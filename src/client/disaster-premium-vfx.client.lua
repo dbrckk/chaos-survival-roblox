@@ -5,8 +5,12 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local lastRoundNumber = nil
+local activeDisasterCount = 1
 local localFolder = Instance.new("Folder")
 localFolder.Name = "ChaosPremiumDisasterVfxLocal"
 localFolder.Parent = workspace
@@ -64,7 +68,7 @@ local function bindLava(lava)
     if DisasterCosmeticRules.reusableLava(lavaState, lava) then
         -- Reconfigure existing GPU instances instead of recreating them
         -- when accessibility or tier changes during an active hazard.
-        local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced)
+        local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced, activeDisasterCount)
         if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
         lavaState.light.Range = 20 + 8 * tier.Scale
         lavaState.light.Brightness = 1.25 * tier.Scale
@@ -94,7 +98,7 @@ local function bindLava(lava)
 
     local embers = Instance.new("ParticleEmitter")
     embers.Name = "LavaEmbers"
-    embers.Rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced)
+    embers.Rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced, activeDisasterCount)
     embers.Lifetime = NumberRange.new(0.7, 1.5)
     embers.Speed = NumberRange.new(2.5, 6.5)
     embers.Acceleration = Vector3.new(0, 4.5, 0)
@@ -189,7 +193,7 @@ local function bindFreeze(warning, snapshot)
                 segment.CFrame = frame * CFrame.new(style.Offset) * style.Rotation
                 segment.Transparency = reduced and 0.66 or style.Transparency
             end
-            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
+            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced, activeDisasterCount)
             local emittedBefore = current.mist.Rate > 0
             if current.mist.Rate ~= rate then current.mist.Rate = rate end
             if reduced and emittedBefore then
@@ -241,7 +245,7 @@ local function bindFreeze(warning, snapshot)
 
     local mist = Instance.new("ParticleEmitter")
     mist.Name = "FreezeMist"
-    mist.Rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced)
+    mist.Rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduced, activeDisasterCount)
     -- One existing emitter now reads as a short cold condensation plume:
     -- small crystal seed -> wide translucent frost -> dissolved vapour.
     -- No extra Part, Light, ParticleEmitter or Texture asset is allocated.
@@ -368,6 +372,60 @@ local function rebuildQuality()
     end
 end
 
+-- This policy only throttles cosmetic emitters. Rebuilds of Freeze wedges,
+-- warning markers and the lava surface remain controlled by their owners.
+local function syncParticlePressure()
+    local profile = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    if lavaState and lavaState.embers and lavaState.embers.Parent then
+        local rate = DisasterCosmeticRules.lavaEmberRate(
+            profile.ParticleScale, reduced, activeDisasterCount)
+        if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
+    end
+    for _, freeze in pairs(freezeStates) do
+        if freeze.mist and freeze.mist.Parent then
+            local rate = DisasterCosmeticRules.freezeMistRate(
+                profile.ParticleScale, reduced, activeDisasterCount)
+            if freeze.mist.Rate ~= rate then freeze.mist.Rate = rate end
+        end
+    end
+end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    if number then lastRoundNumber = number end
+
+    local nextCount = 1
+    if state.phase == "round" and type(state.disasterIds) == "table" then
+        local seen = {}
+        local count = 0
+        for _, id in ipairs(state.disasterIds) do
+            if type(id) == "string" and DisasterVisuals.get(id)
+                and not seen[id] then
+                seen[id] = true
+                count += 1
+                if count >= 3 then break end
+            end
+        end
+        nextCount = math.max(1, count)
+    end
+    if nextCount ~= activeDisasterCount then
+        activeDisasterCount = nextCount
+        -- Heartbeat snapshots normally preserve the same count, so no
+        -- per-second rebuild, extra render loop or ParticleEmitter churn.
+        syncParticlePressure()
+    end
+end)
+
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildQuality)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildQuality)
 
@@ -427,7 +485,7 @@ ensureRenderLoop = function()
             end
         end
         if lavaState.embers and lavaState.embers.Parent then
-            local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion)
+            local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduceMotion, activeDisasterCount)
             if lavaState.embers.Rate ~= rate then
                 lavaState.embers.Rate = rate
             end
@@ -510,7 +568,7 @@ ensureRenderLoop = function()
         end
 
         if state.mist and state.mist.Parent then
-            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduceMotion)
+            local rate = DisasterCosmeticRules.freezeMistRate(tier.ParticleScale, reduceMotion, activeDisasterCount)
             if state.mist.Rate ~= rate then
                 state.mist.Rate = rate
             end
