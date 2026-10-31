@@ -1,4 +1,5 @@
 name: Chaos AI Visual Capture (Temporary Windows)
+# workflow_dispatch only: unattended pushes cannot complete official Studio login.
 # Secure temporary Windows desktop accessible from Android, with a genuine
 # Studio AI camera test. No user account tokens or cookies are stored.
 on:
@@ -16,11 +17,6 @@ on:
           - Crossroads
           - Orbital
           - Harbor
-  push:
-    branches:
-      - main
-    paths:
-      - "studio/REMOTE_AI_QA_TRIGGER"
 
 concurrency:
   group: chaos-studio-ai-visual-hosted
@@ -395,8 +391,19 @@ jobs:
               }
             }
             if (Test-Path $errorFile) {
-              Write-Host "Interactive Roblox Studio capture failed; review the sanitized error artifact."
-              throw "AI camera capture failed; no false screenshot certification."
+              $reason = (Get-Content -LiteralPath $errorFile -Raw).Trim()
+              if ($reason -notmatch '^[A-Z_]{3,64}$') {
+                $reason = "LOCAL_CAPTURE_FAILURE"
+              }
+              @(
+                "### Visual QA not certified",
+                "",
+                "- Sanitized reason: " + $reason,
+                "- Genuine Studio captures: **not certified**; inspect the uploaded status artifact.",
+                "- For AUTH_REQUIRED, trigger a NEW manual run only when ready to log in through private Tailscale/RDP.",
+                "- This workflow never bypasses the official Roblox login and never updates the public game."
+              ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              throw "AI camera capture failed ($reason); no false screenshot certification."
             }
             if (Test-Path $successFile) {
               $status = (Get-Content -LiteralPath $successFile -Raw).Trim()
@@ -428,6 +435,13 @@ jobs:
             Write-Host ("AI CAPTURE WAIT {0:u}: session online; awaiting Roblox sign-in or local test completion." -f (Get-Date).ToUniversalTime())
           }
           if (-not $complete) {
+            @(
+              "### Visual QA not certified",
+              "",
+              "- Reason: AUTH_REQUIRED_OR_CAPTURE_TIMEOUT",
+              "- No complete authenticated 15-frame per-arena evidence was received.",
+              "- Avoid rerunning until the owner's official Studio login can be completed during the temporary RDP session."
+            ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             throw "AUTH_REQUIRED_OR_CAPTURE_TIMEOUT: no complete real authenticated Studio evidence. Do not count partial screenshots."
           }
 
