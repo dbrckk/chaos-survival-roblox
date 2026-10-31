@@ -281,7 +281,7 @@ jobs:
               summary.write(
                   f"- **{suite}**: {passed_tests}/{total_tests} tests PASS, "
                   f"{passed_suites}/{total_suites} suites PASS "
-                  f"(SHA `{os.environ['GITHUB_SHA'][:12]}`)\\n"
+                  f"(SHA `{os.environ['GITHUB_SHA'][:12]}`)\n"
               )
           PY
                 echo "::endgroup::"
