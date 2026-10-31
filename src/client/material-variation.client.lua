@@ -3,11 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local ArenaMaterialRules = require(ReplicatedStorage.Shared.ArenaMaterialRules)
+local PbrDistrictRules = require(ReplicatedStorage.Shared.PbrDistrictRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
 
-local tracked = {}
+-- The streaming client may destroy parts before a later map/tier rebuild.
+-- Weak keys prevent the tint pass from retaining detached scenery.
+local tracked = setmetatable({}, {__mode = "k"})
 
 local function hashName(name)
     local value = 17
@@ -19,6 +22,14 @@ end
 
 local function eligible(part)
     if not part:IsA("BasePart") then
+        return false
+    end
+
+    -- All approved PBR owners are exclusive to pbr-district-materials:
+    -- variation must not touch their native base material BEFORE the PBR
+    -- pass chooses it, otherwise the 2K material key and later restore
+    -- depend on whichever asynchronous client owner happened to run first.
+    if PbrDistrictRules.eligibleOwner(part.Parent) then
         return false
     end
 
@@ -67,6 +78,7 @@ local function applyPart(part, profile, variant, allowMaterialSwap)
         state = {
             Color = part.Color,
             Material = part.Material,
+            MaterialVariant = part.MaterialVariant,
         }
         tracked[part] = state
     end
@@ -97,13 +109,28 @@ local function applyPart(part, profile, variant, allowMaterialSwap)
     else
         part.Color = base:Lerp(Color3.new(0, 0, 0), -shift)
     end
+    -- Only restore properties if they still match the values WE wrote.
+    -- A later PBR/material/animation owner must retain its own changes.
+    state.AppliedMaterial = part.Material
+    state.AppliedColor = part.Color
 end
 
 local function restore()
     for part, state in pairs(tracked) do
-        if part and part.Parent and type(state) == "table" then
-            part.Color = state.Color
-            part.Material = state.Material
+        if part and part.Parent and type(state) == "table"
+            -- Never revert a later PBR variant, a newly streamed
+            -- SurfaceAppearance or a component that changed ownership.
+            and not PbrDistrictRules.eligibleOwner(part.Parent)
+            and part:GetAttribute("PreserveNativeMaterial") ~= true
+            and part:FindFirstChildOfClass("SurfaceAppearance") == nil
+            and part.MaterialVariant == state.MaterialVariant
+        then
+            if part.Color == state.AppliedColor then
+                part.Color = state.Color
+            end
+            if part.Material == state.AppliedMaterial then
+                part.Material = state.Material
+            end
         end
     end
     table.clear(tracked)
