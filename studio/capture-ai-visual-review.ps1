@@ -49,9 +49,26 @@ public static class ChaosScreenNative {
 "@
 }
 
-function Read-Output {
+# A CLI run's final PASS must be proven by its OWN --outputFile/stdout.
+# Windows Roblox client logs are useful only for interim camera markers
+# and must never authenticate the next arena's StudioTestService result.
+function Read-CurrentRunOutcome {
     $builder = [System.Text.StringBuilder]::new()
     foreach ($path in @($engineLog, $stdout, $stderr)) {
+        if (Test-Path $path) {
+            try {
+                [void]$builder.AppendLine((Get-Content -LiteralPath $path -Raw -ErrorAction Stop))
+            }
+            catch {}
+        }
+    }
+    return $builder.ToString()
+}
+
+function Read-Output {
+    $builder = [System.Text.StringBuilder]::new()
+    [void]$builder.Append((Read-CurrentRunOutcome))
+    foreach ($path in @()) {
         if (Test-Path $path) {
             try {
                 [void]$builder.AppendLine((Get-Content -LiteralPath $path -Raw -ErrorAction Stop))
@@ -66,7 +83,12 @@ function Read-Output {
     if (Test-Path $robloxLogs) {
         $latest = Get-ChildItem -LiteralPath $robloxLogs -File -ErrorAction SilentlyContinue |
             Where-Object {
-                $_.LastWriteTime -ge $probeStartedAt.AddSeconds(-5) -and
+                # LastWriteTime alone could include the PRIOR map's
+                # server-approved marker or a stale PASS after a restart.
+                # Only logs CREATED by this exact Studio invocation are
+                # allowed into interim gameplay marker discovery.
+                $_.CreationTime -ge $probeStartedAt.AddSeconds(-3) -and
+                $_.LastWriteTime -ge $probeStartedAt -and
                 $_.Name -match "(Studio|Client|Player)"
             } |
             Sort-Object LastWriteTime -Descending |
@@ -264,13 +286,13 @@ try {
 
     $finishBy = (Get-Date).AddSeconds(55)
     while ((Get-Date) -lt $finishBy) {
-        $log = Read-Output
+        $log = Read-CurrentRunOutcome
         if ($log -match "CHAOS_VISUAL_AI_OK") { break }
         if ($log -match "CHAOS_VISUAL_AI_FAILED") { break }
         if ($studio.HasExited) { break }
         Start-Sleep -Milliseconds 500
     }
-    if ((Read-Output) -notmatch "CHAOS_VISUAL_AI_OK") {
+    if ((Read-CurrentRunOutcome) -notmatch "CHAOS_VISUAL_AI_OK") {
         throw "STUDIO_TEST_FAILED: screenshot files cannot be certified without StudioTestService PASS."
     }
 
