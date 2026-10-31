@@ -7,7 +7,7 @@ This checklist defines the minimum evidence required before calling the experien
 All items below must be green on the **exact release commit**. The checkboxes describe the gate definition; they do not certify the current HEAD by themselves.
 
 - [ ] Build Validation succeeds on release SHA.
-- [ ] Roblox Open Cloud Engine Tests succeed on release SHA.
+- [ ] Roblox Open Cloud Engine Tests succeed on release SHA, with all five suites actually executed and each reporting nonzero passed/total tests (never a green skip for missing Roblox configuration).
 - [ ] Every engine spec is assigned to exactly one Open Cloud shard (currently 75 specs).
 - [ ] Rojo produces a non-empty place file.
 - [ ] Luau syntax validation succeeds.
