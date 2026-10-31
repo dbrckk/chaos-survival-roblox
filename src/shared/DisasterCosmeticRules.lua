@@ -15,6 +15,19 @@ function DisasterCosmeticRules.pressureMultiplier(simultaneous)
     return 1
 end
 
+-- Tornado fragments are decorative and separate from the amber wind
+-- boundary. Share the same Double Chaos pressure as optional particles,
+-- but keep a recognizable minimum silhouette on weaker devices.
+function DisasterCosmeticRules.tornadoDebrisCount(tier, reducedMotion, simultaneous)
+    local base = tier == "High" and 12
+        or (tier == "Medium" and 8 or (tier == "Low" and 5 or 0))
+    if base == 0 then return 0 end
+    if reducedMotion == true then base = math.min(base, 5) end
+    local amount = math.floor(base
+        * DisasterCosmeticRules.pressureMultiplier(simultaneous) + 0.5)
+    return math.max(3, math.min(base, amount))
+end
+
 function DisasterCosmeticRules.lavaEmberRate(particleScale, reducedMotion, simultaneous)
     local scale = math.max(0, tonumber(particleScale) or 0)
     return 10 * scale * (reducedMotion == true and 0.35 or 1)
