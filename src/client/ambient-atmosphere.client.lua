@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local VisualBudgetPressureRules = require(ReplicatedStorage.Shared.VisualBudgetPressureRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -119,7 +120,9 @@ local function refresh()
         baseRate *= 0.35
     end
 
-    local nextRate = math.max(0, baseRate * quality.ParticleScale)
+    local nextRate = math.max(0, baseRate * quality.ParticleScale
+        * VisualBudgetPressureRules.emissionScale(
+            player:GetAttribute("OptionalVfxPressure")))
     if quality.Name == "Low" then
         nextRate = math.min(nextRate, 1.25)
     end
@@ -148,6 +151,7 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refresh)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refresh)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refresh)
 
 player.CharacterRemoving:Connect(destroyEmitter)
 player.CharacterAdded:Connect(function()
