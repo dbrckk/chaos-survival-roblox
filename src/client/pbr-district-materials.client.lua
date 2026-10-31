@@ -106,11 +106,23 @@ local function scan()
         -- Both server arena Decor and four client-authored playable
         -- district models share ONE per-client budget.
         local groups = {}
+        -- Decor includes many non-PBR parts (gameplay platforms, hazards,
+        -- signage, etc.). Check model provenance BEFORE querying surface
+        -- geometry or camera distance. Cache the answer once per owner
+        -- for this scan only: streaming and attributes are reconsidered
+        -- on the next incremental reconciliation, never cached forever.
+        local ownerApproved = {}
         local function collect(root, candidateParts)
             if not root or not root.Parent then return end
             for part in pairs(candidateParts) do
-                if not part.Parent or not part:IsDescendantOf(root) then
+                local owner = part.Parent
+                if not owner or not part:IsDescendantOf(root) then
                     continue
+                end
+                local approved = ownerApproved[owner]
+                if approved == nil then
+                    approved = PbrDistrictRules.eligibleOwner(owner)
+                    ownerApproved[owner] = approved
                 end
                 local old = applied[part]
                 local ownedName = old and old.name or nil
@@ -122,20 +134,18 @@ local function scan()
                     -- authored external variant after a streaming update.
                     applied[part] = nil
                     originals[part] = nil
-                elseif PbrDistrictRules.eligiblePart(part, ownedName)
+                elseif approved
+                    and PbrDistrictRules.eligiblePart(part, ownedName)
                     and PbrDistrictRules.withinDistance(
                         part, cameraPosition, selectedTier, isTouch
                     ) then
-                    local owner = part.Parent
-                    if PbrDistrictRules.eligibleOwner(owner) then
-                        local entries = groups[owner]
-                        if not entries then
-                            entries = {}
-                            groups[owner] = entries
-                        end
-                        entries[#entries + 1] = part
-                        eligibleCount += 1
+                    local entries = groups[owner]
+                    if not entries then
+                        entries = {}
+                        groups[owner] = entries
                     end
+                    entries[#entries + 1] = part
+                    eligibleCount += 1
                 end
             end
         end
