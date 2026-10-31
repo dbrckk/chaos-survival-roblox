@@ -180,6 +180,10 @@ local lastSurvivorCuePlayed = false
 local currentIntensity = 1
 local lastOverdrive = false
 local lastFinalRush = false
+-- Invalidate delayed round-only cues on a new phase or round. The sound
+-- assets and their normal one-shot lifetimes are unchanged.
+local roundCueEpoch = 0
+local lastRoundCueNumber = nil
 
 local ARENA_AUDIO = {
     Classic = {Pitch = 1.000, Low = 0.0, Mid = 0.2, High = 0.4},
@@ -722,7 +726,20 @@ end
 player:GetAttributeChangedSignal("RoundPeakTier"):Connect(onMasteryTierConfirmed)
 
 stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" then return end
     local phase = state.phase
+    local roundNumber = tonumber(state.roundNumber)
+    if not roundNumber or roundNumber ~= roundNumber
+        or roundNumber == math.huge or roundNumber == -math.huge
+        or roundNumber < 1 or roundNumber ~= math.floor(roundNumber) then
+        roundNumber = nil
+    end
+    if phase ~= lastPhase
+        or (roundNumber ~= nil and roundNumber ~= lastRoundCueNumber) then
+        roundCueEpoch += 1
+    end
+    if roundNumber ~= nil then lastRoundCueNumber = roundNumber end
+    local cueEpoch = roundCueEpoch
     local isMastery = phase == "round"
         and state.challengeMetric == "highGround"
     if not isMastery then
@@ -750,7 +767,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     if overdrive and not lastOverdrive then
         play("Overdrive")
         task.delay(0.10, function()
-            play("Speed", 0.03)
+            if cueEpoch == roundCueEpoch and lastPhase == "round" then
+                play("Speed", 0.03)
+            end
         end)
     end
 
@@ -808,6 +827,9 @@ stateEvent.OnClientEvent:Connect(function(state)
                         + ((index - 1) * (tonumber(doublePolicy.StaggerSeconds) or 0.055))
 
                     task.delay(delaySeconds, function()
+                        if cueEpoch ~= roundCueEpoch or lastPhase ~= "round" then
+                            return
+                        end
                         if state.doubleChaos == true then
                             playRaw(
                                 accent,
@@ -988,8 +1010,13 @@ end)
 
 local healthConnection = nil
 local stateConnection = nil
+local healthBindEpoch = 0
+local boundHealthCharacter = nil
 
-local function bindHealthAudio(character)
+local function unbindHealthAudio()
+    -- A pending WaitForChild from an earlier CharacterAdded must not be
+    -- allowed to rebind the old humanoid after a later respawn.
+    healthBindEpoch += 1
     if healthConnection then
         healthConnection:Disconnect()
         healthConnection = nil
@@ -998,9 +1025,18 @@ local function bindHealthAudio(character)
         stateConnection:Disconnect()
         stateConnection = nil
     end
+    boundHealthCharacter = nil
+end
 
+local function bindHealthAudio(character)
+    unbindHealthAudio()
+    if not character or player.Character ~= character then return end
+    boundHealthCharacter = character
+    local issuedEpoch = healthBindEpoch
     local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid then
+    if not humanoid or healthBindEpoch ~= issuedEpoch
+        or boundHealthCharacter ~= character
+        or player.Character ~= character or humanoid.Parent ~= character then
         return
     end
 
@@ -1065,6 +1101,13 @@ local function bindHealthAudio(character)
     end)
 
     healthConnection = humanoid.HealthChanged:Connect(function(health)
+        -- StateChanged already guards respawn ownership; HealthChanged must
+        -- do the same so the previous avatar cannot play stale damage cues.
+        if healthBindEpoch ~= issuedEpoch
+            or boundHealthCharacter ~= character
+            or player.Character ~= character or humanoid.Parent ~= character then
+            return
+        end
         if health < previousHealth and health > 0 then
             play("Hit")
         end
@@ -1072,8 +1115,12 @@ local function bindHealthAudio(character)
     end)
 end
 
+player.CharacterAdded:Connect(bindHealthAudio)
+player.CharacterRemoving:Connect(function(character)
+    if boundHealthCharacter == character then
+        unbindHealthAudio()
+    end
+end)
 if player.Character then
     task.spawn(bindHealthAudio, player.Character)
 end
-
-player.CharacterAdded:Connect(bindHealthAudio)
