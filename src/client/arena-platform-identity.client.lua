@@ -94,14 +94,17 @@ end
 local function decorateClassic(platform, index, theme, tier)
     local top = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.56)
-    local transparency = tier.Name == "Low" and 0.68 or 0.46
+    -- Quiet calibration engraving: it shows deck construction, not a
+    -- suggested jump. Reserve the distinctive cool-white Neon chevrons
+    -- exclusively for geometry-verified parkour takeoffs.
+    local transparency = tier.Name == "Low" and 0.48 or 0.29
 
     makePart(
         "ClassicPlatformAxisA" .. index,
         Vector3.new(length, 0.045, 0.16),
         top,
-        index % 2 == 0 and theme.Secondary or theme.Accent,
-        Enum.Material.Neon,
+        theme.Detail:Lerp(theme.Structure, index % 2 == 0 and 0.38 or 0.28),
+        Enum.Material.Metal,
         transparency,
         platform
     )
@@ -171,9 +174,9 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
         "CrossroadPlatformLane" .. index,
         size,
         center,
-        index % 2 == 0 and theme.Secondary or theme.Accent,
-        Enum.Material.Neon,
-        tier.Name == "Low" and 0.70 or 0.48,
+        theme.Detail:Lerp(theme.Structure, 0.35),
+        Enum.Material.Metal,
+        tier.Name == "Low" and 0.48 or 0.30,
         platform
     )
 
@@ -226,9 +229,11 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
         "OrbitalPlatformTangent" .. index,
         Vector3.new(length, 0.05, 0.22),
         center,
-        index % 3 == 0 and theme.Secondary or (index % 2 == 0 and theme.Accent or theme.Detail),
-        index % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-        index % 3 == 0 and (tier.Name == "Low" and 0.72 or 0.54) or 0.24,
+        -- All orbital deck tangents are material markings, not glowing
+        -- jump arrows (Orbital climbs by actual continuous helix ramps).
+        theme.Detail:Lerp(theme.Structure, index % 2 == 0 and 0.32 or 0.46),
+        Enum.Material.Metal,
+        tier.Name == "Low" and 0.43 or 0.25,
         platform
     )
 
