@@ -6,8 +6,13 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local TornadoBoundaryRules = require(ReplicatedStorage.Shared.TornadoBoundaryRules)
 local TornadoVisualBindRules = require(ReplicatedStorage.Shared.TornadoVisualBindRules)
+local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
 
 local player = Players.LocalPlayer
+local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
+local activeDisasterCount = 1
+local lastRoundNumber = nil
 local activeModel = nil
 local dangerZone = nil
 local lower = nil
@@ -184,7 +189,10 @@ local function buildDebris()
     end
 
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
-    local count = tier.Name == "Low" and 5 or (tier.Name == "Medium" and 8 or 12)
+    local count = DisasterCosmeticRules.tornadoDebrisCount(
+        tier.Name, player:GetAttribute("ReduceMotion") == true,
+        activeDisasterCount
+    )
 
     debrisFolder = Instance.new("Folder")
     debrisFolder.Name = "TornadoDebrisLocal"
@@ -335,6 +343,49 @@ end)
 
 findExisting()
 
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    if number then lastRoundNumber = number end
+
+    local nextCount = 1
+    if state.phase == "round" and type(state.disasterIds) == "table" then
+        local seen = {}
+        local count = 0
+        for _, id in ipairs(state.disasterIds) do
+            if type(id) == "string" and DisasterVisuals.get(id)
+                and not seen[id] then
+                seen[id] = true
+                count += 1
+                if count >= 3 then break end
+            end
+        end
+        nextCount = math.max(1, count)
+    end
+    if activeDisasterCount ~= nextCount then
+        activeDisasterCount = nextCount
+        if activeModel and activeModel.Parent and middle and middle.Parent then
+            -- Only optional shards are rebuilt. The moving amber boundary
+            -- remains intact regardless of Double Chaos pressure.
+            buildDebris()
+        end
+    end
+end)
+
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    if activeModel and activeModel.Parent and middle and middle.Parent then
+        buildDebris()
+    end
+end)
+
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     if activeModel and activeModel.Parent and middle then
         buildDebris()
@@ -374,7 +425,10 @@ ensureRenderLoop = function()
                 or (math.sin(pulseClock * 4) + 1) * 0.5
             local pulseScale = reduceMotion and 0 or 1
             if dangerZone and dangerZone.Parent then
-                dangerZone.Transparency = 0.965 + pulse * 0.018 * pulseScale
+                local opacity = 0.965 + pulse * 0.018 * pulseScale
+                if dangerZone.Transparency ~= opacity then
+                    dangerZone.Transparency = opacity
+                end
             end
             -- The warning follows the actual wind footprint during drift,
             -- including on Low and ReduceMotion. The amber perimeter stays
@@ -393,17 +447,22 @@ ensureRenderLoop = function()
                 end
             end
             if lower and lower.Parent then
-                lower.Transparency = 0.37 + pulse * 0.10 * pulseScale
+                local alpha = 0.37 + pulse * 0.10 * pulseScale
+                if lower.Transparency ~= alpha then lower.Transparency = alpha end
             end
             if middle and middle.Parent then
-                middle.Transparency = 0.44 + pulse * 0.10 * pulseScale
+                local alpha = 0.44 + pulse * 0.10 * pulseScale
+                if middle.Transparency ~= alpha then middle.Transparency = alpha end
             end
             if upper and upper.Parent then
-                upper.Transparency = 0.52 + pulse * 0.11 * pulseScale
+                local alpha = 0.52 + pulse * 0.11 * pulseScale
+                if upper.Transparency ~= alpha then upper.Transparency = alpha end
             end
             if light and light.Parent then
-                light.Brightness = (0.68 + pulse * 0.55 * pulseScale) * tier.Scale
-                light.Range = 20 + (6 * tier.Scale)
+                local brightness = (0.68 + pulse * 0.55 * pulseScale) * tier.Scale
+                local range = 20 + (6 * tier.Scale)
+                if light.Brightness ~= brightness then light.Brightness = brightness end
+                if light.Range ~= range then light.Range = range end
             end
 
             if middle and middle.Parent then
