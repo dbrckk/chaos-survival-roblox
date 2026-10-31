@@ -18,7 +18,12 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageStat
 
 
-def inspect(directory: Path) -> dict:
+ARENAS = ("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+
+
+def inspect(directory: Path, expected_arena: str = "Harbor") -> dict:
+    if expected_arena not in ARENAS:
+        raise ValueError("Invalid real Studio arena identity")
     files = sorted(directory.glob("ai-frame-*.png"))
     if [x.name for x in files] != [f"ai-frame-{i:02d}.png" for i in range(1, 16)]:
         raise ValueError("Expected exactly fifteen consecutively numbered real PNGs")
@@ -35,8 +40,10 @@ def inspect(directory: Path) -> dict:
     }
     if not required_fields.issubset(manifest[0].keys()):
         raise ValueError("Missing authoritative arena/bot/round provenance columns")
-    if {row["arena"] for row in manifest} != {"Harbor"}:
-        raise ValueError("Not every real frame is certified as Storm Harbor")
+    if {row["arena"] for row in manifest} != {expected_arena}:
+        raise ValueError(
+            f"Real frame provenance mismatch: expected {expected_arena}"
+        )
     if {row["phase"] for row in manifest} != {"round"}:
         raise ValueError("Lobby/result images cannot certify active gameplay")
     if len({row["bot"] for row in manifest if row["bot"]}) < 2:
@@ -149,7 +156,7 @@ def inspect(directory: Path) -> dict:
         "production_live_server": False,
         "android_device_certified": False,
         "frame_count": 15,
-        "server_verified_arena": "Harbor",
+        "server_verified_arena": expected_arena,
         "live_round_frames": 15,
         "distinct_ai_bots": len({row["bot"] for row in manifest}),
         "camera_modes": sorted({row["mode"] for row in manifest}),
@@ -194,7 +201,8 @@ def inspect(directory: Path) -> dict:
         "not a public-server recording or an Android device.",
         "",
         f"- Frames: 15 / 15; unique hashes: {len(hashes)}",
-        "- Server-validated arena: **Harbor** (not a five-map certification).",
+        f"- Server-validated arena: **{expected_arena}**.",
+        "- A single 15-frame result does not certify the other four maps.",
         "- Actual round phase: **15/15** samples.",
         f"- Distinct autonomous bots: **{data['distinct_ai_bots']}**.",
         "- Camera angles: **CHASE / SIDE / POV**.",
@@ -231,9 +239,14 @@ def inspect(directory: Path) -> dict:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: analyze-visual-ai.py <capture-directory>")
-    result = inspect(Path(sys.argv[1]))
+    if len(sys.argv) not in (2, 3):
+        raise SystemExit(
+            "usage: analyze-visual-ai.py <capture-directory> [Classic|Towers|Crossroads|Orbital|Harbor]"
+        )
+    result = inspect(
+        Path(sys.argv[1]),
+        sys.argv[2] if len(sys.argv) == 3 else "Harbor"
+    )
     print(json.dumps({
         "status": "AUDIT_CREATED",
         "frames": result["frame_count"],
