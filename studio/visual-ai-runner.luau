@@ -8,7 +8,10 @@ local result = StudioTestService:ExecutePlayModeAsync({
     suite = "ChaosVisualAI",
     sampleCount = 15,
     intervalSeconds = 3,
-    timeoutSeconds = 110,
+    timeoutSeconds = 130,
+    -- First reproducible target of the five-arena visual audit. Native
+    -- scene geometry remains authoritative and fully playable.
+    arenaVariant = "Harbor",
 })
 print("CHAOS_VISUAL_AI_RESULT", result)
 
