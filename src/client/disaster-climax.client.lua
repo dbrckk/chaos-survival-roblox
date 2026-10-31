@@ -16,6 +16,7 @@ folder.Name = "DisasterClimaxLocal"
 folder.Parent = workspace
 
 local previousPhase = "waiting"
+local lastRoundNumber = nil
 local stageById = {}
 local generationById = {}
 local token = 0
@@ -236,24 +237,51 @@ local function presentAvailable(state, serial, attempt)
     end
 end
 
-stateEvent.OnClientEvent:Connect(function(state)
+local function discardClimax()
+    -- Only local transient silhouettes are owned by this controller.
+    -- Invalidate every delayed burst and pending Base replication retry.
+    token += 1
     snapshotSerial += 1
-    local phase = tostring(state.phase or "waiting")
-    if phase ~= "round" then
-        token += 1
-        table.clear(stageById)
-        table.clear(generationById)
-        folder:ClearAllChildren()
-        displayedBase = nil
-        previousPhase = phase
+    table.clear(stageById)
+    table.clear(generationById)
+    folder:ClearAllChildren()
+    displayedBase = nil
+end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
         return
     end
-    if previousPhase ~= "round" then
-        table.clear(stageById)
-        table.clear(generationById)
-        displayedBase = nil
-        token += 1
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        -- An out-of-order result must not invalidate the current climax.
+        return
     end
-    previousPhase = phase
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
+
+    local nextPhase = state.phase
+    if nextPhase ~= previousPhase or newRound then
+        -- A numbered round can start with no intervening READY packet.
+        -- Always retire the previous climax geometry and queued effects.
+        discardClimax()
+    end
+    previousPhase = nextPhase
+    if nextPhase ~= "round" then return end
+
+    snapshotSerial += 1
     presentAvailable(state, snapshotSerial, 1)
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" and displayedBase
+        and displayedBase:IsDescendantOf(child) then
+        -- Streaming/map rotation may remove the arena before RoundState
+        -- announces the transition. Do not leave its climax fins visible.
+        discardClimax()
+    end
 end)
