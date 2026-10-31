@@ -1080,7 +1080,7 @@ describe("Moving platform premium trim kit", function()
         visual.Parent = root
         local theme = VisualTheme.arena("Towers")
         local rails = PlatformFinishKit.buildSideRails(
-            visual, platform, "High", theme
+            visual, platform, "High", theme, "Towers"
         )
         local paint = PlatformFinishKit.build(
             visual, platform, "Towers", "High", theme
@@ -1095,6 +1095,9 @@ describe("Moving platform premium trim kit", function()
             end
         end
         expect(#rails).toBe(4)
+        for _, rail in ipairs(rails) do
+            expect(rail.Material).toBe(Enum.Material.CorrodedMetal)
+        end
         for _, part in ipairs(pieces) do
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
             expect(joint ~= nil and joint:IsA("Weld")).toBe(true)
