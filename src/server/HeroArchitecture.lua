@@ -284,6 +284,55 @@ function HeroArchitecture.build(decor, base, variantId, theme)
                 Vector3.new(side * 7.5, 14.2, 0), metal)
         end
     end
+    -- Architectural materials are now physically distinct from accent
+    -- colors: foundations are stone/concrete, load-bearing joints have
+    -- machined armor, and exposed work housings use weathered steel.
+    -- These are EXISTING Parts only; preserve native stone/concrete and
+    -- their original matte look instead of substituting a reflective 2K
+    -- metal variant. No PBR asset IDs, replicated instances or loops added.
+    local materialIdentity = {
+        Classic = {
+            ObservatoryFoundation = Enum.Material.Slate,
+            CentralPylon = Enum.Material.CorrodedMetal,
+            DishHub = Enum.Material.DiamondPlate,
+        },
+        Towers = {
+            TransitFoundation = Enum.Material.Concrete,
+            SkyTransitMainBeam = Enum.Material.DiamondPlate,
+            SkyTransitOverhang = Enum.Material.DiamondPlate,
+        },
+        Crossroads = {
+            SwitchyardFoundation = Enum.Material.Concrete,
+            ExchangeCore = Enum.Material.CorrodedMetal,
+            RoutingHeadHousing = Enum.Material.DiamondPlate,
+        },
+        Orbital = {
+            MagneticPlatform = Enum.Material.CeramicTiles,
+            ReactorFoot = Enum.Material.CeramicTiles,
+            ReactorUpperMantle = Enum.Material.DiamondPlate,
+        },
+        Harbor = {
+            HarborDrydockFoundation = Enum.Material.Concrete,
+            CargoHull = Enum.Material.CorrodedMetal,
+            HarborBridge = Enum.Material.CorrodedMetal,
+            ContainerDeckA = Enum.Material.DiamondPlate,
+            ContainerDeckB = Enum.Material.DiamondPlate,
+        },
+    }
+    local finishes = materialIdentity[variantId]
+    if finishes then
+        for name, material in pairs(finishes) do
+            local surface = model:FindFirstChild(name)
+            if surface and surface:IsA("BasePart") then
+                surface.Material = material
+                if material == Enum.Material.Concrete
+                    or material == Enum.Material.Slate then
+                    surface:SetAttribute("PreserveNativeMaterial", true)
+                end
+            end
+        end
+    end
+
     local pieces = #model:GetChildren()
     assert(pieces >= 14 and pieces <= 32,
         "Hero 3D art exceeds guarded Android part budget")
