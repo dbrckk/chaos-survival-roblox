@@ -79,6 +79,22 @@ local function syncShockSignature(part, state, diameter, progress, reduced)
     )
     local pieces = state.signature
     if not pieces then return end
+    if reduced then
+        local pose = state.shockStaticPose
+        if pose and pose.position == part.Position
+            and pose.diameter == diameter and pose.count == count
+            and pose.tier == currentTier.Name then
+            local allLive = true
+            for index = 1, count do
+                local piece = pieces[index]
+                if not piece or piece.Parent ~= localDecor then
+                    allLive = false
+                    break
+                end
+            end
+            if allLive then return end
+        end
+    end
     while #pieces > count do
         local extra = table.remove(pieces)
         if extra and extra.Parent then extra:Destroy() end
@@ -106,6 +122,15 @@ local function syncShockSignature(part, state, diameter, progress, reduced)
         piece.Color = design.Secondary and design.SecondaryColor or design.Color
         piece.Transparency = reduced and 0.67 or design.Transparency
     end
+    -- Animating the warning invalidates the static cached pose. When the
+    -- player enables ReduceMotion again, the next tick rebuilds the final
+    -- full-footprint signature rather than reusing mid-animation geometry.
+    state.shockStaticPose = reduced and {
+        position = part.Position,
+        diameter = diameter,
+        count = count,
+        tier = currentTier.Name,
+    } or nil
 end
 
 
@@ -191,33 +216,44 @@ local function ensureRenderLoop()
 
                 if state.kind == "Freeze" then
                     local freezePeak = 0.12 * currentTier.Scale
-                    part.Transparency = reduced and 0.82 or math.clamp(
+                    local transparency = reduced and 0.82 or math.clamp(
                         0.84 - (freezePeak * math.sin(alpha * math.pi)),
                         0.69,
                         0.92
                     )
+                    if part.Transparency ~= transparency then
+                        part.Transparency = transparency
+                    end
                 elseif state.kind == "JumpShock" then
                     -- In ReduceMotion, show the final hazard coverage at once
                     -- instead of sweeping a large luminous disc across sightlines.
                     local diameter = HazardWarningSignatureRules.visualDiameter(
                         state.startSize, state.endSize, alpha, reduced
                     )
-                    part.Size = Vector3.new(part.Size.X, diameter, diameter)
-                    part.Transparency = reduced and 0.78
+                    local newSize = Vector3.new(part.Size.X, diameter, diameter)
+                    if part.Size ~= newSize then part.Size = newSize end
+                    local transparency = reduced and 0.78
                         or (0.62 + 0.27 * alpha)
+                    if part.Transparency ~= transparency then
+                        part.Transparency = transparency
+                    end
 
                     syncShockSignature(part, state, diameter, alpha, reduced)
                 else
                     local diameter = HazardWarningSignatureRules.visualDiameter(
                         state.startSize, state.endSize, alpha, reduced
                     )
-                    part.Size = Vector3.new(diameter, part.Size.Y, diameter)
+                    local newSize = Vector3.new(diameter, part.Size.Y, diameter)
+                    if part.Size ~= newSize then part.Size = newSize end
                     -- An opaque warning disc conceals the platform edges
                     -- and any escape route. Keep a restrained fill, with
                     -- the strong hollow perimeter as the primary signal.
                     local base = state.kind == "Meteor" and 0.69 or 0.66
-                    part.Transparency = reduced and 0.62
+                    local transparency = reduced and 0.62
                         or math.clamp(base - alpha * 0.10 - pulse * 0.05, 0.47, 0.78)
+                    if part.Transparency ~= transparency then
+                        part.Transparency = transparency
+                    end
 
                     if state.ring then
                         -- The actual warning Part, server damage and the
