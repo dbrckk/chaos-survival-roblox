@@ -33,6 +33,9 @@ local count = math.clamp(
 local interval = math.clamp(
     tonumber(ReplicatedStorage:GetAttribute("ChaosVisualAIInterval")) or 3, 2, 8
 )
+local expectedArena = tostring(
+    ReplicatedStorage:GetAttribute("ChaosVisualAIArena") or "Harbor"
+)
 local phase = "waiting"
 local roundState = ReplicatedStorage:WaitForChild("Remotes", 15)
 local stateEvent = roundState and roundState:FindFirstChild("RoundState")
@@ -64,6 +67,22 @@ local function availableBots()
     return bots
 end
 
+local function actualArena()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    return arena and arena:GetAttribute("VariantId")
+end
+
+local function liveRoundBots()
+    local result = {}
+    for _, model in ipairs(availableBots()) do
+        if model:GetAttribute("AISurvivorInRound") == true then
+            result[#result + 1] = model
+        end
+    end
+    return result
+end
+
 local function lookDirection(root)
     local velocity = root.AssemblyLinearVelocity
     local planar = Vector3.new(velocity.X, 0, velocity.Z)
@@ -89,7 +108,7 @@ local proofLabel = Instance.new("TextLabel")
 proofLabel.Name = "AICameraIdentity"
 proofLabel.AnchorPoint = Vector2.new(0, 1)
 proofLabel.Position = UDim2.new(0, 14, 1, -14)
-proofLabel.Size = UDim2.fromOffset(460, 34)
+proofLabel.Size = UDim2.fromOffset(540, 34)
 proofLabel.BackgroundColor3 = Color3.fromRGB(11, 18, 32)
 proofLabel.BackgroundTransparency = 0.16
 proofLabel.TextColor3 = Color3.fromRGB(235, 246, 255)
@@ -205,8 +224,29 @@ task.spawn(function()
     end
 
     print("CHAOS_VISUAL_AI_CLIENT_READY")
+    -- Capture genuine active gameplay, not fourteen lobby/result frames
+    -- and one accidental in-round sample. The Studio server lengthens
+    -- only this opt-in round so all fifteen spaced PNGs can be in-round.
+    local roundDeadline = os.clock() + 50
+    while os.clock() < roundDeadline do
+        if phase == "round" and actualArena() == expectedArena
+            and #liveRoundBots() >= 2 then
+            break
+        end
+        task.wait(0.15)
+    end
+    if phase ~= "round" or actualArena() ~= expectedArena
+        or #liveRoundBots() < 2 then
+        report:FireServer({
+            kind = "failure",
+            error = "No verified live " .. expectedArena .. " AI round available",
+        })
+        restore()
+        return
+    end
+
     for index = 1, count do
-        local bots = availableBots()
+        local bots = liveRoundBots()
         if #bots == 0 then
             report:FireServer({kind = "failure", error = "All AI subjects unavailable"})
             restore()
@@ -224,8 +264,8 @@ task.spawn(function()
             or (((index - 1) % 5 == 2) and "SIDE" or "CHASE")
         sampleIndex = index
         proofLabel.Text = string.format(
-            "STUDIO AI VIEW  %02d/%02d   |   %s   |   %s / %s",
-            index, count, tostring(currentBot and currentBot.Name),
+            "REAL %s AI  %02d/%02d   |   %s   |   %s / %s",
+            expectedArena, index, count, tostring(currentBot and currentBot.Name),
             string.upper(phase), currentMode
         )
 
@@ -242,6 +282,7 @@ task.spawn(function()
             kind = "frame",
             index = index,
             phase = phase,
+            arenaVariant = actualArena(),
             bot = currentBot and currentBot.Name or "",
             mode = currentMode,
             viewport = viewport,
@@ -254,8 +295,9 @@ task.spawn(function()
             practiceVisible = practice and practice.Visible or false,
         })
         print(string.format(
-            "CHAOS_VISUAL_AI_FRAME %02d/%02d bot=%s mode=%s phase=%s viewport=%dx%d",
-            index, count, tostring(currentBot and currentBot.Name), currentMode,
+            "CHAOS_VISUAL_AI_FRAME %02d/%02d arena=%s bot=%s mode=%s phase=%s viewport=%dx%d",
+            index, count, tostring(actualArena()),
+            tostring(currentBot and currentBot.Name), currentMode,
             phase, viewport.X, viewport.Y
         ))
         if index < count then
