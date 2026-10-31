@@ -2,14 +2,29 @@
 -- Does not affect server-authoritative hazards, collisions or damage.
 local DisasterCosmeticRules = {}
 
-function DisasterCosmeticRules.lavaEmberRate(particleScale, reducedMotion)
-    local scale = math.max(0, tonumber(particleScale) or 0)
-    return 10 * scale * (reducedMotion == true and 0.35 or 1)
+-- Shared pressure for OPTIONAL ambient emitters. The physical warning
+-- footprint, damage zones, player escape cues and server hazards are never
+-- gated by this multiplier. Existing two-argument callers default to 1.
+function DisasterCosmeticRules.pressureMultiplier(simultaneous)
+    local count = tonumber(simultaneous) or 1
+    if count ~= count or math.abs(count) == math.huge or count < 1 then
+        count = 1
+    end
+    if count >= 3 then return 0.70 end
+    if count >= 2 then return 0.85 end
+    return 1
 end
 
-function DisasterCosmeticRules.freezeMistRate(particleScale, reducedMotion)
+function DisasterCosmeticRules.lavaEmberRate(particleScale, reducedMotion, simultaneous)
+    local scale = math.max(0, tonumber(particleScale) or 0)
+    return 10 * scale * (reducedMotion == true and 0.35 or 1)
+        * DisasterCosmeticRules.pressureMultiplier(simultaneous)
+end
+
+function DisasterCosmeticRules.freezeMistRate(particleScale, reducedMotion, simultaneous)
     if reducedMotion == true then return 0 end
     return 8 * math.max(0, tonumber(particleScale) or 0)
+        * DisasterCosmeticRules.pressureMultiplier(simultaneous)
 end
 
 -- Quality switches reuse the same cosmetic lava instances. A destroyed
