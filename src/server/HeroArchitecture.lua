@@ -26,6 +26,37 @@ local function bar(model, origin, name, a, b, thickness, color)
         color)
 end
 
+-- Immutable lookup created once per server, not for every round/map rebuild.
+local MATERIAL_IDENTITY = {
+    Classic = {
+        ObservatoryFoundation = Enum.Material.Slate,
+        CentralPylon = Enum.Material.CorrodedMetal,
+        DishHub = Enum.Material.DiamondPlate,
+    },
+    Towers = {
+        TransitFoundation = Enum.Material.Concrete,
+        SkyTransitMainBeam = Enum.Material.DiamondPlate,
+        SkyTransitOverhang = Enum.Material.DiamondPlate,
+    },
+    Crossroads = {
+        SwitchyardFoundation = Enum.Material.Concrete,
+        ExchangeCore = Enum.Material.CorrodedMetal,
+        RoutingHeadHousing = Enum.Material.DiamondPlate,
+    },
+    Orbital = {
+        MagneticPlatform = Enum.Material.CeramicTiles,
+        ReactorFoot = Enum.Material.CeramicTiles,
+        ReactorUpperMantle = Enum.Material.DiamondPlate,
+    },
+    Harbor = {
+        HarborDrydockFoundation = Enum.Material.Concrete,
+        CargoHull = Enum.Material.CorrodedMetal,
+        HarborBridge = Enum.Material.CorrodedMetal,
+        ContainerDeckA = Enum.Material.DiamondPlate,
+        ContainerDeckB = Enum.Material.DiamondPlate,
+    },
+}
+
 function HeroArchitecture.build(decor, base, variantId, theme)
     if not decor or not base or not base:IsA("BasePart") then return nil end
     local model = Instance.new("Model")
@@ -289,37 +320,8 @@ function HeroArchitecture.build(decor, base, variantId, theme)
     -- machined armor, and exposed work housings use weathered steel.
     -- These are EXISTING Parts only; preserve native stone/concrete and
     -- their original matte look instead of substituting a reflective 2K
-    -- metal variant. No PBR asset IDs, replicated instances or loops added.
-    local materialIdentity = {
-        Classic = {
-            ObservatoryFoundation = Enum.Material.Slate,
-            CentralPylon = Enum.Material.CorrodedMetal,
-            DishHub = Enum.Material.DiamondPlate,
-        },
-        Towers = {
-            TransitFoundation = Enum.Material.Concrete,
-            SkyTransitMainBeam = Enum.Material.DiamondPlate,
-            SkyTransitOverhang = Enum.Material.DiamondPlate,
-        },
-        Crossroads = {
-            SwitchyardFoundation = Enum.Material.Concrete,
-            ExchangeCore = Enum.Material.CorrodedMetal,
-            RoutingHeadHousing = Enum.Material.DiamondPlate,
-        },
-        Orbital = {
-            MagneticPlatform = Enum.Material.CeramicTiles,
-            ReactorFoot = Enum.Material.CeramicTiles,
-            ReactorUpperMantle = Enum.Material.DiamondPlate,
-        },
-        Harbor = {
-            HarborDrydockFoundation = Enum.Material.Concrete,
-            CargoHull = Enum.Material.CorrodedMetal,
-            HarborBridge = Enum.Material.CorrodedMetal,
-            ContainerDeckA = Enum.Material.DiamondPlate,
-            ContainerDeckB = Enum.Material.DiamondPlate,
-        },
-    }
-    local finishes = materialIdentity[variantId]
+    -- metal variant. No PBR asset IDs, replicated instances or per-frame loops added.
+    local finishes = MATERIAL_IDENTITY[variantId]
     if finishes then
         for name, material in pairs(finishes) do
             local surface = model:FindFirstChild(name)
