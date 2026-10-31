@@ -173,6 +173,10 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         or part.CanQuery or part.Transparency >= 0.16
         or part.Material == Enum.Material.Neon
         or part.Material == Enum.Material.Glass
+        -- The only approved original 2K variants are metals/ceramics.
+        -- Never substitute reflective titanium on authored Harbor timber.
+        or part.Material == Enum.Material.Wood
+        or part.Material == Enum.Material.WoodPlanks
         or (part.MaterialVariant ~= ""
             and part.MaterialVariant ~= ownedVariant)
         or not PbrDistrictRules.visible(part) then
