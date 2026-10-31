@@ -8,6 +8,7 @@
 -- mobile graphic tiers and the optional Storm Harbor cargo objective.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
@@ -187,6 +188,16 @@ local function show(target, isRamp, achieved, required, returnToRamp)
 end
 
 local function update()
+    -- The Android round HUD already owns the objective/progress lane.
+    -- The optional high-ground mastery billboard becomes a second
+    -- world-space text card over traversal and danger instructions.
+    -- Retain all desktop physical-route guidance without duplicating it
+    -- on touch devices (no new loops, parts or server changes).
+    if UserInputService.TouchEnabled then
+        hide()
+        return
+    end
+
     local state = latestState
     if not state or state.phase ~= "round"
         or state.challengeMetric ~= "highGround"
