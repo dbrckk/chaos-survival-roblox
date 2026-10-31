@@ -89,6 +89,14 @@ local function beam(parent, name, root, a, b, thick, color, alpha)
 end
 
 local function sectorSign(model, anchor, copy, color)
+    -- On real Android landscape screenshots the central survival HUD,
+    -- signal navigation and objective progress already consume the upper
+    -- view. Four more world-floating sector names obscure traversal and
+    -- duplicate the physical district signage/coded buildings.
+    -- Keep all four distinct 3D sector structures and their existing
+    -- architectural sign plates, but reserve floating names for PC.
+    if UserInputService.TouchEnabled then return end
+
     local gui = Instance.new("BillboardGui")
     gui.Name = "SectorWaypoint"
     gui.Adornee = anchor
