@@ -1058,6 +1058,96 @@ local function buildOrbital(base, theme, tier)
     end
 end
 
+-- Storm Harbor's hero landmark must not fall back to Classic's radar
+-- pylons. Build an ORIGINAL cargo-port signal station using the existing
+-- noncolliding, tiered local scenery owner. All decorations remain outside
+-- the real survival floor and never suggest a traversable shortcut.
+local function buildHarbor(base, theme, tier)
+    local hz = base.Size.Z * 0.5
+    local frame = localFrame(base, 0, 0, hz + 18, 180)
+    local steel = theme.Structure:Lerp(Color3.fromRGB(83, 91, 88), 0.32)
+    local dark = theme.Surface:Lerp(VisualTheme.World.Deep, 0.38)
+    local alloy = theme.Detail:Lerp(Color3.fromRGB(164, 174, 168), 0.25)
+    local seaGlass = theme.Accent:Lerp(Color3.fromRGB(206, 229, 216), 0.24)
+    local castShadow = tier.Name == "High"
+
+    makePart("HarborHeroPierFoundation", Vector3.new(23, 2.0, 8.8),
+        frame * CFrame.new(0, 1.4, 0), dark,
+        Enum.Material.Concrete, 0.08, castShadow)
+    for side = -1, 1, 2 do
+        makePart(side < 0 and "HarborHeroPortLeg" or "HarborHeroStarboardLeg",
+            Vector3.new(2.2, 19, 2.4),
+            frame * CFrame.new(side * 7.8, 11.5, 0),
+            steel, Enum.Material.CorrodedMetal, 0.04, castShadow)
+    end
+    makePart("HarborHeroGantryCrosshead", Vector3.new(19.5, 1.8, 3.0),
+        frame * CFrame.new(0, 21.5, 0), alloy,
+        Enum.Material.DiamondPlate, 0.06, castShadow)
+    makePart("HarborHeroSignalCabin", Vector3.new(9.5, 5.7, 6.5),
+        frame * CFrame.new(0, 25.2, 0), steel,
+        Enum.Material.Metal, 0.05, castShadow)
+    makePart("HarborHeroRadarMast", Vector3.new(0.9, 9.5, 0.9),
+        frame * CFrame.new(0, 32.9, 0), alloy,
+        Enum.Material.Metal, 0.05, castShadow)
+
+    -- Animated by the existing arena-hero-motion owner (no second loop).
+    makePart("HarborHeroRadarArm", Vector3.new(11.5, 0.48, 0.6),
+        frame * CFrame.new(0, 37.7, 0), alloy,
+        Enum.Material.Metal, 0.08, false)
+    local lens = makePart("HarborHeroStormLens", Vector3.new(2.6, 2.6, 2.6),
+        frame * CFrame.new(0, 39.8, 0),
+        seaGlass, Enum.Material.Glass,
+        tier.Name == "Low" and 0.42 or 0.24, false)
+    lens.Shape = Enum.PartType.Ball
+
+    if tier.Name == "Low" then return end
+
+    -- Cargo gear is sculptural and cosmetic: the cables/weights never
+    -- move a collider, generate a falling crate or alter hazard damage.
+    makePart("HarborHeroCabinRoof", Vector3.new(11.0, 0.7, 8.2),
+        frame * CFrame.new(0, 28.35, 0),
+        dark, Enum.Material.CorrodedMetal, 0.06, castShadow)
+    makePart("HarborHeroHoistPost", Vector3.new(2.0, 20.5, 2.1),
+        frame * CFrame.new(15.2, 11.8, 0), steel,
+        Enum.Material.Metal, 0.05, castShadow)
+    makePart("HarborHeroHoistBoom", Vector3.new(18.8, 1.25, 1.55),
+        frame * CFrame.new(15.2, 22.2, 0), alloy,
+        Enum.Material.Metal, 0.07, castShadow)
+    makePart("HarborHeroHoistCable", Vector3.new(0.30, 11, 0.30),
+        frame * CFrame.new(22.5, 16.0, 0), dark,
+        Enum.Material.Metal, 0.08, false)
+    makePart("HarborHeroHoistWeight", Vector3.new(3.6, 2.3, 3.5),
+        frame * CFrame.new(22.5, 9.7, 0), steel,
+        Enum.Material.CorrodedMetal, 0.06, castShadow)
+    for side = -1, 1, 2 do
+        makeWedge(side < 0 and "HarborHeroPortKnee" or "HarborHeroStarboardKnee",
+            Vector3.new(4.5, 8, 1.1),
+            frame * CFrame.new(side * 7.3, 17.0, 0)
+                * CFrame.Angles(0, 0, math.rad(side * 22)),
+            alloy, Enum.Material.DiamondPlate, 0.12, false)
+    end
+
+    if tier.Name ~= "High" then return end
+
+    -- High-only maritime mechanical depth; native metal, no fake lights.
+    for side = -1, 1, 2 do
+        makePart(side < 0 and "HarborHeroSignalRailPort" or "HarborHeroSignalRailStarboard",
+            Vector3.new(0.28, 4.5, 0.28),
+            frame * CFrame.new(side * 4.5, 29.4, -2.3),
+            alloy, Enum.Material.Metal, 0.13, false)
+        makePart(side < 0 and "HarborHeroHoistTrussPort" or "HarborHeroHoistTrussStarboard",
+            -- Align the steel truss with the REAL horizontal X boom,
+            -- not across the sideways dock axis.
+            Vector3.new(14.2, 2.2, 0.52),
+            frame * CFrame.new(15.2, 23.2, side * 0.9)
+                * CFrame.Angles(0, 0, math.rad(side * 9)),
+            dark, Enum.Material.Metal, 0.15, false)
+    end
+    makePart("HarborHeroCabinPanorama", Vector3.new(7.6, 2.1, 0.18),
+        frame * CFrame.new(0, 26.0, -3.33), seaGlass,
+        Enum.Material.Glass, 0.33, false)
+end
+
 local function rebuild()
     clear()
 
@@ -1078,6 +1168,8 @@ local function rebuild()
         buildCrossroads(base, theme, tier)
     elseif variant == "Orbital" then
         buildOrbital(base, theme, tier)
+    elseif variant == "Harbor" then
+        buildHarbor(base, theme, tier)
     else
         buildClassic(base, theme, tier)
     end
