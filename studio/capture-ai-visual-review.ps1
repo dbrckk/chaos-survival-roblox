@@ -68,14 +68,6 @@ function Read-CurrentRunOutcome {
 function Read-Output {
     $builder = [System.Text.StringBuilder]::new()
     [void]$builder.Append((Read-CurrentRunOutcome))
-    foreach ($path in @()) {
-        if (Test-Path $path) {
-            try {
-                [void]$builder.AppendLine((Get-Content -LiteralPath $path -Raw -ErrorAction Stop))
-            }
-            catch {}
-        }
-    }
     # Child Studio client/server DataModels sometimes log only to their
     # separate Roblox log files, not the outer RunScript output stream.
     # Inspect only new local Studio logs and never upload account secrets.
