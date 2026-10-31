@@ -22,6 +22,21 @@ local resolvedRound = nil
 local folder = Instance.new("Folder")
 folder.Name = "RoundCelebrationPulsesLocal"
 folder.Parent = workspace
+-- Emission attachments must live on the humanoid root. Track them
+-- separately so result/round transitions remove the bursts immediately
+-- rather than leaving old winner particles on the next playable round.
+-- Weak keys allow Debris-owned expired attachments to be collected.
+local activeBursts = setmetatable({}, {__mode = "k"})
+
+local function clearVisuals()
+    folder:ClearAllChildren()
+    for attachment in pairs(activeBursts) do
+        activeBursts[attachment] = nil
+        if attachment.Parent then
+            attachment:Destroy()
+        end
+    end
+end
 
 local function profile()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -69,6 +84,7 @@ local function makeBurst(root, color, count, speed)
     attachment.Name = "LocalRoundCelebration"
     attachment.Position = Vector3.new(0, 0.2, 0)
     attachment.Parent = root
+    activeBursts[attachment] = true
 
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "CelebrationBurst"
@@ -257,13 +273,19 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     if phase ~= "result" then
         if previousPhase == "result" then
-            -- Do not carry an old victory decoration into vote/READY.
-            folder:ClearAllChildren()
+            -- Neither a ground ring nor a character-root burst belongs
+            -- to the next vote, READY or live match.
+            clearVisuals()
         end
         return
     end
     if number and observedRound and number < observedRound then
         return
+    end
+    if previousPhase == "result" and observedRound ~= previousRound then
+        -- A new numbered result can replace an old result without an
+        -- intervening phase event. Never carry its particles forward.
+        clearVisuals()
     end
     if number and number >= 1 and number < math.huge
         and number == math.floor(number) then
