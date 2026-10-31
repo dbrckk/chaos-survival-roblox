@@ -14,6 +14,7 @@ local attachment = nil
 local emitter = nil
 local paintedPrimary = nil
 local paintedSecondary = nil
+local palettePainted = false
 
 local function tier()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
@@ -27,6 +28,7 @@ local function destroyEmitter()
     emitter = nil
     paintedPrimary = nil
     paintedSecondary = nil
+    palettePainted = false
 end
 
 local function ensureEmitter()
@@ -90,8 +92,9 @@ local function refresh()
     local ids = type(state.disasterIds) == "table" and state.disasterIds or {}
     local primaryId = type(ids[1]) == "string" and ids[1] or nil
     local secondaryId = type(ids[2]) == "string" and ids[2] or nil
-    if primaryId ~= paintedPrimary or secondaryId ~= paintedSecondary then
-        local profile = DisasterVisuals.combine(ids)
+    if not palettePainted
+        or primaryId ~= paintedPrimary or secondaryId ~= paintedSecondary then
+        local profile = DisasterVisuals.combine({primaryId, secondaryId})
         local secondary = secondaryId and DisasterVisuals.get(secondaryId) or nil
         local primaryColor = profile and profile.Accent
             or Color3.fromRGB(95, 185, 255)
@@ -102,6 +105,7 @@ local function refresh()
             ColorSequenceKeypoint.new(1, secondaryColor),
         })
         paintedPrimary, paintedSecondary = primaryId, secondaryId
+        palettePainted = true
     end
 
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
