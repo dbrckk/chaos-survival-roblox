@@ -1,6 +1,7 @@
 -- Pure transform/layout rules for client-only event atmosphere.
 -- Every position is authored in the arena's local deck coordinates.
 local DisasterAtmosphereLayout = {}
+local DisasterCosmeticRules = require(script.Parent.DisasterCosmeticRules)
 
 function DisasterAtmosphereLayout.point(baseFrame, baseSize, angle, radius, height)
     if typeof(baseFrame) ~= "CFrame" or typeof(baseSize) ~= "Vector3"
@@ -122,9 +123,15 @@ end
 function DisasterAtmosphereLayout.particleMultiplier(simultaneous, finalRush)
     local count = tonumber(simultaneous) or 1
     if count ~= count or count < 0 or count == math.huge then count = 1 end
-    if count >= 3 then return finalRush == true and 0.80 or 0.70 end
-    if count >= 2 then return finalRush == true and 1.00 or 0.85 end
-    return finalRush == true and 1.45 or 1
+    if finalRush == true then
+        -- Preserve the existing authored final-rush contrast ratios.
+        if count >= 3 then return 0.80 end
+        if count >= 2 then return 1.00 end
+        return 1.45
+    end
+    -- A single shared pressure table now constrains this ambient renderer
+    -- and the Lava/Freeze optional emitters simultaneously.
+    return DisasterCosmeticRules.pressureMultiplier(count)
 end
 
 return DisasterAtmosphereLayout
