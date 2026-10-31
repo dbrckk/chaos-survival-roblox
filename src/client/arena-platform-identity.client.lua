@@ -319,18 +319,19 @@ local function decorateTakeoff(platform, target, index, theme, quality)
     routeCueStates[platform] = {target = target, strokes = strokes}
 end
 
-local function syncTakeoff(platform)
+local function syncTakeoff(platform, center, variant)
     local cue = routeCueStates[platform]
     if not cue then return end
-    local target = cue.target
-    local valid = platform.Parent ~= nil
-        and target.Parent == platform.Parent
-        and platform.CanCollide and target.CanCollide
-        and platform:GetAttribute("CollapsePhase") == nil
-        and target:GetAttribute("CollapsePhase") == nil
+    -- A shrinking deck can retain collision but lose the original gap:
+    -- do not continue to advertise a now-impossible jump on Android.
+    local valid = JumpRouteCueRules.cueStillSafe(
+        platform, cue.target, center, variant
+    )
     for _, stroke in ipairs(cue.strokes) do
-        stroke.Transparency = valid
-            and stroke:GetAttribute("ChaosBaseTransparency") or 1
+        if stroke.Parent then
+            stroke.Transparency = valid
+                and stroke:GetAttribute("ChaosBaseTransparency") or 1
+        end
     end
 end
 
@@ -438,14 +439,22 @@ local function rebuild()
                     visualsByPlatform[platform],
                     platform:GetAttribute("CollapsePhase")
                 )
-                syncTakeoff(platform)
+                syncTakeoff(platform, base.Position, variant)
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
             if target then
+                -- Size can shrink without any CollapsePhase change.
+                -- Each signal rechecks this ONE verified pair; no polling,
+                -- arena-wide rebuild or per-frame update is introduced.
                 routeTargetConnections[platform] = {
+                    platform:GetPropertyChangedSignal("Size"):Connect(syncCollapse),
+                    platform:GetPropertyChangedSignal("CanCollide"):Connect(syncCollapse),
+                    platform:GetPropertyChangedSignal("Transparency"):Connect(syncCollapse),
                     target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse),
+                    target:GetPropertyChangedSignal("Size"):Connect(syncCollapse),
                     target:GetPropertyChangedSignal("CanCollide"):Connect(syncCollapse),
+                    target:GetPropertyChangedSignal("Transparency"):Connect(syncCollapse),
                 }
             end
             syncCollapse()
