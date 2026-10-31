@@ -25,3 +25,14 @@ This produces visible low-quality scene popping when crossing the arena, and unn
 3. Verify the server original `ArenaHeroArchitecture3D` uses its actual Model pivot for Medium visibility while Low keeps only `HeroSilhouetteEssential` marked components and High is fully visible.
 4. Validate latest exact source SHA with existing Build Validation + all five Roblox Open Cloud engine suites before a public update, and independently verify real Android FPS and appearance.
 5. No screenshot, full engine test, mobile thermal certification or public Roblox publication is claimed by this source-only patch.
+
+
+## Animation/LOD coherence follow-up (31 October 2026)
+
+After the original visual-position fix, a remaining mismatch was found in the **actual** client script. The existing 5 Hz animation loop still gated *all* Classic scanner, Towers lift, Crossroads signal, Orbital collar and Harbor cargo movements using **camera distance to the center of the arena**. On a 320-stud floor, this could stop motion in an outboard prop that was still visibly within its real-world Medium LOD range; conversely, it kept updating Part CFrames on distant hidden props while the camera remained near the arena center.
+
+The same animation loop now reads the already-published `CosmeticWorldOrigin` Vector3 (safe Base fallback during stream-in) and evaluates **the same real outboard location** as scenery LOD. On Medium it keeps the animation budget active through the existing `SceneryLodRules.Hysteresis` (220+8 studs), avoiding a visible static band in which a previously visible prop has not yet been hidden. The High-tier cosmetic animation stays limited to 220 studs as before. Any individual Part whose `SceneryLodHidden` attribute is `true` no longer receives CFrame/transparency animation writes; it resumes from the mathematically current motion phase when the existing LOD returns it to view.
+
+**Budget/safety:** zero new Parts, no new time loop, no animation frequency increase, no server changes, no physics, collision or hazards, no changes to VFX-tier choice or ReduceMotion. The existing `restoreMotion()` remains responsible for static reduced-motion representation.
+
+**Milestone evidence:** verify the five original animations from an Android/Studio camera **near each outboard hero but far from the center**. In particular, check Towers moving counterweight and Harbor hanging cargo from a nearby rim, then check that a hidden prop is not needlessly animated. This is a source-only correction until real authenticated visual evidence is collected.
