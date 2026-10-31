@@ -2,6 +2,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local DisasterResidue = require(ReplicatedStorage.Shared.DisasterResidue)
 local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules)
@@ -26,7 +27,10 @@ local lastRoundNumber = nil
 local roundToken = 0
 
 local function tier()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    -- Android must not start with a temporary desktop High residue budget.
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
 end
 
 local function clearResidue(duration)
@@ -201,18 +205,24 @@ local function impactBudget(profile)
     return 52
 end
 
-local function trimBudget()
-    local children = folder:GetChildren()
-    local limit = impactBudget(tier())
-    if #children <= limit then
-        return
-    end
+local function remainingParts(limit)
+    return math.max(0, limit - #folder:GetChildren())
+end
 
+local function trimBudget(reserve)
+    local children = folder:GetChildren()
+    local totalLimit = impactBudget(tier())
+    local reserved = math.clamp(math.floor(tonumber(reserve) or 0), 0, totalLimit)
+    local limit = totalLimit - reserved
+    if #children <= limit then return end
+
+    -- Make space BEFORE spawning another impact or result motif. Otherwise
+    -- Double Chaos could allocate 6 new pieces and destroy 6 old pieces on
+    -- each impact, spiking Android instance churn above the live cap.
     table.sort(children, function(a, b)
         return (a:GetAttribute("ResidueCreatedAt") or 0)
             < (b:GetAttribute("ResidueCreatedAt") or 0)
     end)
-
     for i = 1, #children - limit do
         children[i]:Destroy()
     end
@@ -292,6 +302,10 @@ local function impactResidue(payload)
     local frame = flatCFrame(surface, normal, 0)
     local radius = math.max(2, ImpactSetpieceRules.safeRadius(payload.radius))
     local reduced = player:GetAttribute("ReduceMotion") == true
+    local expectedPieces = 1 + (reduced and 0
+        or (quality.Name == "High" and 5
+            or (quality.Name == "Medium" and 3 or 0)))
+    trimBudget(expectedPieces)
     local pieces = ImpactSurfaceScarKit.build(
         folder, frame, kind, quality.Name,
         groundMaterial, groundColor, profile.Color, radius, reduced
@@ -338,6 +352,8 @@ local function warningResidue(instance)
             return
         end
 
+        local capacity = impactBudget(quality)
+        if remainingParts(capacity) < 1 then return end
         makeDisc(
             id .. "PulseResidue",
             position,
@@ -348,20 +364,21 @@ local function warningResidue(instance)
         )
 
         if quality.Name == "High" then
-            makeCracks(
-                id .. "PulseTrace",
-                position,
-                id == "Freeze" and 5.5 or 4.2,
-                profile,
-                4,
-                2.2
-            )
+            local cracks = math.min(4, remainingParts(capacity))
+            if cracks > 0 then
+                makeCracks(
+                    id .. "PulseTrace",
+                    position,
+                    id == "Freeze" and 5.5 or 4.2,
+                    profile, cracks, 2.2
+                )
+            end
         end
         trimBudget()
     end)
 end
 
-local function resultResidueFor(id, index, count, base, quality)
+local function resultResidueFor(id, index, count, base, quality, partLimit)
     local profile = DisasterResidue.get(id)
     if not profile then
         return
@@ -374,6 +391,7 @@ local function resultResidueFor(id, index, count, base, quality)
     local lifetime = quality.Name == "Low" and 2.2 or 3.8
 
     for i = 1, perDisaster do
+        if remainingParts(partLimit) == 0 then return end
         local seed = i + index * 11
         local x = ((((seed * 37) % 101) / 100) * 2 - 1) * halfX * 0.68
         local z = ((((seed * 53) % 97) / 96) * 2 - 1) * halfZ * 0.68
@@ -382,6 +400,11 @@ local function resultResidueFor(id, index, count, base, quality)
             Vector3.new(x, base.Size.Y * 0.5 + 0.08, z))
 
         if AftermathSurfaceKit.names(id) ~= nil then
+            -- One motif is a coherent 2/3/4-piece silhouette. Do not
+            -- construct and immediately evict its pieces above the cap.
+            if remainingParts(partLimit) < AftermathSurfaceKit.count(quality.Name) then
+                return
+            end
             local surface, normal = surfaceAt(position)
             if surface then
                 local frame = flatCFrame(surface, normal, (seed * 47) % 180)
@@ -436,29 +459,31 @@ local function resultResidueFor(id, index, count, base, quality)
                     or profile.Kind == "scorch"
                     or profile.Kind == "shock")
             then
-                makeCracks(
-                    id .. "ResultCrack" .. i .. "_",
-                    position,
-                    diameter * 0.72,
-                    profile,
-                    3,
-                    lifetime
-                )
-                makeFragments(
-                    position,
-                    diameter * 0.62,
-                    profile,
+                local cracks = math.min(3, remainingParts(partLimit))
+                if cracks > 0 then
+                    makeCracks(
+                        id .. "ResultCrack" .. i .. "_",
+                        position, diameter * 0.72, profile, cracks, lifetime
+                    )
+                end
+                local fragments = math.min(
                     profile.Kind == "shock" and 2 or 3,
-                    lifetime
+                    remainingParts(partLimit)
                 )
+                if fragments > 0 then
+                    makeFragments(
+                        position, diameter * 0.62, profile,
+                        fragments, lifetime
+                    )
+                end
             elseif quality.Name == "High" and profile.Kind == "frost" then
-                makeFragments(
-                    position,
-                    diameter * 0.50,
-                    profile,
-                    3,
-                    lifetime
-                )
+                local fragments = math.min(3, remainingParts(partLimit))
+                if fragments > 0 then
+                    makeFragments(
+                        position, diameter * 0.50, profile,
+                        fragments, lifetime
+                    )
+                end
             end
         end
     end
@@ -468,10 +493,16 @@ local function playResultResidue()
     local base = arenaBase()
     if not base then return false end
     local quality = tier()
+    local partLimit = impactBudget(quality)
+    -- Prioritize short-lived result motifs over obsolete impact scars, but
+    -- allocate no more than the same live per-tier Part limit.
+    local expected = DisasterResidue.resultBudget(quality.Name)
+        * AftermathSurfaceKit.count(quality.Name)
+    trimBudget(math.min(partLimit, expected))
     for index, id in ipairs(lastIds) do
-        resultResidueFor(id, index, #lastIds, base, quality)
+        if remainingParts(partLimit) == 0 then break end
+        resultResidueFor(id, index, #lastIds, base, quality, partLimit)
     end
-    trimBudget()
     return true
 end
 
