@@ -140,6 +140,7 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 bindCamera()
 
 local currentPhase = "waiting"
+local lastRoundNumber = nil
 local finalRush = false
 local warningStates = {}
 local pendingWarnings = {}
@@ -472,15 +473,31 @@ for _, child in ipairs(workspace:GetChildren()) do
 end
 
 stateEvent.OnClientEvent:Connect(function(state)
-    if type(state) ~= "table" then return end
-    currentPhase = tostring(state.phase or "waiting")
-    finalRush = state.finalRush == true
-
-    if currentPhase ~= "round" then
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local roundNumber = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if roundNumber and lastRoundNumber and roundNumber < lastRoundNumber then
+        -- Do not resurrect offscreen arrows or obsolete "JUMP!" prompts
+        -- when a delayed previous-round packet arrives during results.
+        return
+    end
+    local newRound = roundNumber ~= nil and lastRoundNumber ~= nil
+        and roundNumber ~= lastRoundNumber
+    if roundNumber then lastRoundNumber = roundNumber end
+    local nextPhase = state.phase
+    if nextPhase ~= currentPhase or newRound then
         showUrgentCue(false)
         offscreenArrow.Visible = false
         hideAllStates()
-    elseif ensureRenderLoop then
+    end
+    currentPhase = nextPhase
+    finalRush = currentPhase == "round" and state.finalRush == true
+
+    if currentPhase == "round" and ensureRenderLoop then
         ensureRenderLoop()
     end
 end)
