@@ -32,6 +32,15 @@ function ArenaMaterialRules.targetMaterial(variant, originalMaterial, bucket, ti
         then
             return Enum.Material.Metal
         end
+    elseif id == "Harbor" then
+        -- Explicit maritime wear, not the Classic signal-grid fallback.
+        -- Keep deliberately authored smooth covers instead of converting
+        -- them into radar-style metal; timber is never eligible here.
+        if originalMaterial == Enum.Material.Metal then
+            return Enum.Material.CorrodedMetal
+        elseif originalMaterial == Enum.Material.DiamondPlate then
+            return Enum.Material.Metal
+        end
     else
         if originalMaterial == Enum.Material.Metal then
             return Enum.Material.DiamondPlate
