@@ -37,6 +37,14 @@ local function destroyNames(model, names)
     end
 end
 
+local function countOwned(model, names)
+    local count = 0
+    for _, name in ipairs(names) do
+        if owned(model, name) then count += 1 end
+    end
+    return count
+end
+
 local function add(model, origin, name, kind, size, localFrame,
     color, material, requiredTier)
     local existing = owned(model, name)
@@ -175,10 +183,10 @@ function DistrictFacadeDetailKit.sync(model, tierName, visible, distance)
     makeMedium(model, origin, steel, alloy, finish)
     if tierName == "High" then
         makeHigh(model, origin, steel, dark, alloy, slot)
-        return 6
+        return countOwned(model, MEDIUM) + countOwned(model, HIGH[slot])
     end
     destroyNames(model, HIGH[slot])
-    return 4
+    return countOwned(model, MEDIUM)
 end
 
 return DistrictFacadeDetailKit
