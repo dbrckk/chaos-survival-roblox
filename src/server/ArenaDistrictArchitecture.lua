@@ -4,6 +4,9 @@
 -- volumetric foundation, pitched metal, layered housing and a landmark top.
 -- All pieces are inert scenery: no collisions, touch, queries, scripts,
 -- physics ownership, particles or lights. Client LOD controls mobile cost.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DistrictFacadeStyles = require(ReplicatedStorage.Shared.DistrictFacadeStyles)
+
 local ArenaDistrictArchitecture = {}
 
 -- Four navigable sectors need distinct silhouettes AND distinct color IDs.
@@ -17,25 +20,9 @@ local SECTOR_COLOR = {
     West = Color3.fromRGB(166, 150, 239),  -- indigo / communications
 }
 
--- Variant-specific physical finish on the same eight collisionless door Parts.
--- This changes neither geometry allocations nor parkour collision.
-local FACADE_FINISH = {
-    Classic = {recess = Enum.Material.CorrodedMetal, door = Enum.Material.DiamondPlate,
-        lintel = Enum.Material.Metal, canopy = Enum.Material.Metal,
-        hardware = Enum.Material.Metal, canopyDepth = 1.85},
-    Towers = {recess = Enum.Material.Metal, door = Enum.Material.Foil,
-        lintel = Enum.Material.DiamondPlate, canopy = Enum.Material.DiamondPlate,
-        hardware = Enum.Material.Metal, canopyDepth = 2.45},
-    Crossroads = {recess = Enum.Material.CorrodedMetal, door = Enum.Material.DiamondPlate,
-        lintel = Enum.Material.CorrodedMetal, canopy = Enum.Material.Concrete,
-        hardware = Enum.Material.CorrodedMetal, canopyDepth = 2.20},
-    Orbital = {recess = Enum.Material.CeramicTiles, door = Enum.Material.CeramicTiles,
-        lintel = Enum.Material.Metal, canopy = Enum.Material.CeramicTiles,
-        hardware = Enum.Material.Metal, canopyDepth = 2.0},
-    Harbor = {recess = Enum.Material.CorrodedMetal, door = Enum.Material.CorrodedMetal,
-        lintel = Enum.Material.CorrodedMetal, canopy = Enum.Material.WoodPlanks,
-        hardware = Enum.Material.CorrodedMetal, canopyDepth = 3.0},
-}
+-- Materials are shared by structural server masses and client-only detail.
+-- Shared source prevents Orbital ceramics / Harbor timber from becoming
+-- reflective generic metal when higher tiers are rendered locally.
 
 local function element(model, origin, name, kind, size, localFrame, color, material)
     local piece = Instance.new(kind or "Part")
@@ -139,69 +126,32 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
     -- are cosmetic: they do not alter stairs, parkour, sweeps or collision.
     -- Two large door masses remain on Low; six smaller hardware details
     -- are progressively revealed by the existing client scenery LOD.
-    local finish = FACADE_FINISH[variantId] or FACADE_FINISH.Classic
-    local function facadePart(name, size, frame, color, material, minimumTier)
-        local part = make(name, "Part", size, frame, color, material)
-        if minimumTier then
-            part:SetAttribute("SceneryMinimumTier", minimumTier)
-        end
-        -- Concrete/timber should remain genuinely concrete/timber, not
-        -- receive a metallic 2K MaterialVariant from the shared PBR pass.
-        if material == Enum.Material.Concrete
-            or material == Enum.Material.WoodPlanks then
-            part:SetAttribute("PreserveNativeMaterial", true)
-        end
-        return part
-    end
-    facadePart("ServiceEntryRecess", Vector3.new(5.8, 5.2, 0.48),
+    local finish = DistrictFacadeStyles[variantId] or DistrictFacadeStyles.Classic
+    -- The recessed doorway and its armored leaf are the only TWO server-
+    -- replicated facade Parts. Keep their exact transforms, names, materials
+    -- and PBR eligibility. Extra lintel/canopy/hydraulics/profile hardware
+    -- are noninteractive and are now built locally near the player's
+    -- camera on Medium/High, not replicated 16 x 6 times to every Android.
+    -- The client recovers origin from ServiceEntryDoor.CFrame; only a small
+    -- variant string and version marker cross the network.
+    local recess = make("ServiceEntryRecess",
+        "Part", Vector3.new(5.8, 5.2, 0.48),
         CFrame.new(0, 4.0, -4.02), dark, finish.recess)
-    facadePart("ServiceEntryDoor", Vector3.new(4.65, 4.68, 0.18),
+    local door = make("ServiceEntryDoor",
+        "Part", Vector3.new(4.65, 4.68, 0.18),
         CFrame.new(-0.35, 4.0, -4.36), steel, finish.door)
-    facadePart("ServiceEntryLintel", Vector3.new(6.7, 0.62, 0.95),
-        CFrame.new(0, 6.98, -4.13), alloy, finish.lintel, "Medium")
-    facadePart("ServiceEntryCanopy",
-        Vector3.new(7.6, 0.38, finish.canopyDepth),
-        CFrame.new(0, 7.45, -4.57), steel, finish.canopy, "Medium")
-    for _, direction in ipairs({-1, 1}) do
-        facadePart("PortalHydraulicColumn" .. tostring(direction),
-            Vector3.new(0.42, 5.25, 0.42),
-            CFrame.new(direction * 3.35, 4.08, -4.20),
-            alloy, finish.hardware, "Medium")
+    if recess.Material == Enum.Material.Concrete
+        or recess.Material == Enum.Material.WoodPlanks then
+        recess:SetAttribute("PreserveNativeMaterial", true)
     end
-
-    -- Two High-only profile accents per building. Authored silhouettes
-    -- differ across all four slots, and match their existing roof uses.
-    if slot == 1 then
-        for _, direction in ipairs({-1, 1}) do
-            facadePart("SurveyInstrumentCabinet" .. tostring(direction),
-                Vector3.new(1.15, 3.3, 1.45),
-                CFrame.new(direction * 5.4, 10.1, -2.1),
-                dark, Enum.Material.CorrodedMetal, "High")
-        end
-    elseif slot == 2 then
-        for _, direction in ipairs({-1, 1}) do
-            facadePart("FreightWinchHousing" .. tostring(direction),
-                Vector3.new(2.1, 1.9, 1.6),
-                CFrame.new(direction * 5.15, 16.2, -2.0),
-                alloy, Enum.Material.DiamondPlate, "High")
-        end
-    elseif slot == 3 then
-        for _, direction in ipairs({-1, 1}) do
-            facadePart("TurbineDuctCollar" .. tostring(direction),
-                Vector3.new(1.7, 2.8, 2.7),
-                CFrame.new(direction * 3.4, 17.2, -1.6),
-                steel, Enum.Material.CorrodedMetal, "High")
-        end
-    else
-        for _, direction in ipairs({-1, 1}) do
-            facadePart("AerialCableConduit" .. tostring(direction),
-                Vector3.new(0.56, 8.8, 0.56),
-                CFrame.new(direction * 5.0, 15.7, -2.0)
-                    * CFrame.Angles(0, 0, math.rad(direction * 15)),
-                alloy, Enum.Material.Metal, "High")
-        end
+    if door.Material == Enum.Material.Concrete
+        or door.Material == Enum.Material.WoodPlanks then
+        door:SetAttribute("PreserveNativeMaterial", true)
     end
-    model:SetAttribute("FacadeDetailPieceCount", 8)
+    model:SetAttribute("FacadeVisualVersion", 1)
+    model:SetAttribute("FacadeVariantId", variantId)
+    model:SetAttribute("FacadeDetailPieceCount", 2)
+    model:SetAttribute("FacadeOptionalLocalPartBudget", 6)
 
     -- ONE architectural sign per sector, on the building already facing
     -- the playable center. The codes are language-independent and legible
