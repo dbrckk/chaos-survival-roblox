@@ -64,7 +64,28 @@ function PbrDistrictRules.isAuthoredHarborVesselOwner(owner)
         and arena.Name == "Arena"
 end
 
+-- The five original arena hero architectures are authored as local
+-- BaseParts directly under ONE exact workspace Folder, not as Models.
+-- Require a distinct marker and exact parent to avoid accidentally
+-- granting approved textures to arbitrary Workspace scenery.
+function PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner)
+    return typeof(owner) == "Instance"
+        and owner:IsA("Folder")
+        and owner.Name == "ArenaArchitecturalDetailsLocal"
+        and owner.Parent == workspace
+        and owner:GetAttribute("CosmeticOnly") == true
+        and owner:GetAttribute("OriginalHeroArchitecture") == true
+end
+
 function PbrDistrictRules.ownerLimit(tierName, owner)
+    if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
+        -- Only ONE arena's original local architecture exists at a time.
+        -- Use three large surfaces on Medium, eight on High; all also
+        -- compete within the unchanged global 32/72 Android limits.
+        if tierName == "High" then return 8 end
+        if tierName == "Medium" then return 3 end
+        return 0
+    end
     if PbrDistrictRules.isApprovedImportedFoundationOwner(owner) then
         -- A total of eight imported 3D assets cannot exhaust the Android
         -- global pool: max one support each on Medium, two on High.
@@ -148,6 +169,9 @@ function PbrDistrictRules.withinDistance(part, cameraPosition, tierName, touch)
 end
 
 function PbrDistrictRules.eligibleOwner(owner)
+    if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
+        return true
+    end
     if not owner or not owner:IsA("Model") then return false end
     if PbrDistrictRules.isApprovedImportedFoundationOwner(owner) then
         return true
@@ -210,6 +234,22 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
     -- if it has no SurfaceAppearance. Only locally authored and explicitly
     -- tagged structural foundations inside approved packages qualify.
     local owner = part.Parent
+    if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
+        -- The dedicated hero owner can include concrete, timber, glass,
+        -- lights and metallic components. Only the locally tagged
+        -- original metal/ceramic surfaces may consume its PBR quota.
+        -- Foil is needed for a surface already owned by our titanium
+        -- variant on the next incremental reconciliation.
+        local metal = part.Material
+        if part:GetAttribute("OriginalHeroPbrSurface") ~= true
+            or (metal ~= Enum.Material.Metal
+                and metal ~= Enum.Material.CorrodedMetal
+                and metal ~= Enum.Material.DiamondPlate
+                and metal ~= Enum.Material.CeramicTiles
+                and metal ~= Enum.Material.Foil) then
+            return false
+        end
+    end
     if owner and owner:IsA("Model")
         and owner:GetAttribute("Original3DAssetId") ~= nil then
         if not PbrDistrictRules.isApprovedImportedFoundationOwner(owner)
@@ -366,6 +406,11 @@ function PbrDistrictRules.selectionPriority(
     -- visible nearby playable districts. The cargo ship gets a slightly
     -- bigger penalty than narrow crane housings; its giant surface area
     -- must not evict the actual jump-route art from Android's global pool.
+    if PbrDistrictRules.isAuthoredHeroArchitectureOwner(part.Parent) then
+        -- Outboard setpieces get the leftover pool after the nearer,
+        -- playable district facades. They never raise global GPU caps.
+        score -= 800
+    end
     if PbrDistrictRules.isAuthoredHarborVesselOwner(part.Parent) then
         score -= 1050
     elseif PbrDistrictRules.isAuthoredHarborGantryOwner(part.Parent) then
