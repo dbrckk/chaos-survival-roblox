@@ -22,6 +22,16 @@ local function eligible(part)
         return false
     end
 
+    -- Preserve imported/UV-authored mesh finishing and project-owned
+    -- MaterialVariants. A cosmetic color jitter must not overwrite the
+    -- original PBR/SurfaceAppearance or authored native material.
+    if part:IsA("MeshPart")
+        or part:FindFirstChildOfClass("SurfaceAppearance") ~= nil
+        or part.MaterialVariant ~= ""
+        or part:GetAttribute("PreserveNativeMaterial") == true then
+        return false
+    end
+
     if part.Material == Enum.Material.Neon then
         return false
     end
