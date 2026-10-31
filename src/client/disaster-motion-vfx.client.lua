@@ -358,6 +358,17 @@ local function applyState(state)
 end
 
 stateEvent.OnClientEvent:Connect(applyState)
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name ~= "GeneratedMap" then return end
+    -- A streamed-out/rotated arena must not retain its old locally
+    -- constructed shrinking perimeter or darkness guidance pillars.
+    if shrinkBase and shrinkBase:IsDescendantOf(child) then
+        clearShrink()
+    end
+    if blackoutBase and blackoutBase:IsDescendantOf(child) then
+        clearBlackout()
+    end
+end)
 player.CharacterAdded:Connect(function()
     task.wait(0.15)
     rebuildCharacterEffects()
