@@ -196,26 +196,53 @@ jobs:
             Start-Sleep -Seconds 3
           }
           if (!$studio) { throw "Roblox Studio installer did not complete within six minutes." }
-          $exeSig = Get-AuthenticodeSignature $studio
-          if ($exeSig.Status -ne "Valid" -or $exeSig.SignerCertificate.Subject -notmatch "Roblox") {
-            throw "Installed Roblox Studio executable signature invalid."
+          # Roblox's installer can expose RobloxStudioBeta.exe in the
+          # Versions folder BEFORE releasing its exclusive write lock.
+          # The 31 Oct visual QA failed here with "being used by another
+          # process", despite the installer and signed source succeeding.
+          # Retry ONLY this transient file-sharing failure, never an
+          # invalid signature or an untrusted signing publisher.
+          $signedStudio = (Resolve-Path -LiteralPath $studio).Path
+          $signedDigest = $null
+          $verified = $false
+          $verifyDeadline = (Get-Date).AddSeconds(90)
+          while ((Get-Date) -lt $verifyDeadline) {
+            try {
+              $exeSig = Get-AuthenticodeSignature -LiteralPath $signedStudio -ErrorAction Stop
+              if ($exeSig.Status -ne "Valid" -or
+                  $exeSig.SignerCertificate.Subject -notmatch "Roblox") {
+                throw "Installed Roblox Studio executable signature invalid."
+              }
+              # Attest the exact, now-readable signed file. If the installer
+              # still owns it exclusively, retry both steps together.
+              $signedStream = [System.IO.File]::OpenRead($signedStudio)
+              try {
+                $sha256 = [System.Security.Cryptography.SHA256]::Create()
+                try {
+                  $signedDigest = [BitConverter]::ToString(
+                    $sha256.ComputeHash($signedStream)
+                  ).Replace("-", "")
+                }
+                finally { $sha256.Dispose() }
+              }
+              finally { $signedStream.Dispose() }
+              $verified = $true
+              break
+            }
+            catch {
+              $message = [string]$_.Exception.Message
+              if ($message -notmatch 'being used by another process|sharing violation|file is in use') {
+                throw
+              }
+              Write-Host "Roblox installer holds a temporary file lock; retrying signed binary verification."
+              Start-Sleep -Seconds 3
+            }
+          }
+          if (-not $verified) {
+            throw "Roblox Studio installer did not release the signed binary within 90 seconds."
           }
           Get-Process -Name "RobloxStudioBeta" -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
-          # Attest exact official executable after Windows Authenticode
-          # verification, BEFORE launching interactive RDP PowerShell.
-          $signedStudio = (Resolve-Path -LiteralPath $studio).Path
-          $signedStream = [System.IO.File]::OpenRead($signedStudio)
-          try {
-            $sha256 = [System.Security.Cryptography.SHA256]::Create()
-            try {
-              $signedDigest = [BitConverter]::ToString(
-                $sha256.ComputeHash($signedStream)
-              ).Replace("-", "")
-            }
-            finally { $sha256.Dispose() }
-          }
-          finally { $signedStream.Dispose() }
           if ($signedDigest.Length -ne 64 -or
               $signedDigest -notmatch "^[0-9A-F]{64}$") {
             throw "Invalid Authenticode attestation digest."
