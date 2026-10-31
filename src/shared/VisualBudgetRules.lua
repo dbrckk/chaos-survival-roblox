@@ -123,11 +123,12 @@ local rootEffectTypes = {
 -- Local character/bot polish, human motion, dash and hazard feedback live
 -- under character rigs. Count only named client-created GPU objects, never
 -- server-owned rig Parts, lights or unrelated visual effects.
-local function collectCharacterPolish(model, metrics)
+local function collectCharacterPolish(model, metrics, record)
     if not model or not model:IsA("Model") then return end
     local highlight = model:FindFirstChild("ChaosCharacterPolishHighlight")
     if highlight and highlight:IsA("Highlight") then
         metrics.Effects += 1
+        if record then record("CharacterPolishLocal", "Effects") end
     end
     for _, part in ipairs(model:GetChildren()) do
         if part:IsA("BasePart") then
@@ -139,16 +140,19 @@ local function collectCharacterPolish(model, metrics)
                     and effect:IsA("WedgePart")
                     and string.match(effect.Name, "^LocalFreezeArmorFacet%d+$") then
                     metrics.Parts += 1
+                    if record then record("CharacterPolishLocal", "Parts") end
                 end
                 if effect.Name == "ChaosCharacterPolishLight"
                     and effect:IsA("PointLight") then
                     metrics.Lights += 1
+                    if record then record("CharacterPolishLocal", "Lights") end
                 elseif part.Name == "HumanoidRootPart" then
                     local effectType = rootEffectTypes[effect.Name]
                     if effectType and effect:IsA(effectType) then
                         -- Disabled transient Effects still own Instances
                         -- until Debris/owner cleanup; audit both states.
                         metrics.Effects += 1
+                        if record then record("CharacterPolishLocal", "Effects") end
                     end
                 end
             end
@@ -178,9 +182,25 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
         Effects = 0,
     }
     local auditedFolders = 0
+    -- The third return is an additive owner-by-owner ledger, populated in
+    -- the SAME traversal as the original totals. No second world scan and
+    -- no per-render-step telemetry loop are introduced.
+    local byOwner = {}
+    local function record(owner, kind)
+        local counts = byOwner[owner]
+        if not counts then
+            counts = {Parts = 0, Lights = 0, Effects = 0}
+            byOwner[owner] = counts
+        end
+        counts[kind] += 1
+    end
+    local function add(owner, kind)
+        metrics[kind] += 1
+        record(owner, kind)
+    end
 
     if not root then
-        return metrics, auditedFolders
+        return metrics, auditedFolders, byOwner
     end
 
     for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
@@ -189,11 +209,11 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
             auditedFolders += 1
             for _, descendant in ipairs(folder:GetDescendants()) do
                 if descendant:IsA("BasePart") then
-                    metrics.Parts += 1
+                    add(folderName, "Parts")
                 elseif VisualBudgetRules.isLight(descendant) then
-                    metrics.Lights += 1
+                    add(folderName, "Lights")
                 elseif VisualBudgetRules.isEffect(descendant) then
-                    metrics.Effects += 1
+                    add(folderName, "Effects")
                 end
                 checkpoint()
             end
@@ -210,7 +230,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
             if hazard.Name == "RoundMeteor" then
                 local trail = hazard:FindFirstChild("SignatureMeteorTrail")
                 if trail and trail:IsA("Trail") then
-                    metrics.Effects += 1
+                    add("AttachedMeteorCosmetics", "Effects")
                 end
                 -- MeteorCoreSculptKit's locally welded facets are children
                 -- of the SERVER-owned projectile, outside LocalFolders.
@@ -218,7 +238,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                 for _, child in ipairs(hazard:GetChildren()) do
                     if child:IsA("WedgePart")
                         and string.match(child.Name, "^LocalMeteorFacet%d+$") then
-                        metrics.Parts += 1
+                        add("AttachedMeteorCosmetics", "Parts")
                     end
                 end
             elseif hazard.Name == "RoundLava" or hazard.Name == "FreezeWarning" then
@@ -229,7 +249,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                 if isLava then
                     for _, child in ipairs(hazard:GetChildren()) do
                         if child.Name == lightName and child:IsA("SurfaceLight") then
-                            metrics.Lights += 1
+                            add("AttachedLavaFreezeCosmetics", "Lights")
                         end
                     end
                 end
@@ -238,7 +258,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                         for _, effect in ipairs(child:GetChildren()) do
                             if effect.Name == emitterName
                                 and effect:IsA("ParticleEmitter") then
-                                metrics.Effects += 1
+                                add("AttachedLavaFreezeCosmetics", "Effects")
                             end
                         end
                     end
@@ -268,11 +288,11 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                     if hasFolder then
                         for _, descendant in ipairs(localFolder:GetDescendants()) do
                             if descendant:IsA("BasePart") then
-                                metrics.Parts += 1
+                                add("LobbyPracticePadsLocal", "Parts")
                             elseif VisualBudgetRules.isLight(descendant) then
-                                metrics.Lights += 1
+                                add("LobbyPracticePadsLocal", "Lights")
                             elseif VisualBudgetRules.isEffect(descendant) then
-                                metrics.Effects += 1
+                                add("LobbyPracticePadsLocal", "Effects")
                             end
                             checkpoint()
                         end
@@ -281,7 +301,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                         for _, descendant in ipairs(localAttachment:GetDescendants()) do
                             if descendant.Name == "PracticeMotes"
                                 and descendant:IsA("ParticleEmitter") then
-                                metrics.Effects += 1
+                                add("LobbyPracticePadsLocal", "Effects")
                             end
                         end
                     end
@@ -307,11 +327,11 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                     and attachment:FindFirstChild("MobilityPulseLocal")
                 local counted = false
                 if emitter and emitter:IsA("ParticleEmitter") then
-                    metrics.Effects += 1
+                    add("ArenaMobilityPadsLocal", "Effects")
                     counted = true
                 end
                 if highlight and highlight:IsA("Highlight") then
-                    metrics.Effects += 1
+                    add("ArenaMobilityPadsLocal", "Effects")
                     counted = true
                 end
                 if counted then
@@ -326,17 +346,17 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
     -- Only inspect these immediate model collections, not the entire map.
     for _, model in ipairs(root:GetChildren()) do
         if model:IsA("Model") then
-            collectCharacterPolish(model, metrics)
+            collectCharacterPolish(model, metrics, record)
         end
     end
     local bots = root:FindFirstChild("AISurvivors")
     if bots and bots:IsA("Folder") then
         for _, model in ipairs(bots:GetChildren()) do
-            collectCharacterPolish(model, metrics)
+            collectCharacterPolish(model, metrics, record)
         end
     end
 
-    return metrics, auditedFolders
+    return metrics, auditedFolders, byOwner
 end
 
 function VisualBudgetRules.forTier(tierName)
@@ -350,6 +370,47 @@ function VisualBudgetRules.withinBudget(tierName, metrics)
     return (tonumber(values.Parts) or 0) <= budget.Parts
         and (tonumber(values.Lights) or 0) <= budget.Lights
         and (tonumber(values.Effects) or 0) <= budget.Effects
+end
+
+-- Rank existing local cosmetic owners without rewalking Workspace. A
+-- 1.0 contribution means that owner alone would consume one tier's
+-- allowance of Parts, Lights, or Effects. This is diagnostic only: the
+-- wind boundary and hazard cues must never be auto-disabled by this score.
+function VisualBudgetRules.rankOwners(tierName, byOwner, maxResults)
+    local budget = VisualBudgetRules.forTier(tierName)
+    if type(byOwner) ~= "table" then return {} end
+    local n = tonumber(maxResults) or 5
+    if n ~= n or math.abs(n) == math.huge then n = 5 end
+    n = math.clamp(math.floor(n), 0, 10)
+    local ranked = {}
+    for name, values in pairs(byOwner) do
+        if type(name) == "string" and type(values) == "table" then
+            local parts = tonumber(values.Parts) or 0
+            local lights = tonumber(values.Lights) or 0
+            local effects = tonumber(values.Effects) or 0
+            if parts >= 0 and lights >= 0 and effects >= 0
+                and parts < math.huge and lights < math.huge
+                and effects < math.huge then
+                local score = parts / budget.Parts
+                    + lights / budget.Lights + effects / budget.Effects
+                if score > 0 then
+                    ranked[#ranked + 1] = {
+                        Name = name,
+                        Parts = parts,
+                        Lights = lights,
+                        Effects = effects,
+                        Pressure = score,
+                    }
+                end
+            end
+        end
+    end
+    table.sort(ranked, function(a, b)
+        if a.Pressure == b.Pressure then return a.Name < b.Name end
+        return a.Pressure > b.Pressure
+    end)
+    while #ranked > n do table.remove(ranked) end
+    return ranked
 end
 
 function VisualBudgetRules.status(tierName, metrics)

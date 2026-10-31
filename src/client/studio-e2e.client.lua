@@ -77,8 +77,9 @@ local function sendVisualPhaseProbe(phase)
         end
         visualPhaseProbed[probeKey] = true
 
-        local metrics, folders = VisualBudgetRules.collect(workspace)
+        local metrics, folders, byOwner = VisualBudgetRules.collect(workspace)
         local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
+        local heavyOwners = VisualBudgetRules.rankOwners(tierName, byOwner, 5)
         local camera = workspace.CurrentCamera
         local depth = Lighting:FindFirstChild("ArenaIdentityDepth")
         local sunRays = Lighting:FindFirstChild("ArenaIdentitySunRays")
@@ -100,6 +101,7 @@ local function sendVisualPhaseProbe(phase)
             fieldOfView = camera and camera.FieldOfView or 0,
             auditedFolders = folders,
             visualMetrics = metrics,
+            visualTopOwners = heavyOwners,
             withinBudget = VisualBudgetRules.withinBudget(tierName, metrics),
             gateCueReady = gateCueReady,
             postProcess = {
@@ -1099,7 +1101,8 @@ do
         )
     end
 
-    visualMetrics, auditedFolders = VisualBudgetRules.collect(workspace)
+    local byOwner
+    visualMetrics, auditedFolders, byOwner = VisualBudgetRules.collect(workspace)
 
     for _, folderName in ipairs(VisualBudgetRules.LocalFolders) do
         local folder = workspace:FindFirstChild(folderName)
@@ -1117,14 +1120,22 @@ do
     check(auditedFolders >= 4, "visual decorator folders did not initialize")
 
     local tierName = tostring(player:GetAttribute("VfxQualityTier") or "High")
+    local topOwners = VisualBudgetRules.rankOwners(tierName, byOwner, 3)
+    local ownership = {}
+    for _, owner in ipairs(topOwners) do
+        ownership[#ownership + 1] = string.format(
+            "%s[P%d/L%d/F%d]", owner.Name,
+            owner.Parts, owner.Lights, owner.Effects)
+    end
     check(
         VisualBudgetRules.withinBudget(tierName, visualMetrics),
         string.format(
-            "visual budget exceeded for %s: parts=%d lights=%d effects=%d",
+            "visual budget exceeded for %s: parts=%d lights=%d effects=%d; owners=%s",
             tierName,
             visualMetrics.Parts,
             visualMetrics.Lights,
-            visualMetrics.Effects
+            visualMetrics.Effects,
+            table.concat(ownership, ", ")
         )
     )
 end
