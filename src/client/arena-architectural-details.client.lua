@@ -114,7 +114,11 @@ local function buildClassic(base, theme, tier)
     part("ClassicArchiveBackplate", Vector3.new(13, height - 3, 1.25),
         f * CFrame.new(0, (height - 3) * 0.5 + 1, 1.7),
         VisualTheme.World.Surface, Enum.Material.Slate, 0.02, high)
-    part("ClassicArchiveHeader", Vector3.new(20.5, 1.6, 4.0),
+    -- Low keeps the exact same part count but replaces the rectangular
+    -- skyline slab with a pitched weather hood. Medium/High retain the
+    -- original crosshead beneath their separate, richer roof geometry.
+    local archiveHeader = tier == "Low" and wedge or part
+    archiveHeader("ClassicArchiveHeader", Vector3.new(20.5, 1.6, 4.0),
         f * CFrame.new(0, height + 0.35, 0),
         theme.Detail, Enum.Material.DiamondPlate, 0.06, high)
 
@@ -259,7 +263,11 @@ local function buildCrossroads(base, theme, tier)
             f * CFrame.new(side * 9.0, height * 0.5, 0),
             theme.Structure, Enum.Material.Concrete, 0.02, high)
     end
-    part("CrossroadsConcourseRoof", Vector3.new(23.5, 1.2, 8.0),
+    -- On low-end Android the concourse's only roof is a pitched canopy
+    -- rather than a generic cuboid. No extra part, draw loop or shadow.
+    -- Medium/High still use the authored roof plus their detailed wings.
+    local concourseRoof = tier == "Low" and wedge or part
+    concourseRoof("CrossroadsConcourseRoof", Vector3.new(23.5, 1.2, 8.0),
         f * CFrame.new(0, height + 0.7, 0),
         theme.Detail, Enum.Material.DiamondPlate, 0.05, high)
     part("CrossroadsConcoursePanel", Vector3.new(19, 4.0, 0.65),
