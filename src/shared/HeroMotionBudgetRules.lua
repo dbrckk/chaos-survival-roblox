@@ -145,6 +145,37 @@ function HeroMotionBudgetRules.dockingPodOffset(now, scale)
     return CFrame.new(0, lift, 0) * CFrame.Angles(0, 0, bank)
 end
 
+-- Original Harbor signal mast and cargo hoist. These three gestures
+-- share the existing hero-motion scheduler and react through its global
+-- disaster offset. Low (0.18) stays static; Medium/High ramp up smoothly.
+-- Anchored noncolliding 3D decor, not a server-operated crane or a hitbox.
+function HeroMotionBudgetRules.harborEquipmentOffset(role, now, scale)
+    if role ~= "harborRadar" and role ~= "harborCable"
+        and role ~= "harborWeight" then return CFrame.identity end
+    if type(now) ~= "number" or now ~= now or now < 0
+        or math.abs(now) > 1e7 or type(scale) ~= "number"
+        or scale ~= scale or math.abs(scale) == math.huge
+        or scale < 0 or scale > 1 then
+        return CFrame.identity
+    end
+    local strength = math.clamp(
+        (scale - MOTION.Low) / (MOTION.High - MOTION.Low), 0, 1
+    )
+    if strength == 0 then return CFrame.identity end
+    if role == "harborRadar" then
+        -- Slow storm-watch sweep from original center; no cumulative yaw.
+        return CFrame.Angles(0,
+            math.sin(now * 0.51 + 0.35) * math.rad(27) * strength, 0)
+    end
+    local wave = math.sin(now * 0.82 + 0.65) * strength
+    if role == "harborCable" then
+        return CFrame.Angles(0, 0, wave * math.rad(1.6))
+    end
+    -- Cable and actual suspended counterweight move in the same phase.
+    return CFrame.new(-wave * 0.10, wave * 0.055, 0)
+        * CFrame.Angles(0, 0, wave * math.rad(0.6))
+end
+
 -- Restrained independent light rhythms: Orbital docking rail and three
 -- Crossroads closure bars. The "closed" signal remains constantly visible.
 -- These are decorative Neon transparencies, not danger telegraphs.
