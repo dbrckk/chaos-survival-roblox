@@ -30,6 +30,10 @@ $probeStartedAt = Get-Date
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
+# Each of five arenas invokes this script in the SAME authenticated
+# PowerShell process. Defining the interop type again throws and stops the
+# second capture; reuse the already compiled type after the first arena.
+if (-not ("ChaosScreenNative" -as [type])) {
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -43,6 +47,7 @@ public static class ChaosScreenNative {
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 }
 "@
+}
 
 function Read-Output {
     $builder = [System.Text.StringBuilder]::new()
@@ -187,6 +192,17 @@ try {
         if ($arena -ne $ExpectedArena) {
             throw "WRONG_ARENA: expected $ExpectedArena but marker says $arena"
         }
+        # The bot camera advances every three seconds. If the NEXT sample
+        # has already been approved, screenshotting now would mislabel its
+        # displayed viewpoint as this previous bot or camera mode.
+        if ($i -lt $Count) {
+            $nextTag = "{0:D2}/{1:D2}" -f ($i + 1), $Count
+            $nextPattern = 'CHAOS_VISUAL_AI_CAPTURE_MARKER\s+' +
+                [regex]::Escape($nextTag) + '\b'
+            if ((Read-Output) -match $nextPattern) {
+                throw "STALE_FRAME_MARKER: next bot camera already advanced before image $tag"
+            }
+        }
 
         $window = Find-RenderedStudioWindow
         if ($null -eq $window) {
@@ -225,6 +241,13 @@ try {
         }
         finally { $bitmap.Dispose() }
 
+        # Recheck immediately after reading real pixels. A model/camera
+        # switch during CopyFromScreen makes this image ambiguous and
+        # must NEVER receive the previous approved marker's provenance.
+        if ($i -lt $Count -and (Read-Output) -match $nextPattern) {
+            Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+            throw "STALE_FRAME_MARKER: camera advanced during image $tag"
+        }
         $hash = (Get-FileHash -Algorithm SHA256 -Path $file).Hash
         $name = ($window.Title -replace "[\t\r\n]", " ").Trim()
         $utc = [DateTime]::UtcNow.ToString("o")
