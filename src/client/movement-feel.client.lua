@@ -420,7 +420,9 @@ RunService:BindToRenderStep(
             suspendCameraMotion()
             return
         end
-        if not camera or player.Character ~= character
+        if not camera or camera.ViewportSize.X <= 0
+            or camera.ViewportSize.Y <= 0
+            or player.Character ~= character
             or not root or root.Parent ~= character
             or not humanoid or humanoid.Parent ~= character
             or humanoid.Health <= 0 then
