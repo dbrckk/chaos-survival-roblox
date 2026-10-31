@@ -12,7 +12,20 @@ local player = Players.LocalPlayer
 local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local folder = Instance.new("Folder")
 folder.Name = "ArenaArchitecturalDetailsLocal"
+-- PBR uses this exact local-owner identity to grant a very small share
+-- of the EXISTING 2K material pool. This is not a server or gameplay tag.
+folder:SetAttribute("CosmeticOnly", true)
+folder:SetAttribute("OriginalHeroArchitecture", true)
 folder.Parent = workspace
+
+-- Only the original industrial metals/ceramic deserve PBR relief. Preserve
+-- concrete, timber, slate, glass, beacons and functional neon as authored.
+local HERO_PBR_MATERIAL = {
+    [Enum.Material.Metal] = true,
+    [Enum.Material.CorrodedMetal] = true,
+    [Enum.Material.DiamondPlate] = true,
+    [Enum.Material.CeramicTiles] = true,
+}
 
 local animated = {}
 local activeBase = nil
@@ -35,6 +48,9 @@ local function part(name, size, frame, color, material, transparency, highShadow
     p.CanTouch = false
     p.CanQuery = false
     p.CastShadow = highShadow == true
+    if HERO_PBR_MATERIAL[material] and (transparency or 0) < 0.16 then
+        p:SetAttribute("OriginalHeroPbrSurface", true)
+    end
     p.Parent = folder
     return p
 end
@@ -54,6 +70,9 @@ local function wedge(name, size, frame, color, material, transparency, highShado
     p.CanTouch = false
     p.CanQuery = false
     p.CastShadow = highShadow == true
+    if HERO_PBR_MATERIAL[material] and (transparency or 0) < 0.16 then
+        p:SetAttribute("OriginalHeroPbrSurface", true)
+    end
     p.Parent = folder
     return p
 end
