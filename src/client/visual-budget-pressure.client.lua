@@ -20,6 +20,21 @@ local generation = 0
 local pressure = 0
 local streak = 0
 
+-- The regular round is 45s (30s solo). Decisions every 16s meant a
+-- two-step P2 degradation could not happen until AFTER a solo round.
+-- Reuse one cooperative census for multiple 5s performance decisions.
+-- This keeps the full Workspace traversal at most once every 20s.
+local OBSERVE_SECONDS = 5
+local CENSUS_SECONDS = 20
+local SUSPEND_GAP_SECONDS = 18
+local cachedCounts = nil
+local lastCensusAt = nil
+
+local function invalidateCensus()
+    cachedCounts = nil
+    lastCensusAt = nil
+end
+
 local function publish(nextValue)
     if pressure == nextValue
         and player:GetAttribute("OptionalVfxPressure") == nextValue then
@@ -49,6 +64,7 @@ stateEvent.OnClientEvent:Connect(function(state)
     if newRound or phase ~= newPhase then
         generation += 1
         streak = 0
+        invalidateCensus()
         -- Never carry last round's pressure into another arena/lobby.
         -- Restart observation when the new playable round is actually live.
         publish(0)
@@ -60,33 +76,62 @@ workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then
         generation += 1
         streak = 0
+        invalidateCensus()
         publish(0)
     end
 end)
 
 task.spawn(function()
+    local lastWake = os.clock()
     while player.Parent do
-        -- No diagnostic traversal in READY, lobby, results or loading.
-        -- Worst case one full collection each 16s while playing on touch.
-        task.wait(16)
-        if phase ~= "round" or not workspace:FindFirstChild("GeneratedMap") then
+        task.wait(OBSERVE_SECONDS)
+        local now = os.clock()
+        -- Backgrounding Roblox on Android can suspend scheduling for
+        -- minutes. Never interpret one wakeup after suspension as a
+        -- second consecutive bad FPS sample, or reuse old arena counts.
+        if now - lastWake > SUSPEND_GAP_SECONDS then
+            lastWake = now
+            streak = 0
+            invalidateCensus()
             continue
         end
+        lastWake = now
+
+        -- No full diagnostic traversal during READY, lobby, results or
+        -- map streaming. The next live round gets a fresh count.
+        if phase ~= "round" or not workspace:FindFirstChild("GeneratedMap") then
+            invalidateCensus()
+            continue
+        end
+
         local observedGeneration = generation
+        if not cachedCounts or not lastCensusAt
+            or now - lastCensusAt >= CENSUS_SECONDS then
+            local counts = VisualBudgetRules.collect(workspace, function()
+                -- Yield at the existing 160-instance checkpoint, never
+                -- scan all local decorations in one long Android frame.
+                task.wait()
+            end)
+            if observedGeneration ~= generation or phase ~= "round"
+                or not workspace:FindFirstChild("GeneratedMap")
+                or not player.Parent then
+                invalidateCensus()
+                continue
+            end
+            cachedCounts = counts
+            lastCensusAt = os.clock()
+        end
+        -- Perf readings are sampled anew each observation; the instance
+        -- census is cached, and quality tier normalization stays current.
+        if observedGeneration ~= generation or phase ~= "round" then
+            invalidateCensus()
+            continue
+        end
         local tier = VfxQuality.deviceTier(
             player:GetAttribute("VfxQualityTier"), true
         ).Name
-        local counts = VisualBudgetRules.collect(workspace, function()
-            -- The existing sampler's 160-instance checkpoint keeps the
-            -- scan cooperative on low-end Android during Double Chaos.
-            task.wait()
-        end)
-        if observedGeneration ~= generation or phase ~= "round"
-            or not player.Parent then
-            continue
-        end
         local desired = PressureRules.desired(
-            tier, counts,
+            tier, cachedCounts,
             player:GetAttribute("ClientObservedFps"),
             player:GetAttribute("ClientObservedP95FrameMs")
         )
