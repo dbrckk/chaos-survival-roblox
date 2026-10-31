@@ -276,7 +276,7 @@ local function rebuild()
         attachment.Name = "DisasterAtmosphereAttachment"
         attachment.Parent = beacon
 
-        local id = disasterIds[((i - 1) % math.max(1, #disasterIds)) + 1]
+        local id = disasterIds[((i - 1) % math.max(1, math.min(2, #disasterIds))) + 1]
         if id then
             emitterFor(attachment, id, beacon.Color, tier)
         end
