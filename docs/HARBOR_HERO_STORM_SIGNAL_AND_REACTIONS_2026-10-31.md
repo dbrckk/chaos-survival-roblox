@@ -19,7 +19,7 @@ Added a real, original Harbor branch to the existing `ArenaHeroSceneryLocal` bui
 
 Extended the **existing** `arena-hero-motion.client.lua` tracker by four roles (no second loop):
 - Radar: slow, bounded ±27-degree local yaw from the original authored center; **Low remains motionless**.
-- Hoist cable + counterweight: matching restrained 0.82-Hz sway with no cumulative drift, only Medium/High. Visual-only; no ropes or physics constraints.
+- Hoist cable + counterweight: matching restrained 0.82-radian/second phase sway with no cumulative drift, only Medium/High. Visual-only; no ropes or physics constraints.
 - Seaport lens: a restrained teal glass-opacity rhythm, not an orange/red fake danger beacon.
 - All four parts also receive the existing proportional **live disaster reaction profile**, including tornado wind, freezing restraint, meteors/bombs shake, and Final Rush suppression. The established reaction framework caps tint and displacement and retains `ReduceMotion` as a still, legible pose.
 - Pure `HeroMotionBudgetRules.harborEquipmentOffset` helper bounds amplitudes, protects invalid arguments, and yields `CFrame.identity` at Low/ReducedMotion via the existing shared tier scheduler. All animated positions derive from **captured base CFrame**, never the last frame.
