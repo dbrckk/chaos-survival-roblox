@@ -73,6 +73,13 @@ function BombChargeKit.sync(state, warning, parent, tier, reduced,
         local recipe = rules.recipe(index, count, alpha, reduced)
         if recipe then
             local piece = parts[index]
+            if piece and piece.Parent ~= parent then
+                -- Streaming/local cleanup can remove a previously owned
+                -- instance. A stale reference is not a drawable charge.
+                piece:Destroy()
+                piece = nil
+                parts[index] = nil
+            end
             if not piece then
                 piece = recipe.Shape == "Wedge" and Instance.new("WedgePart")
                     or Instance.new("Part")
