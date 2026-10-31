@@ -146,6 +146,16 @@ function Kit.update(visual, worldPosition, diameter, progress, reduced, pulse, t
         or typeof(worldPosition) ~= "Vector3" then
         return
     end
+    -- Reduced-motion contours are stationary. Reuse the authored silhouette
+    -- until the warning moves, final radius changes, tier changes, or
+    -- normal animation resumes. Visibility is owned independently by
+    -- syncVisibility and is still evaluated every warning update.
+    local static = visual.staticPose
+    if reduced == true and static and visual.canvas and visual.canvas.Parent
+        and static.position == worldPosition
+        and static.diameter == diameter and static.tier == tier then
+        return
+    end
     local kind = string.match(visual.part.Name, "^(%a+)WarningOutlineLocal$")
     local recipe = Kit.recipe(kind, diameter, progress, reduced, pulse, tier)
     if not recipe then return end
@@ -179,6 +189,11 @@ function Kit.update(visual, worldPosition, diameter, progress, reduced, pulse, t
         end
     end
     visual.lastRecipe = recipe
+    visual.staticPose = reduced == true and {
+        position = worldPosition,
+        diameter = diameter,
+        tier = tier,
+    } or nil
 end
 
 function Kit.destroy(visual)
