@@ -12,6 +12,7 @@ local MeteorCoreSculptKit = require(script.Parent.MeteorCoreSculptKit)
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local phase = "waiting"
+local lastRoundNumber = nil
 local meteorsActive = false
 local trails = setmetatable({}, {__mode = "k"})
 -- The previous 250ms effect refresh allocated workspace:GetChildren()
@@ -169,15 +170,32 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     local nextPhase, nextActive = MeteorRules.readRoundState(state)
     if not nextPhase then return end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        -- Old RoundState must not resurrect meteor trails after results
+        -- or a newer storm. The meteor Parts remain server-owned.
+        return
+    end
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
+    local changed = nextPhase ~= phase or nextActive ~= meteorsActive
+        or newRound
+    if not changed then
+        -- The existing quarter-second scanner follows moving meteors;
+        -- a recurring one-second RoundState does not need another scan.
+        return
+    end
     phase = nextPhase
     meteorsActive = nextActive
     dirty = true
-    if not nextActive then
-        clearAll()
-    elseif not syncQueued then
+    if not nextActive or newRound then clearAll() end
+    if nextActive and not syncQueued then
         -- The background scanner sleeps up to 800ms between rounds, longer
-        -- than a falling meteor's entire flight. Wake immediately when the
-        -- disaster becomes active, including for late-joining spectators.
+        -- than a falling meteor's entire flight. Wake on real transitions.
         syncQueued = true
         task.defer(function()
             syncQueued = false

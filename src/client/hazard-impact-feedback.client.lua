@@ -18,6 +18,7 @@ local stateEvent = remotes:WaitForChild("RoundState")
 
 local MAX_DISTANCE = 150
 local activeBursts = 0
+local activePeripheralBursts = 0
 local currentPhase = "waiting"
 local hasRoundSnapshot = false
 local lastRoundNumber = nil
@@ -35,6 +36,7 @@ local function clearBurstVisuals()
     -- must not decrement a new round's active burst budget.
     burstEpoch += 1
     activeBursts = 0
+    activePeripheralBursts = 0
     setpieceFolder:ClearAllChildren()
 end
 
@@ -147,11 +149,19 @@ local function renderBurst(payload)
 
     local profile = tier()
     local reduced = player:GetAttribute("ReduceMotion") == true
+    local peripheralCap = ImpactPulseRules.peripheralBurstCap(
+        profile.Name, reduced, UserInputService.TouchEnabled, viewerDistance
+    )
     local concurrentLimit = maxConcurrentBursts(profile, reduced)
-    if activeBursts >= concurrentLimit then
+    if activeBursts >= concurrentLimit
+        or (peripheralCap and activePeripheralBursts >= peripheralCap) then
+        -- Critical ground warnings/escape guidance are separate controllers.
+        -- Distant visual-only explosions cannot crowd out closer ones on
+        -- budget-limited Android devices during Bomb + Meteor overlaps.
         return
     end
     activeBursts += 1
+    if peripheralCap then activePeripheralBursts += 1 end
     local emittedEpoch = burstEpoch
     -- One projection at impact time, never a camera/render loop. Allow
     -- a 10% viewport margin so partly visible blast clouds keep detail.
@@ -175,10 +185,11 @@ local function renderBurst(payload)
     -- First 2/3 concurrent bursts receive full authored lights/smoke on
     -- touch devices. Every further overlapping impact still gets its
     -- compact flash, radial pressure cue and material-aware aftermath.
-    local richDetail = foregroundDetail and ImpactPulseRules.richDetailAllowed(
-        profile.Name, reduced, viewerDistance, activeBursts,
-        UserInputService.TouchEnabled
-    )
+    local richDetail = not peripheralCap and foregroundDetail
+        and ImpactPulseRules.richDetailAllowed(
+            profile.Name, reduced, viewerDistance, activeBursts,
+            UserInputService.TouchEnabled
+        )
     local materialStyle, groundFrame = sampleGround(
         position, color, kind, profile, reduced
     )
@@ -456,6 +467,9 @@ local function renderBurst(payload)
         -- burst slot when its previously scheduled lifetime expires.
         if emittedEpoch == burstEpoch then
             activeBursts = math.max(0, activeBursts - 1)
+            if peripheralCap then
+                activePeripheralBursts = math.max(0, activePeripheralBursts - 1)
+            end
         end
     end)
 end
