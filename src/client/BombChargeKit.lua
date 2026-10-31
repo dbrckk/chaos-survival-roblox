@@ -8,6 +8,9 @@ local function clearPieces(state)
     end
     state.parts = {}
     state.source = nil
+    state.staticPosition = nil
+    state.staticTier = nil
+    state.staticCount = nil
 end
 
 function BombChargeKit.clear(state)
@@ -46,6 +49,25 @@ function BombChargeKit.sync(state, warning, parent, tier, reduced,
         if extra then extra:Destroy() end
     end
 
+    -- ReduceMotion produces a fixed authored charge (no animation based
+    -- on countdown progress). Avoid regenerating five recipes and writing
+    -- the same Part properties at 30Hz, unless its warning actually moves,
+    -- its tier/count changes or any locally owned Part is removed.
+    local position = warning.Position
+    if reduced == true and state.staticTier == tier
+        and state.staticCount == count
+        and state.staticPosition == position then
+        local allLive = true
+        for index = 1, count do
+            local piece = parts[index]
+            if not piece or piece.Parent ~= parent then
+                allLive = false
+                break
+            end
+        end
+        if allLive then return end
+    end
+
     local alpha = math.clamp(tonumber(progress) or 0, 0, 1)
     for index = 1, count do
         local recipe = rules.recipe(index, count, alpha, reduced)
@@ -63,16 +85,27 @@ function BombChargeKit.sync(state, warning, parent, tier, reduced,
                 piece.Parent = parent
                 parts[index] = piece
             end
-            if recipe.Shape == "Ball" then
+            if recipe.Shape == "Ball" and piece.Shape ~= Enum.PartType.Ball then
                 piece.Shape = Enum.PartType.Ball
             end
-            piece.Size = recipe.Size
-            piece.CFrame = CFrame.new(warning.Position) * recipe.Transform
-            piece.Material = recipe.Material
-            piece.Color = recipe.Color
-            piece.Transparency = recipe.Transparency
+            if piece.Size ~= recipe.Size then piece.Size = recipe.Size end
+            local frame = CFrame.new(position) * recipe.Transform
+            if piece.CFrame ~= frame then piece.CFrame = frame end
+            if piece.Material ~= recipe.Material then
+                piece.Material = recipe.Material
+            end
+            if piece.Color ~= recipe.Color then piece.Color = recipe.Color end
+            if piece.Transparency ~= recipe.Transparency then
+                piece.Transparency = recipe.Transparency
+            end
         end
     end
+
+    -- Reusing a cached static pose is safe only while the visual remains
+    -- in reduced-motion mode. Animated frames invalidate the cache.
+    state.staticTier = reduced == true and tier or nil
+    state.staticCount = reduced == true and count or nil
+    state.staticPosition = reduced == true and position or nil
 end
 
 return BombChargeKit
