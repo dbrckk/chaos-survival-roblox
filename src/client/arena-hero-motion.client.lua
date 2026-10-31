@@ -96,6 +96,13 @@ local function scan()
     track(nextTracked, source:FindFirstChild("ClassicOpsAntenna"), "opsAntenna", 1)
     track(nextTracked, source:FindFirstChild("OrbitalDockingArmGlow"), "dockGlow", 1)
     track(nextTracked, source:FindFirstChild("OrbitalDockingPod"), "dockPod", 1)
+
+    -- Harbor previously fell back to the Classic hero scene. The
+    -- purpose-built port station uses the same 3D scene owner and LOD.
+    track(nextTracked, source:FindFirstChild("HarborHeroRadarArm"), "harborRadar", 1)
+    track(nextTracked, source:FindFirstChild("HarborHeroStormLens"), "harborLens", 1)
+    track(nextTracked, source:FindFirstChild("HarborHeroHoistCable"), "harborCable", 1)
+    track(nextTracked, source:FindFirstChild("HarborHeroHoistWeight"), "harborWeight", 1)
     for i = 1, 3 do
         track(nextTracked, source:FindFirstChild("CrossroadsClosedLaneBarrier" .. i),
             "closureBar", i)
@@ -266,6 +273,9 @@ task.spawn(function()
             or state.role == "antenna" or state.role == "signal"
             or state.role == "craneWeight" or state.role == "opsAntenna"
             or state.role == "dockPod"
+            or ((state.role == "harborRadar" or state.role == "harborCable"
+                or state.role == "harborWeight") and tierScale > 0.18)
+            or state.hadHarborMotion == true
             or (state.role == "reactorCore" and tierScale > 0.18)
             or state.hadCoreMotion == true
         if state.role == "lift" then
@@ -313,6 +323,23 @@ task.spawn(function()
             -- Locally articulated surveillance antenna; its booth stays fixed.
             frame = state.baseCFrame
                 * HeroMotionBudget.serviceAntennaOffset(clock, scale)
+        elseif state.role == "harborRadar" or state.role == "harborCable"
+            or state.role == "harborWeight" then
+            -- Three already-built original Harbor 3D ornaments. Keep every
+            -- offset relative to the captured rest pose, no accumulated drift.
+            frame = state.baseCFrame
+                * HeroMotionBudget.harborEquipmentOffset(
+                    state.role, clock, scale
+                )
+        elseif state.role == "harborLens" then
+            -- Calm teal seaport navigation lens, not a flashing orange
+            -- hazard signal. Disaster colors are applied in the established
+            -- reaction tint below; ReduceMotion freezes the original lens.
+            local glow = (math.sin(clock * 1.35) + 1) * 0.5
+            part.Transparency = math.clamp(
+                state.baseTransparency + (0.07 - glow * 0.13) * scale,
+                0.15, 0.68
+            )
         elseif state.role == "dockGlow" or state.role == "closureBar" then
             -- Staggered, low-contrast existing Neon, not gameplay warnings.
             local glow = HeroMotionBudget.servicePulse(state.role, i, clock)
@@ -383,6 +410,9 @@ task.spawn(function()
         state.hadReaction = reacts
         -- Reset once if graphics drop to Low after a Medium/High frame.
         state.hadCoreMotion = state.role == "reactorCore" and tierScale > 0.18
+        state.hadHarborMotion = (state.role == "harborRadar"
+            or state.role == "harborCable" or state.role == "harborWeight")
+            and tierScale > 0.18
         state.hadServiceMotion = serviceMotion
     end
     end
