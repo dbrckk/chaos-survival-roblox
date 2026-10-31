@@ -250,6 +250,30 @@ local function buildHarbor(base, theme, tier)
             freightColor, Enum.Material.CorrodedMetal,
             tier.Name == "Low" and 0.18 or 0.05
         )
+        -- Two real inset cargo doors and a central locking seam turn the
+        -- generic container cuboid into a recognizable freight module.
+        -- Reuse anchored, shadowless cosmetic geometry; Low retains the
+        -- previous zero-extra-detail silhouette.
+        if tier.Name ~= "Low" then
+            local endFrame = container.CFrame * CFrame.new(0, 0, -4.36)
+            for side = -1, 1, 2 do
+                makePart(
+                    "HarborFreightDoor" .. i .. "_" .. side,
+                    Vector3.new(9.6, 6.45, 0.11),
+                    endFrame * CFrame.new(side * 5.0, 0, 0),
+                    freightColor:Lerp(ribColor, 0.22),
+                    Enum.Material.CorrodedMetal, 0.04
+                )
+            end
+            if tier.Name == "High" then
+                makePart(
+                    "HarborFreightLockingBar" .. i,
+                    Vector3.new(0.22, 6.5, 0.20),
+                    endFrame * CFrame.new(0, 0, -0.14),
+                    ribColor, Enum.Material.DiamondPlate, 0.02
+                )
+            end
+        end
         makePart(
             "HarborFreightLoadSill" .. i,
             Vector3.new(22.0, 0.38, 9.6),
