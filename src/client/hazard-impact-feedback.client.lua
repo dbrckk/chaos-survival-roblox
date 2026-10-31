@@ -12,16 +12,31 @@ local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
 local ImpactMaterialRules = require(ReplicatedStorage.Shared.ImpactMaterialRules)
 
 local player = Players.LocalPlayer
-local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("HazardImpactFeedback")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local feedbackEvent = remotes:WaitForChild("HazardImpactFeedback")
+local stateEvent = remotes:WaitForChild("RoundState")
 
 local MAX_DISTANCE = 150
 local activeBursts = 0
+local currentPhase = "waiting"
+local hasRoundSnapshot = false
+local lastRoundNumber = nil
+local burstEpoch = 0
 
 -- Single telemetry-visible folder for every temporary impact setpiece.
 -- This is registered in VisualBudgetRules so live Studio audits count it.
 local setpieceFolder = Instance.new("Folder")
 setpieceFolder.Name = "ImpactSetpieceLocal"
 setpieceFolder.Parent = workspace
+
+local function clearBurstVisuals()
+    -- All temporary rings, craters, smoke anchors and flashes in this
+    -- controller are local to this single folder. Old Debris timers
+    -- must not decrement a new round's active burst budget.
+    burstEpoch += 1
+    activeBursts = 0
+    setpieceFolder:ClearAllChildren()
+end
 
 local function maxConcurrentBursts(profile, reduced)
     if reduced then
@@ -35,7 +50,8 @@ local function maxConcurrentBursts(profile, reduced)
 end
 
 local function tier()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled)
 end
 
 -- One raycast per eligible impact, restricted to the generated arena.
@@ -104,6 +120,11 @@ local function makeAftermath(kind, profile, style, frame, radius)
 end
 
 local function renderBurst(payload)
+    -- The warning and damage are server-owned. Optional impact geometry
+    -- must never obscure result/READY after a confirmed phase change.
+    -- Before the first RoundState arrives, accept genuine feedback to
+    -- avoid losing a live impact on slow streaming clients.
+    if hasRoundSnapshot and currentPhase ~= "round" then return end
     if not ImpactSetpieceRules.validPayload(payload) then
         return
     end
@@ -131,6 +152,7 @@ local function renderBurst(payload)
         return
     end
     activeBursts += 1
+    local emittedEpoch = burstEpoch
     -- One projection at impact time, never a camera/render loop. Allow
     -- a 10% viewport margin so partly visible blast clouds keep detail.
     -- Missing cameras do not suppress critical nearby feedback.
@@ -430,8 +452,41 @@ local function renderBurst(payload)
         Debris:AddItem(core, lifetime)
     end
     task.delay(lifetime, function()
-        activeBursts = math.max(0, activeBursts - 1)
+        -- A cancelled/old round must not consume a new Double Chaos
+        -- burst slot when its previously scheduled lifetime expires.
+        if emittedEpoch == burstEpoch then
+            activeBursts = math.max(0, activeBursts - 1)
+        end
     end)
 end
+
+stateEvent.OnClientEvent:Connect(function(state)
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
+
+    local nextPhase = state.phase
+    if (hasRoundSnapshot and nextPhase ~= currentPhase) or newRound then
+        clearBurstVisuals()
+    end
+    currentPhase = nextPhase
+    hasRoundSnapshot = true
+end)
+
+workspace.ChildRemoved:Connect(function(child)
+    if child.Name == "GeneratedMap" then
+        clearBurstVisuals()
+    end
+end)
 
 feedbackEvent.OnClientEvent:Connect(renderBurst)

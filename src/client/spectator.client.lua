@@ -149,7 +149,13 @@ healthFill.Parent = healthTrack
 UITheme.addCorner(healthFill, UITheme.Corners.Pill)
 
 local roundActive = false
+local lastRoundNumber = nil
 local practiceMode = false
+-- Track exactly which native camera/subject we took over. Once another
+-- director (cinematic, respawn, or gameplay) owns the camera, never force
+-- CameraType/CameraSubject back from a periodic RoundState heartbeat.
+local ownedCamera = nil
+local ownedSubject = nil
 local restoreCamera
 local latestState = nil
 local targets = {}
@@ -467,9 +473,15 @@ end
 
 restoreCamera = function()
     local camera = workspace.CurrentCamera
+    local controlled = camera ~= nil and camera == ownedCamera
+        and camera.CameraType == Enum.CameraType.Custom
+        and camera.CameraSubject == ownedSubject
+    ownedCamera, ownedSubject = nil, nil
+    if not controlled then return end
     local hum = localHumanoid()
-    if camera and hum then
-        camera.CameraType = Enum.CameraType.Custom
+    if hum and hum.Parent == player.Character then
+        -- Release ONLY our own spectator camera assignment. Native
+        -- Roblox controls the transition to the player's new character.
         camera.CameraSubject = hum
     end
 end
@@ -556,9 +568,15 @@ spectateIndex = function(advance)
     selectedCharacter = character
 
     local camera = workspace.CurrentCamera
-    if camera and (camera.CameraType ~= Enum.CameraType.Custom or camera.CameraSubject ~= hum) then
-        camera.CameraType = Enum.CameraType.Custom
-        camera.CameraSubject = hum
+    -- Scriptable belongs to cutscenes/replays. Do not steal it once per
+    -- RoundState packet, even if the spectator card remains visible.
+    if camera and camera.CameraType ~= Enum.CameraType.Scriptable then
+        if camera.CameraType ~= Enum.CameraType.Custom
+            or camera.CameraSubject ~= hum then
+            camera.CameraType = Enum.CameraType.Custom
+            camera.CameraSubject = hum
+        end
+        ownedCamera, ownedSubject = camera, hum
     end
 
     local summary = roundSummary()
@@ -685,10 +703,19 @@ player.CharacterAdded:Connect(function(spawnedCharacter)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    -- Ignore invalid snapshots: Roblox should not permanently stop the
-    -- spectator controller because of an unexpected payload.
+    -- Invalid or older numbered packets must not restore a past camera
+    -- target after the player already entered the next round.
     local nextActive = SpectatorTargetRules.roundActive(state)
     if nextActive == nil then return end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        return
+    end
+    if number then lastRoundNumber = number end
+
     latestState = state
     roundActive = nextActive
     refreshHazardIdentity(state)
