@@ -115,7 +115,8 @@ jobs:
           $place = (Resolve-Path build/ChaosSurvival.rbxlx).Path
           $script = Join-Path build/visual-ai-captures visual-ai-runner-selected.luau
           & ./studio/prepare-visual-ai-arena.ps1 -Arena $arena -OutputPath $script
-          & ./studio/capture-ai-visual-review.ps1 -StudioExe "$env:STUDIO_EXE" -PlaceFile "$place" -RunScriptFile "$script" -OutputDirectory "build/visual-ai-captures" -Count 15 -IntervalSeconds 3 -ExpectedArena $arena
+          $runnerPath = (Resolve-Path -LiteralPath $script).Path
+          & ./studio/capture-ai-visual-review.ps1 -StudioExe "$env:STUDIO_EXE" -PlaceFile "$place" -RunScriptFile "$runnerPath" -OutputDirectory "build/visual-ai-captures" -Count 15 -IntervalSeconds 3 -ExpectedArena $arena
           if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "Screenshot collector failed." }
 
       - name: Install Python for reproducible image audit
