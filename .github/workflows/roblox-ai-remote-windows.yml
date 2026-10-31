@@ -3,6 +3,19 @@ name: Chaos AI Visual Capture (Temporary Windows)
 # Studio AI camera test. No user account tokens or cookies are stored.
 on:
   workflow_dispatch:
+    inputs:
+      arena:
+        description: "Authentic Studio audit: one map or all five (one Windows login)"
+        required: true
+        type: choice
+        default: All
+        options:
+          - All
+          - Classic
+          - Towers
+          - Crossroads
+          - Orbital
+          - Harbor
   push:
     branches:
       - main
@@ -24,6 +37,19 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 95
     steps:
+      - name: Record approved arena scope (no public game modification)
+        shell: pwsh
+        env:
+          CHAOS_VISUAL_SCOPE: ${{ inputs.arena || 'All' }}
+        run: |
+          $allowed = @("All", "Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+          if ($allowed -cnotcontains $env:CHAOS_VISUAL_SCOPE) {
+            throw "Untrusted or missing visual QA map selection"
+          }
+          New-Item -ItemType Directory -Force build | Out-Null
+          Set-Content -LiteralPath build/visual-ai-audit-scope.txt -Value $env:CHAOS_VISUAL_SCOPE -Encoding ascii
+          Write-Host ("Studio QA scope: " + $env:CHAOS_VISUAL_SCOPE)
+
       - name: Validate opt-in secrets
         shell: pwsh
         env:
@@ -52,7 +78,8 @@ jobs:
           foreach ($path in @(
             "studio/remote-windows-ai-bootstrap.ps1",
             "studio/remote-ai-interactive-session.ps1",
-            "studio/capture-ai-visual-review.ps1"
+            "studio/capture-ai-visual-review.ps1",
+            "studio/prepare-visual-ai-arena.ps1"
           )) {
             $tokens = $null
             $parseErrors = $null
@@ -110,7 +137,7 @@ jobs:
             "",
             "The automatic launcher is installed later in this workflow.",
             "No manual Roblox publication or Studio file opening is needed.",
-            "A local test runs 15 true screenshots of autonomous AI bots.",
+            "One authenticated desktop can test all five arena variants: 15 real PNGs each.",
             "If Studio is not already authenticated for this Windows user,",
             "a one-time login inside Roblox's official Studio UI is required.",
             "Never share account cookies, Roblox passwords or 2FA codes."
@@ -267,7 +294,9 @@ jobs:
             "- RDP password: the private value of CHAOS_REMOTE_RDP_PASSWORD (NOT your Roblox password).",
             "- Sign in once in Roblox Studio; watch the AI test start automatically, or open START_CHAOS_AI_CAPTURE.cmd on the desktop.",
             "- The build ChaosSurvival_VisualQA.rbxlx is prepared from commit " + $env:GITHUB_SHA,
-            "- The Windows session is temporary and ends after 15 authenticated gameplay PNGs or a timeout.",
+            "- Selected audit scope: " + (Get-Content build/visual-ai-audit-scope.txt -Raw).Trim(),
+            "- 'All' makes five sequential real Studio matches and 75 PNGs with one Roblox login.",
+            "- The Windows session is temporary and ends after its verified captures or a timeout.",
             "- The public Roblox game remains unchanged; only the local test build runs."
           ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           Write-Host "Private Tailscale IP: $ip"
@@ -319,12 +348,24 @@ jobs:
             }
             if (Test-Path $successFile) {
               $status = (Get-Content -LiteralPath $successFile -Raw).Trim()
-              $files = @(Get-ChildItem -Path $captureDir -Filter "ai-frame-*.png" -ErrorAction SilentlyContinue)
-              if ($status -ne "PASS" -or $files.Count -ne 15) {
-                throw "Studio screenshot workflow did not produce 15 verified real PNG files."
+              $scope = (Get-Content build/visual-ai-audit-scope.txt -Raw).Trim()
+              $arenas = if ($scope -eq "All") {
+                @("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+              } else { @($scope) }
+              $count = 0
+              foreach ($arena in $arenas) {
+                $folder = Join-Path $captureDir $arena
+                $frames = @(Get-ChildItem -LiteralPath $folder -Filter "ai-frame-*.png" -ErrorAction SilentlyContinue)
+                if ($frames.Count -ne 15) {
+                  throw "Studio evidence incomplete for $arena : $($frames.Count)/15"
+                }
+                $count += $frames.Count
+              }
+              if ($status -ne "PASS" -or $count -ne 15 * $arenas.Count) {
+                throw "Studio screenshot workflow failed to certify all selected arenas."
               }
               $complete = $true
-              Write-Host "PASS: 15 real Roblox Studio AI viewpoint screenshots collected."
+              Write-Host "PASS: $count authentic Studio AI PNGs across $($arenas.Count) selected arenas."
               break
             }
             $listener = @(Get-NetTCPConnection -LocalPort 3389 -State Listen -ErrorAction SilentlyContinue)
@@ -343,36 +384,47 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Analyze actual camera PNGs and make 5-by-3 contact sheet
+      - name: Audit all authenticated arena PNGs and make separate contact sheets
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           python -m pip install --disable-pip-version-check "Pillow==11.2.1"
           if ($LASTEXITCODE -ne 0) { throw "Pillow installation failed." }
-          python studio/analyze-visual-ai.py build/visual-ai-captures
-          if ($LASTEXITCODE -ne 0) { throw "AI visual evidence audit failed." }
-          Get-Content build/visual-ai-captures/visual-ai-audit.md |
-            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          $scope = (Get-Content build/visual-ai-audit-scope.txt -Raw).Trim()
+          $arenas = if ($scope -eq "All") {
+            @("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+          } else { @($scope) }
+          foreach ($arena in $arenas) {
+            $directory = Join-Path build/visual-ai-captures $arena
+            python studio/analyze-visual-ai.py $directory $arena
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed authenticated screenshot provenance/visual audit for $arena"
+            }
+            Get-Content (Join-Path $directory "visual-ai-audit.md") |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+          Write-Host "All $($arenas.Count) requested arena evidence reports verified."
 
       - name: Upload original source PNGs, montage and analysis
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chaos-15-authentic-ai-studio-pngs-hosted-windows
+          name: chaos-authentic-five-arena-studio-pngs-hosted-windows
           # Never upload raw Studio logs; they can contain local
           # authentication state or other unrelated user data. Only image
           # evidence and safe status/manifests are retained.
           path: |
-            build/visual-ai-captures/ai-frame-*.png
-            build/visual-ai-captures/frames.tsv
+            build/visual-ai-captures/*/ai-frame-*.png
+            build/visual-ai-captures/*/frames.tsv
             build/visual-ai-captures/bootstrap-status.txt
             build/visual-ai-captures/watchdog-status.txt
             build/visual-ai-captures/watchdog-history.txt
             build/visual-ai-captures/capture-error-metadata.txt
             build/visual-ai-captures/capture-status.txt
             build/visual-ai-captures/capture-error.txt
-            build/visual-ai-captures/visual-ai-contact-sheet.jpg
-            build/visual-ai-captures/visual-ai-audit.json
-            build/visual-ai-captures/visual-ai-audit.md
+            build/visual-ai-captures/*/visual-ai-contact-sheet.jpg
+            build/visual-ai-captures/*/visual-ai-audit.json
+            build/visual-ai-captures/*/visual-ai-audit.md
+            build/visual-ai-audit-scope.txt
           if-no-files-found: warn
           retention-days: 14
