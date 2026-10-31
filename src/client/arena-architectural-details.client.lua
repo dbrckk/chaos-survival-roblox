@@ -132,6 +132,40 @@ local function buildTowers(base, theme, tier)
             f * CFrame.new(0, 16.0, -0.8),
             theme.Detail:Lerp(dark, 0.24), Enum.Material.DiamondPlate, 0.04, high)
         track(pod, "lift", 2.3, 0.55)
+        -- A bare cuboid does not read as an industrial counterweight.
+        -- Keep its motion and original collision-free footprint while
+        -- adding inset steel face ribs and load-bearing tie plates.
+        -- Every detail uses the SAME lift phase as the parent pod.
+        local podFrame = f * CFrame.new(0, 16.0, -0.8)
+        for side = -1, 1, 2 do
+            local plate = part("TowersCounterweightSidePlate" .. side,
+                Vector3.new(0.18, 5.15, 2.95),
+                podFrame * CFrame.new(side * 2.34, 0, 0),
+                theme.Structure:Lerp(dark, 0.42),
+                Enum.Material.CorrodedMetal, 0.06, false)
+            track(plate, "lift", 2.3, 0.55)
+        end
+        if high then
+            for face = -1, 1, 2 do
+                for index = 1, 3 do
+                    local rib = part(
+                        "TowersCounterweightFaceRib" .. face .. "_" .. index,
+                        Vector3.new(0.24, 5.0, 0.18),
+                        podFrame * CFrame.new(
+                            -1.6 + index * 0.8, 0, face * 1.87),
+                        theme.Detail:Lerp(dark, 0.20),
+                        Enum.Material.DiamondPlate, 0.06, false)
+                    track(rib, "lift", 2.3, 0.55)
+                end
+            end
+            for side = -1, 1, 2 do
+                local eye = part("TowersCounterweightLiftEye" .. side,
+                    Vector3.new(0.7, 0.6, 0.7),
+                    podFrame * CFrame.new(side * 1.42, 3.24, 0),
+                    theme.Detail, Enum.Material.CorrodedMetal, 0.05, false)
+                track(eye, "lift", 2.3, 0.55)
+            end
+        end
         part("TowersEngineBeacon", Vector3.new(6.2, 0.3, 0.5),
             f * CFrame.new(0, height - 2.0, -2.28),
             theme.Accent, Enum.Material.Neon, 0.36, false)
