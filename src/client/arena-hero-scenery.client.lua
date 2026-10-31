@@ -1136,9 +1136,11 @@ local function buildHarbor(base, theme, tier)
             frame * CFrame.new(side * 4.5, 29.4, -2.3),
             alloy, Enum.Material.Metal, 0.13, false)
         makePart(side < 0 and "HarborHeroHoistTrussPort" or "HarborHeroHoistTrussStarboard",
-            Vector3.new(0.52, 2.2, 14.2),
+            -- Align the steel truss with the REAL horizontal X boom,
+            -- not across the sideways dock axis.
+            Vector3.new(14.2, 2.2, 0.52),
             frame * CFrame.new(15.2, 23.2, side * 0.9)
-                * CFrame.Angles(math.rad(side * 9), 0, 0),
+                * CFrame.Angles(0, 0, math.rad(side * 9)),
             dark, Enum.Material.Metal, 0.15, false)
     end
     makePart("HarborHeroCabinPanorama", Vector3.new(7.6, 2.1, 0.18),
