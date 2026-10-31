@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageStat
@@ -27,6 +28,32 @@ def inspect(directory: Path) -> dict:
         manifest = list(csv.DictReader(handle, delimiter="\t"))
     if len(manifest) != 15:
         raise ValueError("Missing or malformed 15-frame provenance manifest")
+
+    required_fields = {
+        "index", "utc", "window_title", "width", "height", "sha256",
+        "arena", "bot", "mode", "phase",
+    }
+    if not required_fields.issubset(manifest[0].keys()):
+        raise ValueError("Missing authoritative arena/bot/round provenance columns")
+    if {row["arena"] for row in manifest} != {"Harbor"}:
+        raise ValueError("Not every real frame is certified as Storm Harbor")
+    if {row["phase"] for row in manifest} != {"round"}:
+        raise ValueError("Lobby/result images cannot certify active gameplay")
+    if len({row["bot"] for row in manifest if row["bot"]}) < 2:
+        raise ValueError("Too few distinct real AI camera subjects")
+    if not {"CHASE", "SIDE", "POV"}.issubset(
+        {row["mode"] for row in manifest}
+    ):
+        raise ValueError("Missing a required authentic bot camera angle")
+    timestamps = [
+        datetime.fromisoformat(row["utc"].replace("Z", "+00:00"))
+        for row in manifest
+    ]
+    if any(
+        (after - before).total_seconds() < 1.8
+        for before, after in zip(timestamps, timestamps[1:])
+    ):
+        raise ValueError("Screenshot intervals are too short for a spaced live review")
 
     records: list[dict] = []
     thumbnails: list[Image.Image] = []
@@ -49,6 +76,8 @@ def inspect(directory: Path) -> dict:
         w, h = frame.size
         if w < 640 or h < 360:
             raise ValueError(f"Viewport too small to inspect: {w}x{h}")
+        if w != int(source["width"]) or h != int(source["height"]):
+            raise ValueError(f"Captured viewport size differs from manifest: {filename.name}")
         short = frame.copy()
         short.thumbnail((480, 270), Image.Resampling.LANCZOS)
         thumbnails.append(short)
@@ -85,6 +114,10 @@ def inspect(directory: Path) -> dict:
             "sha256": sha256,
             "window_title": source["window_title"],
             "utc": source["utc"],
+            "arena": source["arena"],
+            "bot": source["bot"],
+            "mode": source["mode"],
+            "phase": source["phase"],
             "width": w,
             "height": h,
             "mean_brightness": round(colors.mean[0], 2),
@@ -116,6 +149,10 @@ def inspect(directory: Path) -> dict:
         "production_live_server": False,
         "android_device_certified": False,
         "frame_count": 15,
+        "server_verified_arena": "Harbor",
+        "live_round_frames": 15,
+        "distinct_ai_bots": len({row["bot"] for row in manifest}),
+        "camera_modes": sorted({row["mode"] for row in manifest}),
         "unique_frame_hashes": len(hashes),
         "changing_frame_pairs": moving_frames,
         "visual_warnings": warnings,
@@ -157,19 +194,24 @@ def inspect(directory: Path) -> dict:
         "not a public-server recording or an Android device.",
         "",
         f"- Frames: 15 / 15; unique hashes: {len(hashes)}",
+        "- Server-validated arena: **Harbor** (not a five-map certification).",
+        "- Actual round phase: **15/15** samples.",
+        f"- Distinct autonomous bots: **{data['distinct_ai_bots']}**.",
+        "- Camera angles: **CHASE / SIDE / POV**.",
         f"- Visually changing adjacent pairs: {moving_frames} / 14",
         "- Real PNGs are separate artifacts; montage is a resized contact sheet.",
         "- The warnings below are heuristic flags, not confirmed defects.",
         "",
         "## Automated indicators",
         "",
-        "| Image | Brightness | Center | Motion delta | Flags |",
-        "|---|---:|---:|---:|---|",
+        "| Image | Bot | Camera | Brightness | Center | Motion delta | Flags |",
+        "|---|---|---|---:|---:|---:|---|",
     ]
     for record in records:
         delta = record["difference_from_previous"]
         lines.append(
-            f"| {record['index']:02d} | {record['mean_brightness']:.1f}"
+            f"| {record['index']:02d} | {record['bot']} | {record['mode']} | "
+            f"{record['mean_brightness']:.1f}"
             f" | {record['center_brightness']:.1f} | "
             f"{delta if delta is not None else '—'} | "
             f"{', '.join(record['warnings']) or '—'} |"
