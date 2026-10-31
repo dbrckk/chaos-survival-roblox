@@ -35,12 +35,21 @@ jobs:
         id: config
         shell: bash
         run: |
-          if [ -n "$ROBLOX_API_KEY" ] && [ -n "$ROBLOX_UNIVERSE_ID" ] && [ -n "$ROBLOX_PLACE_ID" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Open Cloud test skipped: configure ROBLOX_API_KEY secret and ROBLOX_UNIVERSE_ID / ROBLOX_PLACE_ID repository variables."
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Open Cloud release evidence must run on main."
+            exit 1
           fi
+          if [ -z "$ROBLOX_API_KEY" ] || [ -z "$ROBLOX_UNIVERSE_ID" ] || [ -z "$ROBLOX_PLACE_ID" ]; then
+            echo "::error::Open Cloud configuration missing: no engine tests ran. Configure the Roblox secret and both target IDs."
+            exit 1
+          fi
+          if [ "$ROBLOX_UNIVERSE_ID" != "10771083668" ] || [ "$ROBLOX_PLACE_ID" != "95351659174730" ]; then
+            echo "::error::Open Cloud target does not match the authorized public Chaos Survival universe/place."
+            exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Engine-test config validated for the exact main release target."
 
       - name: Install Lest 0.6.0
         if: steps.config.outputs.ready == 'true'
@@ -237,6 +246,44 @@ jobs:
               set -e
 
               if [ "$status" -eq 0 ]; then
+                # A zero Lest exit code is not sufficient release evidence:
+                # reject empty/skipped suites even when the process exits 0.
+                # Real successful logs include positive Tests and Test Suites
+                # totals (verified against the 31 October cloud-engine run).
+                python3 - "$log" "$suite" <<'PY'
+          import os
+          import re
+          import sys
+
+          path, suite = sys.argv[1:]
+          with open(path, encoding="utf-8", errors="replace") as handle:
+              output = handle.read()
+          output = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", output)
+          suite_totals = re.findall(
+              r"(?m)^\s*Test Suites:\s*(\d+)\s+passed,\s*(\d+)\s+total\s*$", output
+          )
+          test_totals = re.findall(
+              r"(?m)^\s*Tests:\s*(\d+)\s+passed,\s*(\d+)\s+total\s*$", output
+          )
+          if len(suite_totals) != 1 or len(test_totals) != 1:
+              raise SystemExit(f"No unambiguous real-engine test summary for {suite}")
+          passed_suites, total_suites = map(int, suite_totals[0])
+          passed_tests, total_tests = map(int, test_totals[0])
+          if (passed_suites < 1 or passed_suites != total_suites or
+                  passed_tests < 1 or passed_tests != total_tests):
+              raise SystemExit(
+                  f"Invalid or empty Open Cloud test result for {suite}: "
+                  f"{passed_tests}/{total_tests} tests, "
+                  f"{passed_suites}/{total_suites} suites"
+              )
+          print(f"Verified {suite}: {passed_tests} real-engine assertions passed.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write(
+                  f"- **{suite}**: {passed_tests}/{total_tests} tests PASS, "
+                  f"{passed_suites}/{total_suites} suites PASS "
+                  f"(SHA `{os.environ['GITHUB_SHA'][:12]}`)\n"
+              )
+          PY
                 echo "::endgroup::"
                 return 0
               fi
