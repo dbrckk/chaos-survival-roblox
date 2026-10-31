@@ -55,6 +55,16 @@ local MAT = {
     Polished = {Enum.Material.Glass, Color3.fromRGB(69, 102, 120), 0.32},
 }
 
+-- The caller reserves this many live decorative Parts BEFORE a scar
+-- is built. Keep allocation and the source-of-truth recipe in sync across
+-- High/Medium/Low and accessibility changes.
+function ImpactSurfaceScarKit.partCount(tier, reduced)
+    if reduced == true then return 1 end
+    if tier == "High" then return 6 end
+    if tier == "Medium" then return 4 end
+    return 1
+end
+
 function ImpactSurfaceScarKit.recipe(kind, tier, material, groundColor,
         hazardColor, reduced)
     if kind ~= "Meteor" and kind ~= "Bomb" then return nil end
@@ -64,8 +74,7 @@ function ImpactSurfaceScarKit.recipe(kind, tier, material, groundColor,
         and groundColor or Color3.fromRGB(110, 107, 100)
     local hazard = typeof(hazardColor) == "Color3"
         and hazardColor or Color3.fromRGB(220, 115, 65)
-    local count = tier == "High" and 5 or (tier == "Medium" and 3 or 0)
-    if reduced == true then count = 0 end
+    local count = ImpactSurfaceScarKit.partCount(tier, reduced) - 1
     local glow = kind == "Meteor" and 0.08 or 0.035
     return {
         Family = family,
