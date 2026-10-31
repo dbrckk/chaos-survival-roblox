@@ -115,6 +115,12 @@ $lines = @(
 )
 Set-Content -LiteralPath $fallback -Value ($lines -join [Environment]::NewLine) -Encoding ascii
 
+$scopeFile = Join-Path $Workspace "build\visual-ai-audit-scope.txt"
+$scope = if (Test-Path -LiteralPath $scopeFile) {
+    (Get-Content -LiteralPath $scopeFile -Raw).Trim()
+}
+else { "Harbor" }
+$expectedFrames = if ($scope -eq "All") { 75 } else { 15 }
 $instructions = @(
     "CHAOS SURVIVAL - AUTOMATED REAL AI VISUAL QA",
     "",
@@ -124,8 +130,10 @@ $instructions = @(
     "The account can be authorized from the Android Roblox app if Roblox",
     "offers Quick Login, but no script can bypass account authentication.",
     "",
-    "After authentication, 15 real screenshots of AI-driven gameplay will",
-    "be captured every 3 seconds and uploaded to GitHub Actions.",
+    "Selected arena scope: $scope.",
+    "After authentication, $expectedFrames real screenshots of AI gameplay",
+    "will be captured at three-second intervals, in 15-frame map groups,",
+    "and uploaded as independent reports to GitHub Actions.",
     "No public game is modified. No Roblox cookies or passwords are used.",
     "",
     "Rare startup fallback: START_CHAOS_AI_CAPTURE.cmd.",
