@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
@@ -14,7 +15,8 @@ local tracked = {}
 local localDecor = Instance.new("Folder")
 localDecor.Name = "ChaosHazardWarningDecorLocal"
 localDecor.Parent = workspace
-local currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+local currentTier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+    UserInputService.TouchEnabled)
 local loopStarted = false
 local labelRefreshAt = 0
 local selectedLabels = {}
@@ -30,7 +32,8 @@ local warningNames = {
 }
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    currentTier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled)
 end)
 
 local function warningDeckFrame(part, deck)
@@ -119,7 +122,8 @@ local function ensureRenderLoop()
                 continue
             end
 
-            currentTier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+            currentTier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+                UserInputService.TouchEnabled)
             task.wait(math.max(1 / 30, currentTier.UpdateInterval))
 
             -- All simultaneous warnings must use the SAME authoritative

@@ -4,6 +4,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
@@ -17,12 +18,17 @@ folder.Parent = workspace
 
 local disappearingActive = false
 local platformHighlights = {}
+local currentPhase = "waiting"
+local lastRoundNumber = nil
 
 local warningEntries = {}
 local creationOrder = {}
 
 local function profile()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    -- Until the adaptive sampler publishes the first tier, Android must
+    -- use Medium rather than briefly instantiating desktop High effects.
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled)
 end
 
 local function localPart(group, className, name, size, frame, color, transparency)
@@ -166,7 +172,12 @@ end
 
 local function tryPresent(warning)
     local entry = warningEntries[warning]
-    if not entry or entry.rendered or warning.Parent ~= workspace then return end
+    -- The 3D silhouette is optional; only draw when the server's phase
+    -- confirms that a live round can still damage the player. A streamed
+    -- warning may replicate before its phase packet arrives: keep its
+    -- attribute listeners and retry it on the first round snapshot.
+    if currentPhase ~= "round" or not entry or entry.rendered
+        or warning.Parent ~= workspace then return end
     local kind = warning.Name == "MeteorWarning" and "Meteor" or "Bomb"
     if warning:GetAttribute("WarningKind") ~= kind then return end
     local remaining, progress = WarningRules.window(
@@ -327,8 +338,39 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
+    local incoming = tonumber(state.roundNumber)
+    if not incoming or incoming ~= incoming or incoming < 1
+        or incoming == math.huge or incoming ~= math.floor(incoming) then
+        incoming = nil
+    end
+    -- A delayed previous-round snapshot must not resurrect old markers
+    -- after a newer numbered round has already been observed.
+    if incoming and lastRoundNumber and incoming < lastRoundNumber then
+        return
+    end
+    local newRound = incoming and lastRoundNumber
+        and incoming ~= lastRoundNumber
+    if incoming then lastRoundNumber = incoming end
+    local nextPhase = tostring(state.phase or "waiting")
+    local changedPhase = nextPhase ~= currentPhase
+    currentPhase = nextPhase
+
+    if newRound then
+        -- A missing intermission snapshot must not carry optional 3D
+        -- signatures from the previous round into a new numbered round.
+        -- The server warning Parts remain untouched.
+        local previous = {}
+        for warning in pairs(warningEntries) do
+            previous[#previous + 1] = warning
+        end
+        for _, warning in ipairs(previous) do
+            releaseWarning(warning)
+        end
+        table.clear(creationOrder)
+    end
+
     local active = false
-    if state.phase == "round" then
+    if currentPhase == "round" then
         for _, id in ipairs(
             type(state.disasterIds) == "table" and state.disasterIds or {}
         ) do
@@ -337,9 +379,21 @@ stateEvent.OnClientEvent:Connect(function(state)
                 break
             end
         end
-    else
-        -- A round cancellation must also clean up any lingering local
-        -- meteor/bomb signatures; the server warnings are untouched.
+        if changedPhase or newRound then
+            -- Warnings can replicate before RoundState or survive a brief
+            -- streaming transition. Rebind existing server Parts once at
+            -- round entry, then present pending Parts using their actual
+            -- server timestamp (no restarted damage countdown).
+            for _, child in ipairs(workspace:GetChildren()) do
+                bindWarning(child)
+            end
+            for warning in pairs(warningEntries) do
+                tryPresent(warning)
+            end
+        end
+    elseif changedPhase or newRound then
+        -- No cosmetic blast warning may persist into result/READY/lobby.
+        -- Run teardown once per real transition, not per-second heartbeat.
         local toRelease = {}
         for warning in pairs(warningEntries) do
             table.insert(toRelease, warning)

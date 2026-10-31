@@ -185,7 +185,8 @@ local KIND_BADGES = {
 }
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled)
 end
 
 local function rootPart()
