@@ -430,7 +430,7 @@ ensureRenderLoop = function()
 
         if not DisasterCosmeticRules.reusableFreeze(state, warning) then
             clearFreeze(warning)
-            bindFreeze(warning)
+            tryBindFreeze(warning)
             continue
         end
         local elapsed = workspace:GetServerTimeNow() - state.startedAt
