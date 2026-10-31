@@ -25,7 +25,7 @@ exact source SHA. As of 26 October 2026 the repository contains **75** engine
 spec files assigned to five Open Cloud suites; previous counts are historical.
 The merged feature set still requires Studio and native Android verification.
 
-Latest verified automated baseline before this release-preflight change: commit `ff888ac8a505bc828639c9d0684111f79c73a8df` on 2026-10-26 ([Build Validation run 40414240787](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/40414240787) + [five-suite Roblox engine run 40414240704](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/40414240704)). Both completed successfully on that exact SHA; engine logs show 903 passed tests across all five suites. This is **historical CI evidence only**; every newer source or documentation commit requires its own exact-SHA checks. It is **not** Studio/device/publication certification.
+Latest verified automated and public-playtest baseline: 31 October 2026, commit `97a2533cf57e33f74fc2abe9948922e7ac1d8a4f` ([Build Validation run 41189848633](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41189848633) + [five-suite Roblox engine run 41189853156](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41189853156)), followed by [the successful guarded public-playtest publication run 41190173346](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41190173346). These are **historical exact-SHA checks**, not verification of later `main` changes or real Studio/Android/device performance, and not full-release certification.
 
 > Every candidate SHA must re-run both automated workflows. A later code/doc commit invalidates the automated certification until the new exact SHA is green.
 
