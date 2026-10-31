@@ -139,7 +139,10 @@ task.spawn(function()
                 or phase ~= "round"
                 or not workspace:FindFirstChild("GeneratedMap")
                 or not player.Parent then
-                if interrupted then streak = 0 end
+                if interrupted then
+                    streak = 0
+                    settleUntil = os.clock() + QUALITY_SETTLE_SECONDS
+                end
                 invalidateCensus()
                 continue
             end
