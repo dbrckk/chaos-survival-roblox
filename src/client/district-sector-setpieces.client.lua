@@ -61,6 +61,37 @@ local signs = {
     {1, 1, "COMMS ARRAY", "04"},
 }
 
+-- Shared immutable geometry recipe: four monuments use the same five
+-- distinct arena profiles without rebuilding this table per landmark.
+local ROOF_PROFILES = {
+    Classic = {
+        name = "ArchiveWeatherCap", x = 6.2, mirroredX = true, y = 21.0, z = 3.0,
+        span = 1.65, size = Vector3.new(2.6, 2.5, 3.2),
+        yaw = 0, material = Enum.Material.CorrodedMetal,
+    },
+    Towers = {
+        name = "LiftGearCowl", x = 0, y = 17.8, z = 2.6,
+        span = 5.8, size = Vector3.new(3.8, 2.6, 3.7),
+        yaw = 0, material = Enum.Material.DiamondPlate,
+    },
+    Crossroads = {
+        name = "TransitCanopyEave", x = 0, y = 13.6, z = 3.4,
+        span = 6.5, size = Vector3.new(5.3, 1.8, 4.0),
+        yaw = 0, material = Enum.Material.Concrete,
+    },
+    Orbital = {
+        name = "ContainmentFinCrown", x = 0, y = 15.9, z = 2.2,
+        span = 6.6, size = Vector3.new(2.5, 3.0, 4.5),
+        yaw = 17, material = Enum.Material.CeramicTiles,
+    },
+    Harbor = {
+        name = "DockGantryWeatherHood", x = 0, y = 13.5, z = 2.8,
+        span = 6.2, size = Vector3.new(3.4, 2.5, 3.6),
+        yaw = 0, material = Enum.Material.CorrodedMetal,
+    },
+}
+
+
 -- The sixteen real server district facades already identify their
 -- North/East/South/West routes with these four distinct hues
 -- (ArenaDistrictArchitecture.SECTOR_COLOR). The four nearby sector
@@ -438,34 +469,7 @@ local function makeSector(base, theme, index, tier, variant)
     -- Place two per sector (8 per arena) only on Medium/High; Android
     -- Low still has exactly the original five silhouette Parts.
     -- Local, collisionless, streaming/LOD managed by this same model.
-    local roofProfiles = {
-        Classic = {
-            name = "ArchiveWeatherCap", x = mirrored * 6.2, y = 21.0, z = 3.0,
-            span = 1.65, size = Vector3.new(2.6, 2.5, 3.2),
-            yaw = 0, pitch = 0, material = Enum.Material.CorrodedMetal,
-        },
-        Towers = {
-            name = "LiftGearCowl", x = 0, y = 17.8, z = 2.6,
-            span = 5.8, size = Vector3.new(3.8, 2.6, 3.7),
-            yaw = 0, pitch = 0, material = Enum.Material.DiamondPlate,
-        },
-        Crossroads = {
-            name = "TransitCanopyEave", x = 0, y = 13.6, z = 3.4,
-            span = 6.5, size = Vector3.new(5.3, 1.8, 4.0),
-            yaw = 0, pitch = 0, material = Enum.Material.Concrete,
-        },
-        Orbital = {
-            name = "ContainmentFinCrown", x = 0, y = 15.9, z = 2.2,
-            span = 6.6, size = Vector3.new(2.5, 3.0, 4.5),
-            yaw = 17, pitch = 0, material = Enum.Material.CeramicTiles,
-        },
-        Harbor = {
-            name = "DockGantryWeatherHood", x = 0, y = 13.5, z = 2.8,
-            span = 6.2, size = Vector3.new(3.4, 2.5, 3.6),
-            yaw = 0, pitch = 0, material = Enum.Material.CorrodedMetal,
-        },
-    }
-    local profile = roofProfiles[variant]
+    local profile = ROOF_PROFILES[variant]
     if profile then
         for side = -1, 1, 2 do
             -- The two opposed inclines form a gabled roofline/hoist
@@ -475,9 +479,10 @@ local function makeSector(base, theme, index, tier, variant)
                 .. (side < 0 and "L" or "R")
             wedge.Size = profile.size
             wedge.CFrame = root
-                * CFrame.new(profile.x + side * profile.span,
+                * CFrame.new((profile.mirroredX and mirrored * profile.x or profile.x)
+                        + side * profile.span,
                     profile.y, profile.z)
-                * CFrame.Angles(profile.pitch, math.rad(
+                * CFrame.Angles(0, math.rad(
                     profile.yaw * side + (side > 0 and 180 or 0)), 0)
             wedge.Color = (variant == "Crossroads" or variant == "Orbital")
                 and brushed or weathered
