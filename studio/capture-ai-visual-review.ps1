@@ -30,6 +30,10 @@ $probeStartedAt = Get-Date
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
+# Each of five arenas invokes this script in the SAME authenticated
+# PowerShell process. Defining the interop type again throws and stops the
+# second capture; reuse the already compiled type after the first arena.
+if (-not ("ChaosScreenNative" -as [type])) {
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -43,8 +47,12 @@ public static class ChaosScreenNative {
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 }
 "@
+}
 
-function Read-Output {
+# A CLI run's final PASS must be proven by its OWN --outputFile/stdout.
+# Windows Roblox client logs are useful only for interim camera markers
+# and must never authenticate the next arena's StudioTestService result.
+function Read-CurrentRunOutcome {
     $builder = [System.Text.StringBuilder]::new()
     foreach ($path in @($engineLog, $stdout, $stderr)) {
         if (Test-Path $path) {
@@ -54,6 +62,12 @@ function Read-Output {
             catch {}
         }
     }
+    return $builder.ToString()
+}
+
+function Read-Output {
+    $builder = [System.Text.StringBuilder]::new()
+    [void]$builder.Append((Read-CurrentRunOutcome))
     # Child Studio client/server DataModels sometimes log only to their
     # separate Roblox log files, not the outer RunScript output stream.
     # Inspect only new local Studio logs and never upload account secrets.
@@ -61,7 +75,12 @@ function Read-Output {
     if (Test-Path $robloxLogs) {
         $latest = Get-ChildItem -LiteralPath $robloxLogs -File -ErrorAction SilentlyContinue |
             Where-Object {
-                $_.LastWriteTime -ge $probeStartedAt.AddSeconds(-5) -and
+                # LastWriteTime alone could include the PRIOR map's
+                # server-approved marker or a stale PASS after a restart.
+                # Only logs CREATED by this exact Studio invocation are
+                # allowed into interim gameplay marker discovery.
+                $_.CreationTime -ge $probeStartedAt.AddSeconds(-3) -and
+                $_.LastWriteTime -ge $probeStartedAt -and
                 $_.Name -match "(Studio|Client|Player)"
             } |
             Sort-Object LastWriteTime -Descending |
@@ -187,6 +206,17 @@ try {
         if ($arena -ne $ExpectedArena) {
             throw "WRONG_ARENA: expected $ExpectedArena but marker says $arena"
         }
+        # The bot camera advances every three seconds. If the NEXT sample
+        # has already been approved, screenshotting now would mislabel its
+        # displayed viewpoint as this previous bot or camera mode.
+        if ($i -lt $Count) {
+            $nextTag = "{0:D2}/{1:D2}" -f ($i + 1), $Count
+            $nextPattern = 'CHAOS_VISUAL_AI_CAPTURE_MARKER\s+' +
+                [regex]::Escape($nextTag) + '\b'
+            if ((Read-Output) -match $nextPattern) {
+                throw "STALE_FRAME_MARKER: next bot camera already advanced before image $tag"
+            }
+        }
 
         $window = Find-RenderedStudioWindow
         if ($null -eq $window) {
@@ -225,6 +255,13 @@ try {
         }
         finally { $bitmap.Dispose() }
 
+        # Recheck immediately after reading real pixels. A model/camera
+        # switch during CopyFromScreen makes this image ambiguous and
+        # must NEVER receive the previous approved marker's provenance.
+        if ($i -lt $Count -and (Read-Output) -match $nextPattern) {
+            Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+            throw "STALE_FRAME_MARKER: camera advanced during image $tag"
+        }
         $hash = (Get-FileHash -Algorithm SHA256 -Path $file).Hash
         $name = ($window.Title -replace "[\t\r\n]", " ").Trim()
         $utc = [DateTime]::UtcNow.ToString("o")
@@ -241,13 +278,13 @@ try {
 
     $finishBy = (Get-Date).AddSeconds(55)
     while ((Get-Date) -lt $finishBy) {
-        $log = Read-Output
+        $log = Read-CurrentRunOutcome
         if ($log -match "CHAOS_VISUAL_AI_OK") { break }
         if ($log -match "CHAOS_VISUAL_AI_FAILED") { break }
         if ($studio.HasExited) { break }
         Start-Sleep -Milliseconds 500
     }
-    if ((Read-Output) -notmatch "CHAOS_VISUAL_AI_OK") {
+    if ((Read-CurrentRunOutcome) -notmatch "CHAOS_VISUAL_AI_OK") {
         throw "STUDIO_TEST_FAILED: screenshot files cannot be certified without StudioTestService PASS."
     }
 

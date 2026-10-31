@@ -66,7 +66,10 @@ $command = '"' + $psExe + '" ' + $arguments
 Set-ItemProperty -Path $runKey -Name "ChaosAIVisualReviewV2" -Value $command
 
 # Also register a Task Scheduler OnLogon trigger. Windows remote desktop
-# sessions can sometimes reconnect without processing Run keys. Both
+# sessions can sometimes reconnect without processing Run keys. A single
+# All-arenas 75-frame session can span multiple Studio launches after login;
+# its task lifetime must exceed the combined five-map capture duration.
+# Both
 # launchers are safe: the task itself avoids duplicate sessions via mutex.
 $taskName = "ChaosAIVisualReview"
 try {
@@ -74,7 +77,7 @@ try {
     $taskAction = New-ScheduledTaskAction -Execute $psExe -Argument $arguments
     $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
-    $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 17) -MultipleInstances IgnoreNew
+    $taskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 42) -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskPrincipal -Settings $taskSettings -Force | Out-Null
     Write-Host "AI_VISUAL_WATCHER_SCHEDULED: interactive Windows logon"
 }
@@ -112,6 +115,12 @@ $lines = @(
 )
 Set-Content -LiteralPath $fallback -Value ($lines -join [Environment]::NewLine) -Encoding ascii
 
+$scopeFile = Join-Path $Workspace "build\visual-ai-audit-scope.txt"
+$scope = if (Test-Path -LiteralPath $scopeFile) {
+    (Get-Content -LiteralPath $scopeFile -Raw).Trim()
+}
+else { "Harbor" }
+$expectedFrames = if ($scope -eq "All") { 75 } else { 15 }
 $instructions = @(
     "CHAOS SURVIVAL - AUTOMATED REAL AI VISUAL QA",
     "",
@@ -121,8 +130,10 @@ $instructions = @(
     "The account can be authorized from the Android Roblox app if Roblox",
     "offers Quick Login, but no script can bypass account authentication.",
     "",
-    "After authentication, 15 real screenshots of AI-driven gameplay will",
-    "be captured every 3 seconds and uploaded to GitHub Actions.",
+    "Selected arena scope: $scope.",
+    "After authentication, $expectedFrames real screenshots of AI gameplay",
+    "will be captured at three-second intervals, in 15-frame map groups,",
+    "and uploaded as independent reports to GitHub Actions.",
     "No public game is modified. No Roblox cookies or passwords are used.",
     "",
     "Rare startup fallback: START_CHAOS_AI_CAPTURE.cmd.",

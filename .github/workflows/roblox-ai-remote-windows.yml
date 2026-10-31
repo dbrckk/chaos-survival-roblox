@@ -314,14 +314,16 @@ jobs:
           Write-Host "Private Tailscale IP: $ip"
           Write-Host "RDP user: runneradmin (password never printed)."
 
-      - name: Wait for authenticated AI round and exact fifteen screenshots
+      - name: Wait for authenticated five-arena AI capture evidence
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $captureDir = Join-Path $env:GITHUB_WORKSPACE "build/visual-ai-captures"
-          # Do not reserve GitHub-hosted Windows for over an hour when
-          # no Roblox Studio account is authenticated on this fresh VM.
+          # Protect free/limited Actions minutes. Allow only 14 minutes
+          # for the owner to authenticate; *after* a genuine authenticated
+          # Studio stage, budget enough time for five sequential play tests.
           $deadline = (Get-Date).AddMinutes(14)
+          $postAuthExtended = $false
           $complete = $false
           $taskStartRequested = $false
           while ((Get-Date) -lt $deadline) {
@@ -352,6 +354,17 @@ jobs:
               $stage = @($statusLines | Where-Object { $_ -match "^stage=" } | Select-Object -Last 1)
               if ($stage.Count -gt 0) {
                 Write-Host ("STUDIO_WATCHDOG " + $stage[0])
+                $authenticated = $stage[0] -match '^stage=(AUTHENTICATED_STARTING_AI_TEST|CAPTURING_|CAPTURE_COMPLETE)'
+                if ($authenticated -and -not $postAuthExtended) {
+                  $scope = (Get-Content build/visual-ai-audit-scope.txt -Raw).Trim()
+                  $minutes = if ($scope -eq "All") { 22 } else { 8 }
+                  # Authenticated gameplay can use the full bounded time
+                  # required by the real Roblox Studio engine. Never extend
+                  # merely because a remote desktop was opened.
+                  $deadline = (Get-Date).AddMinutes($minutes)
+                  $postAuthExtended = $true
+                  Write-Host "VERIFIED_STUDIO_AUTH: bounded gameplay collection window extended."
+                }
               }
             }
             if (Test-Path $errorFile) {
@@ -388,7 +401,7 @@ jobs:
             Write-Host ("AI CAPTURE WAIT {0:u}: session online; awaiting Roblox sign-in or local test completion." -f (Get-Date).ToUniversalTime())
           }
           if (-not $complete) {
-            throw "AUTH_REQUIRED_OR_STARTUP_FAILURE: no real authenticated Studio capture in this temporary Windows session. Do not count screenshots."
+            throw "AUTH_REQUIRED_OR_CAPTURE_TIMEOUT: no complete real authenticated Studio evidence. Do not count partial screenshots."
           }
 
       - name: Install image QA dependencies
