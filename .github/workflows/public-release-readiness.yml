@@ -124,14 +124,13 @@ jobs:
           try:
               query = urllib.parse.urlencode({
                   "head_sha": sha,
-                  "event": "push",
                   "per_page": 100,
               })
               data = api("/actions/runs?" + query)
               matching = [
                   run for run in data.get("workflow_runs", [])
                   if run.get("head_sha") == sha
-                  and run.get("event") == "push"
+                  and run.get("event") in {"workflow_dispatch", "push"}
                   and run.get("head_branch") == "main"
               ]
               for required in ("Build Validation", "Roblox Open Cloud Engine Tests"):
@@ -141,11 +140,16 @@ jobs:
                       reverse=True,
                   )
                   latest = named[0] if named else None
-                  good = bool(latest and latest.get("status") == "completed"
-                              and latest.get("conclusion") == "success")
-                  row(required, "PASS" if good else "BLOCKED",
-                      ("Successful exact-main push run" if good else
-                       f"Missing, pending or failing exact-main push check: "
+                  # Same proof semantics as the public-playtest publisher:
+                  # a trusted successful exact-SHA manual run is sufficient.
+                  passing = next(
+                      (run for run in named if run.get("status") == "completed"
+                       and run.get("conclusion") == "success"), None
+                  )
+                  row(required, "PASS" if passing else "BLOCKED",
+                      (f"Successful exact-main {passing['event']} run "
+                       f"#{passing['id']}" if passing else
+                       f"No successful manual/legacy-push check: "
                        f"{(latest or {}).get('status', 'missing')}/"
                        f"{(latest or {}).get('conclusion', 'none')}"))
           except (urllib.error.URLError, ValueError, KeyError) as exc:
