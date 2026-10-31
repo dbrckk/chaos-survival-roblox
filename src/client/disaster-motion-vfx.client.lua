@@ -30,6 +30,7 @@ local blackoutLastReduced = nil
 local tornadoSpiral = {parts = {}}
 local clock = 0
 local currentPhase = "waiting"
+local lastRoundNumber = nil
 local activeSignature = ""
 local loopStarted = false
 local ensureRenderLoop
@@ -304,13 +305,30 @@ local function refreshTornado(tier)
 end
 
 local function applyState(state)
-    local snapshot = type(state) == "table" and state or {}
-    local nextPhase = tostring(snapshot.phase or "waiting")
+    if type(state) ~= "table" or type(state.phase) ~= "string" then
+        return
+    end
+    local candidate = tonumber(state.roundNumber)
+    local number = candidate and candidate == candidate
+        and candidate >= 1 and candidate < math.huge
+        and candidate == math.floor(candidate) and candidate or nil
+    if number and lastRoundNumber and number < lastRoundNumber then
+        -- Never reintroduce movement decoration for an obsolete disaster.
+        return
+    end
+    local newRound = number ~= nil and lastRoundNumber ~= nil
+        and number ~= lastRoundNumber
+    if number then lastRoundNumber = number end
+
+    local nextPhase = state.phase
     local nextIds = {}
-    local ids = type(snapshot.disasterIds) == "table"
-        and snapshot.disasterIds or {}
-    for _, id in ipairs(ids) do
-        table.insert(nextIds, tostring(id))
+    local seen = {}
+    for _, id in ipairs(type(state.disasterIds) == "table"
+        and state.disasterIds or {}) do
+        if type(id) == "string" and not seen[id] then
+            seen[id] = true
+            nextIds[#nextIds + 1] = id
+        end
     end
     table.sort(nextIds)
     local nextSignature = nextPhase .. "|" .. table.concat(nextIds, ",")
@@ -321,7 +339,7 @@ local function applyState(state)
         activeIds[id] = true
     end
 
-    if nextSignature ~= activeSignature then
+    if nextSignature ~= activeSignature or newRound then
         activeSignature = nextSignature
         rebuildCharacterEffects()
     end
