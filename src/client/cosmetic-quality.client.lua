@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local CharacterPolishRules = require(ReplicatedStorage.Shared.CharacterPolishRules)
+local VisualBudgetPressureRules = require(ReplicatedStorage.Shared.VisualBudgetPressureRules)
 local CosmeticQualityRegistry = require(script.Parent.CosmeticQualityRegistry)
 
 local localPlayer = Players.LocalPlayer
@@ -21,6 +22,8 @@ end
 local function applyObject(instance)
     local tier = profile()
     local reducedMotion = localPlayer:GetAttribute("ReduceMotion") == true
+    local pressure = localPlayer:GetAttribute("OptionalVfxPressure")
+    local optionalScale = VisualBudgetPressureRules.emissionScale(pressure)
 
     if instance.Name == "ChaosAura" and instance:IsA("ParticleEmitter") then
         local rate
@@ -34,12 +37,12 @@ local function applyObject(instance)
         if reducedMotion then
             rate = math.max(3, math.floor(rate * 0.72))
         end
-        if finalRush then
-            rate = 0
-        end
-        instance.Rate = rate
+        if finalRush then rate = 0 end
+        rate *= optionalScale
+        if instance.Rate ~= rate then instance.Rate = rate end
     elseif instance.Name == "ChaosAuraLight" and instance:IsA("PointLight") then
-        if finalRush or tier.Name == "Low" then
+        if finalRush or tier.Name == "Low"
+            or not VisualBudgetPressureRules.optionalLightAllowed(pressure) then
             instance.Enabled = false
         else
             instance.Enabled = true
@@ -169,6 +172,7 @@ end)
 
 localPlayer:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
 localPlayer:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshAll)
+localPlayer:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshAll)
 
 stateEvent.OnClientEvent:Connect(function(state)
     -- RoundState can briefly be malformed during streaming or reconnect.
