@@ -1,0 +1,159 @@
+# Owner-requested validation milestone, NOT a release workflow.
+# Runs once when this new file is merged onto main; never deploys Roblox.
+# The expensive checks remain manual for subsequent source changes.
+name: One-time Chaos Portrait HUD Recovery Exact-SHA QA (NO PUBLISH)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-qa-20261031-portrait-hud-recovery-no-publish.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-owner-portrait-hud-recovery-qa-20261031
+  cancel-in-progress: false
+
+jobs:
+  final-source-and-engine:
+    if: github.repository == 'dbrckk/chaos-survival-roblox' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+
+    steps:
+      - name: Dispatch exact-main build and five real Roblox engine suites; never publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          repo = os.environ["REPO"]
+          sha = os.environ["CANDIDATE_SHA"]
+          api_root = "https://api.github.com/repos/" + repo
+          headers = {
+              "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "Content-Type": "application/json",
+              "User-Agent": "chaos-owner-one-time-validation-no-publish",
+          }
+          checks = {
+              "Build Validation": "ci.yml",
+              "Roblox Open Cloud Engine Tests": "roblox-cloud-test.yml",
+          }
+
+          def api(path, payload=None):
+              body = json.dumps(payload).encode("utf-8") if payload is not None else None
+              request = urllib.request.Request(
+                  api_root + path, data=body,
+                  method="POST" if body is not None else "GET",
+                  headers=headers,
+              )
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(request, timeout=30) as response:
+                          if body is not None:
+                              if response.status != 204:
+                                  raise RuntimeError("Unexpected workflow dispatch response")
+                              return {}
+                          return json.load(response)
+                  except (urllib.error.URLError, TimeoutError):
+                      if attempt == 3:
+                          raise
+                      time.sleep(3 * (attempt + 1))
+
+          def check_head():
+              actual = api("/git/ref/heads/main")["object"]["sha"]
+              if actual != sha:
+                  raise SystemExit(
+                      "main HEAD moved from validated candidate: "
+                      + sha + " -> " + actual + "; refusing certification"
+                  )
+
+          def runs():
+              payload = api("/actions/runs?head_sha=" + sha + "&per_page=100")
+              return {
+                  run["id"]: run
+                  for run in payload.get("workflow_runs", [])
+                  if run.get("head_sha") == sha
+                  and run.get("head_branch") == "main"
+                  and run.get("event") == "workflow_dispatch"
+                  and run.get("name") in checks
+              }
+
+          check_head()
+          previous_ids = set(runs())
+          for label, workflow in checks.items():
+              check_head()
+              api("/actions/workflows/" + workflow + "/dispatches", {"ref": "main"})
+              print("Requested:", label, "on exact main SHA", sha, flush=True)
+              time.sleep(4)
+
+          found = {}
+          # 90 minutes max allows for the real-engine cloud test job's
+          # single-flight queue and five existing shards. No Roblox publish.
+          for iteration in range(360):
+              check_head()
+              observed = runs()
+              latest = {}
+              for run_id, run in observed.items():
+                  if run_id in previous_ids:
+                      continue
+                  label = run["name"]
+                  if label not in latest or run_id > latest[label]["id"]:
+                      latest[label] = run
+              found = latest
+              if iteration % 4 == 0:
+                  print("Exact-SHA QA:",
+                        {k: ((found.get(k) or {}).get("status", "not_started"),
+                             (found.get(k) or {}).get("conclusion"))
+                         for k in checks}, flush=True)
+              for label in checks:
+                  run = found.get(label)
+                  if run and run["status"] == "completed" and run.get("conclusion") != "success":
+                      raise SystemExit(label + " FAILED on " + sha
+                                       + ": " + run["html_url"]
+                                       + " — NO PUBLICATION")
+              if all(found.get(label, {}).get("status") == "completed"
+                     and found[label].get("conclusion") == "success"
+                     for label in checks):
+                  check_head()
+                  print("PASS: exact SHA Build Validation + all five Roblox Engine suites", sha)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Timed out awaiting exact-SHA QA; NO PUBLICATION")
+
+          lines = [
+              "## Chaos Survival — one-time exact-SHA QA (NO PUBLISH)",
+              "",
+              "Source SHA: `" + sha + "`",
+              "",
+              "| Check | Result |",
+              "|---|---|",
+          ]
+          for label in checks:
+              lines.append("| " + label + " | [PASS]("
+                           + found[label]["html_url"] + ") |")
+          lines += [
+              "",
+              "This workflow does not publish Roblox.",
+              "Authenticated Studio screenshots, genuine Android FPS/thermals,",
+              "and real device touch usability are **NOT certified** by this run.",
+          ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("\n".join(lines) + "\n")
+          PY
