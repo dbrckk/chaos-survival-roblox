@@ -1,6 +1,6 @@
 # Arena balance telemetry — first observational pass (2026-10-21)
 
-**Scope:** Server-side analytics instrumentation for Chaos Survival's four arenas. This document defines how to evaluate survival, engagement and NPC credibility before adjusting difficulty. **There are no observed gameplay measurements yet**: the latest repository code is not necessarily installed in the public Roblox experience.
+**Scope:** Server-side analytics instrumentation for Chaos Survival's five arenas. This document defines how to evaluate survival, engagement and NPC credibility before adjusting difficulty. **This is an instrumentation contract, not measured gameplay data**: check the candidate SHA and public release before interpreting cohorts. On releases before the Harbor whitelist fix, Harbor appears as `Arena:Unknown`; do not retroactively relabel that historic unknown cohort.
 
 ## What is measured
 
@@ -8,7 +8,7 @@ Roblox **AnalyticsService custom events**, logged on the server, with a bounded 
 
 | Event | Frequency / source | Numeric value | Field 01 | Field 02 | Field 03 |
 | --- | --- | --- | --- | --- | --- |
-| `ArenaSurvived` | Once per connected human at round completion | 1 if alive, 0 if eliminated | `Arena:Classic/Towers/Crossroads/Orbital` | `Mode:Solo/Multiplayer` | `Primary:<id>\|Fusion:Yes/No\|Extra:Yes/No` |
+| `ArenaSurvived` | Once per connected human at round completion | 1 if alive, 0 if eliminated | `Arena:Classic/Towers/Crossroads/Orbital/Harbor` | `Mode:Solo/Multiplayer` | `Primary:<id>\|Fusion:Yes/No\|Extra:Yes/No` |
 | `ArenaTimeAliveSeconds` | Once per connected human at round completion | Time from round start to first real `Humanoid.Died` (or elapsed duration if still alive), 0–120s | Same | Same | Same |
 | `ArenaBotSurvivalFraction` | **At most once per server round**, attributed to the first connected human (Roblox requires a Player) and only if actual bots started | Living bots ÷ bots at round start, bounded 0–1 | `Arena:...` | `Mode:...` | `Bots:<count>\|Early:Yes/No` |
 
