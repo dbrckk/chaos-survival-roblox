@@ -1,0 +1,141 @@
+name: One-Time Premium Skyworld Build + Engine Gate (2026-11-01)
+
+# A ONE-SHOT milestone, not a new automatic development test.
+# The creation of THIS file by a specially titled, owner-approved
+# main-branch merge launches it once. Subsequent code-only commits do not
+# match the push paths trigger; a deliberate manual dispatch is the only
+# fallback. Never publishes Roblox or writes game data.
+on:
+  # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
+  # or a later release-blocker fix needs a fresh exact-main certification.
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-premium-release-qa-20261101.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  verify-and-launch:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' &&
+        startsWith(github.event.head_commit.message,
+          'chore(release): launch premium exact-SHA build and engine certification')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    concurrency:
+      group: one-time-premium-build-and-engine-20261101
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_SHA: ${{ github.sha }}
+      SOURCE_REPO: ${{ github.repository }}
+    steps:
+      - name: Verify immutable main SHA, build first, dispatch Cloud only if green
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import sys
+          import time
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ["SOURCE_REPO"]
+          sha = os.environ["SOURCE_SHA"]
+          token = os.environ["GH_TOKEN"]
+          headers = {
+              "Authorization": "Bearer " + token,
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "chaos-skyworld-once-release-gate",
+          }
+
+          def api(suffix, method="GET", payload=None):
+              body = None if payload is None else json.dumps(payload).encode("utf-8")
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/{suffix}",
+                  data=body,
+                  headers={**headers, **({"Content-Type": "application/json"}
+                                     if body is not None else {})},
+                  method=method,
+              )
+              with urllib.request.urlopen(request, timeout=25) as response:
+                  raw = response.read()
+                  return json.loads(raw) if raw else None
+
+          def assert_same_main():
+              current = api("branches/main")["commit"]["sha"]
+              if current != sha:
+                  raise SystemExit(
+                      f"ABORT: main moved from {sha} to {current}; "
+                      "do not certify a stale candidate"
+                  )
+
+          assert_same_main()
+          dispatched_at = datetime.datetime.now(datetime.timezone.utc)
+          print("DISPATCH Build Validation for immutable candidate SHA", sha,
+                flush=True)
+          api("actions/workflows/ci.yml/dispatches", "POST", {"ref": "main"})
+
+          # The Build Validation workflow has a 5-minute job limit.
+          # Wait for the *new* successful same-main run; never accept a
+          # previous green SHA or accidentally consume Roblox quota on
+          # a failed compiler/build.
+          deadline = time.monotonic() + 600
+          seen_run = None
+          while time.monotonic() < deadline:
+              time.sleep(18)
+              assert_same_main()
+              runs = api("actions/runs?head_sha=" + sha + "&per_page=100")
+              candidates = [
+                  run for run in runs.get("workflow_runs", [])
+                  if run.get("name") == "Build Validation"
+                  and run.get("head_sha") == sha
+                  and run.get("head_branch") == "main"
+                  and run.get("event") == "workflow_dispatch"
+                  and datetime.datetime.fromisoformat(
+                      run["created_at"].replace("Z", "+00:00")
+                  ) >= dispatched_at - datetime.timedelta(seconds=5)
+              ]
+              if not candidates:
+                  continue
+              last = max(candidates, key=lambda run: run["id"])
+              seen_run = last["id"]
+              status, conclusion = last.get("status"), last.get("conclusion")
+              if status == "completed":
+                  if conclusion != "success":
+                      raise SystemExit(
+                          f"Build Validation #{seen_run} FAILED: "
+                          f"{conclusion}; Cloud test was NOT dispatched"
+                      )
+                  print("PASS: actual Build Validation run", seen_run,
+                        "on exact", sha, flush=True)
+                  break
+          else:
+              raise SystemExit(
+                  "Timed out waiting for exact-SHA Build Validation; "
+                  "Cloud test was NOT dispatched"
+              )
+
+          assert_same_main()
+          print("DISPATCH Roblox Open Cloud Engine Tests on exact", sha,
+                "(five real engine suites, no publish)", flush=True)
+          api("actions/workflows/roblox-cloud-test.yml/dispatches",
+              "POST", {"ref": "main"})
+          print(
+              "Engine suite dispatch accepted. Source-only release gate "
+              "in progress; publication remains manual and blocked "
+              "without real engine, Studio and Android evidence.",
+              flush=True,
+          )
+          PY

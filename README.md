@@ -18,6 +18,10 @@ The experience is **public to eligible 16+ Roblox players** under the documented
 
 For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-19.md), [launch runbook](docs/MISE_EN_LIGNE_1_0.md), and [release gate issue #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
 
+## Critical gameplay-fairness repair — source candidate
+
+The two end-to-end sky promenades per arena must never become isolated because the *approach* collapses while the actual skybridge remains intact. All physical perimeter steps 1–5 and branch steps 1–4 now join the same **server-owned collapse-resistant backbone** as the 16 elevated crossing decks. This is protection from **random Disappearing Platforms only**, not immunity from meteors/lava or Shrinking Arena. Flat 2.4-stud gaps now have visible two-way chevrons on every real deck, since the old ascent-only jump hints do not apply to these level crossings. Existing engine-contract checks were updated. A one-time source-only release gate is configured to dispatch build, then Roblox engine checks, without publishing. Their **actual green results, physical Studio/Android verification and the public Roblox update are still pending**. [Verified source geometry and final release acceptance](docs/RELEASE_GATE_ROUTE_CONTINUITY_2026-11-01.md).
+
 ## Catastrophe-driven, destructible monumental skyline — source only
 
 Actual Meteor/Bomb impacts and prolonged Tornado/Lava disasters now trigger **large staged 3D collapses** of the six monumental sky-promenade gateways in each of the five playable arenas. Existing native radar structures, maintenance lifts, transit switches, orbital reactors and Harbor freight machinery fracture, tilt and fall in synchronized **server-owned geometry**, with temporary quality-tiered debris and dust. The playable platforms remain real safe colliders; no new unsignaled danger or bogus world physics. This code is **not yet published or validated on Roblox devices**. [Structural Cataclysm architecture, fairness and acceptance](docs/STRUCTURAL_CATACLYSM_PREMIUM_2026-11-01.md).

@@ -2612,6 +2612,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             theme.StructureMaterial or VisualTheme.Materials.Structure
         )
         platform.Color = theme.Detail:Lerp(theme.Surface, 0.28)
+        -- A complete climb-to-sky backbone must never be split by random
+        -- platform collapse. From the floor: perimeter steps 1..5,
+        -- four branch ascents and all eight giant crossing decks. Other
+        -- routes remain eligible, so the disaster still has real stakes.
+        if definition.PermanentRoute == true then
+            platform:SetAttribute("ChaosPermanentRoute", true)
+        end
         local routeTier = tonumber(definition.RouteTier)
         if routeTier and routeTier >= 1 and routeTier <= 4 then
             platform:SetAttribute("RouteTier", routeTier)
@@ -2668,7 +2675,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             -- own only their original four bridges.
             platform:SetAttribute("PromenadeLane", definition.PromenadeLane)
             platform:SetAttribute("PromenadeStep", definition.PromenadeStep)
-            platform:SetAttribute("ChaosPermanentRoute", true)
             platform.Color = theme.Structure:Lerp(theme.Detail, 0.52)
             platform.Material = theme.PanelMaterial
                 or VisualTheme.Materials.Structure
@@ -2850,6 +2856,39 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme)
+
+            -- These long cross-arena lanes are LEVEL jumping routes:
+            -- JumpRouteCueRules intentionally advertises only ascending
+            -- steps. Give both directions a genuinely physical, visible
+            -- trail of two V-shaped arrows per deck, aligned to the
+            -- actual collider. They follow the platform when it shrinks
+            -- and never create a deceptive secondary collision surface.
+            local arrowY = platform.Size.Y * 0.5 + 0.155
+            local tone = theme.Accent:Lerp(theme.Detail, 0.34)
+            for _, direction in ipairs({-1, 1}) do
+                local point = platform.CFrame * CFrame.new(
+                    direction * math.min(5.0, platform.Size.X * 0.24),
+                    arrowY, 0)
+                local heading = CFrame.lookAt(
+                    point.Position, point.Position
+                        + Vector3.new(direction, 0, 0))
+                for _, side in ipairs({-1, 1}) do
+                    local mark = decorPart(
+                        decor,
+                        "PromenadeJumpChevron" .. i .. "_"
+                            .. tostring(direction) .. "_"
+                            .. tostring(side),
+                        Vector3.new(0.30, 0.08, 2.55), point.Position,
+                        tone, Enum.Material.Neon
+                    )
+                    mark.CFrame = heading
+                        * CFrame.new(side * 0.62, 0, 0)
+                        * CFrame.Angles(0, math.rad(side * 35), 0)
+                    mark.Transparency = 0.34
+                    mark:SetAttribute("PerimeterPlatformIndex", i)
+                    mark:SetAttribute("ChaosWayfinding", true)
+                end
+            end
         end
 
         if definition.HarborSpokeStep == 4 then

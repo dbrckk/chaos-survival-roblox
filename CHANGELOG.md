@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-01 — Release-blocking sky crossing escape route fixed (source)
+
+- Corrected a fairness defect exposed by source review of the large #535 and #536 milestone: `DisappearingPlatforms` could randomly remove the FIRST or FINAL access decks connected to a protected, solid 200-stud sky promenade, stranding players and AI. All **20 real perimeter entry/fork steps + 16 branch ascents + 16 sky promenade slabs** now explicitly form a **52-deck continuous random-collapse-safe circuit on each arena**.
+- Source-owned `PermanentRoute` metadata flows to `ChaosPermanentRoute` on real server colliders. Existing disaster exclusion consumes the same flag; other platforms remain destructible. The real flat-jump promenades now have **64 native bidirectional, deck-attached chevron strokes per active map**, following shrink and never altering collision; no custom physics, remotes, UI loops, gameplay timers or DataStore changes.
+- Existing engine specs updated to enforce permanent route ownership, remaining collapse candidates, true level 2.4-stud jumps and physical wayfinding across the five maps; **not run yet**. A one-time workflow on the exact final merge will trigger Build Validation first and the five real Roblox Cloud suites only after a verified passing build, never deploying the public place. [Source geometry, risk, verification requirements](docs/RELEASE_GATE_ROUTE_CONTINUITY_2026-11-01.md). Cloud/Studio/Android gate and publication are still outstanding.
+
+
 ## 2026-11-01 — Massive structural destruction synchronized with real disasters (source only)
 
 - Six giant 3D gateway installations **per arena** now collapse visibly and progressively during real Meteor/Bomb impacts (nearest intact structure) and sustained Tornado/RisingLava weather. Up to six catastrophic failures in a full round, 30 distinct authored structures across the five arena variants (six at a time).

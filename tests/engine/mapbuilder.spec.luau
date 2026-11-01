@@ -842,6 +842,18 @@ describe("Chaos Survival engine", function()
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
             )
+            -- Continuous floor-to-sky paths are mandatory during a
+            -- collapse: the suspended viaduct is not useful if its
+            -- approach or exit vanishes underneath stranded survivors.
+            local collapsible = DisappearingPlatforms.eligiblePlatforms(
+                platforms, {})
+            local remaining = {}
+            for _, deck in ipairs(collapsible) do
+                remaining[deck] = true
+                expect(deck:GetAttribute("ChaosPermanentRoute") ~= true)
+                    .toBe(true)
+            end
+            expect(#collapsible >= 8).toBe(true)
             for route = 1, 4 do
                 local previous = nil
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -853,6 +865,9 @@ describe("Chaos Survival engine", function()
                     expect(platform:GetAttribute("PerimeterRoute")).toBe(route)
                     expect(platform:GetAttribute("PerimeterStep")).toBe(step)
                     expect(platform:GetAttribute("RouteTier")).toBe(math.min(step, 4))
+                    expect(platform:GetAttribute("ChaosPermanentRoute") == true)
+                        .toBe(step <= 5)
+                    expect(remaining[platform] == true).toBe(step > 5)
                     expect(math.abs(platform.Position.X - Config.ArenaCenter.X)
                         >= 45).toBe(true)
                     expect(math.abs(platform.Position.Y - platform.Size.Y * 0.5
@@ -867,6 +882,65 @@ describe("Chaos Survival engine", function()
                     previous = platform
                 end
             end
+            -- Both cross-arena promenades must be continuous from the
+            -- REAL protected branch lookouts, with 2.4-stud gaps and
+            -- clear bidirectional arrows on every physical landing.
+            local runwayStart = original + #variant.PerimeterPlatforms
+                + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+                + #(variant.SkywayPlatforms or {})
+                + #(variant.SpokePlatforms or {})
+            expect(#variant.PromenadePlatforms).toBe(16)
+            local visualDecor = arena:FindFirstChild("Decor")
+            for lane = 1, 2 do
+                local branchLeft = lane == 1 and 1 or 3
+                local leftIndex = original + #variant.PerimeterPlatforms
+                    + (branchLeft - 1) * 4 + 4
+                local rightIndex = leftIndex + 4
+                local from = platforms:FindFirstChild("Platform" .. leftIndex)
+                local target = platforms:FindFirstChild("Platform" .. rightIndex)
+                expect(from:GetAttribute("ChaosPermanentRoute")).toBe(true)
+                expect(target:GetAttribute("ChaosPermanentRoute")).toBe(true)
+                local previous = from
+                for step = 1, 8 do
+                    local index = runwayStart + (lane - 1) * 8 + step
+                    local deck = platforms:FindFirstChild("Platform" .. index)
+                    expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
+                    expect(deck.CanCollide and deck.Anchored).toBe(true)
+                    expect(deck:GetAttribute("ChaosPermanentRoute")).toBe(true)
+                    expect(deck:GetAttribute("PromenadeLane")).toBe(lane)
+                    expect(deck:GetAttribute("PromenadeStep")).toBe(step)
+                    local gap = JumpRouteCueRules.gap(previous, deck)
+                    if step == 1 then
+                        expect(gap < 0.01).toBe(true)
+                    else
+                        expect(math.abs(gap - 2.4) < 0.02).toBe(true)
+                    end
+                    local previousTop = previous.Position.Y
+                        + previous.Size.Y * 0.5
+                    local currentTop = deck.Position.Y + deck.Size.Y * 0.5
+                    expect(math.abs(currentTop - previousTop) < 0.01)
+                        .toBe(true)
+                    for _, direction in ipairs({-1, 1}) do
+                        for _, side in ipairs({-1, 1}) do
+                            local mark = visualDecor:FindFirstChild(
+                                "PromenadeJumpChevron" .. index .. "_"
+                                    .. tostring(direction) .. "_"
+                                    .. tostring(side))
+                            expect(mark ~= nil and mark:IsA("BasePart"))
+                                .toBe(true)
+                            expect(mark.CanCollide).toBe(false)
+                            expect(mark.CanTouch).toBe(false)
+                            expect(mark.CanQuery).toBe(false)
+                            expect(mark:GetAttribute("PerimeterPlatformIndex"))
+                                .toBe(index)
+                        end
+                    end
+                    previous = deck
+                end
+                expect(JumpRouteCueRules.gap(previous, target) < 0.01)
+                    .toBe(true)
+            end
+
             if id == "Harbor" then
                 -- Appended dry-dock routes must remain physical and
                 -- progression-ready, without shifting any older deck.
