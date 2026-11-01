@@ -1119,6 +1119,32 @@ describe("AI survivor rules", function()
         expect(keep(target, position, 0 / 0, 8.54, 15, 15)).toBe(false)
     end)
 
+    it("replans only for genuinely intersecting NEW meteor or bomb footprints", function()
+        local overlaps = AISurvivorRules.newImpactIntersectsEscape
+        local origin = Vector3.new(-22, 3, 0)
+        local target = Vector3.new(22, 3, 0)
+        local center = Vector3.new(0, 3, 0)
+        -- Safe endpoints are insufficient when the whole route crosses
+        -- the impact disk. The true final server diameter must be used.
+        expect(overlaps(origin, target, "MeteorWarning", center, 2.75, 24))
+            .toBe(true)
+        expect(overlaps(origin, target, "BombWarning", center, 2.75, 18))
+            .toBe(true)
+        -- Harmless remote warnings cannot cause heavy replanning loops.
+        expect(overlaps(origin, target, "MeteorWarning",
+            Vector3.new(0, 3, 70), 2.75, 24)).toBe(false)
+        expect(overlaps(origin, target, "FreezeWarning",
+            center, 2.75, 24)).toBe(false)
+        -- A bot already inside a warning that is escaping OUTWARD should
+        -- not reset its route merely because the hazard was newly observed.
+        expect(overlaps(center, Vector3.new(30, 3, 0),
+            "BombWarning", center, 2.75, 18)).toBe(false)
+        expect(overlaps(origin, target, "BombWarning", nil, 2.75, 18))
+            .toBe(false)
+        expect(overlaps(nil, target, "MeteorWarning", center, 2.75, 18))
+            .toBe(false)
+    end)
+
     it("holds a live hazard target through overlapping warning proximity ties", function()
         local keep = AISurvivorRules.keepThreatFocus
         -- Two warnings cross in perceived distance while a survivor dodges.
