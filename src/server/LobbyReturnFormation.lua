@@ -78,9 +78,12 @@ function LobbyReturnFormation.botLanding(spawn, floor, decor, slot, hipHeight, r
     if slot < 1 or slot > MAX_BOT_LANDING_SLOTS then return nil end
     local desiredIndex = BOT_START_INDEX + slot - 1
     local positions = LobbyReturnFormation.positions(spawn, floor, decor, desiredIndex)
-    -- In case another lobby layout has fewer safe slots, try a nearby
-    -- collision-checked position rather than using the raised stage.
-    local point = positions[desiredIndex]
+    -- Reserve the first eight safe positions for actual human returns.
+    -- If a cramped/custom lobby cannot provide slot 19..25, fall back
+    -- to unique bot-only positions 9..15, NEVER to slots 1..8.
+    -- Primary and fallback ranges are disjoint, so seven bot positions
+    -- remain mutually distinct even when only some primary slots exist.
+    local point = positions[desiredIndex] or positions[slot + 8]
     if not point then return nil end
     local floorTop = floor.Position.Y + floor.Size.Y * 0.5
     local clearance = math.max(3.5,
