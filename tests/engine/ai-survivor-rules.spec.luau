@@ -1082,6 +1082,43 @@ describe("AI survivor rules", function()
         meteor:Destroy()
     end)
 
+    it("scores a real raycast CONTACT surface rather than a thick Part center", function()
+        local penalty = AISurvivorRules.escapeGroundStepPenalty
+        -- A thick 18-stud-tall deck has a center 9 studs below the
+        -- playable surface; a bot standing normally on its top is safe.
+        local rootY = 15
+        local realContactY = 12
+        local thickPartCenterY = 3
+        expect(penalty(rootY, realContactY)).toBe(0)
+        expect(penalty(rootY, thickPartCenterY)).toBe(65)
+        -- Genuine cliffs/steps still need the existing avoidance penalties.
+        expect(penalty(14, 4)).toBe(65)
+        expect(penalty(14, 20)).toBe(45)
+        expect(penalty(14, 6)).toBe(0)
+        expect(penalty(14, 10)).toBe(0)
+        expect(penalty(nil, 10)).toBe(100)
+        expect(penalty(14, 0 / 0)).toBe(100)
+        expect(penalty(14, math.huge)).toBe(100)
+    end)
+
+    it("invalidates a committed dodge when another live warning appears", function()
+        local keep = AISurvivorRules.keepEscapeRoute
+        local position = Vector3.new(0, 3, 0)
+        local target = Vector3.new(18, 3, 0)
+        -- Stable hazard set: a believable half-second commitment.
+        expect(keep(target, position, 8.20, 8.54, 15, 15)).toBe(true)
+        -- A newly spawned Meteor/Bomb warning (or a removed old ring)
+        -- increments the owner's generation, forcing a fresh route score.
+        expect(keep(target, position, 8.21, 8.54, 15, 16)).toBe(false)
+        expect(keep(target, position, 8.21, 8.54, 16, 15)).toBe(false)
+        expect(keep(target, position, 8.54, 8.54, 15, 15)).toBe(false)
+        expect(keep(target, Vector3.new(16, 3, 0), 8.2, 8.54, 15, 15))
+            .toBe(false)
+        expect(keep(nil, position, 8.2, 8.54, 15, 15)).toBe(false)
+        expect(keep(target, position, 8.2, 8.54, nil, 15)).toBe(false)
+        expect(keep(target, position, 0 / 0, 8.54, 15, 15)).toBe(false)
+    end)
+
     it("holds a live hazard target through overlapping warning proximity ties", function()
         local keep = AISurvivorRules.keepThreatFocus
         -- Two warnings cross in perceived distance while a survivor dodges.
