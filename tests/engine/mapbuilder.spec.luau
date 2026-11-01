@@ -838,6 +838,7 @@ describe("Chaos Survival engine", function()
             local original = #variant.Platforms
             expect(#platforms:GetChildren()).toBe(
                 original + 52 + #(variant.SkywayPlatforms or {})
+                    + #(variant.SpokePlatforms or {})
             )
             for route = 1, 4 do
                 local previous = nil
@@ -862,6 +863,50 @@ describe("Chaos Survival engine", function()
                         expect(rise >= 2.5 and rise <= 4.05).toBe(true)
                     end
                     previous = platform
+                end
+            end
+            if id == "Harbor" then
+                -- Appended dry-dock routes must remain physical and
+                -- progression-ready, without shifting any older deck.
+                local startIndex = original + 52
+                    + #(variant.SkywayPlatforms or {})
+                expect(#variant.SpokePlatforms).toBe(16)
+                for route = 1, 4 do
+                    local previous = nil
+                    for step = 1, 4 do
+                        local index = startIndex + (route - 1) * 4 + step
+                        local deck = platforms:FindFirstChild("Platform" .. index)
+                        expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
+                        expect(deck.Anchored and deck.CanCollide).toBe(true)
+                        expect(deck:GetAttribute("HarborSpokeRoute")).toBe(route)
+                        expect(deck:GetAttribute("HarborSpokeStep")).toBe(step)
+                        expect(deck:GetAttribute("RouteTier")).toBe(step)
+                        expect(deck:GetAttribute("ParkourGrade")).toBe(
+                            math.min(4, step + 1)
+                        )
+                        if previous then
+                            expect(JumpRouteCueRules.jumpable(previous, deck))
+                                .toBe(true)
+                            expect(JumpRouteCueRules.nextPhysical(
+                                previous, platforms:GetChildren(),
+                                base.Position, "Harbor"
+                            )).toBe(deck)
+                        else
+                            local rise = deck.Position.Y
+                                + deck.Size.Y * 0.5
+                                - (base.Position.Y + base.Size.Y * 0.5)
+                            expect(rise >= 1.5 and rise <= 5.2).toBe(true)
+                        end
+                        if step == 4 then
+                            expect(deck:FindFirstChild("HarborDryDockOutpost")
+                                :IsA("BillboardGui")).toBe(true)
+                            expect(JumpRouteCueRules.nextPhysical(
+                                deck, platforms:GetChildren(),
+                                base.Position, "Harbor"
+                            )).toBe(nil)
+                        end
+                        previous = deck
+                    end
                 end
             end
             -- Real, sculpted exit facades are cosmetic: no collision,
@@ -1115,6 +1160,7 @@ describe("Chaos Survival engine", function()
             local all = platforms:GetChildren()
             expect(#all).toBe(
                 branchEnd + 4 + #(variant.SkywayPlatforms or {})
+                    + #(variant.SpokePlatforms or {})
             )
 
             for route = 1, 4 do
@@ -1416,6 +1462,7 @@ describe("Chaos Survival engine", function()
             local start = #variant.Platforms + #variant.PerimeterPlatforms
             expect(#platforms:GetChildren()).toBe(
                 start + 20 + #(variant.SkywayPlatforms or {})
+                    + #(variant.SpokePlatforms or {})
             )
             for route = 1, 4 do
                 local forkIndex = #variant.Platforms
