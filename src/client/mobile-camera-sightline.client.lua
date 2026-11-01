@@ -193,6 +193,7 @@ end
 local cameraWatch = nil
 local cameraConnections = {}
 local function bindCameraWatch()
+    if not UserInputService.TouchEnabled then return end
     local camera = workspace.CurrentCamera
     if camera == cameraWatch then return end
     for _, connection in ipairs(cameraConnections) do
