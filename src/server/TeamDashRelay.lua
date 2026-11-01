@@ -255,8 +255,11 @@ function TeamDashRelay.activate(entry, actor, fromBot)
         then return false end
     if fromBot then
         local root = botRoot(actor)
-        if not root or (root.Position - entry.core.Position).Magnitude
-            > TeamDashRelay.BotReach
+        local humanoid = root and actor:FindFirstChildOfClass("Humanoid")
+        if not root or not humanoid
+            or humanoid.FloorMaterial == Enum.Material.Air
+            or (root.Position - entry.core.Position).Magnitude
+                > TeamDashRelay.BotReach
             or not humanNearby(round, entry) then
             return false
         end
