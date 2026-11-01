@@ -148,6 +148,17 @@ accessibilitySettingsEvent.OnServerEvent:Connect(function(player, setting, value
     )
 end)
 
+-- Capacity is a Place setting, not writable from a server Script.
+-- Surface mismatches in server logs instead of falsely claiming that a
+-- GitHub change already altered the live Creator Dashboard setting.
+if Players.MaxPlayers ~= Config.RecommendedHumanCapacity then
+    warn(string.format(
+        "Human capacity target is %d; live place currently admits %d. "
+            .. "Set the start place's Maximum Visitor Count on Creator Dashboard.",
+        Config.RecommendedHumanCapacity, Players.MaxPlayers
+    ))
+end
+
 MapBuilder.build(Config, "Classic", ArenaVariants)
 -- Mesh loading may yield or fail: it must never block player arrival,
 -- round lifecycle or the original collision-tested native scenery.
