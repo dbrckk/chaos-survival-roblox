@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-01 — Cooperative DASH route discoverability (source only)
+
+- **Latest VERIFIED public build**: exact SHA `46263cbdced1bddf002a8d57867303eb21422c2f` passed [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41322299252), [real five-suite Roblox Cloud checks](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41322305051), then the [authenticated public-place publish](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41322662162). Eight-person AI autofill and cooperative NPC DASH support are **published source**, but still need physical device/gameplay confirmation.
+- **Next source-only gameplay change**: Move both real Team DASH relays toward the player routes in all five 320-stud maps. Original stations were about 81.5 studs from the center and outside the AI's 68-stud detection radius at the hub. New first choices are about 58.5 studs away, with the older coordinates kept as safe fallbacks. Each candidate must clear real collidable geometry and remain 12 studs from each native spawn marker. World labels now use a smaller 95-stud visibility range.
+- No new network remotes, tasks, persistence, reward advantages, artificial players, geometry collision or public build. [Behavior/QA contract](docs/COOP_RELAY_ROUTE_DISCOVERY_2026-11-01.md). Validation is deferred to the next **single exact-SHA publication milestone**; no Android FPS or relay usage rate is claimed.
+
 ## 2026-10-30 — Harbor maritime deck finishing AFTER verified second publication (source only)
 
 - The preceding Harbor 3D/physical-platform update is **LIVE** in the existing public Roblox place. Exact published source `58af603f185c2adebabd70517ce37f36b778aea8` passed [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091324370), [real Roblox engine tests](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091334778), [owner-only exact-SHA release gate](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41091311509) and [public publisher](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41092002110).
