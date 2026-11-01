@@ -19,6 +19,7 @@ local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Round
 local caches = {}
 local roundActive = false
 local roundFinalRush = false
+local optionalExpeditionAllowed = false
 local climbedStage = {}
 local claimedEasy, claimedElite, claimedSignal = false, false, false
 local shardEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
@@ -359,6 +360,11 @@ player:GetAttributeChangedSignal("RoundDistrictEliteClaimed"):Connect(hideClaime
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     roundFinalRush = state.finalRush == true
+    optionalExpeditionAllowed = UIResponsive.showMobileOptionalExpedition(state)
+    if UserInputService.TouchEnabled and not optionalExpeditionAllowed then
+        panel.Visible = false
+        stepMarker.Enabled = false
+    end
     local phase = tostring(state.phase or state.Phase or ""):lower()
     if phase == "round" then
         if not roundActive then
@@ -504,6 +510,7 @@ local function update()
     hideClaimedCues()
     local eventVisible, introVisible = priorityBannerVisible()
     if not optionalRouteHasRoom
+        or (UserInputService.TouchEnabled and not optionalExpeditionAllowed)
         -- Optional guidance must yield not only to disaster introductions
         -- and escalations but also to a reward in the same mobile side lane.
         or (UserInputService.TouchEnabled and MobileHudNotices.current() ~= nil)
