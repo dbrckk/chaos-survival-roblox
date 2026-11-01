@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-01 — Massive structural destruction synchronized with real disasters (source only)
+
+- Six giant 3D gateway installations **per arena** now collapse visibly and progressively during real Meteor/Bomb impacts (nearest intact structure) and sustained Tornado/RisingLava weather. Up to six catastrophic failures in a full round, 30 distinct authored structures across the five arena variants (six at a time).
+- A single server-authoritative structural controller deforms the **existing** 3D pylon/gantry/hoist/reaction equipment, using distinct displacement profiles for wind and heat. Real player-facing warning and damage remain exclusively under existing disaster modules; all 16 high-altitude promenade decks remain physically solid and safe.
+- Server-replicated structural states trigger local quality-tiered real 3D debris (Low 4, Medium 8, High 12 Parts), short dust and optional airborne pressure rings. No new RemoteEvents, rewards, fake colliders, paid assets, physics or per-frame Lua loops. Reduced Motion, streaming, round cleanup and ShrinkingArena conflict guards included.
+- This major source lot is **not** a tested Roblox release. Build + five real Cloud suites + Studio + Android + visual screenshots must certify the same SHA before any public publish. [Detailed gameplay and QA contract](docs/STRUCTURAL_CATACLYSM_PREMIUM_2026-11-01.md).
+
+
 ## 2026-11-01 — Monumental physically playable 200-stud viaducts in five arenas (source only)
 
 - Major gameplay-level visible construction: **two high-altitude, end-to-end sky promenades per arena**, each connecting an existing pair of far-flung real branch lookouts. Sixteen additional server-authoritative, jumpable, 2-stud-thick collision decks per map, 80 authored landings across five variants. Eight landings per viaduct, with consistent 2.4-stud gaps and overlapping old lookout endpoints; real height-matched jumps, not a teleport or cinematic-only fake.
