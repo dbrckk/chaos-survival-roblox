@@ -111,6 +111,7 @@ function StructuralCollapse.start(ctx)
     local sequence = 0
     local broken = {}
     local snapshots = {}
+    local deckSnapshots = {}
     local tweens = {}
     local lastAt = -math.huge
     local roundNumber = math.floor(math.max(0, tonumber(ctx.RoundNumber) or 0))
@@ -129,6 +130,12 @@ function StructuralCollapse.start(ctx)
                 part.Transparency = original.transparency
                 part.Color = original.color
                 part:SetAttribute("StructuralRuin", nil)
+            end
+        end
+        for platform, original in pairs(deckSnapshots) do
+            if platform.Parent then
+                platform.Color = original.color
+                platform.Material = original.material
             end
         end
         for _, group in ipairs(groups) do
@@ -188,6 +195,18 @@ function StructuralCollapse.start(ctx)
         -- The original impact already completed its server damage and
         -- warning contract. This is the *same event*, not a new hazard.
         local startTime = workspace:GetServerTimeNow()
+        -- The safe, WALKABLE deck visually scars beneath the shattered
+        -- gateway but never changes collision, dimensions or warning state.
+        -- A dark abrasion reads as world damage, not an extra lethal tile.
+        if not deckSnapshots[group.platform] then
+            deckSnapshots[group.platform] = {
+                color = group.platform.Color,
+                material = group.platform.Material,
+            }
+        end
+        group.platform.Color = group.platform.Color:Lerp(
+            Color3.fromRGB(62, 65, 68), 0.40)
+        group.platform.Material = Enum.Material.CorrodedMetal
         group.platform:SetAttribute("StructuralFractureStartedAt", startTime)
         group.platform:SetAttribute("StructuralFractureKind", kind)
         group.platform:SetAttribute("StructuralFracturePhase", "Broken")
