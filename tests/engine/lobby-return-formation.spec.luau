@@ -67,7 +67,7 @@ describe("Lobby survivor return formation", function()
         root:Destroy()
     end)
 
-    it("lands seven R15 AI survivors away from the raised stage and players", function())
+    it("lands seven R15 AI survivors away from the raised stage and players", function()
         local root = MapBuilder.build(Config, "Classic", ArenaVariants)
         local lobby = root:FindFirstChild("Lobby")
         local spawn = lobby:FindFirstChild("LobbySpawn")
