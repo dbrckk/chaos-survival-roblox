@@ -383,7 +383,7 @@ rookieCoach.Font = Enum.Font.GothamBold
 rookieCoach.TextColor3 = Color3.fromRGB(235, 240, 250)
 rookieCoach.TextScaled = true
 rookieCoach.TextWrapped = true
-rookieCoach.Text = "SURVIVE UNTIL 0  •  AVOID WARNING COLORS  •  GLOWING PADS = ESCAPE"
+rookieCoach.Text = ""
 rookieCoach.Visible = false
 rookieCoach.ZIndex = 12
 rookieCoach.Parent = root
@@ -3407,7 +3407,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     rookieCoach.Visible = coachKey ~= nil
         and (not touchDevice or (not votingOpen and currentHudPhase ~= "round"))
     if coachKey then
-        if coachKey == "FIRST_READY" and not touchDevice then
+        if coachKey == "FIRST_WAIT" then
+            -- Show a physical first action without creating another modal
+            -- or obscuring the live hazard, vote or avatar.
+            local controlsKey = touchDevice and "FIRST_WAIT_TOUCH"
+                or (UserInputService.GamepadEnabled and "FIRST_WAIT_GAMEPAD"
+                    or "FIRST_WAIT_KEYBOARD")
+            rookieCoach.Text = CoreLocalization.text(localeId, controlsKey)
+        elseif coachKey == "FIRST_READY" and not touchDevice then
             local controlsKey = UserInputService.GamepadEnabled
                 and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS"
             rookieCoach.Text = CoreLocalization.text(localeId, controlsKey)
