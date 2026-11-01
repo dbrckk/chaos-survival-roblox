@@ -77,6 +77,7 @@ local SurvivalFeedback = require(script.SurvivalFeedback)
 local RoundCollectibles = require(script.RoundCollectibles)
 local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
 local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
+local ArenaStructuralCollapse = require(script.ArenaStructuralCollapse)
 local DistrictSignalRush = require(script.DistrictSignalRush)
 local RoundChallenge = require(script.RoundChallenge)
 local HighGroundMastery = require(script.HighGroundMastery)
@@ -967,6 +968,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local hazardContestants = AISurvivorService.hazardContestants(contestants)
     local cleanup = {}
     local onCleanup = {}
+    -- Bound after the round context is complete, before hazards start.
+    -- Meteors/Bombs report a true impact; never mutate a decorative arch
+    -- from an arbitrary client event or a pre-impact warning.
+    local structuralImpact = nil
     local eliminated = {}
     local eliminationCauses = {}
     local deathElapsed = {}
@@ -1262,6 +1267,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             end
         end,
         OnHazardImpact = function(position, color, radius, kind)
+            if structuralImpact then
+                local ok, err = pcall(structuralImpact, position, kind)
+                if not ok then
+                    warn("Arena structural response failed:", err)
+                end
+            end
             for _, player in ipairs(Players:GetPlayers()) do
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                 -- A spectator's camera may follow a survivor across the
@@ -1578,6 +1589,16 @@ local function runDisasterSet(selected, contestants, roundSettings)
             end
         end,
     }
+
+    -- Structural damage operates on existing noncolliding promenade
+    -- architecture, never on the server-owned playable decks. The
+    -- destruction watcher is installed before any actual hazard lands.
+    local cataclysmOk, cataclysmResult = pcall(ArenaStructuralCollapse.start, ctx)
+    if cataclysmOk then
+        structuralImpact = cataclysmResult
+    else
+        warn("Arena structural cataclysm failed to start:", cataclysmResult)
+    end
 
     local arenaMechanic = nil
     local mechanicOk, mechanicResult = pcall(ArenaMechanics.start, ctx, currentArenaVariant)
