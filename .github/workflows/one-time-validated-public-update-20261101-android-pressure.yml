@@ -1,0 +1,179 @@
+# Owner explicitly requested a PUBLIC Chaos Survival Android-pressure update 2026-11-01.
+# The workflow triggers ONCE when this exact new filename lands on main.
+# It launches real build/engine checks and dispatches the existing guarded
+# public publisher ONLY IF both finish green on this very same main SHA.
+# This is not Android/Studio certification and cannot auto-publish future PRs.
+name: One-time Verified Public Update 2026-11-01 Android VFX
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-validated-public-update-20261101-android-pressure.yml'
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: premium-platformer-public-update-20261101-android-pressure
+  cancel-in-progress: false
+jobs:
+  public-candidate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 135
+    steps:
+      - name: Owner-authorized exact-SHA validation and guarded public update
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ['REPO']
+          sha = os.environ['CANDIDATE_SHA']
+          root = 'https://api.github.com/repos/' + repo
+          headers = {
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'chaos-survival-owner-release-milestone',
+          }
+
+          def request(path, payload=None):
+              data = json.dumps(payload).encode('utf-8') if payload is not None else None
+              req = urllib.request.Request(
+                  root + path,
+                  data=data,
+                  method='POST' if data is not None else 'GET',
+                  headers={**headers, 'Content-Type': 'application/json'},
+              )
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(req, timeout=40) as response:
+                          if data is not None:
+                              if response.status != 204:
+                                  raise RuntimeError('Unexpected dispatch status ' + str(response.status))
+                              return {}
+                          return json.load(response)
+                  except (urllib.error.URLError, TimeoutError) as exc:
+                      if attempt == 3:
+                          raise
+                      print('Transient GitHub API failure:', str(exc), flush=True)
+                      time.sleep(3 * (attempt + 1))
+
+          def assert_head():
+              head = request('/git/ref/heads/main')['object']['sha']
+              if head != sha:
+                  raise SystemExit('main changed: refusing validation or publishing of stale SHA ' + sha)
+
+          assert_head()
+          workflows = (
+              ('Build Validation', 'ci.yml'),
+              ('Roblox Open Cloud Engine Tests', 'roblox-cloud-test.yml'),
+          )
+          print('Owner-authorized FINAL MILESTONE candidate:', sha, flush=True)
+          for name, path in workflows:
+              request('/actions/workflows/' + path + '/dispatches', {'ref': 'main'})
+              print('Explicit milestone check dispatched:', name, flush=True)
+              time.sleep(3)
+
+          for attempt in range(420):
+              assert_head()
+              runs = request('/actions/runs?head_sha=' + sha + '&per_page=100')
+              checked = {}
+              for run in runs.get('workflow_runs', []):
+                  if (run.get('head_sha') != sha
+                      or run.get('head_branch') != 'main'
+                      or run.get('event') != 'workflow_dispatch'):
+                      continue
+                  name = run.get('name')
+                  if name in (n for n, _ in workflows):
+                      previous = checked.get(name)
+                      if previous is None or run.get('created_at', '') > previous.get('created_at', ''):
+                          checked[name] = run
+              state = {
+                  name: (checked.get(name) or {}).get('status', 'not_started')
+                  + '/' + str((checked.get(name) or {}).get('conclusion'))
+                  for name, _ in workflows
+              }
+              if attempt % 4 == 0:
+                  print('FINAL MILESTONE', state, flush=True)
+              if any(
+                  (checked.get(name) or {}).get('status') == 'completed'
+                  and (checked.get(name) or {}).get('conclusion') != 'success'
+                  for name, _ in workflows
+              ):
+                  raise SystemExit('FINAL MILESTONE FAILED: ' + str(state) + '; NO PUBLISH')
+              if all(
+                  (checked.get(name) or {}).get('status') == 'completed'
+                  and (checked.get(name) or {}).get('conclusion') == 'success'
+                  for name, _ in workflows
+              ):
+                  assert_head()
+                  print('PREMIUM PLATFORMER milestone exact-SHA checks PASS; publisher may start.', flush=True)
+                  print('Validated source SHA:', sha, flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit('Timeout waiting for both final exact-SHA checks; NO PUBLISH')
+
+          # Only the repository's existing public-playtest publisher may
+          # write the Roblox place. It independently rechecks all green
+          # exact-SHA validations, main HEAD, Universe/Place and API key.
+          # Snapshot existing runs to avoid accepting an old success.
+          assert_head()
+          workflow = 'publish-existing-public-playtest.yml'
+          publish_name = 'Publish Existing Chaos Survival (Public Playtest Update)'
+          previous_ids = {
+              run['id'] for run in request(
+                  '/actions/workflows/' + workflow + '/runs?per_page=40'
+              ).get('workflow_runs', [])
+          }
+          request('/actions/workflows/' + workflow + '/dispatches', {
+              'ref': 'main',
+              'inputs': {
+                  'confirm': 'PUBLISH_EXISTING_10771083668',
+                  'acknowledge_untested': 'true',
+              },
+          })
+          print('Owner-authorized public update DISPATCHED:', sha, flush=True)
+          for attempt in range(96):
+              if attempt % 3 == 0:
+                  assert_head()
+              new_runs = [
+                  run for run in request(
+                      '/actions/workflows/' + workflow + '/runs?per_page=40'
+                  ).get('workflow_runs', [])
+                  if run.get('id') not in previous_ids
+                  and run.get('head_sha') == sha
+                  and run.get('head_branch') == 'main'
+                  and run.get('name') == publish_name
+                  and run.get('event') == 'workflow_dispatch'
+              ]
+              if new_runs:
+                  latest = max(new_runs, key=lambda run: run['id'])
+                  if attempt % 3 == 0:
+                      print('Public update status:', latest['html_url'],
+                            latest['status'], latest.get('conclusion'), flush=True)
+                  if latest.get('status') == 'completed':
+                      if latest.get('conclusion') != 'success':
+                          raise SystemExit('Publishing failed: ' + latest['html_url'])
+                      print('EXISTING PUBLIC ROBLOX PLACE UPDATED:',
+                            sha, latest['html_url'], flush=True)
+                      break
+              time.sleep(15)
+          else:
+              raise SystemExit(
+                  'Publisher outcome unknown: inspect GitHub Actions '
+                  'before any retry; publication may have succeeded.'
+              )
+          PY
