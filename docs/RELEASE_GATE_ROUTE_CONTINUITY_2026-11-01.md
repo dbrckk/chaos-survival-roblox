@@ -48,3 +48,7 @@ The new one-shot `.github/workflows/one-time-premium-release-qa-20261101.yml` is
 - Only after actual milestones and explicit public-release authorization, update the existing public experience; record published SHA and preserve rollback target.
 
 No physical QA, Cloud tests, same-SHA readiness or public Roblox publishing have been claimed or inferred.
+
+## Actual first gate outcome and source correction
+
+The one-time gate **really ran** on source SHA `f2e8c0e9a3887c733225957acfd9051586983ba5` ([orchestrator](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41330650145), [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41330658400)). Build passed Rojo installation, glTF, registry checks, Luau compilation and early security/performance guards, then **failed** at the persistent local-world visual-folder audit, because the newly added `ArenaSkyFleetLocal` and `ArenaCataclysmDebrisLocal` were missing from the visual accounting registry. The server never dispatched paid Roblox Cloud tests on that failed source. The retry explicitly adds BOTH to `src/shared/VisualBudgetRules.lua`, preserving the Low/Medium/High numeric limits and existing 1Hz telemetry. A second build on the new SHA is required; do not treat the previous Luau PASS as complete Build Validation.

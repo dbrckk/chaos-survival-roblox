@@ -1,5 +1,9 @@
 name: One-Time Premium Skyworld Build + Engine Gate (2026-11-01)
 
+# Milestone retry: the first real Build Validation passed Luau compilation
+# but detected two unregistered local visual folders (job 124919859102).
+# This corrected candidate must be freshly built on its OWN exact SHA;
+# an earlier failed/green SHA is never sufficient.
 # A ONE-SHOT milestone, not a new automatic development test.
 # The creation of THIS file by a specially titled, owner-approved
 # main-branch merge launches it once. Subsequent code-only commits do not
