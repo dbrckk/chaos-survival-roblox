@@ -5,10 +5,14 @@
 local HarborOutpostKit = {}
 
 local PROFILES = {
-    [1] = {name = "StormRadar", yaw = 0, shape = Enum.PartType.Cylinder},
-    [2] = {name = "CargoHoist", yaw = -math.pi * 0.5, shape = Enum.PartType.Cylinder},
-    [3] = {name = "TidalBeacon", yaw = math.pi, shape = Enum.PartType.Ball},
-    [4] = {name = "SignalArray", yaw = math.pi * 0.5, shape = Enum.PartType.Cylinder},
+    [1] = {name = "StormRadar", yaw = 0, shape = Enum.PartType.Cylinder,
+        span = 6.1, height = 4.5, legX = 2.7},
+    [2] = {name = "CargoHoist", yaw = -math.pi * 0.5,
+        shape = Enum.PartType.Cylinder, span = 7.4, height = 3.3, legX = 3.25},
+    [3] = {name = "TidalBeacon", yaw = math.pi, shape = Enum.PartType.Ball,
+        span = 5.7, height = 4.0, legX = 2.5},
+    [4] = {name = "SignalArray", yaw = math.pi * 0.5,
+        shape = Enum.PartType.Cylinder, span = 6.7, height = 5.0, legX = 2.95},
 }
 
 function HarborOutpostKit.count(tier)
@@ -41,6 +45,8 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
     local frame = platform.CFrame * CFrame.Angles(0, profile.yaw, 0)
     local top = platform.Size.Y * 0.5
     local rear = -math.min(platform.Size.Z * 0.34, 3.6)
+    local mastHeight = profile.height
+    local spread = profile.legX
     local steel = theme.Structure:Lerp(theme.Detail, 0.25)
     local trim = theme.Detail:Lerp(theme.Secondary, 0.23)
     local muted = theme.Structure:Lerp(Color3.fromRGB(72, 91, 104), 0.30)
@@ -63,17 +69,17 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
     end
 
     -- Medium: exactly five pieces per outpost; 20 across Harbor.
-    add("Keel", Vector3.new(7.5, 0.44, 1.05),
+    add("Keel", Vector3.new(profile.span + 0.35, 0.44, 1.05),
         CFrame.new(0, -top - 0.38, rear),
         muted, Enum.Material.CorrodedMetal, 0.08)
     for _, side in ipairs({-1, 1}) do
         add(side < 0 and "PortLeg" or "StarboardLeg",
-            Vector3.new(0.65, 3.5, 0.65),
-            CFrame.new(side * 3.15, top + 1.75, rear),
+            Vector3.new(0.65, mastHeight, 0.65),
+            CFrame.new(side * spread, top + mastHeight * 0.5, rear),
             steel, Enum.Material.Metal, 0.06)
     end
-    add("Gantry", Vector3.new(7.2, 0.48, 0.84),
-        CFrame.new(0, top + 3.65, rear),
+    add("Gantry", Vector3.new(profile.span, 0.48, 0.84),
+        CFrame.new(0, top + mastHeight + 0.15, rear),
         trim, Enum.Material.CorrodedMetal, 0.05)
 
     local instrumentSize = route == 3
@@ -81,7 +87,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
         or (route == 2 and Vector3.new(1.30, 1.85, 1.85)
             or Vector3.new(0.85, 2.15, 2.15))
     add("Instrument", instrumentSize,
-        CFrame.new(0, top + 3.35, rear - 0.15)
+        CFrame.new(0, top + mastHeight - 0.15, rear - 0.15)
             * CFrame.Angles(0, 0, route == 4 and math.rad(20) or 0),
         signature, route == 3 and Enum.Material.Slate
             or Enum.Material.CorrodedMetal,
@@ -93,14 +99,14 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
         for _, side in ipairs({-1, 1}) do
             add(side < 0 and "PortKnee" or "StarboardKnee",
                 Vector3.new(0.28, 2.25, 0.43),
-                CFrame.new(side * 2.55, top + 1.1, rear)
+                CFrame.new(side * (spread - 0.55), top + 1.1, rear)
                     * CFrame.Angles(0, 0, side * math.rad(32)),
                 muted, Enum.Material.Metal, 0.12)
         end
         for _, side in ipairs({-1, 1}) do
             add(side < 0 and "PortVane" or "StarboardVane",
                 Vector3.new(1.05, 0.30, 1.4),
-                CFrame.new(side * 1.55, top + 4.05, rear - 0.45)
+                CFrame.new(side * (spread * 0.5), top + mastHeight + 0.55, rear - 0.45)
                     * CFrame.Angles(0, side * math.rad(16), 0),
                 signature:Lerp(steel, 0.55),
                 Enum.Material.CorrodedMetal, 0.16)
