@@ -66,6 +66,24 @@ function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage, haza
             local damage = DisasterImpact.damageForDistance(distance, radius, maxDamage)
             if damage > 0 then
                 local appliedDamage = math.min(damage, humanoid.Health)
+                -- A player-activated shared protective field may reduce
+                -- only real Meteor/Bomb hits. Invoke the server-owned
+                -- arena callback with the ACTUAL server character position,
+                -- never a client-declared dodge or immunity request.
+                if (hazardKind == "Meteor" or hazardKind == "Bomb")
+                    and type(ctx.ImpactShieldMitigation) == "function" then
+                    local ok, reduced = pcall(
+                        ctx.ImpactShieldMitigation,
+                        root.Position, hazardKind, appliedDamage
+                    )
+                    if ok and type(reduced) == "number"
+                        and reduced == reduced
+                        and reduced > -math.huge
+                        and reduced < math.huge then
+                        appliedDamage = math.clamp(
+                            math.floor(reduced + 0.5), 1, appliedDamage)
+                    end
+                end
                 if hazardKind and ctx.OnHazardDamage then
                     pcall(ctx.OnHazardDamage, player, hazardKind, appliedDamage)
                 end
