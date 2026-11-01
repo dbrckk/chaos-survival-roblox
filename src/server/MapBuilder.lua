@@ -2592,6 +2592,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for _, definition in ipairs(variant.SpokePlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- Two large, physically traversable air corridors connect the far
+    -- north/south lookouts of every arena. Always append AFTER Harbor's
+    -- dock spurs: no existing platform ID, hazard owner, or bot target
+    -- changes. Exactly 16 collision decks, no floor-level collision wall.
+    for _, definition in ipairs(variant.PromenadePlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2649,6 +2656,21 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             )
             platform.Material = definition.HarborSpokeStep <= 2
                 and Enum.Material.WoodPlanks or Enum.Material.CorrodedMetal
+        end
+        if definition.PromenadeLane then
+            -- These are genuine elevated crossing platforms at the EXACT
+            -- same top elevation as the two connected corner lookouts.
+            -- Their physical collision and all platform finish follow
+            -- Shrinking Arena; a separate permanent-route marker keeps
+            -- Disappearing Platforms from making an inescapable midair gap.
+            -- Do not set ChaosSkybridge: Tower's gated skybridge mechanics
+            -- own only their original four bridges.
+            platform:SetAttribute("PromenadeLane", definition.PromenadeLane)
+            platform:SetAttribute("PromenadeStep", definition.PromenadeStep)
+            platform:SetAttribute("ChaosPermanentRoute", true)
+            platform.Color = theme.Structure:Lerp(theme.Detail, 0.52)
+            platform.Material = theme.PanelMaterial
+                or VisualTheme.Materials.Structure
         end
         if definition.PerimeterRoute then
             -- Explicit route metadata is visible to wayfinding and QA.
