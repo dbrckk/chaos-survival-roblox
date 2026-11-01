@@ -1,4 +1,4 @@
--- Four arena-specific kinetic hero props, built from Roblox primitives.
+-- Five arena-specific kinetic hero props, built from Roblox primitives.
 -- Cosmetic only: every part is anchored, non-colliding and local to this client.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Load the theme only during construction; isolated Open Cloud unit tests
