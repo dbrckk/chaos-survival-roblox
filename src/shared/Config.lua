@@ -1,5 +1,9 @@
 local Config = {
     MinimumPlayers = 1,
+    -- Design target ONLY. Roblox enforces the ACTUAL Players.MaxPlayers
+    -- from Creator Dashboard > Places > start place > Access, not Lua.
+    -- Eight human slots match the eight physical spawn offsets/map.
+    RecommendedHumanCapacity = 8,
     IntermissionSeconds = 8,
     VoteSeconds = 6,
     ReadySeconds = 4,
