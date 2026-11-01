@@ -296,7 +296,7 @@ function TeamDashRelay.activate(entry, actor, fromBot)
         tween:Play()
         tween.Completed:Once(function() tween:Destroy() end)
         entry.label.Text = fromBot
-            and "TEAM DASH\nBOT HELPED"
+            and "TEAM DASH\nALLY HELPED"
             or "TEAM DASH\nRELAY USED"
         entry.label.TextColor3 = Color3.fromRGB(151, 179, 188)
         entry.refresh()
