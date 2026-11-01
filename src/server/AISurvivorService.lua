@@ -154,6 +154,7 @@ local started = false
 local brainStarted = false
 local identityOrder = {}
 local roundSerial = 0
+local nextReadyRepairAt = 0
 
 local function humanCount()
     return #Players:GetPlayers()
@@ -3718,6 +3719,7 @@ function AISurvivorService.setRoundState(state)
         if phase == "ready" then
             voteActive = false
             roundSerial += 1
+            nextReadyRepairAt = os.clock() + 0.8
             reconcile(true)
             for _, record in ipairs(records) do
                 record.roundTraits = AISurvivorRules.roundTraits(
@@ -3733,6 +3735,7 @@ function AISurvivorService.setRoundState(state)
                     -0.32,
                     0.32
                 )
+                record.readySpawnRetries = 0
                 sendToArena(record)
                 AISurvivorService.resetGridCircuit(record.model)
             end
@@ -3782,6 +3785,21 @@ function AISurvivorService.setRoundState(state)
         end
     end
 
+    -- Roblox R15 rig creation and physical spawn resolution can fail on
+    -- the FIRST READY frame. Retry only missing, allocated NPCs twice
+    -- during the following READY broadcasts. Never respawn an eliminated
+    -- contestant during ROUND, which would invalidate survival results.
+    if phase == "ready" and phase == previousPhase
+        and os.clock() >= nextReadyRepairAt then
+        nextReadyRepairAt = os.clock() + 0.9
+        for _, record in ipairs(records) do
+            if not record.inRound
+                and (record.readySpawnRetries or 0) < 2 then
+                record.readySpawnRetries = (record.readySpawnRetries or 0) + 1
+                sendToArena(record)
+            end
+        end
+    end
     previousPhase = phase
 end
 
