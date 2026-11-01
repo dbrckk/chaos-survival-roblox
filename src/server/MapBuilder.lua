@@ -2830,7 +2830,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             outpost.Name = "HarborDryDockOutpost"
             outpost.Adornee = platform
             outpost.Size = UDim2.fromOffset(120, 28)
-            outpost.StudsOffsetWorldSpace = Vector3.new(0, 6, 0)
+            -- Clear the tallest High-tier western communications array
+            -- (max top + ~5.7 studs); keep the real destination label
+            -- above authored scenery instead of painting through a mast.
+            outpost.StudsOffsetWorldSpace = Vector3.new(0, 8.5, 0)
             outpost.MaxDistance = 64
             outpost.AlwaysOnTop = false
             outpost.Parent = platform
