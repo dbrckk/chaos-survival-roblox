@@ -527,7 +527,7 @@ for _, variantId in ipairs(ArenaVariants.Order) do
                 ),
                 size = Vector3.new(laneSpacing - 2.4, 2, 12),
                 RouteTier = 4,
-                ParkourGrade = step == 4 or step == 5 and 4 or 3,
+                ParkourGrade = (step == 4 or step == 5) and 4 or 3,
                 PromenadeLane = lane,
                 PromenadeStep = step,
             })
