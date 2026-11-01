@@ -10,6 +10,12 @@ VisualBudgetRules.LocalFolders = {
     "ArenaUnderstructureLocal",
     "ArenaHeroSceneryLocal",
     "ArenaArchitecturalDetailsLocal",
+    -- Tiered 2/3/4 giant native air carriers. These client-owned models
+    -- must count in the same live Parts ledger as all other local visuals.
+    "ArenaSkyFleetLocal",
+    -- Server-authored landmark fractures emit short-lived debris and dust
+    -- here. Count the fragments AND their emitters against Android limits.
+    "ArenaCataclysmDebrisLocal",
     -- New 3D signal arches are client-only and must count toward the
     -- mobile visual budget instead of silently bypassing telemetry.
     "DistrictSignalArchitectureLocal",
