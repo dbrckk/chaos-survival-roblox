@@ -1,5 +1,7 @@
 # Dimensionnement Chaos Survival — 8 humains, 6 survivants visibles minimum ciblés
 
+> **Historique (remplacé pour les prochaines mises à jour)** : à la demande du propriétaire, le compromis de 6 survivants / 4 bots a été remplacé par un objectif de **8 participants au début de chaque manche**, avec jusqu'à **7 bots** si un seul humain est présent. La configuration de capacité humaine a été enregistrée à **8** par le propriétaire. Voir [l'autofill actuel](EIGHT_PARTICIPANT_BOT_AUTOFILL_2026-11-01.md). Cette note est conservée pour la traçabilité.
+
 Date : 1er novembre 2026. Cible : toutes les cinq cartes **320 × 320 studs**, huit points de spawn réels sur chacune, 45 secondes en multijoueur, 30 secondes en solo.
 
 ## Décision produit

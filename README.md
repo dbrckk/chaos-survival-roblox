@@ -2,6 +2,8 @@
 
 Fast multiplayer disaster-survival game built with Luau + Rojo.
 
+**Upcoming eight-participant round roster (source only):** the owner has set the start place to eight human visitor slots in Creator Dashboard. The next Roblox release will fill unused READY contestant slots with up to **seven original AI bots**, targeting eight competitors at round start; the lobby and AI budget have been updated, but this code is **not in the current public Roblox build**. See [eight-seat autofill and validation](docs/EIGHT_PARTICIPANT_BOT_AUTOFILL_2026-11-01.md).
+
 ## Public experience status
 
 [**Play Chaos Survival on Roblox**](https://www.roblox.com/games/95351659174730/Chaos-Survival) · [Creator Dashboard](https://create.roblox.com/dashboard/creations/experiences/10771083668/overview)

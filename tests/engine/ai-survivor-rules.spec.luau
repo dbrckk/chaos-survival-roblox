@@ -403,23 +403,24 @@ describe("AI survivor rules", function()
         end
     end)
 
-    it("fills toward six visible contestants with at most four bots", function()
-        expect(AISurvivorRules.TargetVisibleParticipants).toBe(6)
-        expect(AISurvivorRules.MaxBots).toBe(4)
+    it("fills eight active seats with humans first and up to seven bots", function()
+        expect(AISurvivorRules.TargetVisibleParticipants).toBe(8)
+        expect(AISurvivorRules.MaxBots).toBe(7)
         expect(AISurvivorRules.desiredBotCount(0)).toBe(0)
-        expect(AISurvivorRules.desiredBotCount(1)).toBe(4)
-        expect(AISurvivorRules.desiredBotCount(2)).toBe(4)
-        expect(AISurvivorRules.desiredBotCount(3)).toBe(3)
-        expect(AISurvivorRules.desiredBotCount(4)).toBe(2)
-        expect(AISurvivorRules.desiredBotCount(5)).toBe(1)
-        expect(AISurvivorRules.desiredBotCount(6)).toBe(0)
+        expect(AISurvivorRules.desiredBotCount(1)).toBe(7)
+        expect(AISurvivorRules.desiredBotCount(2)).toBe(6)
+        expect(AISurvivorRules.desiredBotCount(3)).toBe(5)
+        expect(AISurvivorRules.desiredBotCount(4)).toBe(4)
+        expect(AISurvivorRules.desiredBotCount(5)).toBe(3)
+        expect(AISurvivorRules.desiredBotCount(6)).toBe(2)
+        expect(AISurvivorRules.desiredBotCount(7)).toBe(1)
         expect(AISurvivorRules.desiredBotCount(8)).toBe(0)
         expect(AISurvivorRules.desiredBotCount(9)).toBe(0)
     end)
 
     it("freezes active AI competitors when a human joins mid-round", function()
-        expect(AISurvivorRules.desiredBotCount(1)).toBe(4)
-        expect(AISurvivorRules.desiredBotCount(2)).toBe(4)
+        expect(AISurvivorRules.desiredBotCount(1)).toBe(7)
+        expect(AISurvivorRules.desiredBotCount(2)).toBe(6)
 
         -- The extra human must not evict a live AI during a round.
         for _, phase in ipairs({"ready", "round", "result"}) do
@@ -441,8 +442,8 @@ describe("AI survivor rules", function()
         expect(allowed("round", true)).toBe(false)
         expect(allowed("result", true)).toBe(false)
 
-        -- One real human receives four (not five) NPC competitors.
-        expect(AISurvivorRules.desiredBotCount(1)).toBe(4)
+        -- One real human receives seven NPC competitors at READY.
+        expect(AISurvivorRules.desiredBotCount(1)).toBe(7)
         expect(AISurvivorRules.rosterLocked("ready")).toBe(true)
     end)
 
@@ -451,9 +452,9 @@ describe("AI survivor rules", function()
         local desired = AISurvivorRules.desiredBotCount
 
         expect(count("ready", true, 3, 1)).toBe(1)
-        expect(desired(count("ready", true, 3, 1))).toBe(4)
+        expect(desired(count("ready", true, 3, 1))).toBe(7)
         expect(count("ready", true, 4, 2)).toBe(2)
-        expect(desired(count("ready", true, 4, 2))).toBe(4)
+        expect(desired(count("ready", true, 4, 2))).toBe(6)
         -- A late arrival cannot change an already committed roster.
         expect(count("ready", false, 3, 1)).toBe(3)
         expect(count("intermission", false, 3, 1)).toBe(3)
@@ -676,6 +677,10 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.brainCadence(3, "round")).toBe(0.18)
         expect(AISurvivorRules.brainCadence(3, "intermission")).toBe(0.18)
         expect(AISurvivorRules.brainCadence(4, "round")).toBe(0.24)
+        expect(AISurvivorRules.brainCadence(5, "round")).toBe(0.30)
+        expect(AISurvivorRules.brainCadence(6, "round")).toBe(0.36)
+        expect(AISurvivorRules.brainCadence(7, "round")).toBe(0.42)
+        expect(AISurvivorRules.brainCadence(7, "result")).toBe(0.42)
         expect(AISurvivorRules.brainCadence(4, "result")).toBe(0.42)
     end)
 
