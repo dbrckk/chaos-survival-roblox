@@ -92,7 +92,7 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 - Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
 - Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
 - AI Survivor animation state blending (idle/walk/run/jump/fall) and map-aware/hazard-aware navigation
-- 76 engine specs assigned exactly once across Open Cloud CI shards
+- 77 engine specs assigned exactly once across Open Cloud CI shards
 - **Published premium-platformer gameplay:** progressive physical route widths, server-verified airborne parkour mastery medals/records, daily/weekly mastery goals and veteran Tower Run's real timed rising bridge shutters alternating with collapsing bridge challenges. Both use authentic warnings, obstacle collision and fair Skyrail/AI safeguards. This gameplay is present in the latest verified public release described above; [the full premium quality benchmark and remaining acceptance plan](docs/PREMIUM_BENCHMARK_AND_COMPLETION_PLAN_2026-10-30.md) still require actual Android/PC certification.
 - No paid assets required
 
