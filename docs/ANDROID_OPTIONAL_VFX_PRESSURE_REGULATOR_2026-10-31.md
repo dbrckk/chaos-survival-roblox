@@ -23,6 +23,17 @@
 - Le nouveau niveau ne doit **jamais** être utilisé côté serveur pour récompense, déplacement, collision ou dégâts. L'attribut est un signal local de cosmétique non fiable et non autoritatif.
 - En cas d'absence de mesures FPS, les ratios d'instances peuvent déclencher la régulation, sans prétendre prédire les performances réelles.
 
+## Correction du 1er novembre 2026 — fraîcheur des mesures FPS/p95
+
+Le contrôleur adaptatif `src/client/juice.client.lua` fournit déjà les deux mesures depuis un **même échantillon de 2,5 secondes**, tandis que le régulateur `visual-budget-pressure.client.lua` décide toutes les 5 secondes et peut céder l'exécution pendant sa collecte. Sans horodatage, un échantillon ancien survivant à une suspension Android pouvait encore être interprété comme une observation actuelle.
+
+- `juice.client.lua` publie `ClientObservedSampleClock = os.clock()` **après** les attributs FPS/p95/slowPercent, ce qui garantit la cohérence du couple pour le consommateur. Après un frame interrompu de plus de 0,60 s, l'horodatage est supprimé et ne réapparaît qu'après un nouveau cycle complet de rendu. Les chiffres affichables peuvent rester visibles, mais ils ne constituent plus des données fraîches.
+- `visual-budget-pressure.client.lua` rejette tout couple de mesures sans horodatage, âgé de plus de **8 secondes**, daté dans le futur ou malformé. Le test précède le recensement graphique coûteux ; il est également répété **après** tout `VisualBudgetRules.collect` coopératif qui aurait pu durer plusieurs frames ou traverser une suspension.
+- Sans mesure fraîche, le régulateur n'augmente ni ne réduit le niveau facultatif P0/P1/P2 et réinitialise les observations consécutives. Il invalide son cache et attend de nouveaux frames valides. L'état courant n'est pas brutalement restauré à P0 à cause d'une mesure manquante.
+- Ce timestamp local est uniquement un indicateur de fraîcheur des mesures et **n'est jamais transmis au serveur**. Aucune nouvelle boucle `RenderStepped`, aucun scan supplémentaire et aucun changement des avertissements de danger.
+
+Prépublication : vérifier sur Android que le timestamp se renouvelle toutes les ~2,5 s de rendu effectif, disparaît après suspension, puis revient avant toute décision. Une valeur FPS/p95 artificiellement conservée sans timestamp ne doit pas modifier P0/P1/P2, et une collecte qui devient périmée avant sa fin doit être écartée. Valider ces règles dans Roblox Studio/Android avant toute publication publique.
+
 ## Prochain jalon majeur prépublication
 
 Exécuter Build Validation, les cinq suites Roblox Open Cloud sur le SHA exact de `main` et les sessions Android/PC. Pour une manche solo de 30 s, vérifier que quatre observations défavorables consécutives (5/10/15/20 s environ) peuvent atteindre P2 sans quatre balayages Workspace, et que la reconstruction du cache ne se produit pas à chaque observation. Suspendre Android plus de 18 s, puis reprendre : aucun ancien compteur ne doit être réutilisé comme deuxième observation défavorable. Sur Android, provoquer plusieurs pics d'instances et de longs ralentissements avec Meteor+Bomb+Tornado. Observer les changements P0→P1→P2 et le retour P2→P1→P0, la fréquence des recensements, le p95 et le CPU du scan. Vérifier READY/RESULT, changement de carte, streaming, FPS et p95 invalides, économie de Rate, conservation des alertes, survie, contrôles et FPS. Ne pas publier avant cette validation ; l'audit visuel des cartes reste reporté.

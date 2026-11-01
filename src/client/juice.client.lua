@@ -901,6 +901,10 @@ RunService.RenderStepped:Connect(function(dt)
         frameSampleCount += 1
         qualitySampleClock += activeDt
     elseif dt > 0.60 then
+        -- After Android background suspension, the previously published
+        -- FPS/p95 sample is stale. Keep the display values for diagnostics
+        -- but revoke their freshness until new frames are measured.
+        player:SetAttribute("ClientObservedSampleClock", nil)
         frameTimeAccumulator = 0
         sampleWorstFrameDt = 0
         FramePacingRules.reset(qualityPacing)
@@ -967,6 +971,10 @@ RunService.RenderStepped:Connect(function(dt)
             FramePacingRules.summary(qualityPacing)
         player:SetAttribute("ClientObservedP95FrameMs", observedP95Ms)
         player:SetAttribute("ClientObservedSlowFramePercent", observedSlowPercent)
+        -- Publish LAST: optional Android backpressure sees a complete
+        -- matching FPS/p95 pair, not one old and one new value. os.clock()
+        -- is local to this client and is never sent to the server.
+        player:SetAttribute("ClientObservedSampleClock", os.clock())
         local nextTierName = VfxQuality.nextTier(
             vfxTierName, averageFps, UserInputService.TouchEnabled,
             observedP95Ms, observedSlowPercent

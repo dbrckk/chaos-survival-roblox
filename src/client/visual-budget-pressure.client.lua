@@ -28,6 +28,9 @@ local OBSERVE_SECONDS = 5
 local CENSUS_SECONDS = 20
 local SUSPEND_GAP_SECONDS = 18
 local QUALITY_SETTLE_SECONDS = 8
+-- juice.client.lua publishes a complete FPS/p95 sample about every 2.5s.
+-- No adaptive decision is safe when that producer has stopped running.
+local MAX_FRAME_SAMPLE_AGE = 8
 local cachedCounts = nil
 local lastCensusAt = nil
 local settleUntil = 0
@@ -35,6 +38,22 @@ local settleUntil = 0
 local function invalidateCensus()
     cachedCounts = nil
     lastCensusAt = nil
+end
+
+local function freshFrameReadings()
+    local now = os.clock()
+    local stamp = player:GetAttribute("ClientObservedSampleClock")
+    if type(stamp) ~= "number" or stamp ~= stamp
+        or stamp > now or now - stamp > MAX_FRAME_SAMPLE_AGE then
+        return nil, nil
+    end
+    local fps = player:GetAttribute("ClientObservedFps")
+    local p95 = player:GetAttribute("ClientObservedP95FrameMs")
+    if type(fps) ~= "number" or fps ~= fps
+        or type(p95) ~= "number" or p95 ~= p95 then
+        return nil, nil
+    end
+    return fps, p95
 end
 
 -- A changed adaptive tier changes both the VFX population and the
@@ -130,6 +149,14 @@ task.spawn(function()
             streak = 0
             continue
         end
+        -- Neither a stale FPS from a previous round nor one retained by
+        -- Roblox during app backgrounding should start a new VFX census.
+        local fps = freshFrameReadings()
+        if not fps then
+            streak = 0
+            invalidateCensus()
+            continue
+        end
         local observedGeneration = generation
         if not cachedCounts or not lastCensusAt
             or now - lastCensusAt >= CENSUS_SECONDS then
@@ -172,10 +199,16 @@ task.spawn(function()
         local tier = VfxQuality.deviceTier(
             player:GetAttribute("VfxQualityTier"), true
         ).Name
+        -- The cooperative census yields. The sampler may stop or restart
+        -- while it runs: validate age again before applying any decision.
+        local currentFps, currentP95 = freshFrameReadings()
+        if not currentFps then
+            streak = 0
+            invalidateCensus()
+            continue
+        end
         local desired = PressureRules.desired(
-            tier, cachedCounts,
-            player:GetAttribute("ClientObservedFps"),
-            player:GetAttribute("ClientObservedP95FrameMs")
+            tier, cachedCounts, currentFps, currentP95
         )
         local nextLevel
         nextLevel, streak = PressureRules.advance(pressure, streak, desired)
