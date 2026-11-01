@@ -326,7 +326,7 @@ end
 -- Preserve identical 3D pose with ReduceMotion. No incremental transforms:
 -- each frame uses the originally authored relative pose, so streaming,
 -- background app suspension and phase changes never accumulate drift.
-function Kit.pose(bundle, elapsed, phase, reducedMotion, finalRush, disasterCount)
+function Kit.pose(bundle, elapsed, phase, reducedMotion, finalRush, disasterIds)
     if not bundle or not bundle.folder or not bundle.folder.Parent then
         return
     end
@@ -334,42 +334,79 @@ function Kit.pose(bundle, elapsed, phase, reducedMotion, finalRush, disasterCoun
         or phase == "result") and reducedMotion ~= true
     local now = type(elapsed) == "number" and elapsed == elapsed
         and math.abs(elapsed) < 1e7 and elapsed >= 0 and elapsed or 0
-    local rush = finalRush == true and phase == "round"
-    local hazard = math.clamp(tonumber(disasterCount) or 0, 0, 2)
+
+    -- One coherent weather response for the *entire* far-field air traffic.
+    -- These are genuine known round disaster identifiers, not invented
+    -- hazards or client-authoritative gameplay state. Freeze slows engines;
+    -- lava raises evacuation traffic; tornado induces a broad stable bank.
+    local pace, bob, bank, emergencyLift = 1, 1.8, 0.028, 0
+    if phase == "round" and type(disasterIds) == "table" then
+        for _, id in ipairs(disasterIds) do
+            if id == "Tornado" then
+                pace, bob, bank = 1.55, 4.5, 0.095
+            elseif id == "RisingLava" then
+                emergencyLift = math.max(emergencyLift, 9)
+                bob = math.max(bob, 2.8)
+            elseif id == "LowGravity" then
+                emergencyLift = math.max(emergencyLift, 6.5)
+                bob = math.max(bob, 3.3)
+            elseif id == "Meteors" or id == "Bombs" then
+                bob = math.max(bob, 3.7)
+                bank = math.max(bank, 0.060)
+            elseif id == "Freeze" then
+                pace = math.min(pace, 0.63)
+                bob = math.min(bob, 1.5)
+            end
+        end
+    end
+    if finalRush == true and phase == "round" then
+        pace *= 1.24
+    end
     for _, ship in ipairs(bundle.ships) do
-        local time = now * (rush and 1.20 or 1) + ship.index * 0.82
+        local originPhase = ship.index * 0.82
+        local time = now * pace + originPhase
+        -- Zero displacement at t=0, including after ReduceMotion toggles:
+        -- no one-frame jumps when READY or RESULT starts.
         local lift = active and
-            (math.sin(time * 0.55) - math.sin(ship.index * 0.82 * 0.55))
-                * (hazard > 0 and 2.8 or 1.8) or 0
-        local roll = active and math.sin(time * 0.36)
-            * (hazard > 0 and 0.048 or 0.028) or 0
-        local heading = active and math.sin(time * 0.23) * 0.044 or 0
-        local root = ship.rest * CFrame.new(0, lift, 0)
+            (math.sin(time * 0.55) - math.sin(originPhase * 0.55))
+                * bob or 0
+        local roll = active and (
+            math.sin(time * 0.36) - math.sin(originPhase * 0.36)
+        ) * bank or 0
+        local heading = active and (
+            math.sin(time * 0.23) - math.sin(originPhase * 0.23)
+        ) * 0.044 or 0
+        local ascent = active and emergencyLift
+            * math.clamp(now / 4.5, 0, 1) or 0
+        local root = ship.rest * CFrame.new(0, lift + ascent, 0)
             * CFrame.Angles(0, heading, roll)
         for _, entry in ipairs(ship.parts) do
             local part = entry.part
             if not part.Parent then continue end
             local offset = entry.offset
             if active then
+                local hoistWave = math.sin(time * 0.68)
+                    - math.sin(originPhase * 0.68)
                 if entry.role == "scan" then
                     offset = offset * CFrame.Angles(0, now * 0.48, 0)
                 elseif entry.role == "lift" then
-                    offset = offset * CFrame.new(0, math.sin(time * 0.68) * 3.6, 0)
+                    offset = offset * CFrame.new(0, hoistWave * 3.6, 0)
                 elseif entry.role == "counter" then
-                    offset = offset * CFrame.new(0, -math.sin(time * 0.68) * 3.0, 0)
+                    offset = offset * CFrame.new(0, -hoistWave * 3.0, 0)
                 elseif entry.role == "switch" then
-                    offset = offset * CFrame.Angles(0, math.sin(time * 0.5) * 0.18, 0)
+                    offset = offset * CFrame.Angles(0,
+                        (math.sin(time * 0.5)
+                            - math.sin(originPhase * 0.5)) * 0.18, 0)
                 elseif entry.role == "orbit" then
                     local pivot = CFrame.new(0, 11.2, 0)
                     offset = pivot * CFrame.Angles(0, now * 0.28, 0)
                         * pivot:Inverse() * offset
                 elseif entry.role == "hoist" then
-                    offset = offset * CFrame.new(0, math.sin(time * 0.68) * 2, 0)
+                    offset = offset * CFrame.new(0, hoistWave * 2, 0)
                 elseif entry.role == "cable" then
-                    local extension = math.sin(time * 0.68) * 2
-                    -- Cable moves half as far as the suspended payload.
-                    -- Dimensions stay native 3D geometry, never physics.
-                    offset = offset * CFrame.new(0, extension * 0.5, 0)
+                    -- Cable follows the suspended freight at half its
+                    -- distance. Original part remains noncolliding.
+                    offset = offset * CFrame.new(0, hoistWave, 0)
                 end
             end
             part.CFrame = root * offset
