@@ -144,7 +144,7 @@ function StructuralCollapse.start(ctx)
     end
     ctx.OnCleanup[#ctx.OnCleanup + 1] = restore
 
-    local function fracture(kind)
+    local function fracture(kind, impactPosition)
         if not active or not ctx.Active() or not arena.Parent
             or not VALID_IMPACTS[kind] and not VALID_STRESS[kind]
             or sequence >= math.min(StructuralCollapse.MaxFailures, #groups)
@@ -154,12 +154,29 @@ function StructuralCollapse.start(ctx)
             return false
         end
         local choice = nil
-        for attempt = 1, #groups do
-            local idx = ((roundNumber + sequence + attempt - 1)
-                % #groups) + 1
-            if not broken[idx] then
-                choice = {idx = idx, group = groups[idx]}
-                break
+        if typeof(impactPosition) == "Vector3" then
+            -- Crack the nearest still-intact gateway, so the aftermath
+            -- advances coherently outward from the TRUE blast center.
+            -- Deterministic indexed tie breaks for identical distances.
+            local bestDistance = math.huge
+            for idx, group in ipairs(groups) do
+                if not broken[idx] and group.platform.Parent then
+                    local delta = group.platform.Position - impactPosition
+                    local distance = delta.X * delta.X + delta.Z * delta.Z
+                    if distance < bestDistance then
+                        bestDistance = distance
+                        choice = {idx = idx, group = group}
+                    end
+                end
+            end
+        else
+            for attempt = 1, #groups do
+                local idx = ((roundNumber + sequence + attempt - 1)
+                    % #groups) + 1
+                if not broken[idx] then
+                    choice = {idx = idx, group = groups[idx]}
+                    break
+                end
             end
         end
         if not choice or not choice.group.platform.Parent then return false end
@@ -201,10 +218,10 @@ function StructuralCollapse.start(ctx)
 
     -- Real meteor/bomb callbacks share this entry point. Only actual
     -- authoritative impacts, never fake random client triggers, break an arch.
-    local function onImpact(_, kind)
+    local function onImpact(position, kind)
         if VALID_IMPACTS[kind] and ctx.ActiveDisasters[
             kind == "Meteor" and "Meteors" or "Bombs"] then
-            return fracture(kind)
+            return fracture(kind, position)
         end
         return false
     end
