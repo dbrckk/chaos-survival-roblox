@@ -5,7 +5,9 @@
 -- No clients can choose recipients or rewards. No per-frame update loops.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local SpawnSafety = require(script.Parent.SpawnSafety)
+local SpawnSafety = if script
+    then require(script.Parent.SpawnSafety)
+    else require("./SpawnSafety")
 
 local TeamDashRelay = {}
 
@@ -247,7 +249,10 @@ function TeamDashRelay.activate(entry, actor, fromBot)
     local round = activeRound
     if not round or not round.ctx.Active()
         or not entry or entry.used or entry.guard
-        or not entry.prompt.Enabled then return false end
+        or not entry.prompt.Enabled
+        or entry.model.Parent ~= round.folder
+        or not withinLiveFloor(round.base, entry.core)
+        then return false end
     if fromBot then
         local root = botRoot(actor)
         if not root or (root.Position - entry.core.Position).Magnitude
@@ -290,8 +295,8 @@ function TeamDashRelay.activate(entry, actor, fromBot)
         tween:Play()
         tween.Completed:Once(function() tween:Destroy() end)
         entry.label.Text = fromBot
-            and "TEAM DASH\\nBOT HELPED"
-            or "TEAM DASH\\nRELAY USED"
+            and "TEAM DASH\nBOT HELPED"
+            or "TEAM DASH\nRELAY USED"
         entry.label.TextColor3 = Color3.fromRGB(151, 179, 188)
         entry.refresh()
         if fromBot and type(round.ctx.OnTeamDashBotUsed) == "function" then
