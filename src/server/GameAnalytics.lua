@@ -1,4 +1,5 @@
 local AnalyticsService = game:GetService("AnalyticsService")
+local ArenaVariants = require(script.Parent.ArenaVariants)
 
 local GameAnalytics = {}
 
@@ -270,9 +271,13 @@ end
 -- interaction counts; no per-tick or per-hazard telemetry is introduced.
 -- Restrict the field values to known, stable dimensions to preserve Roblox's
 -- cross-experience custom-field cardinality budget.
-local KNOWN_ARENAS = {
-    Classic = true, Towers = true, Crossroads = true, Orbital = true,
-}
+local KNOWN_ARENAS = {}
+-- Reuse the same authoritative rotation set as the arena selector.
+-- Harbor previously fell through as "Unknown" in BOTH human and bot
+-- telemetry, corrupting the very breakdown needed to balance five maps.
+for _, arenaId in ipairs(ArenaVariants.Order) do
+    KNOWN_ARENAS[arenaId] = true
+end
 
 local function finiteNonnegative(value, maxValue)
     local number = tonumber(value)
