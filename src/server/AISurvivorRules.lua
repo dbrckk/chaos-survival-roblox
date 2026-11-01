@@ -51,8 +51,12 @@ function AISurvivorRules.availableIdentityIndex(identities, preferredIndex, huma
     return nil
 end
 
-AISurvivorRules.TargetVisibleParticipants = 4
-AISurvivorRules.MaxBots = 3
+-- Six visible contestants is the sweet spot for 320x320 arenas:
+-- enough crossings to make the new shared-DASH relays relevant, without
+-- running a full 8-NPC simulation when only one human is online.
+-- Never exceed four real server-owned NPC rigs per Roblox server.
+AISurvivorRules.TargetVisibleParticipants = 6
+AISurvivorRules.MaxBots = 4
 
 AISurvivorRules.Profiles = {
     -- All three competitors move at normal player speed or slower. Skill
