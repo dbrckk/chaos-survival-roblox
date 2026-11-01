@@ -23,18 +23,14 @@ Shield.Offsets = {
 }
 
 function Shield.enabled(ctx)
-    return type(ctx) == "table"
-        and type(ctx.Active) == "function"
-        and type(ctx.IsContestantActive) == "function"
-        and type(ctx.OnCleanup) == "table"
-        and type(ctx.Cleanup) == "table"
-        and (ctx.ActiveDisasters or {}).Meteors == true
-            or type(ctx) == "table"
-            and type(ctx.Active) == "function"
-            and type(ctx.IsContestantActive) == "function"
-            and type(ctx.OnCleanup) == "table"
-            and type(ctx.Cleanup) == "table"
-            and (ctx.ActiveDisasters or {}).Bombs == true
+    if type(ctx) ~= "table"
+        or type(ctx.Active) ~= "function"
+        or type(ctx.IsContestantActive) ~= "function"
+        or type(ctx.OnCleanup) ~= "table"
+        or type(ctx.Cleanup) ~= "table" then return false end
+    local active = ctx.ActiveDisasters
+    return type(active) == "table"
+        and (active.Meteors == true or active.Bombs == true)
 end
 
 -- Pure server geometry: only the energy volume which is currently
@@ -255,7 +251,8 @@ function Shield.start(ctx)
         end
         entry.prompt.Triggered:Connect(function(player)
             if not active or not ctx.Active() or not withinFloor()
-                or not entry.prompt.Enabled or player.Parent ~= Players
+                or not entry.prompt.Enabled or not player
+                or player.Parent ~= Players
                 or player:GetAttribute("DataLoaded") ~= true
                 or not ctx.IsContestantActive(player)
                 or os.clock() < entry.readyAt then return end
