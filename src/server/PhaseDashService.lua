@@ -4,10 +4,39 @@ local PhaseDashRules = require(ReplicatedStorage.Shared.PhaseDashRules)
 
 local PhaseDashService = {}
 
+-- The authoritative cooldown was previously private to start(). Shared
+-- interaction stations need a narrow SERVER-ONLY way to replenish it.
+-- Never trust a remote argument, client attribute or local timestamp.
+local nextAllowed = {}
+local phaseNow = nil
+
+function PhaseDashService.recharge(player)
+    if not phaseNow or phaseNow() ~= "round"
+        or not player or player.Parent ~= Players
+        or player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true then
+        return false
+    end
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or humanoid.Health <= 0 or not root
+        or not root:IsA("BasePart") or not root:IsDescendantOf(workspace) then
+        return false
+    end
+    local now = os.clock()
+    if (nextAllowed[player] or 0) <= now then
+        return false
+    end
+    nextAllowed[player] = 0
+    player:SetAttribute("PhaseDashReadyAt", workspace:GetServerTimeNow())
+    return true
+end
+
 function PhaseDashService.start(remote, phaseProvider)
     assert(remote and remote:IsA("RemoteEvent"), "PhaseDash requires RemoteEvent")
     assert(type(phaseProvider) == "function", "PhaseDash requires phase provider")
-    local nextAllowed = {}
+    phaseNow = phaseProvider
 
     Players.PlayerRemoving:Connect(function(player)
         nextAllowed[player] = nil
