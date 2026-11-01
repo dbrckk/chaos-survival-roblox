@@ -2036,18 +2036,33 @@ describe("Storm Harbor engine and Android scenery certification", function()
         local decor = arena and arena:FindFirstChild("Decor")
         expect(arena:GetAttribute("VariantId")).toBe("Harbor")
         expect(base ~= nil and platforms ~= nil and decor ~= nil).toBe(true)
-        -- Preserve the original 80 decks and 14 skyway roofs (IDs 1–94).
-        -- Sixteen real four-way drydock spoke decks now append as IDs 95–110,
-        -- not extra cosmetic scenery or duplicate route generation.
-        -- The prior hard-coded 94 failed Cloud core_b2 despite valid maps.
+        -- Preserve the historical Harbor deck IDs: original 80,
+        -- fourteen steel skyways (81-94), sixteen true drydock spokes
+        -- (95-110), then the sixteen colossal sky promenades (111-126).
+        -- All of these must be REAL server-owned collision platforms.
+        -- A former hard-coded 110 caused the exact-SHA core_b2 Cloud
+        -- failure even though the new routes are intentionally physical.
         expect(#variant.SkywayPlatforms).toBe(14)
         expect(#variant.SpokePlatforms).toBe(16)
+        expect(#variant.PromenadePlatforms).toBe(16)
         expect(#platforms:GetChildren()).toBe(
             #variant.Platforms + #variant.PerimeterPlatforms
                 + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
                 + #variant.SkywayPlatforms + #variant.SpokePlatforms
+                + #variant.PromenadePlatforms
         )
-        expect(#platforms:GetChildren()).toBe(110)
+        expect(#platforms:GetChildren()).toBe(126)
+        for lane = 1, 2 do
+            for step = 1, 8 do
+                local index = 110 + (lane - 1) * 8 + step
+                local crossing = platforms:FindFirstChild("Platform" .. index)
+                expect(crossing ~= nil and crossing:IsA("BasePart")).toBe(true)
+                expect(crossing.Anchored and crossing.CanCollide).toBe(true)
+                expect(crossing:GetAttribute("ChaosPermanentRoute")).toBe(true)
+                expect(crossing:GetAttribute("PromenadeLane")).toBe(lane)
+                expect(crossing:GetAttribute("PromenadeStep")).toBe(step)
+            end
+        end
         for route = 1, 4 do
             for step = 1, 4 do
                 local index = 94 + (route - 1) * 4 + step
