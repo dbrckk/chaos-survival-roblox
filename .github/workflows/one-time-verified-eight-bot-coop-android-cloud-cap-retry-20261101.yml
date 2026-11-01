@@ -1,9 +1,10 @@
-# Owner-directed ONE-TIME exact-SHA retry after repairing the two remaining
-# release blockers found by the last real workflows on 4dbeea8:
-# README expected 76 specs (actual 77) and GameAnalytics Lest import nil script.
-# Keeps exactly the same eight-seat IA / cooperative DASH / Android release
-# contract, and never publishes unless BOTH expensive gates pass on this SHA.
-# Triggered only when this existing workflow file changes on main.
+# Owner-directed ONE-TIME exact-SHA retry after the last engine-only
+# release blocker found on 6d7e027: Harbor Cloud core_b2 expected 94 decks,
+# but MapBuilder correctly appends 16 real drydock spokes after the 94
+# historical/sideroute/skyway platforms, for exactly 110 collision decks.
+# Build Validation passed; four complete engine suites also passed.
+# This change triggers the existing strict main SHA gate ONE more time.
+# It cannot publish without BOTH expensive checks passing at this SHA.
 # Runs current main Build Validation and all five REAL Roblox engine suites.
 # Only if BOTH are green at the identical immutable main SHA does it
 # dispatch the pre-existing confirmation-guarded PUBLIC PLAYTEST publisher.
@@ -60,6 +61,17 @@ jobs:
                   Path('tests/engine/mapbuilder-advanced.spec.luau').stat().st_size < 105_000 and
                   'mapbuilder-advanced.spec.luau' in
                       Path('.github/workflows/roblox-cloud-test.yml').read_text()
+              ),
+              'Storm Harbor real 110-platform topology certified': (
+                  Path('tests/engine/vfx-quality.spec.luau').stat().st_size < 105_000 and
+                  'expect(#variant.SpokePlatforms).toBe(16)' in
+                      Path('tests/engine/vfx-quality.spec.luau').read_text() and
+                  'expect(#platforms:GetChildren()).toBe(110)' in
+                      Path('tests/engine/vfx-quality.spec.luau').read_text() and
+                  '+ #variant.SkywayPlatforms + #variant.SpokePlatforms' in
+                      Path('tests/engine/vfx-quality.spec.luau').read_text() and
+                  'for _, definition in ipairs(variant.SpokePlatforms or {}) do' in
+                      Path('src/server/MapBuilder.lua').read_text()
               ),
               'eight-seat roster': ('AISurvivorRules.TargetVisibleParticipants = 8' in rules and
                                     'AISurvivorRules.MaxBots = 7' in rules),
