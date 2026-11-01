@@ -192,6 +192,40 @@ local function orbital(bundle, cf, theme, profile)
     end
 end
 
+-- Storm Harbor has its own working port signal, not Classic's radar array.
+-- The moving beacon reuses the existing time-sliced radar role and remains
+-- decorative, non-colliding and safe on Low-tier mobile devices.
+local function harbor(bundle, cf, theme, profile)
+    local steel = theme.Structure
+    local alloy = theme.Detail
+    for side = -1, 1, 2 do
+        add(bundle, "HarborStormGantryLeg" .. side,
+            Vector3.new(0.95, 8.7, 1.05),
+            cf * CFrame.new(side * 3.30, 4.6, 0),
+            steel, Enum.Material.CorrodedMetal)
+    end
+    add(bundle, "HarborStormGantryBeam", Vector3.new(8.6, 0.9, 1.20),
+        cf * CFrame.new(0, 9.1, 0), alloy, Enum.Material.Metal)
+    add(bundle, "HarborStormControlCab", Vector3.new(3.0, 2.1, 2.2),
+        cf * CFrame.new(0, 10.5, 0), steel, Enum.Material.Metal)
+    add(bundle, "HarborStormAntenna", Vector3.new(0.42, 3.4, 0.42),
+        cf * CFrame.new(0, 13.15, 0), alloy, Enum.Material.Metal)
+    local sweepFrame = cf * CFrame.new(0, 15.1, 0)
+    local sweep = add(bundle, "HarborStormRadarSweep",
+        Vector3.new(5.0, 0.20, 0.36), sweepFrame,
+        theme.Accent, Enum.Material.Metal, 0.12)
+    moving(bundle, sweep, "radar", sweepFrame, 1)
+    add(bundle, "HarborStormHoistRail", Vector3.new(0.42, 5.8, 0.46),
+        cf * CFrame.new(2.30, 5.35, -0.85), alloy, Enum.Material.Metal)
+    add(bundle, "HarborStormCargoCradle", Vector3.new(2.8, 1.15, 2.0),
+        cf * CFrame.new(2.30, 2.2, -0.85), steel, Enum.Material.DiamondPlate)
+    if profile.Detail then
+        add(bundle, "HarborStormCabVisor", Vector3.new(2.2, 0.52, 0.16),
+            cf * CFrame.new(0, 10.85, 1.16),
+            theme.Secondary, Enum.Material.Glass, 0.28)
+    end
+end
+
 -- Large-scale signature silhouettes instead of undifferentiated neon bars.
 -- All pieces stay anchored, non-colliding, and under the per-tier part cap.
 -- Geometry is built once; the existing animation loop only moves key actors.
@@ -285,6 +319,14 @@ local function craftSignature(bundle, cf, theme, profile, variant)
             Vector3.new(3.0, 3.0, 3.0),
             cf * CFrame.new(0, 6.3, 0), trim,
             Enum.Material.Glass, 0.76, Enum.PartType.Ball)
+    elseif variant == "Harbor" then
+        for side = -1, 1, 2 do
+            add(bundle, "HarborStormDiagonalStay" .. side,
+                Vector3.new(0.30, 6.2, 0.40),
+                cf * CFrame.new(side * 2.20, 5.20, -0.30)
+                    * CFrame.Angles(0, 0, math.rad(side * 27)),
+                metal, Enum.Material.CorrodedMetal, 0.07)
+        end
     end
 end
 
@@ -362,6 +404,12 @@ local function finishSignature(bundle, cf, theme, variant)
                 i % 2 == 0 and Enum.Material.Glass or Enum.Material.Metal,
                 i % 2 == 0 and 0.37 or 0.10, nil, "WedgePart")
             petal:SetAttribute("ChaosSignatureFinish", true)
+        elseif variant == "Harbor" then
+            local stay = add(bundle, "HarborStormRiggingCleat" .. i,
+                Vector3.new(0.70, 1.0, 0.48),
+                cf * CFrame.new(side * 3.3, i <= 2 and 7.2 or 5.4, 0.6),
+                theme.Detail, Enum.Material.CorrodedMetal, 0.06)
+            stay:SetAttribute("ChaosSignatureFinish", true)
         end
     end
 end
@@ -494,7 +542,9 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
     labelOn(bundle, cf, theme.Accent, 
         variant == "Towers" and "LIFT SYSTEM" or (
             variant == "Crossroads" and "TRANSIT CTRL" or (
-                variant == "Orbital" and "REACTOR CORE" or "RADAR ARRAY"
+                variant == "Orbital" and "REACTOR CORE" or (
+                    variant == "Harbor" and "STORM PORT" or "RADAR ARRAY"
+                )
             )
         )
     )
@@ -504,6 +554,8 @@ function ArenaSignatureKit.build(parent, arenaBase, variant, tierName, themeOver
         crossroads(bundle, cf, theme, profile)
     elseif variant == "Orbital" then
         orbital(bundle, cf, theme, profile)
+    elseif variant == "Harbor" then
+        harbor(bundle, cf, theme, profile)
     else
         classic(bundle, cf, theme, profile)
     end
