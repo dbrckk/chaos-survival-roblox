@@ -1390,6 +1390,32 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 "Station:" .. tostring(station),
                 shared > 0 and "Team:Helped" or "Team:Solo")
         end,
+        -- NPCs help only REAL humans at a physical relay. Do not
+        -- attribute bot activations to a fabricated Player or count
+        -- them as human-to-human cooperation.
+        OnTeamDashBotUsed = function(botModel, station, helped)
+            if not roundActive or not botModel or not botModel.Parent
+                or botModel:GetAttribute("AISurvivor") ~= true then return end
+            for _, benefit in ipairs(helped) do
+                local target = benefit.player
+                if target and target.Parent == Players
+                    and not eliminated[target.UserId] then
+                    local received = math.max(0, math.floor(tonumber(
+                        target:GetAttribute("RoundTeamDashReceived")) or 0))
+                    target:SetAttribute("RoundTeamDashReceived", received + 1)
+                    arenaMechanicFeedbackEvent:FireClient(target, {
+                        variantId = currentArenaVariant,
+                        mechanicName = "BOT DASH SHARED",
+                        overdrive = false,
+                    })
+                    GameAnalytics.custom(target, "TeamDashBotHelped", 1,
+                        "Arena:" .. tostring(currentArenaVariant),
+                        "Station:" .. tostring(station),
+                        benefit.kind == "reserve"
+                            and "Help:Reserve" or "Help:Recharge")
+                end
+            end
+        end,
         OnDistrictTransitUsed = function(player, route, outbound)
             if player.Parent ~= Players then return end
             GameAnalytics.custom(
