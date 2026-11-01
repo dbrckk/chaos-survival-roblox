@@ -1,7 +1,11 @@
 -- Prevent simultaneous meteor/bomb impact feedback from filling the playfield.
 -- Rendering may be reduced, but the server's damage and hazard timing never are.
 local ImpactPulseRules = {}
-local DisasterCosmeticRules = require(script.Parent.DisasterCosmeticRules)
+-- Preserve Roblox ModuleScript ownership and support real-engine Lest
+-- importing source modules without a script Instance.
+local DisasterCosmeticRules = if script and script.Parent
+    then require(script.Parent.DisasterCosmeticRules)
+    else require("./DisasterCosmeticRules")
 local BUDGETS = {
     Low = {Near = 70, Concurrent = 2, Expansion = 1.04},
     Medium = {Near = 105, Concurrent = 3, Expansion = 1.16},

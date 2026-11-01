@@ -2,7 +2,11 @@
 -- Deterministic tornado spiral silhouettes. Pure client-side geometry recipes:
 -- server wind impulses, damage, arena navigation and roster remain unchanged.
 local TornadoSpiralRules = {}
-local DisasterCosmeticRules = require(script.Parent.DisasterCosmeticRules)
+-- Runtime uses the sibling ModuleScript; source-loaded Lest does not
+-- provide script.Parent, so resolve the same shared policy by path there.
+local DisasterCosmeticRules = if script and script.Parent
+    then require(script.Parent.DisasterCosmeticRules)
+    else require("./DisasterCosmeticRules")
 
 -- Two intertwined arms give the funnel a distinct silhouette. Each arm
 -- remains short and inexpensive: 3/6/9 segments per arm.

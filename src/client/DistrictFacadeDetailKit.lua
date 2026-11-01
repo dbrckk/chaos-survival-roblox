@@ -5,7 +5,13 @@
 -- This kit is called solely by the existing 0.65/0.90s scenery LOD loop.
 -- No new RenderStepped, heartbeat, remote, physics or streaming listeners.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Styles = require(ReplicatedStorage.Shared.DistrictFacadeStyles)
+-- Lest imports this client kit from source against an older published
+-- test place where the new Shared ModuleScript may not exist yet.
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local stylesModule = shared and shared:FindFirstChild("DistrictFacadeStyles")
+local Styles = if stylesModule
+    then require(stylesModule)
+    else require("../shared/DistrictFacadeStyles")
 
 local DistrictFacadeDetailKit = {}
 local MEDIUM = {

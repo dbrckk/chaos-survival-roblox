@@ -5,7 +5,14 @@
 -- All pieces are inert scenery: no collisions, touch, queries, scripts,
 -- physics ownership, particles or lights. Client LOD controls mobile cost.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local DistrictFacadeStyles = require(ReplicatedStorage.Shared.DistrictFacadeStyles)
+-- Real-engine source tests can run before the public place receives a
+-- newly added Shared ModuleScript. The fallback loads the SAME source
+-- table by relative path; published builds still use ReplicatedStorage.
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local stylesModule = shared and shared:FindFirstChild("DistrictFacadeStyles")
+local DistrictFacadeStyles = if stylesModule
+    then require(stylesModule)
+    else require("../shared/DistrictFacadeStyles")
 
 local ArenaDistrictArchitecture = {}
 
