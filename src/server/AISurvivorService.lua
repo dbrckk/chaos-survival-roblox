@@ -3316,7 +3316,9 @@ local function stepRecord(record, now)
                 end
                 humanoid:Move(Vector3.zero)
                 if now < record.assistHoldAt then return end
-                local helped = TeamDashRelay.activateBot(record.model, now)
+                local helped = TeamDashRelay.activateBot(
+                    record.model, now, record.assistRelay
+                )
                 TeamDashRelay.releaseBot(record.model)
                 record.assistRelay = nil
                 record.assistHoldAt = nil
