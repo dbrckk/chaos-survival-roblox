@@ -269,7 +269,8 @@ function TeamDashRelay.activate(entry, actor, fromBot)
     entry.guard = true
     local helped = {}
     for _, target in ipairs(round.ctx.Contestants or {}) do
-        if round.ctx.IsContestantActive(target) then
+        if target:GetAttribute("DataLoaded") == true
+            and round.ctx.IsContestantActive(target) then
             local root = validCharacter(target)
             if root and (root.Position - entry.core.Position).Magnitude
                 <= TeamDashRelay.Radius then
@@ -310,8 +311,8 @@ function TeamDashRelay.activate(entry, actor, fromBot)
     return #helped > 0, #helped
 end
 
-function TeamDashRelay.activateBot(model, now)
-    local _, station = TeamDashRelay.botOpportunity(model, now)
+function TeamDashRelay.activateBot(model, now, preferred)
+    local _, station = TeamDashRelay.botOpportunity(model, now, preferred)
     if not station then return false end
     local round = activeRound
     if not round then return false end
