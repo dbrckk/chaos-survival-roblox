@@ -202,11 +202,14 @@ end
 -- at a fixed 39% height where it can obscure the avatar on small Android.
 -- On an extremely short split-screen viewport there is no safe room for
 -- a duplicate introduction: return fits=false; the main HUD remains.
-function UIResponsive.mobileRoundBanner(viewport)
+function UIResponsive.mobileRoundBanner(viewport, topInset)
     local c = UIResponsive.classify(viewport, true)
     local profile = UIResponsive.mobileProfile(viewport)
     local height = c.tinyHeight and 48 or (c.compactHeight and 52 or 58)
-    local headerBottom = 7 + profile.topHeight + 5 + 24 + 8
+    -- ChaosHUD respects the native Roblox inset, whereas ChaosJuice
+    -- ignores it. Account for the actual top bar on the raw viewport.
+    local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
+    local headerBottom = inset + 7 + profile.topHeight + 5 + 24 + 8
     local top = headerBottom + 8
     local survivalTop = c.height - profile.roundFocusBottomOffset
         - profile.roundFocusHeight - 8
