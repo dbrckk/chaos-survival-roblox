@@ -334,6 +334,40 @@ ArenaVariants.Definitions.Harbor.SkywayPlatforms = (function()
 end)()
 
 
+-- Four genuinely PLAYABLE cardinal dock runs make the large open
+-- middle of Storm Harbor useful. Each route begins on the arena floor,
+-- then climbs through four precise but standard-R15-jumpable landings to
+-- a distinct 14-stud-high lookout. Exactly SIXTEEN
+-- colliding native decks, not a fake skyline or nonphysical sign.
+-- Append AFTER the existing 94 Harbor platforms to preserve all original
+-- IDs, bridge/mobility references and skyway mastery indices.
+ArenaVariants.Definitions.Harbor.SpokePlatforms = (function()
+    local decks = {}
+    local directions = {
+        {0, -1}, {1, 0}, {0, 1}, {-1, 0},
+    }
+    local widths = {12, 11.5, 11, 10.5}
+    for route, axis in ipairs(directions) do
+        for step = 1, 4 do
+            local distance = 55 + (step - 1) * 13
+            local width = widths[step]
+            decks[#decks + 1] = {
+                offset = Vector3.new(
+                    axis[1] * distance, 4 + (step - 1) * 3,
+                    axis[2] * distance
+                ),
+                size = Vector3.new(width, 2, width),
+                RouteTier = step,
+                ParkourGrade = math.min(4, step + 1),
+                HarborSpokeRoute = route,
+                HarborSpokeStep = step,
+            }
+        end
+    end
+    return decks
+end)()
+
+
 -- Mega districts: 320 x 320 is 2.04x the preceding 224 x 224 map.
 -- Keep the authored central routes and bridge indices unchanged. Eight
 -- physical, ground-supported perimeter terraces now lead toward the outer

@@ -530,6 +530,31 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
         )
     end
 
+    -- Storm Harbor's newer cardinal dry-dock routes are also authored
+    -- and physically ordered, never a nearest-tier hallucination. The
+    -- same ordinary jumpability predicate filters collapsing decks,
+    -- missing collision and impossible gaps or rises.
+    local spokeRoute = from:GetAttribute("HarborSpokeRoute")
+    local spokeStep = from:GetAttribute("HarborSpokeStep")
+    if spokeRoute ~= nil or spokeStep ~= nil then
+        if variantId ~= "Harbor"
+            or type(spokeRoute) ~= "number" or spokeRoute % 1 ~= 0
+            or spokeRoute < 1 or spokeRoute > 4
+            or type(spokeStep) ~= "number" or spokeStep % 1 ~= 0
+            or spokeStep < 1 or spokeStep >= 4 then
+            return nil
+        end
+        for _, destination in ipairs(orderedPlatforms) do
+            if destination ~= from and destination:IsA("BasePart")
+                and destination:GetAttribute("HarborSpokeRoute") == spokeRoute
+                and destination:GetAttribute("HarborSpokeStep") == spokeStep + 1
+                and JumpRouteCueRules.jumpable(from, destination) then
+                return destination
+            end
+        end
+        return nil
+    end
+
     -- Storm Harbor's tight 90-degree switchbacks need their real,
     -- authored order. Spatial nearest-tier selection alone can steer
     -- novices to a DIFFERENT quay with no attainable jump.
