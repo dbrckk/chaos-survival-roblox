@@ -121,7 +121,7 @@ describe("UI responsive profiles", function()
         expect(c.aspect > 1.7).toBe(true)
     end)
 
-    it("keeps main round reveals out of the center gameplay lane on Android", function()
+    it("keeps round introductions below native Roblox controls and above survival", function()
         for _, viewport in ipairs({
             Vector2.new(540, 320),
             Vector2.new(640, 360),
@@ -129,19 +129,40 @@ describe("UI responsive profiles", function()
             Vector2.new(1536, 688),
             Vector2.new(400, 720),
         }) do
-            local l = UIResponsive.mobileRoundBanner(viewport)
-            expect(l.widthScale >= 0.70 and l.widthScale <= 0.95).toBe(true)
-            expect(l.height >= 54 and l.height <= 64).toBe(true)
-            expect(l.titleMaxTextSize <= 24).toBe(true)
-            expect(l.subtitleMaxTextSize <= 17).toBe(true)
-            expect(l.centerYScale < 0.43).toBe(true)
-            -- The first mobile banner is a 54–64px strip, never a
-            -- screen-height-scaled rectangle hiding a central avatar.
+            -- The intro ScreenGui ignores the top inset, unlike ChaosHUD.
+            local inset = 48
+            local l = UIResponsive.mobileRoundBanner(viewport, inset)
+            local profile = UIResponsive.mobileProfile(viewport)
+            local safeBottom = viewport.Y - profile.roundFocusBottomOffset
+                - profile.roundFocusHeight - 8
+            expect(l.fits).toBe(true)
+            expect(l.widthScale >= 0.48 and l.widthScale <= 0.84).toBe(true)
+            expect(l.height >= 48 and l.height <= 58).toBe(true)
+            expect(l.titleMaxTextSize <= 21).toBe(true)
+            expect(l.subtitleMaxTextSize <= 15).toBe(true)
+            expect(l.topOffset >= inset + 7 + profile.topHeight + 5 + 24 + 8)
+                .toBe(true)
+            expect(l.topOffset + l.height <= safeBottom).toBe(true)
             expect(l.height < viewport.Y * 0.20).toBe(true)
+            expect(math.abs(l.centerYScale * viewport.Y
+                - (l.topOffset + l.height * 0.5)) < 0.01).toBe(true)
         end
-        local wide = UIResponsive.mobileRoundBanner(Vector2.new(1536, 688))
-        local narrow = UIResponsive.mobileRoundBanner(Vector2.new(540, 320))
+        local wide = UIResponsive.mobileRoundBanner(Vector2.new(1536, 688), 48)
+        local narrow = UIResponsive.mobileRoundBanner(Vector2.new(540, 320), 48)
         expect(wide.widthScale < narrow.widthScale).toBe(true)
+    end)
+
+    it("hides optional intro only when a short Android viewport has no safe lane", function()
+        local cramped = UIResponsive.mobileRoundBanner(Vector2.new(400, 230), 48)
+        expect(cramped.fits).toBe(false)
+        local rotated = UIResponsive.mobileRoundBanner(Vector2.new(540, 320), 70)
+        expect(rotated.fits).toBe(false)
+        local normal = UIResponsive.mobileRoundBanner(Vector2.new(540, 320), 48)
+        expect(normal.fits).toBe(true)
+        local noInset = UIResponsive.mobileRoundBanner(Vector2.new(640, 360))
+        expect(noInset.fits).toBe(true)
+        expect(noInset.topOffset < UIResponsive.mobileRoundBanner(
+            Vector2.new(640, 360), 48).topOffset).toBe(true)
     end)
 
     it("keeps the ready strategy card clear of the alive counter on Android", function()
