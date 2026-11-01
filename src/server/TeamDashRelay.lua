@@ -13,6 +13,12 @@ TeamDashRelay.PromptDistance = 9
 TeamDashRelay.Radius = 29
 TeamDashRelay.HoldSeconds = 0.65
 TeamDashRelay.MinRoundSeconds = 20
+TeamDashRelay.BotApproachRadius = 68
+TeamDashRelay.BotReach = 7.5
+
+-- The server owns both the human prompt and the bot activation path.
+-- No client remote can impersonate an NPC or choose human beneficiaries.
+local activeRound = nil
 
 local OFFSETS = {
     {
@@ -64,6 +70,89 @@ function TeamDashRelay.canUse(ctx, base, source, player, now)
     local delta = source.Position - base.Position
     return math.abs(delta.X) + 7 < base.Size.X * 0.5
         and math.abs(delta.Z) + 7 < base.Size.Z * 0.5
+end
+
+local function botRoot(model)
+    local folder = workspace:FindFirstChild("AISurvivors")
+    if typeof(model) ~= "Instance" or not model:IsA("Model")
+        or not folder or model.Parent ~= folder
+        or model:GetAttribute("AISurvivor") ~= true
+        or model:GetAttribute("AISurvivorInRound") ~= true then
+        return nil
+    end
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    local root = model:FindFirstChild("HumanoidRootPart")
+    if not humanoid or humanoid.Health <= 0
+        or not root or not root:IsA("BasePart")
+        or not root:IsDescendantOf(workspace) then
+        return nil
+    end
+    return root
+end
+
+local function withinLiveFloor(base, source)
+    if not base or not base.Parent or not base.CanCollide
+        or not source or not source.Parent then return false end
+    local delta = source.Position - base.Position
+    return math.abs(delta.X) + 7 < base.Size.X * 0.5
+        and math.abs(delta.Z) + 7 < base.Size.Z * 0.5
+end
+
+-- Only real humans can benefit from a bot's shared-DASH interaction.
+-- This check is repeated at activation, never trusted from path planning.
+local function humanNearby(round, station)
+    for _, player in ipairs(round.ctx.Contestants or {}) do
+        if player:GetAttribute("DataLoaded") == true
+            and round.ctx.IsContestantActive(player) then
+            local root = validCharacter(player)
+            if root and (root.Position - station.core.Position).Magnitude
+                <= TeamDashRelay.Radius then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function TeamDashRelay.botOpportunity(model, now, preferred)
+    local round = activeRound
+    local root = botRoot(model)
+    if not round or not root or not round.ctx.Active()
+        or type(now) ~= "number"
+        or not round.folder.Parent then return nil end
+    local best, distance = nil, TeamDashRelay.BotApproachRadius
+    for _, station in ipairs(round.entries) do
+        local core = station.core
+        local delta = core.Position - root.Position
+        local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        local claimedByOther = station.claim and station.claim ~= model
+            and (station.claimUntil or 0) > now
+        if not station.used and not station.guard
+            and station.prompt.Enabled
+            and withinLiveFloor(round.base, core)
+            and math.abs(delta.Y) <= 6.5
+            and flat <= distance
+            and not claimedByOther
+            and (preferred == nil or core == preferred)
+            and humanNearby(round, station) then
+            best, distance = station, flat
+        end
+    end
+    if not best then return nil end
+    best.claim, best.claimUntil = model, now + 5.0
+    return Vector3.new(best.core.Position.X, root.Position.Y,
+        best.core.Position.Z), best.core
+end
+
+function TeamDashRelay.releaseBot(model)
+    local round = activeRound
+    if not round then return end
+    for _, station in ipairs(round.entries) do
+        if station.claim == model then
+            station.claim = nil
+            station.claimUntil = 0
+        end
+    end
 end
 
 local function part(model, name, size, cframe, color, material)
@@ -152,6 +241,85 @@ local function build(folder, position, index, color)
         pulse = pulse, label = text}
 end
 
+-- Both physical player interaction and real server-driven AI action go
+-- through this single, bounded, atomic station state transition.
+function TeamDashRelay.activate(entry, actor, fromBot)
+    local round = activeRound
+    if not round or not round.ctx.Active()
+        or not entry or entry.used or entry.guard
+        or not entry.prompt.Enabled then return false end
+    if fromBot then
+        local root = botRoot(actor)
+        if not root or (root.Position - entry.core.Position).Magnitude
+            > TeamDashRelay.BotReach
+            or not humanNearby(round, entry) then
+            return false
+        end
+    elseif not TeamDashRelay.canUse(
+        round.ctx, round.base, entry.core, actor, os.clock()
+    ) then
+        return false
+    end
+
+    entry.guard = true
+    local helped = {}
+    for _, target in ipairs(round.ctx.Contestants or {}) do
+        if round.ctx.IsContestantActive(target) then
+            local root = validCharacter(target)
+            if root and (root.Position - entry.core.Position).Magnitude
+                <= TeamDashRelay.Radius then
+                local ok, received, kind = pcall(
+                    round.ctx.OnTeamDashCharge, target
+                )
+                if ok and received == true then
+                    helped[#helped + 1] = {player = target, kind = kind}
+                end
+            end
+        end
+    end
+    if #helped > 0 then
+        entry.used = true
+        entry.model:SetAttribute("RelayUsed", true)
+        entry.model:SetAttribute("TeamBeneficiaries", #helped)
+        entry.model:SetAttribute("BotActivated", fromBot == true)
+        entry.core.Color = Color3.fromRGB(66, 97, 106)
+        entry.pulse.Transparency = 0.86
+        local tween = TweenService:Create(entry.pulse,
+            TweenInfo.new(0.7, Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out), {Transparency = 1})
+        tween:Play()
+        tween.Completed:Once(function() tween:Destroy() end)
+        entry.label.Text = fromBot
+            and "TEAM DASH\\nBOT HELPED"
+            or "TEAM DASH\\nRELAY USED"
+        entry.label.TextColor3 = Color3.fromRGB(151, 179, 188)
+        entry.refresh()
+        if fromBot and type(round.ctx.OnTeamDashBotUsed) == "function" then
+            pcall(round.ctx.OnTeamDashBotUsed, actor, entry.index, helped)
+        elseif not fromBot
+            and type(round.ctx.OnTeamDashUsed) == "function" then
+            pcall(round.ctx.OnTeamDashUsed, actor, entry.index, helped)
+        end
+    end
+    entry.guard = false
+    return #helped > 0, #helped
+end
+
+function TeamDashRelay.activateBot(model, now)
+    local _, station = TeamDashRelay.botOpportunity(model, now)
+    if not station then return false end
+    local round = activeRound
+    if not round then return false end
+    for _, entry in ipairs(round.entries) do
+        if entry.core == station then
+            local ok, count = TeamDashRelay.activate(entry, model, true)
+            if ok then TeamDashRelay.releaseBot(model) end
+            return ok, count
+        end
+    end
+    return false
+end
+
 function TeamDashRelay.start(ctx)
     if not ctx or type(ctx.Active) ~= "function" or not ctx.Active()
         or type(ctx.OnTeamDashCharge) ~= "function"
@@ -171,6 +339,11 @@ function TeamDashRelay.start(ctx)
     folder:SetAttribute("ServerAuthoritative", true)
     folder.Parent = arena
     table.insert(ctx.Cleanup, folder)
+    local round = {ctx = ctx, base = base, folder = folder, entries = {}}
+    activeRound = round
+    folder.Destroying:Connect(function()
+        if activeRound == round then activeRound = nil end
+    end)
 
     local floorTop = base.Position.Y + base.Size.Y * 0.5
     local color = Color3.fromRGB(109, 220, 190)
@@ -187,15 +360,17 @@ function TeamDashRelay.start(ctx)
         if position then
             local entry = build(folder, position, index, color)
             built += 1
-            local used = false
-            local guard = false
+            entry.index = index
+            entry.used = false
+            entry.guard = false
+            entry.claim = nil
+            entry.claimUntil = 0
+            table.insert(round.entries, entry)
             local function refresh()
-                local delta = entry.core.Position - base.Position
-                entry.prompt.Enabled = not used and ctx.Active()
-                    and base.CanCollide
-                    and math.abs(delta.X) + 7 < base.Size.X * 0.5
-                    and math.abs(delta.Z) + 7 < base.Size.Z * 0.5
+                entry.prompt.Enabled = not entry.used and ctx.Active()
+                    and withinLiveFloor(base, entry.core)
             end
+            entry.refresh = refresh
             local shrink = base:GetPropertyChangedSignal("Size"):Connect(refresh)
             entry.model.Destroying:Connect(function()
                 shrink:Disconnect()
@@ -203,56 +378,11 @@ function TeamDashRelay.start(ctx)
             refresh()
 
             entry.prompt.Triggered:Connect(function(player)
-                if guard or used or not entry.prompt.Enabled
+                if entry.guard or entry.used or not entry.prompt.Enabled
                     or not TeamDashRelay.canUse(
                         ctx, base, entry.core, player, os.clock()
                     ) then return end
-                guard = true
-                local helped = {}
-                for _, target in ipairs(ctx.Contestants or {}) do
-                    if ctx.IsContestantActive(target) then
-                        local root = validCharacter(target)
-                        if root and (root.Position - entry.core.Position).Magnitude
-                            <= TeamDashRelay.Radius then
-                            -- A failing benefit callback must not leave a
-                            -- station permanently locked or prevent others
-                            -- from receiving their own valid server charge.
-                            local ok, success, kind = pcall(
-                                ctx.OnTeamDashCharge, target
-                            )
-                            if ok and success == true then
-                                helped[#helped + 1] = {
-                                    player = target, kind = kind
-                                }
-                            end
-                        end
-                    end
-                end
-                if #helped > 0 then
-                    used = true
-                    entry.model:SetAttribute("RelayUsed", true)
-                    entry.model:SetAttribute("TeamBeneficiaries", #helped)
-                    entry.core.Color = Color3.fromRGB(66, 97, 106)
-                    -- One short shared environmental reaction; clients
-                    -- see that a teammate used the physical console, but
-                    -- hazard warning red/orange keeps higher visual priority.
-                    entry.pulse.Transparency = 0.86
-                    local pulseTween = TweenService:Create(entry.pulse,
-                        TweenInfo.new(0.7, Enum.EasingStyle.Quad,
-                            Enum.EasingDirection.Out),
-                        {Transparency = 1})
-                    pulseTween:Play()
-                    pulseTween.Completed:Once(function()
-                        pulseTween:Destroy()
-                    end)
-                    entry.label.Text = "TEAM DASH\nRELAY USED"
-                    entry.label.TextColor3 = Color3.fromRGB(151, 179, 188)
-                    refresh()
-                    if type(ctx.OnTeamDashUsed) == "function" then
-                        pcall(ctx.OnTeamDashUsed, player, index, helped)
-                    end
-                end
-                guard = false
+                TeamDashRelay.activate(entry, player, false)
             end)
         end
     end
