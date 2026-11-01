@@ -915,6 +915,13 @@ function AISurvivorRules.brainCadence(recordCount, phase)
         return 0.42
     end
 
+    -- Four server-owned R15 rigs are more expensive than the original
+    -- three. A slightly wider step keeps the aggregate brain budget
+    -- roughly flat: 3/0.18 = 16.7 vs 4/0.24 = 16.7 steps/s.
+    -- No extra heartbeat, pathfinding service or movement speed buff.
+    if count >= 4 then
+        return 0.24
+    end
     return 0.18
 end
 
