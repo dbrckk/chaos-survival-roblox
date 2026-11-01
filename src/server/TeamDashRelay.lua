@@ -4,6 +4,7 @@
 -- A ready survivor receives exactly ONE future emergency follow-up DASH.
 -- No clients can choose recipients or rewards. No per-frame update loops.
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local SpawnSafety = require(script.Parent.SpawnSafety)
 
 local TeamDashRelay = {}
@@ -99,6 +100,12 @@ local function build(folder, position, index, color)
     local head = part(model, "SharedChargeCore", Vector3.new(2.6, 0.65, 2.6),
         frame * CFrame.new(0, 3.9, 0),
         color, Enum.Material.Metal)
+    local pulse = part(model, "TeamChargePulse",
+        Vector3.new(5.5, 5.5, 5.5),
+        frame * CFrame.new(0, 3.9, 0),
+        color, Enum.Material.Neon)
+    pulse.Shape = Enum.PartType.Ball
+    pulse.Transparency = 1
     for side = -1, 1, 2 do
         part(model, "CouplingArm" .. tostring(side),
             Vector3.new(0.36, 2.8, 0.55),
@@ -138,7 +145,8 @@ local function build(folder, position, index, color)
     corner.CornerRadius = UDim.new(0, 7)
     corner.Parent = text
     model.Parent = folder
-    return {model = model, prompt = prompt, core = head, label = text}
+    return {model = model, prompt = prompt, core = head,
+        pulse = pulse, label = text}
 end
 
 function TeamDashRelay.start(ctx)
@@ -203,8 +211,13 @@ function TeamDashRelay.start(ctx)
                         local root = validCharacter(target)
                         if root and (root.Position - entry.core.Position).Magnitude
                             <= TeamDashRelay.Radius then
-                            local success, kind = ctx.OnTeamDashCharge(target)
-                            if success == true then
+                            -- A failing benefit callback must not leave a
+                            -- station permanently locked or prevent others
+                            -- from receiving their own valid server charge.
+                            local ok, success, kind = pcall(
+                                ctx.OnTeamDashCharge, target
+                            )
+                            if ok and success == true then
                                 helped[#helped + 1] = {
                                     player = target, kind = kind
                                 }
@@ -217,6 +230,18 @@ function TeamDashRelay.start(ctx)
                     entry.model:SetAttribute("RelayUsed", true)
                     entry.model:SetAttribute("TeamBeneficiaries", #helped)
                     entry.core.Color = Color3.fromRGB(66, 97, 106)
+                    -- One short shared environmental reaction; clients
+                    -- see that a teammate used the physical console, but
+                    -- hazard warning red/orange keeps higher visual priority.
+                    entry.pulse.Transparency = 0.86
+                    local pulseTween = TweenService:Create(entry.pulse,
+                        TweenInfo.new(0.7, Enum.EasingStyle.Quad,
+                            Enum.EasingDirection.Out),
+                        {Transparency = 1})
+                    pulseTween:Play()
+                    pulseTween.Completed:Once(function()
+                        pulseTween:Destroy()
+                    end)
                     entry.label.Text = "TEAM DASH\nRELAY USED"
                     entry.label.TextColor3 = Color3.fromRGB(151, 179, 188)
                     refresh()
