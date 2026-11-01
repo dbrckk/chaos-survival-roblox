@@ -52,7 +52,7 @@ describe("Game analytics helpers", function()
 
     it("builds stable low-cardinality arena cohorts for every round type", function()
         local a = GameAnalytics
-        for _, arena in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        for _, arena in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local field1, field2, field3 = a.arenaRoundFields(
                 arena, true, "Meteors", false, true
             )
