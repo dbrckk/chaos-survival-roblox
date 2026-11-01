@@ -7,6 +7,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
+local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
 
 local player = Players.LocalPlayer
 
@@ -409,6 +410,13 @@ local function rebuild()
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Harbor" then
                 decorateHarbor(platform, visualIndex, theme, tier)
+                -- Only the four real cardinal terminal decks get authored
+                -- 3D port infrastructure. The existing visual registrar,
+                -- shrink-weld, collapse owner and tier rebuild own it.
+                -- No new scene loop, world physics or touch occlusion.
+                HarborOutpostKit.build(
+                    makePart, platform, visualIndex, theme, tier.Name
+                )
             elseif variant == "Classic" then
                 decorateClassic(platform, visualIndex, theme, tier)
             end
