@@ -1336,7 +1336,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
         OnTeamDashUsed = function(actor, station, helped)
             if not roundActive or actor.Parent ~= Players then return end
             local shared = 0
-            local helpedActor = false
+            local actorKind = nil
             for _, benefit in ipairs(helped) do
                 local target = benefit.player
                 if target and target.Parent == Players then
@@ -1344,16 +1344,16 @@ local function runDisasterSet(selected, contestants, roundSettings)
                         target:GetAttribute("RoundTeamDashReceived")) or 0))
                     target:SetAttribute("RoundTeamDashReceived", received + 1)
                     if target == actor then
-                        helpedActor = true
+                        actorKind = benefit.kind
                     else
                         shared += 1
+                        arenaMechanicFeedbackEvent:FireClient(target, {
+                            variantId = currentArenaVariant,
+                            mechanicName = benefit.kind == "reserve"
+                                and "DASH RESERVE" or "DASH RECHARGED",
+                            overdrive = false,
+                        })
                     end
-                    arenaMechanicFeedbackEvent:FireClient(target, {
-                        variantId = currentArenaVariant,
-                        mechanicName = benefit.kind == "reserve"
-                            and "DASH RESERVE" or "DASH RECHARGED",
-                        overdrive = false,
-                    })
                 end
             end
             local activations = math.max(0, math.floor(tonumber(
@@ -1364,13 +1364,16 @@ local function runDisasterSet(selected, contestants, roundSettings)
                     actor:GetAttribute("RoundTeamDashShared")) or 0))
                 actor:SetAttribute("RoundTeamDashShared", previous + shared)
             end
-            if not helpedActor then
-                arenaMechanicFeedbackEvent:FireClient(actor, {
-                    variantId = currentArenaVariant,
-                    mechanicName = "TEAM DASH SHARED",
-                    overdrive = false,
-                })
-            end
+            -- The operator sees the cooperative outcome, not two
+            -- competing toast messages inside the 180ms HUD throttle.
+            -- Their own DASH button separately shows the real reserve.
+            arenaMechanicFeedbackEvent:FireClient(actor, {
+                variantId = currentArenaVariant,
+                mechanicName = shared > 0 and "TEAM DASH SHARED"
+                    or (actorKind == "reserve"
+                        and "DASH RESERVE" or "DASH RECHARGED"),
+                overdrive = false,
+            })
             GameAnalytics.custom(actor, "TeamDashRelayUsed", 1,
                 "Arena:" .. tostring(currentArenaVariant),
                 "Station:" .. tostring(station),
