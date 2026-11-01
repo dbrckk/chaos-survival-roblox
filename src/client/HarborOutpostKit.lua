@@ -116,25 +116,88 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
     return made, instrument
 end
 
--- Move one ACTUAL mechanical instrument per station, not its collision deck,
--- arch or warning markers. The existing owner tweens the instrument's
--- PlatformIdentityWeld.C0; the Shrinking Arena footprint owner separately
--- adjusts Weld.C1, so animated rotation never fights deck resizing.
--- Reverse every swing: no unbounded accumulated rotation or joint drift.
--- These calm mechanical rhythms are intentionally NOT hazard signals.
-function HarborOutpostKit.motionTarget(route)
+-- A server-authored round contains at most two disaster IDs. Reduce the
+-- pair to ONE stable mechanical posture. Priority is deterministic regardless
+-- of the order in which the IDs reach a client. No hazard warnings, new light
+-- or fake safe-zone marker are synthesized here.
+local DISASTER_POSTURES = {
+    Freeze = {mode = "stowed", weight = 7},
+    DisappearingPlatforms = {mode = "stowed", weight = 7},
+    Meteors = {mode = "impact", weight = 6},
+    Bombs = {mode = "impact", weight = 6},
+    ShrinkingArena = {mode = "impact", weight = 6},
+    JumpShock = {mode = "impact", weight = 6},
+    Tornado = {mode = "gale", weight = 5},
+    SpeedSurge = {mode = "gale", weight = 5},
+    RisingLava = {mode = "heat", weight = 4},
+    LowGravity = {mode = "drift", weight = 3},
+    Darkness = {mode = "night", weight = 2},
+}
+
+function HarborOutpostKit.disasterPosture(ids, phase)
+    if phase ~= "round" or type(ids) ~= "table" then
+        return "normal"
+    end
+    local chosen, weight = "normal", 0
+    for _, id in ipairs(ids) do
+        local candidate = type(id) == "string" and DISASTER_POSTURES[id]
+        if candidate and candidate.weight > weight then
+            chosen, weight = candidate.mode, candidate.weight
+        end
+    end
+    return chosen
+end
+
+-- A very restrained surface shift makes the equipment state readable at
+-- close range, without reusing yellow/red hazard telegraphs or changing any
+-- global ColorCorrection/Atmosphere. The rest of the gantry stays original.
+function HarborOutpostKit.instrumentColor(baseColor, posture)
+    if typeof(baseColor) ~= "Color3" then return baseColor end
+    if posture == "stowed" or posture == "night" then
+        return baseColor:Lerp(Color3.fromRGB(93, 111, 121), 0.18)
+    elseif posture == "gale" then
+        return baseColor:Lerp(Color3.fromRGB(146, 179, 183), 0.16)
+    elseif posture == "impact" then
+        return baseColor:Lerp(Color3.fromRGB(94, 110, 123), 0.12)
+    elseif posture == "heat" then
+        return baseColor:Lerp(Color3.fromRGB(157, 149, 127), 0.10)
+    elseif posture == "drift" then
+        return baseColor:Lerp(Color3.fromRGB(150, 169, 190), 0.12)
+    end
+    return baseColor
+end
+
+-- Move the ONE original instrument per terminal, not its collision deck.
+-- The owner tweens PlatformIdentityWeld.C0; Shrinking Arena alone owns C1.
+-- Different disasters change only amplitude/tempo and the neutral surface
+-- tone. The truly dangerous floor telegraphs always remain authoritative.
+function HarborOutpostKit.motionTarget(route, posture)
+    if posture == "stowed" then return nil end
+    local amplitude, interval = 1, 1
+    if posture == "gale" then
+        amplitude, interval = 1.18, 0.75
+    elseif posture == "impact" then
+        amplitude, interval = 0.50, 1.20
+    elseif posture == "drift" then
+        amplitude, interval = 0.70, 1.35
+    elseif posture == "heat" then
+        amplitude, interval = 0.82, 1.17
+    elseif posture == "night" then
+        amplitude, interval = 0.54, 1.30
+    end
     if route == 1 then
-        -- Weather radar sweeps the horizon left/right.
-        return CFrame.Angles(0, math.rad(20), 0), 2.8
+        -- Weather radar: wide sweep during wind; stow during freezing.
+        return CFrame.Angles(0, math.rad(20 * amplitude), 0), 2.8 * interval
     elseif route == 2 then
-        -- Winch drum rocks around its axle as a loaded port mechanism.
-        return CFrame.Angles(math.rad(14), 0, 0), 2.2
+        -- Loaded cargo winch: a slow axle rotation in an impact wave.
+        return CFrame.Angles(math.rad(14 * amplitude), 0, 0), 2.2 * interval
     elseif route == 3 then
-        -- Tidal instrument responds slowly to the swell.
-        return CFrame.Angles(0, 0, math.rad(6)), 3.4
+        -- Tidal probe: compliant, nonflashing response to the weather.
+        return CFrame.Angles(0, 0, math.rad(6 * amplitude)), 3.4 * interval
     elseif route == 4 then
-        -- Communications receiver calibrates its skyward elevation.
-        return CFrame.Angles(0, math.rad(-12), math.rad(9)), 3.0
+        -- Communications sensor maintains a safe bounded elevation arc.
+        return CFrame.Angles(0, math.rad(-12 * amplitude),
+            math.rad(9 * amplitude)), 3.0 * interval
     end
     return nil
 end
