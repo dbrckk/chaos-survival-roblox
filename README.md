@@ -18,6 +18,10 @@ The experience is **public to eligible 16+ Roblox players** under the documented
 
 For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-19.md), [launch runbook](docs/MISE_EN_LIGNE_1_0.md), and [release gate issue #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
 
+## Catastrophe-driven, destructible monumental skyline — source only
+
+Actual Meteor/Bomb impacts and prolonged Tornado/Lava disasters now trigger **large staged 3D collapses** of the six monumental sky-promenade gateways in each of the five playable arenas. Existing native radar structures, maintenance lifts, transit switches, orbital reactors and Harbor freight machinery fracture, tilt and fall in synchronized **server-owned geometry**, with temporary quality-tiered debris and dust. The playable platforms remain real safe colliders; no new unsignaled danger or bogus world physics. This code is **not yet published or validated on Roblox devices**. [Structural Cataclysm architecture, fairness and acceptance](docs/STRUCTURAL_CATACLYSM_PREMIUM_2026-11-01.md).
+
 ## Major physical 3D world expansion — source only, not yet published
 
 Five arenas now have a new **genuine high-altitude traversal loop**: each has two approximately 200-stud airborne sky promenades connecting existing distant physical lookouts. Sixteen new server-collidable, standard-R15-jumpable decks per map (80 authored among the five variants) create actual strategic route choices rather than background scenery. Six sculpted 3D structural portals per arena visually frame the walkways, with unique machinery for Classic/Towers/Crossroads/Orbital/Harbor. They have no blocking decorative collision; original spawn/hazard/AI systems continue to use the real `Arena/Platforms` parts. [Real geometry, deterministic route offsets and release acceptance](docs/MONUMENTAL_SKY_PROMENADES_2026-11-01.md). Source-only until a complete same-SHA Roblox engine/Studio/Android gate and explicit public publication.
