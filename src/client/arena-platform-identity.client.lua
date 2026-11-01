@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -24,8 +25,56 @@ local routeAttributeConnections = {}
 local routeTargetConnections = {}
 local routeCueStates = {}
 local footprintDisconnects = {}
+local outpostMotions = {}
+
+local function stopOutpostMotion(state)
+    if state.tween then
+        state.tween:Cancel()
+        state.tween:Destroy()
+        state.tween = nil
+    end
+    if state.joint and state.joint.Parent then
+        state.joint.C0 = CFrame.identity
+    end
+end
+
+local function refreshOutpostMotion(platform)
+    local state = outpostMotions[platform]
+    if not state then return end
+    local phase = platform:GetAttribute("CollapsePhase")
+    local active = player:GetAttribute("ReduceMotion") ~= true
+        and platform.Parent ~= nil and state.joint.Parent ~= nil
+        and platform.CanCollide and platform.Transparency < 0.75
+        and phase ~= "Warning" and phase ~= "Gone"
+    if not active then
+        if state.tween then stopOutpostMotion(state) end
+        return
+    end
+    if state.tween then return end
+    local goal, duration = HarborOutpostKit.motionTarget(state.route)
+    if not goal then return end
+    state.joint.C0 = CFrame.identity
+    -- Roblox TweenService supports CFrame properties on Weld. Only C0
+    -- animates here; the existing shrink-footprint callback owns C1.
+    -- Four owned tweens MAX in Medium/High, zero on Low and ReduceMotion.
+    local tween = TweenService:Create(
+        state.joint,
+        TweenInfo.new(duration, Enum.EasingStyle.Sine,
+            Enum.EasingDirection.InOut, -1, true),
+        {C0 = goal}
+    )
+    state.tween = tween
+    tween:Play()
+end
 
 local function clear()
+    for platform, state in pairs(outpostMotions) do
+        stopOutpostMotion(state)
+        for _, connection in ipairs(state.connections or {}) do
+            connection:Disconnect()
+        end
+        outpostMotions[platform] = nil
+    end
     for platform, connection in pairs(collapseConnections) do
         connection:Disconnect()
         collapseConnections[platform] = nil
@@ -414,9 +463,30 @@ local function rebuild()
                 -- 3D port infrastructure. The existing visual registrar,
                 -- shrink-weld, collapse owner and tier rebuild own it.
                 -- No new scene loop, world physics or touch occlusion.
-                HarborOutpostKit.build(
+                local _, instrument = HarborOutpostKit.build(
                     makePart, platform, visualIndex, theme, tier.Name
                 )
+                if instrument then
+                    local joint = instrument:FindFirstChild(
+                        "PlatformIdentityWeld"
+                    )
+                    if joint and joint:IsA("Weld") then
+                        outpostMotions[platform] = {
+                            joint = joint,
+                            route = platform:GetAttribute("HarborSpokeRoute"),
+                            connections = {
+                                platform:GetPropertyChangedSignal("CanCollide")
+                                    :Connect(function()
+                                        refreshOutpostMotion(platform)
+                                    end),
+                                platform:GetPropertyChangedSignal("Transparency")
+                                    :Connect(function()
+                                        refreshOutpostMotion(platform)
+                                    end),
+                            },
+                        }
+                    end
+                end
             elseif variant == "Classic" then
                 decorateClassic(platform, visualIndex, theme, tier)
             end
@@ -459,6 +529,7 @@ local function rebuild()
                     platform:GetAttribute("CollapsePhase")
                 )
                 syncRoute()
+                refreshOutpostMotion(platform)
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
@@ -561,5 +632,12 @@ end)
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+-- Accessibility changes affect at most four existing instrument tweens;
+-- never rebuild the whole arena just to freeze/restart the moving heads.
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
+    for platform in pairs(outpostMotions) do
+        refreshOutpostMotion(platform)
+    end
+end)
 
 rebuild()
