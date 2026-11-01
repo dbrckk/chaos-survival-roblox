@@ -50,6 +50,9 @@ describe("Chaos Survival engine", function()
                     expect(deck:GetAttribute("BranchRoute")).toBe(route)
                     expect(deck:GetAttribute("BranchStep")).toBe(step)
                     expect(deck:GetAttribute("BranchParentStep")).toBe(5)
+                    -- Both terminal lookouts and all physical access
+                    -- landings remain connected throughout collapse waves.
+                    expect(deck:GetAttribute("ChaosPermanentRoute")).toBe(true)
                     local decor = arena:FindFirstChild("Decor")
                     for side = -1, 1, 2 do
                         local mark = decor:FindFirstChild(
