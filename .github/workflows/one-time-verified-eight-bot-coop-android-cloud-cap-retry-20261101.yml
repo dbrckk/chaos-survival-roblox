@@ -1,7 +1,9 @@
-# Owner-directed ONE-TIME retry after fixing Open Cloud oversized map spec.
+# Owner-directed ONE-TIME exact-SHA retry after repairing the two remaining
+# release blockers found by the last real workflows on 4dbeea8:
+# README expected 76 specs (actual 77) and GameAnalytics Lest import nil script.
 # Keeps exactly the same eight-seat IA / cooperative DASH / Android release
 # contract, and never publishes unless BOTH expensive gates pass on this SHA.
-# Triggered only when this new workflow is first merged onto main.
+# Triggered only when this existing workflow file changes on main.
 # Runs current main Build Validation and all five REAL Roblox engine suites.
 # Only if BOTH are green at the identical immutable main SHA does it
 # dispatch the pre-existing confirmation-guarded PUBLIC PLAYTEST publisher.
@@ -41,7 +43,18 @@ jobs:
           server = Path('src/server/init.server.lua').read_text()
           responsive = Path('src/shared/UIResponsive.lua').read_text()
           juice = Path('src/client/juice.client.lua').read_text()
+          analytics = Path('src/server/GameAnalytics.lua').read_text()
+          readme = Path('README.md').read_text()
+          spec_count = len(list(Path('tests/engine').glob('*.spec.luau')))
           required = {
+              'README count agrees with real-engine spec files': (
+                  spec_count == 77 and
+                  f'- {spec_count} engine specs assigned exactly once' in readme
+              ),
+              'analytics works in Lest without Roblox script globals': (
+                  'if script and script.Parent' in analytics and
+                  'else require("./ArenaVariants")' in analytics
+              ),
               'Cloud map spec below source cap': (
                   Path('tests/engine/mapbuilder.spec.luau').stat().st_size < 105_000 and
                   Path('tests/engine/mapbuilder-advanced.spec.luau').stat().st_size < 105_000 and
