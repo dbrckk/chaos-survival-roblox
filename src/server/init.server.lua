@@ -78,6 +78,7 @@ local RoundCollectibles = require(script.RoundCollectibles)
 local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
 local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
 local ArenaStructuralCollapse = require(script.ArenaStructuralCollapse)
+local ArenaSkyShieldNetwork = require(script.ArenaSkyShieldNetwork)
 local DistrictSignalRush = require(script.DistrictSignalRush)
 local RoundChallenge = require(script.RoundChallenge)
 local HighGroundMastery = require(script.HighGroundMastery)
@@ -1598,6 +1599,17 @@ local function runDisasterSet(selected, contestants, roundSettings)
         structuralImpact = cataclysmResult
     else
         warn("Arena structural cataclysm failed to start:", cataclysmResult)
+    end
+
+    -- When real Bomb/Meteor rounds run, four large player-operated
+    -- emergency generators create temporary protective volumes. Both
+    -- humans and simulated survivors are protected by the SAME real
+    -- DisasterImpact damage path; no separate damage or client remotes.
+    local shieldsOk, impactShield = pcall(ArenaSkyShieldNetwork.start, ctx)
+    if shieldsOk and type(impactShield) == "function" then
+        ctx.ImpactShieldMitigation = impactShield
+    elseif not shieldsOk then
+        warn("Emergency skyline shield network failed:", impactShield)
     end
 
     local arenaMechanic = nil

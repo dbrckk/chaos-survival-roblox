@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local DisasterImpact = require("../../src/server/DisasterImpact")
 local HazardImpactAudience = require("../../src/shared/HazardImpactAudience")
 local RisingLava = require("../../src/server/Disasters/RisingLava")
+local ArenaSkyShieldNetwork = require("../../src/server/ArenaSkyShieldNetwork")
 
 describe("Disaster impact", function()
     it("routes nearby impacts to active players and visible events to spectators", function()
@@ -377,6 +378,146 @@ describe("Disaster impact", function()
             if instance and instance.Parent then instance:Destroy() end
         end
         character:Destroy()
+    end)
+
+    it("gates genuine team emergency shields to impact disasters and live geometric volumes", function()
+        local Shield = ArenaSkyShieldNetwork
+        local context = {
+            Active = function() return true end,
+            IsContestantActive = function() return true end,
+            OnCleanup = {},
+            Cleanup = {},
+            ActiveDisasters = {Meteors = true},
+        }
+        expect(Shield.enabled(context)).toBe(true)
+        context.ActiveDisasters = {Bombs = true}
+        expect(Shield.enabled(context)).toBe(true)
+        context.ActiveDisasters = {Tornado = true}
+        expect(Shield.enabled(context)).toBe(false)
+        expect(Shield.enabled(nil)).toBe(false)
+        expect(Shield.contains(
+            Vector3.new(10, 1, 10), Vector3.new(10, 4, 10), 1
+        )).toBe(true)
+        expect(Shield.contains(
+            Vector3.new(10, 1, 10), Vector3.new(34.01, 4, 10), 1
+        )).toBe(false)
+        expect(Shield.contains(
+            Vector3.new(10, 1, 10), Vector3.new(10, 30, 10), 1
+        )).toBe(false)
+        expect(Shield.damageAfterProtection(50)).toBe(21)
+        expect(Shield.damageAfterProtection(48)).toBe(20)
+        expect(Shield.damageAfterProtection(1)).toBe(1)
+    end)
+
+    it("applies the SAME authentic impact mitigation to nearby humans and bots, never unshielded avatars", function()
+        local Shield = ArenaSkyShieldNetwork
+        local subjects, characters, health = {}, {}, {}
+        for index, position in ipairs({
+            Vector3.new(0, 4, 0),
+            Vector3.new(2, 4, 0),
+            Vector3.new(-2, 4, 0),
+        }) do
+            local character = Instance.new("Model")
+            character.Name = "SharedShieldSurvivor" .. index
+            local root = Instance.new("Part")
+            root.Name = "HumanoidRootPart"
+            root.Position = position
+            root.Anchored = true
+            root.Parent = character
+            local humanoid = Instance.new("Humanoid")
+            humanoid.MaxHealth = 100
+            humanoid.Health = 100
+            humanoid.Parent = character
+            character.Parent = workspace
+            subjects[index] = {Character = character, IsAISurvivor = index == 2}
+            characters[index] = character
+            health[index] = humanoid
+        end
+        local centers = {Vector3.new(0, 1, 0)}
+        local protected = {[1] = true, [2] = true}
+        local hits = DisasterImpact.applyRadialDamage({
+            HazardContestants = subjects,
+            IsContestantActive = function() return true end,
+            ImpactShieldMitigation = function(position, kind, applied)
+                expect(kind).toBe("Meteor")
+                if protected[(position.X == 0 and 1)
+                    or (position.X == 2 and 2) or 3]
+                    and Shield.contains(centers[1], position, 1) then
+                    return Shield.damageAfterProtection(applied)
+                end
+                return applied
+            end,
+        }, Vector3.new(0, 4, 0), 8, 50, "Meteor")
+        expect(hits).toBe(3)
+        expect(health[1].Health).toBe(79)
+        -- Bot receives the very same authoritative reduction.
+        expect(health[2].Health > 75).toBe(true)
+        expect(health[2].Health < 85).toBe(true)
+        -- Outside the active field, ordinary blast falloff is preserved.
+        expect(health[3].Health < 70).toBe(true)
+        for _, character in ipairs(characters) do character:Destroy() end
+    end)
+
+    it("builds four real arena shield control stations without collision, damaging hitboxes or new remotes", function()
+        local old = workspace:FindFirstChild("GeneratedMap")
+        if old then old:Destroy() end
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = workspace
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId", "Harbor")
+        arena.Parent = generated
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.CFrame = CFrame.new(0, 0, 0)
+        base.Anchored = true
+        base.CanCollide = true
+        base.Parent = arena
+
+        local cleanups = {}
+        local records = {}
+        local active = true
+        local mitigate = ArenaSkyShieldNetwork.start({
+            Active = function() return active end,
+            IsContestantActive = function() return true end,
+            ActiveDisasters = {Meteors = true},
+            OnCleanup = cleanups,
+            Cleanup = records,
+        })
+        expect(type(mitigate)).toBe("function")
+        local folder = arena:FindFirstChild("EmergencySkyShields")
+        expect(folder ~= nil).toBe(true)
+        expect(folder:GetAttribute("ShieldStationCount")).toBe(4)
+        expect(#folder:GetChildren()).toBe(4)
+        for _, station in ipairs(folder:GetChildren()) do
+            expect(station:GetAttribute("ShieldPhase")).toBe("Ready")
+            local core = station:FindFirstChild("ShieldGeneratorCore")
+            expect(core ~= nil).toBe(true)
+            expect(core:FindFirstChild("ActivateEmergencyShield")
+                :IsA("ProximityPrompt")).toBe(true)
+            local dome = station:FindFirstChild("ActiveProtectiveField")
+            expect(dome.Size).toBe(Vector3.new(52, 52, 52))
+            expect(dome.Transparency).toBe(1)
+            for _, piece in ipairs(station:GetDescendants()) do
+                if piece:IsA("BasePart") then
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                end
+            end
+        end
+        -- Merely spawning a huge shield antenna doesn't confer protection:
+        -- its server activation phase must be explicitly switched on.
+        expect(mitigate(Vector3.new(53, 4, 17), "Meteor", 50)).toBe(50)
+        active = false
+        for _, fn in ipairs(cleanups) do fn() end
+        for _, child in ipairs(records) do
+            if child and child.Parent then child:Destroy() end
+        end
+        generated:Destroy()
     end)
 
     it("sanitizes negative distance and damage inputs", function()
