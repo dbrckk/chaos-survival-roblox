@@ -196,18 +196,32 @@ function UIResponsive.mobileShardToast(viewport)
     }
 end
 
--- Primary round introductions should not cover the avatar and other
--- survivors on Android. The warning timer already occupies the top edge:
--- place the short reveal directly below it, never across screen center.
-function UIResponsive.mobileRoundBanner(viewport)
+-- The round introduction is SECONDARY to the persistent critical
+-- hazard name/timer, survivor count and touch movement. Reserve those
+-- lanes and keep the brief intro immediately beneath them, rather than
+-- at a fixed 39% height where it can obscure the avatar on small Android.
+-- On an extremely short split-screen viewport there is no safe room for
+-- a duplicate introduction: return fits=false; the main HUD remains.
+function UIResponsive.mobileRoundBanner(viewport, topInset)
     local c = UIResponsive.classify(viewport, true)
+    local profile = UIResponsive.mobileProfile(viewport)
+    local height = c.tinyHeight and 48 or (c.compactHeight and 52 or 58)
+    -- ChaosHUD respects the native Roblox inset, whereas ChaosJuice
+    -- ignores it. Account for the actual top bar on the raw viewport.
+    local inset = math.clamp(tonumber(topInset) or 0, 0, c.height)
+    local headerBottom = inset + 7 + profile.topHeight + 5 + 24 + 8
+    local top = headerBottom + 8
+    local survivalTop = c.height - profile.roundFocusBottomOffset
+        - profile.roundFocusHeight - 8
     return {
-        widthScale = c.veryNarrow and 0.90
-            or (c.narrowWidth and 0.86 or (c.wide and 0.73 or 0.80)),
-        height = c.tinyHeight and 54 or (c.compactHeight and 58 or 64),
-        centerYScale = 0.39,
-        titleMaxTextSize = c.tinyHeight and 19 or 24,
-        subtitleMaxTextSize = c.tinyHeight and 13 or 17,
+        widthScale = c.veryNarrow and 0.84
+            or (c.narrowWidth and 0.78 or (c.wide and 0.48 or 0.70)),
+        height = height,
+        topOffset = top,
+        centerYScale = (top + height * 0.5) / c.height,
+        fits = top + height <= survivalTop,
+        titleMaxTextSize = c.tinyHeight and 17 or 21,
+        subtitleMaxTextSize = c.tinyHeight and 12 or 15,
     }
 end
 

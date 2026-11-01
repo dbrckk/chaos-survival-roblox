@@ -28,3 +28,14 @@ Les fonctions pures `UIResponsive.showMobileMechanicProgress` et `UIResponsive.s
 6. Comparer le nombre de pixels obstrués avant/après avec capture authentique, plutôt que modifier la note AAA en fonction de l'inspection du code.
 
 **État** : changements source GitHub uniquement. Les tests moteur et le rendu Android ne sont pas encore exécutés ; la dernière expérience Roblox publique vérifiée reste publiée depuis `e8767c98c475a3efb39ed53ed7bbe16efa1865d2`.
+
+
+## Complément — positionnement de l'introduction de manche (PR suivante)
+
+- `UIResponsive.mobileRoundBanner(viewport, topInset)` ne fixe plus la bannière à 39 % de l'écran, là où elle masquait les concurrents et une partie des trajectoires Android. Sa hauteur est limitée à **48 / 52 / 58 px** selon la hauteur disponible, sa largeur à **48–84 %** selon le format.
+- Le bandeau d'introduction utilise **la véritable marge supérieure native de Roblox** obtenue par `GuiService:GetGuiInset()`. Son premier pixel se place sous le bandeau critique `ChaosHUD` **et** sa pastille de survivants ; son bord inférieur reste au-dessus de la jauge inférieure. La hauteur du `TopHUD` n'est pas réduite davantage et les événements dangereux ne sont pas supprimés.
+- Sur une fenêtre Android exceptionnellement étroite en hauteur (par exemple **400×230** ou **540×320 avec 70 px de marge native**), si aucune bande sûre ne peut contenir le message, seule **l'introduction secondaire** est omise. Les informations primaires de survie continuent de s'afficher. La fenêtre invisible ne peut pas réserver le canal d'alerte `MobileHudNotices`.
+- Lors d'un pivot, d'un fractionnement de l'écran ou d'un changement de caméra, le placement est recalculé avec la même connexion `ViewportSize` existante : si le bandeau devient impossible à afficher, il se ferme immédiatement, libère la priorité « intro » et invalide les callbacks de masquage retardés. Aucun `RenderStepped`, aucun nouveau `ScreenGui` ou serveur.
+- La suite existante `ui-responsive.spec.luau` est étendue aux tailles **540×320, 640×360, 960×440, 1536×688 et 400×720** avec une marge native de 48 px, puis aux deux cas non conformes. Les calculs de rectangles et l'ordre des priorités sont contrôlés côté source ; **aucun test moteur Roblox ni capture Android réelle n'est revendiqué ici**.
+
+**Critère de réception supplémentaire** : vérifier une rotation **paysage → écran fractionné → paysage** pendant une introduction READY puis pendant une célébration ; l'alerte de catastrophe, le compteur de survivants et la jauge du bas restent lisibles, et un nouveau message événementiel n'est pas bloqué par une ancienne « intro » cachée.
