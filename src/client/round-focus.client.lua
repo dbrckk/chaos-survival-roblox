@@ -241,6 +241,7 @@ local visibleToken = 0
 local completedChallengeId = nil
 local lastNotifiedPeakTier = 0
 local rookieCompactMode = false
+local mobileStatusCollapsed = false
 local isHiding = false
 local lastIntensityScale = nil
 -- One cancellable Tween per visual target. Prevents fade/re-entry races and
@@ -533,6 +534,36 @@ local function refresh()
     end
     status.Text = text
     status.TextColor3 = color
+
+    -- Android screenshots show the exact same hazard name in the top
+    -- warning banner AND the third pill of the lower focus meter.
+    -- Preserve exceptional tactical cues (FLANKS, SWEEP, OVERDRIVE,
+    -- FINAL RUSH, fusions), but remove only the identical stable name.
+    -- Widen the actual objective instead of leaving a blank pill;
+    -- no additional screen surface or changes to survival information.
+    if touchDevice then
+        local name = primaryId
+            and CoreLocalization.hazardName(localeId, primaryId)
+        local redundant = type(name) == "string" and text == name
+            and state.finalRush ~= true and state.doubleChaos ~= true
+        if redundant ~= mobileStatusCollapsed then
+            mobileStatusCollapsed = redundant
+            status.Visible = not redundant
+            if not redundant then
+                applyResponsiveLayout()
+                if rookieCompactMode then
+                    challenge.Position = UDim2.fromScale(0.025, 0.12)
+                    challenge.Size = UDim2.fromScale(0.46, 0.43)
+                    status.Size = UDim2.fromScale(0.46, 0.43)
+                end
+            end
+        end
+        if redundant then
+            challenge.Size = UDim2.fromScale(
+                rookieCompactMode and 0.95 or 0.65, 0.43
+            )
+        end
+    end
 
     local secondaryId = state.disasterIds and state.disasterIds[2]
     local disasterAccent = UITheme.disasterAccent(primaryId, UITheme.Colors.Cyan)
