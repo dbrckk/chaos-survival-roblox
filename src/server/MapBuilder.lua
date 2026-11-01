@@ -2856,6 +2856,39 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme)
+
+            -- These long cross-arena lanes are LEVEL jumping routes:
+            -- JumpRouteCueRules intentionally advertises only ascending
+            -- steps. Give both directions a genuinely physical, visible
+            -- trail of two V-shaped arrows per deck, aligned to the
+            -- actual collider. They follow the platform when it shrinks
+            -- and never create a deceptive secondary collision surface.
+            local arrowY = platform.Size.Y * 0.5 + 0.155
+            local tone = theme.Accent:Lerp(theme.Detail, 0.34)
+            for _, direction in ipairs({-1, 1}) do
+                local point = platform.CFrame * CFrame.new(
+                    direction * math.min(5.0, platform.Size.X * 0.24),
+                    arrowY, 0)
+                local heading = CFrame.lookAt(
+                    point.Position, point.Position
+                        + Vector3.new(direction, 0, 0))
+                for _, side in ipairs({-1, 1}) do
+                    local mark = decorPart(
+                        decor,
+                        "PromenadeJumpChevron" .. i .. "_"
+                            .. tostring(direction) .. "_"
+                            .. tostring(side),
+                        Vector3.new(0.30, 0.08, 2.55), point.Position,
+                        tone, Enum.Material.Neon
+                    )
+                    mark.CFrame = heading
+                        * CFrame.new(side * 0.62, 0, 0)
+                        * CFrame.Angles(0, math.rad(side * 35), 0)
+                    mark.Transparency = 0.34
+                    mark:SetAttribute("PerimeterPlatformIndex", i)
+                    mark:SetAttribute("ChaosWayfinding", true)
+                end
+            end
         end
 
         if definition.HarborSpokeStep == 4 then
