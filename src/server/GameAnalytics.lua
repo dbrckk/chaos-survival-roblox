@@ -1,5 +1,10 @@
 local AnalyticsService = game:GetService("AnalyticsService")
-local ArenaVariants = require(script.Parent.ArenaVariants)
+-- Lest runs server modules outside the Roblox DataModel: `script` is nil.
+-- The live server uses the sibling ModuleScript; the Cloud test runner
+-- resolves the same source by its repo-relative path.
+local ArenaVariants = if script and script.Parent
+    then require(script.Parent.ArenaVariants)
+    else require("./ArenaVariants")
 
 local GameAnalytics = {}
 
