@@ -43,6 +43,61 @@ function Kit.burst(parent, platform, tier, theme)
             {CFrame = target, Transparency = 1}):Play()
         Debris:AddItem(shard, 1.4)
     end
+
+    -- One localized dust plume per genuine server-authored failure.
+    -- All particles are brief, muted and emitted only once, never
+    -- an opaque screen-filling cloud or an artificial hazard warning.
+    local source = Instance.new("Part")
+    source.Name = "GatewayDustSource"
+    source.Size = Vector3.new(0.1, 0.1, 0.1)
+    source.CFrame = origin
+    source.Transparency = 1
+    source.Anchored = true
+    source.CanCollide = false
+    source.CanTouch = false
+    source.CanQuery = false
+    source.CastShadow = false
+    source.Parent = parent
+    local dust = Instance.new("ParticleEmitter")
+    dust.Name = "LocalStructuralDust"
+    dust.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    dust.Rate = 0
+    dust.Speed = NumberRange.new(3, 10)
+    dust.Lifetime = NumberRange.new(0.65, 1.35)
+    dust.SpreadAngle = Vector2.new(105, 105)
+    dust.Drag = 3
+    dust.LightInfluence = 1
+    dust.LightEmission = 0
+    dust.Color = ColorSequence.new(
+        theme.Structure:Lerp(Color3.fromRGB(140, 145, 147), 0.30),
+        theme.Surface)
+    dust.Size = NumberSequence.new(3.0, 7.0)
+    dust.Transparency = NumberSequence.new(0.52, 1)
+    dust.Parent = source
+    dust:Emit(tier == "Low" and 5 or (tier == "Medium" and 12 or 21))
+    Debris:AddItem(source, 2.0)
+
+    if tier ~= "Low" then
+        local ring = Instance.new("Part")
+        ring.Name = "AirborneCollapsePressureRing"
+        ring.Shape = Enum.PartType.Cylinder
+        ring.Size = Vector3.new(0.15, 4, 4)
+        ring.CFrame = origin * CFrame.Angles(0, 0, math.pi * 0.5)
+        ring.Anchored = true
+        ring.CanCollide = false
+        ring.CanTouch = false
+        ring.CanQuery = false
+        ring.CastShadow = false
+        ring.Material = Enum.Material.Glass
+        ring.Color = theme.Detail
+        ring.Transparency = 0.55
+        ring.Parent = parent
+        TweenService:Create(ring, TweenInfo.new(
+            0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = Vector3.new(0.15, 23, 23), Transparency = 1}
+        ):Play()
+        Debris:AddItem(ring, 0.9)
+    end
     return count
 end
 return Kit
