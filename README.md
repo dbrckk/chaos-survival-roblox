@@ -18,6 +18,10 @@ The experience is **public to eligible 16+ Roblox players** under the documented
 
 For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-19.md), [launch runbook](docs/MISE_EN_LIGNE_1_0.md), and [release gate issue #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
 
+## Colossal visual transformation — new source, not yet published
+
+The upcoming major art update gives **all five arenas a unique fleet of enormous, moving 3D aerial machines**, with authored mechanical silhouettes and reactions to the real hazards. Unlike an image background, the airborne carriers, cargo gantries, rotating arrays, suspended lifts and reactor arcs are native 3D parts visible from the actual player camera. Low/Medium/High tier budgets and the existing distance LOD protect Android, while ReduceMotion restores static poses. [Scope, art direction and exact milestone acceptance](docs/COLOSSAL_SKYFLEET_PREMIUM_2026-11-01.md). This artwork is on the current repository source only until a future exact-SHA test and public publish; its appearance and FPS have **not** yet been validated on devices.
+
 ## Original 3D assets — no-PC Android upload option
 
 **Runtime integration in the published code:** `src/server/OriginalMeshScenery.lua` now attempts **six** approved creator-owned Roblox Model packages in two bounded loading lanes, validates their contents and may place up to **eight** cosmetic skyline models beyond the playable perimeter. Native, noncolliding fallback scenery remains when a package cannot load; Android Low hides external models through the existing LOD. Whether all eight assets actually load and render on a particular client **has not been verified by real Studio/Android captures**. See [the integration guide](docs/ORIGINAL_3D_RUNTIME_INTEGRATION.md).

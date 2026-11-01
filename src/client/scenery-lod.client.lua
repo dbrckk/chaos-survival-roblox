@@ -60,6 +60,15 @@ local LOCAL_SECTOR_SETPIECE_LOD = {
     MediumDistance = 255,
 }
 
+-- The original cinematic sky fleet is made of 2/3/4 enormous floating
+-- ships rather than small filler particles. Cull EACH aircraft by its
+-- actual world pivot; an arena-center decision would keep distant
+-- corner traffic rendering throughout an Android session.
+local SKY_FLEET_LOD = {
+    LowDistance = 255,
+    MediumDistance = 350,
+}
+
 local FOLDERS = {
     ChaosEnvironmentDepthLocal = {
         LowDistance = 150,
@@ -392,6 +401,24 @@ task.spawn(function()
                     and sector == math.floor(sector) then
                     applyFolder(model, LOCAL_SECTOR_SETPIECE_LOD,
                         profile, model:GetPivot().Position, cameraPoint)
+                end
+            end
+        end
+
+        -- Reuse this owner for individually authored sky ships. Cosmetic
+        -- animation reads the LOD mask and skips hidden craft; no second
+        -- distance poller, no modification to networked map geometry.
+        local skyFleet = workspace:FindFirstChild("ArenaSkyFleetLocal")
+        if skyFleet and skyFleet:IsA("Folder") then
+            local fleet = skyFleet:FindFirstChildWhichIsA("Folder")
+            if fleet then
+                for _, craft in ipairs(fleet:GetChildren()) do
+                    if craft:IsA("Model")
+                        and craft:GetAttribute("CosmeticOnly") == true
+                        and craft:GetAttribute("LocalOriginal3D") == true then
+                        applyFolder(craft, SKY_FLEET_LOD, profile,
+                            craft:GetPivot().Position, cameraPoint)
+                    end
                 end
             end
         end
