@@ -19,6 +19,7 @@ local OrbitalHelix = if helixModule
 local HeroArchitecture = require("./HeroArchitecture")
 local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 local HarborScenery = require("./HarborScenery")
+local PromenadeArchitecture = require("./PromenadeArchitecture")
 
 local MapBuilder = {}
 
@@ -2592,6 +2593,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for _, definition in ipairs(variant.SpokePlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- Two large, physically traversable air corridors connect the far
+    -- north/south lookouts of every arena. Always append AFTER Harbor's
+    -- dock spurs: no existing platform ID, hazard owner, or bot target
+    -- changes. Exactly 16 collision decks, no floor-level collision wall.
+    for _, definition in ipairs(variant.PromenadePlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2649,6 +2657,21 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             )
             platform.Material = definition.HarborSpokeStep <= 2
                 and Enum.Material.WoodPlanks or Enum.Material.CorrodedMetal
+        end
+        if definition.PromenadeLane then
+            -- These are genuine elevated crossing platforms at the EXACT
+            -- same top elevation as the two connected corner lookouts.
+            -- Their physical collision and all platform finish follow
+            -- Shrinking Arena; a separate permanent-route marker keeps
+            -- Disappearing Platforms from making an inescapable midair gap.
+            -- Do not set ChaosSkybridge: Tower's gated skybridge mechanics
+            -- own only their original four bridges.
+            platform:SetAttribute("PromenadeLane", definition.PromenadeLane)
+            platform:SetAttribute("PromenadeStep", definition.PromenadeStep)
+            platform:SetAttribute("ChaosPermanentRoute", true)
+            platform.Color = theme.Structure:Lerp(theme.Detail, 0.52)
+            platform.Material = theme.PanelMaterial
+                or VisualTheme.Materials.Structure
         end
         if definition.PerimeterRoute then
             -- Explicit route metadata is visible to wayfinding and QA.
@@ -2820,6 +2843,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+        -- Six large native-metal arches visibly frame the actual elevated
+        -- 200-stud promenades. Every noncolliding part is owned by its
+        -- physical PlatformN, including ShrinkingArena movement/scaling.
+        -- None adds a blocking wall beneath the high walkways.
+        if definition.PromenadeLane then
+            PromenadeArchitecture.decorate(
+                decor, platform, i, definition, variant.Id, theme)
+        end
 
         if definition.HarborSpokeStep == 4 then
             -- A real, compact destination marker on each of the four
@@ -2889,7 +2920,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             text.BackgroundTransparency = 0.25
             text.BorderSizePixel = 0
             text.Font = Enum.Font.GothamBold
-            text.Text = "SIDE LOOKOUT"
+            -- Every side lookout now connects to a genuine elevated
+            -- cross-arena route. Do not advertise a dead end at the
+            -- exact place where players must discover a second strategy.
+            text.Text = "SKY CROSSING"
             text.TextColor3 = Color3.fromRGB(235, 246, 255)
             text.TextScaled = true
             text.Parent = billboard

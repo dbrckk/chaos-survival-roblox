@@ -87,6 +87,11 @@ function D.eligiblePlatforms(folder, activeStates)
             -- Tower Run's engineered skybridges are permanent route backbones.
             -- Their attached visual rails must never advertise a phantom path.
             and item:GetAttribute("ChaosSkybridge") ~= true
+            -- Long elevated connections are permanent route backbones,
+            -- like the Tower skybridges. Removing a random link halfway
+            -- through a 200-stud crossing would strand mobile players
+            -- even when their existing entry lookout remains safe.
+            and item:GetAttribute("ChaosPermanentRoute") ~= true
             and not activeStates[item]
         then
             result[#result+1] = item

@@ -18,6 +18,10 @@ The experience is **public to eligible 16+ Roblox players** under the documented
 
 For factual verification, see the [live status record](docs/ETAT_PUBLIC_2026-10-19.md), [launch runbook](docs/MISE_EN_LIGNE_1_0.md), and [release gate issue #79](https://github.com/dbrckk/chaos-survival-roblox/issues/79).
 
+## Major physical 3D world expansion — source only, not yet published
+
+Five arenas now have a new **genuine high-altitude traversal loop**: each has two approximately 200-stud airborne sky promenades connecting existing distant physical lookouts. Sixteen new server-collidable, standard-R15-jumpable decks per map (80 authored among the five variants) create actual strategic route choices rather than background scenery. Six sculpted 3D structural portals per arena visually frame the walkways, with unique machinery for Classic/Towers/Crossroads/Orbital/Harbor. They have no blocking decorative collision; original spawn/hazard/AI systems continue to use the real `Arena/Platforms` parts. [Real geometry, deterministic route offsets and release acceptance](docs/MONUMENTAL_SKY_PROMENADES_2026-11-01.md). Source-only until a complete same-SHA Roblox engine/Studio/Android gate and explicit public publication.
+
 ## Colossal visual transformation — new source, not yet published
 
 The upcoming major art update gives **all five arenas a unique fleet of enormous, moving 3D aerial machines**, with authored mechanical silhouettes and reactions to the real hazards. Unlike an image background, the airborne carriers, cargo gantries, rotating arrays, suspended lifts and reactor arcs are native 3D parts visible from the actual player camera. Low/Medium/High tier budgets and the existing distance LOD protect Android, while ReduceMotion restores static poses. [Scope, art direction and exact milestone acceptance](docs/COLOSSAL_SKYFLEET_PREMIUM_2026-11-01.md). This artwork is on the current repository source only until a future exact-SHA test and public publish; its appearance and FPS have **not** yet been validated on devices.
