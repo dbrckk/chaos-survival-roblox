@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-01 — Active co-op skyline storm-defense generators (source only)
+
+- Four giant, original **interactive shared emergency shield installations** per active arena during Meteor/Bomb rounds: physical hold-to-activate consoles, 52-stud transparent shield envelopes, five map-specific machinery silhouettes and an actual 8-second team protection field with 21-second recharge.
+- Same protected bubble covers **human and AI survivors** standing within 24 studs: server-owned Meteor/Bomb damage is reduced to 42% of its previous value, never to invulnerability; unprotected targets retain normal damage. Uses the actual attacker/hazard event and `HazardContestants` HumanoidRootPart, not a client-supplied position or RemoteEvent.
+- No extra gameplay collision, new damage, DataStore, premium boosts, physics, frame-loop or outside-scope immunity. Existing disaster-impact engine specs strengthened for pure and real-instance shielding/cleanup behavior. **Tests for this feature and public Roblox publication remain outstanding.** [Implementation and actual acceptance criteria](docs/SKYLINE_EMERGENCY_SHIELDS_2026-11-01.md).
+
+
 ## 2026-11-01 — Actual Build Validation blocker repaired after first release-gate run
 
 - Authentic GitHub Actions Build Validation on exact SHA `f2e8c0e9a3887c733225957acfd9051586983ba5` passed the **Luau syntax check** plus earlier source/security guards, then **correctly failed** at persistent client visual-folder coverage: `ArenaSkyFleetLocal` and `ArenaCataclysmDebrisLocal` were absent from `VisualBudgetRules.LocalFolders`. [Observed failed run](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41330658400).
