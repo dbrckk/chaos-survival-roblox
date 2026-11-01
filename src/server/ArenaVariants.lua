@@ -491,6 +491,49 @@ for _, variantId in ipairs(ArenaVariants.Order) do
         })
     end
     variant.CrosslinkPlatforms = crosslinks
+
+    -- MONUMENTAL SKY PROMENADES: two REAL 200-stud-scale routes connect
+    -- the existing north and south branch lookouts. The far edge of
+    -- every district gains a second direction (left or right), not a
+    -- decorative dead end. Append last: all historical PlatformN IDs,
+    -- Harbor's skyways and dock spurs remain unchanged.
+    --
+    -- Eight native solid landing slabs per lane. Centre spacing is
+    -- exactly 1/8 of the two endpoint lookout positions; each slab
+    -- occupies (spacing - 2.4) studs of that span. This produces eight
+    -- uniform 2.4-stud standard-R15 jump gaps along each crossing and
+    -- generous *overlap* with the original 12-stud endpoint landings.
+    -- The collision is only 2 studs thick AT lookout height: the
+    -- ground-level combat area beneath stays free, unlike a giant
+    -- 30-stud-tall wall of colliders across the entire map.
+    local promenades = {}
+    for lane, leftRoute in ipairs({1, 3}) do
+        local left = branches[(leftRoute - 1) * 4 + 4]
+        local right = branches[leftRoute * 4 + 4]
+        local xDistance = right.offset.X - left.offset.X
+        local laneSpacing = math.abs(xDistance) / 8
+        local leftTop = left.offset.Y + left.size.Y * 0.5
+        local rightTop = right.offset.Y + right.size.Y * 0.5
+        assert(math.abs(leftTop - rightTop) < 0.001
+            and laneSpacing > 17 and laneSpacing < 32,
+            "Sky promenade endpoint geometry must match existing lookouts")
+        for step = 1, 8 do
+            local progress = (step - 0.5) / 8
+            table.insert(promenades, {
+                offset = Vector3.new(
+                    left.offset.X + xDistance * progress,
+                    leftTop - 1,
+                    left.offset.Z + (right.offset.Z - left.offset.Z) * progress
+                ),
+                size = Vector3.new(laneSpacing - 2.4, 2, 12),
+                RouteTier = 4,
+                ParkourGrade = step == 4 or step == 5 and 4 or 3,
+                PromenadeLane = lane,
+                PromenadeStep = step,
+            })
+        end
+    end
+    variant.PromenadePlatforms = promenades
 end
 
 local legacyRecent = {}
