@@ -4,6 +4,7 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local LocalizationService = game:GetService("LocalizationService")
 local Stats = game:GetService("Stats")
 
@@ -181,16 +182,30 @@ bannerSubLimit.Parent = bannerSub
 -- One viewport listener (never another RenderStepped owner) keeps the
 -- disaster introduction clear of Android's central avatar/parkour lane.
 local bannerViewportConnection = nil
+local bannerToken = 0
+local bannerFadingOut = false
+local bannerFits = true
 local function updateBannerViewport()
     local camera = workspace.CurrentCamera
     local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
     if UserInputService.TouchEnabled then
-        local layout = UIResponsive.mobileRoundBanner(viewport)
+        local inset = GuiService:GetGuiInset()
+        local layout = UIResponsive.mobileRoundBanner(viewport, inset.Y)
+        bannerFits = layout.fits
+        if not bannerFits and banner.Visible then
+            -- Resize/rotate to an extremely short split screen: discard
+            -- the duplicate intro immediately and free the notice lane.
+            -- The authoritative hazard name/timer remain on ChaosHUD.
+            bannerToken += 1
+            banner.Visible = false
+            MobileHudNotices.release("intro")
+        end
         banner.Position = UDim2.fromScale(0.5, layout.centerYScale)
         banner.Size = UDim2.new(layout.widthScale, 0, 0, layout.height)
         bannerTitleLimit.MaxTextSize = layout.titleMaxTextSize
         bannerSubLimit.MaxTextSize = layout.subtitleMaxTextSize
     else
+        bannerFits = true
         banner.Position = UDim2.fromScale(0.5, 0.42)
         banner.Size = UDim2.fromScale(0.86, 0.18)
         bannerTitleLimit.MaxTextSize = 48
@@ -226,8 +241,6 @@ streak.ZIndex = 5
 streak.Parent = gui
 Instance.new("UICorner", streak).CornerRadius = UDim.new(1, 0)
 
-local bannerToken = 0
-local bannerFadingOut = false
 local bannerTweens = {}
 local lastPhase = nil
 local lastRoundTitle = nil
@@ -355,6 +368,13 @@ local function animateBanner(item, info, properties)
 end
 
 local function showBanner(mainText, subText, accent, duration)
+    if UserInputService.TouchEnabled and not bannerFits then
+        -- This is an optional duplicate of the persistent critical HUD.
+        -- Do not claim the only notice lane for an invisible frame.
+        banner.Visible = false
+        MobileHudNotices.release("intro")
+        return
+    end
     bannerToken += 1
     local token = bannerToken
     bannerFadingOut = false
