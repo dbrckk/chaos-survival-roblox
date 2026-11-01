@@ -23,6 +23,7 @@ folder.Parent = workspace
 local visualsByPlatform = {}
 local collapseConnections = {}
 local routeAttributeConnections = {}
+local outpostAttributeConnections = {}
 local routeTargetConnections = {}
 local routeCueStates = {}
 local footprintDisconnects = {}
@@ -102,6 +103,12 @@ local function clear()
     for platform, connection in pairs(routeAttributeConnections) do
         connection:Disconnect()
         routeAttributeConnections[platform] = nil
+    end
+    for platform, connections in pairs(outpostAttributeConnections) do
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+        outpostAttributeConnections[platform] = nil
     end
     for platform, connections in pairs(routeTargetConnections) do
         for _, connection in ipairs(connections) do
@@ -442,6 +449,22 @@ local function rebuild()
                         task.defer(rebuild)
                     end)
             end
+            -- The 16 appended Harbor terminals can stream in with their
+            -- RouteTier already present but one or both spoke attributes
+            -- still pending. Subscribe ONLY to the known four-by-four
+            -- appended index range (95..110); do not add 220 listeners
+            -- to every older Harbor platform or invent a polling loop.
+            if variant == "Harbor"
+                and visualIndex >= 95 and visualIndex <= 110
+                and (platform:GetAttribute("HarborSpokeRoute") == nil
+                    or platform:GetAttribute("HarborSpokeStep") == nil) then
+                outpostAttributeConnections[platform] = {
+                    platform:GetAttributeChangedSignal("HarborSpokeRoute")
+                        :Connect(function() task.defer(rebuild) end),
+                    platform:GetAttributeChangedSignal("HarborSpokeStep")
+                        :Connect(function() task.defer(rebuild) end),
+                }
+            end
             -- Low tier keeps its existing half-density surface ornaments,
             -- but EVERY verified takeoff gets a small gameplay route cue.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
@@ -652,9 +675,11 @@ bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 -- The already existing RoundState message drives the port machinery
 -- without another RemoteEvent, ticker or disaster polling task.
 roundEvent.OnClientEvent:Connect(function(packet)
-    if type(packet) ~= "table" then return end
+    -- A malformed/late payload resets to the calm authored posture rather
+    -- than locking Harbor instruments in a stale disaster condition.
+    if type(packet) ~= "table" then packet = nil end
     local posture = HarborOutpostKit.disasterPosture(
-        packet.disasterIds, packet.phase
+        packet and packet.disasterIds, packet and packet.phase
     )
     if posture == currentOutpostPosture then return end
     currentOutpostPosture = posture
