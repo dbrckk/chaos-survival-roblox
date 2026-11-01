@@ -906,6 +906,7 @@ local function sendToLobby(record)
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
     record.assistRelay = nil
+    record.assistHoldAt = nil
     record.nextAssistAt = 0
     pivotRecord(record, getLobbyPosition(record))
 end
@@ -957,6 +958,7 @@ local function sendToArena(record)
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
     record.assistRelay = nil
+    record.assistHoldAt = nil
     record.nextAssistAt = os.clock() + 1.6 + record.slot * 0.25
     pivotRecord(record, spawn)
 end
@@ -1007,6 +1009,7 @@ local function newRecord(slot)
         inRound = false,
         nextThink = 0,
         assistRelay = nil,
+        assistHoldAt = nil,
         nextAssistAt = 0,
         nextJump = 0,
         nextPadAt = 0,
@@ -2459,6 +2462,7 @@ local function chooseArenaTarget(record, root, now)
         )
         if assistPoint then
             record.assistRelay = station
+            record.assistHoldAt = nil
             record.targetPart = nil
             record.targetIsPad = false
             record.nextAssistAt = now + 11
@@ -3290,6 +3294,7 @@ local function stepRecord(record, now)
         if not station then
             TeamDashRelay.releaseBot(record.model)
             record.assistRelay = nil
+            record.assistHoldAt = nil
             record.target = nil
             record.targetPart = nil
             record.nextThink = 0
@@ -3302,9 +3307,19 @@ local function stepRecord(record, now)
             local delta = assistPoint - root.Position
             local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
             if horizontal <= 4.3 then
+                -- Mimic the same physical hold required of a human
+                -- (0.65s), without fabricating ProximityPrompt.Triggered.
+                -- Both model position and real beneficiaries are
+                -- rechecked by the relay before granting any charge.
+                if not record.assistHoldAt then
+                    record.assistHoldAt = now + TeamDashRelay.HoldSeconds
+                end
+                humanoid:Move(Vector3.zero)
+                if now < record.assistHoldAt then return end
                 local helped = TeamDashRelay.activateBot(record.model, now)
                 TeamDashRelay.releaseBot(record.model)
                 record.assistRelay = nil
+                record.assistHoldAt = nil
                 record.target = nil
                 record.nextThink = 0
                 record.nextAssistAt = now + 13
@@ -3314,6 +3329,8 @@ local function stepRecord(record, now)
                         (tonumber(record.model:GetAttribute(
                             "BotTeamDashRelaysUsed")) or 0) + 1)
                 end
+            else
+                record.assistHoldAt = nil
             end
         end
     end
