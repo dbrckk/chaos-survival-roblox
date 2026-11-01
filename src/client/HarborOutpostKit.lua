@@ -66,6 +66,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
             part.Shape = shape
         end
         made += 1
+        return part
     end
 
     -- Medium: exactly five pieces per outpost; 20 across Harbor.
@@ -86,7 +87,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
         and Vector3.new(1.75, 1.75, 1.75)
         or (route == 2 and Vector3.new(1.30, 1.85, 1.85)
             or Vector3.new(0.85, 2.15, 2.15))
-    add("Instrument", instrumentSize,
+    local instrument = add("Instrument", instrumentSize,
         CFrame.new(0, top + mastHeight - 0.15, rear - 0.15)
             * CFrame.Angles(0, 0, route == 4 and math.rad(20) or 0),
         signature, route == 3 and Enum.Material.Slate
@@ -112,7 +113,30 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier)
                 Enum.Material.CorrodedMetal, 0.16)
         end
     end
-    return made
+    return made, instrument
+end
+
+-- Move one ACTUAL mechanical instrument per station, not its collision deck,
+-- arch or warning markers. The existing owner tweens the instrument's
+-- PlatformIdentityWeld.C0; the Shrinking Arena footprint owner separately
+-- adjusts Weld.C1, so animated rotation never fights deck resizing.
+-- Reverse every swing: no unbounded accumulated rotation or joint drift.
+-- These calm mechanical rhythms are intentionally NOT hazard signals.
+function HarborOutpostKit.motionTarget(route)
+    if route == 1 then
+        -- Weather radar sweeps the horizon left/right.
+        return CFrame.Angles(0, math.rad(20), 0), 2.8
+    elseif route == 2 then
+        -- Winch drum rocks around its axle as a loaded port mechanism.
+        return CFrame.Angles(math.rad(14), 0, 0), 2.2
+    elseif route == 3 then
+        -- Tidal instrument responds slowly to the swell.
+        return CFrame.Angles(0, 0, math.rad(6)), 3.4
+    elseif route == 4 then
+        -- Communications receiver calibrates its skyward elevation.
+        return CFrame.Angles(0, math.rad(-12), math.rad(9)), 3.0
+    end
+    return nil
 end
 
 return HarborOutpostKit
