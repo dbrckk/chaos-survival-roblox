@@ -12,6 +12,7 @@ Baseline `main`: `44c1aca6f039488503f12b4d97e3e39f672e2522`. This patch fixes re
 ## Corrections
 
 - Android occlusion now requires a live local Humanoid in the current character, a valid viewport and a **non-Scriptable CameraSubject following that Humanoid or one of this character's own parts**. Foreign spectated subject, dead rig, unreplicated rig, and invalid camera restore the actual preexisting local avatar/structure transparency and clear raycast filter ownership. No camera rotation/zoom/physics writes are introduced.
+- **Immediate camera handoff:** the current Camera has one `CameraSubject` listener and one `CameraType` listener. Leaving local ownership restores faded parts at the property change rather than waiting for the next 180 ms sample. Both listeners disconnect on `CurrentCamera` replacement; the original low-frequency sampling remains unchanged.
 - The existing `movement-feel` character connection owner now listens to both child arrival and removal. Removal invalidates its old Humanoid/Root state listener and schedules one deferred rebind of the current character. Existing `bindVersion` and character equality checks suppress events from a previous respawn; existing `disconnectCharacter` cleans both subscriptions.
 - When a new Humanoid/Root pair actually differs, `suspendCameraMotion()` clears the previous impact, landing, FOV, and preview state before attaching the new pose/velocity baseline. No extra render step, network event, additional game physics or AI advantage.
 
