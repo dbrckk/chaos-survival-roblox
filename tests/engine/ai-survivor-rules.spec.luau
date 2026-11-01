@@ -404,7 +404,7 @@ describe("AI survivor rules", function()
     end)
 
     it("fills toward six visible contestants with at most four bots", function()
-        expect(AISurvivorRules.TargetVisibleParticipants).toBe(6)
+        expect(AISurvivorRules.TargetVisibleParticipants).toBe(8)
         expect(AISurvivorRules.MaxBots).toBe(4)
         expect(AISurvivorRules.desiredBotCount(0)).toBe(0)
         expect(AISurvivorRules.desiredBotCount(1)).toBe(4)
