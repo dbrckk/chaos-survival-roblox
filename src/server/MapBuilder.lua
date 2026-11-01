@@ -2586,6 +2586,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for _, definition in ipairs(variant.SkywayPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- Harbor cardinal dry-dock outposts append after all 94 authored
+    -- historical deck identities. Their collision belongs to the same
+    -- authoritative platform folder as every hazard, AI and shard route.
+    for _, definition in ipairs(variant.SpokePlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2629,6 +2635,20 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform:SetAttribute("HarborSkywayStep", definition.HarborSkywayStep)
             platform.Color = theme.Structure:Lerp(theme.Secondary, 0.42)
             platform.Material = Enum.Material.CorrodedMetal
+        end
+        if definition.HarborSpokeRoute then
+            -- Real four-step cardinal service piers: accessible from the
+            -- ground; clear standard 3-stud vertical and 1.25..2.25-stud
+            -- horizontal jumps. Reuse the existing dynamic platform finish
+            -- and hazard ownership, no extra client model/animation loop.
+            platform:SetAttribute("HarborSpokeRoute", definition.HarborSpokeRoute)
+            platform:SetAttribute("HarborSpokeStep", definition.HarborSpokeStep)
+            platform.Color = theme.Structure:Lerp(
+                definition.HarborSpokeStep <= 2 and theme.Detail
+                    or theme.Secondary, 0.42
+            )
+            platform.Material = definition.HarborSpokeStep <= 2
+                and Enum.Material.WoodPlanks or Enum.Material.CorrodedMetal
         end
         if definition.PerimeterRoute then
             -- Explicit route metadata is visible to wayfinding and QA.
@@ -2800,6 +2820,35 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+
+        if definition.HarborSpokeStep == 4 then
+            -- A real, compact destination marker on each of the four
+            -- cardinal playable lookouts. Attached to the owned deck:
+            -- follows map resizing and is removed automatically on swap.
+            local sides = {"N", "E", "S", "W"}
+            local outpost = Instance.new("BillboardGui")
+            outpost.Name = "HarborDryDockOutpost"
+            outpost.Adornee = platform
+            outpost.Size = UDim2.fromOffset(120, 28)
+            outpost.StudsOffsetWorldSpace = Vector3.new(0, 6, 0)
+            outpost.MaxDistance = 64
+            outpost.AlwaysOnTop = false
+            outpost.Parent = platform
+            local sign = Instance.new("TextLabel")
+            sign.Name = "OutpostLabel"
+            sign.Size = UDim2.fromScale(1, 1)
+            sign.BackgroundColor3 = theme.Structure
+            sign.BackgroundTransparency = 0.30
+            sign.BorderSizePixel = 0
+            sign.Font = Enum.Font.GothamBold
+            sign.TextScaled = true
+            sign.TextColor3 = Color3.fromRGB(236, 243, 246)
+            sign.Text = "DOCK " .. sides[definition.HarborSpokeRoute]
+            sign.Parent = outpost
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = sign
+        end
 
         if definition.BranchStep == 4 then
             -- Short, distance-limited hint over each genuinely reachable
