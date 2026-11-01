@@ -363,6 +363,12 @@ function Kit.pose(bundle, elapsed, phase, reducedMotion, finalRush, disasterIds)
         pace *= 1.24
     end
     for _, ship in ipairs(bundle.ships) do
+        -- The existing shared scenery-LOD owner writes visibility masks
+        -- per real craft. Avoid CFrame work on a ship it has fully hidden.
+        local hull = ship.parts[1] and ship.parts[1].part
+        if not hull or hull:GetAttribute("SceneryLodHidden") == true then
+            continue
+        end
         local originPhase = ship.index * 0.82
         local time = now * pace + originPhase
         -- Zero displacement at t=0, including after ReduceMotion toggles:
