@@ -2036,16 +2036,34 @@ describe("Storm Harbor engine and Android scenery certification", function()
         local decor = arena and arena:FindFirstChild("Decor")
         expect(arena:GetAttribute("VariantId")).toBe("Harbor")
         expect(base ~= nil and platforms ~= nil and decor ~= nil).toBe(true)
-        -- The original 80 real parkour decks remain stable at their
-        -- original IDs. The two 7-jump steel gantries are appended, so
-        -- this Android scenery check must certify the full active topology.
+        -- Preserve the original 80 decks and 14 skyway roofs (IDs 1–94).
+        -- Sixteen real four-way drydock spoke decks now append as IDs 95–110,
+        -- not extra cosmetic scenery or duplicate route generation.
+        -- The prior hard-coded 94 failed Cloud core_b2 despite valid maps.
         expect(#variant.SkywayPlatforms).toBe(14)
+        expect(#variant.SpokePlatforms).toBe(16)
         expect(#platforms:GetChildren()).toBe(
             #variant.Platforms + #variant.PerimeterPlatforms
                 + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
-                + #variant.SkywayPlatforms
+                + #variant.SkywayPlatforms + #variant.SpokePlatforms
         )
-        expect(#platforms:GetChildren()).toBe(94)
+        expect(#platforms:GetChildren()).toBe(110)
+        for route = 1, 4 do
+            for step = 1, 4 do
+                local index = 94 + (route - 1) * 4 + step
+                local deck = platforms:FindFirstChild("Platform" .. index)
+                expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
+                expect(deck.Anchored and deck.CanCollide).toBe(true)
+                expect(deck:GetAttribute("HarborSpokeRoute")).toBe(route)
+                expect(deck:GetAttribute("HarborSpokeStep")).toBe(step)
+                if step == 4 then
+                    local outpost = deck:FindFirstChild("HarborDryDockOutpost")
+                    expect(outpost ~= nil and outpost:IsA("BillboardGui"))
+                        .toBe(true)
+                    expect(outpost.Adornee).toBe(deck)
+                end
+            end
+        end
         local parts = platforms:GetChildren()
         for route = 1, 4 do
             local previous = nil
