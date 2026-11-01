@@ -1090,6 +1090,24 @@ function AISurvivorRules.keepEscapeRoute(
     return now < holdUntil and (position - target).Magnitude >= 4
 end
 
+-- Detect only a NEW visible impact footprint crossing a bot's current
+-- escape path. The warning event counter may change for faraway impacts;
+-- they must NOT multiply ground raycasts during Double Chaos. The final
+-- server warning diameter is the same data used by the existing planner.
+function AISurvivorRules.newImpactIntersectsEscape(
+    origin, target, warningName, center, visibleRadius, endDiameter
+)
+    if warningName ~= "MeteorWarning" and warningName ~= "BombWarning" then
+        return false
+    end
+    local radius = math.max(5, AISurvivorRules.warningDetectionRadius(
+        warningName, visibleRadius, endDiameter
+    ) - 9)
+    return AISurvivorRules.routeWarningPenalty(
+        origin, target, center, radius
+    ) >= 20
+end
+
 -- A bot that is already dodging one live warning should not switch
 -- its attention on every brain tick when two equal-size blast footprints
 -- overlap. Switch only when the competing warning is meaningfully closer.
