@@ -28,7 +28,7 @@ end
 function UIResponsive.mobileProfile(viewport)
     local c = UIResponsive.classify(viewport, true)
 
-    local topHeight = c.tinyHeight and 46 or (c.compactHeight and 50 or 54)
+    local topHeight = c.tinyHeight and 46 or (c.compactHeight and 50 or (c.wide and 50 or 54))
     local timerSize = c.tinyHeight and 42 or (c.compactHeight and 44 or 46)
     local dockHeight = c.tinyHeight and 52 or 58
     local buttonHeight = c.tinyHeight and 44 or 48
@@ -55,7 +55,7 @@ function UIResponsive.mobileProfile(viewport)
         -- the upper left ~28% of the screen (visible in Android captures).
         -- Offset the phase header right so the first words remain legible.
         topCenterXScale = c.wide and 0.60 or 0.50,
-        topWidthScale = c.veryNarrow and 0.94 or (c.narrowWidth and 0.90 or (c.wide and 0.60 or 0.82)),
+        topWidthScale = c.veryNarrow and 0.94 or (c.narrowWidth and 0.90 or (c.wide and 0.56 or 0.82)),
         topHeight = topHeight,
         timerSize = timerSize,
         dockWidthScale = c.veryNarrow and 0.98 or 0.94,
@@ -70,8 +70,8 @@ function UIResponsive.mobileProfile(viewport)
         panelWidthScale = c.veryNarrow and 0.96 or (c.narrowWidth and 0.92 or 0.84),
         panelBottomOffset = dockHeight + 12,
         toastWidthScale = c.veryNarrow and 0.92 or 0.84,
-        roundFocusWidthScale = c.veryNarrow and 0.90 or (c.narrowWidth and 0.82 or (c.wide and 0.48 or 0.68)),
-        roundFocusHeight = c.tinyHeight and 42 or 46,
+        roundFocusWidthScale = c.veryNarrow and 0.90 or (c.narrowWidth and 0.82 or (c.wide and 0.44 or 0.68)),
+        roundFocusHeight = c.tinyHeight and 42 or (c.wide and 42 or 46),
         roundFocusBottomOffset = c.tinyHeight and 72 or (c.compactHeight and 84 or 96),
     }
 end
@@ -129,6 +129,28 @@ function UIResponsive.mobileEscalationToast(viewport)
         titleMaxTextSize = c.tinyHeight and 18 or 21,
         subtitleMaxTextSize = c.tinyHeight and 12 or 14,
     }
+end
+
+-- A permanently visible zero-progress 3D-mechanic tracker duplicates
+-- the round objective and masks the avatar on Android. Show it at zero
+-- only near a REAL interactive node; keep an active sequence visible
+-- even while a player moves between platforms. Desktop is unchanged.
+function UIResponsive.showMobileMechanicProgress(touch, active, stage, nearNode)
+    if not active then return false end
+    if not touch then return true end
+    return (tonumber(stage) or 0) > 0 or nearNode == true
+end
+
+-- The secondary district route yields when the last seconds or a
+-- compound/advanced hazard needs the central playfield. Critical hazard
+-- instructions, touch controls and world prompts always remain visible.
+function UIResponsive.showMobileOptionalExpedition(state)
+    if type(state) ~= "table" or state.phase ~= "round" then return false end
+    if state.finalRush == true or state.doubleChaos == true
+        or state.impactWaveMode == "Sweep"
+        or state.impactWaveMode == "Flanks" then return false end
+    local seconds = tonumber(state.seconds)
+    return seconds == nil or seconds > 12
 end
 
 -- Optional near-miss feedback shares the compact escalation lane.
