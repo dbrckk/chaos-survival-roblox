@@ -127,7 +127,10 @@ local function build(folder, position, index, color)
     label.Adornee = head
     label.Size = UDim2.fromOffset(158, 36)
     label.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
-    label.MaxDistance = 65
+    -- The stations sit ~82 studs from the hub. The label must be seen
+    -- from that hub, otherwise the feature exists but is undiscoverable.
+    -- Only two small, occlusion-aware (AlwaysOnTop=false) tags per arena.
+    label.MaxDistance = 110
     label.AlwaysOnTop = false
     label.Parent = head
     local text = Instance.new("TextLabel")
