@@ -62,6 +62,7 @@ local GameAnalytics = require(script.GameAnalytics)
 local ArenaVariants = require(script.ArenaVariants)
 local ArenaMechanics = require(script.ArenaMechanics)
 local PhaseDashService = require(script.PhaseDashService)
+local TeamDashRelay = require(script.TeamDashRelay)
 local DisasterBalance = require(script.DisasterBalance)
 local EliminationCauseRules = require(script.EliminationCauseRules)
 local SessionStreak = require(script.SessionStreak)
@@ -978,6 +979,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
 
     for _, player in ipairs(contestants) do
         eliminated[player.UserId] = false
+        PhaseDashService.resetRound(player)
+        player:SetAttribute("RoundTeamRelaysActivated", 0)
+        player:SetAttribute("RoundTeamDashShared", 0)
+        player:SetAttribute("RoundTeamDashReceived", 0)
         player:SetAttribute("RoundParticipant", true)
         player:SetAttribute("RoundEliminated", false)
         player:SetAttribute("RoundChaosShards", 0)
@@ -1320,6 +1325,60 @@ local function runDisasterSet(selected, contestants, roundSettings)
         -- the floor, so its stationary fast-travel stations stay disabled.
         EnableDistrictTransit = allowDynamicArenas
             and activeHazards.ShrinkingArena ~= true,
+        -- The actual PhaseDashService owns BOTH the private monotonic
+        -- cooldown and the replicated UI timestamp. A cosmetic attribute
+        -- alone cannot recharge a real dash; use its narrow server API.
+        OnTeamDashCharge = function(player)
+            if not roundActive or player.Parent ~= Players
+                or eliminated[player.UserId] then return false end
+            return PhaseDashService.recharge(player)
+        end,
+        OnTeamDashUsed = function(actor, station, helped)
+            if not roundActive or actor.Parent ~= Players then return end
+            local shared = 0
+            local actorKind = nil
+            for _, benefit in ipairs(helped) do
+                local target = benefit.player
+                if target and target.Parent == Players then
+                    local received = math.max(0, math.floor(tonumber(
+                        target:GetAttribute("RoundTeamDashReceived")) or 0))
+                    target:SetAttribute("RoundTeamDashReceived", received + 1)
+                    if target == actor then
+                        actorKind = benefit.kind
+                    else
+                        shared += 1
+                        arenaMechanicFeedbackEvent:FireClient(target, {
+                            variantId = currentArenaVariant,
+                            mechanicName = benefit.kind == "reserve"
+                                and "DASH RESERVE" or "DASH RECHARGED",
+                            overdrive = false,
+                        })
+                    end
+                end
+            end
+            local activations = math.max(0, math.floor(tonumber(
+                actor:GetAttribute("RoundTeamRelaysActivated")) or 0))
+            actor:SetAttribute("RoundTeamRelaysActivated", activations + 1)
+            if shared > 0 then
+                local previous = math.max(0, math.floor(tonumber(
+                    actor:GetAttribute("RoundTeamDashShared")) or 0))
+                actor:SetAttribute("RoundTeamDashShared", previous + shared)
+            end
+            -- The operator sees the cooperative outcome, not two
+            -- competing toast messages inside the 180ms HUD throttle.
+            -- Their own DASH button separately shows the real reserve.
+            arenaMechanicFeedbackEvent:FireClient(actor, {
+                variantId = currentArenaVariant,
+                mechanicName = shared > 0 and "TEAM DASH SHARED"
+                    or (actorKind == "reserve"
+                        and "DASH RESERVE" or "DASH RECHARGED"),
+                overdrive = false,
+            })
+            GameAnalytics.custom(actor, "TeamDashRelayUsed", 1,
+                "Arena:" .. tostring(currentArenaVariant),
+                "Station:" .. tostring(station),
+                shared > 0 and "Team:Helped" or "Team:Solo")
+        end,
         OnDistrictTransitUsed = function(player, route, outbound)
             if player.Parent ~= Players then return end
             GameAnalytics.custom(
@@ -1489,6 +1548,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
         arenaMechanic = mechanicResult
     else
         warn("Arena mechanic failed to start:", currentArenaVariant, mechanicResult)
+    end
+
+    -- Every arena has two tangible cooperative consoles. Humans can
+    -- share one emergency dash with nearby allies; solo rounds still
+    -- grant their operator a real cooldown refill or reserve.
+    local relayOk, relayResult = pcall(TeamDashRelay.start, ctx)
+    if not relayOk then
+        warn("Team DASH relays failed to start:", relayResult)
     end
 
     local transitOk, transitResult = pcall(ArenaDistrictTransit.start, ctx)

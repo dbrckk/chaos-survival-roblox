@@ -366,7 +366,12 @@ task.spawn(function()
                 button.TextColor3 = Color3.fromRGB(155, 177, 194)
                 charge.Size = UDim2.fromScale(1, 1)
             else
-                button.Text = UserInputService.TouchEnabled and "DASH" or "Q • DASH"
+                -- Reserve comes only from a real shared relay. Players see
+                -- the extra server-issued dash without a new HUD element.
+                local reserve = player:GetAttribute("TeamDashReserve") == 1
+                button.Text = reserve and (UserInputService.TouchEnabled
+                    and "DASH +1" or "Q • DASH +1")
+                    or (UserInputService.TouchEnabled and "DASH" or "Q • DASH")
                 button.TextColor3 = Color3.fromRGB(117, 251, 233)
                 charge.Size = UDim2.fromScale(1, 1)
             end

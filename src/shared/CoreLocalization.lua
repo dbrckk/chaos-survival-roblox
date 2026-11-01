@@ -1031,6 +1031,9 @@ local MECHANIC_FEEDBACK_FR = {
     ["HELIX FLOW"] = "FLUX HÉLICE",
     ["HELIX CHAIN x2"] = "CHAÎNE HÉLICE x2",
     ["ORBIT MASTER"] = "MAÎTRE DE L'ORBITE",
+    ["DASH RECHARGED"] = "DASH RECHARGÉ",
+    ["DASH RESERVE"] = "DASH BONUS +1",
+    ["TEAM DASH SHARED"] = "DASH PARTAGÉ",
 }
 
 function CoreLocalization.mechanicFeedback(localeId, mechanicId)

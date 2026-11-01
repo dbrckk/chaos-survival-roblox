@@ -33,6 +33,7 @@ local ACCENTS = {
     Towers = Color3.fromRGB(65, 220, 255),
     Crossroads = Color3.fromRGB(235, 105, 220),
     Orbital = Color3.fromRGB(65, 255, 205),
+    Harbor = Color3.fromRGB(91, 223, 197),
 }
 
 local overdriveLabel = Instance.new("TextLabel")
@@ -183,6 +184,9 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     local fluxMaster = payload.mechanicName == "FLUX MASTER"
     -- The final challenge success should never be swallowed by a mobility
     -- pad's short visual cooldown during a fast last-node crossing.
+    local teamDash = payload.mechanicName == "DASH RECHARGED"
+        or payload.mechanicName == "DASH RESERVE"
+        or payload.mechanicName == "TEAM DASH SHARED"
     local orbitMaster = payload.mechanicName == "ORBIT MASTER"
     local priority = gridClear or fluxWeave or skyrailAce or fluxMaster
         or orbitMaster
@@ -232,7 +236,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         pulseCharacter(accent)
     end
 
-    if overdrive or fluxRelay or helixFlow or gridClear or skyrail then
+    if overdrive or fluxRelay or helixFlow or gridClear or skyrail or teamDash then
         if touchDevice and not MobileHudNotices.claim("mechanic", 20) then
             return
         end
@@ -243,7 +247,8 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
             or (gridClear and "GRID CIRCUIT CLEAR"
                 or (fluxWeave and tostring(payload.mechanicName)
                     or (skyrail and tostring(payload.mechanicName)
-                        or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY"))))
+                        or (teamDash and tostring(payload.mechanicName)
+                            or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")))))
         overdriveLabel.Text = CoreLocalization.mechanicFeedback(localeId, serverCue)
         overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce or fluxMaster)
             and Color3.fromRGB(255, 225, 115)
