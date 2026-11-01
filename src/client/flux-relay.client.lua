@@ -376,9 +376,9 @@ local function renderHUD(serverTime)
     local participant = player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
     local visible = activeRound and participant and next(gates) ~= nil
-    hudEligible = visible
-    refreshProgressVisibility()
     if not visible then
+        hudEligible = false
+        refreshProgressVisibility()
         lastHudKey = ""
         return -1
     end
@@ -386,6 +386,29 @@ local function renderHUD(serverTime)
         player:GetAttribute("RoundFluxWeaveCombo"),
         player:GetAttribute("RoundFluxWeaveDeadline"), serverTime
     )
+    -- On a touch device the unstarted 'TRAVERSE UNE ARCHE' box was
+    -- permanently centered over the character in real Android captures.
+    -- Only show its initial instruction near a real gate; after the first
+    -- crossing, keep the timed 1/3..3/3 progress visible. The existing
+    -- gate sculptures and server-side triggers still guide players.
+    local nearGate = false
+    if touchDevice and stage == 0 then
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            for trigger in pairs(gates) do
+                if trigger.Parent
+                    and (trigger.Position - root.Position).Magnitude <= 42 then
+                    nearGate = true
+                    break
+                end
+            end
+        end
+    end
+    hudEligible = UIResponsive.showMobileMechanicProgress(
+        touchDevice, visible, stage, nearGate
+    )
+    refreshProgressVisibility()
     local nextParity = stage > 0 and stage < FluxRelayRules.WeaveCap
         and (tonumber(player:GetAttribute("RoundFluxWeaveNextParity")) or -1)
         or -1
