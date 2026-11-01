@@ -184,6 +184,49 @@ local function restore()
     lastCamera = nil
 end
 
+-- Camera ownership can change between two 180 ms Android sightline
+-- samples. Release every local fade immediately when Roblox hands the
+-- camera to a spectator/cinematic, rather than showing a foreign view with
+-- locally hidden players for another sampling interval. One pair of
+-- property listeners is owned by the current Camera and disconnected on
+-- replacement; no extra polling loop or camera transform writes.
+local cameraWatch = nil
+local cameraConnections = {}
+local function bindCameraWatch()
+    local camera = workspace.CurrentCamera
+    if camera == cameraWatch then return end
+    for _, connection in ipairs(cameraConnections) do
+        connection:Disconnect()
+    end
+    table.clear(cameraConnections)
+    restore()
+    cameraWatch = camera
+    if not camera then return end
+    local function releaseForeignCamera()
+        if camera ~= workspace.CurrentCamera then return end
+        local localCharacter = player.Character
+        local localHumanoid = localCharacter
+            and localCharacter:FindFirstChildOfClass("Humanoid")
+        local subject = camera.CameraSubject
+        if camera.CameraType == Enum.CameraType.Scriptable
+            or not localHumanoid or localHumanoid.Health <= 0
+            or not subject
+            or (subject ~= localHumanoid
+                and not subject:IsDescendantOf(localCharacter)) then
+            restore()
+        end
+    end
+    table.insert(cameraConnections,
+        camera:GetPropertyChangedSignal("CameraSubject")
+            :Connect(releaseForeignCamera))
+    table.insert(cameraConnections,
+        camera:GetPropertyChangedSignal("CameraType")
+            :Connect(releaseForeignCamera))
+    releaseForeignCamera()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCameraWatch)
+bindCameraWatch()
+
 local function supportedTarget(part, arena, base)
     local platforms = arena:FindFirstChild("Platforms")
     local mechanics = arena:FindFirstChild("Mechanics")
