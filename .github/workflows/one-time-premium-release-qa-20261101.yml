@@ -1,9 +1,11 @@
 name: One-Time Premium Skyworld Build + Engine Gate (2026-11-01)
 
-# Milestone retry: the first real Build Validation passed Luau compilation
-# but detected two unregistered local visual folders (job 124919859102).
-# This corrected candidate must be freshly built on its OWN exact SHA;
-# an earlier failed/green SHA is never sufficient.
+# Milestone source-test repair: Build Validation succeeded on main
+# 112a9227e2c1319f8b4f35088c1ebaf01192aa1b, but the actual Roblox engine
+# core_b2 suite failed (job 124920626764): Harbor expected 110 physical
+# decks and received 126 after adding both sky promenades.
+# Re-run Build Validation AND all Cloud suites on the NEW merged fix SHA.
+# The earlier green Build SHA and failing Cloud SHA cannot certify this commit.
 # A ONE-SHOT milestone, not a new automatic development test.
 # The creation of THIS file by a specially titled, owner-approved
 # main-branch merge launches it once. Subsequent code-only commits do not
