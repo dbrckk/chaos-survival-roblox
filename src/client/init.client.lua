@@ -1925,14 +1925,24 @@ local function applyResponsiveLayout()
     votes.Position = UDim2.fromScale(0.5, voteCenterY)
     votes.Size = UDim2.new(profile.voteWidthScale, 0, 0, profile.voteHeight)
 
-    -- The ? help button lives on the left. Keep the first-run cue centered
-    -- beside it and below the top HUD, above the vote cards on short phones.
-    rookieCoach.Position = UDim2.new(0.5, 0, 0, profile.topHeight + 10)
-    rookieCoach.Size = UDim2.new(
-        profile.veryNarrow and 0.66
-            or (profile.narrowWidth and 0.76 or (profile.wide and 0.70 or 0.82)),
-        0, 0, profile.tinyHeight and 40 or 44
-    )
+    -- A first-run "AIDE / HELP" button occupies x=6..74 on Android.
+    -- The old centered beginner banner started at x=54 on 320px phones,
+    -- overlapping that button's actual touch area. Reserve its full lane.
+    -- During READY, the real survivor count sits 5..29px below TopHUD;
+    -- move the beginner objective beneath that chip rather than covering it.
+    local coachTop = profile.topHeight
+        + (currentHudPhase == "ready" and 42 or 10)
+    if profile.narrowWidth then
+        rookieCoach.AnchorPoint = Vector2.new(0, 0)
+        rookieCoach.Position = UDim2.new(0, 82, 0, coachTop)
+        rookieCoach.Size = UDim2.new(1, -94, 0, profile.coachHeight)
+    else
+        rookieCoach.AnchorPoint = Vector2.new(0.5, 0)
+        rookieCoach.Position = UDim2.new(0.5, 0, 0, coachTop)
+        rookieCoach.Size = UDim2.new(
+            profile.wide and 0.70 or 0.82, 0, 0, profile.coachHeight
+        )
+    end
     -- The hazard is already named in the top header; keep only a short
     -- pre-round cue and preserve the camera view of warning circles.
     countdownCard.Size = UDim2.new(
