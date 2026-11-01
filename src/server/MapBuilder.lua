@@ -19,6 +19,7 @@ local OrbitalHelix = if helixModule
 local HeroArchitecture = require("./HeroArchitecture")
 local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 local HarborScenery = require("./HarborScenery")
+local PromenadeArchitecture = require("./PromenadeArchitecture")
 
 local MapBuilder = {}
 
@@ -2842,6 +2843,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+        -- Six large native-metal arches visibly frame the actual elevated
+        -- 200-stud promenades. Every noncolliding part is owned by its
+        -- physical PlatformN, including ShrinkingArena movement/scaling.
+        -- None adds a blocking wall beneath the high walkways.
+        if definition.PromenadeLane then
+            PromenadeArchitecture.decorate(
+                decor, platform, i, definition, variant.Id, theme)
+        end
 
         if definition.HarborSpokeStep == 4 then
             -- A real, compact destination marker on each of the four
