@@ -71,15 +71,16 @@ end
 -- were inside/at the lip of the raised central stage and could embed R15
 -- feet or strand a bot immediately after an intermission transition.
 local BOT_START_INDEX = 19
+local MAX_BOT_LANDING_SLOTS = 7
 
 function LobbyReturnFormation.botLanding(spawn, floor, decor, slot, hipHeight, rootHalfHeight)
     slot = math.floor(tonumber(slot) or 0)
-    if slot < 1 or slot > 3 then return nil end
+    if slot < 1 or slot > MAX_BOT_LANDING_SLOTS then return nil end
     local desiredIndex = BOT_START_INDEX + slot - 1
     local positions = LobbyReturnFormation.positions(spawn, floor, decor, desiredIndex)
     -- In case another lobby layout has fewer safe slots, try a nearby
     -- collision-checked position rather than using the raised stage.
-    local point = positions[desiredIndex] or positions[slot + 3]
+    local point = positions[desiredIndex]
     if not point then return nil end
     local floorTop = floor.Position.Y + floor.Size.Y * 0.5
     local clearance = math.max(3.5,
