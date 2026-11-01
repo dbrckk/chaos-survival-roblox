@@ -675,6 +675,8 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.brainCadence(3, "result")).toBe(0.42)
         expect(AISurvivorRules.brainCadence(3, "round")).toBe(0.18)
         expect(AISurvivorRules.brainCadence(3, "intermission")).toBe(0.18)
+        expect(AISurvivorRules.brainCadence(4, "round")).toBe(0.24)
+        expect(AISurvivorRules.brainCadence(4, "result")).toBe(0.42)
     end)
 
     it("keeps identity-based depth and head scales bounded and varied", function()
