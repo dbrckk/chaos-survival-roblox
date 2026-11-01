@@ -3,7 +3,11 @@
 -- never controls authoritative warnings, physics, particles from hazards,
 -- camera safety indicators or damage. Budget metrics are diagnostic counts,
 -- not proof of GPU work; combine them with measured local frame pacing.
-local VisualBudgetRules = require(script.Parent.VisualBudgetRules)
+-- Published Roblox assets use sibling ModuleScripts; Lest's source
+-- module imports run without a script Instance.
+local VisualBudgetRules = if script and script.Parent
+    then require(script.Parent.VisualBudgetRules)
+    else require("./VisualBudgetRules")
 local Rules = {}
 
 local function finite(value)
