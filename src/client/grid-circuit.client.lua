@@ -423,11 +423,34 @@ local function updateLook()
     local key = tostring(stage) .. "/" .. tostring(destination) .. "/"
         .. tostring(complete) .. "/" .. tostring(phase)
         .. "/" .. tostring(remain)
+    -- The human can approach a node without any replicated progress
+    -- changing. Recompute proximity visibility BEFORE returning early
+    -- on the unchanged decorative/style key.
+    -- The four circuit nodes remain physically discoverable; a
+    -- zero-progress 'TOUCHE UNE BORNE' banner is shown on Android
+    -- only once the player approaches a REAL node. A started timed
+    -- sequence stays visible so the next clockwise direction is clear.
+    local nearNode = false
+    if touchDevice and stage == 0 and phase then
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            for _, node in pairs(nodes) do
+                if node.base and node.base.Parent
+                    and (node.base.Position - root.Position).Magnitude <= 42 then
+                    nearNode = true
+                    break
+                end
+            end
+        end
+    end
+    hudEligible = UIResponsive.showMobileMechanicProgress(
+        touchDevice, phase and #GridCircuitRules.Offsets == 4,
+        stage, nearNode
+    )
+    refreshProgressVisibility()
     if key == lastStyleKey then return end
     lastStyleKey = key
-
-    hudEligible = phase and #GridCircuitRules.Offsets == 4
-    refreshProgressVisibility()
     local visibleProgress = (stage > 0 and not complete and remain <= 0)
         and 0 or stage
     for index, pip in ipairs(progressPips) do
