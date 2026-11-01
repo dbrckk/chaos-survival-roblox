@@ -400,6 +400,9 @@ for _, variantId in ipairs(ArenaVariants.Order) do
             size = Vector3.new(entryWidth, 3, entryWidth),
             RouteTier = 1,
             ParkourGrade = entryGrade,
+            -- Ground-to-sky escape backbone: all four ascent circuits
+            -- must keep their first five physical steps through collapse.
+            PermanentRoute = true,
             PerimeterRoute = route,
             PerimeterStep = 1,
         })
@@ -417,6 +420,7 @@ for _, variantId in ipairs(ArenaVariants.Order) do
                 -- Guidance/visual tiers stay within the existing 1..4 API.
                 RouteTier = math.min(step, 4),
                 ParkourGrade = grade,
+                PermanentRoute = step <= 5,
                 PerimeterRoute = route,
                 PerimeterStep = step,
             })
@@ -452,6 +456,10 @@ for _, variantId in ipairs(ArenaVariants.Order) do
                 size = Vector3.new(width, height, width),
                 RouteTier = math.min(4, step + 1),
                 ParkourGrade = grade,
+                -- Both ends of each sky promenade MUST retain a viable
+                -- way down, not just a solid 200-stud bridge above a
+                -- temporarily vanished ground connection.
+                PermanentRoute = true,
                 BranchRoute = route,
                 BranchStep = step,
                 BranchParentStep = 5,
@@ -528,6 +536,7 @@ for _, variantId in ipairs(ArenaVariants.Order) do
                 size = Vector3.new(laneSpacing - 2.4, 2, 12),
                 RouteTier = 4,
                 ParkourGrade = (step == 4 or step == 5) and 4 or 3,
+                PermanentRoute = true,
                 PromenadeLane = lane,
                 PromenadeStep = step,
             })
