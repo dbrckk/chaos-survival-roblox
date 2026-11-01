@@ -23,7 +23,11 @@ local AISurvivorNetworkOwnership = if script
 local SpawnSafety = if script
     then require(script.Parent.SpawnSafety)
     else require("./SpawnSafety")
-local TeamDashRelay = if script
+-- Engine suites may evaluate this source against an earlier published
+-- place where the new cooperative relay ModuleScript is not installed.
+-- Use the repository source fallback, just like FluxRelayRules.
+local relayModuleInPlace = script and script.Parent:FindFirstChild("TeamDashRelay")
+local TeamDashRelay = if relayModuleInPlace
     then require(script.Parent.TeamDashRelay)
     else require("./TeamDashRelay")
 local LobbyActivities = if script
