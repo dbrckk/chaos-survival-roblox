@@ -1405,7 +1405,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
                     target:SetAttribute("RoundTeamDashReceived", received + 1)
                     arenaMechanicFeedbackEvent:FireClient(target, {
                         variantId = currentArenaVariant,
-                        mechanicName = "BOT DASH SHARED",
+                        mechanicName = "ALLY DASH SHARED",
                         overdrive = false,
                     })
                     GameAnalytics.custom(target, "TeamDashBotHelped", 1,
