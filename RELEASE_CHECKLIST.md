@@ -110,7 +110,7 @@ Before certification:
 
 Then validate the game:
 - [ ] Generated lobby appears correctly.
-- [ ] All 4 arena variants can be entered — Studio E2E must observe Classic, Towers, Crossroads and Orbital, with RoundState arenaId matching GeneratedMap.Arena.VariantId and a READY entry probe confirming a live character inside Arena.Base footprint.
+- [ ] All 5 arena variants can be entered — Studio E2E must observe Classic, Towers, Crossroads, Orbital and Harbor, with RoundState arenaId matching GeneratedMap.Arena.VariantId and a READY entry probe confirming a live character inside Arena.Base footprint.
 - [ ] Critical HUD elements remain within viewport bounds.
 - [ ] Touch targets meet the E2E minimum size.
 - [ ] READY visual phase probe passes tier budget + FOV bounds.
@@ -139,8 +139,8 @@ Record:
 - [ ] Authenticated Studio E2E checks Showtime 3D stage identity, static part safety and hidden ROUND / visible RESULT transitions.
 - [ ] Studio confirms six R6/R15 emotes and no conflict with Settings or locomotion.
 - [ ] Android 320/360/400/440px viewport checks: emote dock stays on screen and accessibility Settings remains operable.
-- [ ] The four arena probes confirm each distinct hero monument is present, has 6–50 anchored non-colliding parts and logs its identity/part count during Studio E2E.
-- [ ] All four map landmarks render and rotate safely, remain non-colliding and clean up across arena transitions.
+- [ ] The five arena probes confirm each distinct hero monument is present, has 6–50 anchored non-colliding parts and logs its identity/part count during Studio E2E.
+- [ ] All five map landmarks render and animate safely, remain non-colliding and clean up across arena transitions.
 - [ ] Meteor/Bomb bursts render as different fragments, including all transient pieces in live budget metrics.
 - [ ] Near-miss and landing FX affect eligible living participants and AI only; late joiners, spectators and eliminated lobby avatars excluded.
 - [ ] Simultaneous character reaction beams stay at or below 12 per client and missing rigs release their temporary listeners within eight seconds.

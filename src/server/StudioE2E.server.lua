@@ -9,6 +9,7 @@ local StudioTestService = game:GetService("StudioTestService")
 
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SpawnSafety = require(script.Parent.SpawnSafety)
+local ArenaVariants = require(script.Parent.ArenaVariants)
 
 local okArgs, args = pcall(StudioTestService.GetTestArgs, StudioTestService)
 if not okArgs or type(args) ~= "table" or args.suite ~= "ChaosE2E" then
@@ -26,38 +27,28 @@ local reportEvent = ReplicatedStorage:FindFirstChild("ChaosE2EReport") or Instan
 reportEvent.Name = "ChaosE2EReport"
 reportEvent.Parent = ReplicatedStorage
 
+-- Derive E2E coverage from the same canonical order as the round selector.
+-- A newly added map must be probed rather than silently skipped.
+local function arenaReportFlags()
+    local flags = {}
+    for _, arenaId in ipairs(ArenaVariants.Order) do
+        flags[arenaId] = false
+    end
+    return flags
+end
+
 local reports = {}
 local spectatorProbeReports = {}
-local arenaProbeReports = {
-    Classic = false,
-    Towers = false,
-    Crossroads = false,
-    Orbital = false,
-}
-local arenaEntryProbeReports = {
-    Classic = false,
-    Towers = false,
-    Crossroads = false,
-    Orbital = false,
-}
+local arenaProbeReports = arenaReportFlags()
+local arenaEntryProbeReports = arenaReportFlags()
 local replayContinuityVerified = false
-local roundJourneyReports = {
-    Classic = false,
-    Towers = false,
-    Crossroads = false,
-    Orbital = false,
-}
+local roundJourneyReports = arenaReportFlags()
 local visualPhaseProbeReports = {
     ready = 0,
     round = 0,
     result = 0,
 }
-local roundArenaVisualReports = {
-    Classic = false,
-    Towers = false,
-    Crossroads = false,
-    Orbital = false,
-}
+local roundArenaVisualReports = arenaReportFlags()
 local showtimePhaseProbeReports = {
     round = false,
     result = false,
@@ -84,7 +75,7 @@ local function visualPhasesReady()
 end
 
 local function arenaCoverageReady()
-    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+    for _, arenaId in ipairs(ArenaVariants.Order) do
         if arenaProbeReports[arenaId] ~= true then
             return false
         end
@@ -93,7 +84,7 @@ local function arenaCoverageReady()
 end
 
 local function arenaEntryCoverageReady()
-    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+    for _, arenaId in ipairs(ArenaVariants.Order) do
         if arenaEntryProbeReports[arenaId] ~= true then
             return false
         end
@@ -102,14 +93,16 @@ local function arenaEntryCoverageReady()
 end
 
 local function roundJourneyObserved()
-    for _, seen in pairs(roundJourneyReports) do
-        if seen then return true end
+    for _, arenaId in ipairs(ArenaVariants.Order) do
+        if roundJourneyReports[arenaId] ~= true then
+            return false
+        end
     end
-    return false
+    return true
 end
 
 local function roundArenaVisualCoverageReady()
-    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+    for _, arenaId in ipairs(ArenaVariants.Order) do
         if roundArenaVisualReports[arenaId] ~= true then
             return false
         end
@@ -567,8 +560,10 @@ task.spawn(function()
     if reportCount < expectedTotal then
         fail(string.format("only %d/%d clients reported", reportCount, expectedTotal))
     end
-    if not roundJourneyObserved() then
-        fail("no client completed intermission > ready > round > result in order")
+    for _, arenaId in ipairs(ArenaVariants.Order) do
+        if roundJourneyReports[arenaId] ~= true then
+            fail("missing ordered intermission > ready > round > result for " .. arenaId)
+        end
     end
     if not replayContinuityVerified then
         fail("no verified RESULT > next numbered READY with full-health contestant spawn")
@@ -585,19 +580,19 @@ task.spawn(function()
         end
     end
 
-    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+    for _, arenaId in ipairs(ArenaVariants.Order) do
         if arenaProbeReports[arenaId] ~= true then
             fail("missing arena coverage probe: " .. arenaId)
         end
     end
 
-    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+    for _, arenaId in ipairs(ArenaVariants.Order) do
         if arenaEntryProbeReports[arenaId] ~= true then
             fail("missing arena entry probe: " .. arenaId)
         end
     end
 
-    for _, arenaId in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+    for _, arenaId in ipairs(ArenaVariants.Order) do
         if roundArenaVisualReports[arenaId] ~= true then
             fail("missing ROUND visual budget probe: " .. arenaId)
         end
@@ -659,8 +654,8 @@ task.spawn(function()
         StudioTestService:EndTest("FAIL: " .. table.concat(failures, " | "))
     else
         StudioTestService:EndTest(string.format(
-            "PASS: %d clients, 4 arena entries + RESULT-to-next-READY full-health replay + per-arena ROUND visuals + full journey + Showtime + UI/input/vote/movement/spectator/join-leave verified",
-            expectedTotal
+            "PASS: %d clients, %d arena entries + RESULT-to-next-READY full-health replay + per-arena ROUND visuals + full journey + Showtime + UI/input/vote/movement/spectator/join-leave verified",
+            expectedTotal, #ArenaVariants.Order
         ))
     end
 end)

@@ -203,6 +203,7 @@ local function sampleArenaPresentation(arenaId)
         Towers = "TowerAnimatedLift",
         Crossroads = "CrossroadAnimatedSignal1",
         Orbital = "OrbitalGyroscopeHeart",
+        Harbor = "HarborStormRadarSweep",
     })[arenaId]
     local signatureRoot = workspace:FindFirstChild("ArenaSignatureLocal")
     local signatureSet = signatureRoot and signatureRoot:FindFirstChild("ArenaSignatureSet")
@@ -233,6 +234,7 @@ local function sampleArenaPresentation(arenaId)
         Towers = {"TowerCrateSeal", "TowerCoolingVent"},
         Crossroads = {"CrossroadsDirectionArrow", "CrossroadsTransitCornice"},
         Orbital = {"OrbitalCanisterCollar", "OrbitalRadialSpine"},
+        Harbor = {"HarborMooringFooting1", "HarborBowTaper"},
     })[arenaId]
     local serviceFolder = workspace:FindFirstChild("ArenaServicePropsLocal")
     local skylineFolder = workspace:FindFirstChild("ArenaMidgroundMassLocal")
@@ -249,6 +251,7 @@ local function sampleArenaPresentation(arenaId)
         Towers = "CoolingIntakeSpine",
         Crossroads = "TransitDirectionBeam",
         Orbital = "DockFieldSpine",
+        Harbor = "HarborMooringSpire",
     })[arenaId]
     local silhouetteRoot = workspace:FindFirstChild("ArenaSilhouetteBreakupLocal")
     local silhouette = silhouetteRoot and silhouetteName
@@ -265,6 +268,7 @@ local function sampleArenaPresentation(arenaId)
         Towers = "TowerLoadSpreaderNorth",
         Crossroads = "CrossroadsLaneArrowWest",
         Orbital = "OrbitalIrisPetalNorth",
+        Harbor = "HarborDryDockPlankWest",
     })[arenaId]
     local deckRoot = workspace:FindFirstChild("ArenaSurfaceDetailLocal")
     local deck = deckRoot and deckName and deckRoot:FindFirstChild(deckName)
@@ -292,6 +296,7 @@ local function sampleArenaPresentation(arenaId)
         Towers = "TowerHoistMount",
         Crossroads = "CrossroadsRouteChevron",
         Orbital = "OrbitalFluxSpine",
+        Harbor = "HarborTimberSplice",
     })[arenaId]
     local platformRoot = workspace:FindFirstChild("ArenaPlatformIdentityLocal")
     local trim = platformRoot and platformName
@@ -302,7 +307,8 @@ local function sampleArenaPresentation(arenaId)
         and trim:GetAttribute("ChaosPlatformTrim") == true
         and trim.Massless and not trim.Anchored and not trim.CanCollide
         and not trim.CanTouch and not trim.CanQuery
-        and weld ~= nil and weld:IsA("WeldConstraint")
+        and weld ~= nil
+        and (weld:IsA("WeldConstraint") or weld:IsA("Weld"))
         and weld.Part0 == trim and weld.Part1 ~= nil
 
     local ok = matchesWorld and signatureReady and secondaryReady
