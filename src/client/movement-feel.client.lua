@@ -200,6 +200,9 @@ local function bindCharacter(nextCharacter)
         end
         if humanoid == nextHumanoid and root == nextRoot then return end
 
+        -- A replaced root/Humanoid is a new camera-body owner. Previous
+        -- fall, impact and FOV impulses must never land on the new rig.
+        suspendCameraMotion()
         if humanoidStateConnection then
             humanoidStateConnection:Disconnect()
             humanoidStateConnection = nil
@@ -266,6 +269,29 @@ local function bindCharacter(nextCharacter)
     end
 
     table.insert(characterConnections, nextCharacter.ChildAdded:Connect(function(child)
+        if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
+            task.defer(attachIfReady)
+        end
+    end))
+    -- Android replication may insert the replacement FIRST and remove
+    -- the previous Humanoid or root a frame later. ChildAdded alone then
+    -- finds the old rig, and its final removal used to leave motion feel
+    -- disconnected for the rest of this life. Re-evaluate on both sides
+    -- of the swap; the version guard rejects a previous CharacterAdded.
+    table.insert(characterConnections, nextCharacter.ChildRemoved:Connect(function(child)
+        if bindVersion ~= version or character ~= nextCharacter
+            or player.Character ~= nextCharacter then
+            return
+        end
+        if child == humanoid or child == root then
+            if humanoidStateConnection then
+                humanoidStateConnection:Disconnect()
+                humanoidStateConnection = nil
+            end
+            humanoid = nil
+            root = nil
+            suspendCameraMotion()
+        end
         if child:IsA("Humanoid") or child.Name == "HumanoidRootPart" then
             task.defer(attachIfReady)
         end
