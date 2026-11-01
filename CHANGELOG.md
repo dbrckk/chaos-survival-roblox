@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-01 — Actual Build Validation blocker repaired after first release-gate run
+
+- Authentic GitHub Actions Build Validation on exact SHA `f2e8c0e9a3887c733225957acfd9051586983ba5` passed the **Luau syntax check** plus earlier source/security guards, then **correctly failed** at persistent client visual-folder coverage: `ArenaSkyFleetLocal` and `ArenaCataclysmDebrisLocal` were absent from `VisualBudgetRules.LocalFolders`. [Observed failed run](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41330658400).
+- Corrected the centralized runtime owner ledger, rather than disabling the safety check or increasing mobile GPU/part budgets. Both large visuals will now contribute their true Parts/Effects totals to existing adaptive quality telemetry.
+- The one-shot exact-SHA build-before-Cloud workflow is re-armed by this **dedicated release-blocker merge**, and still never publishes. Green results for the new SHA are not claimed before observed.
+
+
 ## 2026-11-01 — Release-blocking sky crossing escape route fixed (source)
 
 - Corrected a fairness defect exposed by source review of the large #535 and #536 milestone: `DisappearingPlatforms` could randomly remove the FIRST or FINAL access decks connected to a protected, solid 200-stud sky promenade, stranding players and AI. All **20 real perimeter entry/fork steps + 16 branch ascents + 16 sky promenade slabs** now explicitly form a **52-deck continuous random-collapse-safe circuit on each arena**.
