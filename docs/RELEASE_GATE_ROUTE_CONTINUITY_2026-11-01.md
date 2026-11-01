@@ -33,7 +33,13 @@ Dimensions are evaluated from the declared `perimeterLocations`, `PerimeterSteps
 
 The existing engine-map specs were **updated**, not replaced, to assert: first five perimeter segments and all four branch segments bear permanent-route attributes; the random collapse candidate list excludes all permanent decks; at least eight normal eligible choices remain. No new unit test file was added.
 
-## Release checklist — manual execution pending
+**Critical second finding:** the existing `JumpRouteCueRules.jumpable()` deliberately requires at least 0.4 studs of height increase, so it cannot validate or guide the level 2.4-stud gaps of the new crossings. The real crossing collider is still physically jumpable, but a player received no repeated directional language over 200 studs. `MapBuilder` now attaches **four native, collisionless double-chevron stroke pieces per promenade deck** (**64 cosmetic guidance parts** per active map): one two-stroke arrow toward each end, author-owned by its real `PerimeterPlatformIndex`. They remain above the existing `PlatformPanel`, follow Shrinking Arena, are nonqueryable, and do not misrepresent platform collision. The updated real-map engine spec verifies every 2.4-stud interval, overlapping entry/exit, equal deck heights, permanent colliders and all marks across both lanes on all five variants.
+
+## One-time release gate and remaining real-world validation
+
+The new one-shot `.github/workflows/one-time-premium-release-qa-20261101.yml` is restricted to a **single exact-title, main-branch merge that creates that file**, not every feature push. Its token has **Actions write only** and **Contents read**. It checks the immutable current main SHA, dispatches the existing manual `Build Validation`, waits for a genuinely green run on that exact SHA, and **only then** dispatches the five real `Roblox Open Cloud Engine Tests` suites. If build fails, main moves, GitHub denies the dispatch or a timeout occurs, the orchestrator fails closed and no Roblox engine test is launched. **It has no publish permission or publishing step.** The subsequent read-only release-readiness workflow may run automatically after a Cloud result. This architecture reduces wasted Roblox Cloud calls and keeps automatic tests permanently OFF during unrelated future feature pushes. Do not claim it executed until the GitHub Actions job state proves it.
+
+## Release checklist — physical and final publication still pending
 
 - Run existing **Build Validation** GitHub Action on current `main`, record real green commit SHA and Luau/Rojo logs.
 - Run existing **Roblox Open Cloud Engine Tests** GitHub Action on **the same exact SHA**; all five shards must pass. If either fails, do not publish and fix the real reported defect.
