@@ -2834,6 +2834,22 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             outpost.MaxDistance = 64
             outpost.AlwaysOnTop = false
             outpost.Parent = platform
+            -- Never advertise a look-out whose solid footing is about to
+            -- disappear. Keep the marker event-driven and tied to the real
+            -- server-owned collision/visibility state, not a new loop.
+            local function refreshOutpost()
+                local phase = platform:GetAttribute("CollapsePhase")
+                outpost.Enabled = platform.Parent ~= nil
+                    and platform.CanCollide and platform.Transparency < 0.75
+                    and phase ~= "Warning" and phase ~= "Gone"
+            end
+            platform:GetAttributeChangedSignal("CollapsePhase")
+                :Connect(refreshOutpost)
+            platform:GetPropertyChangedSignal("CanCollide")
+                :Connect(refreshOutpost)
+            platform:GetPropertyChangedSignal("Transparency")
+                :Connect(refreshOutpost)
+            refreshOutpost()
             local sign = Instance.new("TextLabel")
             sign.Name = "OutpostLabel"
             sign.Size = UDim2.fromScale(1, 1)
