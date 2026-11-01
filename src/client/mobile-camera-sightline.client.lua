@@ -226,6 +226,8 @@ local function update()
     local camera = workspace.CurrentCamera
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local subject = camera and camera.CameraSubject
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
@@ -233,8 +235,17 @@ local function update()
         restore()
         lastCamera = camera
     end
+    -- The round/participation attributes can lag behind spectator and
+    -- respawn camera handoffs. Never fade world geometry or other avatars
+    -- while Roblox is following another player's Humanoid/Part. Mirror
+    -- the stricter ownership rule already used by movement-feel.
     if not camera or camera.CameraType == Enum.CameraType.Scriptable
-        or not root or not root:IsA("BasePart")
+        or camera.ViewportSize.X <= 0 or camera.ViewportSize.Y <= 0
+        or not humanoid or humanoid.Parent ~= character
+        or humanoid.Health <= 0
+        or not subject
+        or (subject ~= humanoid and not subject:IsDescendantOf(character))
+        or not root or not root:IsA("BasePart") or root.Parent ~= character
         or not arena or not base or not base:IsA("BasePart") then
         restore()
         return
