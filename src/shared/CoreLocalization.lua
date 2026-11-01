@@ -1034,6 +1034,7 @@ local MECHANIC_FEEDBACK_FR = {
     ["DASH RECHARGED"] = "DASH RECHARGÉ",
     ["DASH RESERVE"] = "DASH BONUS +1",
     ["TEAM DASH SHARED"] = "DASH PARTAGÉ",
+    ["BOT DASH SHARED"] = "BOT : DASH RECHARGÉ",
 }
 
 function CoreLocalization.mechanicFeedback(localeId, mechanicId)
