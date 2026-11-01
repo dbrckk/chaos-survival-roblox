@@ -782,6 +782,7 @@ local function createRig(record)
     record.escapeTarget = nil
     record.escapeUntil = 0
     record.escapeWarningVersion = nil
+    record.escapeKnownWarnings = nil
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
@@ -1025,6 +1026,7 @@ local function newRecord(slot)
         escapeTarget = nil,
         escapeUntil = 0,
         escapeWarningVersion = nil,
+        escapeKnownWarnings = nil,
         roundTraits = AISurvivorRules.roundTraits(profile, slot, 1),
         nextHesitationAt = 0,
         nextReconsiderAt = 0,
@@ -1595,6 +1597,7 @@ local function immediateThreat(record, root, now)
         record.escapeWarning = nil
         record.escapeUntil = 0
         record.escapeWarningVersion = nil
+        record.escapeKnownWarnings = nil
         if nearest then
             warnNearbyContestants(record, now)
         end
@@ -1644,6 +1647,44 @@ local function immediateThreat(record, root, now)
 
     -- Commit for a short time so the bot does not twitch left and right
     -- on every 0.18s brain tick. Re-evaluate if the warning moves/changes.
+    if record.escapeWarning == nearest and record.escapeTarget
+        and record.escapeWarningVersion ~= warningVersion
+    then
+        -- A distant new impact must not trigger six candidate routes and
+        -- twelve ground raycasts. Recalculate early only when a NEW real
+        -- Meteor/Bomb ring actually intersects the committed direction.
+        local known = record.escapeKnownWarnings or {}
+        local live = warningParts() -- event-cached, not Workspace traversal
+        local blocked = false
+        for _, candidate in ipairs(live) do
+            if not known[candidate]
+                and (candidate.Name == "MeteorWarning"
+                    or candidate.Name == "BombWarning")
+            then
+                local radius = math.max(5,
+                    AISurvivorRules.warningDetectionRadius(
+                        candidate.Name,
+                        math.max(candidate.Size.X, candidate.Size.Z) * 0.5,
+                        candidate:GetAttribute("WarningEndSize")
+                    ) - 9)
+                if AISurvivorRules.routeWarningPenalty(
+                    root.Position, record.escapeTarget,
+                    candidate.Position, radius
+                ) >= 20 then
+                    blocked = true
+                    break
+                end
+            end
+        end
+        if not blocked then
+            record.escapeWarningVersion = warningVersion
+            for _, candidate in ipairs(live) do
+                known[candidate] = true
+            end
+            record.escapeKnownWarnings = known
+        end
+    end
+
     if record.escapeWarning == nearest
         and AISurvivorRules.keepEscapeRoute(
             record.escapeTarget, root.Position, now,
@@ -1657,6 +1698,13 @@ local function immediateThreat(record, root, now)
     record.escapeTarget = saferThreatEscape(record, root, predictedPosition, nearest)
     record.escapeUntil = now + 0.54
     record.escapeWarningVersion = warningVersion
+    -- Remember only impact warnings included in this plan, with weak keys.
+    -- Removed transient server warnings cannot accumulate across rounds.
+    local known = setmetatable({}, {__mode = "k"})
+    for _, candidate in ipairs(warningParts()) do
+        known[candidate] = true
+    end
+    record.escapeKnownWarnings = known
     return record.escapeTarget
 end
 
