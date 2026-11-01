@@ -1051,6 +1051,45 @@ function AISurvivorRules.floorSweepRoutePenalty(origin, destination, bandFrame, 
     return endsInside and 125 or 90
 end
 
+-- Score the actual RAYCAST CONTACT height, never the centre of a
+-- thick floor slab. Using BasePart.Position.Y falsely punished legal routes
+-- on raised decks and favored the wrong direction around a meteor.
+-- HumanoidRootPart is ~2.5-3 studs above its contact surface.
+function AISurvivorRules.escapeGroundStepPenalty(rootY, contactY)
+    local start = tonumber(rootY)
+    local surface = tonumber(contactY)
+    if not start or not surface
+        or start ~= start or surface ~= surface
+        or math.abs(start) == math.huge
+        or math.abs(surface) == math.huge then
+        return 100
+    end
+    local verticalDrop = start - surface
+    if verticalDrop > 8 then return 65 end
+    if verticalDrop < -4 then return 45 end
+    return 0
+end
+
+-- A humanlike bot can commit to a dodge for a fraction of a second, but
+-- never keep blindly following that route when a NEW real warning is
+-- created or removed. No extra raycasts or Workspace traversal are needed:
+-- the warning owner already tracks direct-child lifecycle events.
+function AISurvivorRules.keepEscapeRoute(
+    target, position, now, holdUntil, plannedWarningVersion, currentWarningVersion
+)
+    if typeof(target) ~= "Vector3" or typeof(position) ~= "Vector3"
+        or type(now) ~= "number" or type(holdUntil) ~= "number"
+        or now ~= now or holdUntil ~= holdUntil
+        or math.abs(now) == math.huge or math.abs(holdUntil) == math.huge
+        or type(plannedWarningVersion) ~= "number"
+        or type(currentWarningVersion) ~= "number"
+        or plannedWarningVersion ~= currentWarningVersion
+    then
+        return false
+    end
+    return now < holdUntil and (position - target).Magnitude >= 4
+end
+
 -- A bot that is already dodging one live warning should not switch
 -- its attention on every brain tick when two equal-size blast footprints
 -- overlap. Switch only when the competing warning is meaningfully closer.
