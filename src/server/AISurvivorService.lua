@@ -781,6 +781,8 @@ local function createRig(record)
     record.escapeWarning = nil
     record.escapeTarget = nil
     record.escapeUntil = 0
+    record.escapeWarningVersion = nil
+    record.escapeKnownWarnings = nil
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
@@ -1023,6 +1025,8 @@ local function newRecord(slot)
         escapeWarning = nil,
         escapeTarget = nil,
         escapeUntil = 0,
+        escapeWarningVersion = nil,
+        escapeKnownWarnings = nil,
         roundTraits = AISurvivorRules.roundTraits(profile, slot, 1),
         nextHesitationAt = 0,
         nextReconsiderAt = 0,
@@ -1153,11 +1157,16 @@ local WARNING_PART_NAMES = {
 local warningPartSet = setmetatable({}, {__mode = "k"})
 local cachedWarningParts = {}
 local warningCacheDirty = true
+-- Each newly spawned/expired real warning invalidates a bot's briefly
+-- committed escape path; no extra watcher and no per-tick world scan.
+local warningVersion = 0
 
 local function trackWarningPart(child)
-    if child:IsA("BasePart") and WARNING_PART_NAMES[child.Name] then
+    if child:IsA("BasePart") and WARNING_PART_NAMES[child.Name]
+        and not warningPartSet[child] then
         warningPartSet[child] = true
         warningCacheDirty = true
+        warningVersion += 1
     end
 end
 
@@ -1165,6 +1174,7 @@ local function untrackWarningPart(child)
     if warningPartSet[child] then
         warningPartSet[child] = nil
         warningCacheDirty = true
+        warningVersion += 1
     end
 end
 
@@ -1299,12 +1309,12 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                 then
                     score -= 110
                 end
-                local verticalDrop = root.Position.Y - support.Position.Y
-                if verticalDrop > 8 then
-                    score -= 65
-                elseif verticalDrop < -4 then
-                    score -= 45
-                end
+                -- The impact point is the WALKABLE SURFACE. A thick
+                -- elevated foundation's center can be >8 studs below
+                -- the real floor and previously looked like a cliff.
+                score -= AISurvivorRules.escapeGroundStepPenalty(
+                    root.Position.Y, support.Position.Y
+                )
             end
         end
 
@@ -1586,6 +1596,8 @@ local function immediateThreat(record, root, now)
         record.escapeTarget = nil
         record.escapeWarning = nil
         record.escapeUntil = 0
+        record.escapeWarningVersion = nil
+        record.escapeKnownWarnings = nil
         if nearest then
             warnNearbyContestants(record, now)
         end
@@ -1636,8 +1648,41 @@ local function immediateThreat(record, root, now)
     -- Commit for a short time so the bot does not twitch left and right
     -- on every 0.18s brain tick. Re-evaluate if the warning moves/changes.
     if record.escapeWarning == nearest and record.escapeTarget
-        and now < (record.escapeUntil or 0)
-        and (root.Position - record.escapeTarget).Magnitude >= 4
+        and record.escapeWarningVersion ~= warningVersion
+    then
+        -- A distant new impact must not trigger six candidate routes and
+        -- twelve ground raycasts. Recalculate early only when a NEW real
+        -- Meteor/Bomb ring actually intersects the committed direction.
+        local known = record.escapeKnownWarnings or {}
+        local live = warningParts() -- event-cached, not Workspace traversal
+        local blocked = false
+        for _, candidate in ipairs(live) do
+            if not known[candidate]
+                and AISurvivorRules.newImpactIntersectsEscape(
+                    root.Position, record.escapeTarget,
+                    candidate.Name, candidate.Position,
+                    math.max(candidate.Size.X, candidate.Size.Z) * 0.5,
+                    candidate:GetAttribute("WarningEndSize")
+                )
+            then
+                blocked = true
+                break
+            end
+        end
+        if not blocked then
+            record.escapeWarningVersion = warningVersion
+            for _, candidate in ipairs(live) do
+                known[candidate] = true
+            end
+            record.escapeKnownWarnings = known
+        end
+    end
+
+    if record.escapeWarning == nearest
+        and AISurvivorRules.keepEscapeRoute(
+            record.escapeTarget, root.Position, now,
+            record.escapeUntil, record.escapeWarningVersion, warningVersion
+        )
     then
         return record.escapeTarget
     end
@@ -1645,6 +1690,14 @@ local function immediateThreat(record, root, now)
     record.escapeWarning = nearest
     record.escapeTarget = saferThreatEscape(record, root, predictedPosition, nearest)
     record.escapeUntil = now + 0.54
+    record.escapeWarningVersion = warningVersion
+    -- Remember only impact warnings included in this plan, with weak keys.
+    -- Removed transient server warnings cannot accumulate across rounds.
+    local known = setmetatable({}, {__mode = "k"})
+    for _, candidate in ipairs(warningParts()) do
+        known[candidate] = true
+    end
+    record.escapeKnownWarnings = known
     return record.escapeTarget
 end
 
