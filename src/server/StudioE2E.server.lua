@@ -93,10 +93,12 @@ local function arenaEntryCoverageReady()
 end
 
 local function roundJourneyObserved()
-    for _, seen in pairs(roundJourneyReports) do
-        if seen then return true end
+    for _, arenaId in ipairs(ArenaVariants.Order) do
+        if roundJourneyReports[arenaId] ~= true then
+            return false
+        end
     end
-    return false
+    return true
 end
 
 local function roundArenaVisualCoverageReady()
@@ -558,8 +560,10 @@ task.spawn(function()
     if reportCount < expectedTotal then
         fail(string.format("only %d/%d clients reported", reportCount, expectedTotal))
     end
-    if not roundJourneyObserved() then
-        fail("no client completed intermission > ready > round > result in order")
+    for _, arenaId in ipairs(ArenaVariants.Order) do
+        if roundJourneyReports[arenaId] ~= true then
+            fail("missing ordered intermission > ready > round > result for " .. arenaId)
+        end
     end
     if not replayContinuityVerified then
         fail("no verified RESULT > next numbered READY with full-health contestant spawn")
