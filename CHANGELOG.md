@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-01 — Colossal cinematic sky fleet across five arenas (source only)
+
+- A major **visible world-scale production pass**: the five arena identities now each author a fleet of enormous, original, animated 3D carrier structures in the playable skyline. Classic has radar survey airships; Towers has freight gantries and moving lifts; Crossroads has mechanical maglev interchanges; Orbital has active reactor gyroscopes; Harbor has floating cargo docks, cranes and moving suspended freight. These are five bespoke shapes, not recolored background images.
+- The moving **entire hull silhouettes** visibly bank and lift during actual tornado, meteor, lava, low-gravity and freeze rounds; individual mechanisms animate as part of the same craft. Zero client-server gameplay changes, no occlusion of human/platform collision, no external paid assets.
+- Low: two large ships (about 20–24 native parts total), Medium: three (about 45–54), High: four (about 68–80). Reuse global per-model camera LOD, suppress animation on hidden craft and honor ReduceMotion. [Full source/runtime acceptance](docs/COLOSSAL_SKYFLEET_PREMIUM_2026-11-01.md).
+- **Not yet validated or published**. The existing latest verified public build remains exact SHA `46263cbdced1bddf002a8d57867303eb21422c2f`; final Cloud/Studio/Android validation and publication are separate gated actions.
+
+
 ## 2026-11-01 — Cooperative DASH route discoverability (source only)
 
 - **Latest VERIFIED public build**: exact SHA `46263cbdced1bddf002a8d57867303eb21422c2f` passed [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41322299252), [real five-suite Roblox Cloud checks](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41322305051), then the [authenticated public-place publish](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41322662162). Eight-person AI autofill and cooperative NPC DASH support are **published source**, but still need physical device/gameplay confirmation.
