@@ -187,6 +187,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     local teamDash = payload.mechanicName == "DASH RECHARGED"
         or payload.mechanicName == "DASH RESERVE"
         or payload.mechanicName == "TEAM DASH SHARED"
+        or payload.mechanicName == "BOT DASH SHARED"
     local orbitMaster = payload.mechanicName == "ORBIT MASTER"
     local priority = gridClear or fluxWeave or skyrailAce or fluxMaster
         or orbitMaster
