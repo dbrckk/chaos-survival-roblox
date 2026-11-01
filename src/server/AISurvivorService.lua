@@ -23,6 +23,9 @@ local AISurvivorNetworkOwnership = if script
 local SpawnSafety = if script
     then require(script.Parent.SpawnSafety)
     else require("./SpawnSafety")
+local TeamDashRelay = if script
+    then require(script.Parent.TeamDashRelay)
+    else require("./TeamDashRelay")
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
@@ -901,6 +904,9 @@ local function sendToLobby(record)
     record.resultTarget = nil
     record.socialPartnerUserId = nil
     record.socialPartnerUntil = 0
+    TeamDashRelay.releaseBot(record.model)
+    record.assistRelay = nil
+    record.nextAssistAt = 0
     pivotRecord(record, getLobbyPosition(record))
 end
 
@@ -949,10 +955,14 @@ local function sendToArena(record)
     record.resultTarget = nil
     record.socialPartnerUserId = nil
     record.socialPartnerUntil = 0
+    TeamDashRelay.releaseBot(record.model)
+    record.assistRelay = nil
+    record.nextAssistAt = os.clock() + 1.6 + record.slot * 0.25
     pivotRecord(record, spawn)
 end
 
 local function destroyRecord(record)
+    TeamDashRelay.releaseBot(record.model)
     destroyTracks(record)
     if record.model and record.model.Parent then
         record.model:Destroy()
@@ -996,6 +1006,8 @@ local function newRecord(slot)
         alive = false,
         inRound = false,
         nextThink = 0,
+        assistRelay = nil,
+        nextAssistAt = 0,
         nextJump = 0,
         nextPadAt = 0,
         target = nil,
@@ -2432,6 +2444,29 @@ local function chooseArenaTarget(record, root, now)
     if signalTarget then
         return signalTarget, signalHold
     end
+    -- Bots can use REAL server-owned world consoles, but only as helpers
+    -- for live nearby HUMAN contestants. No client event, teleport,
+    -- fabricated DASH token or interaction while the floor is contracting.
+    -- Reserve one of two consoles to avoid seven NPCs swarming it.
+    if record.inRound and currentState.phase == "round"
+        and now >= (record.nextAssistAt or 0)
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado")
+        and root.Position.Y <= config.ArenaCenter.Y + 7.5 then
+        local assistPoint, station = TeamDashRelay.botOpportunity(
+            record.model, now
+        )
+        if assistPoint then
+            record.assistRelay = station
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextAssistAt = now + 11
+            return assistPoint, 1.6
+        end
+        record.nextAssistAt = now + 2.8 + record.slot * 0.15
+    end
+
     local socialTarget = socialArenaTarget(record, root, traits, now)
     if socialTarget then
         record.targetIsPad = false
@@ -3235,6 +3270,51 @@ local function stepRecord(record, now)
         end
         if not urgentTarget then
             urgentTarget = skybridgeShutterEscape(record, root, now)
+        end
+    end
+
+    -- Physical cooperation never outranks a real impact/escape, and
+    -- stale station claims are released as soon as the human beneficiary
+    -- leaves, the deck retracts or another participant uses the console.
+    if record.assistRelay then
+        local assistPoint, station = nil, nil
+        if not urgentTarget and record.inRound
+            and currentState.phase == "round"
+            and not hasDisaster("ShrinkingArena")
+            and not hasDisaster("RisingLava")
+            and not hasDisaster("Tornado") then
+            assistPoint, station = TeamDashRelay.botOpportunity(
+                record.model, now, record.assistRelay
+            )
+        end
+        if not station then
+            TeamDashRelay.releaseBot(record.model)
+            record.assistRelay = nil
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
+            record.nextAssistAt = now + 4
+        else
+            record.target = assistPoint
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextThink = now + 1.2
+            local delta = assistPoint - root.Position
+            local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
+            if horizontal <= 4.3 then
+                local helped = TeamDashRelay.activateBot(record.model, now)
+                TeamDashRelay.releaseBot(record.model)
+                record.assistRelay = nil
+                record.target = nil
+                record.nextThink = 0
+                record.nextAssistAt = now + 13
+                if helped then
+                    showBotSignal(record, "TEAM UP!", now)
+                    record.model:SetAttribute("BotTeamDashRelaysUsed",
+                        (tonumber(record.model:GetAttribute(
+                            "BotTeamDashRelaysUsed")) or 0) + 1)
+                end
+            end
         end
     end
 
