@@ -11,6 +11,7 @@ local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
 
 local player = Players.LocalPlayer
+local roundEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 
 local folder = Instance.new("Folder")
 folder.Name = "ArenaPlatformIdentityLocal"
@@ -22,10 +23,12 @@ folder.Parent = workspace
 local visualsByPlatform = {}
 local collapseConnections = {}
 local routeAttributeConnections = {}
+local outpostAttributeConnections = {}
 local routeTargetConnections = {}
 local routeCueStates = {}
 local footprintDisconnects = {}
 local outpostMotions = {}
+local currentOutpostPosture = "normal"
 
 local function stopOutpostMotion(state)
     if state.tween then
@@ -41,6 +44,18 @@ end
 local function refreshOutpostMotion(platform)
     local state = outpostMotions[platform]
     if not state then return end
+    -- RoundState may arrive once a second. Never restart a tween unless
+    -- the actual disaster posture changes. Also restore the creator's
+    -- original metal color immediately on a phase or map transition.
+    if state.posture ~= currentOutpostPosture then
+        stopOutpostMotion(state)
+        state.posture = currentOutpostPosture
+        if state.instrument and state.instrument.Parent then
+            state.instrument.Color = HarborOutpostKit.instrumentColor(
+                state.baseColor, currentOutpostPosture
+            )
+        end
+    end
     local phase = platform:GetAttribute("CollapsePhase")
     local active = player:GetAttribute("ReduceMotion") ~= true
         and platform.Parent ~= nil and state.joint.Parent ~= nil
@@ -51,7 +66,9 @@ local function refreshOutpostMotion(platform)
         return
     end
     if state.tween then return end
-    local goal, duration = HarborOutpostKit.motionTarget(state.route)
+    local goal, duration = HarborOutpostKit.motionTarget(
+        state.route, currentOutpostPosture
+    )
     if not goal then return end
     state.joint.C0 = CFrame.identity
     -- Roblox TweenService supports CFrame properties on Weld. Only C0
@@ -86,6 +103,12 @@ local function clear()
     for platform, connection in pairs(routeAttributeConnections) do
         connection:Disconnect()
         routeAttributeConnections[platform] = nil
+    end
+    for platform, connections in pairs(outpostAttributeConnections) do
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+        outpostAttributeConnections[platform] = nil
     end
     for platform, connections in pairs(routeTargetConnections) do
         for _, connection in ipairs(connections) do
@@ -426,6 +449,22 @@ local function rebuild()
                         task.defer(rebuild)
                     end)
             end
+            -- The 16 appended Harbor terminals can stream in with their
+            -- RouteTier already present but one or both spoke attributes
+            -- still pending. Subscribe ONLY to the known four-by-four
+            -- appended index range (95..110); do not add 220 listeners
+            -- to every older Harbor platform or invent a polling loop.
+            if variant == "Harbor"
+                and visualIndex >= 95 and visualIndex <= 110
+                and (platform:GetAttribute("HarborSpokeRoute") == nil
+                    or platform:GetAttribute("HarborSpokeStep") == nil) then
+                outpostAttributeConnections[platform] = {
+                    platform:GetAttributeChangedSignal("HarborSpokeRoute")
+                        :Connect(function() task.defer(rebuild) end),
+                    platform:GetAttributeChangedSignal("HarborSpokeStep")
+                        :Connect(function() task.defer(rebuild) end),
+                }
+            end
             -- Low tier keeps its existing half-density surface ornaments,
             -- but EVERY verified takeoff gets a small gameplay route cue.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
@@ -473,6 +512,8 @@ local function rebuild()
                     if joint and joint:IsA("Weld") then
                         outpostMotions[platform] = {
                             joint = joint,
+                            instrument = instrument,
+                            baseColor = instrument.Color,
                             route = platform:GetAttribute("HarborSpokeRoute"),
                             connections = {
                                 platform:GetPropertyChangedSignal("CanCollide")
@@ -630,6 +671,22 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
+
+-- The already existing RoundState message drives the port machinery
+-- without another RemoteEvent, ticker or disaster polling task.
+roundEvent.OnClientEvent:Connect(function(packet)
+    -- A malformed/late payload resets to the calm authored posture rather
+    -- than locking Harbor instruments in a stale disaster condition.
+    if type(packet) ~= "table" then packet = nil end
+    local posture = HarborOutpostKit.disasterPosture(
+        packet and packet.disasterIds, packet and packet.phase
+    )
+    if posture == currentOutpostPosture then return end
+    currentOutpostPosture = posture
+    for platform in pairs(outpostMotions) do
+        refreshOutpostMotion(platform)
+    end
+end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;
