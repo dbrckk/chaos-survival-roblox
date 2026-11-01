@@ -423,9 +423,9 @@ local function updateLook()
     local key = tostring(stage) .. "/" .. tostring(destination) .. "/"
         .. tostring(complete) .. "/" .. tostring(phase)
         .. "/" .. tostring(remain)
-    if key == lastStyleKey then return end
-    lastStyleKey = key
-
+    -- The human can approach a node without any replicated progress
+    -- changing. Recompute proximity visibility BEFORE returning early
+    -- on the unchanged decorative/style key.
     -- The four circuit nodes remain physically discoverable; a
     -- zero-progress 'TOUCHE UNE BORNE' banner is shown on Android
     -- only once the player approaches a REAL node. A started timed
@@ -449,6 +449,8 @@ local function updateLook()
         stage, nearNode
     )
     refreshProgressVisibility()
+    if key == lastStyleKey then return end
+    lastStyleKey = key
     local visibleProgress = (stage > 0 and not complete and remain <= 0)
         and 0 or stage
     for index, pip in ipairs(progressPips) do
