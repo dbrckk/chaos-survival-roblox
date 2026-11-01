@@ -1,10 +1,14 @@
 name: One-Time Premium Skyworld Build + Engine Gate (2026-11-01)
 
 # A ONE-SHOT milestone, not a new automatic development test.
-# Only the creation of THIS file by a specially titled, owner-approved
-# main-branch merge can launch it. Subsequent code-only commits do not
-# match the paths trigger. Never publishes Roblox or writes game data.
+# The creation of THIS file by a specially titled, owner-approved
+# main-branch merge launches it once. Subsequent code-only commits do not
+# match the push paths trigger; a deliberate manual dispatch is the only
+# fallback. Never publishes Roblox or writes game data.
 on:
+  # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
+  # or a later release-blocker fix needs a fresh exact-main certification.
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -19,8 +23,10 @@ jobs:
     if: >-
       github.repository == 'dbrckk/chaos-survival-roblox' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message,
-        'chore(release): launch premium exact-SHA build and engine certification')
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' &&
+        startsWith(github.event.head_commit.message,
+          'chore(release): launch premium exact-SHA build and engine certification')))
     runs-on: ubuntu-latest
     timeout-minutes: 14
     concurrency:
