@@ -94,7 +94,7 @@ local function constructCommon(ship, theme, variant, profile)
 end
 
 local function addClassic(ship, theme, profile)
-    local mast = piece(ship, "SurveyArrayMast", Vector3.new(1.2, 11.0, 1.2),
+    piece(ship, "SurveyArrayMast", Vector3.new(1.2, 11.0, 1.2),
         CFrame.new(0, 8.6, 2), theme.Detail, Enum.Material.Metal)
     local hub = CFrame.new(0, 14.35, 2)
     piece(ship, "SurveyRotationBearing", Vector3.new(4.2, 1.2, 4.2),
@@ -366,7 +366,8 @@ function Kit.pose(bundle, elapsed, phase, reducedMotion, finalRush, disasterIds)
         -- The existing shared scenery-LOD owner writes visibility masks
         -- per real craft. Avoid CFrame work on a ship it has fully hidden.
         local hull = ship.parts[1] and ship.parts[1].part
-        if not hull or hull:GetAttribute("SceneryLodHidden") == true then
+        if not hull or (active
+            and hull:GetAttribute("SceneryLodHidden") == true) then
             continue
         end
         local originPhase = ship.index * 0.82
