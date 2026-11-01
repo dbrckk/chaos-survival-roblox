@@ -1658,22 +1658,15 @@ local function immediateThreat(record, root, now)
         local blocked = false
         for _, candidate in ipairs(live) do
             if not known[candidate]
-                and (candidate.Name == "MeteorWarning"
-                    or candidate.Name == "BombWarning")
-            then
-                local radius = math.max(5,
-                    AISurvivorRules.warningDetectionRadius(
-                        candidate.Name,
-                        math.max(candidate.Size.X, candidate.Size.Z) * 0.5,
-                        candidate:GetAttribute("WarningEndSize")
-                    ) - 9)
-                if AISurvivorRules.routeWarningPenalty(
+                and AISurvivorRules.newImpactIntersectsEscape(
                     root.Position, record.escapeTarget,
-                    candidate.Position, radius
-                ) >= 20 then
-                    blocked = true
-                    break
-                end
+                    candidate.Name, candidate.Position,
+                    math.max(candidate.Size.X, candidate.Size.Z) * 0.5,
+                    candidate:GetAttribute("WarningEndSize")
+                )
+            then
+                blocked = true
+                break
             end
         end
         if not blocked then
