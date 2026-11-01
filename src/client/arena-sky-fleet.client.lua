@@ -23,7 +23,7 @@ local bundle = nil
 local clock = 0
 local phase = "waiting"
 local finalRush = false
-local disasterCount = 0
+local disasterIds = {}
 
 local function tierName()
     return VfxQuality.deviceTier(
@@ -116,7 +116,13 @@ roundEvent.OnClientEvent:Connect(function(snapshot)
 
     local ids = type(snapshot.disasterIds) == "table"
         and snapshot.disasterIds or {}
-    disasterCount = math.min(2, #ids)
+    -- Retain only bounded, real disaster identifiers from the round state.
+    disasterIds = {}
+    for index = 1, math.min(2, #ids) do
+        if type(ids[index]) == "string" then
+            disasterIds[#disasterIds + 1] = ids[index]
+        end
+    end
     if phase ~= "round" and phase ~= "ready" and phase ~= "result" then
         if bundle then
             SkyFleet.pose(bundle, 0, "waiting", true, false, 0)
@@ -142,7 +148,7 @@ task.spawn(function()
                 and (phase == "ready" or phase == "round" or phase == "result")
                 and player:GetAttribute("ReduceMotion") ~= true then
                 clock += math.clamp(tonumber(dt) or 0, 0, 0.25)
-                SkyFleet.pose(bundle, clock, phase, false, finalRush, disasterCount)
+                SkyFleet.pose(bundle, clock, phase, false, finalRush, disasterIds)
             end
         end
     end
