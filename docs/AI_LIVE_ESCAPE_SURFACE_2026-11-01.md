@@ -10,14 +10,15 @@ La cible d'évitement météore/bombe est verrouillée durant 0,54 seconde pour 
 
 1. `AISurvivorRules.escapeGroundStepPenalty(rootY, contactY)` vérifie les différences de hauteur à partir de la surface touchée par le rayon (`RaycastResult.Position.Y`), pas du centre de la pièce. Seuils de sécurité conservés : perte de hauteur >8 studs = 65 points de pénalité, montée >4 studs = 45 points ; valeurs malformées = 100 points. Les deux raycasts existants par candidat et les six directions existantes restent inchangés.
 2. Le cache événementiel des avertissements conservait déjà une liste faible de pièces depuis `workspace.ChildAdded/ChildRemoved`. Il conserve maintenant aussi un compteur **`warningVersion`** incrémenté uniquement pour les apparitions/disparitions effectives de `MeteorWarning`, `BombWarning`, `FreezeWarning` ou `JumpShockWarning`. Le code ne parcourt pas le Workspace en plus.
-3. `AISurvivorRules.keepEscapeRoute` conserve un trajet sur sa courte fenêtre habituelle uniquement si **la génération de danger est toujours identique**. Une arrivée/disparition de zone invalide ce verrou : le bot refait sa sélection parmi six directions et utilise les zones d'impact et bandes de balayage réellement actives. Une menace identique sans changement continue d'utiliser la fenêtre de 0,54 seconde pour ne pas osciller.
+3. `AISurvivorRules.keepEscapeRoute` conserve un trajet sur sa courte fenêtre habituelle. Si la génération de danger change, `newImpactIntersectsEscape` vérifie d'abord uniquement les **nouveaux** anneaux Bomb/Meteor, via la géométrie de leur empreinte de dégâts finale et du trajet actuel. Seul un nouvel impact qui **croise réellement le trajet** invalide le verrou et force le recalcul parmi six directions. Un anneau lointain, une zone supprimée, ou un trajet déjà dirigé vers l'extérieur ne déclenchent pas de nouveaux raycasts. Les avertissements sont mémorisés dans une table à clés faibles pour ne pas s'accumuler en session longue.
 4. Réinitialisation de la génération mémorisée au remplacement du rig ou au changement de menace. Les bots se déplacent toujours via `Humanoid:MoveTo` avec vitesse et puissance de saut inchangées ; pas de téléportation, pas de visibilité privilégiée sur des dangers cachés.
 
 ## Vérification
 
 Deux cas de régression ajoutés à `tests/engine/ai-survivor-rules.spec.luau` :
 - une dalle épaisse avec surface réelle proche du bot ne doit pas ressembler à une falaise ; une vraie marche/cliff reste pénalisée ;
-- la réutilisation de la trajectoire tient pendant le même avertissement, s'interrompt sur nouvelle génération et expire correctement à l'approche de l'objectif ou à la fin du délai.
+- la réutilisation de la trajectoire tient pendant le même avertissement, s'interrompt sur changement de génération **lorsqu'une nouvelle zone croise le trajet**, et expire correctement à l'approche de l'objectif ou à la fin du délai ;
+- les nouveaux anneaux lointains ou les routes sortant déjà d'une zone ne doivent pas provoquer de replanification coûteuse.
 
 Pas de nouvel `Heartbeat`, `RenderStepped`, RemoteEvent, scan, son, VFX ou logique de dégâts. Ces tests ne seront exécutés **qu'au prochain jalon important**, conformément aux règles de développement ; les vérifications statiques du diff sont faites maintenant.
 
