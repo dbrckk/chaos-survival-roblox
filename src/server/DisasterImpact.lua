@@ -80,8 +80,12 @@ function DisasterImpact.applyRadialDamage(ctx, position, radius, maxDamage, haza
                         and reduced == reduced
                         and reduced > -math.huge
                         and reduced < math.huge then
+                        -- Humanoid.Health can be fractional. A nearly
+                        -- defeated survivor must not trip a min > max
+                        -- clamp or gain perfect immunity from rounding.
                         appliedDamage = math.clamp(
-                            math.floor(reduced + 0.5), 1, appliedDamage)
+                            math.floor(reduced + 0.5),
+                            math.min(1, appliedDamage), appliedDamage)
                     end
                 end
                 if hazardKind and ctx.OnHazardDamage then
