@@ -67,7 +67,7 @@ describe("Lobby survivor return formation", function()
         root:Destroy()
     end)
 
-    it("lands three R15 AI survivors away from the raised stage and players", function()
+    it("lands seven R15 AI survivors away from the raised stage and players", function())
         local root = MapBuilder.build(Config, "Classic", ArenaVariants)
         local lobby = root:FindFirstChild("Lobby")
         local spawn = lobby:FindFirstChild("LobbySpawn")
@@ -78,7 +78,7 @@ describe("Lobby survivor return formation", function()
         local positions = {}
         local floorTop = floor.Position.Y + floor.Size.Y * 0.5
 
-        for slot = 1, 3 do
+        for slot = 1, 7 do
             local landing = LobbyReturnFormation.botLanding(
                 spawn, floor, decor, slot, 2.2, 1.0
             )
@@ -114,7 +114,7 @@ describe("Lobby survivor return formation", function()
         end
 
         expect(LobbyReturnFormation.botLanding(spawn, floor, decor, 0, 2, 1)).toBe(nil)
-        expect(LobbyReturnFormation.botLanding(spawn, floor, decor, 4, 2, 1)).toBe(nil)
+        expect(LobbyReturnFormation.botLanding(spawn, floor, decor, 8, 2, 1)).toBe(nil)
         root:Destroy()
     end)
 
