@@ -842,6 +842,18 @@ describe("Chaos Survival engine", function()
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
             )
+            -- Continuous floor-to-sky paths are mandatory during a
+            -- collapse: the suspended viaduct is not useful if its
+            -- approach or exit vanishes underneath stranded survivors.
+            local collapsible = DisappearingPlatforms.eligiblePlatforms(
+                platforms, {})
+            local remaining = {}
+            for _, deck in ipairs(collapsible) do
+                remaining[deck] = true
+                expect(deck:GetAttribute("ChaosPermanentRoute") ~= true)
+                    .toBe(true)
+            end
+            expect(#collapsible >= 8).toBe(true)
             for route = 1, 4 do
                 local previous = nil
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -853,6 +865,9 @@ describe("Chaos Survival engine", function()
                     expect(platform:GetAttribute("PerimeterRoute")).toBe(route)
                     expect(platform:GetAttribute("PerimeterStep")).toBe(step)
                     expect(platform:GetAttribute("RouteTier")).toBe(math.min(step, 4))
+                    expect(platform:GetAttribute("ChaosPermanentRoute") == true)
+                        .toBe(step <= 5)
+                    expect(remaining[platform] == true).toBe(step > 5)
                     expect(math.abs(platform.Position.X - Config.ArenaCenter.X)
                         >= 45).toBe(true)
                     expect(math.abs(platform.Position.Y - platform.Size.Y * 0.5
