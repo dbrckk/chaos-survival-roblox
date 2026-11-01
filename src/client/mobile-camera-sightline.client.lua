@@ -184,6 +184,50 @@ local function restore()
     lastCamera = nil
 end
 
+-- Camera ownership can change between two 180 ms Android sightline
+-- samples. Release every local fade immediately when Roblox hands the
+-- camera to a spectator/cinematic, rather than showing a foreign view with
+-- locally hidden players for another sampling interval. One pair of
+-- property listeners is owned by the current Camera and disconnected on
+-- replacement; no extra polling loop or camera transform writes.
+local cameraWatch = nil
+local cameraConnections = {}
+local function bindCameraWatch()
+    if not UserInputService.TouchEnabled then return end
+    local camera = workspace.CurrentCamera
+    if camera == cameraWatch then return end
+    for _, connection in ipairs(cameraConnections) do
+        connection:Disconnect()
+    end
+    table.clear(cameraConnections)
+    restore()
+    cameraWatch = camera
+    if not camera then return end
+    local function releaseForeignCamera()
+        if camera ~= workspace.CurrentCamera then return end
+        local localCharacter = player.Character
+        local localHumanoid = localCharacter
+            and localCharacter:FindFirstChildOfClass("Humanoid")
+        local subject = camera.CameraSubject
+        if camera.CameraType == Enum.CameraType.Scriptable
+            or not localHumanoid or localHumanoid.Health <= 0
+            or not subject
+            or (subject ~= localHumanoid
+                and not subject:IsDescendantOf(localCharacter)) then
+            restore()
+        end
+    end
+    table.insert(cameraConnections,
+        camera:GetPropertyChangedSignal("CameraSubject")
+            :Connect(releaseForeignCamera))
+    table.insert(cameraConnections,
+        camera:GetPropertyChangedSignal("CameraType")
+            :Connect(releaseForeignCamera))
+    releaseForeignCamera()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCameraWatch)
+bindCameraWatch()
+
 local function supportedTarget(part, arena, base)
     local platforms = arena:FindFirstChild("Platforms")
     local mechanics = arena:FindFirstChild("Mechanics")
@@ -226,6 +270,8 @@ local function update()
     local camera = workspace.CurrentCamera
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local subject = camera and camera.CameraSubject
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
@@ -233,8 +279,17 @@ local function update()
         restore()
         lastCamera = camera
     end
+    -- The round/participation attributes can lag behind spectator and
+    -- respawn camera handoffs. Never fade world geometry or other avatars
+    -- while Roblox is following another player's Humanoid/Part. Mirror
+    -- the stricter ownership rule already used by movement-feel.
     if not camera or camera.CameraType == Enum.CameraType.Scriptable
-        or not root or not root:IsA("BasePart")
+        or camera.ViewportSize.X <= 0 or camera.ViewportSize.Y <= 0
+        or not humanoid or humanoid.Parent ~= character
+        or humanoid.Health <= 0
+        or not subject
+        or (subject ~= humanoid and not subject:IsDescendantOf(character))
+        or not root or not root:IsA("BasePart") or root.Parent ~= character
         or not arena or not base or not base:IsA("BasePart") then
         restore()
         return
