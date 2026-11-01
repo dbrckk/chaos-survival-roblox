@@ -22,20 +22,51 @@ TeamDashRelay.BotReach = 7.5
 -- No client remote can impersonate an NPC or choose human beneficiaries.
 local activeRound = nil
 
+-- Prefer stations along the actual first-minute routes (roughly 30–55
+-- studs from the arena center), not beyond the initial play cluster.
+-- A bot standing at the central hub can now discover an available station
+-- with its existing 68-stud search radius. Retain the original outlying
+-- positions as collision-safe fallbacks when a map's geometry blocks a lane.
 local OFFSETS = {
     {
+        Vector3.new(-55, 0, 20),
+        Vector3.new(-60, 0, 8),
+        Vector3.new(-51, 0, 31),
+        Vector3.new(-64, 0, 20),
         Vector3.new(-68, 0, 45),
         Vector3.new(-83, 0, 56),
         Vector3.new(-57, 0, 72),
         Vector3.new(-92, 0, 33),
     },
     {
+        Vector3.new(55, 0, -20),
+        Vector3.new(60, 0, -8),
+        Vector3.new(51, 0, -31),
+        Vector3.new(64, 0, -20),
         Vector3.new(68, 0, -45),
         Vector3.new(83, 0, -56),
         Vector3.new(57, 0, -72),
         Vector3.new(92, 0, -33),
     },
 }
+
+-- Models are non-colliding, but a control stand visually intersecting a
+-- round-entry marker would still obscure the player and the interaction.
+-- Preserve room for every human and AI landing on all five real arenas.
+local function clearOfSpawnMarkers(arena, position)
+    local spawns = arena:FindFirstChild("Spawns")
+    if not spawns then return true end
+    for _, marker in ipairs(spawns:GetChildren()) do
+        if marker:IsA("BasePart") then
+            local dx = marker.Position.X - position.X
+            local dz = marker.Position.Z - position.Z
+            if dx * dx + dz * dz < 12 * 12 then
+                return false
+            end
+        end
+    end
+    return true
+end
 
 local function validCharacter(player)
     if not player or player.Parent ~= Players then return nil end
@@ -218,10 +249,10 @@ local function build(folder, position, index, color)
     label.Adornee = head
     label.Size = UDim2.fromOffset(158, 36)
     label.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
-    -- The stations sit ~82 studs from the hub. The label must be seen
-    -- from that hub, otherwise the feature exists but is undiscoverable.
+    -- Route-side stations are now closer to active players. Keep both
+    -- labels readable from the hub without adding persistent screen HUD.
     -- Only two small, occlusion-aware (AlwaysOnTop=false) tags per arena.
-    label.MaxDistance = 110
+    label.MaxDistance = 95
     label.AlwaysOnTop = false
     label.Parent = head
     local text = Instance.new("TextLabel")
@@ -361,7 +392,8 @@ function TeamDashRelay.start(ctx)
         local position = nil
         for _, offset in ipairs(candidates) do
             local flat = base.Position + offset
-            if SpawnSafety.clearAt(arena, flat) then
+            if SpawnSafety.clearAt(arena, flat)
+                and clearOfSpawnMarkers(arena, flat) then
                 position = Vector3.new(flat.X, floorTop, flat.Z)
                 break
             end
