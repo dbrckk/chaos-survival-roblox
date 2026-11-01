@@ -2920,7 +2920,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             text.BackgroundTransparency = 0.25
             text.BorderSizePixel = 0
             text.Font = Enum.Font.GothamBold
-            text.Text = "SIDE LOOKOUT"
+            -- Every side lookout now connects to a genuine elevated
+            -- cross-arena route. Do not advertise a dead end at the
+            -- exact place where players must discover a second strategy.
+            text.Text = "SKY CROSSING"
             text.TextColor3 = Color3.fromRGB(235, 246, 255)
             text.TextScaled = true
             text.Parent = billboard
