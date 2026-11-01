@@ -1,7 +1,11 @@
 -- Pure transform/layout rules for client-only event atmosphere.
 -- Every position is authored in the arena's local deck coordinates.
 local DisasterAtmosphereLayout = {}
-local DisasterCosmeticRules = require(script.Parent.DisasterCosmeticRules)
+-- In the published Roblox place this is a sibling ModuleScript. Lest
+-- loads source modules by path and does not provide their script Instance.
+local DisasterCosmeticRules = if script and script.Parent
+    then require(script.Parent.DisasterCosmeticRules)
+    else require("./DisasterCosmeticRules")
 
 function DisasterAtmosphereLayout.point(baseFrame, baseSize, angle, radius, height)
     if typeof(baseFrame) ~= "CFrame" or typeof(baseSize) ~= "Vector3"
