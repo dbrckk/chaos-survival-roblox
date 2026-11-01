@@ -4,7 +4,7 @@ Use this file to review a **rendered build**, not its source code. Do not assign
 
 | Area | Reviewer discipline | Required evidence | Gate |
 | --- | --- | --- | --- |
-| Silhouette per arena | Environment art | Low/High distance capture for all four maps | Distinct without neon |
+| Silhouette per arena | Environment art | Low/High distance capture for all five maps | Distinct without neon |
 | Composition & pacing | Art direction | Lobby, Ready, Round, Result footage | One focal point per phase |
 | Materials & detail | Technical art | Close/medium-range side-by-side captures | Plausible layered forms |
 | Character animation | Animation | R6/R15 walk, pivot, jump, land, death, emote | No broken poses |
