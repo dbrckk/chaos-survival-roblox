@@ -292,6 +292,7 @@ local function addHarbor(base, theme, tier)
             frame,
             agedIron, Enum.Material.CorrodedMetal, 0.06
         )
+        footing:SetAttribute("ChaosVisualMotif", true)
         makePart(
             "HarborMooringStem" .. i,
             Vector3.new(0.96, 0.94, 1.0),
