@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-01 — Monumental physically playable 200-stud viaducts in five arenas (source only)
+
+- Major gameplay-level visible construction: **two high-altitude, end-to-end sky promenades per arena**, each connecting an existing pair of far-flung real branch lookouts. Sixteen additional server-authoritative, jumpable, 2-stud-thick collision decks per map, 80 authored landings across five variants. Eight landings per viaduct, with consistent 2.4-stud gaps and overlapping old lookout endpoints; real height-matched jumps, not a teleport or cinematic-only fake.
+- Six large, original, nonblocking architectural gateways per map, distinct per arena: Classic radar towers, Towers cargo-lift machine rooms, Crossroads transit switching fins, Orbital ceramic reactor containment, Harbor suspended freight cranes. At most 54 locally relevant decorative server Parts per generated arena, all linked to the real deck's shrinking footprint.
+- Protect long permanent routes from random disappearance while allowing Shrinking Arena to transform decks **and** their owned artwork together. Append after every original route, Harbor skyway and dock-spoke to keep historic indices, hazard owners, AI navigation and existing game loop stable. No new timers, paid assets, RemoteEvents, player powers or data format changes.
+- Existing engine map-count assertions updated only to account for the genuinely new platforms; **no tests executed** during the feature implementation phase. Studio/Android, Cloud and public release are deferred to the next final exact-SHA milestone. [Architecture, physics, scope and acceptance](docs/MONUMENTAL_SKY_PROMENADES_2026-11-01.md).
+
+
 ## 2026-11-01 — Colossal cinematic sky fleet across five arenas (source only)
 
 - A major **visible world-scale production pass**: the five arena identities now each author a fleet of enormous, original, animated 3D carrier structures in the playable skyline. Classic has radar survey airships; Towers has freight gantries and moving lifts; Crossroads has mechanical maglev interchanges; Orbital has active reactor gyroscopes; Harbor has floating cargo docks, cranes and moving suspended freight. These are five bespoke shapes, not recolored background images.
