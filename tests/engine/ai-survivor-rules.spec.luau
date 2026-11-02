@@ -32,6 +32,12 @@ describe("AI survivor rules", function()
                 frame(threatened), threatened.size,
                 frame(adjacent), adjacent.size, false
             )).toBe(false)
+            -- A shrinking tile may still collide while being too tiny
+            -- to hold the physical character and must not be an exit.
+            expect(eligible(
+                frame(threatened), threatened.size,
+                frame(adjacent), Vector3.new(4, 2, 4), true
+            )).toBe(false)
             expect(eligible(
                 frame(threatened), threatened.size,
                 frame(far), far.size, true
