@@ -195,6 +195,41 @@ function StructureRetrofit.buildLobby(decor, lobbyCenter)
             0.52, dark, trim)
     end
     count += #gate:GetChildren()
+
+    -- The 24x24 central stage was still an undecorated rectangular block,
+    -- visible throughout every pre-round lobby. Build original dimensional
+    -- alloy facings BELOW its authoritative walkable top. The existing
+    -- CenterGlow and floor tutorial graphics remain legible and untouched.
+    local stage = Instance.new("Model")
+    stage.Name = "MachinedLobbyCenterStage"
+    stage.Parent = group
+    local stageOrigin = CFrame.new(lobbyCenter + Vector3.new(0, 1.45, 0))
+    for _, side in ipairs({-1, 1}) do
+        add(stage, stageOrigin, "FrontStageArmor" .. tostring(side),
+            CFrame.new(0, -0.24, side * 11.90)
+                * CFrame.Angles(0, side == -1 and 0 or math.pi, 0),
+            Vector3.new(18.8, 0.52, 1.2), color,
+            shell, "WedgePart", false)
+        add(stage, stageOrigin, "FlankStageArmor" .. tostring(side),
+            CFrame.new(side * 11.90, -0.24, 0)
+                * CFrame.Angles(0, side * math.pi * 0.5, 0),
+            Vector3.new(18.8, 0.52, 1.2), color,
+            shell, "WedgePart", false)
+        add(stage, stageOrigin, "RecessedStageKeel" .. tostring(side),
+            CFrame.new(side * 5.5, -1.03, 0),
+            Vector3.new(4.5, 0.42, 15.8), dark,
+            trim, nil, false)
+    end
+    for _, sx in ipairs({-1, 1}) do
+        for _, sz in ipairs({-1, 1}) do
+            local start = Vector3.new(sx * 9.9, -0.52, sz * 9.9)
+            local finish = Vector3.new(sx * 6.2, -1.22, sz * 6.1)
+            spar(stage, stageOrigin,
+                "StageCornerDiagonal" .. tostring(sx) .. "_" .. tostring(sz),
+                start, finish, 0.48, color, shell)
+        end
+    end
+    count += #stage:GetChildren()
     return count
 end
 
