@@ -1021,6 +1021,16 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.reachableElevation(24, 13.9, "Towers")).toBe(false)
         -- On high platforms, the next 20-32-stud sky lane is a valid
         -- target, but an equally high deck across 200 studs of void is not.
+        -- A bot whose bridge collapsed underfoot cannot pick a
+        -- new remote roof just because the elevation matches.
+        local hasSupport = AISurvivorRules.elevatedRouteHasSupport
+        expect(hasSupport(5, 1, false)).toBe(true)
+        expect(hasSupport(9, 1, false)).toBe(true)
+        expect(hasSupport(15, 1, false)).toBe(false)
+        expect(hasSupport(15, 1, true)).toBe(true)
+        expect(hasSupport(15, 1, nil)).toBe(false)
+        expect(hasSupport(0/0, 1, true)).toBe(false)
+
         local nearby = AISurvivorRules.elevatedWaypointNearby
         expect(nearby(Vector3.new(10, 4, 0),
             Vector3.new(210, 4, 0), 1)).toBe(true)
