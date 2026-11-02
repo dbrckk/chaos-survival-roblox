@@ -789,6 +789,31 @@ end
 -- world. The latter looked like a valid same-height waypoint to the
 -- old AI and sent runners straight into empty air. Ground runners keep
 -- the long-distance freedom needed to reach a real entrance terrace.
+-- Short level crossings have 2.4-stud REAL air gaps. A human
+-- naturally jumps, but ordinary bot height-based jumps never fire
+-- when the destination is at the same altitude. Only authorize a
+-- normal Humanoid jump when grounded support is present beneath the
+-- bot, missing directly ahead, and resumes on a reachable landing.
+-- Sample physics separately in the runtime, never fabricate a floor.
+function AISurvivorRules.skyGapJumpReady(
+    grounded, heightAboveBase, horizontalDistance,
+    originFloorY, gapIsSupported, landingFloorY)
+    if grounded ~= true or gapIsSupported ~= false then return false end
+    if type(heightAboveBase) ~= "number"
+        or type(horizontalDistance) ~= "number"
+        or type(originFloorY) ~= "number"
+        or type(landingFloorY) ~= "number" then return false end
+    for _, value in ipairs({
+        heightAboveBase, horizontalDistance, originFloorY, landingFloorY
+    }) do
+        if value ~= value or math.abs(value) == math.huge then return false end
+    end
+    return heightAboveBase >= 7
+        and horizontalDistance >= 4.2
+        and horizontalDistance <= 34
+        and math.abs(landingFloorY - originFloorY) <= 2.0
+end
+
 function AISurvivorRules.elevatedWaypointNearby(
     current, destination, groundTopY)
     if typeof(current) ~= "Vector3"
