@@ -2120,11 +2120,39 @@ local function socialArenaTarget(record, root, traits, now)
     end
 
     target = clampToArena(target)
+    local safeDeck = nil
+    if root.Position.Y > groundTopY + 8 then
+        -- Rooftop social spacing can put an otherwise harmless rival
+        -- chase OUTSIDE a 12-stud bridge. Use the partner's actual
+        -- grounded physical deck, not an imaginary landing coordinate.
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {
+            record.model, partnerRoot.Parent
+        }
+        params.RespectCanCollide = true
+        local surface = workspace:Raycast(
+            partnerRoot.Position + Vector3.new(0, 1, 0),
+            Vector3.new(0, -6, 0), params
+        )
+        local part = surface and surface.Instance
+        if not part or not part:IsA("BasePart")
+            or not part.Parent or part.Parent.Name ~= "Platforms"
+            or surface.Normal.Y < 0.78
+            or not AISurvivorRules.platformAvailable(
+                part.CanCollide, part.Transparency,
+                part:GetAttribute("CollapsePhase")
+            ) then return nil end
+        safeDeck = part
+        target = AISurvivorRules.clampWaypointToDeck(
+            safeDeck.CFrame, safeDeck.Size, target
+        ) or target
+    end
     -- A social impulse may not override the existing server hazard evaluator.
     if scoreCandidate(record, root, {position = target}, traits) < -32 then
         return nil
     end
-    return target
+    return target, safeDeck
 end
 
 local function separateTarget(record, target)
@@ -2593,11 +2621,18 @@ local function chooseArenaTarget(record, root, now)
         record.nextAssistAt = now + 2.8 + record.slot * 0.15
     end
 
-    local socialTarget = socialArenaTarget(record, root, traits, now)
+    local socialTarget, socialDeck =
+        socialArenaTarget(record, root, traits, now)
     if socialTarget then
         record.targetIsPad = false
-        record.targetPart = nil
-        return separateTarget(record, socialTarget), 0.65 + math.random() * 1.0
+        record.targetPart = socialDeck
+        local waypoint = separateTarget(record, socialTarget)
+        if socialDeck then
+            waypoint = AISurvivorRules.clampWaypointToDeck(
+                socialDeck.CFrame, socialDeck.Size, waypoint
+            ) or socialTarget
+        end
+        return waypoint, 0.65 + math.random() * 1.0
     end
 
     -- When a Flux Relay can be reached before its charge window ends,
