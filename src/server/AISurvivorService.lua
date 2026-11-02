@@ -3697,6 +3697,7 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
     -- Ordinary ground roaming keeps its humanlike steering inertia.
     local direct = urgent == true
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
+        or record.groundNavigation ~= nil
         or AISurvivorRules.committedWorldRoute(
             record.targetIsSkyrail, record.targetPart,
             record.districtTraverse ~= nil
@@ -4546,6 +4547,7 @@ local function stepRecord(record, now)
 
             local destination = record.target
             if not urgentTarget
+                and not record.groundNavigation
                 and AISurvivorRules.allowRouteStrafe(
                     record.targetIsPad,
                     record.targetIsSkyrail,
