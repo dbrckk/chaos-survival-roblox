@@ -540,6 +540,26 @@ function AISurvivorRules.filterRecentlyFailedCandidates(
     return #viable > 0 and viable or candidates
 end
 
+-- Five grounded samples along a detour prevent a bot from trying
+-- to cross the unseen void between two otherwise safe landing spots.
+-- This is a pure rule, so Roblox engine specs can certify it without
+-- simulating an entire AI round or relying on arbitrary NPC rig height.
+function AISurvivorRules.recoveryGroundSamplesSafe(
+    rootY, originY, quarterY, midpointY, threeQuarterY, endpointY, distance)
+    for _, height in ipairs({originY, quarterY, midpointY,
+        threeQuarterY, endpointY}) do
+        if type(height) ~= "number" or height ~= height
+            or math.abs(height) == math.huge then return false end
+    end
+    if not AISurvivorRules.recoveryGroundIsContinuous(
+        rootY, midpointY, endpointY, distance, originY
+    ) then return false end
+    return math.abs(quarterY - originY) <= 1.25
+        and math.abs(midpointY - quarterY) <= 1.25
+        and math.abs(threeQuarterY - midpointY) <= 1.25
+        and math.abs(endpointY - threeQuarterY) <= 1.25
+end
+
 function AISurvivorRules.isGenuineStall(
     previousPosition, position, target, elapsed, grounded, moving)
     if grounded ~= true or moving ~= true
