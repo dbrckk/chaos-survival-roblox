@@ -121,19 +121,19 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
         count += 1
     end
 
+    local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
+    local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
     -- Two side rails outside the ACTUAL 12-stud-wide crossing. Arch
     -- interiors have >11 studs head clearance and no solid decoration,
     -- so running/jumping R6/R15 players never hit invisible beams.
     for side = -1, 1, 2 do
-        structure("LoadPylon" .. side, Vector3.new(1.6, 13, 1.8),
-            CFrame.new(0, 6.5, side * 7.6), steel)
+        structure("LoadPylon" .. side, Vector3.new(1.6, crownHeight, 1.8),
+            CFrame.new(0, crownHeight * 0.5, side * 7.6), steel)
         structure("DiagonalStay" .. side, Vector3.new(0.65, 7.3, 1.1),
             CFrame.new(0, 8.6, side * 8.3)
                 * CFrame.Angles(math.rad(side * 16), 0, 0),
             alloy)
     end
-    local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
-    local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
     structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, crownSpan),
         CFrame.new(0, crownHeight, 0), alloy)
     -- The real walkway remains unchanged; larger late-stage underframes
