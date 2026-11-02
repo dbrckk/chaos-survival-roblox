@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-02 — Monumental climb architecture and intuitive escape towers (source only)
+
+- **Full-scale 3D art improvement**: 12 original massive engineered entry/transfer/summit towers per 320×320 arena, all five playable environments, four genuine physics-backed 8-step escape routes each. Twin outside-walkway pylons, structural buttresses, wedge fins, giant overpass crowns, under-deck girder details, level-coded restrained light ribbons and objective-direction arrows. A player can distinguish the foot of a route, a waypoint and its final visible safe-high-ground destination from the world itself without adding more HUD.
+- Five unique architectural details: Classic industrial survey mast, Towers transit monitor, Crossroads angled exchange equipment, Orbital reactor/rotor, Harbor storm-crane tackle. Native metal/ceramic/oxidized materials and minimal Neon, no premium assets/licensed meshes or per-frame graphics loops. Maximum **16 anchored/noncolliding parts per tower**, only twelve monuments instantiated per arena at once.
+- **Crucial physical correctness**: every decoration has a real `PerimeterPlatformIndex`, so `ShrinkingArena` moves it with the owning platform and `DisappearingPlatforms` hides all its details exactly when collision vanishes. Main pylons are beyond the real lateral walking space, overhead crosses clear R15 jumps and no existing platform identity or bot route is altered.
+- Existing real-engine `mapbuilder.spec.luau` now checks all five arenas × all twelve original structures, collision/shrink ownership, directional cue positioning and collapse safety. Source must still pass the NEW exact-SHA Build + five-suite Cloud certification and physical Android QA. [Architecture and acceptance](docs/MONUMENTAL_ESCAPE_ROUTE_ARCHITECTURE_2026-11-02.md).
+
+
 ## 2026-11-02 — Real AI locomotion recovery and Android disaster floor lighting (source)
 
 - **Fixed the actual AI stuck-recovery dead path:** after a 1.15-second directional stall the old code forgot its goal and immediately reset `stuckCount`, effectively preventing the required two-count physically checked recovery. Bots now navigate away on the **first** proven stall, remember the failed destination for 7.5 seconds and release blocked cooperative action reservations.
