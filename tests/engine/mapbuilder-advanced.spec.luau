@@ -28,6 +28,7 @@ describe("Chaos Survival engine", function()
                 start + 20 + #(variant.SkywayPlatforms or {})
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
+                    + #(variant.SkySpinePlatforms or {})
             )
             for route = 1, 4 do
                 local forkIndex = #variant.Platforms
@@ -141,6 +142,7 @@ describe("Chaos Survival engine", function()
             #authored.Platforms + #authored.PerimeterPlatforms
                 + #authored.BranchPlatforms + #authored.CrosslinkPlatforms
                 + #authored.PromenadePlatforms
+                + #authored.SkySpinePlatforms
         )
         -- Original 21 decks and Skybridges 18–21 are unchanged.
         -- The outer rim, 16 corner spurs and four physical crosslinks
@@ -148,7 +150,8 @@ describe("Chaos Survival engine", function()
         expect(tierCount[1]).toBe(9)
         expect(tierCount[2]).toBe(12)
         expect(tierCount[3]).toBe(12)
-        expect(tierCount[4]).toBe(36 + #authored.PromenadePlatforms)
+        expect(tierCount[4]).toBe(36 + #authored.PromenadePlatforms
+            + #authored.SkySpinePlatforms)
 
         -- Floor guidance must be genuinely visible but never obstruct
         -- escape movement, hazard collision or updraft pads.
@@ -193,6 +196,7 @@ describe("Chaos Survival engine", function()
         expect(#(platforms :: Folder):GetChildren()).toBe(
             #ArenaVariants.get("Crossroads").Platforms + 52
                 + #ArenaVariants.get("Crossroads").PromenadePlatforms
+                + #ArenaVariants.get("Crossroads").SkySpinePlatforms
         )
         local tiers = {[1] = 0, [2] = 0, [3] = 0, [4] = 0}
         for index = 1, 17 do
