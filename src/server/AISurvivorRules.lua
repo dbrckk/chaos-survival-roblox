@@ -497,6 +497,32 @@ function AISurvivorRules.recoveryGroundIsContinuous(
         and math.abs(midpointY - endpointY) <= 1.25
 end
 
+-- A quarantined unreachable goal must not enter the ordinary
+-- candidate lottery again on the very next brain tick. Keep all other
+-- real physical targets eligible; never fabricate a waypoint in midair.
+-- If a tiny map has no alternative, preserve the original list so the
+-- existing physical recovery/idle fallback remains authoritative.
+function AISurvivorRules.filterRecentlyFailedCandidates(
+    candidates, failedTarget, now, expiresAt)
+    if type(candidates) ~= "table" then return {} end
+    if typeof(failedTarget) ~= "Vector3"
+        or (tonumber(now) or 0) >= (tonumber(expiresAt) or 0)
+    then return candidates end
+
+    local viable = {}
+    for _, candidate in ipairs(candidates) do
+        if type(candidate) == "table"
+            and typeof(candidate.position) == "Vector3" then
+            local dx = candidate.position.X - failedTarget.X
+            local dz = candidate.position.Z - failedTarget.Z
+            if dx * dx + dz * dz >= 121 then
+                table.insert(viable, candidate)
+            end
+        end
+    end
+    return #viable > 0 and viable or candidates
+end
+
 function AISurvivorRules.isGenuineStall(
     previousPosition, position, target, elapsed, grounded, moving)
     if grounded ~= true or moving ~= true
