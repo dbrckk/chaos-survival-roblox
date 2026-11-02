@@ -1,8 +1,8 @@
-name: One-Time Real Orbital Mobile Wayfinding Engine Gate (2026-11-02)
+name: One-Time Android Danger-First Physical Guidance Engine Gate (2026-11-02)
 
-# One exact-main-SHA milestone for the actual first-time Orbital ramp
-# entry/helix/core route sign, including hazard/lava checks at HelixStart.
-# No public Roblox publishing or unverified Android claims.
+# Milestone: real hazard instantly preempts rookie physical route
+# guidance on touch devices, reusing the existing MobileHudNotices lane.
+# No public Roblox publishing; exact-SHA Build + five Cloud suites.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.
