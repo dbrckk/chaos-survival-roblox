@@ -254,6 +254,63 @@ local function cargoWaypoint(from, pieces, base, root, arena, french)
     return bestTarget, bestHint
 end
 
+-- Orbital's vertical escape is a continuous, server-built ramp network.
+-- Generic deck-jump rules deliberately refuse this arena, so the mobile
+-- rookie marker must follow its REAL entry/helix/core ramp transitions.
+local function orbitalRampNext(arena, from, root, base, platforms)
+    if arena:GetAttribute("VariantId") ~= "Orbital" then return nil end
+    local circuit = arena:FindFirstChild("HelixCircuit")
+    if not circuit then return nil end
+    local function real(folder, name)
+        local part = folder and folder:FindFirstChild(name)
+        if not part or not part:IsA("BasePart") or not part.Anchored
+            or not part.CanCollide or part.Transparency >= 0.75
+            or part:GetAttribute("CollapsePhase") == "Warning"
+            or part:GetAttribute("CollapsePhase") == "Gone" then
+            return nil
+        end
+        return part
+    end
+    local function nearestEntry(maxDistance)
+        local closest, distance = nil, maxDistance
+        for i = 1, 8 do
+            local part = real(circuit, "EntryRamp" .. i)
+            local start = part and part:GetAttribute("HelixStart")
+            if typeof(start) == "Vector3" then
+                local delta = start - root.Position
+                local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
+                if flat < distance then
+                    closest, distance = part, flat
+                end
+            end
+        end
+        return closest
+    end
+    if from == base then return nearestEntry(44) end
+    if from.Parent == platforms then
+        local id = tonumber(from.Name:match("^Platform(%d+)$"))
+        if id == 17 then return nearestEntry(56) end
+        if id and id >= 1 and id <= 8 then
+            return real(circuit, "HelixRamp" .. id)
+        elseif id and id >= 9 and id <= 16 then
+            local lane = id - 8
+            return real(circuit, lane == 2 and "HelixRamp9"
+                or ("CoreRamp" .. lane))
+        end
+    elseif from.Parent == circuit then
+        local entry = tonumber(from.Name:match("^EntryRamp(%d+)$"))
+        if entry then return real(platforms, "Platform" .. entry) end
+        local helix = tonumber(from.Name:match("^HelixRamp(%d+)$"))
+        if helix then
+            return real(platforms, "Platform" .. (helix == 9 and 18
+                or helix + 8))
+        end
+        local core = tonumber(from.Name:match("^CoreRamp(%d+)$"))
+        if core then return real(platforms, "Platform18") end
+    end
+    return nil
+end
+
 local function update()
     local games = FirstTimeExperience.effectiveGames(
         player:GetAttribute("Games"),
@@ -402,6 +459,13 @@ local function update()
                     or "RESUME THE ROUTE  ↑"
             end
         end
+    elseif arena:GetAttribute("VariantId") == "Orbital" then
+        -- This world uses physical ramps instead of tiered jump gaps.
+        -- Preserve the SAME one-sign Android guide, not a second HUD.
+        target = orbitalRampNext(arena, from, root, base, platforms)
+        if target then
+            hint = french and "SUIS LA RAMPE  ↑" or "FOLLOW THE RAMP  ↑"
+        end
     elseif from == base then
         -- The largest missing first-session cue was *before* the first
         -- jump. Guide from the actual floor to a short, grounded entry.
@@ -485,7 +549,17 @@ local function update()
             target = nil
         end
     end
-    if not target or (root.Position - target.Position).Magnitude > 46 then
+    -- A long orbital ramp's CENTER can be far from its actionable entry.
+    -- Only for server-authored ramps, use the real HelixStart takeoff
+    -- coordinate rather than suppressing the guide or marking midair.
+    local rampStart = target and target.Parent
+        and target.Parent.Name == "HelixCircuit"
+        and target:GetAttribute("HelixStart") or nil
+    local guideDistance = typeof(rampStart) == "Vector3"
+        and (root.Position - rampStart).Magnitude
+        or (target and (root.Position - target.Position).Magnitude
+            or math.huge)
+    if not target or guideDistance > 46 then
         hide()
         -- Never burn an extra fast loop to search for optional hints.
         return rookie
@@ -517,9 +591,9 @@ local function update()
     if currentTarget ~= target then
         currentTarget = target
         sign.Adornee = target
-        sign.StudsOffsetWorldSpace = Vector3.new(
-            0, target.Size.Y * 0.5 + 3.1, 0
-        )
+        sign.StudsOffsetWorldSpace = typeof(rampStart) == "Vector3"
+            and (rampStart + Vector3.new(0, 3.1, 0) - target.Position)
+            or Vector3.new(0, target.Size.Y * 0.5 + 3.1, 0)
     end
     sign.Enabled = true
     return true
