@@ -1,3 +1,6 @@
+# Milestone: PR #565 original 65-piece 3D/PBR modular floors in five arenas.
+# Exact new main SHA requires full Build plus five Roblox real-engine suites.
+# No public Roblox publishing; physical Android visual QA is still required.
 # Milestone: PR #564 original five-arena 3D/PBR architectural cladding merged.
 # Repeat full Build + five real Roblox Cloud engine suites on exact main SHA.
 # This workflow NEVER publishes to the existing public place.
