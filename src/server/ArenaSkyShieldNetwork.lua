@@ -216,6 +216,7 @@ local function build(folder, ground, index, variant)
         activeUntil = 0, readyAt = 0, generation = 0,
         theme = theme, groundY = ground.Y,
         floorValid = true, guard = false,
+        domeTween = nil, crownTween = nil,
         absorbed = 0, protections = 0, lastImpactAt = -math.huge,
         claim = nil, claimUntil = 0,
     }
@@ -353,15 +354,21 @@ function Shield.activate(entry, actor, fromBot)
     for _, segment in ipairs(entry.boundary) do
         segment.Transparency = 0.22
     end
-    TweenService:Create(entry.dome, TweenInfo.new(0.30),
-        {Transparency = 0.91}):Play()
-    TweenService:Create(entry.ring, TweenInfo.new(0.30),
-        {Transparency = 0.54}):Play()
+    if entry.domeTween then entry.domeTween:Cancel() end
+    if entry.crownTween then entry.crownTween:Cancel() end
+    entry.domeTween = TweenService:Create(entry.dome, TweenInfo.new(0.30),
+        {Transparency = 0.91})
+    entry.crownTween = TweenService:Create(entry.ring, TweenInfo.new(0.30),
+        {Transparency = 0.54})
+    entry.domeTween:Play()
+    entry.crownTween:Play()
     entry.refresh()
 
     task.delay(Shield.Duration, function()
         if not round.active() or ticket ~= entry.generation
             or not entry.model.Parent then return end
+        if entry.domeTween then entry.domeTween:Cancel() end
+        if entry.crownTween then entry.crownTween:Cancel() end
         entry.dome.Transparency = 1
         entry.ring.Transparency = 1
         for _, segment in ipairs(entry.boundary) do
@@ -449,6 +456,8 @@ function Shield.start(ctx)
                 -- Never leave a visible shield or residual damage benefit
                 -- floating above the void.
                 entry.activeUntil = 0
+                if entry.domeTween then entry.domeTween:Cancel() end
+                if entry.crownTween then entry.crownTween:Cancel() end
                 entry.dome.Transparency = 1
                 entry.ring.Transparency = 1
                 for _, segment in ipairs(entry.boundary) do
@@ -512,11 +521,15 @@ function Shield.start(ctx)
                         entry.lastImpactAt = now
                         entry.ring.Size = Vector3.new(0.2, 8, 8)
                         entry.ring.Transparency = 0.36
-                        TweenService:Create(entry.ring,
+                        if entry.crownTween then
+                            entry.crownTween:Cancel()
+                        end
+                        entry.crownTween = TweenService:Create(entry.ring,
                             TweenInfo.new(0.42, Enum.EasingStyle.Quad,
                                 Enum.EasingDirection.Out),
                             {Size = Vector3.new(0.2, 15, 15),
-                                Transparency = 0.54}):Play()
+                                Transparency = 0.54})
+                        entry.crownTween:Play()
                     end
                 end
                 return reduced
