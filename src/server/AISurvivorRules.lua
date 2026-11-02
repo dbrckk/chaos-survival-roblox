@@ -421,7 +421,14 @@ function AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart, active
             return true
         end
     end
+    -- The connected 200-stud promenades and transverse Sky Spine
+    -- have real 2.4-stud gaps. A casual lateral strafe or random
+    -- rethink near their edges sent bots into open air despite the
+    -- intentional guided route. Treat only these actual decks as
+    -- committed for the existing bounded five-second grace period.
     return step == 1 or step == 2
+        or targetPart:GetAttribute("PromenadeLane") ~= nil
+        or targetPart:GetAttribute("SkySpineStep") ~= nil
         or targetPart:GetAttribute("GridCircuitIndex") ~= nil
         or targetPart:GetAttribute("FluxRelayIndex") ~= nil
 end
