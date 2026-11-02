@@ -793,6 +793,8 @@ local function createRig(record)
     record.turnPauseUntil = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
+    record.recoveryAttemptCount = 0
+    record.lastRecoveryAt = 0
     record.lastProgressTarget = nil
     record.threat = nil
     record.threatSeenAt = nil
@@ -915,6 +917,8 @@ local function sendToLobby(record)
     record.lastProgressTarget = nil
     record.lastProgressAt = 0
     record.stuckCount = 0
+    record.recoveryAttemptCount = 0
+    record.lastRecoveryAt = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
     record.moveDirection = Vector3.zero
@@ -979,6 +983,8 @@ local function sendToArena(record)
     record.lastProgressTarget = nil
     record.lastProgressAt = 0
     record.stuckCount = 0
+    record.recoveryAttemptCount = 0
+    record.lastRecoveryAt = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
     record.model:SetAttribute("BotStallRecoveryCount", 0)
@@ -1082,6 +1088,8 @@ local function newRecord(slot)
         lastProgressPosition = nil,
         lastProgressAt = 0,
         stuckCount = 0,
+        recoveryAttemptCount = 0,
+        lastRecoveryAt = 0,
         failedTarget = nil,
         failedTargetUntil = 0,
         lastProgressTarget = nil,
@@ -2981,7 +2989,7 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     local directions = AISurvivorRules.recoveryDirections(
         root.Position, failedDestination or record.failedTarget
             or (root.Position + root.CFrame.LookVector * 8),
-        (record.slot or 1) + (record.stuckCount or 0))
+        (record.slot or 1) + (record.recoveryAttemptCount or 0))
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
@@ -3027,13 +3035,24 @@ local function nearbyRecoveryStep(record, root, failedDestination)
             if not blocked then
                 -- Midpoint AND endpoint need real walkable support; matching
                 -- the measured current floor handles differing rig scales.
-                local midpointY = groundAt(
+                -- A 6.5-stud detour can cross a narrow gap hidden
+                -- between safe midpoint/endpoint samples. Probe every
+                -- quarter and bound elevation changes between neighbors.
+                local quarterY = groundAt(
+                    root.Position + actualStep * 0.25)
+                local midpointY = quarterY and groundAt(
                     root.Position + actualStep * 0.50)
-                local endpointY = groundAt(candidate)
-                if midpointY and endpointY
+                local threeQuarterY = midpointY and groundAt(
+                    root.Position + actualStep * 0.75)
+                local endpointY = threeQuarterY and groundAt(candidate)
+                if quarterY and midpointY and threeQuarterY and endpointY
                     and AISurvivorRules.recoveryGroundIsContinuous(
                         root.Position.Y, midpointY, endpointY,
-                        actualStep.Magnitude, originFloorY) then
+                        actualStep.Magnitude, originFloorY)
+                    and math.abs(quarterY - originFloorY) <= 1.25
+                    and math.abs(midpointY - quarterY) <= 1.25
+                    and math.abs(threeQuarterY - midpointY) <= 1.25
+                    and math.abs(endpointY - threeQuarterY) <= 1.25 then
                     return Vector3.new(
                         candidate.X, root.Position.Y, candidate.Z)
                 end
@@ -3087,6 +3106,15 @@ local function recoverIfStuck(record, humanoid, root, now)
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
+    -- Preserve the recovery-side sequence even when short detours make
+    -- progress. Previously that success reset stuckCount and sent every
+    -- later attempt around the exact same obstacle on the same side.
+    if now - (record.lastRecoveryAt or 0) > 12 then
+        record.recoveryAttemptCount = 0
+    end
+    record.recoveryAttemptCount =
+        ((record.recoveryAttemptCount or 0) % 8) + 1
+    record.lastRecoveryAt = now
     record.failedTarget = goal
     record.failedTargetUntil = now + 7.5
     -- Physical stations and expedition reservations cannot be held by
