@@ -322,15 +322,16 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
     local longest = math.max(part.Size.X, part.Size.Y, part.Size.Z)
     -- Keep the regular >=0.35-stud minimum for every other Part. The
     -- approved authored entrance is the sole thin-surface exception.
-    local largeAuthoredDeck = PbrDistrictRules.isPremiumArchitecturalOwner(owner)
+    local authoredFloorOrPanel = PbrDistrictRules.isPremiumArchitecturalOwner(owner)
         and owner:IsA("Folder")
         and part:GetAttribute("PremiumArchitecturalSurface") == true
-        and (part.Name == "ArenaDeckInset" or part.Name == "LobbyFloorInset")
-        and part.Size.X >= 20 and part.Size.Z >= 20
-        and part.Size.Y >= 0.10
+        and (part.Name == "ArenaDeckInset" or part.Name == "LobbyFloorInset"
+            or part.Name:match("^PlatformPanel%d+$") ~= nil)
+        and part.Size.X >= 3 and part.Size.Z >= 3
+        and part.Size.Y >= 0.09
     return longest >= 3
         and (smallest >= 0.35 or canonicalServiceDoor(part, owner)
-            or largeAuthoredDeck)
+            or authoredFloorOrPanel)
 end
 
 function PbrDistrictRules.materialKey(partName, material, owner)
