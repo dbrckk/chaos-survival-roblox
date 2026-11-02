@@ -102,9 +102,16 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     -- A continuous silhouette above the route, completely clear of the
     -- avatar's jump height. The 3D band means "this is a real route" from
     -- across a whole district without another huge floating text label.
+    -- Three distinct gateway silhouettes make the route hierarchy visible
+    -- from the arena floor without more text, neon or additional instances.
+    local overpassWidth = stage == "SUMMIT" and 4.6
+        or (stage == "TRANSFER" and 3.5 or 2.8)
+    local overpassRise = stage == "SUMMIT" and 14.0
+        or (stage == "TRANSFER" and 12.9 or 12.1)
     add("MonumentalOverpass",
-        Vector3.new(2.8, 1.3, deck.Size.Z + 6.6),
-        CFrame.new(0, top + 12.1, 0),
+        Vector3.new(overpassWidth, stage == "SUMMIT" and 1.9 or 1.3,
+            deck.Size.Z + (stage == "SUMMIT" and 9.0 or 6.6)),
+        CFrame.new(0, top + overpassRise, 0),
         roof, material)
     add("RouteStageBeacon",
         Vector3.new(0.48, 0.58, math.max(3.0, deck.Size.Z * 0.55)),
