@@ -706,6 +706,20 @@ describe("AI survivor rules", function()
         expect(cautiousJumpCutoff ~= boldJumpCutoff).toBe(true)
     end)
 
+    it("detects real blocked AI travel instead of mistaking side-steps for forward progress", function()
+        local from = Vector3.new(0, 5, 0)
+        local destination = Vector3.new(12, 5, 0)
+        expect(AISurvivorRules.forwardTravel(from,
+            Vector3.new(3, 5, 0), destination)).toBe(3)
+        expect(AISurvivorRules.forwardTravel(from,
+            Vector3.new(0, 5, 4), destination)).toBe(0)
+        expect(AISurvivorRules.forwardTravel(from,
+            Vector3.new(-2, 5, 0), destination)).toBe(-2)
+        expect(AISurvivorRules.forwardTravel(from,
+            Vector3.new(0, 15, 0), destination)).toBe(0)
+        expect(AISurvivorRules.forwardTravel(nil, from, destination)).toBe(0)
+    end)
+
     it("smooths ordinary steering but keeps urgent steering direct", function()
         local previous = Vector3.new(1, 0, 0)
         local desired = Vector3.new(0, 0, 1)
