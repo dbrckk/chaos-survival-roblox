@@ -1347,6 +1347,37 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
         or (record.model and {record.model} or {})
     params.RespectCanCollide = true
 
+    -- High sky-deck meteors previously chose a long free-space dodge
+    -- using only soft unsupported-floor penalties. Every direction
+    -- could still score badly yet win, sending seven bots off the edge.
+    -- A single ground ray binds these escapes to the CURRENT safe
+    -- oriented landing. Ground-level contestants keep full mobility.
+    local base = arenaBase()
+    local groundTopY = base and (base.Position.Y + base.Size.Y * 0.5)
+        or config.ArenaCenter.Y
+    local standingDeck = nil
+    if root.Position.Y > groundTopY + 8 then
+        local originHit = workspace:Raycast(
+            root.Position + Vector3.new(0, 1, 0),
+            Vector3.new(0, -7.5, 0),
+            params
+        )
+        local part = originHit and originHit.Instance
+        if originHit and originHit.Normal.Y >= 0.78
+            and part and part:IsA("BasePart")
+            and part.Parent and (part.Parent.Name == "Platforms"
+                or part.Parent.Name == "HelixCircuit")
+            and AISurvivorRules.platformAvailable(
+                part.CanCollide, part.Transparency,
+                part:GetAttribute("CollapsePhase")
+            ) then
+            standingDeck = part
+        else
+            -- An airborne/falling bot cannot invent a supported escape.
+            return root.Position
+        end
+    end
+
     local length = 17 + (1 - record.profile.Risk) * 7
     local best = nil
     local bestScore = -math.huge
@@ -1356,6 +1387,11 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
         local destination = clampToArena(
             root.Position + heading.Unit * length
         )
+        destination = AISurvivorRules.safeElevatedImpactEscape(
+            root.Position, destination, groundTopY,
+            standingDeck and standingDeck.CFrame,
+            standingDeck and standingDeck.Size
+        ) or root.Position
         local shifted = destination - root.Position
         local walked = Vector3.new(shifted.X, 0, shifted.Z).Magnitude
         local warningDistance = Vector3.new(
