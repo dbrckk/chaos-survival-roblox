@@ -173,6 +173,18 @@ describe("AI survivor rules", function()
         expect(#directions(start, start, 1)).toBe(0)
         expect(#directions(nil, goal, 1)).toBe(0)
 
+        local supported = AISurvivorRules.recoveryGroundIsContinuous
+        -- Root 2.7 studs above actual floor; halfway + endpoint MUST
+        -- both be supported at the SAME accessible height.
+        expect(supported(9.7, 7.0, 7.1, 6.5)).toBe(true)
+        expect(supported(9.7, 7.0, 9.0, 6.5)).toBe(false)
+        expect(supported(9.7, 7.0, 3.2, 6.5)).toBe(false)
+        expect(supported(9.7, 10.7, 7.0, 6.5)).toBe(false)
+        expect(supported(9.7, 7.0, 7.0, 1)).toBe(false)
+        expect(supported(9.7, 7.0, 7.0, 20)).toBe(false)
+        expect(supported(9.7, 7.0, 7.0, 0 / 0)).toBe(false)
+        expect(supported(9.7, 7.0, math.huge, 6.5)).toBe(false)
+
         local stalled = AISurvivorRules.isGenuineStall
         expect(stalled(start, start, goal, 1.16, true, true)).toBe(true)
         expect(stalled(start, start + Vector3.new(0, 0, 2.5),
