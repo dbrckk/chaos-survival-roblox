@@ -821,6 +821,23 @@ function AISurvivorRules.skyGapJumpReady(
         and math.abs(landingFloorY - originFloorY) <= 2.0
 end
 
+-- Bot-to-bot separation can displace a center waypoint by several
+-- studs. Clamp the result inside the ACTUAL physics deck with room for
+-- an R15 collision capsule, rather than asking a survivor to dodge an
+-- ally by walking off the edge of a 10-stud sky walkway.
+function AISurvivorRules.clampWaypointToDeck(deckFrame, deckSize, waypoint)
+    if typeof(deckFrame) ~= "CFrame" or typeof(deckSize) ~= "Vector3"
+        or typeof(waypoint) ~= "Vector3" then return nil end
+    local localPoint = deckFrame:PointToObjectSpace(waypoint)
+    local safeHalfX = math.max(0, deckSize.X * 0.5 - 2)
+    local safeHalfZ = math.max(0, deckSize.Z * 0.5 - 2)
+    return deckFrame:PointToWorldSpace(Vector3.new(
+        math.clamp(localPoint.X, -safeHalfX, safeHalfX),
+        localPoint.Y,
+        math.clamp(localPoint.Z, -safeHalfZ, safeHalfZ)
+    ))
+end
+
 function AISurvivorRules.elevatedWaypointNearby(
     current, destination, groundTopY)
     if typeof(current) ~= "Vector3"
