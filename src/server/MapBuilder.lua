@@ -22,6 +22,7 @@ local HarborScenery = require("./HarborScenery")
 local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
+local ArchitecturalCladding = require("./ArchitecturalCladding")
 
 local MapBuilder = {}
 
@@ -912,6 +913,7 @@ local function addArenaFoundation(decor, config, variant, theme)
         VisualTheme.Materials.Structure
     )
     undercarriage.Transparency = 0.04
+    undercarriage:SetAttribute("PremiumArchitecturalSurface", true)
 
     local deckInset = decorPart(
         decor,
@@ -924,6 +926,13 @@ local function addArenaFoundation(decor, config, variant, theme)
     -- A broad neutral midtone keeps the REAL floor readable on mobile;
     -- subdued route paint and red/orange disaster telegraphs stay distinct.
     deckInset.Transparency = 0.03
+    -- Existing Harbor timber remains on smaller route panels. The enormous
+    -- working port deck uses actual salt-worn steel, not a default wooden
+    -- slab pretending to be a seaport floor.
+    if variant.Id == "Harbor" then
+        deckInset.Material = Enum.Material.CorrodedMetal
+    end
+    deckInset:SetAttribute("PremiumArchitecturalSurface", true)
 
     local laneLengthX = math.max(18, baseSize.X - 18)
     local laneLengthZ = math.max(18, baseSize.Z - 18)
@@ -1631,6 +1640,11 @@ local function addPlatformFinish(decor, platform, index, theme)
     -- Quiet, durable walking inset: hazards keep visual priority and the
     -- rim now reads as a separate machined structural layer.
     topPanel.Transparency = 0.07
+    -- Creator-owned original PBR, selected by the existing camera budget.
+    -- Never alter the collidable platform Material used by disasters.
+    if topPanel.Material ~= Enum.Material.WoodPlanks then
+        topPanel:SetAttribute("PremiumArchitecturalSurface", true)
+    end
     local routeTier = tonumber(platform:GetAttribute("RouteTier"))
     local parkourGrade = tonumber(platform:GetAttribute("ParkourGrade"))
     if parkourGrade then
@@ -1713,6 +1727,7 @@ local function addPlatformFinish(decor, platform, index, theme)
         VisualTheme.Materials.Structure
     )
     underFrame.Transparency = 0.04
+    underFrame:SetAttribute("PremiumArchitecturalSurface", true)
 
     local core = decorPart(
         decor,
@@ -1784,6 +1799,7 @@ local function buildLobby(root, config)
 
     local decor = Instance.new("Folder")
     decor.Name = "Decor"
+    decor:SetAttribute("PremiumSurfaceSkinSource", true)
     decor.Parent = lobby
 
     local floorInset = decorPart(
@@ -1795,6 +1811,7 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Panel
     )
     floorInset.Transparency = 0.04
+    floorInset:SetAttribute("PremiumArchitecturalSurface", true)
 
     local lobbyLanes = {
         {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
@@ -2503,6 +2520,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
 
     local decor = Instance.new("Folder")
     decor.Name = "Decor"
+    decor:SetAttribute("PremiumSurfaceSkinSource", true)
     decor.Parent = arena
 
     addArenaFoundation(decor, config, variant, theme)
@@ -2512,6 +2530,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- One distinctive real 3D skyline per arena. No external asset ID is
     -- required; this is the always-available mobile-friendly model layer.
     HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
+    -- Faceted original 3D shells, machined collars, diagonal load spars
+    -- and cantilevers on the four EXISTING foundation towers. No physics.
+    ArchitecturalCladding.build(decor, base, variant.Id, theme)
     if variant.Id == "Harbor" then
         -- Exterior harbor cranes distinguish the new cargo port without
         -- extra colliders, sound loops or cameras tracking scenic models.
