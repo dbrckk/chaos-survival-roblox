@@ -321,8 +321,8 @@ function Shield.activate(entry, actor, fromBot)
     entry.model:SetAttribute("ShieldReadyAt",
         workspace:GetServerTimeNow() + Shield.Cooldown)
     entry.label.Text = fromBot
-        and "ALLY ACTIVATED\\nSHIELD ACTIVE"
-        or "TEAM SHIELD\\nPROTECTED"
+        and "ALLY ACTIVATED\nSHIELD ACTIVE"
+        or "TEAM SHIELD\nPROTECTED"
     entry.label.TextColor3 = entry.theme.Secondary
     entry.dome.Transparency = 1
     entry.ring.Transparency = 1
@@ -337,14 +337,14 @@ function Shield.activate(entry, actor, fromBot)
             or not entry.model.Parent then return end
         entry.dome.Transparency = 1
         entry.ring.Transparency = 1
-        entry.label.Text = "TEAM SHIELD\\nRECHARGING"
+        entry.label.Text = "TEAM SHIELD\nRECHARGING"
         entry.label.TextColor3 = entry.theme.Detail
         entry.refresh()
     end)
     task.delay(Shield.Cooldown, function()
         if not round.active() or ticket ~= entry.generation
             or not entry.model.Parent then return end
-        entry.label.Text = "TEAM SHIELD\\nHOLD TO ACTIVATE"
+        entry.label.Text = "TEAM SHIELD\nHOLD TO ACTIVATE"
         entry.label.TextColor3 = entry.theme.Accent
         entry.refresh()
     end)
@@ -470,7 +470,7 @@ function Shield.start(ctx)
                         math.floor(entry.absorbed))
                     entry.model:SetAttribute("ShieldProtections",
                         entry.protections)
-                    entry.label.Text = "SHIELD ACTIVE\\n"
+                    entry.label.Text = "SHIELD ACTIVE\n"
                         .. tostring(math.floor(entry.absorbed)) .. " HP SAVED"
                 end
                 return reduced
