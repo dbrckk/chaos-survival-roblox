@@ -15,6 +15,9 @@ Shield.Cooldown = 21
 Shield.HoldSeconds = 0.65
 Shield.PromptDistance = 10
 Shield.DamageMultiplier = 0.42
+Shield.BotApproachRadius = 74
+Shield.BotReach = 7.5
+local activeRound = nil
 Shield.Offsets = {
     Vector3.new(-53, 0, -17),
     Vector3.new(53, 0, 17),
@@ -77,6 +80,9 @@ local function build(folder, ground, index, variant)
     model:SetAttribute("ShieldPhase", "Ready")
     model:SetAttribute("ShieldActiveUntil", 0)
     model:SetAttribute("ShieldReadyAt", 0)
+    model:SetAttribute("ShieldAbsorbedDamage", 0)
+    model:SetAttribute("ShieldProtections", 0)
+    model:SetAttribute("ShieldActivatedByBot", false)
     local base = CFrame.new(ground)
     local structure = theme.Structure:Lerp(theme.Detail, 0.35)
     visual(model, "Foundation", Vector3.new(8, 0.28, 8),
@@ -135,14 +141,17 @@ local function build(folder, ground, index, variant)
     -- The translucent protective volume is genuinely large, but doesn't
     -- become a fake solid ceiling or hide Roblox damage telegraphs.
     local dome = visual(model, "ActiveProtectiveField",
-        Vector3.new(52, 52, 52),
-        base * CFrame.new(0, 10, 0),
+        -- Cylinder's axis is local X: rotate 90 degrees to make a REAL
+        -- 48-stud-wide vertical enclosure matching the server's area.
+        Vector3.new(Shield.Height + 2, Shield.Radius * 2, Shield.Radius * 2),
+        base * CFrame.new(0, Shield.Height * 0.5 - 1, 0)
+            * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Accent:Lerp(Color3.fromRGB(210, 242, 255), 0.28),
         Enum.Material.Glass, 1)
-    dome.Shape = Enum.PartType.Ball
+    dome.Shape = Enum.PartType.Cylinder
     local ring = visual(model, "ActiveFieldCrown",
-        Vector3.new(0.20, 49, 49),
-        base * CFrame.new(0, 10, 0) * CFrame.Angles(0, 0, math.pi * 0.5),
+        Vector3.new(0.20, Shield.Radius * 2, Shield.Radius * 2),
+        base * CFrame.new(0, 0.19, 0) * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Secondary, Enum.Material.Glass, 1)
     ring.Shape = Enum.PartType.Cylinder
     local prompt = Instance.new("ProximityPrompt")
@@ -184,6 +193,8 @@ local function build(folder, ground, index, variant)
         prompt = prompt, label = label, center = ground,
         activeUntil = 0, readyAt = 0, generation = 0,
         theme = theme, groundY = ground.Y,
+        floorValid = true, guard = false,
+        absorbed = 0, protections = 0, claim = nil, claimUntil = 0,
     }
 end
 
@@ -203,7 +214,11 @@ function Shield.start(ctx)
     local floorY = base.Position.Y + base.Size.Y * 0.5
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local active = true
+    local round = {ctx = ctx, folder = folder, stations = stations,
+        base = base, active = function() return active end}
+    activeRound = round
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
+        if activeRound == round then activeRound = nil end
         active = false
         for _, entry in ipairs(stations) do
             entry.generation += 1
@@ -229,7 +244,14 @@ function Shield.start(ctx)
         local function refresh()
             if not active or not entry.model.Parent then return end
             local now = os.clock()
-            if not withinFloor() then
+            entry.floorValid = withinFloor()
+            if not entry.floorValid then
+                -- Shrinking can retract the floor from a live generator.
+                -- Never leave a visible shield or residual damage benefit
+                -- floating above the void.
+                entry.activeUntil = 0
+                entry.dome.Transparency = 1
+                entry.ring.Transparency = 1
                 entry.prompt.Enabled = false
                 entry.model:SetAttribute("ShieldPhase", "Offline")
             elseif now < entry.activeUntil then
@@ -312,10 +334,22 @@ function Shield.start(ctx)
         end
         local now = os.clock()
         for _, entry in ipairs(stations) do
-            if entry.model.Parent and now < entry.activeUntil
-                and Shield.contains(entry.center, position, entry.groundY)
-            then
-                return Shield.damageAfterProtection(damage)
+            if entry.model.Parent and entry.floorValid
+                and now < entry.activeUntil
+                and Shield.contains(entry.center, position, entry.groundY) then
+                local reduced = Shield.damageAfterProtection(damage)
+                local saved = math.max(0, damage - reduced)
+                if saved > 0 then
+                    entry.absorbed += saved
+                    entry.protections += 1
+                    entry.model:SetAttribute("ShieldAbsorbedDamage",
+                        math.floor(entry.absorbed))
+                    entry.model:SetAttribute("ShieldProtections",
+                        entry.protections)
+                    entry.label.Text = "SHIELD ACTIVE\\n"
+                        .. tostring(math.floor(entry.absorbed)) .. " HP SAVED"
+                end
+                return reduced
             end
         end
         return damage
