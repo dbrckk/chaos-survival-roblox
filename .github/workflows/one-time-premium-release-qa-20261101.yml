@@ -1,16 +1,14 @@
-name: One-Time Premium Skyworld Build + Engine Gate (2026-11-01)
+name: One-Time Premium Skyworld Build + Engine Gate (2026-11-02)
 
-# Milestone source-test repair: Build Validation succeeded on main
-# 112a9227e2c1319f8b4f35088c1ebaf01192aa1b, but the actual Roblox engine
-# core_b2 suite failed (job 124920626764): Harbor expected 110 physical
-# decks and received 126 after adding both sky promenades.
-# Re-run Build Validation AND all Cloud suites on the NEW merged fix SHA.
-# The earlier green Build SHA and failing Cloud SHA cannot certify this commit.
-# A ONE-SHOT milestone, not a new automatic development test.
-# The creation of THIS file by a specially titled, owner-approved
-# main-branch merge launches it once. Subsequent code-only commits do not
-# match the push paths trigger; a deliberate manual dispatch is the only
-# fallback. Never publishes Roblox or writes game data.
+# Major release acceptance after the real cooperative shield-network update:
+# four live 3D generators, actual bot teammates, and a simultaneous
+# 18-stud-wide paired protective corridor across each playable arena.
+# The last green main 635b6b234fa09674a9fc47cca66125efd4161080
+# predates TWO major gameplay integrations (#540/#541) and this update.
+# Rebuild and test all five Roblox Open Cloud suites on ONE new exact SHA.
+# This one-shot workflow only triggers on its own altered path AND the
+# owner's exact release-gate merge title; normal source commits won't run it.
+# This does not publish any Roblox place or fabricate Studio/Android QA.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.
