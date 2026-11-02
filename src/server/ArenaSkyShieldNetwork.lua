@@ -198,6 +198,175 @@ local function build(folder, ground, index, variant)
     }
 end
 
+-- Real AI participants can operate the SAME non-colliding prompt station
+-- as a human, but only to protect a live human beneficiary nearby. One
+-- bounded reservation per structure prevents 7 bots swarming the console.
+local function botRoot(model)
+    local folder = workspace:FindFirstChild("AISurvivors")
+    if typeof(model) ~= "Instance" or not model:IsA("Model")
+        or not folder or model.Parent ~= folder
+        or model:GetAttribute("AISurvivor") ~= true
+        or model:GetAttribute("AISurvivorInRound") ~= true
+    then return nil end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local root = model:FindFirstChild("HumanoidRootPart")
+    if not hum or hum.Health <= 0 or not root
+        or not root:IsA("BasePart")
+        or not root:IsDescendantOf(workspace) then return nil end
+    return root, hum
+end
+
+local function humanBeneficiary(round, entry)
+    for _, player in ipairs(round.ctx.Contestants or {}) do
+        if player.Parent == Players
+            and player:GetAttribute("DataLoaded") == true
+            and round.ctx.IsContestantActive(player) then
+            local character = player.Character
+            local hum = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and root and root:IsA("BasePart")
+                and Shield.contains(entry.center, root.Position, entry.groundY)
+            then return true end
+        end
+    end
+    return false
+end
+
+function Shield.releaseBot(model)
+    local round = activeRound
+    if not round then return end
+    for _, entry in ipairs(round.stations) do
+        if entry.claim == model then
+            entry.claim = nil
+            entry.claimUntil = 0
+        end
+    end
+end
+
+function Shield.botOpportunity(model, now, preferred)
+    local round = activeRound
+    local root = botRoot(model)
+    if not round or not round.active() or not round.ctx.Active()
+        or not root or type(now) ~= "number"
+        or not round.folder.Parent then return nil end
+    local chosen, nearest = nil, Shield.BotApproachRadius
+    for _, entry in ipairs(round.stations) do
+        local delta = entry.core.Position - root.Position
+        local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        local reserved = entry.claim and entry.claim ~= model
+            and (entry.claimUntil or 0) > now
+        if entry.model.Parent == round.folder
+            and entry.floorValid and entry.prompt.Enabled
+            and now >= entry.readyAt
+            and not entry.guard and not reserved
+            and math.abs(delta.Y) < 8
+            and flat <= nearest
+            and (preferred == nil or preferred == entry.core)
+            and humanBeneficiary(round, entry) then
+            chosen, nearest = entry, flat
+        end
+    end
+    if not chosen then return nil end
+    chosen.claim, chosen.claimUntil = model, now + 5
+    return Vector3.new(chosen.core.Position.X, root.Position.Y,
+        chosen.core.Position.Z), chosen.core
+end
+
+-- The ONE authoritative activation path for human prompts and AI agency.
+-- Bots cannot spoof ProximityPrompt.Triggered or bypass the normal hold
+-- time; their AI brain performs its own physical approach and hold.
+function Shield.activate(entry, actor, fromBot)
+    local round = activeRound
+    if not round or not round.active() or not round.ctx.Active()
+        or not entry or entry.model.Parent ~= round.folder
+        or not entry.floorValid or not entry.prompt.Enabled
+        or entry.guard or os.clock() < entry.readyAt then return false end
+
+    local root
+    if fromBot then
+        local hum
+        root, hum = botRoot(actor)
+        if not root or hum.FloorMaterial == Enum.Material.Air
+            or (root.Position - entry.core.Position).Magnitude > Shield.BotReach
+            or not humanBeneficiary(round, entry) then
+            return false
+        end
+    else
+        if not actor or actor.Parent ~= Players
+            or actor:GetAttribute("DataLoaded") ~= true
+            or not round.ctx.IsContestantActive(actor) then return false end
+        local character = actor.Character
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        root = character and character:FindFirstChild("HumanoidRootPart")
+        if not hum or hum.Health <= 0 or not root
+            or not root:IsA("BasePart")
+            or not root:IsDescendantOf(workspace)
+            or (root.Position - entry.core.Position).Magnitude
+                > Shield.PromptDistance + 3 then return false end
+    end
+
+    entry.guard = true
+    local now = os.clock()
+    entry.generation += 1
+    local ticket = entry.generation
+    entry.activeUntil = now + Shield.Duration
+    entry.readyAt = now + Shield.Cooldown
+    entry.absorbed = 0
+    entry.protections = 0
+    entry.model:SetAttribute("ShieldAbsorbedDamage", 0)
+    entry.model:SetAttribute("ShieldProtections", 0)
+    entry.model:SetAttribute("ShieldActivatedByBot", fromBot == true)
+    entry.model:SetAttribute("ShieldActiveUntil",
+        workspace:GetServerTimeNow() + Shield.Duration)
+    entry.model:SetAttribute("ShieldReadyAt",
+        workspace:GetServerTimeNow() + Shield.Cooldown)
+    entry.label.Text = fromBot
+        and "ALLY ACTIVATED\\nSHIELD ACTIVE"
+        or "TEAM SHIELD\\nPROTECTED"
+    entry.label.TextColor3 = entry.theme.Secondary
+    entry.dome.Transparency = 1
+    entry.ring.Transparency = 1
+    TweenService:Create(entry.dome, TweenInfo.new(0.30),
+        {Transparency = 0.91}):Play()
+    TweenService:Create(entry.ring, TweenInfo.new(0.30),
+        {Transparency = 0.54}):Play()
+    entry.refresh()
+
+    task.delay(Shield.Duration, function()
+        if not round.active() or ticket ~= entry.generation
+            or not entry.model.Parent then return end
+        entry.dome.Transparency = 1
+        entry.ring.Transparency = 1
+        entry.label.Text = "TEAM SHIELD\\nRECHARGING"
+        entry.label.TextColor3 = entry.theme.Detail
+        entry.refresh()
+    end)
+    task.delay(Shield.Cooldown, function()
+        if not round.active() or ticket ~= entry.generation
+            or not entry.model.Parent then return end
+        entry.label.Text = "TEAM SHIELD\\nHOLD TO ACTIVATE"
+        entry.label.TextColor3 = entry.theme.Accent
+        entry.refresh()
+    end)
+    entry.guard = false
+    return true
+end
+
+function Shield.activateBot(model, now, preferred)
+    local _, core = Shield.botOpportunity(model, now, preferred)
+    if not core then return false end
+    local round = activeRound
+    if not round then return false end
+    for _, entry in ipairs(round.stations) do
+        if entry.core == core then
+            local ok = Shield.activate(entry, model, true)
+            if ok then Shield.releaseBot(model) end
+            return ok
+        end
+    end
+    return false
+end
+
 function Shield.start(ctx)
     if not Shield.enabled(ctx) or not ctx.Active() then return nil end
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -271,54 +440,9 @@ function Shield.start(ctx)
         ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
             connection:Disconnect()
         end
+        entry.refresh = refresh
         entry.prompt.Triggered:Connect(function(player)
-            if not active or not ctx.Active() or not withinFloor()
-                or not entry.prompt.Enabled or not player
-                or player.Parent ~= Players
-                or player:GetAttribute("DataLoaded") ~= true
-                or not ctx.IsContestantActive(player)
-                or os.clock() < entry.readyAt then return end
-            local character = player.Character
-            local hum = character and character:FindFirstChildOfClass("Humanoid")
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if not hum or hum.Health <= 0 or not root
-                or not root:IsA("BasePart")
-                or (root.Position - entry.core.Position).Magnitude
-                    > Shield.PromptDistance + 3 then return end
-            local now = os.clock()
-            entry.generation += 1
-            local ticket = entry.generation
-            entry.activeUntil = now + Shield.Duration
-            entry.readyAt = now + Shield.Cooldown
-            entry.model:SetAttribute("ShieldActiveUntil",
-                workspace:GetServerTimeNow() + Shield.Duration)
-            entry.model:SetAttribute("ShieldReadyAt",
-                workspace:GetServerTimeNow() + Shield.Cooldown)
-            entry.label.Text = "TEAM SHIELD\nPROTECTED"
-            entry.label.TextColor3 = entry.theme.Secondary
-            entry.dome.Transparency = 1
-            entry.ring.Transparency = 1
-            TweenService:Create(entry.dome, TweenInfo.new(0.3),
-                {Transparency = 0.91}):Play()
-            TweenService:Create(entry.ring, TweenInfo.new(0.3),
-                {Transparency = 0.74}):Play()
-            refresh()
-            task.delay(Shield.Duration, function()
-                if not active or ticket ~= entry.generation
-                    or not entry.model.Parent then return end
-                entry.dome.Transparency = 1
-                entry.ring.Transparency = 1
-                entry.label.Text = "TEAM SHIELD\nRECHARGING"
-                entry.label.TextColor3 = entry.theme.Detail
-                refresh()
-            end)
-            task.delay(Shield.Cooldown, function()
-                if not active or ticket ~= entry.generation
-                    or not entry.model.Parent then return end
-                entry.label.Text = "TEAM SHIELD\nHOLD TO ACTIVATE"
-                entry.label.TextColor3 = entry.theme.Accent
-                refresh()
-            end)
+            Shield.activate(entry, player, false)
         end)
         refresh()
     end
