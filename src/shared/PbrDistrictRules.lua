@@ -277,6 +277,7 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
             local name = part.Name
             if name ~= "ArenaDeckInset" and name ~= "LobbyFloorInset"
                 and name ~= "ArenaUndercarriage"
+                and not name:match("^PremiumGroundModule%d+$")
                 and not name:match("^PlatformPanel%d+$")
                 and not name:match("^PlatformUnderFrame%d+$") then
                 return false
@@ -326,6 +327,7 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         and owner:IsA("Folder")
         and part:GetAttribute("PremiumArchitecturalSurface") == true
         and (part.Name == "ArenaDeckInset" or part.Name == "LobbyFloorInset"
+            or part.Name:match("^PremiumGroundModule%d+$") ~= nil
             or part.Name:match("^PlatformPanel%d+$") ~= nil)
         and part.Size.X >= 3 and part.Size.Z >= 3
         and part.Size.Y >= 0.09
@@ -409,6 +411,10 @@ function PbrDistrictRules.priority(part)
     if PbrDistrictRules.isPremiumArchitecturalOwner(part.Parent) then
         if name == "arenadeckinset" or name == "lobbyfloorinset" then
             structuralScore = 9000
+        elseif name:match("^premiumgroundmodule%d+$") then
+            -- Prefer visible original 2K ceramic/steel plates near the
+            -- player rather than wasting residency on skyline props.
+            structuralScore = 2600
         elseif name:match("^platformpanel%d+$") then
             structuralScore = 3100
         elseif name:match("^platformunderframe%d+$") then
