@@ -446,6 +446,23 @@ end
 -- a fixed RightVector made seven NPCs ricochet at the same obstacle.
 -- Alternate their first sidestep by slot; both directions and a small
 -- retreat remain valid physical walk paths, never teleport/flight.
+-- Recovery side alternation must survive a successfully completed detour.
+-- Reset only after a genuine 12-second period without another stall;
+-- ordinary progress toward the sideways detour is not proof the original
+-- obstacle has been cleared.
+function AISurvivorRules.nextRecoveryAttempt(previous, lastAt, now)
+    local time = tonumber(now) or 0
+    local prior = tonumber(previous) or 0
+    local previousAt = tonumber(lastAt) or 0
+    if time ~= time or previousAt ~= previousAt
+        or math.abs(time) == math.huge
+        or math.abs(previousAt) == math.huge
+        or time < previousAt or time - previousAt > 12 then
+        prior = 0
+    end
+    return (math.floor(math.max(0, prior)) % 8) + 1
+end
+
 function AISurvivorRules.recoveryDirections(position, target, slot)
     if typeof(position) ~= "Vector3" or typeof(target) ~= "Vector3" then
         return {}
