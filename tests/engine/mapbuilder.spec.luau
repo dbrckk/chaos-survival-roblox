@@ -160,6 +160,7 @@ describe("Chaos Survival engine", function()
         expect(#(platforms :: Folder):GetChildren()).toBe(
             #ArenaVariants.get("Classic").Platforms + 52
                 + #ArenaVariants.get("Classic").PromenadePlatforms
+                + #ArenaVariants.get("Classic").SkySpinePlatforms
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -841,6 +842,7 @@ describe("Chaos Survival engine", function()
                 original + 52 + #(variant.SkywayPlatforms or {})
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
+                    + #(variant.SkySpinePlatforms or {})
             )
             -- Continuous floor-to-sky paths are mandatory during a
             -- collapse: the suspended viaduct is not useful if its
@@ -1238,6 +1240,7 @@ describe("Chaos Survival engine", function()
                 branchEnd + 4 + #(variant.SkywayPlatforms or {})
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
+                    + #(variant.SkySpinePlatforms or {})
             )
 
             for route = 1, 4 do
