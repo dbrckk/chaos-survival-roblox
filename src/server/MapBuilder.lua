@@ -24,6 +24,7 @@ local SkySpineArchitecture = require("./SkySpineArchitecture")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
 local ArenaGroundArchitecture = require("./ArenaGroundArchitecture")
+local StructureRetrofit = require("./StructureRetrofit")
 
 local MapBuilder = {}
 
@@ -2383,6 +2384,10 @@ local function buildLobby(root, config)
     lobbySpawn.CanCollide = false
     lobbySpawn.Parent = lobby
 
+    -- Retain the existing collidable lobby entrance and pylons, but hide
+    -- their simplistic silhouettes behind authored multi-layer 3D casing.
+    StructureRetrofit.buildLobby(decor, config.LobbyCenter)
+
     floor:SetAttribute("VisualVersion", 2)
     centerPlatform:SetAttribute("SafeHub", true)
     leftColumn:SetAttribute("ArenaGate", true)
@@ -2551,6 +2556,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     addExteriorSilhouettePairs(decor, config, variant, theme)
     addVariantIdentity(decor, config, variant, theme)
     addVariantLandmarks(decor, config, variant, theme)
+    -- Faceted exterior machinery over the EXISTING simple skyline markers.
+    -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
+    StructureRetrofit.buildArena(decor, base, variant.Id, theme)
     addVariantFloorLanguage(decor, config, variant, theme)
     addArenaHologram(decor, config, variant, theme)
 
