@@ -122,6 +122,45 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme)
         end
     end
 
+    -- Original 6x6 modules stop 9.6 studs short of every physical edge.
+    -- The previously exposed border was still the default-looking base.
+    -- Close it with fitted metal/ceramic apron casings, flush with the
+    -- existing original modules. No overhang beyond the authoritative
+    -- collider and no extra material/texture allocation on Android.
+    local innerX = base.Size.X - 19.2
+    local innerZ = base.Size.Z - 19.2
+    local apronX = (base.Size.X - innerX) * 0.5
+    local apronZ = (base.Size.Z - innerZ) * 0.5
+    local armorTone = theme.Surface:Lerp(theme.Detail, profile.tint + 0.06)
+    local outerTone = theme.Structure:Lerp(theme.Detail, 0.38)
+    for side = -1, 1, 2 do
+        local x = side * (innerX * 0.5 + apronX * 0.5)
+        local z = side * (innerZ * 0.5 + apronZ * 0.5)
+        -- Match the 0.035-stud modules' exact visible top height.
+        part(decor, "PremiumGroundApronX" .. tostring(side), "Part",
+            origin * CFrame.new(x, finishY, 0),
+            Vector3.new(apronX - 0.08, 0.035, innerZ),
+            armorTone, profile.panel, 0.035, false)
+        part(decor, "PremiumGroundApronZ" .. tostring(side), "Part",
+            origin * CFrame.new(0, finishY, z),
+            Vector3.new(innerX, 0.035, apronZ - 0.08),
+            armorTone, profile.panel, 0.035, false)
+        count += 2
+    end
+    for sx = -1, 1, 2 do
+        for sz = -1, 1, 2 do
+            local cornerX = sx * (innerX * 0.5 + apronX * 0.5)
+            local cornerZ = sz * (innerZ * 0.5 + apronZ * 0.5)
+            part(decor, "PremiumGroundCorner" .. tostring(sx)
+                    .. "_" .. tostring(sz), "WedgePart",
+                origin * CFrame.new(cornerX, finishY, cornerZ)
+                    * CFrame.Angles(0, (sx == sz) and 0 or math.pi, 0),
+                Vector3.new(apronX - 0.08, 0.035, apronZ - 0.08),
+                outerTone, profile.detail, 0.045, false)
+            count += 1
+        end
+    end
+
     -- Eight structural fins cut real depth into the already existing
     -- undercarriage silhouette. They are BELOW the real survival floor,
     -- not a new deck, railing, collider or false supported route.
