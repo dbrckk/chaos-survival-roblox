@@ -111,6 +111,7 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local height = platform.Size.Y * 0.5
     local steel = theme.Structure:Lerp(theme.Surface, 0.18)
     local alloy = theme.Detail:Lerp(theme.Structure, 0.30)
+    -- Preserve distinct world materials while reducing generic metal repetition.
     local material = variant == "Harbor" and Enum.Material.CorrodedMetal
         or (variant == "Orbital" and Enum.Material.CeramicTiles
             or Enum.Material.Metal)
