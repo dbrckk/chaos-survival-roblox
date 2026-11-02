@@ -791,6 +791,9 @@ local function createRig(record)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
+    record.failedTarget = nil
+    record.failedTargetUntil = 0
+    record.lastProgressTarget = nil
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
@@ -1065,6 +1068,9 @@ local function newRecord(slot)
         lastProgressPosition = nil,
         lastProgressAt = 0,
         stuckCount = 0,
+        failedTarget = nil,
+        failedTargetUntil = 0,
+        lastProgressTarget = nil,
         nextEmoteAt = os.clock() + 3 + math.random() * 6,
         emoteUntil = 0,
         nextHazardSignalAt = 0,
@@ -2949,6 +2955,42 @@ local function tryLobbyPracticeImpulse(record, root, now)
     record.targetPart = nil
 end
 
+-- A stranded bot must not endlessly retry the exact same piece of
+-- machinery or walk into a wall. Test physical clearance and support only
+-- after genuinely failing to advance; there is no extra per-frame raycast.
+local function nearbyRecoveryStep(record, root)
+    local directions = {
+        root.CFrame.RightVector, -root.CFrame.RightVector,
+        -root.CFrame.LookVector, root.CFrame.LookVector,
+        Vector3.new(1, 0, 1), Vector3.new(-1, 0, -1),
+        Vector3.new(1, 0, -1), Vector3.new(-1, 0, 1),
+    }
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {record.model}
+    for _, dir in ipairs(directions) do
+        local flat = Vector3.new(dir.X, 0, dir.Z)
+        if flat.Magnitude > 0.1 then
+            local step = flat.Unit * 6.5
+            local origin = root.Position + Vector3.new(0, 1.25, 0)
+            local obstruction = workspace:Raycast(origin, step, params)
+            local candidate = clampToArena(root.Position + step)
+            local ground = workspace:Raycast(
+                candidate + Vector3.new(0, 3, 0),
+                Vector3.new(0, -9, 0), params)
+            if not obstruction and ground
+                and ground.Instance and ground.Instance.CanCollide
+                and ground.Normal.Y > 0.70
+                and math.abs(ground.Position.Y - (root.Position.Y - 2.7))
+                    < 5.5 then
+                return Vector3.new(
+                    candidate.X, root.Position.Y, candidate.Z)
+            end
+        end
+    end
+    return nil
+end
+
 local function recoverIfStuck(record, humanoid, root, now)
     if not record.target then
         record.lastProgressPosition = root.Position
@@ -2967,16 +3009,26 @@ local function recoverIfStuck(record, humanoid, root, now)
         return false
     end
 
-    local moved = (root.Position - record.lastProgressPosition).Magnitude
+    local displacement = root.Position - record.lastProgressPosition
+    local target = record.target
+    local toward = Vector3.new(target.X - record.lastProgressPosition.X,
+        0, target.Z - record.lastProgressPosition.Z)
+    local traveled = Vector3.new(displacement.X, 0, displacement.Z)
+    local forward = toward.Magnitude > 0.2
+        and traveled:Dot(toward.Unit) or traveled.Magnitude
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
 
-    if moved >= 1.15 then
+    -- Lateral oscillation around a wall is NOT progress toward the
+    -- selected objective; do not mark a twitching bot as unstuck.
+    if forward >= 0.85 then
         record.stuckCount = 0
         return false
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
+    record.failedTarget = record.target
+    record.failedTargetUntil = now + 7.5
     -- A physical route that cannot make progress must not be selected
     -- again on the next think tick. Release the route reservation so
     -- another NPC may try a different sector; keep normal speed/jump.
@@ -3003,11 +3055,17 @@ local function recoverIfStuck(record, humanoid, root, now)
     record.nextThink = 0
 
     if record.stuckCount >= 2 then
-        local side = root.CFrame.RightVector * ((math.random() < 0.5) and -6 or 6)
-        local recoveryTarget = root.Position + side
-        humanoid:MoveTo(
-            record.inRound and clampToArena(recoveryTarget) or recoveryTarget
-        )
+        -- Find actual collidable ground with a clear horizontal approach,
+        -- rather than repeatedly running into the same visible 3D wall.
+        local recoveryTarget = nearbyRecoveryStep(record, root)
+        if recoveryTarget then
+            record.target = recoveryTarget
+            record.nextThink = now + 1.15
+            record.turnPauseUntil = 0
+            record.lastMoveTarget = nil
+            record.moveDirection = Vector3.zero
+            humanoid:MoveTo(recoveryTarget)
+        end
         record.stuckCount = 0
     end
 
@@ -3808,6 +3866,21 @@ local function stepRecord(record, now)
             end
 
             local target, hold = chooseArenaTarget(record, root, now)
+            -- Temporarily reject the destination that just made the
+            -- NPC oscillate in place. Valid new threats override this.
+            if not urgentTarget and target and record.failedTarget
+                and now < (record.failedTargetUntil or 0)
+                and (Vector3.new(target.X - record.failedTarget.X, 0,
+                    target.Z - record.failedTarget.Z)).Magnitude < 11 then
+                local alternative = nearbyRecoveryStep(record, root)
+                if alternative then
+                    target, hold = alternative, 1.2
+                    record.targetPart = nil
+                    record.targetIsPad = false
+                    record.targetIsSkyrail = false
+                    record.skyrailDirection = nil
+                end
+            end
             record.target = target
             record.nextThink = now + hold * (traits.FollowThrough or 1)
         end
