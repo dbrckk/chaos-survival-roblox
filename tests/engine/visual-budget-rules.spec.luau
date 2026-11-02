@@ -12,6 +12,8 @@ local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 local HarborGantryMotionRules = require("../../src/shared/HarborGantryMotionRules")
+local HarborScenery = require("../../src/server/HarborScenery")
+local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("visual budget rules", function()
     it("moves original Harbor cargo and crane trolleys only inside client LOD limits", function()
@@ -45,6 +47,43 @@ describe("visual budget rules", function()
                 expect(13 - lift >= 10.3 - 0.0001).toBe(true)
             end
         end
+        -- Verify the moving parts belong to actual original, real
+        -- anchored and noncolliding Harbor models, not generated stand-ins.
+        local decor = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(320, 2, 320)
+        local fleet = HarborScenery.build(
+            decor, base, VisualTheme.arena("Harbor"))
+        expect(fleet ~= nil).toBe(true)
+        for _, name in ipairs({
+            "HarborGantryEastNorth", "HarborGantryEastSouth",
+            "HarborGantryWestNorth", "HarborGantryWestSouth",
+        }) do
+            local crane = fleet:FindFirstChild(name)
+            expect(crane ~= nil and crane:IsA("Model")).toBe(true)
+            local movingCount = 0
+            for _, piece in ipairs(crane:GetChildren()) do
+                if piece:IsA("BasePart")
+                    and rules.role(piece.Name, false) ~= nil then
+                    movingCount += 1
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                end
+            end
+            expect(movingCount >= 8).toBe(true)
+        end
+        local vessel = fleet:FindFirstChild("HarborCargoVessel")
+        expect(vessel ~= nil and vessel:IsA("Model")).toBe(true)
+        local radar = vessel:FindFirstChild("RadarBoom")
+        expect(radar ~= nil and rules.role(radar.Name, true) == "radar")
+            .toBe(true)
+        expect(radar.CanCollide).toBe(false)
+        decor:Destroy()
+        base:Destroy()
+
         expect(rules.radarAngle(3, 0)).toBe(0)
         for t = 0, 18, 0.5 do
             expect(math.abs(rules.radarAngle(t, 1))
