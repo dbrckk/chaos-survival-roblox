@@ -2983,7 +2983,6 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
     params.RespectCanCollide = true
-    local bodyOrigin = root.Position + Vector3.new(0, 1.1, 0)
     local function groundAt(candidate)
         local ray = workspace:Raycast(
             candidate + Vector3.new(0, 3, 0),
@@ -2999,26 +2998,42 @@ local function nearbyRecoveryStep(record, root, failedDestination)
         return ray.Position.Y
     end
 
+    -- Only run these rays after a confirmed stall, not on every AI tick.
+    -- The original shoulder-only line missed short barriers and rails
+    -- that block a humanoid's feet or torso. Sample the full body column.
+    local originFloorY = groundAt(root.Position)
+    if not originFloorY then return nil end
+    local clearanceOffsets = {-1.35, 0, 1.1}
     for _, direction in ipairs(directions) do
         local step = direction * 6.5
         local candidate = clampToArena(root.Position + step)
         local actualStep = Vector3.new(candidate.X - root.Position.X,
             0, candidate.Z - root.Position.Z)
         -- Never treat boundary-clamped 0.5-stud twitching as a rescue.
-        if actualStep.Magnitude >= 4.5
-            and not workspace:Raycast(bodyOrigin, actualStep, params)
-        then
-            -- Require support BOTH halfway AND at the end: checking only
-            -- the endpoint sent stuck bots across 6-stud open-air gaps.
-            local midpointY = groundAt(
-                root.Position + actualStep * 0.50)
-            local endpointY = groundAt(candidate)
-            if midpointY and endpointY
-                and AISurvivorRules.recoveryGroundIsContinuous(
-                    root.Position.Y, midpointY, endpointY,
-                    actualStep.Magnitude) then
-                return Vector3.new(
-                    candidate.X, root.Position.Y, candidate.Z)
+        if actualStep.Magnitude >= 4.5 then
+            local blocked = false
+            for _, offset in ipairs(clearanceOffsets) do
+                if workspace:Raycast(
+                    root.Position + Vector3.new(0, offset, 0),
+                    actualStep, params
+                ) then
+                    blocked = true
+                    break
+                end
+            end
+            if not blocked then
+                -- Midpoint AND endpoint need real walkable support; matching
+                -- the measured current floor handles differing rig scales.
+                local midpointY = groundAt(
+                    root.Position + actualStep * 0.50)
+                local endpointY = groundAt(candidate)
+                if midpointY and endpointY
+                    and AISurvivorRules.recoveryGroundIsContinuous(
+                        root.Position.Y, midpointY, endpointY,
+                        actualStep.Magnitude, originFloorY) then
+                    return Vector3.new(
+                        candidate.X, root.Position.Y, candidate.Z)
+                end
             end
         end
     end
