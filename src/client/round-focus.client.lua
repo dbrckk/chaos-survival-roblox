@@ -546,22 +546,25 @@ local function refresh()
             and CoreLocalization.hazardName(localeId, primaryId)
         local redundant = type(name) == "string" and text == name
             and state.finalRush ~= true and state.doubleChaos ~= true
+        -- On real Android shots players saw only "ÉCLATS 0/2" (a
+        -- BONUS), with no readable persistent core goal. Replace only
+        -- the redundant third-pip hazard NAME with the true survival
+        -- objective. Keep special wave/fusion/final-rush instructions.
+        if redundant then
+            status.Text = CoreLocalization.text(
+                localeId, "SURVIVE_SECONDS",
+                math.max(0, math.floor(tonumber(state.seconds) or 0)))
+            status.TextColor3 = UITheme.Colors.Text
+        end
         if redundant ~= mobileStatusCollapsed then
             mobileStatusCollapsed = redundant
-            status.Visible = not redundant
-            if not redundant then
-                applyResponsiveLayout()
-                if rookieCompactMode then
-                    challenge.Position = UDim2.fromScale(0.025, 0.12)
-                    challenge.Size = UDim2.fromScale(0.46, 0.43)
-                    status.Size = UDim2.fromScale(0.46, 0.43)
-                end
+            status.Visible = true
+            applyResponsiveLayout()
+            if rookieCompactMode then
+                challenge.Position = UDim2.fromScale(0.025, 0.12)
+                challenge.Size = UDim2.fromScale(0.46, 0.43)
+                status.Size = UDim2.fromScale(0.46, 0.43)
             end
-        end
-        if redundant then
-            challenge.Size = UDim2.fromScale(
-                rookieCompactMode and 0.95 or 0.65, 0.43
-            )
         end
     end
 
