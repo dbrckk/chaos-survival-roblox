@@ -50,8 +50,9 @@ local function exteriorAnchors(decor, base, variant)
     }
     local prefix = sourcePrefixes[variant]
     if prefix then
-        for i = 1, variant == "Orbital" and 7 or 4,
-            variant == "Orbital" and 2 or 1 do
+        local finalIndex = variant == "Orbital" and 7 or 4
+        local increment = variant == "Orbital" and 2 or 1
+        for i = 1, finalIndex, increment do
             local source = decor:FindFirstChild(prefix .. i)
             if source and source:IsA("BasePart") then
                 result[#result + 1] = source.Position
