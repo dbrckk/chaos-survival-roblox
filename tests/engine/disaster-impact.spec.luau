@@ -504,6 +504,19 @@ describe("Disaster impact", function()
             expect(dome.Size).toBe(Vector3.new(26, 48, 48))
             expect(dome.Shape).toBe(Enum.PartType.Cylinder)
             expect(dome.Transparency).toBe(1)
+            -- Shield readability is authored from an actual 24-stud
+            -- radius. Eight thin inactive boundary segments don't hide
+            -- the real meteor/bomb warnings on the gameplay floor.
+            local crown = station:FindFirstChild("ActiveFieldCrown")
+            expect(crown.Size).toBe(Vector3.new(0.2, 8, 8))
+            for sector = 1, 8 do
+                local segment = station:FindFirstChild(
+                    "ShieldPerimeter" .. sector)
+                expect(segment ~= nil and segment:IsA("BasePart")).toBe(true)
+                expect(segment.Transparency).toBe(1)
+                expect(segment.CanCollide).toBe(false)
+                expect(segment.CanQuery).toBe(false)
+            end
             expect(station:GetAttribute("ShieldAbsorbedDamage")).toBe(0)
             expect(station:GetAttribute("ShieldProtections")).toBe(0)
             expect(station:GetAttribute("ShieldActivatedByBot")).toBe(false)
