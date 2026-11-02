@@ -1,13 +1,13 @@
-name: One-Time Mobile Core-A Baseline Repair Engine Gate (2026-11-02)
+name: One-Time Five-Suite Final Android QA Gate (2026-11-02)
 
-# Exact-source release gate for the five-world daylight, bot anti-stuck
-# and platform-hardware candidate. Previous SHA 77b93dc2b13e576858933a92c703c86bc41cc8df
-# successfully BUILT but failed 3 purely outdated deterministic core_a
-# assertions (engine run 41434824447), all explicitly identified:
-# 68 vs 72 ready-phase High touch nameplate, actual light attenuation
-# Low .62 / Medium .70 / High .78 vs previous Low .58 / .66 / .74.
-# All gameplay source stays unchanged. Verify full five real suites
-# and Build on THIS newly merged SHA, no public Roblox publish.
+# Exactly four of five suites are completely GREEN on main 61feb0e870bc97f476d2d27b6f473cf9b0952c3c
+# (run 41435628808): gameplay 351/351, matrix 2/2, core_a 354/354,
+# core_b1 105/105. core_b2 had 227/228 assertions green; its single
+# failure is a stale pre-change expectation in vfx-quality.spec.luau.
+# Update that LAST source-of-truth Low/Medium/High Neon and PointLight
+# baseline only; gameplay, AI, lighting, routes and physics UNCHANGED.
+# Re-certify all five real engine suites and Build on the new main SHA.
+# The only last published game SHA is older a3e414be. DO NOT PUBLISH.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.
