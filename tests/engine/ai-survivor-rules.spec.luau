@@ -11,6 +11,17 @@ local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 describe("AI survivor rules", function()
     it("selects only stable neighboring decks when a high route warns of collapse", function()
+        -- An actual impact/sweep has priority over holding on a
+        -- doomed platform, even when there is no adjacent escape deck.
+        local fallback = AISurvivorRules.collapseFallbackTarget
+        local current = Vector3.new(3, 18, 9)
+        local urgent = Vector3.new(12, 18, 9)
+        expect(fallback(urgent, true, current)).toBe(urgent)
+        expect(fallback(urgent, false, current)).toBe(urgent)
+        expect(fallback(nil, true, current)).toBe(current)
+        expect(fallback(nil, false, current)).toBe(nil)
+        expect(fallback(nil, true, nil)).toBe(nil)
+
         local eligible = AISurvivorRules.safeCollapseNeighbor
         local frame = function(entry)
             return CFrame.new(entry.offset)
