@@ -857,6 +857,18 @@ function AISurvivorRules.neighboringPhysicalDeck(
         - reach(nextFrame, nextSize) <= 3.05
 end
 
+-- When a high, real platform announces a collapse, bot escape must
+-- move to an AVAILABLE, physically adjacent deck rather than running
+-- toward the arena's distant centre through empty air. This shared
+-- predicate is deterministic and exercised in the Roblox engine.
+function AISurvivorRules.safeCollapseNeighbor(
+    threatenedFrame, threatenedSize,
+    candidateFrame, candidateSize, available)
+    return available == true and AISurvivorRules.neighboringPhysicalDeck(
+        threatenedFrame, threatenedSize, candidateFrame, candidateSize
+    )
+end
+
 function AISurvivorRules.skyGapJumpReady(
     grounded, heightAboveBase, horizontalDistance,
     originFloorY, gapIsSupported, landingFloorY)
