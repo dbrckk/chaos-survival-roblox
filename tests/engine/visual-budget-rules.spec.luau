@@ -11,8 +11,86 @@ local DisasterBoundaryClimaxKit = require("../../src/client/DisasterBoundaryClim
 local LocomotionGroundFx = require("../../src/client/LocomotionGroundFx")
 local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit")
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
+local HarborGantryMotionRules = require("../../src/shared/HarborGantryMotionRules")
+local HarborScenery = require("../../src/server/HarborScenery")
+local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("visual budget rules", function()
+    it("moves original Harbor cargo and crane trolleys only inside client LOD limits", function()
+        local rules = HarborGantryMotionRules
+        expect(rules.profile("Low", false).Count).toBe(0)
+        expect(rules.profile("Medium", false).Count).toBe(2)
+        expect(rules.profile("High", false).Count).toBe(4)
+        expect(rules.profile("High", true).Count).toBe(0)
+        expect(rules.profile("Medium", false).Interval >= 0.20).toBe(true)
+        expect(rules.role("TrolleyCabin", false)).toBe("trolley")
+        expect(rules.role("CabinWindow", false)).toBe("trolley")
+        expect(rules.role("TrolleyDriveHousing", false)).toBe("trolley")
+        expect(rules.role("HoistCable", false)).toBe("cable")
+        expect(rules.role("CargoSpreader", false)).toBe("load")
+        expect(rules.role("CargoSling-1", false)).toBe("load")
+        expect(rules.role("ContainerRib-1", false)).toBe("load")
+        expect(rules.role("CableDrum", false)).toBe("load")
+        expect(rules.role("DrumArmorPlate1", false)).toBe("load")
+        expect(rules.role("MainCrossgirder", false)).toBe(nil)
+        expect(rules.role("RadarBoom", true)).toBe("radar")
+        expect(rules.role("RadarBoom", false)).toBe(nil)
+        for slot = 1, 4 do
+            local restingTravel, restingLift = rules.pose(9, slot, 0)
+            expect(restingTravel).toBe(0)
+            expect(restingLift).toBe(0)
+            for t = 0, 18, 0.5 do
+                local travel, lift = rules.pose(t, slot, 1)
+                expect(math.abs(travel) <= 4.7 + 0.0001).toBe(true)
+                expect(lift >= 0 and lift <= 2.7 + 0.0001).toBe(true)
+                -- Original 13-stud hoist cable can never invert/collapse.
+                expect(13 - lift >= 10.3 - 0.0001).toBe(true)
+            end
+        end
+        -- Verify the moving parts belong to actual original, real
+        -- anchored and noncolliding Harbor models, not generated stand-ins.
+        local decor = Instance.new("Folder")
+        local base = Instance.new("Part")
+        base.Size = Vector3.new(320, 2, 320)
+        local fleet = HarborScenery.build(
+            decor, base, VisualTheme.arena("Harbor"))
+        expect(fleet ~= nil).toBe(true)
+        for _, name in ipairs({
+            "HarborGantryEastNorth", "HarborGantryEastSouth",
+            "HarborGantryWestNorth", "HarborGantryWestSouth",
+        }) do
+            local crane = fleet:FindFirstChild(name)
+            expect(crane ~= nil and crane:IsA("Model")).toBe(true)
+            local movingCount = 0
+            for _, piece in ipairs(crane:GetChildren()) do
+                if piece:IsA("BasePart")
+                    and rules.role(piece.Name, false) ~= nil then
+                    movingCount += 1
+                    expect(piece.Anchored).toBe(true)
+                    expect(piece.CanCollide).toBe(false)
+                    expect(piece.CanTouch).toBe(false)
+                    expect(piece.CanQuery).toBe(false)
+                    expect(piece.CastShadow).toBe(false)
+                end
+            end
+            expect(movingCount >= 8).toBe(true)
+        end
+        local vessel = fleet:FindFirstChild("HarborCargoVessel")
+        expect(vessel ~= nil and vessel:IsA("Model")).toBe(true)
+        local radar = vessel:FindFirstChild("RadarBoom")
+        expect(radar ~= nil and rules.role(radar.Name, true) == "radar")
+            .toBe(true)
+        expect(radar.CanCollide).toBe(false)
+        decor:Destroy()
+        base:Destroy()
+
+        expect(rules.radarAngle(3, 0)).toBe(0)
+        for t = 0, 18, 0.5 do
+            expect(math.abs(rules.radarAngle(t, 1))
+                <= math.rad(58) + 0.0001).toBe(true)
+        end
+    end)
+
     it("spreads a diagnostic census over frames without changing exact counts", function()
         local root = Instance.new("Folder")
         local folder = Instance.new("Folder")
