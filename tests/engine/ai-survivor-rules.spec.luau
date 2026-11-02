@@ -10,6 +10,65 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 describe("AI survivor rules", function()
+    it("keeps elevated AI on adjacent real 3D sky landings in five arenas", function()
+        local adjacent = AISurvivorRules.neighboringPhysicalDeck
+        local function frame(def)
+            return CFrame.new(def.offset)
+        end
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local definition = ArenaVariants.get(variantId)
+            local promenades = definition.PromenadePlatforms
+            local spine = definition.SkySpinePlatforms
+            expect(#promenades).toBe(16)
+            expect(#spine).toBe(10)
+            for startIndex = 1, 16 do
+                -- There are two separate eight-deck parallel lanes:
+                -- adjacent step centers have 2.4-stud real jump gaps.
+                if startIndex % 8 ~= 0 then
+                    local current = promenades[startIndex]
+                    local nextDeck = promenades[startIndex + 1]
+                    expect(adjacent(frame(current), current.size,
+                        frame(nextDeck), nextDeck.size)).toBe(true)
+                end
+            end
+            for index = 1, 9 do
+                local current, nextDeck = spine[index], spine[index + 1]
+                expect(adjacent(frame(current), current.size,
+                    frame(nextDeck), nextDeck.size)).toBe(true)
+            end
+            -- Do not treat two jumps worth of empty sky as one.
+            local a, c = promenades[2], promenades[4]
+            expect(adjacent(frame(a), a.size,
+                frame(c), c.size)).toBe(false)
+            -- H-shaped walkway: the transverse spine physically
+            -- joins the center of the original north/south routes.
+            expect(adjacent(frame(promenades[4]), promenades[4].size,
+                frame(spine[1]), spine[1].size)).toBe(true)
+            expect(adjacent(frame(spine[10]), spine[10].size,
+                frame(promenades[12]), promenades[12].size)).toBe(true)
+            -- All four elevation-graded ascent sequences remain
+            -- compatible with standard real R15 jumps.
+            for route = 1, 4 do
+                local first = (route - 1) * ArenaVariants.PerimeterSteps
+                for step = 1, ArenaVariants.PerimeterSteps - 1 do
+                    local lower = definition.PerimeterPlatforms[first + step]
+                    local upper = definition.PerimeterPlatforms[first + step + 1]
+                    expect(adjacent(frame(lower), lower.size,
+                        frame(upper), upper.size)).toBe(true)
+                end
+            end
+        end
+        local left = CFrame.new(0, 14, 0)
+        local right = CFrame.new(24.4, 14, 0)
+        local size = Vector3.new(22, 2, 12)
+        expect(adjacent(left, size, right, size)).toBe(true)
+        expect(adjacent(left, size, CFrame.new(34, 14, 0), size))
+            .toBe(false)
+        expect(adjacent(left, size, CFrame.new(24.4, 23, 0), size))
+            .toBe(false)
+        expect(adjacent(nil, size, right, size)).toBe(false)
+    end)
+
     it("loads the runtime AI survivor service contract in Roblox", function()
         expect(type(AISurvivorService)).toBe("table")
         expect(type(AISurvivorService.start)).toBe("function")
