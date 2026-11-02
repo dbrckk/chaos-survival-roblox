@@ -132,14 +132,16 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
                 * CFrame.Angles(math.rad(side * 16), 0, 0),
             alloy)
     end
-    structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, 18.4),
-        CFrame.new(0, 13.25, 0), alloy)
+    local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
+    local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
+    structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, crownSpan),
+        CFrame.new(0, crownHeight, 0), alloy)
     structure("UnderdeckTruss", Vector3.new(5.6, 1.7, 11.0),
         CFrame.new(0, -1.3, 0), steel, Enum.Material.Metal)
     -- The equipment is above the structural crosshead, or outside
     -- the deck edges. Nothing presents a fake playable upper surface.
     count += variantEquipment(decor, platform, index,
-        variant, theme, height + 13.25)
+        variant, theme, height + crownHeight)
     assert(count <= 9, "Monumental promenade arch exceeded part budget")
     return count
 end
