@@ -69,6 +69,16 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
             color, mat, kind, transparency, navigation)
     end
 
+    -- The overhead beam grows from ACCESS to SUMMIT. All load-bearing
+    -- supports must physically meet its underside: late-stage crowns
+    -- previously hovered as much as 1.45 studs above their pylons.
+    -- Adjust existing parts only (no extra draw calls or mobile geometry).
+    local overpassRise = stage == "SUMMIT" and 14.0
+        or (stage == "TRANSFER" and 12.9 or 12.1)
+    local overpassHeight = stage == "SUMMIT" and 1.9 or 1.3
+    local pylonHeight = overpassRise - overpassHeight * 0.5 + 0.42
+    local powerRibHeight = math.max(6.4, pylonHeight - 4.4)
+
     -- Genuine architectural depth, not another neon-outline cube. Deep
     -- external paired abutments and bottom trusses read from ground level.
     for side = -1, 1, 2 do
@@ -77,17 +87,20 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
             CFrame.new(0, -top - 1.65, side * (half + 1.0)),
             roof, material)
         add("VerticalBridgePylon" .. side,
-            Vector3.new(1.3, 11.6, 1.6),
-            CFrame.new(0, top + 5.8, side * (half + 1.55)),
+            Vector3.new(1.3, pylonHeight, 1.6),
+            CFrame.new(0, top + pylonHeight * 0.5,
+                side * (half + 1.55)),
             metal, material)
         add("TaperedFin" .. side,
             Vector3.new(2.2, 4.1, 2.1),
-            CFrame.new(0, top + 9.8, side * (half + 1.55))
+            CFrame.new(0, top + pylonHeight - 1.8,
+                side * (half + 1.55))
                 * CFrame.Angles(0, 0, math.rad(side * 19)),
             roof, material, "WedgePart")
         add("DirectionalPowerRib" .. side,
-            Vector3.new(0.29, 7.1, 0.28),
-            CFrame.new(outward * 0.76, top + 6.2,
+            Vector3.new(0.29, powerRibHeight, 0.28),
+            CFrame.new(outward * 0.76,
+                top + pylonHeight - powerRibHeight * 0.5 - 0.4,
                 side * (half + 1.57)),
             accent, Enum.Material.Neon, nil, 0.44, true)
     end
@@ -106,16 +119,15 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     -- from the arena floor without more text, neon or additional instances.
     local overpassWidth = stage == "SUMMIT" and 4.6
         or (stage == "TRANSFER" and 3.5 or 2.8)
-    local overpassRise = stage == "SUMMIT" and 14.0
-        or (stage == "TRANSFER" and 12.9 or 12.1)
     add("MonumentalOverpass",
-        Vector3.new(overpassWidth, stage == "SUMMIT" and 1.9 or 1.3,
+        Vector3.new(overpassWidth, overpassHeight,
             deck.Size.Z + (stage == "SUMMIT" and 9.0 or 6.6)),
         CFrame.new(0, top + overpassRise, 0),
         roof, material)
     add("RouteStageBeacon",
         Vector3.new(0.48, 0.58, math.max(3.0, deck.Size.Z * 0.55)),
-        CFrame.new(outward * 1.45, top + 11.75, 0),
+        CFrame.new(outward * 1.45,
+            top + overpassRise - overpassHeight * 0.5 - 0.20, 0),
         accent, Enum.Material.Neon, nil, 0.28, true)
     add("RecessedCentralGirder",
         Vector3.new(math.max(3.0, width - 1.2), 0.7, 1.15),
