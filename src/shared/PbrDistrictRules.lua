@@ -91,6 +91,20 @@ function PbrDistrictRules.isPremiumArchitecturalOwner(owner)
             and (parent.Name == "Arena" or parent.Name == "Lobby")
     end
     if owner:IsA("Model")
+        and owner:GetAttribute("OriginalExteriorRetrofit") == true
+        and owner:GetAttribute("SourceIsOriginal") == true
+        and owner:GetAttribute("CosmeticOnly") == true then
+        local fleet = owner.Parent
+        local decor = fleet and fleet.Parent
+        local arena = decor and decor.Parent
+        return fleet ~= nil and fleet:IsA("Folder")
+            and fleet.Name == "OriginalExteriorRetrofits"
+            and decor ~= nil and decor.Name == "Decor"
+            and decor:GetAttribute("PremiumSurfaceSkinSource") == true
+            and arena ~= nil and arena.Name == "Arena"
+            and arena.Parent == map
+    end
+    if owner:IsA("Model")
         and owner:GetAttribute("OriginalFrameCladding") == true
         and owner:GetAttribute("SourceIsOriginal") == true
         and owner:GetAttribute("CosmeticOnly") == true then
@@ -266,6 +280,10 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         or not PbrDistrictRules.visible(part) then
         return false
     end
+    -- The candidate's owner must be bound BEFORE the premium provenance
+    -- check. The previous global 'owner' was nil, disabling this restriction
+    -- and permitting unrelated thin decorative metal to enter the PBR pool.
+    local owner = part.Parent
     -- The arena Decor folder is a broad PBR candidate index; select ONLY
     -- the exact original floor/deck structures explicitly tagged by builder.
     -- No hazard part or player-accessible collider may be retextured.
@@ -282,6 +300,13 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
                 and not name:match("^PlatformUnderFrame%d+$") then
                 return false
             end
+        elseif owner:GetAttribute("OriginalExteriorRetrofit") == true then
+            -- Only original metallic shell plates, never signals, decal
+            -- geometry or imported meshes.
+            if not part:IsA("Part")
+                or part:GetAttribute("OriginalRetrofitPbrSurface") ~= true then
+                return false
+            end
         elseif part:IsA("MeshPart") then
             return false
         end
@@ -289,7 +314,6 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
     -- Never retexture the source geometry of an imported package, even
     -- if it has no SurfaceAppearance. Only locally authored and explicitly
     -- tagged structural foundations inside approved packages qualify.
-    local owner = part.Parent
     if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
         -- The dedicated hero owner can include concrete, timber, glass,
         -- lights and metallic components. Only the locally tagged
