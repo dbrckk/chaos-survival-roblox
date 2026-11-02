@@ -1646,6 +1646,27 @@ local function addPlatformFinish(decor, platform, index, theme)
         )
     end
 
+    -- Encode ACTUAL playable sky routes into the landing surface rather
+    -- than more floating signs or neon floor strips. Two promenade lanes
+    -- use different muted tints; the transverse Sky Spine has a coherent
+    -- third finish. All stay part-owned, hazard-neutral and zero-cost in
+    -- geometry or additional lights.
+    local promenadeLane = tonumber(platform:GetAttribute("PromenadeLane"))
+    local skySpineStep = tonumber(platform:GetAttribute("SkySpineStep"))
+    local perimeterStep = tonumber(platform:GetAttribute("PerimeterStep"))
+    if promenadeLane == 1 or promenadeLane == 2 then
+        topPanel.Color = theme.Surface:Lerp(theme.Detail, 0.55)
+            :Lerp(promenadeLane == 1 and theme.Accent or theme.Secondary, 0.14)
+    elseif skySpineStep then
+        topPanel.Color = theme.Surface:Lerp(theme.Detail, 0.58)
+            :Lerp(theme.Secondary, 0.10)
+    elseif perimeterStep then
+        topPanel.Color = topPanel.Color:Lerp(
+            perimeterStep == 8 and theme.Accent or theme.Secondary,
+            perimeterStep == 8 and 0.13 or 0.06
+        )
+    end
+
     -- Four separate, shallow edge chamfers give the deck a deliberate
     -- machined silhouette instead of the default square Roblox slab.
     -- They sit OUTSIDE the walkable top surface, below foot level,
