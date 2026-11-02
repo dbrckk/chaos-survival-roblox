@@ -6,7 +6,7 @@
 local SkyRouteMonuments = {}
 
 SkyRouteMonuments.Steps = {[1] = "ACCESS", [4] = "TRANSFER", [8] = "SUMMIT"}
-SkyRouteMonuments.MaxPartsPerMonument = 16
+SkyRouteMonuments.MaxPartsPerMonument = 17
 
 local function piece(decor, deck, index, role, name, size, offset,
         color, material, kind, transparency, navigation)
@@ -91,6 +91,14 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
                 side * (half + 1.57)),
             accent, Enum.Material.Neon, nil, 0.44, true)
     end
+    -- Reinforce the physical route silhouette without adding collision or
+    -- dynamic effects. The underside truss makes tall platforms look
+    -- engineered rather than like thin floating slabs.
+    add("LoadBearingKeel",
+        Vector3.new(math.max(3, width - 1), 1.25, 0.9),
+        CFrame.new(0, -top - 1.45, 0),
+        metal, material)
+
     -- A continuous silhouette above the route, completely clear of the
     -- avatar's jump height. The 3D band means "this is a real route" from
     -- across a whole district without another huge floating text label.
