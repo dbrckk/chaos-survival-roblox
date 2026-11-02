@@ -173,6 +173,16 @@ describe("AI survivor rules", function()
         expect(#directions(start, start, 1)).toBe(0)
         expect(#directions(nil, goal, 1)).toBe(0)
 
+        -- Consecutive stalls must alternate detour directions even after
+        -- a short successful lateral move reset the ordinary stall count.
+        local nextAttempt = AISurvivorRules.nextRecoveryAttempt
+        expect(nextAttempt(0, 1, 2)).toBe(1)
+        expect(nextAttempt(1, 2, 3)).toBe(2)
+        expect(nextAttempt(7, 3, 4)).toBe(8)
+        expect(nextAttempt(8, 4, 5)).toBe(1)
+        expect(nextAttempt(3, 1, 15)).toBe(1)
+        expect(nextAttempt(3, 15, 14)).toBe(1)
+
         local supported = AISurvivorRules.recoveryGroundIsContinuous
         -- Root 2.7 studs above actual floor; halfway + endpoint MUST
         -- both be supported at the SAME accessible height.
