@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-02 — Android screenshots: genuine gameplay readability repair (source only)
+
+- **Captured reproducible user-visible issue:** actual published Sky Spine signs displayed `\\n` literally. All three server label strings use real Luau newline escapes; smaller 3D sign sizes and closer culling stop overhead floating text from engulfing the center of Android landscape views.
+- **Gameplay-first mobile visual hierarchy:** reduce AI overhead name range, distant Team Dash and Storm Shield floating panels, move optional FLUX progress to a compact left lane with proximity-based discovery, and fade ONLY decorative neon while explicitly preserving jumpway edges, route arrows and actual danger warnings. Real dash/bridge/hazard/bot logic unchanged.
+- Existing Cloud engine specs updated to reject broken Sky Spine labels and test mobile FLUX camera-space layout. The previous [published SHA `a3e414be`](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41428449036) **does not contain these corrections**. [Physical Android screenshot evidence and full regression criteria](docs/ANDROID_GAMEPLAY_CAPTURE_LEGIBILITY_2026-11-02.md).
+
+
 ## 2026-11-02 — Full-scale 200+ stud Sky Spine with real cooperative rescue switchboards (source only)
 
 - **Third fully playable 200–248-stud elevated 3D crossing on ALL five worlds**: ten new genuine 12-stud-wide server collision decks with 2.4-stud standard jumps, creating an H-shaped platforming network physically joining both existing sky promenades. No renumbered legacy platforms; Harbor 127–136 append after its historic 126 decks. All ten decks permanently survive random platform collapse.
