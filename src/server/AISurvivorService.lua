@@ -2030,6 +2030,26 @@ local function socialArenaTarget(record, root, traits, now)
     local groundTopY = arenaGround
         and (arenaGround.Position.Y + arenaGround.Size.Y * 0.5)
         or config.ArenaCenter.Y + 1
+    if root.Position.Y > groundTopY + 8 then
+        -- Social urges must not override lost-footing safety: if the
+        -- current roof vanished, chasing a teammate would walk the
+        -- NPC farther into empty air. This ray runs only on an actual
+        -- social decision, not on every brain tick.
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {record.model}
+        params.RespectCanCollide = true
+        local floor = workspace:Raycast(
+            root.Position + Vector3.new(0, 1, 0),
+            Vector3.new(0, -7.5, 0), params
+        )
+        if not floor or floor.Normal.Y < 0.78
+            or not floor.Instance or not floor.Instance.CanCollide
+            or not AISurvivorRules.platformAvailable(
+                floor.Instance.CanCollide, floor.Instance.Transparency,
+                floor.Instance:GetAttribute("CollapsePhase")
+            ) then return nil end
+    end
     for _, player in ipairs(Players:GetPlayers()) do
         local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
