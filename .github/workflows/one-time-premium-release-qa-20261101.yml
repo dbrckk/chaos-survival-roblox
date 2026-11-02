@@ -1,13 +1,15 @@
-name: One-Time Five-Suite Final Android QA Gate (2026-11-02)
+name: One-Time Physical Bot Navigation + Android Lighting Gate (2026-11-02)
 
-# Exactly four of five suites are completely GREEN on main 61feb0e870bc97f476d2d27b6f473cf9b0952c3c
-# (run 41435628808): gameplay 351/351, matrix 2/2, core_a 354/354,
-# core_b1 105/105. core_b2 had 227/228 assertions green; its single
-# failure is a stale pre-change expectation in vfx-quality.spec.luau.
-# Update that LAST source-of-truth Low/Medium/High Neon and PointLight
-# baseline only; gameplay, AI, lighting, routes and physics UNCHANGED.
-# Re-certify all five real engine suites and Build on the new main SHA.
-# The only last published game SHA is older a3e414be. DO NOT PUBLISH.
+# One deliberate major source integration: genuine grounded NPC stall
+# recovery using real collision and midpoint/end floor raycasts, stable
+# failed-target memory, less unnatural in-round jumping, and the reviewed
+# Android real-world floor-fill repair #548. The previous exact-green main
+# dbe193694a560c86a78a570b9bcb91e64a35526c predates these changes.
+# Run ONE fresh build and ALL five engine shards on the same merged SHA.
+# User screenshot QA/actual Roblox publishing remain separate milestones:
+# this workflow NEVER modifies the existing public Roblox experience.
+# It triggers only if this workflow path is changed AND the special
+# explicitly titled source merge reaches the exact main branch HEAD.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.

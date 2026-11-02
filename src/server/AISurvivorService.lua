@@ -911,6 +911,12 @@ local function sendToLobby(record)
     record.targetIsPad = false
     record.targetIsSkyrail = false
     record.skyrailDirection = nil
+    record.lastProgressPosition = nil
+    record.lastProgressTarget = nil
+    record.lastProgressAt = 0
+    record.stuckCount = 0
+    record.failedTarget = nil
+    record.failedTargetUntil = 0
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -969,6 +975,14 @@ local function sendToArena(record)
     record.model:SetAttribute("DistrictRouteCompleted", false)
     record.model:SetAttribute("DistrictRouteStep", 0)
     record.nextSkyrailAt = 0
+    record.lastProgressPosition = nil
+    record.lastProgressTarget = nil
+    record.lastProgressAt = 0
+    record.stuckCount = 0
+    record.failedTarget = nil
+    record.failedTargetUntil = 0
+    record.model:SetAttribute("BotStallRecoveryCount", 0)
+    record.model:SetAttribute("BotRecoveryRouteFound", nil)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -2958,31 +2972,51 @@ end
 -- A stranded bot must not endlessly retry the exact same piece of
 -- machinery or walk into a wall. Test physical clearance and support only
 -- after genuinely failing to advance; there is no extra per-frame raycast.
-local function nearbyRecoveryStep(record, root)
-    local directions = {
-        root.CFrame.RightVector, -root.CFrame.RightVector,
-        -root.CFrame.LookVector, root.CFrame.LookVector,
-        Vector3.new(1, 0, 1), Vector3.new(-1, 0, -1),
-        Vector3.new(1, 0, -1), Vector3.new(-1, 0, 1),
-    }
+local function nearbyRecoveryStep(record, root, failedDestination)
+    -- Check the REAL intended route, not the NPC's potentially rotated
+    -- RightVector: that used to send several stuck bots into the same wall.
+    local directions = AISurvivorRules.recoveryDirections(
+        root.Position, failedDestination or record.failedTarget
+            or (root.Position + root.CFrame.LookVector * 8),
+        (record.slot or 1) + (record.stuckCount or 0))
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
-    for _, dir in ipairs(directions) do
-        local flat = Vector3.new(dir.X, 0, dir.Z)
-        if flat.Magnitude > 0.1 then
-            local step = flat.Unit * 6.5
-            local origin = root.Position + Vector3.new(0, 1.25, 0)
-            local obstruction = workspace:Raycast(origin, step, params)
-            local candidate = clampToArena(root.Position + step)
-            local ground = workspace:Raycast(
-                candidate + Vector3.new(0, 3, 0),
-                Vector3.new(0, -9, 0), params)
-            if not obstruction and ground
-                and ground.Instance and ground.Instance.CanCollide
-                and ground.Normal.Y > 0.70
-                and math.abs(ground.Position.Y - (root.Position.Y - 2.7))
-                    < 5.5 then
+    params.RespectCanCollide = true
+    local bodyOrigin = root.Position + Vector3.new(0, 1.1, 0)
+    local function groundAt(candidate)
+        local ray = workspace:Raycast(
+            candidate + Vector3.new(0, 3, 0),
+            Vector3.new(0, -9, 0), params)
+        if not ray or not ray.Instance or not ray.Instance.CanCollide
+            or ray.Normal.Y < 0.78 then return nil end
+        -- A visually present deck can be blinking out under a bot.
+        if not AISurvivorRules.platformAvailable(
+            ray.Instance.CanCollide,
+            ray.Instance.Transparency,
+            ray.Instance:GetAttribute("CollapsePhase")
+        ) then return nil end
+        return ray.Position.Y
+    end
+
+    for _, direction in ipairs(directions) do
+        local step = direction * 6.5
+        local candidate = clampToArena(root.Position + step)
+        local actualStep = Vector3.new(candidate.X - root.Position.X,
+            0, candidate.Z - root.Position.Z)
+        -- Never treat boundary-clamped 0.5-stud twitching as a rescue.
+        if actualStep.Magnitude >= 4.5
+            and not workspace:Raycast(bodyOrigin, actualStep, params)
+        then
+            -- Require support BOTH halfway AND at the end: checking only
+            -- the endpoint sent stuck bots across 6-stud open-air gaps.
+            local midpointY = groundAt(
+                root.Position + actualStep * 0.50)
+            local endpointY = groundAt(candidate)
+            if midpointY and endpointY
+                and AISurvivorRules.recoveryGroundIsContinuous(
+                    root.Position.Y, midpointY, endpointY,
+                    actualStep.Magnitude) then
                 return Vector3.new(
                     candidate.X, root.Position.Y, candidate.Z)
             end
@@ -2992,44 +3026,70 @@ local function nearbyRecoveryStep(record, root)
 end
 
 local function recoverIfStuck(record, humanoid, root, now)
-    if not record.target then
+    local goal = record.target
+    if typeof(goal) ~= "Vector3" then
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = nil
+        record.lastProgressAt = now
+        -- Do NOT clear the failure quarantine here. The old reset
+        -- erased stuckCount immediately after abandoning a failed goal,
+        -- so its >= 2 physical recovery branch was effectively dead.
+        return false
+    end
+    if not record.lastProgressPosition
+        or typeof(record.lastProgressTarget) ~= "Vector3"
+        or (goal - record.lastProgressTarget).Magnitude > 5 then
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = goal
+        record.lastProgressAt = now
+        return false
+    end
+    -- Deliberate pauses, grounded prompt-holds, airborne jumps and
+    -- turn animations must NEVER be interpreted as failed navigation.
+    local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
+    local walking = now >= (record.turnPauseUntil or 0)
+        and now >= (record.idleUntil or 0)
+        and (Vector3.new(goal.X - root.Position.X, 0,
+            goal.Z - root.Position.Z)).Magnitude > 3.5
+    if not grounded or not walking then
         record.lastProgressPosition = root.Position
         record.lastProgressAt = now
-        record.stuckCount = 0
         return false
     end
-
-    if not record.lastProgressPosition then
-        record.lastProgressPosition = root.Position
-        record.lastProgressAt = now
-        return false
-    end
-
-    if now - (record.lastProgressAt or 0) < 1.15 then
-        return false
-    end
-
-    local forward = AISurvivorRules.forwardTravel(
-        record.lastProgressPosition, root.Position, record.target)
+    local elapsed = now - (record.lastProgressAt or now)
+    if elapsed < 1.15 then return false end
+    local isStalled = AISurvivorRules.isGenuineStall(
+        record.lastProgressPosition, root.Position,
+        goal, elapsed, grounded, walking)
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
-
-    -- Lateral oscillation around a wall is NOT progress toward the
-    -- selected objective; do not mark a twitching bot as unstuck.
-    if forward >= 0.85 then
+    if not isStalled then
         record.stuckCount = 0
         return false
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
-    record.failedTarget = record.target
+    record.failedTarget = goal
     record.failedTargetUntil = now + 7.5
-    -- A physical route that cannot make progress must not be selected
-    -- again on the next think tick. Release the route reservation so
-    -- another NPC may try a different sector; keep normal speed/jump.
+    -- Physical stations and expedition reservations cannot be held by
+    -- an NPC walking into a wall. Release ALL claims before detouring.
+    if record.assistShield then
+        ArenaSkyShieldNetwork.releaseBot(record.model)
+        record.assistShield = nil
+        record.shieldHoldAt = nil
+        record.nextShieldAt = now + 4
+    end
+    if record.assistRelay then
+        TeamDashRelay.releaseBot(record.model)
+        record.assistRelay = nil
+        record.assistHoldAt = nil
+        record.nextAssistAt = now + 4
+    end
+    record.spineControl = nil
+    record.spineHoldAt = nil
     if record.districtTraverse then
         record.districtTraverse = nil
-        record.nextDistrictTraverseAt = now + 10
+        record.nextDistrictTraverseAt = now + 9
         if record.model then
             record.model:SetAttribute("DistrictRouteStep", 0)
         end
@@ -3039,31 +3099,39 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.signalInterestUntil = 0
         record.nextSignalInterestAt = now + 6
     end
-    if humanoid.FloorMaterial ~= Enum.Material.Air
-        and now >= (record.nextRouteJumpAt or 0) then
-        humanoid.Jump = true
-        record.nextRouteJumpAt = now + 0.8
-    end
-    record.target = nil
+    -- React on the FIRST confirmed 1.15s stall. Repeated failures rotate
+    -- which SIDE is tried first, but every step needs real body clearance
+    -- plus floor at the midpoint and endpoint. Never PivotTo / warp.
+    local recovery = nearbyRecoveryStep(
+        record, root, goal)
     record.targetPart = nil
     record.targetIsPad = false
-    record.nextThink = 0
-
-    if record.stuckCount >= 2 then
-        -- Find actual collidable ground with a clear horizontal approach,
-        -- rather than repeatedly running into the same visible 3D wall.
-        local recoveryTarget = nearbyRecoveryStep(record, root)
-        if recoveryTarget then
-            record.target = recoveryTarget
-            record.nextThink = now + 1.15
-            record.turnPauseUntil = 0
-            record.lastMoveTarget = nil
-            record.moveDirection = Vector3.zero
-            humanoid:MoveTo(recoveryTarget)
-        end
-        record.stuckCount = 0
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
+    record.turnPauseUntil = 0
+    record.idleUntil = 0
+    record.lastMoveTarget = nil
+    record.moveDirection = Vector3.zero
+    record.lastProgressPosition = root.Position
+    record.lastProgressAt = now
+    record.target = recovery
+    record.lastProgressTarget = recovery
+    record.nextThink = recovery and (now + 1.6) or 0
+    if record.model then
+        record.model:SetAttribute("BotStallRecoveryCount",
+            (tonumber(record.model:GetAttribute(
+                "BotStallRecoveryCount")) or 0) + 1)
+        record.model:SetAttribute("BotRecoveryRouteFound",
+            recovery ~= nil)
     end
-
+    if recovery then
+        humanoid:MoveTo(recovery)
+    else
+        -- No physically safe adjacent floor exists. Let the next
+        -- ordinary server route selection choose a different objective;
+        -- do not move to a guessed coordinate over void.
+        humanoid:Move(Vector3.zero)
+    end
     return true
 end
 
@@ -3638,7 +3706,17 @@ local function stepRecord(record, now)
             pressure,
             hasDisaster("LowGravity")
         )
-        if math.random() < jumpChance then
+        -- All-seven-bots pogo-jumping mid-disaster looked artificial in
+        -- actual Android play. Keep purposeful ascent and warning escapes
+        -- above; casual personality jumps are rare on live terrain and
+        -- never attempted in the air or on a committed narrow route.
+        local livelyRound = record.inRound
+            and currentState.phase == "round"
+        if livelyRound then jumpChance *= 0.20 end
+        if humanoid.FloorMaterial ~= Enum.Material.Air
+            and not record.targetIsSkyrail
+            and record.targetPart == nil
+            and math.random() < jumpChance then
             humanoid.Jump = true
         end
         record.nextJump = now + 1.8 + math.random() * 3.4
