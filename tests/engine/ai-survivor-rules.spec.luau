@@ -942,6 +942,19 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.reachableElevation(24, 4, "Classic")).toBe(false)
         expect(AISurvivorRules.reachableElevation(24, 14, "Towers")).toBe(true)
         expect(AISurvivorRules.reachableElevation(24, 13.9, "Towers")).toBe(false)
+        -- On high platforms, the next 20-32-stud sky lane is a valid
+        -- target, but an equally high deck across 200 studs of void is not.
+        local nearby = AISurvivorRules.elevatedWaypointNearby
+        expect(nearby(Vector3.new(10, 4, 0),
+            Vector3.new(210, 4, 0), 1)).toBe(true)
+        expect(nearby(Vector3.new(10, 15, 0),
+            Vector3.new(42, 15, 0), 1)).toBe(true)
+        expect(nearby(Vector3.new(10, 15, 0),
+            Vector3.new(55, 15, 0), 1)).toBe(false)
+        expect(nearby(Vector3.new(10, 15, 0),
+            Vector3.new(210, 15, 0), 1)).toBe(false)
+        expect(nearby(nil, Vector3.new(42, 15, 0), 1)).toBe(false)
+
     end)
 
     it("preserves plausible route continuity per arena", function()
