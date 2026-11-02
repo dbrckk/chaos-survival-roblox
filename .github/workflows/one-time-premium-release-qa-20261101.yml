@@ -1,3 +1,6 @@
+# Milestone: PR #564 original five-arena 3D/PBR architectural cladding merged.
+# Repeat full Build + five real Roblox Cloud engine suites on exact main SHA.
+# This workflow NEVER publishes to the existing public place.
 # Milestone: PR #561 bounded native ground-obstacle navigation for physical AI.
 # Source compile, Android VFX gate and Rojo build passed in 41501281571.
 # Repeat build and five real Cloud suites at exact new main SHA; NO publish.
