@@ -184,6 +184,13 @@ describe("AI survivor rules", function()
         expect(supported(9.7, 7.0, 7.0, 20)).toBe(false)
         expect(supported(9.7, 7.0, 7.0, 0 / 0)).toBe(false)
         expect(supported(9.7, 7.0, math.huge, 6.5)).toBe(false)
+        -- Actual floor sampling fixes false stalls with nonstandard rig
+        -- height without relaxing the continuous-walkway requirement.
+        expect(supported(12, 7.0, 7.1, 6.5, 7.0)).toBe(true)
+        expect(supported(12, 7.0, 7.1, 6.5)).toBe(false)
+        expect(supported(12, 7.0, 9.5, 6.5, 7.0)).toBe(false)
+        expect(supported(12, 7.0, 7.1, 6.5, math.huge)).toBe(false)
+        expect(supported(12, 7.0, 7.1, 6.5, "invalid")).toBe(false)
 
         local stalled = AISurvivorRules.isGenuineStall
         expect(stalled(start, start, goal, 1.16, true, true)).toBe(true)
