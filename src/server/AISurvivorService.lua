@@ -2984,15 +2984,12 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     params.FilterDescendantsInstances = {record.model}
     params.RespectCanCollide = true
     local bodyOrigin = root.Position + Vector3.new(0, 1.1, 0)
-    local referenceFloor = root.Position.Y - 2.7
     local function groundAt(candidate)
         local ray = workspace:Raycast(
             candidate + Vector3.new(0, 3, 0),
             Vector3.new(0, -9, 0), params)
         if not ray or not ray.Instance or not ray.Instance.CanCollide
-            or ray.Normal.Y < 0.78
-            or math.abs(ray.Position.Y - referenceFloor) > 2.4
-        then return nil end
+            or ray.Normal.Y < 0.78 then return nil end
         -- A visually present deck can be blinking out under a bot.
         if not AISurvivorRules.platformAvailable(
             ray.Instance.CanCollide,
@@ -3017,7 +3014,9 @@ local function nearbyRecoveryStep(record, root, failedDestination)
                 root.Position + actualStep * 0.50)
             local endpointY = groundAt(candidate)
             if midpointY and endpointY
-                and math.abs(midpointY - endpointY) <= 1.25 then
+                and AISurvivorRules.recoveryGroundIsContinuous(
+                    root.Position.Y, midpointY, endpointY,
+                    actualStep.Magnitude) then
                 return Vector3.new(
                     candidate.X, root.Position.Y, candidate.Z)
             end
