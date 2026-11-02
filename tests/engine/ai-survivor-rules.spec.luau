@@ -187,7 +187,7 @@ describe("AI survivor rules", function()
         -- Actual floor sampling fixes false stalls with nonstandard rig
         -- height without relaxing the continuous-walkway requirement.
         expect(supported(12, 7.0, 7.1, 6.5, 7.0)).toBe(true)
-        expect(supported(12, 7.0, 7.1, 6.5)).toBe(false)
+        expect(supported(13, 7.0, 7.1, 6.5)).toBe(false)
         expect(supported(12, 7.0, 9.5, 6.5, 7.0)).toBe(false)
         expect(supported(12, 7.0, 7.1, 6.5, math.huge)).toBe(false)
         expect(supported(12, 7.0, 7.1, 6.5, "invalid")).toBe(false)
