@@ -77,6 +77,29 @@ describe("Chaos Survival engine", function()
                 expect(panel.CanTouch).toBe(false)
                 expect(panel.CanQuery).toBe(false)
             end
+            local lanePanels = {}
+            local spinePanel = nil
+            for _, physical in ipairs(platforms:GetChildren()) do
+                local index = tonumber(physical.Name:match("^Platform(%d+)$"))
+                if index then
+                    local lane = physical:GetAttribute("PromenadeLane")
+                    if lane == 1 or lane == 2 then
+                        lanePanels[lane] = lanePanels[lane]
+                            or decor:FindFirstChild("PlatformPanel" .. index)
+                    end
+                    if physical:GetAttribute("SkySpineStep") then
+                        spinePanel = spinePanel
+                            or decor:FindFirstChild("PlatformPanel" .. index)
+                    end
+                end
+            end
+            expect(lanePanels[1] ~= nil).toBe(true)
+            expect(lanePanels[2] ~= nil).toBe(true)
+            expect(spinePanel ~= nil).toBe(true)
+            -- Both crossings are genuinely separate painted landing paths
+            -- on the actual decks, never client-only fake walkways.
+            expect(lanePanels[1].Color == lanePanels[2].Color).toBe(false)
+            expect(spinePanel.CanCollide).toBe(false)
             root:Destroy()
         end
     end)
