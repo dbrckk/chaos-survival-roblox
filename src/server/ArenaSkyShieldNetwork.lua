@@ -104,6 +104,51 @@ local function visual(parent, name, size, frame, color, material, alpha)
     return p
 end
 
+-- Four large defensive machines can create up to SIX real, temporary
+-- corridors as teammates coordinate. These are world-scaled volumetric
+-- links, not fullscreen HUD tricks. All sections are anchored and inert.
+local function makeLink(folder, from, to, variant)
+    local delta = to.center - from.center
+    local flat = Vector3.new(delta.X, 0, delta.Z)
+    local span = flat.Magnitude
+    local theme = VisualTheme.arena(variant)
+    local center = (from.center + to.center) * 0.5
+    local frame = CFrame.lookAt(
+        center + Vector3.new(0, 0.34, 0),
+        center + Vector3.new(0, 0.34, 0) + flat.Unit)
+    local model = Instance.new("Model")
+    model.Name = "ShieldCorridor" .. from.index .. "_" .. to.index
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+    model:SetAttribute("ShieldCorridor", true)
+    model:SetAttribute("LinkedStations", 2)
+    model:SetAttribute("ShieldCorridorActive", false)
+    model:SetAttribute("ShieldAbsorbedDamage", 0)
+    model:SetAttribute("ShieldActiveUntil", 0)
+    local sections = {}
+    for side = -1, 1, 2 do
+        sections[#sections + 1] = visual(
+            model, "ProtectiveGroundRail" .. side,
+            Vector3.new(0.38, 0.24, span),
+            frame * CFrame.new(side * Shield.LinkHalfWidth, 0, 0),
+            theme.Accent, Enum.Material.Neon, 1)
+        sections[#sections + 1] = visual(
+            model, "ProtectiveUpperRail" .. side,
+            Vector3.new(0.22, 0.22, span),
+            frame * CFrame.new(side * Shield.LinkHalfWidth, 11, 0),
+            theme.Secondary, Enum.Material.Neon, 1)
+    end
+    for quarter = 1, 3 do
+        sections[#sections + 1] = visual(
+            model, "CrossingBeacon" .. quarter,
+            Vector3.new(Shield.LinkHalfWidth * 2, 0.14, 0.36),
+            frame * CFrame.new(0, 0, (quarter - 2) * span * 0.25),
+            theme.Detail, Enum.Material.Neon, 1)
+    end
+    model.Parent = folder
+    return {from = from, to = to, model = model, sections = sections,
+        live = false, deadline = 0, generation = 0, absorbed = 0}
+end
+
 local function build(folder, ground, index, variant)
     local theme = VisualTheme.arena(variant)
     local model = Instance.new("Model")
