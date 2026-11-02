@@ -808,6 +808,44 @@ end
 -- normal Humanoid jump when grounded support is present beneath the
 -- bot, missing directly ahead, and resumes on a reachable landing.
 -- Sample physics separately in the runtime, never fabricate a floor.
+-- On elevated routes, two waypoints are physically neighboring
+-- only if a straight line between the actual solid deck centers crosses
+-- no gap wider than the 3-stud ordinary R15 jump contract. This uses
+-- the directional footprint of each rotated deck (not just center
+-- distance), so a nearby diagonal platform across open air cannot be
+-- scored as a walkable next stage.
+function AISurvivorRules.neighboringPhysicalDeck(
+    firstFrame, firstSize, nextFrame, nextSize)
+    if typeof(firstFrame) ~= "CFrame" or typeof(nextFrame) ~= "CFrame"
+        or typeof(firstSize) ~= "Vector3"
+        or typeof(nextSize) ~= "Vector3" then return false end
+    if firstSize.X <= 0 or firstSize.Z <= 0
+        or nextSize.X <= 0 or nextSize.Z <= 0 then return false end
+
+    local firstTop = firstFrame.Position.Y
+        + firstFrame.UpVector.Y * firstSize.Y * 0.5
+    local nextTop = nextFrame.Position.Y
+        + nextFrame.UpVector.Y * nextSize.Y * 0.5
+    if nextTop - firstTop > 5 or firstTop - nextTop > 7 then
+        return false
+    end
+
+    local delta = nextFrame.Position - firstFrame.Position
+    local horizontal = Vector3.new(delta.X, 0, delta.Z)
+    local distance = horizontal.Magnitude
+    if distance < 0.05 then return true end
+    local unit = horizontal / distance
+    local function reach(frame, size)
+        local x = math.abs(frame.RightVector:Dot(unit))
+        local z = math.abs(frame.LookVector:Dot(unit))
+        local xReach = x > 0.0001 and size.X * 0.5 / x or math.huge
+        local zReach = z > 0.0001 and size.Z * 0.5 / z or math.huge
+        return math.min(xReach, zReach)
+    end
+    return distance - reach(firstFrame, firstSize)
+        - reach(nextFrame, nextSize) <= 3.05
+end
+
 function AISurvivorRules.skyGapJumpReady(
     grounded, heightAboveBase, horizontalDistance,
     originFloorY, gapIsSupported, landingFloorY)
