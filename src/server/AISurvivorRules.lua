@@ -429,6 +429,18 @@ end
 -- Long world routes must survive the ordinary roaming rethink clock.
 -- Arrival, urgent hazard overrides, invalid targets and stuck recovery
 -- still clear the goal; a bounded grace period prevents permanent locks.
+-- A bot moving sideways into the SAME wall every second is stuck
+-- even if its root moved 2 studs left/right. Only displacement TOWARD
+-- the chosen physical route counts as navigation progress.
+function AISurvivorRules.forwardTravel(from, to, target)
+    if typeof(from) ~= "Vector3" or typeof(to) ~= "Vector3"
+        or typeof(target) ~= "Vector3" then return 0 end
+    local heading = Vector3.new(target.X - from.X, 0, target.Z - from.Z)
+    local moved = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
+    if heading.Magnitude < 0.2 then return moved.Magnitude end
+    return moved:Dot(heading.Unit)
+end
+
 function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart, urgent, activeExpedition)
     -- Replanning a casual goal must never overwrite a live disaster escape
     -- after the ordinary timer expires. Survival always takes precedence.
