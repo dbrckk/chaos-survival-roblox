@@ -2958,31 +2958,52 @@ end
 -- A stranded bot must not endlessly retry the exact same piece of
 -- machinery or walk into a wall. Test physical clearance and support only
 -- after genuinely failing to advance; there is no extra per-frame raycast.
-local function nearbyRecoveryStep(record, root)
-    local directions = {
-        root.CFrame.RightVector, -root.CFrame.RightVector,
-        -root.CFrame.LookVector, root.CFrame.LookVector,
-        Vector3.new(1, 0, 1), Vector3.new(-1, 0, -1),
-        Vector3.new(1, 0, -1), Vector3.new(-1, 0, 1),
-    }
+local function nearbyRecoveryStep(record, root, failedDestination)
+    -- Check the REAL intended route, not the NPC's potentially rotated
+    -- RightVector: that used to send several stuck bots into the same wall.
+    local directions = AISurvivorRules.recoveryDirections(
+        root.Position, failedDestination or record.failedTarget
+            or (root.Position + root.CFrame.LookVector * 8),
+        record.slot)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
-    for _, dir in ipairs(directions) do
-        local flat = Vector3.new(dir.X, 0, dir.Z)
-        if flat.Magnitude > 0.1 then
-            local step = flat.Unit * 6.5
-            local origin = root.Position + Vector3.new(0, 1.25, 0)
-            local obstruction = workspace:Raycast(origin, step, params)
-            local candidate = clampToArena(root.Position + step)
-            local ground = workspace:Raycast(
-                candidate + Vector3.new(0, 3, 0),
-                Vector3.new(0, -9, 0), params)
-            if not obstruction and ground
-                and ground.Instance and ground.Instance.CanCollide
-                and ground.Normal.Y > 0.70
-                and math.abs(ground.Position.Y - (root.Position.Y - 2.7))
-                    < 5.5 then
+    params.RespectCanCollide = true
+    local bodyOrigin = root.Position + Vector3.new(0, 1.1, 0)
+    local referenceFloor = root.Position.Y - 2.7
+    local function groundAt(candidate)
+        local ray = workspace:Raycast(
+            candidate + Vector3.new(0, 3, 0),
+            Vector3.new(0, -9, 0), params)
+        if not ray or not ray.Instance or not ray.Instance.CanCollide
+            or ray.Normal.Y < 0.78
+            or math.abs(ray.Position.Y - referenceFloor) > 2.4
+        then return nil end
+        -- A visually present deck can be blinking out under a bot.
+        if not AISurvivorRules.platformAvailable(
+            ray.Instance.CanCollide,
+            ray.Instance.Transparency,
+            ray.Instance:GetAttribute("CollapsePhase")
+        ) then return nil end
+        return ray.Position.Y
+    end
+
+    for _, direction in ipairs(directions) do
+        local step = direction * 6.5
+        local candidate = clampToArena(root.Position + step)
+        local actualStep = Vector3.new(candidate.X - root.Position.X,
+            0, candidate.Z - root.Position.Z)
+        -- Never treat boundary-clamped 0.5-stud twitching as a rescue.
+        if actualStep.Magnitude >= 4.5
+            and not workspace:Raycast(bodyOrigin, actualStep, params)
+        then
+            -- Require support BOTH halfway AND at the end: checking only
+            -- the endpoint sent stuck bots across 6-stud open-air gaps.
+            local midpointY = groundAt(
+                root.Position + actualStep * 0.50)
+            local endpointY = groundAt(candidate)
+            if midpointY and endpointY
+                and math.abs(midpointY - endpointY) <= 1.25 then
                 return Vector3.new(
                     candidate.X, root.Position.Y, candidate.Z)
             end
