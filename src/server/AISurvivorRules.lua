@@ -814,6 +814,17 @@ end
 -- the directional footprint of each rotated deck (not just center
 -- distance), so a nearby diagonal platform across open air cannot be
 -- scored as a walkable next stage.
+-- A missing floor ray beneath an elevated NPC must never unlock
+-- every same-height sky waypoint. If its supporting deck vanished,
+-- the bot needs a local safe recovery, not a 30-stud run over void.
+-- On the ground the normal candidate system remains unrestricted.
+function AISurvivorRules.elevatedRouteHasSupport(
+    rootY, baseTopY, standingDeckConfirmed)
+    if type(rootY) ~= "number" or type(baseTopY) ~= "number"
+        or rootY ~= rootY or baseTopY ~= baseTopY then return false end
+    return rootY <= baseTopY + 8 or standingDeckConfirmed == true
+end
+
 function AISurvivorRules.neighboringPhysicalDeck(
     firstFrame, firstSize, nextFrame, nextSize)
     if typeof(firstFrame) ~= "CFrame" or typeof(nextFrame) ~= "CFrame"
