@@ -3109,11 +3109,8 @@ local function recoverIfStuck(record, humanoid, root, now)
     -- Preserve the recovery-side sequence even when short detours make
     -- progress. Previously that success reset stuckCount and sent every
     -- later attempt around the exact same obstacle on the same side.
-    if now - (record.lastRecoveryAt or 0) > 12 then
-        record.recoveryAttemptCount = 0
-    end
-    record.recoveryAttemptCount =
-        ((record.recoveryAttemptCount or 0) % 8) + 1
+    record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
+        record.recoveryAttemptCount, record.lastRecoveryAt, now)
     record.lastRecoveryAt = now
     record.failedTarget = goal
     record.failedTargetUntil = now + 7.5
