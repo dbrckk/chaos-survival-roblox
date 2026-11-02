@@ -330,7 +330,16 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
             or part.Name:match("^PremiumGroundModule%d+$") ~= nil
             or part.Name:match("^PlatformPanel%d+$") ~= nil)
         and part.Size.X >= 3 and part.Size.Z >= 3
-        and part.Size.Y >= 0.09
+        -- PR565 original 6x6 ground modules are intentional 0.035-stud
+        -- overlays. Their old >=0.09 gate silently disabled all 2K PBR.
+        -- Exception is restricted to the real authored 20+ stud panels,
+        -- with an additional builder-set provenance marker.
+        and (part.Name:match("^PremiumGroundModule%d+$") == nil
+            or (part:IsA("Part")
+                and part:GetAttribute("OriginalGroundFinish") == true
+                and part.Size.X >= 20 and part.Size.Z >= 20))
+        and part.Size.Y >=
+            (part.Name:match("^PremiumGroundModule%d+$") and 0.03 or 0.09)
     return longest >= 3
         and (smallest >= 0.35 or canonicalServiceDoor(part, owner)
             or authoredFloorOrPanel)
@@ -409,14 +418,20 @@ function PbrDistrictRules.priority(part)
     local name = part.Name:lower()
     local structuralScore = 0
     if PbrDistrictRules.isPremiumArchitecturalOwner(part.Parent) then
-        if name == "arenadeckinset" or name == "lobbyfloorinset" then
-            structuralScore = 9000
+        if name == "lobbyfloorinset" then
+            structuralScore = 2900
+        elseif name == "arenadeckinset" then
+            -- A monolithic 313-stud texture should not steal the whole
+            -- nearby PBR pool from the real modular floor and jump decks.
+            structuralScore = 0
         elseif name:match("^premiumgroundmodule%d+$") then
-            -- Prefer visible original 2K ceramic/steel plates near the
-            -- player rather than wasting residency on skyline props.
-            structuralScore = 2600
+            -- Large original modular floor pieces receive visible relief
+            -- but do not force every jumping deck back to native plastic.
+            structuralScore = 2700
         elseif name:match("^platformpanel%d+$") then
-            structuralScore = 3100
+            -- Reward actual close-up parkour landings. This must compete
+            -- fairly against modular floor and the existing 7/12 owner cap.
+            structuralScore = 6500
         elseif name:match("^platformunderframe%d+$") then
             structuralScore = 1300
         elseif name == "armoredfrontshell" then
