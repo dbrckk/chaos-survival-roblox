@@ -409,6 +409,53 @@ describe("Disaster impact", function()
         expect(Shield.damageAfterProtection(1)).toBe(1)
     end)
 
+    it("keeps a real simultaneous-shield corridor restricted to an 18-stud wide, 24-stud high walkway", function()
+        local Shield = ArenaSkyShieldNetwork
+        local first = Vector3.new(-48, 1, -16)
+        local second = Vector3.new(48, 1, 16)
+        local middle = (first + second) * 0.5
+        expect(Shield.LinkHalfWidth).toBe(9)
+        expect(Shield.MaxLinkedStations).toBe(4)
+        local generatorA = {floorValid = true, activeUntil = 30}
+        local generatorB = {floorValid = true, activeUntil = 28}
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(28)
+        expect(Shield.pairDeadline(generatorA, generatorB, 28)).toBe(nil)
+        generatorB.floorValid = false
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(nil)
+        generatorB.floorValid = true
+        generatorB.activeUntil = 24
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(nil)
+        generatorB.activeUntil = 28
+        generatorA.activeUntil = 0
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(nil)
+        expect(Shield.linkContains(first, second,
+            middle + Vector3.new(0, 3, 0), 1)).toBe(true)
+        -- Both endpoints correspond to genuinely separately activated
+        -- physical generators; no projection outside the wire is covered.
+        expect(Shield.linkContains(first, second,
+            first + Vector3.new(-8, 3, 0), 1)).toBe(false)
+        expect(Shield.linkContains(first, second,
+            second + Vector3.new(8, 3, 0), 1)).toBe(false)
+        -- A perpendicular offset beyond the actual thin glowing lanes
+        -- must NOT grant free damage reduction on the rest of the map.
+        local axis = second - first
+        local side = Vector3.new(-axis.Z, 0, axis.X).Unit
+        expect(Shield.linkContains(first, second,
+            middle + side * 8.99 + Vector3.new(0, 3, 0), 1)).toBe(true)
+        expect(Shield.linkContains(first, second,
+            middle + side * 9.01 + Vector3.new(0, 3, 0), 1)).toBe(false)
+        expect(Shield.linkContains(first, second,
+            middle + Vector3.new(0, 28, 0), 1)).toBe(false)
+        expect(Shield.linkContains(first, second,
+            middle + Vector3.new(0, -4, 0), 1)).toBe(false)
+        expect(Shield.linkContains(first, first,
+            middle, 1)).toBe(false)
+        -- Matching active blast mitigation, without any stacking.
+        expect(Shield.damageAfterProtection(50)).toBe(21)
+        expect(Shield.damageAfterProtection(Shield.damageAfterProtection(50))
+            ~= Shield.damageAfterProtection(50)).toBe(true)
+    end)
+
     it("applies the SAME authentic impact mitigation to nearby humans and bots, never unshielded avatars", function()
         local Shield = ArenaSkyShieldNetwork
         local subjects, characters, health = {}, {}, {}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-02 — Real linked storm-defense corridors across all five arenas (source)
+
+- **Major new cooperative survival mechanic:** two different human/bot-operated Skyline generator shields activated concurrently now form an actual **18-stud-wide, up to 24-stud-high protected corridor** across the playable 320-stud terrain. Real Meteor/Bomb impacts to participants inside the projected corridor receive the SAME 58% mitigation as existing single shields; protection stops at the shorter of the two 8-second live durations, never stacks and cannot grant immunity outside the route.
+- Seven original 3D **noncolliding world-space parts per live corridor** depict two energized ground rails, two elevated conductors and three crossing beacons, with a midpoint label and real replicated `ShieldAbsorbedDamage` / HP SAVED. Up to six pair links between four generators; no polling, external assets, user credits, Roblox remotes or permanent hazard changes. Uses actual server humanoid positions for people and bots.
+- **Fixed a real published-module loading risk** by resolving `VisualTheme` from `ReplicatedStorage.Shared` rather than unconditionally requiring a relative source path. Existing engine impact specs extended to reject false protection outside the true narrow geometry. **Roblox build, Cloud engine, Studio and Android certification on this newer SHA remain required.** [Feature and release acceptance](docs/LINKED_STORM_SHIELD_CORRIDORS_2026-11-02.md).
+
+
 ## 2026-11-02 — Cooperative AI actually operates huge storm shields (source only)
 
 - Bots now detect human teammates near **real defensive generators**, reserve one station per bot, navigate there using their existing humanoid controller, perform a genuine **0.65-second hold**, and activate the SAME server-validated shield as human players. Incoming danger always cancels the interaction; no bot teleport, client-trusted action or fabricated benefit. Shield reservations reset on lobby, new round and rig deletion.

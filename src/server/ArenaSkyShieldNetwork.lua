@@ -5,11 +5,20 @@
 -- No new RemoteEvents, monetization, client hit checks or render loops.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local VisualTheme = require("../shared/VisualTheme")
+-- Published Roblox places use the actual shared ModuleScript. Engine source
+-- specs may load this repo before the published place contains new modules.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local visualThemeModule = shared and shared:FindFirstChild("VisualTheme")
+local VisualTheme = if visualThemeModule
+    then require(visualThemeModule)
+    else require("../shared/VisualTheme")
 
 local Shield = {}
 Shield.Radius = 24
 Shield.Height = 24
+Shield.LinkHalfWidth = 9
+Shield.MaxLinkedStations = 4
 Shield.Duration = 8
 Shield.Cooldown = 21
 Shield.HoldSeconds = 0.65
@@ -49,6 +58,44 @@ function Shield.contains(center, position, floorY)
         and position.Y <= floorY + Shield.Height
 end
 
+-- When two different players (or an AI helper) activate separate
+-- generators, the interval between their fields becomes a real tactical
+-- safe corridor. This geometry is shared by every real human AND AI bot.
+-- It never extends beyond either live endpoint or above the server's
+-- 24-stud shield ceiling; no client can declare a protected position.
+function Shield.linkContains(a, b, position, groundY)
+    if typeof(a) ~= "Vector3" or typeof(b) ~= "Vector3"
+        or typeof(position) ~= "Vector3"
+        or type(groundY) ~= "number"
+        or position.Y < groundY - 2
+        or position.Y > groundY + Shield.Height then return false end
+    local dx, dz = b.X - a.X, b.Z - a.Z
+    local span2 = dx * dx + dz * dz
+    if span2 < 64 or span2 ~= span2 then return false end
+    local along = ((position.X - a.X) * dx
+        + (position.Z - a.Z) * dz) / span2
+    if along < 0 or along > 1 then return false end
+    local px, pz = a.X + dx * along, a.Z + dz * along
+    local ox, oz = position.X - px, position.Z - pz
+    return ox * ox + oz * oz
+        <= Shield.LinkHalfWidth * Shield.LinkHalfWidth
+end
+
+-- The link only exists for the OVERLAP of two actual active
+-- charges, on currently supported physical terrain. One station
+-- alone can NEVER activate this server-owned protection corridor.
+function Shield.pairDeadline(first, second, now)
+    if type(first) ~= "table" or type(second) ~= "table"
+        or first.floorValid ~= true or second.floorValid ~= true
+        or type(now) ~= "number" or now ~= now then return nil end
+    local a = tonumber(first.activeUntil)
+    local b = tonumber(second.activeUntil)
+    if not a or not b or a ~= a or b ~= b
+        or a == math.huge or b == math.huge then return nil end
+    local deadline = math.min(a, b)
+    return deadline > now and deadline or nil
+end
+
 function Shield.damageAfterProtection(damage)
     local n = tonumber(damage)
     if not n or n <= 0 or n ~= n or n == math.huge then return damage end
@@ -70,6 +117,79 @@ local function visual(parent, name, size, frame, color, material, alpha)
     p.CastShadow = false
     p.Parent = parent
     return p
+end
+
+-- Four large defensive machines can create up to SIX real, temporary
+-- corridors as teammates coordinate. These are world-scaled volumetric
+-- links, not fullscreen HUD tricks. All sections are anchored and inert.
+local function makeLink(folder, from, to, variant)
+    local delta = to.center - from.center
+    local flat = Vector3.new(delta.X, 0, delta.Z)
+    local span = flat.Magnitude
+    local theme = VisualTheme.arena(variant)
+    local center = (from.center + to.center) * 0.5
+    local frame = CFrame.lookAt(
+        center + Vector3.new(0, 0.34, 0),
+        center + Vector3.new(0, 0.34, 0) + flat.Unit)
+    local model = Instance.new("Model")
+    model.Name = "ShieldCorridor" .. from.index .. "_" .. to.index
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+    model:SetAttribute("ShieldCorridor", true)
+    model:SetAttribute("LinkedStations", 2)
+    model:SetAttribute("ShieldCorridorActive", false)
+    model:SetAttribute("ShieldAbsorbedDamage", 0)
+    model:SetAttribute("ShieldActiveUntil", 0)
+    local sections = {}
+    for side = -1, 1, 2 do
+        sections[#sections + 1] = visual(
+            model, "ProtectiveGroundRail" .. side,
+            Vector3.new(0.38, 0.24, span),
+            frame * CFrame.new(side * Shield.LinkHalfWidth, 0, 0),
+            theme.Accent, Enum.Material.Neon, 1)
+        sections[#sections + 1] = visual(
+            model, "ProtectiveUpperRail" .. side,
+            Vector3.new(0.22, 0.22, span),
+            frame * CFrame.new(side * Shield.LinkHalfWidth, 11, 0),
+            theme.Secondary, Enum.Material.Neon, 1)
+    end
+    for quarter = 1, 3 do
+        sections[#sections + 1] = visual(
+            model, "CrossingBeacon" .. quarter,
+            Vector3.new(Shield.LinkHalfWidth * 2, 0.14, 0.36),
+            frame * CFrame.new(0, 0, (quarter - 2) * span * 0.25),
+            theme.Detail, Enum.Material.Neon, 1)
+    end
+    -- One world-space label at the actual midpoint. Tiny on Android,
+    -- distance culled, never blocks native hazard warnings or touch.
+    local marker = sections[#sections - 1]
+    local banner = Instance.new("BillboardGui")
+    banner.Name = "CooperativeLinkStatus"
+    banner.Adornee = marker
+    banner.Size = UDim2.fromOffset(170, 42)
+    banner.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
+    banner.MaxDistance = 100
+    banner.AlwaysOnTop = false
+    banner.Enabled = false
+    banner.Parent = marker
+    local label = Instance.new("TextLabel")
+    label.Name = "Protection"
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundColor3 = Color3.fromRGB(14, 28, 42)
+    label.BackgroundTransparency = 0.18
+    label.BorderSizePixel = 0
+    label.TextScaled = true
+    label.TextWrapped = true
+    label.Font = Enum.Font.GothamBold
+    label.TextColor3 = theme.Accent
+    label.Text = "TEAM LINK ACTIVE\nCROSS TO SURVIVE"
+    label.Parent = banner
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = label
+    model.Parent = folder
+    return {from = from, to = to, model = model, sections = sections,
+        banner = banner, label = label,
+        live = false, deadline = 0, generation = 0, absorbed = 0}
 end
 
 local function build(folder, ground, index, variant)
@@ -248,9 +368,24 @@ local function humanBeneficiary(round, entry)
             local character = player.Character
             local hum = character and character:FindFirstChildOfClass("Humanoid")
             local root = character and character:FindFirstChild("HumanoidRootPart")
-            if hum and hum.Health > 0 and root and root:IsA("BasePart")
-                and Shield.contains(entry.center, root.Position, entry.groundY)
-            then return true end
+            if hum and hum.Health > 0 and root and root:IsA("BasePart") then
+                if Shield.contains(entry.center, root.Position, entry.groundY) then
+                    return true
+                end
+                -- A solo human can still coordinate with a real AI teammate:
+                -- if another generator is ALREADY live and this machine
+                -- would create a protective lane passing over the human,
+                -- that is a genuinely useful bot activation as well.
+                local now = os.clock()
+                for _, other in ipairs(round.stations) do
+                    if other ~= entry and other.floorValid
+                        and now < other.activeUntil
+                        and Shield.linkContains(other.center, entry.center,
+                            root.Position, entry.groundY) then
+                        return true
+                    end
+                end
+            end
         end
     end
     return false
@@ -417,6 +552,7 @@ function Shield.start(ctx)
     folder.Parent = arena
     ctx.Cleanup[#ctx.Cleanup + 1] = folder
     local stations = {}
+    local links = {}
     local floorY = base.Position.Y + base.Size.Y * 0.5
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local active = true
@@ -426,6 +562,15 @@ function Shield.start(ctx)
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
         if activeRound == round then activeRound = nil end
         active = false
+        for _, link in pairs(links) do
+            link.generation += 1
+            link.live = false
+            link.banner.Enabled = false
+            if link.model.Parent then
+                link.model:SetAttribute("ShieldCorridorActive", false)
+                link.model:SetAttribute("ShieldActiveUntil", 0)
+            end
+        end
         for _, entry in ipairs(stations) do
             entry.generation += 1
             entry.prompt.Enabled = false
@@ -479,6 +624,9 @@ function Shield.start(ctx)
                 entry.model:SetAttribute("ShieldPhase",
                     ctx.Active() and "Ready" or "Offline")
             end
+            -- Re-evaluate every living corridor immediately whenever a
+            -- generator changes phase or a shrinking floor moves away.
+            if round.refreshLinks then round.refreshLinks() end
         end
 
         local connection = base:GetPropertyChangedSignal("Size"):Connect(refresh)
@@ -492,6 +640,79 @@ function Shield.start(ctx)
         refresh()
     end
     folder:SetAttribute("ShieldStationCount", #stations)
+
+    -- Exactly one bounded event-driven update per activation, expiry or
+    -- collapsing-floor Size change; NO permanent server or client loop.
+    local function refreshLinks()
+        if not active or not ctx.Active() or not folder.Parent then return end
+        local now = os.clock()
+        local activeCount = 0
+        for index = 1, math.min(#stations, Shield.MaxLinkedStations) do
+            if stations[index].floorValid and now < stations[index].activeUntil then
+                activeCount += 1
+            end
+        end
+        folder:SetAttribute("ActiveShieldGenerators", activeCount)
+        local linkedCount = 0
+        for i = 1, math.min(#stations, Shield.MaxLinkedStations) do
+            for j = i + 1, math.min(#stations, Shield.MaxLinkedStations) do
+                local from, to = stations[i], stations[j]
+                local deadline = Shield.pairDeadline(from, to, now)
+                local shouldLink = deadline ~= nil
+                    and from.model.Parent ~= nil
+                    and to.model.Parent ~= nil
+                local key = tostring(i) .. "_" .. tostring(j)
+                local link = links[key]
+                if shouldLink and not link then
+                    link = makeLink(folder, from, to, variant)
+                    links[key] = link
+                end
+                if link then
+                    if shouldLink then
+                        linkedCount += 1
+                        if not link.live then
+                            link.live = true
+                            link.absorbed = 0
+                            link.model:SetAttribute("ShieldAbsorbedDamage", 0)
+                            link.model:SetAttribute("ShieldCorridorActive", true)
+                            link.banner.Enabled = true
+                            link.label.Text = "TEAM LINK ACTIVE\nCROSS TO SURVIVE"
+                            for _, section in ipairs(link.sections) do
+                                section.Transparency = section.Name:find("Upper")
+                                    and 0.52 or 0.18
+                            end
+                        end
+                        if math.abs(link.deadline - deadline) > 0.01 then
+                            link.deadline = deadline
+                            link.generation += 1
+                            local generation = link.generation
+                            link.model:SetAttribute("ShieldActiveUntil",
+                                workspace:GetServerTimeNow()
+                                    + math.max(0, deadline - now))
+                            task.delay(math.max(0.02, deadline - now), function()
+                                if active and link.generation == generation then
+                                    refreshLinks()
+                                end
+                            end)
+                        end
+                    elseif link.live then
+                        link.live = false
+                        link.deadline = 0
+                        link.generation += 1
+                        link.model:SetAttribute("ShieldCorridorActive", false)
+                        link.model:SetAttribute("ShieldActiveUntil", 0)
+                        link.banner.Enabled = false
+                        for _, section in ipairs(link.sections) do
+                            section.Transparency = 1
+                        end
+                    end
+                end
+            end
+        end
+        folder:SetAttribute("ActiveShieldCorridors", linkedCount)
+    end
+    round.refreshLinks = refreshLinks
+    refreshLinks()
 
     -- The exact damage pass in DisasterImpact is authoritative.  No
     -- client-reported world position or instant-dodge privilege exists.
@@ -534,6 +755,27 @@ function Shield.start(ctx)
                                 Transparency = 0.54})
                         entry.crownTween:Play()
                     end
+                end
+                return reduced
+            end
+        end
+        -- The SAME server-owned mitigation applies to everybody walking
+        -- through a genuine concurrent shield LINK. Links are only live
+        -- while BOTH end generators remain active on valid floor.
+        for _, link in pairs(links) do
+            if link.live
+                and Shield.pairDeadline(link.from, link.to, now) ~= nil
+                and Shield.linkContains(
+                    link.from.center, link.to.center, position, floorY)
+            then
+                local reduced = Shield.damageAfterProtection(damage)
+                local saved = math.max(0, damage - reduced)
+                if saved > 0 then
+                    link.absorbed += saved
+                    link.model:SetAttribute("ShieldAbsorbedDamage",
+                        math.floor(link.absorbed))
+                    link.label.Text = "TEAM LINK ACTIVE\n"
+                        .. tostring(math.floor(link.absorbed)) .. " HP SAVED"
                 end
                 return reduced
             end
