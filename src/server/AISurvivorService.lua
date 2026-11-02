@@ -1531,7 +1531,7 @@ local function disappearingPlatformEscape(record, root, now)
         -- beats continuing a stale route over void. Preserve threat
         -- priority so a newly visible meteor can still override it.
         record.collapseEscapeHolding = true
-        return root.Position
+        return nil
     end
 
     local center = base and base.Position or config.ArenaCenter
@@ -3790,6 +3790,12 @@ local function stepRecord(record, now)
         end
         if not urgentTarget then
             urgentTarget = skybridgeShutterEscape(record, root, now)
+        end
+        if not urgentTarget and record.collapseEscapeHolding then
+            -- An impossible elevated retreat should not mask a genuine
+            -- meteor/bomb/sweep escape. Only hold position AFTER every
+            -- more actionable urgent hazard has been considered.
+            urgentTarget = root.Position
         end
     end
 
