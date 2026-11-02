@@ -522,6 +522,112 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     return built
 end
 
+-- Authored native 3D carapaces turn rectangular jump blocks into engineered
+-- modules with sloped facings and an exposed underside chassis. Reuse the
+-- existing welded client trim ownership: collapse visibility, route shrink,
+-- streaming and tier rebuild need NO extra listeners or physics objects.
+-- Every visible top of a wedge is BELOW the actual walkable collider top.
+-- Per-arena variants differ in steel, alloy, armored ceramic and dock metal.
+local CARAPACE_PROFILES = {
+    Classic = {shell = Enum.Material.DiamondPlate,
+        core = Enum.Material.CorrodedMetal, tint = 0.38},
+    Towers = {shell = Enum.Material.Foil,
+        core = Enum.Material.DiamondPlate, tint = 0.29},
+    Crossroads = {shell = Enum.Material.CorrodedMetal,
+        core = Enum.Material.DiamondPlate, tint = 0.46},
+    Orbital = {shell = Enum.Material.CeramicTiles,
+        core = Enum.Material.Foil, tint = 0.42},
+    Harbor = {shell = Enum.Material.CorrodedMetal,
+        core = Enum.Material.DiamondPlate, tint = 0.34},
+}
+
+function PlatformFinishKit.carapaceCount(tier, index)
+    local number = math.floor(tonumber(index) or 0)
+    if number < 1 then return 0 end
+    if tier == "High" and number % 3 == 1 then return 7 end
+    if tier == "Medium" and number % 4 == 1 then return 4 end
+    if tier == "Low" and number % 8 == 1 then return 2 end
+    return 0
+end
+
+function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index)
+    if not parent or not platform or not platform:IsA("BasePart")
+        or not theme or not CARAPACE_PROFILES[variant]
+        or platform:GetAttribute("ChaosSkybridge") == true then
+        return {}
+    end
+    local budget = PlatformFinishKit.carapaceCount(tier, index)
+    if budget == 0 then return {} end
+
+    local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
+    -- Narrow skywalks and the giant structural spans already have their
+    -- own original geometry. Only finish existing real jump decks.
+    if math.min(sx, sz) < 7 or math.max(sx, sz) > 36 then
+        return {}
+    end
+
+    local p = CARAPACE_PROFILES[variant]
+    local shellColor = theme.Structure:Lerp(theme.Detail, p.tint)
+    local coreColor = theme.Surface:Lerp(theme.Structure, 0.54)
+    local accent = theme.Detail:Lerp(theme.Secondary, 0.09)
+    local built = {}
+    local function piece(name, frame, size, color, material, alpha, shape)
+        local item = add(parent, platform, variant .. "DeckCarapace"
+            .. tostring(index) .. name, frame, size,
+            color, material, alpha, shape)
+        item:SetAttribute("OriginalDeckCarapace", true)
+        built[#built + 1] = item
+    end
+
+    -- These sloped side facings are *outside* the deck's vertical silhouette
+    -- only, ending at least 0.08 studs BELOW the physical top. They are
+    -- never reachable side shelves or phantom landings for players/bots.
+    local y = sy * 0.5 - 0.54
+    local longSpan = math.max(3, sx * 0.78)
+    for side = -1, 1, 2 do
+        piece(side == -1 and "NorthFacetedSkirt" or "SouthFacetedSkirt",
+            CFrame.new(0, y, side * (sz * 0.5 - 0.12))
+                * CFrame.Angles(0, side == -1 and 0 or math.pi, 0),
+            Vector3.new(longSpan, 0.84, 0.90),
+            shellColor, p.shell, 0.04, "WedgePart")
+    end
+
+    if budget >= 4 then
+        -- An inset keel below the deck cuts away the toy floating-cube look.
+        -- It is noncolliding, massless, and cannot change real jump height.
+        piece("RecessedLoadKeel",
+            CFrame.new(0, -sy * 0.5 - 0.36, 0),
+            Vector3.new(math.max(3.0, sx * 0.61), 0.68,
+                math.max(3.0, sz * 0.57)),
+            coreColor, p.core, 0.055)
+        piece("PortServiceFin",
+            CFrame.new(-sx * 0.5 + 0.12, y, 0)
+                * CFrame.Angles(0, math.pi * 0.5, 0),
+            Vector3.new(sz * 0.66, 0.84, 0.90),
+            accent, p.shell, 0.075, "WedgePart")
+    end
+
+    if budget >= 7 then
+        piece("StarboardServiceFin",
+            CFrame.new(sx * 0.5 - 0.12, y, 0)
+                * CFrame.Angles(0, -math.pi * 0.5, 0),
+            Vector3.new(sz * 0.66, 0.84, 0.90),
+            accent, p.shell, 0.075, "WedgePart")
+        for side = -1, 1, 2 do
+            local start = Vector3.new(side * sx * 0.35,
+                -sy * 0.5 - 0.14, -sz * 0.24)
+            local finish = Vector3.new(side * sx * 0.11,
+                -sy * 0.5 - 1.70, sz * 0.10)
+            local delta = finish - start
+            piece(side == -1 and "PortDiagonalSpar" or "StarboardDiagonalSpar",
+                CFrame.lookAt((start + finish) * 0.5, finish),
+                Vector3.new(0.44, 0.51, delta.Magnitude),
+                coreColor, p.core, 0.07)
+        end
+    end
+    return built
+end
+
 -- Platform disappearance is gameplay, not an artistic overlay: any local
 -- welded armor or painted glyph must also become completely invisible.
 -- Saved base transparencies survive repeated Warning/Gone/Restore cycles.
