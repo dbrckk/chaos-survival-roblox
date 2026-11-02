@@ -3291,8 +3291,15 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
         return
     end
 
+    -- Narrow server-owned sky crossings need accurate physical heading,
+    -- not a blended previous turn that curves off a 12-stud walkway.
+    -- Ordinary ground roaming keeps its humanlike steering inertia.
     local direct = urgent == true
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
+        or AISurvivorRules.committedWorldRoute(
+            record.targetIsSkyrail, record.targetPart,
+            record.districtTraverse ~= nil
+        )
 
     local previousTarget = record.lastMoveTarget
     local changedTarget = not previousTarget
