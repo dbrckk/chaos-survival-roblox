@@ -8,11 +8,11 @@ function Kit.profile(tier)
     -- Neon decor; hazard outlines, route edges and spawn guidance keep
     -- their separate high-contrast treatment in isGameplayEdge().
     if tier == "Low" then
-        return 0.28, 0.58
+        return 0.50, 0.62
     elseif tier == "Medium" then
-        return 0.21, 0.66
+        return 0.39, 0.70
     end
-    return 0.13, 0.74
+    return 0.30, 0.78
 end
 
 function Kit.isGameplayEdge(part)
@@ -20,6 +20,11 @@ function Kit.isGameplayEdge(part)
     return string.sub(name, 1, 4) == "Edge"
         or string.find(name, "PlatformGlow", 1, true) ~= nil
         or string.find(name, "SpawnGlow", 1, true) ~= nil
+        -- Preserve authentic route edges, not giant decorative neon
+        -- floods. The new elevated skyway must still show each jump.
+        or string.find(name, "_LightedEdge", 1, true) ~= nil
+        or string.find(name, "PromenadeJumpChevron", 1, true) ~= nil
+        or part:GetAttribute("ChaosWayfinding") == true
 end
 
 -- Store each light's unscaled brightness, so repeated tier changes never
