@@ -17,6 +17,8 @@ local VisualTheme = if visualThemeModule
 local Shield = {}
 Shield.Radius = 24
 Shield.Height = 24
+Shield.LinkHalfWidth = 9
+Shield.MaxLinkedStations = 4
 Shield.Duration = 8
 Shield.Cooldown = 21
 Shield.HoldSeconds = 0.65
@@ -54,6 +56,29 @@ function Shield.contains(center, position, floorY)
     return dx * dx + dz * dz <= Shield.Radius * Shield.Radius
         and position.Y >= floorY - 2
         and position.Y <= floorY + Shield.Height
+end
+
+-- When two different players (or an AI helper) activate separate
+-- generators, the interval between their fields becomes a real tactical
+-- safe corridor. This geometry is shared by every real human AND AI bot.
+-- It never extends beyond either live endpoint or above the server's
+-- 24-stud shield ceiling; no client can declare a protected position.
+function Shield.linkContains(a, b, position, groundY)
+    if typeof(a) ~= "Vector3" or typeof(b) ~= "Vector3"
+        or typeof(position) ~= "Vector3"
+        or type(groundY) ~= "number"
+        or position.Y < groundY - 2
+        or position.Y > groundY + Shield.Height then return false end
+    local dx, dz = b.X - a.X, b.Z - a.Z
+    local span2 = dx * dx + dz * dz
+    if span2 < 64 or span2 ~= span2 then return false end
+    local along = ((position.X - a.X) * dx
+        + (position.Z - a.Z) * dz) / span2
+    if along < 0 or along > 1 then return false end
+    local px, pz = a.X + dx * along, a.Z + dz * along
+    local ox, oz = position.X - px, position.Z - pz
+    return ox * ox + oz * oz
+        <= Shield.LinkHalfWidth * Shield.LinkHalfWidth
 end
 
 function Shield.damageAfterProtection(damage)
