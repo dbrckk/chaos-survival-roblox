@@ -646,6 +646,45 @@ describe("Arena variants", function()
         end
     end)
 
+    it("makes a real ten-deck Sky Spine joining BOTH 200-stud promenades in all five worlds", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local spine = variant.SkySpinePlatforms
+            expect(type(spine)).toBe("table")
+            expect(#spine).toBe(10)
+            local north, south = variant.PromenadePlatforms[4],
+                variant.PromenadePlatforms[12]
+            expect(north ~= nil and south ~= nil).toBe(true)
+            expect(math.abs(north.offset.X - south.offset.X) < 0.001).toBe(true)
+            local interval = (south.offset.Z - north.offset.Z) / 10
+            expect(interval >= 17 and interval < 32).toBe(true)
+            for step = 1, 10 do
+                local deck = spine[step]
+                expect(deck.SkySpineStep).toBe(step)
+                expect(deck.PermanentRoute).toBe(true)
+                expect(deck.RouteTier).toBe(4)
+                expect(deck.size.X).toBe(12)
+                expect(deck.size.Y).toBe(2)
+                expect(math.abs(deck.size.Z - (interval - 2.4))
+                    < 0.001).toBe(true)
+                expect(math.abs(deck.offset.X - north.offset.X)
+                    < 0.001).toBe(true)
+                expect(math.abs(deck.offset.Y - north.offset.Y)
+                    < 0.001).toBe(true)
+                if step > 1 then
+                    local previous = spine[step - 1]
+                    local leap = math.abs(deck.offset.Z - previous.offset.Z)
+                        - (deck.size.Z + previous.size.Z) * 0.5
+                    expect(math.abs(leap - 2.4) < 0.001).toBe(true)
+                end
+            end
+            local firstEdge = spine[1].offset.Z - spine[1].size.Z * 0.5
+            local lastEdge = spine[10].offset.Z + spine[10].size.Z * 0.5
+            expect(firstEdge < north.offset.Z + north.size.Z * 0.5).toBe(true)
+            expect(lastEdge > south.offset.Z - south.size.Z * 0.5).toBe(true)
+        end
+    end)
+
     it("adds a connected high-route skybridge circuit to the Tower Run arena", function()
         local towers = ArenaVariants.get("Towers")
         local links = {}
