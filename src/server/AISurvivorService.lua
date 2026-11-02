@@ -3013,44 +3013,70 @@ local function nearbyRecoveryStep(record, root, failedDestination)
 end
 
 local function recoverIfStuck(record, humanoid, root, now)
-    if not record.target then
+    local goal = record.target
+    if typeof(goal) ~= "Vector3" then
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = nil
+        record.lastProgressAt = now
+        -- Do NOT clear the failure quarantine here. The old reset
+        -- erased stuckCount immediately after abandoning a failed goal,
+        -- so its >= 2 physical recovery branch was effectively dead.
+        return false
+    end
+    if not record.lastProgressPosition
+        or typeof(record.lastProgressTarget) ~= "Vector3"
+        or (goal - record.lastProgressTarget).Magnitude > 5 then
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = goal
+        record.lastProgressAt = now
+        return false
+    end
+    -- Deliberate pauses, grounded prompt-holds, airborne jumps and
+    -- turn animations must NEVER be interpreted as failed navigation.
+    local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
+    local walking = now >= (record.turnPauseUntil or 0)
+        and now >= (record.idleUntil or 0)
+        and (Vector3.new(goal.X - root.Position.X, 0,
+            goal.Z - root.Position.Z)).Magnitude > 3.5
+    if not grounded or not walking then
         record.lastProgressPosition = root.Position
         record.lastProgressAt = now
-        record.stuckCount = 0
         return false
     end
-
-    if not record.lastProgressPosition then
-        record.lastProgressPosition = root.Position
-        record.lastProgressAt = now
-        return false
-    end
-
-    if now - (record.lastProgressAt or 0) < 1.15 then
-        return false
-    end
-
-    local forward = AISurvivorRules.forwardTravel(
-        record.lastProgressPosition, root.Position, record.target)
+    local elapsed = now - (record.lastProgressAt or now)
+    if elapsed < 1.15 then return false end
+    local isStalled = AISurvivorRules.isGenuineStall(
+        record.lastProgressPosition, root.Position,
+        goal, elapsed, grounded, walking)
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
-
-    -- Lateral oscillation around a wall is NOT progress toward the
-    -- selected objective; do not mark a twitching bot as unstuck.
-    if forward >= 0.85 then
+    if not isStalled then
         record.stuckCount = 0
         return false
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
-    record.failedTarget = record.target
+    record.failedTarget = goal
     record.failedTargetUntil = now + 7.5
-    -- A physical route that cannot make progress must not be selected
-    -- again on the next think tick. Release the route reservation so
-    -- another NPC may try a different sector; keep normal speed/jump.
+    -- Physical stations and expedition reservations cannot be held by
+    -- an NPC walking into a wall. Release ALL claims before detouring.
+    if record.assistShield then
+        ArenaSkyShieldNetwork.releaseBot(record.model)
+        record.assistShield = nil
+        record.shieldHoldAt = nil
+        record.nextShieldAt = now + 4
+    end
+    if record.assistRelay then
+        TeamDashRelay.releaseBot(record.model)
+        record.assistRelay = nil
+        record.assistHoldAt = nil
+        record.nextAssistAt = now + 4
+    end
+    record.spineControl = nil
+    record.spineHoldAt = nil
     if record.districtTraverse then
         record.districtTraverse = nil
-        record.nextDistrictTraverseAt = now + 10
+        record.nextDistrictTraverseAt = now + 9
         if record.model then
             record.model:SetAttribute("DistrictRouteStep", 0)
         end
@@ -3060,31 +3086,39 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.signalInterestUntil = 0
         record.nextSignalInterestAt = now + 6
     end
-    if humanoid.FloorMaterial ~= Enum.Material.Air
-        and now >= (record.nextRouteJumpAt or 0) then
-        humanoid.Jump = true
-        record.nextRouteJumpAt = now + 0.8
-    end
-    record.target = nil
+    -- React on the FIRST confirmed 1.15s stall. Repeated failures rotate
+    -- which SIDE is tried first, but every step needs real body clearance
+    -- plus floor at the midpoint and endpoint. Never PivotTo / warp.
+    local recovery = nearbyRecoveryStep(
+        record, root, goal)
     record.targetPart = nil
     record.targetIsPad = false
-    record.nextThink = 0
-
-    if record.stuckCount >= 2 then
-        -- Find actual collidable ground with a clear horizontal approach,
-        -- rather than repeatedly running into the same visible 3D wall.
-        local recoveryTarget = nearbyRecoveryStep(record, root)
-        if recoveryTarget then
-            record.target = recoveryTarget
-            record.nextThink = now + 1.15
-            record.turnPauseUntil = 0
-            record.lastMoveTarget = nil
-            record.moveDirection = Vector3.zero
-            humanoid:MoveTo(recoveryTarget)
-        end
-        record.stuckCount = 0
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
+    record.turnPauseUntil = 0
+    record.idleUntil = 0
+    record.lastMoveTarget = nil
+    record.moveDirection = Vector3.zero
+    record.lastProgressPosition = root.Position
+    record.lastProgressAt = now
+    record.target = recovery
+    record.lastProgressTarget = recovery
+    record.nextThink = recovery and (now + 1.6) or 0
+    if record.model then
+        record.model:SetAttribute("BotStallRecoveryCount",
+            (tonumber(record.model:GetAttribute(
+                "BotStallRecoveryCount")) or 0) + 1)
+        record.model:SetAttribute("BotRecoveryRouteFound",
+            recovery ~= nil)
     end
-
+    if recovery then
+        humanoid:MoveTo(recovery)
+    else
+        -- No physically safe adjacent floor exists. Let the next
+        -- ordinary server route selection choose a different objective;
+        -- do not move to a guessed coordinate over void.
+        humanoid:Move(Vector3.zero)
+    end
     return true
 end
 
