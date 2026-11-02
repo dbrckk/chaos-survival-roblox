@@ -1531,7 +1531,7 @@ local function disappearingPlatformEscape(record, root, now)
         -- beats continuing a stale route over void. Preserve threat
         -- priority so a newly visible meteor can still override it.
         record.collapseEscapeHolding = true
-        return root.Position
+        return nil
     end
 
     local center = base and base.Position or config.ArenaCenter
@@ -3791,6 +3791,11 @@ local function stepRecord(record, now)
         if not urgentTarget then
             urgentTarget = skybridgeShutterEscape(record, root, now)
         end
+        -- An impossible elevated retreat must not hide a genuine
+        -- meteor, bomb, sweep or shutter escape found above.
+        urgentTarget = AISurvivorRules.collapseFallbackTarget(
+            urgentTarget, record.collapseEscapeHolding, root.Position
+        )
     end
 
     -- Do not teleport or auto-activate AI. Hold time and proximity are
