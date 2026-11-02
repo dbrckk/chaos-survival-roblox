@@ -19,10 +19,12 @@ Shield.BotApproachRadius = 74
 Shield.BotReach = 7.5
 local activeRound = nil
 Shield.Offsets = {
-    Vector3.new(-53, 0, -17),
-    Vector3.new(53, 0, 17),
-    Vector3.new(-17, 0, 53),
-    Vector3.new(17, 0, -53),
+    -- Visible from the initial eight spawn pads: every first-minute
+    -- participant is within 24 studs of at least one real defense zone.
+    Vector3.new(-48, 0, -16),
+    Vector3.new(48, 0, 16),
+    Vector3.new(-16, 0, 48),
+    Vector3.new(16, 0, -48),
 }
 
 function Shield.enabled(ctx)
@@ -214,7 +216,8 @@ local function build(folder, ground, index, variant)
         activeUntil = 0, readyAt = 0, generation = 0,
         theme = theme, groundY = ground.Y,
         floorValid = true, guard = false,
-        absorbed = 0, protections = 0, claim = nil, claimUntil = 0,
+        absorbed = 0, protections = 0, lastImpactAt = -math.huge,
+        claim = nil, claimUntil = 0,
     }
 end
 
@@ -333,6 +336,7 @@ function Shield.activate(entry, actor, fromBot)
     entry.readyAt = now + Shield.Cooldown
     entry.absorbed = 0
     entry.protections = 0
+    entry.lastImpactAt = -math.huge
     entry.model:SetAttribute("ShieldAbsorbedDamage", 0)
     entry.model:SetAttribute("ShieldProtections", 0)
     entry.model:SetAttribute("ShieldActivatedByBot", fromBot == true)
@@ -501,6 +505,19 @@ function Shield.start(ctx)
                         entry.protections)
                     entry.label.Text = "SHIELD ACTIVE\n"
                         .. tostring(math.floor(entry.absorbed)) .. " HP SAVED"
+                    -- An actual absorbed hit physically ripples the
+                    -- 3D generator crown, rather than inventing a red
+                    -- warning or changing any gameplay collision.
+                    if now - entry.lastImpactAt >= 0.35 then
+                        entry.lastImpactAt = now
+                        entry.ring.Size = Vector3.new(0.2, 8, 8)
+                        entry.ring.Transparency = 0.36
+                        TweenService:Create(entry.ring,
+                            TweenInfo.new(0.42, Enum.EasingStyle.Quad,
+                                Enum.EasingDirection.Out),
+                            {Size = Vector3.new(0.2, 15, 15),
+                                Transparency = 0.54}):Play()
+                    end
                 end
                 return reduced
             end
