@@ -96,7 +96,10 @@ local function safeGuidedTargetPath(fromPosition, target, warnings)
     -- exits while a bomb detonates well below them.
     -- Cargo pickups are not standable platforms; keep their actual goal
     -- position for the route test rather than inventing a floor under them.
-    local toPosition = target.Position
+    local rampStart = target.Parent and target.Parent.Name == "HelixCircuit"
+        and target:GetAttribute("HelixStart") or nil
+    local toPosition = typeof(rampStart) == "Vector3"
+        and rampStart + Vector3.new(0, 2.5, 0) or target.Position
     if target.Parent and target.Parent.Name == "Platforms" then
         toPosition += Vector3.new(0, target.Size.Y * 0.5 + 2.5, 0)
     end
@@ -106,6 +109,9 @@ local function safeGuidedTargetPath(fromPosition, target, warnings)
         return false
     end
     local lava = workspace:FindFirstChild("RoundLava")
+    if typeof(rampStart) == "Vector3" then
+        return not JumpRouteCueRules.lavaAtRoot(toPosition, lava)
+    end
     return not JumpRouteCueRules.lavaOnDeck(target, lava)
 end
 
