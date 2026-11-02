@@ -165,9 +165,9 @@ local function makeLink(folder, from, to, variant)
     local banner = Instance.new("BillboardGui")
     banner.Name = "CooperativeLinkStatus"
     banner.Adornee = marker
-    banner.Size = UDim2.fromOffset(170, 42)
+    banner.Size = UDim2.fromOffset(154, 38)
     banner.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
-    banner.MaxDistance = 100
+    banner.MaxDistance = 55
     banner.AlwaysOnTop = false
     banner.Enabled = false
     banner.Parent = marker
@@ -309,9 +309,9 @@ local function build(folder, ground, index, variant)
     local tag = Instance.new("BillboardGui")
     tag.Name = "EmergencyShieldLabel"
     tag.Adornee = core
-    tag.Size = UDim2.fromOffset(170, 46)
+    tag.Size = UDim2.fromOffset(154, 40)
     tag.StudsOffsetWorldSpace = Vector3.new(0, 3.4, 0)
-    tag.MaxDistance = 90
+    tag.MaxDistance = 55
     tag.AlwaysOnTop = false
     tag.Parent = core
     local label = Instance.new("TextLabel")
