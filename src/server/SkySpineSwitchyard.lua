@@ -123,9 +123,9 @@ local function station(folder, deck, step, theme)
     prompt.Parent = core
     local gui = Instance.new("BillboardGui")
     gui.Name = "SkySpineSwitchyardStatus"
-    gui.Size = UDim2.fromOffset(210, 52)
+    gui.Size = UDim2.fromOffset(160, 38)
     gui.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
-    gui.MaxDistance = 90
+    gui.MaxDistance = 48
     gui.Adornee = core
     gui.AlwaysOnTop = false
     gui.Parent = core
@@ -139,7 +139,7 @@ local function station(folder, deck, step, theme)
     label.TextWrapped = true
     label.Font = Enum.Font.GothamBold
     label.TextColor3 = theme.Accent
-    label.Text = "SKY SPINE OPEN\\nHOLD TO CONNECT"
+    label.Text = "SKY SPINE OPEN\nHOLD TO CONNECT"
     label.Parent = gui
     local rounded = Instance.new("UICorner")
     rounded.CornerRadius = UDim.new(0, 8)
@@ -280,8 +280,8 @@ function SkySpineSwitchyard.start(ctx)
         for _, control in ipairs(commands) do
             control.prompt.Enabled = false
             control.label.Text = fromBot
-                and "ALLY CONNECTED\\nTEAM SKY ROUTE"
-                or "BRIDGE CONNECTED\\nTEAM SKY ROUTE"
+                and "ALLY CONNECTED\nTEAM SKY ROUTE"
+                or "BRIDGE CONNECTED\nTEAM SKY ROUTE"
             control.label.TextColor3 = theme.Secondary
             control.model:SetAttribute("SkySpineLinked", true)
         end
