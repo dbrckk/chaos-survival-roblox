@@ -2038,20 +2038,23 @@ describe("Storm Harbor engine and Android scenery certification", function()
         expect(base ~= nil and platforms ~= nil and decor ~= nil).toBe(true)
         -- Preserve the historical Harbor deck IDs: original 80,
         -- fourteen steel skyways (81-94), sixteen true drydock spokes
-        -- (95-110), then the sixteen colossal sky promenades (111-126).
+        -- (95-110), sixteen original sky promenades (111-126),
+        -- and ten new real transverse Sky Spine decks (127-136).
         -- All of these must be REAL server-owned collision platforms.
         -- A former hard-coded 110 caused the exact-SHA core_b2 Cloud
         -- failure even though the new routes are intentionally physical.
         expect(#variant.SkywayPlatforms).toBe(14)
         expect(#variant.SpokePlatforms).toBe(16)
         expect(#variant.PromenadePlatforms).toBe(16)
+        expect(#variant.SkySpinePlatforms).toBe(10)
         expect(#platforms:GetChildren()).toBe(
             #variant.Platforms + #variant.PerimeterPlatforms
                 + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
                 + #variant.SkywayPlatforms + #variant.SpokePlatforms
                 + #variant.PromenadePlatforms
+                + #variant.SkySpinePlatforms
         )
-        expect(#platforms:GetChildren()).toBe(126)
+        expect(#platforms:GetChildren()).toBe(136)
         for lane = 1, 2 do
             for step = 1, 8 do
                 local index = 110 + (lane - 1) * 8 + step
