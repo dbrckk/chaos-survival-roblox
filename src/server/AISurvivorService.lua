@@ -2171,6 +2171,20 @@ local function socialArenaTarget(record, root, traits, now)
                 part.CanCollide, part.Transparency,
                 part:GetAttribute("CollapsePhase")
             ) then return nil end
+        -- A nearby teammate on a separate parallel sky route is NOT a
+        -- safe social objective just because both roots have equal Y.
+        -- A normal player could not cross 10 studs of air to meet them.
+        local ownSurface = workspace:Raycast(
+            root.Position + Vector3.new(0, 1, 0),
+            Vector3.new(0, -7.5, 0), params
+        )
+        local ownDeck = ownSurface and ownSurface.Instance
+        if not ownDeck or ownDeck.Parent ~= part.Parent
+            or ownSurface.Normal.Y < 0.78
+            or (ownDeck ~= part
+                and not AISurvivorRules.neighboringPhysicalDeck(
+                    ownDeck.CFrame, ownDeck.Size, part.CFrame, part.Size
+                )) then return nil end
         safeDeck = part
         target = AISurvivorRules.clampWaypointToDeck(
             safeDeck.CFrame, safeDeck.Size, target
