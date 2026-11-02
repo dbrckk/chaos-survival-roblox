@@ -293,30 +293,7 @@ function SkySpineSwitchyard.start(ctx)
             activate(player, false, command)
         end)
     end
-    function SkySpineSwitchyard.botOpportunity(model, now)
-        if not current() or round.joined or not model
-            or type(now) ~= "number" then return nil end
-        local best, distance = nil, SkySpineSwitchyard.BotReach
-        for _, command in ipairs(commands) do
-            local root = model:FindFirstChild("HumanoidRootPart")
-            if root and root:IsA("BasePart") then
-                local d = (root.Position - command.core.Position).Magnitude
-                if d <= distance then
-                    best, distance = command, d
-                end
-            end
-        end
-        return best and best.core or nil
-    end
-    function SkySpineSwitchyard.activateBot(model, core)
-        if not current() or round.joined then return false end
-        for _, command in ipairs(commands) do
-            if command.core == core then
-                return activate(model, true, command)
-            end
-        end
-        return false
-    end
+    round.activate = activate
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
         round.active = false
         if activeRound == round then activeRound = nil end
@@ -325,6 +302,58 @@ function SkySpineSwitchyard.start(ctx)
         end
     end
     return 9
+end
+
+-- Bots already on a physically reached sky deck may operate a REAL
+-- 0.7s cooperative switch, without pathfinding privilege or teleport.
+-- These stable API methods exist before and after any round starts.
+function SkySpineSwitchyard.botOpportunity(model, now)
+    local round = activeRound
+    if not round or not round.active or round.joined
+        or not round.folder.Parent or not round.ctx.Active()
+        or type(now) ~= "number"
+        or typeof(model) ~= "Instance" or not model:IsA("Model") then
+        return nil
+    end
+    local bots = workspace:FindFirstChild("AISurvivors")
+    if not bots or model.Parent ~= bots
+        or model:GetAttribute("AISurvivor") ~= true
+        or model:GetAttribute("AISurvivorInRound") ~= true then
+        return nil
+    end
+    local root = model:FindFirstChild("HumanoidRootPart")
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    if not root or not root:IsA("BasePart")
+        or not root:IsDescendantOf(workspace)
+        or not hum or hum.Health <= 0
+        or hum.FloorMaterial == Enum.Material.Air then return nil end
+    local best, distance = nil, SkySpineSwitchyard.BotReach
+    for _, command in ipairs(round.commands) do
+        if command.prompt.Enabled then
+            local d = (root.Position - command.core.Position).Magnitude
+            if d <= distance then
+                best, distance = command, d
+            end
+        end
+    end
+    return best and best.core or nil
+end
+
+function SkySpineSwitchyard.activateBot(model, core)
+    local round = activeRound
+    if not round or not round.active or round.joined
+        or not round.ctx.Active() or not round.folder.Parent then
+        return false
+    end
+    if SkySpineSwitchyard.botOpportunity(model, os.clock()) ~= core then
+        return false
+    end
+    for _, command in ipairs(round.commands) do
+        if command.core == core then
+            return round.activate(model, true, command)
+        end
+    end
+    return false
 end
 
 return SkySpineSwitchyard
