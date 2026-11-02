@@ -136,7 +136,10 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
     structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, crownSpan),
         CFrame.new(0, crownHeight, 0), alloy)
-    structure("UnderdeckTruss", Vector3.new(5.6, 1.7, 11.0),
+    -- The real walkway remains unchanged; larger late-stage underframes
+    -- create a stronger silhouette without extra parts or collisions.
+    local trussSpan = step == 7 and 15.0 or (step == 4 and 13.0 or 11.0)
+    structure("UnderdeckTruss", Vector3.new(5.6, 1.7, trussSpan),
         CFrame.new(0, -1.3, 0), steel, Enum.Material.Metal)
     -- The equipment is above the structural crosshead, or outside
     -- the deck edges. Nothing presents a fake playable upper surface.
