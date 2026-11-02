@@ -45,6 +45,17 @@ describe("Chaos Survival engine", function()
             local decor = arena:FindFirstChild("Decor")
             local platforms = arena:FindFirstChild("Platforms")
             local n = #platforms:GetChildren()
+            local theme = VisualTheme.arena(variantId)
+            local foundation = decor:FindFirstChild("ArenaDeckInset")
+            expect(foundation ~= nil).toBe(true)
+            local function luminance(color)
+                return color.R * 0.2126 + color.G * 0.7152
+                    + color.B * 0.0722
+            end
+            -- Physical arena lighting must not leave the main floor
+            -- almost black on touch devices with reduced graphics.
+            expect(luminance(foundation.Color) - luminance(theme.Surface)
+                >= 0.075).toBe(true)
 
             -- Sample near, center, and outer branch platforms. Deck
             -- materials are cosmetic; their true server collision,
@@ -60,6 +71,8 @@ describe("Chaos Survival engine", function()
                 expect(platform.Anchored).toBe(true)
                 expect(platform.CanCollide).toBe(true)
                 expect(panel.Material).toBe(material)
+                expect(luminance(panel.Color) - luminance(theme.Surface)
+                    >= 0.075).toBe(true)
                 expect(panel.CanCollide).toBe(false)
                 expect(panel.CanTouch).toBe(false)
                 expect(panel.CanQuery).toBe(false)
