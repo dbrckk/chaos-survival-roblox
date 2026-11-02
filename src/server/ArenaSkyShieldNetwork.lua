@@ -494,6 +494,7 @@ function Shield.start(ctx)
     folder.Parent = arena
     ctx.Cleanup[#ctx.Cleanup + 1] = folder
     local stations = {}
+    local links = {}
     local floorY = base.Position.Y + base.Size.Y * 0.5
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local active = true
@@ -503,6 +504,14 @@ function Shield.start(ctx)
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
         if activeRound == round then activeRound = nil end
         active = false
+        for _, link in pairs(links) do
+            link.generation += 1
+            link.live = false
+            if link.model.Parent then
+                link.model:SetAttribute("ShieldCorridorActive", false)
+                link.model:SetAttribute("ShieldActiveUntil", 0)
+            end
+        end
         for _, entry in ipairs(stations) do
             entry.generation += 1
             entry.prompt.Enabled = false
@@ -569,6 +578,76 @@ function Shield.start(ctx)
         refresh()
     end
     folder:SetAttribute("ShieldStationCount", #stations)
+
+    -- Exactly one bounded event-driven update per activation, expiry or
+    -- collapsing-floor Size change; NO permanent server or client loop.
+    local function refreshLinks()
+        if not active or not ctx.Active() or not folder.Parent then return end
+        local now = os.clock()
+        local activeCount = 0
+        for index = 1, math.min(#stations, Shield.MaxLinkedStations) do
+            if stations[index].floorValid and now < stations[index].activeUntil then
+                activeCount += 1
+            end
+        end
+        folder:SetAttribute("ActiveShieldGenerators", activeCount)
+        local linkedCount = 0
+        for i = 1, math.min(#stations, Shield.MaxLinkedStations) do
+            for j = i + 1, math.min(#stations, Shield.MaxLinkedStations) do
+                local from, to = stations[i], stations[j]
+                local deadline = math.min(from.activeUntil, to.activeUntil)
+                local shouldLink = from.floorValid and to.floorValid
+                    and from.model.Parent and to.model.Parent
+                    and now < deadline
+                local key = tostring(i) .. "_" .. tostring(j)
+                local link = links[key]
+                if shouldLink and not link then
+                    link = makeLink(folder, from, to, variant)
+                    links[key] = link
+                end
+                if link then
+                    if shouldLink then
+                        linkedCount += 1
+                        if not link.live then
+                            link.live = true
+                            link.absorbed = 0
+                            link.model:SetAttribute("ShieldAbsorbedDamage", 0)
+                            link.model:SetAttribute("ShieldCorridorActive", true)
+                            for _, section in ipairs(link.sections) do
+                                section.Transparency = section.Name:find("Upper")
+                                    and 0.52 or 0.18
+                            end
+                        end
+                        if math.abs(link.deadline - deadline) > 0.01 then
+                            link.deadline = deadline
+                            link.generation += 1
+                            local generation = link.generation
+                            link.model:SetAttribute("ShieldActiveUntil",
+                                workspace:GetServerTimeNow()
+                                    + math.max(0, deadline - now))
+                            task.delay(math.max(0.02, deadline - now), function()
+                                if active and link.generation == generation then
+                                    refreshLinks()
+                                end
+                            end)
+                        end
+                    elseif link.live then
+                        link.live = false
+                        link.deadline = 0
+                        link.generation += 1
+                        link.model:SetAttribute("ShieldCorridorActive", false)
+                        link.model:SetAttribute("ShieldActiveUntil", 0)
+                        for _, section in ipairs(link.sections) do
+                            section.Transparency = 1
+                        end
+                    end
+                end
+            end
+        end
+        folder:SetAttribute("ActiveShieldCorridors", linkedCount)
+    end
+    round.refreshLinks = refreshLinks
+    refreshLinks()
 
     -- The exact damage pass in DisasterImpact is authoritative.  No
     -- client-reported world position or instant-dodge privilege exists.
