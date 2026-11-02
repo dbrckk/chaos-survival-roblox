@@ -10,6 +10,53 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 describe("AI survivor rules", function()
+    it("selects only stable neighboring decks when a high route warns of collapse", function()
+        local eligible = AISurvivorRules.safeCollapseNeighbor
+        local frame = function(entry)
+            return CFrame.new(entry.offset)
+        end
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(variantId)
+            local promenade = variant.PromenadePlatforms
+            local spine = variant.SkySpinePlatforms
+            -- A warning on lane 1 step 3 can escape to the next
+            -- genuine deck, but not leap across a skipped 2.4-stud gap.
+            local threatened = promenade[3]
+            local adjacent = promenade[4]
+            local far = promenade[5]
+            expect(eligible(
+                frame(threatened), threatened.size,
+                frame(adjacent), adjacent.size, true
+            )).toBe(true)
+            expect(eligible(
+                frame(threatened), threatened.size,
+                frame(adjacent), adjacent.size, false
+            )).toBe(false)
+            -- A shrinking tile may still collide while being too tiny
+            -- to hold the physical character and must not be an exit.
+            expect(eligible(
+                frame(threatened), threatened.size,
+                frame(adjacent), Vector3.new(4, 2, 4), true
+            )).toBe(false)
+            expect(eligible(
+                frame(threatened), threatened.size,
+                frame(far), far.size, true
+            )).toBe(false)
+            -- The middle of an H crossing is also a legitimate escape.
+            local crossing = promenade[4]
+            expect(eligible(
+                frame(crossing), crossing.size,
+                frame(spine[1]), spine[1].size, true
+            )).toBe(true)
+            expect(eligible(
+                frame(crossing), crossing.size,
+                frame(spine[5]), spine[5].size, true
+            )).toBe(false)
+        end
+        expect(eligible(nil, Vector3.new(12, 2, 12),
+            CFrame.new(), Vector3.new(12, 2, 12), true)).toBe(false)
+    end)
+
     it("keeps elevated AI on adjacent real 3D sky landings in five arenas", function()
         local adjacent = AISurvivorRules.neighboringPhysicalDeck
         local function frame(def)
@@ -1021,6 +1068,16 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.reachableElevation(24, 13.9, "Towers")).toBe(false)
         -- On high platforms, the next 20-32-stud sky lane is a valid
         -- target, but an equally high deck across 200 studs of void is not.
+        -- A bot whose bridge collapsed underfoot cannot pick a
+        -- new remote roof just because the elevation matches.
+        local hasSupport = AISurvivorRules.elevatedRouteHasSupport
+        expect(hasSupport(5, 1, false)).toBe(true)
+        expect(hasSupport(9, 1, false)).toBe(true)
+        expect(hasSupport(15, 1, false)).toBe(false)
+        expect(hasSupport(15, 1, true)).toBe(true)
+        expect(hasSupport(15, 1, nil)).toBe(false)
+        expect(hasSupport(0/0, 1, true)).toBe(false)
+
         local nearby = AISurvivorRules.elevatedWaypointNearby
         expect(nearby(Vector3.new(10, 4, 0),
             Vector3.new(210, 4, 0), 1)).toBe(true)

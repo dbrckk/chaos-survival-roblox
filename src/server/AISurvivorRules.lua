@@ -814,6 +814,17 @@ end
 -- the directional footprint of each rotated deck (not just center
 -- distance), so a nearby diagonal platform across open air cannot be
 -- scored as a walkable next stage.
+-- A missing floor ray beneath an elevated NPC must never unlock
+-- every same-height sky waypoint. If its supporting deck vanished,
+-- the bot needs a local safe recovery, not a 30-stud run over void.
+-- On the ground the normal candidate system remains unrestricted.
+function AISurvivorRules.elevatedRouteHasSupport(
+    rootY, baseTopY, standingDeckConfirmed)
+    if type(rootY) ~= "number" or type(baseTopY) ~= "number"
+        or rootY ~= rootY or baseTopY ~= baseTopY then return false end
+    return rootY <= baseTopY + 8 or standingDeckConfirmed == true
+end
+
 function AISurvivorRules.neighboringPhysicalDeck(
     firstFrame, firstSize, nextFrame, nextSize)
     if typeof(firstFrame) ~= "CFrame" or typeof(nextFrame) ~= "CFrame"
@@ -844,6 +855,24 @@ function AISurvivorRules.neighboringPhysicalDeck(
     end
     return distance - reach(firstFrame, firstSize)
         - reach(nextFrame, nextSize) <= 3.05
+end
+
+-- When a high, real platform announces a collapse, bot escape must
+-- move to an AVAILABLE, physically adjacent deck rather than running
+-- toward the arena's distant centre through empty air. This shared
+-- predicate is deterministic and exercised in the Roblox engine.
+function AISurvivorRules.safeCollapseNeighbor(
+    threatenedFrame, threatenedSize,
+    candidateFrame, candidateSize, available)
+    -- A physically colliding but nearly vanished/shrunken tile is not
+    -- a viable emergency landing for a full R15 avatar.
+    if typeof(candidateSize) ~= "Vector3"
+        or candidateSize.X < 6 or candidateSize.Z < 6 then
+        return false
+    end
+    return available == true and AISurvivorRules.neighboringPhysicalDeck(
+        threatenedFrame, threatenedSize, candidateFrame, candidateSize
+    )
 end
 
 function AISurvivorRules.skyGapJumpReady(
