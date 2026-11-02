@@ -1433,6 +1433,9 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
 end
 
 local function disappearingPlatformEscape(record, root, now)
+    -- Always drop the previous emergency deck; stale collapse targets
+    -- are especially unsafe when the disaster changes platform phase.
+    record.collapseEscapeDeck = nil
     -- Inspect live platform warnings on Towers as well as the dedicated
     -- collapse disaster. Other arenas avoid a new per-bot raycast each tick.
     if not hasDisaster("DisappearingPlatforms")
@@ -1484,6 +1487,50 @@ local function disappearingPlatformEscape(record, root, now)
     end
 
     local base = arenaBase()
+    local baseTopY = base and (base.Position.Y + base.Size.Y * 0.5)
+        or config.ArenaCenter.Y
+    if root.Position.Y > baseTopY + 8 then
+        -- The existing centre-directed dodge is safe on the ground, but
+        -- sends bots off a 20-stud HIGH perimeter / promenade landing.
+        -- Choose only the nearest solid, same-network physical deck.
+        -- This scans just the arena's authoritative Platforms folder
+        -- during a confirmed warning, after the normal reaction delay.
+        local platforms = part.Parent
+        local closest, closestCost = nil, math.huge
+        for _, deck in ipairs(platforms:GetChildren()) do
+            if deck ~= part and deck:IsA("BasePart") then
+                local available = AISurvivorRules.platformAvailable(
+                    deck.CanCollide, deck.Transparency,
+                    deck:GetAttribute("CollapsePhase")
+                )
+                if AISurvivorRules.safeCollapseNeighbor(
+                    part.CFrame, part.Size,
+                    deck.CFrame, deck.Size, available
+                ) then
+                    local waypoint = deck.Position
+                        + deck.CFrame.UpVector * (deck.Size.Y * 0.5 + 2.4)
+                    local difference = waypoint - root.Position
+                    local flatDistance = Vector3.new(
+                        difference.X, 0, difference.Z
+                    ).Magnitude
+                    -- No world-spanning diagonals across disconnected
+                    -- sky sectors even if broad bounding boxes overlap.
+                    if flatDistance < 34 and flatDistance < closestCost then
+                        closest, closestCost = deck, flatDistance
+                    end
+                end
+            end
+        end
+        if closest then
+            record.collapseEscapeDeck = closest
+            return closest.Position
+                + closest.CFrame.UpVector * (closest.Size.Y * 0.5 + 2.4)
+        end
+        -- No physically supported high escape exists. Do not invent
+        -- a rescue path through open air or fabricate a teleport.
+        return nil
+    end
+
     local center = base and base.Position or config.ArenaCenter
     local towardCenter = center - root.Position
     local horizontal = Vector3.new(towardCenter.X, 0, towardCenter.Z)
@@ -3334,8 +3381,9 @@ end
 -- cadence ONLY while the bot is actually approaching a real elevated
 -- platform; jump with native Humanoid physics if the intervening gap
 -- has no footing and the far side has a safe, level landing.
-local function tryPhysicalSkyGapJump(record, humanoid, root, now, target)
-    local deck = record.targetPart
+local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
+        emergencyDeck)
+    local deck = emergencyDeck or record.targetPart
     if not deck or not deck:IsA("BasePart")
         or not deck.Parent or deck.Parent.Name ~= "Platforms"
         or typeof(target) ~= "Vector3"
@@ -4047,7 +4095,10 @@ local function stepRecord(record, now)
             local warnedEscape = record.escapeWarning
                 and record.escapeWarning.Parent
                 and record.escapeTarget == urgentTarget
-            record.target = (skybridgeEscape or floorSweepEscape or warnedEscape)
+            -- An imminent elevated collapse has a prevalidated real
+            -- landing. Social spacing must not push that target off it.
+            record.target = (skybridgeEscape or floorSweepEscape
+                or warnedEscape or record.collapseEscapeDeck)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
@@ -4238,8 +4289,9 @@ local function stepRecord(record, now)
             -- The old generic height check fired on every brain tick,
             -- even while airborne, overriding the bounded parkour jump
             -- cooldown and creating unnatural pogo-stick movement.
-            if not urgentTarget then
-                tryPhysicalSkyGapJump(record, humanoid, root, now, record.target)
+            if not urgentTarget or record.collapseEscapeDeck then
+                tryPhysicalSkyGapJump(record, humanoid, root, now,
+                    record.target, record.collapseEscapeDeck)
             end
             if delta.Y > 2.2 and horizontal.Magnitude < 10
                 and humanoid.FloorMaterial ~= Enum.Material.Air
