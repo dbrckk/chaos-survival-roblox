@@ -247,12 +247,12 @@ local function build(folder, position, index, color)
     local label = Instance.new("BillboardGui")
     label.Name = "RelayStatus"
     label.Adornee = head
-    label.Size = UDim2.fromOffset(158, 36)
+    label.Size = UDim2.fromOffset(150, 34)
     label.StudsOffsetWorldSpace = Vector3.new(0, 2.8, 0)
     -- Route-side stations are now closer to active players. Keep both
     -- labels readable from the hub without adding persistent screen HUD.
     -- Only two small, occlusion-aware (AlwaysOnTop=false) tags per arena.
-    label.MaxDistance = 95
+    label.MaxDistance = 56
     label.AlwaysOnTop = false
     label.Parent = head
     local text = Instance.new("TextLabel")

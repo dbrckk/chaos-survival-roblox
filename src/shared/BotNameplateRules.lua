@@ -13,9 +13,9 @@ function BotNameplateRules.presentation(phase, tier, touch)
     -- over the hazards and real-player thumb controls.
     if touch == true then
         if tier == "Low" then
-            distance = emphasize and 58 or 42
+            distance = emphasize and 58 or 33
         else
-            distance = emphasize and 72 or 54
+            distance = emphasize and 68 or 42
         end
     end
 

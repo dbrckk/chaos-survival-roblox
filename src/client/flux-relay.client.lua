@@ -398,7 +398,7 @@ local function renderHUD(serverTime)
         if root then
             for trigger in pairs(gates) do
                 if trigger.Parent
-                    and (trigger.Position - root.Position).Magnitude <= 42 then
+                    and (trigger.Position - root.Position).Magnitude <= 26 then
                     nearGate = true
                     break
                 end
@@ -420,8 +420,10 @@ local function renderHUD(serverTime)
             hudTitle.Text = "FLUX MASTER  //  3/3"
             hudTitle.TextColor3 = style.Signal
         elseif stage == 0 then
-            hudTitle.Text = french and "FLUX • TRAVERSE UNE ARCHE"
-                or "FLUX • ENTER A CHARGED GATE"
+            hudTitle.Text = if touchDevice
+                then (french and "FLUX • PASSE L'ARCHE" or "FLUX • CROSS GATE")
+                else (french and "FLUX • TRAVERSE UNE ARCHE"
+                    or "FLUX • ENTER A CHARGED GATE")
             hudTitle.TextColor3 = Color3.fromRGB(222, 236, 255)
         else
             hudTitle.Text = string.format("FLUX %d/3  •  %s  •  %ds",
