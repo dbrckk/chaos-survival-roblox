@@ -1,14 +1,13 @@
-name: One-Time Android Gameplay Recovery Engine Gate (2026-11-02)
+name: One-Time Mobile Core-A Baseline Repair Engine Gate (2026-11-02)
 
-# User's SIX REAL Android screenshots show that maps are dark, NPCs
-# run against geometry, secondary objectives hide the basic survival
-# goal and platforms look flat. This patch adds daylight, physically
-# supported anti-stuck detours, a persistent SURVIVE objective and
-# budgeted 3D native hardware. It ALSO corrects the four real core_a
-# assertion failures on the previous main 6e1d320bb024cd1a932711c5eff613f5cfa354c6
-# (engine run 41430457701), caused by stale expected mobile styles.
-# A newly merged SHA must pass Rojo Build AND all 5 real engine suites.
-# The previous published 2-Nov SHA a3e414be is separate. No publish.
+# Exact-source release gate for the five-world daylight, bot anti-stuck
+# and platform-hardware candidate. Previous SHA 77b93dc2b13e576858933a92c703c86bc41cc8df
+# successfully BUILT but failed 3 purely outdated deterministic core_a
+# assertions (engine run 41434824447), all explicitly identified:
+# 68 vs 72 ready-phase High touch nameplate, actual light attenuation
+# Low .62 / Medium .70 / High .78 vs previous Low .58 / .66 / .74.
+# All gameplay source stays unchanged. Verify full five real suites
+# and Build on THIS newly merged SHA, no public Roblox publish.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.
