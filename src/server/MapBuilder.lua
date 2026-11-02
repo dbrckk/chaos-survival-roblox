@@ -21,6 +21,7 @@ local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 local HarborScenery = require("./HarborScenery")
 local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
+local SkyRouteMonuments = require("./SkyRouteMonuments")
 
 local MapBuilder = {}
 
@@ -2864,6 +2865,16 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             trim.Transparency = 0.64
         end
         addPlatformFinish(decor, platform, i, theme)
+        -- Real 320-stud arenas need strong visual destinations, not more
+        -- small repeated squares. Twelve major route portals stand on
+        -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
+        -- at guessed coordinates. The tower is wholly noncolliding and
+        -- every piece follows its actual owning platform through shrink
+        -- and collapse; pre-existing danger telegraphs remain authoritative.
+        if definition.PerimeterRoute then
+            SkyRouteMonuments.decorate(
+                decor, platform, i, definition, variant.Id, theme)
+        end
         -- Six large native-metal arches visibly frame the actual elevated
         -- 200-stud promenades. Every noncolliding part is owned by its
         -- physical PlatformN, including ShrinkingArena movement/scaling.

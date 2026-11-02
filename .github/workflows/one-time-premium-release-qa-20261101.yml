@@ -1,15 +1,16 @@
-name: One-Time Physical Bot Navigation + Android Lighting Gate (2026-11-02)
+name: One-Time Monumental Escape Route Architecture Engine Gate (2026-11-02)
 
-# One deliberate major source integration: genuine grounded NPC stall
-# recovery using real collision and midpoint/end floor raycasts, stable
-# failed-target memory, less unnatural in-round jumping, and the reviewed
-# Android real-world floor-fill repair #548. The previous exact-green main
-# dbe193694a560c86a78a570b9bcb91e64a35526c predates these changes.
-# Run ONE fresh build and ALL five engine shards on the same merged SHA.
-# User screenshot QA/actual Roblox publishing remain separate milestones:
-# this workflow NEVER modifies the existing public Roblox experience.
-# It triggers only if this workflow path is changed AND the special
-# explicitly titled source merge reaches the exact main branch HEAD.
+# One substantial visually verifiable source milestone: twelve genuine
+# 3D route-entry, mid-climb and summit monuments on all five physical arenas,
+# authored mechanical silhouettes and sparse stage navigation cues.
+# Every component follows its exact 8-step deck when shrinking/collapsing.
+# Previous main 534c4eaad8c031edb55c88ca884c123698f4015d has FULLY
+# green Build Validation 41448424985 and all five Cloud suites 41448510356
+# but those runs DO NOT certify this newly authored production 3D geometry.
+# One new build and all five real Roblox engine shards on EXACT merged SHA.
+# No public Roblox publishing, Studio screenshots or Android FPS claims.
+# Trigger only when this workflow is deliberately altered AND special
+# exact-SHA release-gate merge message is pushed to original main.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.
