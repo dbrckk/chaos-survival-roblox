@@ -192,6 +192,23 @@ describe("AI survivor rules", function()
         expect(supported(12, 7.0, 7.1, 6.5, math.huge)).toBe(false)
         expect(supported(12, 7.0, 7.1, 6.5, "invalid")).toBe(false)
 
+        -- Repeatedly scoring the just-failed goal causes bots to turn
+        -- straight back into the same wall after a detour.
+        local bad = {position = Vector3.new(8, 4, 4)}
+        local good = {position = Vector3.new(30, 4, 4)}
+        local choices = {bad, good}
+        local filtered = AISurvivorRules.filterRecentlyFailedCandidates(
+            choices, Vector3.new(4, 4, 4), 2, 9.5)
+        expect(#filtered).toBe(1)
+        expect(filtered[1]).toBe(good)
+        expect(AISurvivorRules.filterRecentlyFailedCandidates(
+            choices, Vector3.new(4, 4, 4), 10, 9.5)).toBe(choices)
+        expect(AISurvivorRules.filterRecentlyFailedCandidates(
+            choices, nil, 2, 9.5)).toBe(choices)
+        local onlyBlocked = {bad}
+        expect(AISurvivorRules.filterRecentlyFailedCandidates(
+            onlyBlocked, Vector3.new(4, 4, 4), 2, 9.5)).toBe(onlyBlocked)
+
         local stalled = AISurvivorRules.isGenuineStall
         expect(stalled(start, start, goal, 1.16, true, true)).toBe(true)
         expect(stalled(start, start + Vector3.new(0, 0, 2.5),
