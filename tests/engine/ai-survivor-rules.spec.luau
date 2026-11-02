@@ -938,6 +938,10 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.reachableElevation(3, 11.4, "Towers")).toBe(true)
         expect(AISurvivorRules.reachableElevation(3, 12, "Towers")).toBe(false)
         expect(AISurvivorRules.reachableElevation(12, 6, "Towers")).toBe(true)
+        -- A high sky platform is not a walkable shortcut to floor level.
+        expect(AISurvivorRules.reachableElevation(24, 4, "Classic")).toBe(false)
+        expect(AISurvivorRules.reachableElevation(24, 14, "Towers")).toBe(true)
+        expect(AISurvivorRules.reachableElevation(24, 13.9, "Towers")).toBe(false)
     end)
 
     it("preserves plausible route continuity per arena", function()
