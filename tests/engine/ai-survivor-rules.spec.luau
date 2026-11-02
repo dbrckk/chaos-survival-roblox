@@ -10,6 +10,44 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 
 describe("AI survivor rules", function()
+    it("keeps meteor escapes on actual elevated sky platforms in five worlds", function()
+        local safe = AISurvivorRules.safeElevatedImpactEscape
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(variantId)
+            for _, decks in ipairs({
+                variant.PromenadePlatforms, variant.SkySpinePlatforms
+            }) do
+                local deck = decks[4]
+                local frame = CFrame.new(deck.offset)
+                local origin = frame.Position
+                    + Vector3.new(0, deck.size.Y * 0.5 + 2.4, 0)
+                local rawDodge = origin + Vector3.new(40, 0, 25)
+                local clamped = safe(
+                    origin, rawDodge, origin.Y - 18, frame, deck.size
+                )
+                expect(typeof(clamped)).toBe("Vector3")
+                local localTarget = frame:PointToObjectSpace(clamped)
+                expect(math.abs(localTarget.X)
+                    <= deck.size.X * 0.5 - 1.99).toBe(true)
+                expect(math.abs(localTarget.Z)
+                    <= deck.size.Z * 0.5 - 1.99).toBe(true)
+                expect(math.abs(clamped.Y - origin.Y) < 0.001)
+                    .toBe(true)
+                -- A normal contestant on the main floor still has
+                -- full freedom to dodge a large meteor footprint.
+                expect(safe(origin, rawDodge, origin.Y, nil, nil))
+                    .toBe(rawDodge)
+                -- No real overhead footing, no imagined long route.
+                expect(safe(origin, rawDodge, origin.Y - 18, nil, nil))
+                    .toBe(origin)
+                expect(safe(origin, rawDodge, origin.Y - 18, frame,
+                    Vector3.new(2, 2, 3))).toBe(origin)
+            end
+        end
+        expect(safe(nil, Vector3.new(1, 2, 3), 0, nil, nil))
+            .toBe(nil)
+    end)
+
     it("selects only stable neighboring decks when a high route warns of collapse", function()
         -- An actual impact/sweep has priority over holding on a
         -- doomed platform, even when there is no adjacent escape deck.
