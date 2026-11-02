@@ -784,6 +784,22 @@ function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     return rise <= limit
 end
 
+-- Elevated bots should choose the NEXT physical 20-32-stud sky
+-- landing, not another sky bridge on the opposite side of the 320-stud
+-- world. The latter looked like a valid same-height waypoint to the
+-- old AI and sent runners straight into empty air. Ground runners keep
+-- the long-distance freedom needed to reach a real entrance terrace.
+function AISurvivorRules.elevatedWaypointNearby(
+    current, destination, groundTopY)
+    if typeof(current) ~= "Vector3"
+        or typeof(destination) ~= "Vector3"
+        or type(groundTopY) ~= "number" then return false end
+    if current.Y <= groundTopY + 8 then return true end
+    local dx = current.X - destination.X
+    local dz = current.Z - destination.Z
+    return dx * dx + dz * dz <= 34 * 34
+end
+
 function AISurvivorRules.routeContinuity(variantId, currentPosition, targetPosition, center, directionBias)
     if typeof(currentPosition) ~= "Vector3"
         or typeof(targetPosition) ~= "Vector3"
