@@ -6,7 +6,7 @@
 local SkyRouteMonuments = {}
 
 SkyRouteMonuments.Steps = {[1] = "ACCESS", [4] = "TRANSFER", [8] = "SUMMIT"}
-SkyRouteMonuments.MaxPartsPerMonument = 14
+SkyRouteMonuments.MaxPartsPerMonument = 16
 
 local function piece(decor, deck, index, role, name, size, offset,
         color, material, kind, transparency, navigation)
@@ -133,6 +133,48 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
             CFrame.new(0, top + 14.4, 0),
             accent, Enum.Material.Glass, nil, 0.18, true)
         beacon.Shape = Enum.PartType.Ball
+    end
+
+    -- Distinct original architectural crown for each of the five
+    -- universes. Shapes are not just recolored stock platform cubes.
+    if variant == "Classic" then
+        add("IndustrialSurveyAntenna",
+            Vector3.new(1.6, 3.2, 3.4),
+            CFrame.new(0, top + 14.5, 0)
+                * CFrame.Angles(0, 0, math.rad(22)),
+            metal, Enum.Material.DiamondPlate, "WedgePart")
+    elseif variant == "Towers" then
+        add("RailwayTransitMonitor",
+            Vector3.new(1.4, 3.8, 5.5),
+            CFrame.new(0, top + 14.7, 0),
+            accent, Enum.Material.Glass, nil, 0.32)
+    elseif variant == "Crossroads" then
+        add("AngledRoadExchange",
+            Vector3.new(2.2, 3.1, 5.0),
+            CFrame.new(0, top + 14.3, 0)
+                * CFrame.Angles(0, math.rad(20), math.rad(17)),
+            metal, Enum.Material.CorrodedMetal, "WedgePart")
+    elseif variant == "Orbital" then
+        local reactor = add("SatelliteReactor",
+            Vector3.new(3.8, 3.8, 3.8),
+            CFrame.new(0, top + 15.5, 0),
+            accent, Enum.Material.Glass, nil, 0.20)
+        reactor.Shape = Enum.PartType.Ball
+        local ring = add("ContainmentRotor",
+            Vector3.new(0.38, 5.0, 5.0),
+            CFrame.new(0, top + 15.5, 0)
+                * CFrame.Angles(0, 0, math.rad(35)),
+            metal, Enum.Material.Metal)
+        ring.Shape = Enum.PartType.Cylinder
+    elseif variant == "Harbor" then
+        add("PortCargoTraverse",
+            Vector3.new(5.5, 0.65, 1.8),
+            CFrame.new(0, top + 14.4, 1.8),
+            metal, Enum.Material.CorrodedMetal)
+        add("SuspendedStormHook",
+            Vector3.new(0.55, 3.8, 0.55),
+            CFrame.new(0, top + 12.3, 3.5),
+            accent, Enum.Material.Metal)
     end
 
     assert(count <= SkyRouteMonuments.MaxPartsPerMonument,
