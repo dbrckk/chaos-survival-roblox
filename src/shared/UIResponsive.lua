@@ -254,10 +254,13 @@ function UIResponsive.mobileMechanicTracker(viewport, topInset)
     local focusTop = c.height - profile.roundFocusBottomOffset
         - profile.roundFocusHeight
     return {
-        centerXScale = 0.50,
+        -- Wide Android captures put this optional FLUX/GRID banner over
+        -- the avatar and other players. Reserve a narrow LEFT status lane
+        -- beneath the top hazard; keep centered on portrait devices.
+        centerXScale = c.wide and 0.315 or 0.50,
         topOffset = top,
         height = height,
-        width = math.min(254, math.max(174,
+        width = math.min(c.wide and 218 or 254, math.max(174,
             c.width * (c.veryNarrow and 0.66 or 0.36))),
         fits = top + height + 8 <= focusTop,
     }
