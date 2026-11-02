@@ -614,7 +614,13 @@ end
 -- knock an NPC off a narrow perimeter step or out of a mastery trigger.
 function AISurvivorRules.allowRouteStrafe(
     targetIsPad, targetIsSkyrail, targetPart, activeExpedition)
+    -- Mid/high-tier genuine parkour decks are too narrow for arbitrary
+    -- sideways crowd-avoidance curves, even when the route was chosen
+    -- casually rather than by a deliberate expedition.
+    local tier = typeof(targetPart) == "Instance"
+        and tonumber(targetPart:GetAttribute("RouteTier")) or nil
     return targetIsPad ~= true
+        and (not tier or tier < 3)
         and not AISurvivorRules.committedWorldRoute(
             targetIsSkyrail, targetPart, activeExpedition
         )
