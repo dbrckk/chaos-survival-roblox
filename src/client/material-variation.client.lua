@@ -29,7 +29,12 @@ local function eligible(part)
     -- variation must not touch their native base material BEFORE the PBR
     -- pass chooses it, otherwise the 2K material key and later restore
     -- depend on whichever asynchronous client owner happened to run first.
-    if PbrDistrictRules.eligibleOwner(part.Parent) then
+    -- The shared arena Decor folder now contains specifically tagged
+    -- premium surfaces. Preserve variation on OTHER legacy decor while
+    -- never racing the creator-owned camera-budgeted PBR selector.
+    if PbrDistrictRules.eligibleOwner(part.Parent)
+        and (part.Parent.Name ~= "Decor"
+            or part:GetAttribute("PremiumArchitecturalSurface") == true) then
         return false
     end
 
