@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
+local HAZARD_OWNER = "imminent-hazard"
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -131,6 +132,15 @@ local function hide()
     if marker then marker.Enabled = false end
     currentTarget = nil
 end
+
+-- The real danger event can arrive between two 0.4-second guidance polls.
+-- Hide the existing world sign in that SAME frame, without another loop.
+-- Recovery is handled by the already-running coach when the alert releases.
+MobileHudNotices.Changed:Connect(function(owner)
+    if UserInputService.TouchEnabled and owner == HAZARD_OWNER then
+        hide()
+    end
+end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
@@ -592,7 +602,7 @@ local function update()
     -- notification lane, and it can preempt this marker immediately.
     -- On desktop the world-space depth-tested sign remains unchanged.
     if UserInputService.TouchEnabled
-        and MobileHudNotices.current() == "imminent-hazard" then
+        and MobileHudNotices.current() == HAZARD_OWNER then
         hide()
         return true
     end
