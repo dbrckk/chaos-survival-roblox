@@ -77,7 +77,42 @@ function PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner)
         and owner:GetAttribute("OriginalHeroArchitecture") == true
 end
 
+-- Only the original structural artwork owned by THIS generated arena/lobby
+-- enters the existing global 2K PBR budget. Attribute alone never approves
+-- arbitrary player models, hazard geometry or a random workspace Folder.
+function PbrDistrictRules.isPremiumArchitecturalOwner(owner)
+    if typeof(owner) ~= "Instance" then return false end
+    local map = workspace:FindFirstChild("GeneratedMap")
+    if not map then return false end
+    if owner:IsA("Folder") and owner.Name == "Decor"
+        and owner:GetAttribute("PremiumSurfaceSkinSource") == true then
+        local parent = owner.Parent
+        return parent ~= nil and parent.Parent == map
+            and (parent.Name == "Arena" or parent.Name == "Lobby")
+    end
+    if owner:IsA("Model")
+        and owner:GetAttribute("OriginalFrameCladding") == true
+        and owner:GetAttribute("SourceIsOriginal") == true
+        and owner:GetAttribute("CosmeticOnly") == true then
+        local fleet = owner.Parent
+        local decor = fleet and fleet.Parent
+        local arena = decor and decor.Parent
+        return fleet ~= nil and fleet.Name == "OriginalPremiumColumnCladding"
+            and decor ~= nil and decor.Name == "Decor"
+            and decor:GetAttribute("PremiumSurfaceSkinSource") == true
+            and arena ~= nil and arena.Name == "Arena"
+            and arena.Parent == map
+    end
+    return false
+end
+
 function PbrDistrictRules.ownerLimit(tierName, owner)
+    if PbrDistrictRules.isPremiumArchitecturalOwner(owner) then
+        if owner:IsA("Folder") then
+            return tierName == "High" and 12 or (tierName == "Medium" and 7 or 0)
+        end
+        return tierName == "High" and 2 or (tierName == "Medium" and 1 or 0)
+    end
     if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
         -- Only ONE arena's original local architecture exists at a time.
         -- Use three large surfaces on Medium, eight on High; all also
@@ -169,6 +204,7 @@ function PbrDistrictRules.withinDistance(part, cameraPosition, tierName, touch)
 end
 
 function PbrDistrictRules.eligibleOwner(owner)
+    if PbrDistrictRules.isPremiumArchitecturalOwner(owner) then return true end
     if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
         return true
     end
@@ -230,6 +266,25 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         or not PbrDistrictRules.visible(part) then
         return false
     end
+    -- The arena Decor folder is a broad PBR candidate index; select ONLY
+    -- the exact original floor/deck structures explicitly tagged by builder.
+    -- No hazard part or player-accessible collider may be retextured.
+    if PbrDistrictRules.isPremiumArchitecturalOwner(owner) then
+        if owner:IsA("Folder") then
+            if part:GetAttribute("PremiumArchitecturalSurface") ~= true then
+                return false
+            end
+            local name = part.Name
+            if name ~= "ArenaDeckInset" and name ~= "LobbyFloorInset"
+                and name ~= "ArenaUndercarriage"
+                and not name:match("^PlatformPanel%d+$")
+                and not name:match("^PlatformUnderFrame%d+$") then
+                return false
+            end
+        elseif part:IsA("MeshPart") then
+            return false
+        end
+    end
     -- Never retexture the source geometry of an imported package, even
     -- if it has no SurfaceAppearance. Only locally authored and explicitly
     -- tagged structural foundations inside approved packages qualify.
@@ -267,12 +322,27 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
     local longest = math.max(part.Size.X, part.Size.Y, part.Size.Z)
     -- Keep the regular >=0.35-stud minimum for every other Part. The
     -- approved authored entrance is the sole thin-surface exception.
+    local largeAuthoredDeck = PbrDistrictRules.isPremiumArchitecturalOwner(owner)
+        and owner:IsA("Folder")
+        and part:GetAttribute("PremiumArchitecturalSurface") == true
+        and (part.Name == "ArenaDeckInset" or part.Name == "LobbyFloorInset")
+        and part.Size.X >= 20 and part.Size.Z >= 20
+        and part.Size.Y >= 0.10
     return longest >= 3
-        and (smallest >= 0.35 or canonicalServiceDoor(part, owner))
+        and (smallest >= 0.35 or canonicalServiceDoor(part, owner)
+            or largeAuthoredDeck)
 end
 
 function PbrDistrictRules.materialKey(partName, material, owner)
     local name = tostring(partName or ""):lower()
+    if PbrDistrictRules.isPremiumArchitecturalOwner(owner) then
+        -- Respect real original material family instead of a generic
+        -- name substring; especially keep corroded Harbor port steel.
+        if material == Enum.Material.CeramicTiles then return "ceramic" end
+        if material == Enum.Material.CorrodedMetal then return "oxidized" end
+        if material == Enum.Material.DiamondPlate then return "armor" end
+        return "titanium"
+    end
     if PbrDistrictRules.isAuthoredHeroArchitectureOwner(owner) then
         -- The original hero setpieces use explicit real material families.
         -- A large diamondplate crosshead must remain armored steel, not
@@ -334,6 +404,18 @@ function PbrDistrictRules.priority(part)
     local size = part.Size
     local area = 2 * (size.X * size.Y + size.Y * size.Z + size.X * size.Z)
     local name = part.Name:lower()
+    local structuralScore = 0
+    if PbrDistrictRules.isPremiumArchitecturalOwner(part.Parent) then
+        if name == "arenadeckinset" or name == "lobbyfloorinset" then
+            structuralScore = 9000
+        elseif name:match("^platformpanel%d+$") then
+            structuralScore = 3100
+        elseif name:match("^platformunderframe%d+$") then
+            structuralScore = 1300
+        elseif name == "armoredfrontshell" then
+            structuralScore = 2400
+        end
+    end
     local architecturalFace = name:find("housing", 1, true)
         or name:find("shell", 1, true)
         or name:find("panel", 1, true)
@@ -346,7 +428,8 @@ function PbrDistrictRules.priority(part)
     -- rather than giving the 2K budget to a taller but remote roof shell.
     -- The existing owner/global quotas remain authoritative.
     local primaryEntrance = name == "serviceentrydoor"
-    return math.min(area, 4000) + (architecturalFace and 250 or 0)
+    return math.min(area, 4000) + structuralScore
+        + (architecturalFace and 250 or 0)
         + (primaryEntrance and 1200 or 0)
 end
 
