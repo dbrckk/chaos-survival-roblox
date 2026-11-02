@@ -3791,12 +3791,11 @@ local function stepRecord(record, now)
         if not urgentTarget then
             urgentTarget = skybridgeShutterEscape(record, root, now)
         end
-        if not urgentTarget and record.collapseEscapeHolding then
-            -- An impossible elevated retreat should not mask a genuine
-            -- meteor/bomb/sweep escape. Only hold position AFTER every
-            -- more actionable urgent hazard has been considered.
-            urgentTarget = root.Position
-        end
+        -- An impossible elevated retreat must not hide a genuine
+        -- meteor, bomb, sweep or shutter escape found above.
+        urgentTarget = AISurvivorRules.collapseFallbackTarget(
+            urgentTarget, record.collapseEscapeHolding, root.Position
+        )
     end
 
     -- Do not teleport or auto-activate AI. Hold time and proximity are
