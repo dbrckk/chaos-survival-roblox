@@ -498,6 +498,16 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
 
+            -- Original 3D machined/wedge armor replaces the visible
+            -- rectangular toy-block silhouette on selected real decks.
+            -- Registered here under the EXISTING collapse/shrink/streaming
+            -- owner; never spawn a new per-frame cosmetics task.
+            for _, piece in ipairs(PlatformFinishKit.buildCarapace(
+                folder, platform, variant, tier.Name, theme, visualIndex
+            )) do
+                registerVisual(platform, piece)
+            end
+
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier)
             elseif variant == "Crossroads" then
