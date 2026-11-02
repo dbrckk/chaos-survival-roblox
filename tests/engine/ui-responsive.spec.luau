@@ -207,6 +207,10 @@ describe("UI responsive profiles", function()
         expect(normal.MaxDistance < desktop.MaxDistance).toBe(true)
         expect(ready.MaxDistance > normal.MaxDistance).toBe(true)
         expect(desktop.MaxDistance).toBe(72)
+        -- Real Android screenshots showed seven overlapping bot names
+        -- competing with the disaster text; nearby bots stay visible.
+        expect(normal.MaxDistance <= 42).toBe(true)
+        expect(low.MaxDistance <= 33).toBe(true)
     end)
 
     it("keeps critical mobile text above a readable floor", function()
@@ -377,7 +381,16 @@ describe("UI responsive profiles", function()
             local focusTop = data.viewport.Y - profile.roundFocusBottomOffset
                 - profile.roundFocusHeight
             expect(layout.fits).toBe(true)
-            expect(layout.centerXScale).toBe(0.5)
+            -- On wide touch screens the FLUX tracker must not cover
+            -- the avatar and the 8-player centerline.
+            local wide = data.viewport.X / data.viewport.Y > 2
+            expect(layout.centerXScale).toBe(wide and 0.315 or 0.5)
+            if wide then
+                expect(layout.width <= 218).toBe(true)
+                expect(layout.centerXScale * data.viewport.X
+                    + layout.width * 0.5 < data.viewport.X * 0.48)
+                    .toBe(true)
+            end
             expect(layout.topOffset >= data.inset + 7 + profile.topHeight
                 + 5 + 24 + 8).toBe(true)
             expect(layout.topOffset + layout.height + 8 <= focusTop)
