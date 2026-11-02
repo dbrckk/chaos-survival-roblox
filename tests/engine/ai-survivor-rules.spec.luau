@@ -153,6 +153,43 @@ describe("AI survivor rules", function()
         folder:Destroy()
     end)
 
+    it("recovers real stalls with alternate grounded sides, not avatar-facing wall loops", function()
+        local directions = AISurvivorRules.recoveryDirections
+        local start = Vector3.new(10, 4, 10)
+        local goal = Vector3.new(42, 4, 10)
+        local odd = directions(start, goal, 1)
+        local even = directions(start, goal, 2)
+        expect(#odd).toBe(7)
+        expect(#even).toBe(7)
+        for _, direction in ipairs(odd) do
+            expect(math.abs(direction.Y) < 0.001).toBe(true)
+            expect(math.abs(direction.Magnitude - 1) < 0.001).toBe(true)
+        end
+        -- Their initial safe detours diverge, instead of seven identical
+        -- NPCs banging against the same sideways wall.
+        expect(odd[1].Z * even[1].Z < 0).toBe(true)
+        expect(math.abs(odd[1].X - even[1].X) < 0.001).toBe(true)
+        expect(odd[7].X < -0.9).toBe(true)
+        expect(#directions(start, start, 1)).toBe(0)
+        expect(#directions(nil, goal, 1)).toBe(0)
+
+        local stalled = AISurvivorRules.isGenuineStall
+        expect(stalled(start, start, goal, 1.16, true, true)).toBe(true)
+        expect(stalled(start, start + Vector3.new(0, 0, 2.5),
+            goal, 1.16, true, true)).toBe(true)
+        expect(stalled(start, start + Vector3.new(-2, 0, 0),
+            goal, 1.16, true, true)).toBe(true)
+        expect(stalled(start, start + Vector3.new(1.2, 0, 0),
+            goal, 1.16, true, true)).toBe(false)
+        -- Do not "rescue" a normal intentional prompt hold, a jump,
+        -- an ungrounded falling rig or a brief human-like turn.
+        expect(stalled(start, start, goal, 1.16, true, false)).toBe(false)
+        expect(stalled(start, start, goal, 1.16, false, true)).toBe(false)
+        expect(stalled(start, start, goal, 1.0, true, true)).toBe(false)
+        expect(stalled(start, start, nil, 2, true, true)).toBe(false)
+        expect(stalled(start, start, goal, -1, true, true)).toBe(false)
+    end)
+
     it("never interrupts a live hazard escape to choose a random route", function()
         local shouldReplan = AISurvivorRules.shouldReplanTarget
         local regularTarget = Vector3.new(36, 4, 18)
