@@ -546,6 +546,12 @@ end
 -- simulating an entire AI round or relying on arbitrary NPC rig height.
 function AISurvivorRules.recoveryGroundSamplesSafe(
     rootY, originY, quarterY, midpointY, threeQuarterY, endpointY, distance)
+    -- ipairs skips nil holes in Lua arrays: validate every sample
+    -- explicitly before iterating, so an actual gap is always rejected.
+    if type(originY) ~= "number" or type(quarterY) ~= "number"
+        or type(midpointY) ~= "number"
+        or type(threeQuarterY) ~= "number"
+        or type(endpointY) ~= "number" then return false end
     for _, height in ipairs({originY, quarterY, midpointY,
         threeQuarterY, endpointY}) do
         if type(height) ~= "number" or height ~= height
