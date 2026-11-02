@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-02 — Real AI locomotion recovery and Android disaster floor lighting (source)
+
+- **Fixed the actual AI stuck-recovery dead path:** after a 1.15-second directional stall the old code forgot its goal and immediately reset `stuckCount`, effectively preventing the required two-count physically checked recovery. Bots now navigate away on the **first** proven stall, remember the failed destination for 7.5 seconds and release blocked cooperative action reservations.
+- **Seven target-relative physical escape options**, alternating left/right between bot instances and attempts; every candidate requires collision-free approach, real flat collidable ground at the halfway point **and** destination, and an actual >=4.5-stud lateral move. Bots do not warp, receive hidden speed, or run into invisible recovery floors. Round resets clear stale progress; authenticated bot attributes expose real recovery counts.
+- Ambient "pogo" jumps during active disasters are reduced while real obstacle/height/hazard jumps remain. Existing five-suite engine AI tests extended to distinguish genuine stalled motion from a valid prompt hold, airborne motion or intentional brief turn.
+- The previously reviewed [Android daylight floor fill #548](https://github.com/dbrckk/chaos-survival-roblox/pull/548) is also merged into the source baseline: neutral real-world floor / survivor readability during active disaster rounds without overriding Darkness exposure. **Neither the AI correction nor this newer lighting SHA is published or Cloud-certified yet.** [Production details and real-device acceptance](docs/PHYSICAL_AI_STALL_RECOVERY_2026-11-02.md).
+
+
 ## 2026-11-02 — Real Android feedback: daylight lighting, AI unsticking, actual goal, 3D deck detail (source only)
 
 - **Critical:** resolve four genuine Roblox Cloud core_a assertion failures left by the preceding readability patch; update existing engine contracts for current native mobile nameplate/Neon transparency values.
