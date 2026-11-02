@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-02 — Real Android feedback: daylight lighting, AI unsticking, actual goal, 3D deck detail (source only)
+
+- **Critical:** resolve four genuine Roblox Cloud core_a assertion failures left by the preceding readability patch; update existing engine contracts for current native mobile nameplate/Neon transparency values.
+- **Lighting:** daytime 14:42–15:36 on five worlds, brighter restrained ambient/environment fill without adding per-part lamps or breaking native disaster VFX/shadow budgets.
+- **AI:** measure genuine progress TOWARD destination (reject sideways wall-oscillation), 7.5-second invalid-destination memory, controlled collision-probed short detours to existing floor, normal Humanoid walk/jump and urgent hazard override. No teleport or pathfinding cheats.
+- **Onboarding:** replace redundant danger-label chip with real "SURVIS X s" victory condition on the *existing* mobile round-focus bar; keep shard side quest optional and preserve hazard/wave warnings.
+- **Physical art:** three-level local-service hatches, steel collars and fittings on a strictly bounded subset of medium/high-tier 3D platforms, all noncolliding, existing platform welded/moving/collapsing and mobile Low unchanged.
+- **Unreleased:** no new public publish or confirmed physical FPS/bot traversal proof yet; [real capture findings and gate](docs/ANDROID_GAMEPLAY_CORE_REMEDIATION_2026-11-02.md).
+
+
 ## 2026-11-02 — Android screenshots: genuine gameplay readability repair (source only)
 
 - **Captured reproducible user-visible issue:** actual published Sky Spine signs displayed `\\n` literally. All three server label strings use real Luau newline escapes; smaller 3D sign sizes and closer culling stop overhead floating text from engulfing the center of Android landscape views.

@@ -1,14 +1,14 @@
-name: One-Time Android Screenshot Legibility Engine Gate (2026-11-02)
+name: One-Time Android Gameplay Recovery Engine Gate (2026-11-02)
 
-# Owner's four REAL public Android gameplay captures found bad literal
-# escaped newlines on new Sky Spine signs; giant distant TEAM DASH/SHIELD
-# tags, center FLUX banner, stacked bot nameplates and neon readability.
-# Previous exact-main a3e414bea21d6dec9e0d8bed7a454c8b42415699 was
-# fully Build+five-Cloud green AND actually publicly published (run
-# 41428449036). This Android-presentation fix is a NEW candidate SHA.
-# Run one exact-SHA Build Validation followed by all FIVE real Roblox
-# engine shards after merge; no implicit public game publication.
-# Existing manually gated publish workflow is NOT modified or triggered.
+# User's SIX REAL Android screenshots show that maps are dark, NPCs
+# run against geometry, secondary objectives hide the basic survival
+# goal and platforms look flat. This patch adds daylight, physically
+# supported anti-stuck detours, a persistent SURVIVE objective and
+# budgeted 3D native hardware. It ALSO corrects the four real core_a
+# assertion failures on the previous main 6e1d320bb024cd1a932711c5eff613f5cfa354c6
+# (engine run 41430457701), caused by stale expected mobile styles.
+# A newly merged SHA must pass Rojo Build AND all 5 real engine suites.
+# The previous published 2-Nov SHA a3e414be is separate. No publish.
 on:
   # Manual fallback if GitHub policy blocks the one-shot Actions dispatch
   # or a later release-blocker fix needs a fresh exact-main certification.

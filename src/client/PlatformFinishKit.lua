@@ -329,6 +329,50 @@ function PlatformFinishKit.bindSkybridgeFootprint(platform, pieces)
     end
 end
 
+-- Real near-camera structural depth, not more glowing rectangles:
+-- inset ribbed service hatches and a two-level metal casing are welded to
+-- actual collidable decks. Existing collapse/shrink owners register these
+-- three nonblocking meshes. Tight budget: 1 out of 3 physical platforms,
+-- Medium/High only; zero extra lights, textures or update loops.
+function PlatformFinishKit.buildServiceHatch(parent, platform, variant, tier, theme, index)
+    if not parent or not platform or not platform:IsA("BasePart")
+        or tier == "Low" or not NAMES[variant] or not theme
+        or (math.floor(tonumber(index) or 0) % 3 ~= 1)
+        or platform:GetAttribute("ChaosSkybridge") == true
+    then return {} end
+    local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
+    if math.min(sx, sz) < 8 or math.max(sx, sz) > 36 then return {} end
+    local upper = PlatformFinishKit.surfacePaintOffset(platform, 0.065)
+    local hatchWidth = math.min(sx * 0.55, 6.2)
+    local hatchDepth = math.min(sz * 0.42, 4.2)
+    local materials = {
+        Classic = Enum.Material.DiamondPlate,
+        Towers = Enum.Material.CorrodedMetal,
+        Crossroads = Enum.Material.Concrete,
+        Orbital = Enum.Material.Metal,
+        Harbor = Enum.Material.WoodPlanks,
+    }
+    local color = theme.Structure:Lerp(theme.Detail, 0.28)
+    local accent = theme.Detail:Lerp(theme.Surface, 0.42)
+    local hatch = add(parent, platform, variant .. "ServiceHatch",
+        CFrame.new(0, upper, -sz * 0.19),
+        Vector3.new(hatchWidth, 0.18, hatchDepth), color,
+        materials[variant], 0.05)
+    hatch:SetAttribute("ChaosServiceHatch", true)
+    local collar = add(parent, platform, variant .. "ServiceCollar",
+        CFrame.new(0, upper + 0.11, -sz * 0.19),
+        Vector3.new(math.max(1.0, hatchWidth - 0.70), 0.08,
+            math.max(1.0, hatchDepth - 0.70)),
+        accent, Enum.Material.Metal, 0.11)
+    collar:SetAttribute("ChaosServiceHatch", true)
+    local handle = add(parent, platform, variant .. "ServiceHandle",
+        CFrame.new(0, upper + 0.18, -sz * 0.19),
+        Vector3.new(math.min(1.7, hatchWidth * 0.36), 0.10, 0.25),
+        theme.Structure, Enum.Material.DiamondPlate, 0.02)
+    handle:SetAttribute("ChaosServiceHatch", true)
+    return {hatch, collar, handle}
+end
+
 -- Classic's authored zigzag decks shrink along BOTH horizontal axes.
 -- Keep every welded client-only stripe, armor/brace and axis cue strictly
 -- inside its real collision deck instead of showing a phantom 10-stud top.

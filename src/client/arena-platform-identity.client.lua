@@ -489,6 +489,14 @@ local function rebuild()
             )) do
                 registerVisual(platform, piece)
             end
+            -- Textured-looking three-layer native hardware on a strictly
+            -- bounded subset of actual jump decks. Shares this existing
+            -- platform's weld, collapse visibility and shrinking footprint.
+            for _, piece in ipairs(PlatformFinishKit.buildServiceHatch(
+                folder, platform, variant, tier.Name, theme, visualIndex
+            )) do
+                registerVisual(platform, piece)
+            end
 
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier)
