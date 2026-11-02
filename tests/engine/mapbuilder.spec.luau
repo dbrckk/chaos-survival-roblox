@@ -1605,6 +1605,18 @@ describe("Chaos Survival engine", function()
                 expect(core ~= nil).toBe(true)
                 expect(core:FindFirstChild("ConnectSkySpine")
                     :IsA("ProximityPrompt")).toBe(true)
+                local label = core:FindFirstChild("SkySpineSwitchyardStatus")
+                expect(label ~= nil and label:IsA("BillboardGui"))
+                    .toBe(true)
+                expect(label.MaxDistance <= 48).toBe(true)
+                -- User Android capture: literal backslash-n must not
+                -- render on the skyline. Verify a REAL Luau newline.
+                local message = label:FindFirstChild("Status")
+                expect(message ~= nil and message:IsA("TextLabel")).toBe(true)
+                expect(message.Text:find("\n", 1, true) ~= nil)
+                    .toBe(true)
+                expect(message.Text:find("\\n", 1, true) == nil)
+                    .toBe(true)
             end
             expect(SkySpineSwitchyard.botOpportunity(nil, os.clock()))
                 .toBe(nil)
