@@ -2804,6 +2804,11 @@ local function chooseArenaTarget(record, root, now)
         and selected.part.Parent.Name == "Platforms"
     then
         record.targetPart = selected.part
+        -- Don't let crowd-avoidance vectors push a real sky landing off
+        -- its collision surface. The world location is authoritative.
+        target = AISurvivorRules.clampWaypointToDeck(
+            selected.part.CFrame, selected.part.Size, target
+        ) or selected.position
     end
 
     local hold = record.profile.TargetHoldMin
