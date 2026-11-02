@@ -219,6 +219,17 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.filterRecentlyFailedCandidates(
             onlyBlocked, Vector3.new(4, 4, 4), 2, 9.5)).toBe(onlyBlocked)
 
+        -- A landing that looks safe only at its midpoint/end must not
+        -- encourage bots to walk over a missing quarter of real floor.
+        local continuous = AISurvivorRules.recoveryGroundSamplesSafe
+        expect(continuous(9.7, 7, 7, 7, 7.1, 7, 6.5)).toBe(true)
+        expect(continuous(9.7, 7, nil, 7, 7, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7, nil, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 9, 7, 7, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7.1, 9, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7, 7, 7, 2)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7, 7, 7, 6.5)).toBe(true)
+
         local stalled = AISurvivorRules.isGenuineStall
         expect(stalled(start, start, goal, 1.16, true, true)).toBe(true)
         expect(stalled(start, start + Vector3.new(0, 0, 2.5),
