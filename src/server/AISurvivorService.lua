@@ -971,6 +971,7 @@ local function sendToArena(record)
     record.districtTraverse = nil
     record.nextDistrictTraverseAt = os.clock() + 3
     record.nextRouteJumpAt = 0
+    record.nextGapProbeAt = 0
     record.nextDistrictStageCheckAt = 0
     record.signalInterestRoute = nil
     record.signalInterestUntil = 0
@@ -1075,6 +1076,7 @@ local function newRecord(slot)
         districtTraverse = nil,
         nextDistrictTraverseAt = 0,
         nextRouteJumpAt = 0,
+        nextGapProbeAt = 0,
         nextDistrictStageCheckAt = 0,
         signalInterestRoute = nil,
         signalInterestUntil = 0,
@@ -3207,6 +3209,73 @@ local function recoverIfStuck(record, humanoid, root, now)
     return true
 end
 
+-- Ordinary AI height-based jumps never fire across the eight flat
+-- promenade decks and ten flat Sky Spine decks. Probe at a bounded
+-- cadence ONLY while the bot is actually approaching a real elevated
+-- platform; jump with native Humanoid physics if the intervening gap
+-- has no footing and the far side has a safe, level landing.
+local function tryPhysicalSkyGapJump(record, humanoid, root, now, target)
+    local deck = record.targetPart
+    if not deck or not deck:IsA("BasePart")
+        or not deck.Parent or deck.Parent.Name ~= "Platforms"
+        or typeof(target) ~= "Vector3"
+        or humanoid.FloorMaterial == Enum.Material.Air
+        or now < (record.nextRouteJumpAt or 0)
+        or now < (record.nextGapProbeAt or 0) then return false end
+    local base = arenaBase()
+    if not base then return false end
+    local delta = target - root.Position
+    local travel = Vector3.new(delta.X, 0, delta.Z)
+    if travel.Magnitude < 4.2 or travel.Magnitude > 34
+        or root.Position.Y < base.Position.Y + base.Size.Y * 0.5 + 7
+        or not AISurvivorRules.platformAvailable(
+            deck.CanCollide, deck.Transparency,
+            deck:GetAttribute("CollapsePhase")
+        ) then return false end
+
+    record.nextGapProbeAt = now + 0.20
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {record.model}
+    params.RespectCanCollide = true
+    local forward = travel.Unit
+    local function floorAt(distance)
+        local result = workspace:Raycast(
+            root.Position + forward * distance + Vector3.new(0, 1.5, 0),
+            Vector3.new(0, -7, 0),
+            params
+        )
+        if result and result.Normal.Y >= 0.78
+            and result.Instance and result.Instance.CanCollide
+            and AISurvivorRules.platformAvailable(
+                result.Instance.CanCollide,
+                result.Instance.Transparency,
+                result.Instance:GetAttribute("CollapsePhase")
+            ) then
+            return result
+        end
+        return nil
+    end
+
+    local origin = floorAt(0)
+    if not origin or not origin.Instance.Parent
+        or origin.Instance.Parent.Name ~= "Platforms" then return false end
+    local gap = floorAt(3.4)
+    if gap then return false end
+    local landing = floorAt(7.2)
+    if not landing or not landing.Instance.Parent
+        or landing.Instance.Parent.Name ~= "Platforms" then return false end
+    if AISurvivorRules.skyGapJumpReady(
+        true, root.Position.Y - (base.Position.Y + base.Size.Y * 0.5),
+        travel.Magnitude, origin.Position.Y, false, landing.Position.Y
+    ) then
+        humanoid.Jump = true
+        record.nextRouteJumpAt = now + 0.80
+        return true
+    end
+    return false
+end
+
 local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaBounded)
     if not target then
         humanoid:Move(Vector3.zero)
@@ -4036,6 +4105,9 @@ local function stepRecord(record, now)
             -- The old generic height check fired on every brain tick,
             -- even while airborne, overriding the bounded parkour jump
             -- cooldown and creating unnatural pogo-stick movement.
+            if not urgentTarget then
+                tryPhysicalSkyGapJump(record, humanoid, root, now, record.target)
+            end
             if delta.Y > 2.2 and horizontal.Magnitude < 10
                 and humanoid.FloorMaterial ~= Enum.Material.Air
                 and now >= (record.nextRouteJumpAt or 0)
