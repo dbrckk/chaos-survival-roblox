@@ -1436,6 +1436,7 @@ local function disappearingPlatformEscape(record, root, now)
     -- Always drop the previous emergency deck; stale collapse targets
     -- are especially unsafe when the disaster changes platform phase.
     record.collapseEscapeDeck = nil
+    record.collapseEscapeHolding = false
     -- Inspect live platform warnings on Towers as well as the dedicated
     -- collapse disaster. Other arenas avoid a new per-bot raycast each tick.
     if not hasDisaster("DisappearingPlatforms")
@@ -1526,9 +1527,11 @@ local function disappearingPlatformEscape(record, root, now)
             return closest.Position
                 + closest.CFrame.UpVector * (closest.Size.Y * 0.5 + 2.4)
         end
-        -- No physically supported high escape exists. Do not invent
-        -- a rescue path through open air or fabricate a teleport.
-        return nil
+        -- No physically supported high escape exists. An urgent hold
+        -- beats continuing a stale route over void. Preserve threat
+        -- priority so a newly visible meteor can still override it.
+        record.collapseEscapeHolding = true
+        return root.Position
     end
 
     local center = base and base.Position or config.ArenaCenter
@@ -3407,7 +3410,7 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
     params.FilterDescendantsInstances = {record.model}
     params.RespectCanCollide = true
     local forward = travel.Unit
-    local function floorAt(distance)
+    local function floorAt(distance, allowThreatenedOrigin)
         local result = workspace:Raycast(
             root.Position + forward * distance + Vector3.new(0, 1.5, 0),
             Vector3.new(0, -7, 0),
@@ -3415,17 +3418,24 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
         )
         if result and result.Normal.Y >= 0.78
             and result.Instance and result.Instance.CanCollide
-            and AISurvivorRules.platformAvailable(
+            and (AISurvivorRules.platformAvailable(
                 result.Instance.CanCollide,
                 result.Instance.Transparency,
                 result.Instance:GetAttribute("CollapsePhase")
-            ) then
+            ) or (allowThreatenedOrigin == true
+                and emergencyDeck ~= nil
+                and result.Instance == record.platformThreat
+                and result.Instance.Transparency < 0.90))
+        then
             return result
         end
         return nil
     end
 
-    local origin = floorAt(0)
+    -- Warning platforms remain physically solid until the "Gone"
+    -- transition. Allow standing on that EXACT live warning surface
+    -- for takeoff; the destination must always be a safe ready deck.
+    local origin = floorAt(0, emergencyDeck ~= nil)
     if not origin or not origin.Instance.Parent
         or origin.Instance.Parent.Name ~= "Platforms" then return false end
     local gap = floorAt(3.4)
@@ -4098,7 +4108,8 @@ local function stepRecord(record, now)
             -- An imminent elevated collapse has a prevalidated real
             -- landing. Social spacing must not push that target off it.
             record.target = (skybridgeEscape or floorSweepEscape
-                or warnedEscape or record.collapseEscapeDeck)
+                or warnedEscape or record.collapseEscapeDeck
+                or record.collapseEscapeHolding)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
@@ -4289,9 +4300,11 @@ local function stepRecord(record, now)
             -- The old generic height check fired on every brain tick,
             -- even while airborne, overriding the bounded parkour jump
             -- cooldown and creating unnatural pogo-stick movement.
-            if not urgentTarget or record.collapseEscapeDeck then
+            local emergencyDeck =
+                urgentTarget and record.collapseEscapeDeck or nil
+            if not urgentTarget or emergencyDeck then
                 tryPhysicalSkyGapJump(record, humanoid, root, now,
-                    record.target, record.collapseEscapeDeck)
+                    record.target, emergencyDeck)
             end
             if delta.Y > 2.2 and horizontal.Magnitude < 10
                 and humanoid.FloorMaterial ~= Enum.Material.Air
