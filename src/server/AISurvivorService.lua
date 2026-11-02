@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AISurvivorRules = if script
@@ -898,7 +899,17 @@ local function ensureAliveRig(record)
     return true
 end
 
+-- A path belongs to one physical bot rig and one round only. Invalidating its
+-- token also prevents an outstanding ComputeAsync from moving a replacement rig.
+local function cancelGroundNavigation(record)
+    record.groundNavigation = nil
+    record.groundNavigationPending = false
+    record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
+end
+
 local function sendToLobby(record)
+    cancelGroundNavigation(record)
+    record.nextGroundNavigationAt = 0
     if not ensureAliveRig(record) then
         return
     end
@@ -943,6 +954,8 @@ local function sendToLobby(record)
 end
 
 local function sendToArena(record)
+    cancelGroundNavigation(record)
+    record.nextGroundNavigationAt = 0
     if not ensureAliveRig(record) then
         return
     end
@@ -1012,6 +1025,7 @@ local function sendToArena(record)
 end
 
 local function destroyRecord(record)
+    cancelGroundNavigation(record)
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
     destroyTracks(record)
@@ -1090,6 +1104,10 @@ local function newRecord(slot)
         lastProgressPosition = nil,
         lastProgressAt = 0,
         stuckCount = 0,
+        groundNavigation = nil,
+        groundNavigationPending = false,
+        groundNavigationToken = 0,
+        nextGroundNavigationAt = 0,
         recoveryAttemptCount = 0,
         lastRecoveryAt = 0,
         failedTarget = nil,
@@ -3299,6 +3317,159 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     return nil
 end
 
+-- Ground-only large-obstacle fallback. The fast local detour remains first.
+-- ComputeAsync yields, so never run it in the sequential eight-bot brain loop.
+-- Candidate waypoints must be on the EXISTING collidable arena base: no
+-- invisible bridges, obstacle phasing, height cheats or movement teleports.
+local function requestGroundNavigation(record, root, goal, now)
+    if record.groundNavigationPending or record.groundNavigation
+        or now < (record.nextGroundNavigationAt or 0)
+        or currentState.phase ~= "round" or not record.inRound
+        or typeof(goal) ~= "Vector3"
+        or hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
+        or hasDisaster("Tornado") or hasDisaster("DisappearingPlatforms")
+        or #warningParts() > 0 then
+        return
+    end
+    local base = arenaBase()
+    if not base or not base:IsA("BasePart") or not base.CanCollide then
+        return
+    end
+    local top = base.Position.Y + base.Size.Y * 0.5
+    if math.abs(root.Position.Y - top) > 7
+        or math.abs(goal.Y - root.Position.Y) > 5 then
+        return
+    end
+    local flat = Vector3.new(goal.X - root.Position.X, 0, goal.Z - root.Position.Z)
+    if flat.Magnitude < 9 or flat.Magnitude > 110 then
+        return
+    end
+
+    record.nextGroundNavigationAt = now + 9
+    record.groundNavigationPending = true
+    record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
+    local token = record.groundNavigationToken
+    local rig = record.model
+    local start = root.Position
+
+    task.spawn(function()
+        local ok, waypoints = pcall(function()
+            local path = PathfindingService:CreatePath({
+                AgentRadius = 2.5,
+                AgentHeight = 6,
+                AgentCanJump = false,
+                WaypointSpacing = 5,
+            })
+            path:ComputeAsync(start, goal)
+            if path.Status ~= Enum.PathStatus.Success then
+                return nil
+            end
+            return path:GetWaypoints()
+        end)
+        if record.groundNavigationToken ~= token or record.model ~= rig then
+            return
+        end
+        record.groundNavigationPending = false
+        if not ok or not waypoints or #waypoints < 3
+            or #waypoints > 24 or not rig or not rig.Parent
+            or not record.inRound or currentState.phase ~= "round"
+            or arenaBase() ~= base or #warningParts() > 0
+            or hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
+            or hasDisaster("Tornado") or hasDisaster("DisappearingPlatforms")
+            or record.failedTarget ~= goal then
+            return
+        end
+
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {rig}
+        params.RespectCanCollide = true
+        local function onPhysicalBase(point)
+            local hit = workspace:Raycast(
+                point + Vector3.new(0, 7, 0),
+                Vector3.new(0, -15, 0), params)
+            return hit and hit.Instance == base
+                and hit.Normal.Y >= 0.78
+                and math.abs(hit.Position.Y - top) < 2.5
+        end
+        if not onPhysicalBase(start) then return end
+        local points = {}
+        local previous = start
+        local length = 0
+        for index, waypoint in ipairs(waypoints) do
+            if waypoint.Action == Enum.PathWaypointAction.Jump then return end
+            if index > 1 then
+                local point = waypoint.Position
+                local difference = point - previous
+                local distance = difference.Magnitude
+                length += distance
+                if distance > 13 or length > 155
+                    or not onPhysicalBase(point)
+                    or not onPhysicalBase(previous + difference * 0.5) then
+                    return
+                end
+                table.insert(points, Vector3.new(point.X, start.Y, point.Z))
+                previous = point
+            end
+        end
+        -- Pathfinding can finish after the bot has moved elsewhere or a
+        -- hazard appeared: never force it back to the old starting point.
+        local liveRoot = rig:FindFirstChild("HumanoidRootPart")
+        if not liveRoot or (liveRoot.Position - start).Magnitude > 9
+            or #points < 2 or record.groundNavigationToken ~= token then
+            return
+        end
+        record.groundNavigation = {
+            points = points,
+            index = 1,
+            expires = os.clock() + 11,
+        }
+        record.target = points[1]
+        record.targetPart = nil
+        record.targetIsPad = false
+        record.targetIsSkyrail = false
+        record.lastMoveTarget = nil
+        record.turnPauseUntil = 0
+        record.idleUntil = 0
+        record.nextThink = os.clock() + 1
+        rig:SetAttribute("BotGroundNavigationCount",
+            (tonumber(rig:GetAttribute("BotGroundNavigationCount")) or 0) + 1)
+    end)
+end
+
+local function advanceGroundNavigation(record, root, now)
+    local route = record.groundNavigation
+    if not route then return end
+    if now > route.expires or #warningParts() > 0
+        or hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
+        or hasDisaster("Tornado") or hasDisaster("DisappearingPlatforms")
+        or not record.inRound or currentState.phase ~= "round" then
+        cancelGroundNavigation(record)
+        record.target = nil
+        record.nextThink = 0
+        return
+    end
+    local target = route.points[route.index]
+    while target and (Vector3.new(
+        target.X - root.Position.X, 0, target.Z - root.Position.Z
+    )).Magnitude <= 3.8 do
+        route.index += 1
+        target = route.points[route.index]
+    end
+    if not target then
+        cancelGroundNavigation(record)
+        record.target = nil
+        record.nextThink = 0
+        return
+    end
+    if record.target ~= target then
+        record.lastMoveTarget = nil
+        record.lastProgressTarget = nil
+    end
+    record.target = target
+    record.nextThink = now + 1
+end
+
 local function recoverIfStuck(record, humanoid, root, now)
     local goal = record.target
     if typeof(goal) ~= "Vector3" then
@@ -3343,6 +3514,9 @@ local function recoverIfStuck(record, humanoid, root, now)
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
+    if record.groundNavigation then
+        cancelGroundNavigation(record)
+    end
     -- Preserve the recovery-side sequence even when short detours make
     -- progress. Previously that success reset stuckCount and sent every
     -- later attempt around the exact same obstacle on the same side.
@@ -3384,6 +3558,13 @@ local function recoverIfStuck(record, humanoid, root, now)
     -- plus floor at the midpoint and endpoint. Never PivotTo / warp.
     local recovery = nearbyRecoveryStep(
         record, root, goal)
+    -- A wall wider than the local 6.5-stud rescue step needs a complete
+    -- physical ground route. Start only after repeated stalls, or immediately
+    -- when no local safe step exists. The existing detour remains usable
+    -- while the asynchronous route is being computed.
+    if not recovery or record.recoveryAttemptCount >= 2 then
+        requestGroundNavigation(record, root, goal, now)
+    end
     record.targetPart = nil
     record.targetIsPad = false
     record.targetIsSkyrail = false
@@ -3516,6 +3697,7 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
     -- Ordinary ground roaming keeps its humanlike steering inertia.
     local direct = urgent == true
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
+        or record.groundNavigation ~= nil
         or AISurvivorRules.committedWorldRoute(
             record.targetIsSkyrail, record.targetPart,
             record.districtTraverse ~= nil
@@ -3832,6 +4014,13 @@ local function stepRecord(record, now)
         urgentTarget = AISurvivorRules.collapseFallbackTarget(
             urgentTarget, record.collapseEscapeHolding, root.Position
         )
+    end
+
+    if urgentTarget and (record.groundNavigation
+        or record.groundNavigationPending) then
+        cancelGroundNavigation(record)
+    elseif not urgentTarget then
+        advanceGroundNavigation(record, root, now)
     end
 
     -- Do not teleport or auto-activate AI. Hold time and proximity are
@@ -4269,6 +4458,7 @@ local function stepRecord(record, now)
         end
 
         if not urgentTarget and record.target
+            and not record.groundNavigation
             and not record.districtTraverse
             and not record.signalInterestRoute
             and (root.Position - record.target).Magnitude < 4.2
@@ -4292,7 +4482,7 @@ local function stepRecord(record, now)
             end
         end
 
-        if AISurvivorRules.shouldReplanTarget(
+        if not record.groundNavigation and AISurvivorRules.shouldReplanTarget(
             currentState.phase,
             now,
             record.nextThink,
@@ -4357,6 +4547,7 @@ local function stepRecord(record, now)
 
             local destination = record.target
             if not urgentTarget
+                and not record.groundNavigation
                 and AISurvivorRules.allowRouteStrafe(
                     record.targetIsPad,
                     record.targetIsSkyrail,
@@ -4524,6 +4715,9 @@ function AISurvivorService.setRoundState(state)
                 AISurvivorService.resetGridCircuit(record.model)
             end
         elseif phase == "result" then
+            for _, record in ipairs(records) do
+                cancelGroundNavigation(record)
+            end
             for _, record in ipairs(records) do
                 local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
                 local root = record.model and record.model:FindFirstChild("HumanoidRootPart")
