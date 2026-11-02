@@ -3342,8 +3342,13 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target)
     if gap then return false end
     local landing = floorAt(7.2)
     -- A nearby unrelated deck does not prove that the SELECTED next
-    -- waypoint is reachable. Jump only toward its exact solid floor.
-    if not landing or landing.Instance ~= deck then return false end
+    -- waypoint is reachable. Jump only toward its exact solid floor,
+    -- with a verified centerline gap within normal Humanoid reach.
+    if not landing or landing.Instance ~= deck
+        or not AISurvivorRules.neighboringPhysicalDeck(
+            origin.Instance.CFrame, origin.Instance.Size,
+            deck.CFrame, deck.Size
+        ) then return false end
     if AISurvivorRules.skyGapJumpReady(
         true, root.Position.Y - (base.Position.Y + base.Size.Y * 0.5),
         travel.Magnitude, origin.Position.Y, false, landing.Position.Y
