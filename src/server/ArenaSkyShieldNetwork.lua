@@ -81,6 +81,21 @@ function Shield.linkContains(a, b, position, groundY)
         <= Shield.LinkHalfWidth * Shield.LinkHalfWidth
 end
 
+-- The link only exists for the OVERLAP of two actual active
+-- charges, on currently supported physical terrain. One station
+-- alone can NEVER activate this server-owned protection corridor.
+function Shield.pairDeadline(first, second, now)
+    if type(first) ~= "table" or type(second) ~= "table"
+        or first.floorValid ~= true or second.floorValid ~= true
+        or type(now) ~= "number" or now ~= now then return nil end
+    local a = tonumber(first.activeUntil)
+    local b = tonumber(second.activeUntil)
+    if not a or not b or a ~= a or b ~= b
+        or a == math.huge or b == math.huge then return nil end
+    local deadline = math.min(a, b)
+    return deadline > now and deadline or nil
+end
+
 function Shield.damageAfterProtection(damage)
     local n = tonumber(damage)
     if not n or n <= 0 or n ~= n or n == math.huge then return damage end
@@ -627,10 +642,10 @@ function Shield.start(ctx)
         for i = 1, math.min(#stations, Shield.MaxLinkedStations) do
             for j = i + 1, math.min(#stations, Shield.MaxLinkedStations) do
                 local from, to = stations[i], stations[j]
-                local deadline = math.min(from.activeUntil, to.activeUntil)
-                local shouldLink = from.floorValid and to.floorValid
-                    and from.model.Parent and to.model.Parent
-                    and now < deadline
+                local deadline = Shield.pairDeadline(from, to, now)
+                local shouldLink = deadline ~= nil
+                    and from.model.Parent ~= nil
+                    and to.model.Parent ~= nil
                 local key = tostring(i) .. "_" .. tostring(j)
                 local link = links[key]
                 if shouldLink and not link then
@@ -733,9 +748,8 @@ function Shield.start(ctx)
         -- through a genuine concurrent shield LINK. Links are only live
         -- while BOTH end generators remain active on valid floor.
         for _, link in pairs(links) do
-            if link.live and link.from.floorValid and link.to.floorValid
-                and now < math.min(
-                    link.from.activeUntil, link.to.activeUntil)
+            if link.live
+                and Shield.pairDeadline(link.from, link.to, now) ~= nil
                 and Shield.linkContains(
                     link.from.center, link.to.center, position, floorY)
             then
