@@ -2815,7 +2815,12 @@ local function chooseArenaTarget(record, root, now)
         lowOnMap,
         hasDisaster("RisingLava")
     )
-    local wantsPad = not hasDisaster("LowGravity")
+    -- Mobility pads are authored on the main ARENA FLOOR, not on
+    -- the 20+ stud sky promenade. A tempting distant pad previously
+    -- bypassed elevated-deck safety filtering and led bots off roofs.
+    -- Upper bots must first descend through actual physical walkways.
+    local wantsPad = lowOnMap
+        and not hasDisaster("LowGravity")
         and #pads > 0
         and now >= record.nextPadAt
         and math.random() < padChance
