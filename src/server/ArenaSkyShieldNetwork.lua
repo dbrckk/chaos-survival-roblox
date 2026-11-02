@@ -565,6 +565,9 @@ function Shield.start(ctx)
                 entry.model:SetAttribute("ShieldPhase",
                     ctx.Active() and "Ready" or "Offline")
             end
+            -- Re-evaluate every living corridor immediately whenever a
+            -- generator changes phase or a shrinking floor moves away.
+            if round.refreshLinks then round.refreshLinks() end
         end
 
         local connection = base:GetPropertyChangedSignal("Size"):Connect(refresh)
@@ -690,6 +693,28 @@ function Shield.start(ctx)
                                 Transparency = 0.54})
                         entry.crownTween:Play()
                     end
+                end
+                return reduced
+            end
+        end
+        -- The SAME server-owned mitigation applies to everybody walking
+        -- through a genuine concurrent shield LINK. Links are only live
+        -- while BOTH end generators remain active on valid floor.
+        for _, link in pairs(links) do
+            if link.live and link.from.floorValid and link.to.floorValid
+                and now < math.min(
+                    link.from.activeUntil, link.to.activeUntil)
+                and Shield.linkContains(
+                    link.from.center, link.to.center, position, floorY)
+            then
+                local reduced = Shield.damageAfterProtection(damage)
+                local saved = math.max(0, damage - reduced)
+                if saved > 0 then
+                    link.absorbed += saved
+                    link.model:SetAttribute("ShieldAbsorbedDamage",
+                        math.floor(link.absorbed))
+                    link.label.Text = "TEAM LINK ACTIVE\n"
+                        .. tostring(math.floor(link.absorbed)) .. " HP SAVED"
                 end
                 return reduced
             end
