@@ -1797,6 +1797,10 @@ local function arenaCandidates(root)
     end
 
     local variantId = arenaVariantId()
+    local groundBase = arena:FindFirstChild("Base")
+    local groundTopY = groundBase and groundBase:IsA("BasePart")
+        and (groundBase.Position.Y + groundBase.Size.Y * 0.5)
+        or config.ArenaCenter.Y + 1
     -- On a raised bridge, spawn markers are far below the real landing
     -- and cannot be reached by walking. They must obey the same vertical
     -- safety filter as the actual physical platform candidates.
@@ -1821,6 +1825,8 @@ local function arenaCandidates(root)
             root and root.Position.Y or position.Y,
             position.Y,
             variantId
+        ) and AISurvivorRules.elevatedWaypointNearby(
+            root and root.Position or position, position, groundTopY
         ) and AISurvivorRules.outerStepReachable(
             part:GetAttribute("PerimeterStep"),
             root and root.Position, position,
@@ -1859,7 +1865,7 @@ local function arenaCandidates(root)
         end
     end
 
-    local base = arena:FindFirstChild("Base")
+    local base = groundBase
     if base and base:IsA("BasePart")
         and AISurvivorRules.reachableElevation(
             root and root.Position.Y or base.Position.Y,
@@ -1987,6 +1993,10 @@ local function socialArenaTarget(record, root, traits, now)
     end
 
     local eligible = {}
+    local arenaGround = arenaBase()
+    local groundTopY = arenaGround
+        and (arenaGround.Position.Y + arenaGround.Size.Y * 0.5)
+        or config.ArenaCenter.Y + 1
     for _, player in ipairs(Players:GetPlayers()) do
         local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -1997,6 +2007,9 @@ local function socialArenaTarget(record, root, traits, now)
             and humanHumanoid and humanHumanoid.Health > 0
             and AISurvivorRules.reachableElevation(
                 root.Position.Y, humanRoot.Position.Y, arenaVariantId()
+            )
+            and AISurvivorRules.elevatedWaypointNearby(
+                root.Position, humanRoot.Position, groundTopY
             )
         then
             table.insert(eligible, {
@@ -2020,6 +2033,9 @@ local function socialArenaTarget(record, root, traits, now)
                 and otherHumanoid and otherHumanoid.Health > 0
                 and AISurvivorRules.reachableElevation(
                     root.Position.Y, otherRoot.Position.Y, arenaVariantId()
+                )
+                and AISurvivorRules.elevatedWaypointNearby(
+                    root.Position, otherRoot.Position, groundTopY
                 )
             then
                 table.insert(eligible, {
