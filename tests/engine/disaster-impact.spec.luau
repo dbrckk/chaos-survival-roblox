@@ -498,8 +498,15 @@ describe("Disaster impact", function()
             expect(core:FindFirstChild("ActivateEmergencyShield")
                 :IsA("ProximityPrompt")).toBe(true)
             local dome = station:FindFirstChild("ActiveProtectiveField")
-            expect(dome.Size).toBe(Vector3.new(52, 52, 52))
+            -- The original spherical shell extended UNDER the floor.
+            -- This upright cylinder now matches the REAL radius (24)
+            -- and valid vertical protection band (-2..24 studs).
+            expect(dome.Size).toBe(Vector3.new(26, 48, 48))
+            expect(dome.Shape).toBe(Enum.PartType.Cylinder)
             expect(dome.Transparency).toBe(1)
+            expect(station:GetAttribute("ShieldAbsorbedDamage")).toBe(0)
+            expect(station:GetAttribute("ShieldProtections")).toBe(0)
+            expect(station:GetAttribute("ShieldActivatedByBot")).toBe(false)
             for _, piece in ipairs(station:GetDescendants()) do
                 if piece:IsA("BasePart") then
                     expect(piece.Anchored).toBe(true)
@@ -512,6 +519,36 @@ describe("Disaster impact", function()
         -- Merely spawning a huge shield antenna doesn't confer protection:
         -- its server activation phase must be explicitly switched on.
         expect(mitigate(Vector3.new(53, 4, 17), "Meteor", 50)).toBe(50)
+        -- AI has no client proximity bypass, and cannot activate on
+        -- behalf of a teammate who is not actually present.
+        expect(ArenaSkyShieldNetwork.botOpportunity(nil, os.clock())).toBe(nil)
+        expect(ArenaSkyShieldNetwork.activateBot(nil, os.clock())).toBe(false)
+        local oldBots = workspace:FindFirstChild("AISurvivors")
+        local temporaryBots = nil
+        if not oldBots then
+            temporaryBots = Instance.new("Folder")
+            temporaryBots.Name = "AISurvivors"
+            temporaryBots.Parent = workspace
+        end
+        local botFolder = oldBots or temporaryBots
+        local fake = Instance.new("Model")
+        fake.Name = "NoHumanBeneficiary"
+        fake:SetAttribute("AISurvivor", true)
+        fake:SetAttribute("AISurvivorInRound", true)
+        local botRoot = Instance.new("Part")
+        botRoot.Name = "HumanoidRootPart"
+        botRoot.Anchored = true
+        botRoot.CFrame = CFrame.new(53, 3, 17)
+        botRoot.Parent = fake
+        local botHum = Instance.new("Humanoid")
+        botHum.Health = 100
+        botHum.Parent = fake
+        fake.Parent = botFolder
+        expect(ArenaSkyShieldNetwork.botOpportunity(fake, os.clock())).toBe(nil)
+        expect(ArenaSkyShieldNetwork.activateBot(fake, os.clock())).toBe(false)
+        ArenaSkyShieldNetwork.releaseBot(fake)
+        fake:Destroy()
+        if temporaryBots then temporaryBots:Destroy() end
         active = false
         for _, fn in ipairs(cleanups) do fn() end
         for _, child in ipairs(records) do
