@@ -154,6 +154,23 @@ local function build(folder, ground, index, variant)
         base * CFrame.new(0, 0.19, 0) * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Secondary, Enum.Material.Glass, 1)
     ring.Shape = Enum.PartType.Cylinder
+    -- Eight thin perimeter edges instead of a floor-covering warning disc.
+    -- Shield effects never obscure real meteor impact circles.
+    local boundary = {}
+    for sector = 1, 8 do
+        local angle = (sector - 1) * math.pi * 0.25
+        local x = math.cos(angle) * Shield.Radius
+        local z = math.sin(angle) * Shield.Radius
+        local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+        local point = ground + Vector3.new(x, 0.25, z)
+        boundary[#boundary + 1] = visual(
+            model, "ShieldPerimeter" .. sector,
+            Vector3.new(0.34, 0.32, 17.5),
+            CFrame.lookAt(point, point + tangent),
+            theme.Accent:Lerp(theme.Secondary, 0.28),
+            Enum.Material.Neon, 1
+        )
+    end
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "ActivateEmergencyShield"
     prompt.ActionText = "PROTECT TEAM"
@@ -190,7 +207,7 @@ local function build(folder, ground, index, variant)
     model.Parent = folder
     return {
         model = model, core = core, dome = dome, ring = ring,
-        prompt = prompt, label = label, center = ground,
+        boundary = boundary, prompt = prompt, label = label, center = ground,
         activeUntil = 0, readyAt = 0, generation = 0,
         theme = theme, groundY = ground.Y,
         floorValid = true, guard = false,
@@ -326,6 +343,9 @@ function Shield.activate(entry, actor, fromBot)
     entry.label.TextColor3 = entry.theme.Secondary
     entry.dome.Transparency = 1
     entry.ring.Transparency = 1
+    for _, segment in ipairs(entry.boundary) do
+        segment.Transparency = 0.22
+    end
     TweenService:Create(entry.dome, TweenInfo.new(0.30),
         {Transparency = 0.91}):Play()
     TweenService:Create(entry.ring, TweenInfo.new(0.30),
@@ -337,6 +357,9 @@ function Shield.activate(entry, actor, fromBot)
             or not entry.model.Parent then return end
         entry.dome.Transparency = 1
         entry.ring.Transparency = 1
+        for _, segment in ipairs(entry.boundary) do
+            segment.Transparency = 1
+        end
         entry.label.Text = "TEAM SHIELD\nRECHARGING"
         entry.label.TextColor3 = entry.theme.Detail
         entry.refresh()
@@ -421,6 +444,9 @@ function Shield.start(ctx)
                 entry.activeUntil = 0
                 entry.dome.Transparency = 1
                 entry.ring.Transparency = 1
+                for _, segment in ipairs(entry.boundary) do
+                    segment.Transparency = 1
+                end
                 entry.prompt.Enabled = false
                 entry.model:SetAttribute("ShieldPhase", "Offline")
             elseif now < entry.activeUntil then
