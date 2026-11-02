@@ -261,6 +261,18 @@ local function applyMood(duration)
         lightingGoal.ExposureCompensation = exposure
         lightingGoal.EnvironmentDiffuseScale = environmentDiffuse
         lightingGoal.EnvironmentSpecularScale = environmentSpecular
+    elseif UserInputService.TouchEnabled then
+        -- Actual Android screenshots: during live RisingLava/JumpShock,
+        -- the HUD/neon were legible but the real floor and bot silhouettes
+        -- were near black. Preserve disaster-owned color grading and fog;
+        -- provide a modest neutral fill for physical route readability.
+        -- Do NOT override ExposureCompensation: Darkness and other
+        -- disaster-specific exposure effects retain server ownership.
+        lightingGoal.Ambient = mood.Ambient:Lerp(
+            Color3.fromRGB(166, 171, 177), 0.38)
+        lightingGoal.OutdoorAmbient = mood.Outdoor:Lerp(
+            Color3.fromRGB(188, 192, 194), 0.30)
+        lightingGoal.Brightness = quality.Name == "Low" and 3.0 or 2.85
     end
 
     TweenService:Create(
