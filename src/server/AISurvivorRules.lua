@@ -773,9 +773,12 @@ end
 
 function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     local rise = (tonumber(targetY) or 0) - (tonumber(currentY) or 0)
-    if rise <= 0 then
-        return true
-    end
+    -- A downward target is not automatically walkable: choosing the
+    -- arena floor from a 20-stud sky bridge makes bots simply run off
+    -- the edge. Descend through nearby physical steps instead; the
+    -- urgent threat-escape system can still preempt normal roaming.
+    if rise < -10 then return false end
+    if rise <= 0 then return true end
 
     local limit = variantId == "Towers" and 8.5 or 7.5
     return rise <= limit
