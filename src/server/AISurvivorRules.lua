@@ -864,6 +864,12 @@ end
 function AISurvivorRules.safeCollapseNeighbor(
     threatenedFrame, threatenedSize,
     candidateFrame, candidateSize, available)
+    -- A physically colliding but nearly vanished/shrunken tile is not
+    -- a viable emergency landing for a full R15 avatar.
+    if typeof(candidateSize) ~= "Vector3"
+        or candidateSize.X < 6 or candidateSize.Z < 6 then
+        return false
+    end
     return available == true and AISurvivorRules.neighboringPhysicalDeck(
         threatenedFrame, threatenedSize, candidateFrame, candidateSize
     )
