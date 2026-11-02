@@ -1796,13 +1796,21 @@ local function arenaCandidates(root)
         return result
     end
 
+    local variantId = arenaVariantId()
+    -- On a raised bridge, spawn markers are far below the real landing
+    -- and cannot be reached by walking. They must obey the same vertical
+    -- safety filter as the actual physical platform candidates.
     local spawns = arena:FindFirstChild("Spawns")
     for _, part in ipairs(sortedParts(spawns)) do
-        table.insert(result, {part = part, position = part.Position + Vector3.new(0, 2.5, 0)})
+        local position = part.Position + Vector3.new(0, 2.5, 0)
+        if AISurvivorRules.reachableElevation(
+            root and root.Position.Y or position.Y, position.Y, variantId
+        ) then
+            table.insert(result, {part = part, position = position})
+        end
     end
 
     local platforms = arena:FindFirstChild("Platforms")
-    local variantId = arenaVariantId()
     for _, part in ipairs(sortedParts(platforms)) do
         local position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0)
         if AISurvivorRules.platformAvailable(
@@ -1852,7 +1860,12 @@ local function arenaCandidates(root)
     end
 
     local base = arena:FindFirstChild("Base")
-    if base and base:IsA("BasePart") then
+    if base and base:IsA("BasePart")
+        and AISurvivorRules.reachableElevation(
+            root and root.Position.Y or base.Position.Y,
+            base.Position.Y + base.Size.Y * 0.5 + 2.6,
+            variantId
+        ) then
         local halfX = math.max(5, base.Size.X * 0.5 - 7)
         local halfZ = math.max(5, base.Size.Z * 0.5 - 7)
         for _ = 1, 4 do
@@ -2741,7 +2754,10 @@ local function chooseArenaTarget(record, root, now)
         record.failedTargetUntil
     )
     if #candidates == 0 then
-        return clampToArena(config.ArenaCenter + Vector3.new(math.random(-18, 18), 3, math.random(-18, 18))), 1.5
+        -- No reachable physical waypoint? Stay on the CURRENT footing
+        -- rather than ordering a sky-deck bot to run toward a random
+        -- ground point and fall to its death. Hazard evasion still wins.
+        return root.Position, 1.5
     end
 
     local ranked = {}
