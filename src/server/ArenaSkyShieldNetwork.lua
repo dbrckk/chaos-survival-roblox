@@ -144,8 +144,36 @@ local function makeLink(folder, from, to, variant)
             frame * CFrame.new(0, 0, (quarter - 2) * span * 0.25),
             theme.Detail, Enum.Material.Neon, 1)
     end
+    -- One world-space label at the actual midpoint. Tiny on Android,
+    -- distance culled, never blocks native hazard warnings or touch.
+    local marker = sections[#sections - 1]
+    local banner = Instance.new("BillboardGui")
+    banner.Name = "CooperativeLinkStatus"
+    banner.Adornee = marker
+    banner.Size = UDim2.fromOffset(170, 42)
+    banner.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
+    banner.MaxDistance = 100
+    banner.AlwaysOnTop = false
+    banner.Enabled = false
+    banner.Parent = marker
+    local label = Instance.new("TextLabel")
+    label.Name = "Protection"
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundColor3 = Color3.fromRGB(14, 28, 42)
+    label.BackgroundTransparency = 0.18
+    label.BorderSizePixel = 0
+    label.TextScaled = true
+    label.TextWrapped = true
+    label.Font = Enum.Font.GothamBold
+    label.TextColor3 = theme.Accent
+    label.Text = "TEAM LINK ACTIVE\nCROSS TO SURVIVE"
+    label.Parent = banner
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = label
     model.Parent = folder
     return {from = from, to = to, model = model, sections = sections,
+        banner = banner, label = label,
         live = false, deadline = 0, generation = 0, absorbed = 0}
 end
 
@@ -507,6 +535,7 @@ function Shield.start(ctx)
         for _, link in pairs(links) do
             link.generation += 1
             link.live = false
+            link.banner.Enabled = false
             if link.model.Parent then
                 link.model:SetAttribute("ShieldCorridorActive", false)
                 link.model:SetAttribute("ShieldActiveUntil", 0)
@@ -616,6 +645,8 @@ function Shield.start(ctx)
                             link.absorbed = 0
                             link.model:SetAttribute("ShieldAbsorbedDamage", 0)
                             link.model:SetAttribute("ShieldCorridorActive", true)
+                            link.banner.Enabled = true
+                            link.label.Text = "TEAM LINK ACTIVE\nCROSS TO SURVIVE"
                             for _, section in ipairs(link.sections) do
                                 section.Transparency = section.Name:find("Upper")
                                     and 0.52 or 0.18
@@ -640,6 +671,7 @@ function Shield.start(ctx)
                         link.generation += 1
                         link.model:SetAttribute("ShieldCorridorActive", false)
                         link.model:SetAttribute("ShieldActiveUntil", 0)
+                        link.banner.Enabled = false
                         for _, section in ipairs(link.sections) do
                             section.Transparency = 1
                         end
