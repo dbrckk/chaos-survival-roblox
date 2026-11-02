@@ -1852,6 +1852,9 @@ local function arenaCandidates(root)
             variantId
         ) and AISurvivorRules.elevatedWaypointNearby(
             root and root.Position or position, position, groundTopY
+        ) and AISurvivorRules.elevatedRouteHasSupport(
+            root and root.Position.Y or position.Y,
+            groundTopY, standingDeck ~= nil
         ) and (not standingDeck or part == standingDeck
             or AISurvivorRules.neighboringPhysicalDeck(
                 standingDeck.CFrame, standingDeck.Size,
