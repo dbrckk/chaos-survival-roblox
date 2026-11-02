@@ -98,6 +98,11 @@ function D.start(ctx)
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
                     -- Keep 320-stud district navigation markings on the
                     -- contracting floor, not floating beyond lethal edges.
+                    -- All original thin floor panels, recessed seams,
+                    -- diagonal gussets and below-floor girders must shrink
+                    -- together with the authoritative base. Without this,
+                    -- artwork would remain as false ground outside the edge.
+                    or name:match("^PremiumGround")
                     or name:match("^DistrictArrow%d+_%d+_%-?%d+$")
                     or name:match("^OuterRouteChevron%d+_%d+_%-?%d+$")
                 if floorArt then

@@ -2,6 +2,12 @@
 
 Fast multiplayer disaster-survival game built with Luau + Rojo.
 
+
+## New original volumetric arena floors (source candidate; not live yet)
+
+The [second major visual architecture pass](docs/FIVE_ARENA_VOLUMETRIC_GROUND_2026-11-02.md) gives **all five arenas 65 genuinely volumetric, non-colliding extra floor/undercarriage details per active map**, including 36 original structural floor panels eligible for the existing licensed 2K PBR camera budget. The real shrink owner now scales this artwork with the survival floor: no phantom platforms, AI walls or hazard masking. The preceding [PR #564](https://github.com/dbrckk/chaos-survival-roblox/pull/564) structural corner cladding passed exact-SHA Build Validation and all five real-engine suites on 2 November (source SHA 2732da8), but neither the new floor treatment nor that cladding has been published to the public Roblox experience. Await full validation before deployment.
+
+
 ## Next major update — authentic eight-bot ground routing and five-arena Android quality
 
 The [2 November large-release candidate](docs/MAJOR_RELEASE_2026-11-02_PHYSICAL_NAVIGATION.md) adds asynchronous, **physically supported ground-obstacle pathfinding** for bots which cannot escape major arena structures using local detours. Routes are server-owned, never teleport and are cancelled by real hazards or round changes. Combined with the **already merged** raised-deck AI escape corrections, this is the next substantial gameplay reliability milestone; the existing original 3D arena/lighting and mobile quality targets remain mandatory release gates. **This branch is not published to Roblox.** Compile, five real-engine suites, authenticated Studio visual review and physical Android testing are required before the guarded public-place update.

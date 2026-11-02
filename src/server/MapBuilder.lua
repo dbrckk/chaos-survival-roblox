@@ -23,6 +23,7 @@ local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
+local ArenaGroundArchitecture = require("./ArenaGroundArchitecture")
 
 local MapBuilder = {}
 
@@ -2524,6 +2525,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     decor.Parent = arena
 
     addArenaFoundation(decor, config, variant, theme)
+    -- Original modular top deck: 6 x 6 textured industrial panels,
+    -- recessed service grooves and volumetric undercarriage fins.
+    -- All floor art follows the shrinking REAL base and is noncolliding.
+    ArenaGroundArchitecture.build(decor, base, variant.Id, theme)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
