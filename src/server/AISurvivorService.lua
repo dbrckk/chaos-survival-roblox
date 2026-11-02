@@ -911,6 +911,12 @@ local function sendToLobby(record)
     record.targetIsPad = false
     record.targetIsSkyrail = false
     record.skyrailDirection = nil
+    record.lastProgressPosition = nil
+    record.lastProgressTarget = nil
+    record.lastProgressAt = 0
+    record.stuckCount = 0
+    record.failedTarget = nil
+    record.failedTargetUntil = 0
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -969,6 +975,14 @@ local function sendToArena(record)
     record.model:SetAttribute("DistrictRouteCompleted", false)
     record.model:SetAttribute("DistrictRouteStep", 0)
     record.nextSkyrailAt = 0
+    record.lastProgressPosition = nil
+    record.lastProgressTarget = nil
+    record.lastProgressAt = 0
+    record.stuckCount = 0
+    record.failedTarget = nil
+    record.failedTargetUntil = 0
+    record.model:SetAttribute("BotStallRecoveryCount", 0)
+    record.model:SetAttribute("BotRecoveryRouteFound", nil)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -2964,7 +2978,7 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     local directions = AISurvivorRules.recoveryDirections(
         root.Position, failedDestination or record.failedTarget
             or (root.Position + root.CFrame.LookVector * 8),
-        record.slot)
+        (record.slot or 1) + (record.stuckCount or 0))
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
@@ -3693,7 +3707,17 @@ local function stepRecord(record, now)
             pressure,
             hasDisaster("LowGravity")
         )
-        if math.random() < jumpChance then
+        -- All-seven-bots pogo-jumping mid-disaster looked artificial in
+        -- actual Android play. Keep purposeful ascent and warning escapes
+        -- above; casual personality jumps are rare on live terrain and
+        -- never attempted in the air or on a committed narrow route.
+        local livelyRound = record.inRound
+            and currentState.phase == "round"
+        if livelyRound then jumpChance *= 0.20 end
+        if humanoid.FloorMaterial ~= Enum.Material.Air
+            and not record.targetIsSkyrail
+            and record.targetPart == nil
+            and math.random() < jumpChance then
             humanoid.Jump = true
         end
         record.nextJump = now + 1.8 + math.random() * 3.4
