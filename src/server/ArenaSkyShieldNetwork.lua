@@ -15,11 +15,16 @@ Shield.Cooldown = 21
 Shield.HoldSeconds = 0.65
 Shield.PromptDistance = 10
 Shield.DamageMultiplier = 0.42
+Shield.BotApproachRadius = 74
+Shield.BotReach = 7.5
+local activeRound = nil
 Shield.Offsets = {
-    Vector3.new(-53, 0, -17),
-    Vector3.new(53, 0, 17),
-    Vector3.new(-17, 0, 53),
-    Vector3.new(17, 0, -53),
+    -- Visible from the initial eight spawn pads: every first-minute
+    -- participant is within 24 studs of at least one real defense zone.
+    Vector3.new(-48, 0, -16),
+    Vector3.new(48, 0, 16),
+    Vector3.new(-16, 0, 48),
+    Vector3.new(16, 0, -48),
 }
 
 function Shield.enabled(ctx)
@@ -77,6 +82,9 @@ local function build(folder, ground, index, variant)
     model:SetAttribute("ShieldPhase", "Ready")
     model:SetAttribute("ShieldActiveUntil", 0)
     model:SetAttribute("ShieldReadyAt", 0)
+    model:SetAttribute("ShieldAbsorbedDamage", 0)
+    model:SetAttribute("ShieldProtections", 0)
+    model:SetAttribute("ShieldActivatedByBot", false)
     local base = CFrame.new(ground)
     local structure = theme.Structure:Lerp(theme.Detail, 0.35)
     visual(model, "Foundation", Vector3.new(8, 0.28, 8),
@@ -135,16 +143,39 @@ local function build(folder, ground, index, variant)
     -- The translucent protective volume is genuinely large, but doesn't
     -- become a fake solid ceiling or hide Roblox damage telegraphs.
     local dome = visual(model, "ActiveProtectiveField",
-        Vector3.new(52, 52, 52),
-        base * CFrame.new(0, 10, 0),
+        -- Cylinder's axis is local X: rotate 90 degrees to make a REAL
+        -- 48-stud-wide vertical enclosure matching the server's area.
+        Vector3.new(Shield.Height + 2, Shield.Radius * 2, Shield.Radius * 2),
+        base * CFrame.new(0, Shield.Height * 0.5 - 1, 0)
+            * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Accent:Lerp(Color3.fromRGB(210, 242, 255), 0.28),
         Enum.Material.Glass, 1)
-    dome.Shape = Enum.PartType.Ball
+    dome.Shape = Enum.PartType.Cylinder
     local ring = visual(model, "ActiveFieldCrown",
-        Vector3.new(0.20, 49, 49),
-        base * CFrame.new(0, 10, 0) * CFrame.Angles(0, 0, math.pi * 0.5),
+        -- A compact overhead crown rather than an opaque floor disk:
+        -- warning circles must remain legible through the shield.
+        Vector3.new(0.20, 8, 8),
+        base * CFrame.new(0, 10.25, 0)
+            * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Secondary, Enum.Material.Glass, 1)
     ring.Shape = Enum.PartType.Cylinder
+    -- Eight thin perimeter edges instead of a floor-covering warning disc.
+    -- Shield effects never obscure real meteor impact circles.
+    local boundary = {}
+    for sector = 1, 8 do
+        local angle = (sector - 1) * math.pi * 0.25
+        local x = math.cos(angle) * Shield.Radius
+        local z = math.sin(angle) * Shield.Radius
+        local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+        local point = ground + Vector3.new(x, 0.25, z)
+        boundary[#boundary + 1] = visual(
+            model, "ShieldPerimeter" .. sector,
+            Vector3.new(0.34, 0.32, 17.5),
+            CFrame.lookAt(point, point + tangent),
+            theme.Accent:Lerp(theme.Secondary, 0.28),
+            Enum.Material.Neon, 1
+        )
+    end
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "ActivateEmergencyShield"
     prompt.ActionText = "PROTECT TEAM"
@@ -181,10 +212,196 @@ local function build(folder, ground, index, variant)
     model.Parent = folder
     return {
         model = model, core = core, dome = dome, ring = ring,
-        prompt = prompt, label = label, center = ground,
+        boundary = boundary, prompt = prompt, label = label, center = ground,
         activeUntil = 0, readyAt = 0, generation = 0,
         theme = theme, groundY = ground.Y,
+        floorValid = true, guard = false,
+        domeTween = nil, crownTween = nil,
+        absorbed = 0, protections = 0, lastImpactAt = -math.huge,
+        claim = nil, claimUntil = 0,
     }
+end
+
+-- Real AI participants can operate the SAME non-colliding prompt station
+-- as a human, but only to protect a live human beneficiary nearby. One
+-- bounded reservation per structure prevents 7 bots swarming the console.
+local function botRoot(model)
+    local folder = workspace:FindFirstChild("AISurvivors")
+    if typeof(model) ~= "Instance" or not model:IsA("Model")
+        or not folder or model.Parent ~= folder
+        or model:GetAttribute("AISurvivor") ~= true
+        or model:GetAttribute("AISurvivorInRound") ~= true
+    then return nil end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local root = model:FindFirstChild("HumanoidRootPart")
+    if not hum or hum.Health <= 0 or not root
+        or not root:IsA("BasePart")
+        or not root:IsDescendantOf(workspace) then return nil end
+    return root, hum
+end
+
+local function humanBeneficiary(round, entry)
+    for _, player in ipairs(round.ctx.Contestants or {}) do
+        if player.Parent == Players
+            and player:GetAttribute("DataLoaded") == true
+            and round.ctx.IsContestantActive(player) then
+            local character = player.Character
+            local hum = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if hum and hum.Health > 0 and root and root:IsA("BasePart")
+                and Shield.contains(entry.center, root.Position, entry.groundY)
+            then return true end
+        end
+    end
+    return false
+end
+
+function Shield.releaseBot(model)
+    local round = activeRound
+    if not round then return end
+    for _, entry in ipairs(round.stations) do
+        if entry.claim == model then
+            entry.claim = nil
+            entry.claimUntil = 0
+        end
+    end
+end
+
+function Shield.botOpportunity(model, now, preferred)
+    local round = activeRound
+    local root = botRoot(model)
+    if not round or not round.active() or not round.ctx.Active()
+        or not root or type(now) ~= "number"
+        or not round.folder.Parent then return nil end
+    local chosen, nearest = nil, Shield.BotApproachRadius
+    for _, entry in ipairs(round.stations) do
+        local delta = entry.core.Position - root.Position
+        local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        local reserved = entry.claim and entry.claim ~= model
+            and (entry.claimUntil or 0) > now
+        if entry.model.Parent == round.folder
+            and entry.floorValid and entry.prompt.Enabled
+            and now >= entry.readyAt
+            and not entry.guard and not reserved
+            and math.abs(delta.Y) < 8
+            and flat <= nearest
+            and (preferred == nil or preferred == entry.core)
+            and humanBeneficiary(round, entry) then
+            chosen, nearest = entry, flat
+        end
+    end
+    if not chosen then return nil end
+    chosen.claim, chosen.claimUntil = model, now + 5
+    return Vector3.new(chosen.core.Position.X, root.Position.Y,
+        chosen.core.Position.Z), chosen.core
+end
+
+-- The ONE authoritative activation path for human prompts and AI agency.
+-- Bots cannot spoof ProximityPrompt.Triggered or bypass the normal hold
+-- time; their AI brain performs its own physical approach and hold.
+function Shield.activate(entry, actor, fromBot)
+    local round = activeRound
+    if not round or not round.active() or not round.ctx.Active()
+        or not entry or entry.model.Parent ~= round.folder
+        or not entry.floorValid or not entry.prompt.Enabled
+        or entry.guard or os.clock() < entry.readyAt then return false end
+
+    local root
+    if fromBot then
+        local hum
+        root, hum = botRoot(actor)
+        if not root or hum.FloorMaterial == Enum.Material.Air
+            or (root.Position - entry.core.Position).Magnitude > Shield.BotReach
+            or not humanBeneficiary(round, entry) then
+            return false
+        end
+    else
+        if not actor or actor.Parent ~= Players
+            or actor:GetAttribute("DataLoaded") ~= true
+            or not round.ctx.IsContestantActive(actor) then return false end
+        local character = actor.Character
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        root = character and character:FindFirstChild("HumanoidRootPart")
+        if not hum or hum.Health <= 0 or not root
+            or not root:IsA("BasePart")
+            or not root:IsDescendantOf(workspace)
+            or (root.Position - entry.core.Position).Magnitude
+                > Shield.PromptDistance + 3 then return false end
+    end
+
+    entry.guard = true
+    local now = os.clock()
+    entry.generation += 1
+    local ticket = entry.generation
+    entry.activeUntil = now + Shield.Duration
+    entry.readyAt = now + Shield.Cooldown
+    entry.absorbed = 0
+    entry.protections = 0
+    entry.lastImpactAt = -math.huge
+    entry.model:SetAttribute("ShieldAbsorbedDamage", 0)
+    entry.model:SetAttribute("ShieldProtections", 0)
+    entry.model:SetAttribute("ShieldActivatedByBot", fromBot == true)
+    entry.model:SetAttribute("ShieldActiveUntil",
+        workspace:GetServerTimeNow() + Shield.Duration)
+    entry.model:SetAttribute("ShieldReadyAt",
+        workspace:GetServerTimeNow() + Shield.Cooldown)
+    entry.label.Text = fromBot
+        and "ALLY ACTIVATED\nSHIELD ACTIVE"
+        or "TEAM SHIELD\nPROTECTED"
+    entry.label.TextColor3 = entry.theme.Secondary
+    entry.dome.Transparency = 1
+    entry.ring.Transparency = 1
+    for _, segment in ipairs(entry.boundary) do
+        segment.Transparency = 0.22
+    end
+    if entry.domeTween then entry.domeTween:Cancel() end
+    if entry.crownTween then entry.crownTween:Cancel() end
+    entry.domeTween = TweenService:Create(entry.dome, TweenInfo.new(0.30),
+        {Transparency = 0.91})
+    entry.crownTween = TweenService:Create(entry.ring, TweenInfo.new(0.30),
+        {Transparency = 0.54})
+    entry.domeTween:Play()
+    entry.crownTween:Play()
+    entry.refresh()
+
+    task.delay(Shield.Duration, function()
+        if not round.active() or ticket ~= entry.generation
+            or not entry.model.Parent then return end
+        if entry.domeTween then entry.domeTween:Cancel() end
+        if entry.crownTween then entry.crownTween:Cancel() end
+        entry.dome.Transparency = 1
+        entry.ring.Transparency = 1
+        for _, segment in ipairs(entry.boundary) do
+            segment.Transparency = 1
+        end
+        entry.label.Text = "TEAM SHIELD\nRECHARGING"
+        entry.label.TextColor3 = entry.theme.Detail
+        entry.refresh()
+    end)
+    task.delay(Shield.Cooldown, function()
+        if not round.active() or ticket ~= entry.generation
+            or not entry.model.Parent then return end
+        entry.label.Text = "TEAM SHIELD\nHOLD TO ACTIVATE"
+        entry.label.TextColor3 = entry.theme.Accent
+        entry.refresh()
+    end)
+    entry.guard = false
+    return true
+end
+
+function Shield.activateBot(model, now, preferred)
+    local _, core = Shield.botOpportunity(model, now, preferred)
+    if not core then return false end
+    local round = activeRound
+    if not round then return false end
+    for _, entry in ipairs(round.stations) do
+        if entry.core == core then
+            local ok = Shield.activate(entry, model, true)
+            if ok then Shield.releaseBot(model) end
+            return ok
+        end
+    end
+    return false
 end
 
 function Shield.start(ctx)
@@ -203,7 +420,11 @@ function Shield.start(ctx)
     local floorY = base.Position.Y + base.Size.Y * 0.5
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local active = true
+    local round = {ctx = ctx, folder = folder, stations = stations,
+        base = base, active = function() return active end}
+    activeRound = round
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
+        if activeRound == round then activeRound = nil end
         active = false
         for _, entry in ipairs(stations) do
             entry.generation += 1
@@ -229,7 +450,22 @@ function Shield.start(ctx)
         local function refresh()
             if not active or not entry.model.Parent then return end
             local now = os.clock()
-            if not withinFloor() then
+            entry.floorValid = withinFloor()
+            if not entry.floorValid then
+                -- Shrinking can retract the floor from a live generator.
+                -- Never leave a visible shield or residual damage benefit
+                -- floating above the void.
+                entry.activeUntil = 0
+                entry.model:SetAttribute("ShieldActiveUntil", 0)
+                entry.label.Text = "SHIELD OFFLINE\nUNSAFE FLOOR"
+                entry.label.TextColor3 = entry.theme.Detail
+                if entry.domeTween then entry.domeTween:Cancel() end
+                if entry.crownTween then entry.crownTween:Cancel() end
+                entry.dome.Transparency = 1
+                entry.ring.Transparency = 1
+                for _, segment in ipairs(entry.boundary) do
+                    segment.Transparency = 1
+                end
                 entry.prompt.Enabled = false
                 entry.model:SetAttribute("ShieldPhase", "Offline")
             elseif now < entry.activeUntil then
@@ -249,54 +485,9 @@ function Shield.start(ctx)
         ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
             connection:Disconnect()
         end
+        entry.refresh = refresh
         entry.prompt.Triggered:Connect(function(player)
-            if not active or not ctx.Active() or not withinFloor()
-                or not entry.prompt.Enabled or not player
-                or player.Parent ~= Players
-                or player:GetAttribute("DataLoaded") ~= true
-                or not ctx.IsContestantActive(player)
-                or os.clock() < entry.readyAt then return end
-            local character = player.Character
-            local hum = character and character:FindFirstChildOfClass("Humanoid")
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if not hum or hum.Health <= 0 or not root
-                or not root:IsA("BasePart")
-                or (root.Position - entry.core.Position).Magnitude
-                    > Shield.PromptDistance + 3 then return end
-            local now = os.clock()
-            entry.generation += 1
-            local ticket = entry.generation
-            entry.activeUntil = now + Shield.Duration
-            entry.readyAt = now + Shield.Cooldown
-            entry.model:SetAttribute("ShieldActiveUntil",
-                workspace:GetServerTimeNow() + Shield.Duration)
-            entry.model:SetAttribute("ShieldReadyAt",
-                workspace:GetServerTimeNow() + Shield.Cooldown)
-            entry.label.Text = "TEAM SHIELD\nPROTECTED"
-            entry.label.TextColor3 = entry.theme.Secondary
-            entry.dome.Transparency = 1
-            entry.ring.Transparency = 1
-            TweenService:Create(entry.dome, TweenInfo.new(0.3),
-                {Transparency = 0.91}):Play()
-            TweenService:Create(entry.ring, TweenInfo.new(0.3),
-                {Transparency = 0.74}):Play()
-            refresh()
-            task.delay(Shield.Duration, function()
-                if not active or ticket ~= entry.generation
-                    or not entry.model.Parent then return end
-                entry.dome.Transparency = 1
-                entry.ring.Transparency = 1
-                entry.label.Text = "TEAM SHIELD\nRECHARGING"
-                entry.label.TextColor3 = entry.theme.Detail
-                refresh()
-            end)
-            task.delay(Shield.Cooldown, function()
-                if not active or ticket ~= entry.generation
-                    or not entry.model.Parent then return end
-                entry.label.Text = "TEAM SHIELD\nHOLD TO ACTIVATE"
-                entry.label.TextColor3 = entry.theme.Accent
-                refresh()
-            end)
+            Shield.activate(entry, player, false)
         end)
         refresh()
     end
@@ -312,10 +503,39 @@ function Shield.start(ctx)
         end
         local now = os.clock()
         for _, entry in ipairs(stations) do
-            if entry.model.Parent and now < entry.activeUntil
-                and Shield.contains(entry.center, position, entry.groundY)
-            then
-                return Shield.damageAfterProtection(damage)
+            if entry.model.Parent and entry.floorValid
+                and now < entry.activeUntil
+                and Shield.contains(entry.center, position, entry.groundY) then
+                local reduced = Shield.damageAfterProtection(damage)
+                local saved = math.max(0, damage - reduced)
+                if saved > 0 then
+                    entry.absorbed += saved
+                    entry.protections += 1
+                    entry.model:SetAttribute("ShieldAbsorbedDamage",
+                        math.floor(entry.absorbed))
+                    entry.model:SetAttribute("ShieldProtections",
+                        entry.protections)
+                    entry.label.Text = "SHIELD ACTIVE\n"
+                        .. tostring(math.floor(entry.absorbed)) .. " HP SAVED"
+                    -- An actual absorbed hit physically ripples the
+                    -- 3D generator crown, rather than inventing a red
+                    -- warning or changing any gameplay collision.
+                    if now - entry.lastImpactAt >= 0.35 then
+                        entry.lastImpactAt = now
+                        entry.ring.Size = Vector3.new(0.2, 8, 8)
+                        entry.ring.Transparency = 0.36
+                        if entry.crownTween then
+                            entry.crownTween:Cancel()
+                        end
+                        entry.crownTween = TweenService:Create(entry.ring,
+                            TweenInfo.new(0.42, Enum.EasingStyle.Quad,
+                                Enum.EasingDirection.Out),
+                            {Size = Vector3.new(0.2, 15, 15),
+                                Transparency = 0.54})
+                        entry.crownTween:Play()
+                    end
+                end
+                return reduced
             end
         end
         return damage

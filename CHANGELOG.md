@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-02 — Cooperative AI actually operates huge storm shields (source only)
+
+- Bots now detect human teammates near **real defensive generators**, reserve one station per bot, navigate there using their existing humanoid controller, perform a genuine **0.65-second hold**, and activate the SAME server-validated shield as human players. Incoming danger always cancels the interaction; no bot teleport, client-trusted action or fabricated benefit. Shield reservations reset on lobby, new round and rig deletion.
+- All four generator sites have been brought closer to the existing eight spawn positions, so the protective interaction is discoverable in the FIRST minute rather than only at the far edge. The readable field is a true **48-stud-wide / 26-stud-high** cylinder with **eight illuminated 24-stud-radius perimeter sections**, not a misleading giant sphere and opaque blast-warning-obscuring disc.
+- Actual absorbed Meteor/Bomb damage is counted and displayed as **HP SAVED**; the real overhead machine crown responds with an animated impact ripple. Three event guards cancel in-flight tweens on expiry, cleanup or a disappearing floor. No increased damage, immunity, extra server network protocol or new fullscreen animation.
+- Existing real-engine disaster-impact tests extended for the true shell volume, eight perimeter segments, no false pre-activation benefits and refusal of AI activation without a real human beneficiary. **This new source SHA has not yet passed Build/Cloud/Android or been published to Roblox.** [Implementation and certification requirements](docs/REAL_COOPERATIVE_SKY_SHIELD_2026-11-02.md).
+
+
 ## 2026-11-01 — Active co-op skyline storm-defense generators (source only)
 
 - Four giant, original **interactive shared emergency shield installations** per active arena during Meteor/Bomb rounds: physical hold-to-activate consoles, 52-stud transparent shield envelopes, five map-specific machinery silhouettes and an actual 8-second team protection field with 21-second recharge.
