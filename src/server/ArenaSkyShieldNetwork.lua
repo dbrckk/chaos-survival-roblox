@@ -5,7 +5,14 @@
 -- No new RemoteEvents, monetization, client hit checks or render loops.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local VisualTheme = require("../shared/VisualTheme")
+-- Published Roblox places use the actual shared ModuleScript. Engine source
+-- specs may load this repo before the published place contains new modules.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local visualThemeModule = shared and shared:FindFirstChild("VisualTheme")
+local VisualTheme = if visualThemeModule
+    then require(visualThemeModule)
+    else require("../shared/VisualTheme")
 
 local Shield = {}
 Shield.Radius = 24
