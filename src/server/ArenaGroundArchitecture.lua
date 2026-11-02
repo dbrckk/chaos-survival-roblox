@@ -152,9 +152,8 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme)
             local cornerX = sx * (innerX * 0.5 + apronX * 0.5)
             local cornerZ = sz * (innerZ * 0.5 + apronZ * 0.5)
             part(decor, "PremiumGroundCorner" .. tostring(sx)
-                    .. "_" .. tostring(sz), "WedgePart",
-                origin * CFrame.new(cornerX, finishY, cornerZ)
-                    * CFrame.Angles(0, (sx == sz) and 0 or math.pi, 0),
+                    .. "_" .. tostring(sz), "Part",
+                origin * CFrame.new(cornerX, finishY, cornerZ),
                 Vector3.new(apronX - 0.08, 0.035, apronZ - 0.08),
                 outerTone, profile.detail, 0.045, false)
             count += 1
