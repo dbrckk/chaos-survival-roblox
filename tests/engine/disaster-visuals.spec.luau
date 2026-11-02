@@ -58,6 +58,41 @@ describe("Material-aware Harbor timber impact appearance", function()
 end)
 
 describe("Disaster visual identities", function()
+    it("adds bounded layered 3D hatches to actual platforms, never Low or unsafe bridges", function()
+        local parent = Instance.new("Folder")
+        local platform = Instance.new("Part")
+        platform.Size = Vector3.new(12, 2, 11)
+        platform.CFrame = CFrame.new(18, 22, 15)
+        platform.Anchored = true
+        platform.Parent = parent
+        local theme = require("../../src/shared/VisualTheme").arena("Classic")
+        local pieces = PlatformFinishKit.buildServiceHatch(
+            parent, platform, "Classic", "Medium", theme, 1)
+        expect(#pieces).toBe(3)
+        for _, part in ipairs(pieces) do
+            expect(part:GetAttribute("ChaosServiceHatch")).toBe(true)
+            expect(part:GetAttribute("ChaosPlatformTrim")).toBe(true)
+            expect(part.CanCollide).toBe(false)
+            expect(part.CanTouch).toBe(false)
+            expect(part.CanQuery).toBe(false)
+            expect(part.Anchored).toBe(false)
+            expect(part:FindFirstChild("ChaosPlatformTrimWeld") ~= nil)
+                .toBe(true)
+        end
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
+        expect(pieces[1].Transparency).toBe(1)
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Restore")
+        expect(pieces[1].Transparency < 1).toBe(true)
+        expect(#PlatformFinishKit.buildServiceHatch(
+            parent, platform, "Classic", "Low", theme, 1)).toBe(0)
+        expect(#PlatformFinishKit.buildServiceHatch(
+            parent, platform, "Classic", "High", theme, 2)).toBe(0)
+        platform:SetAttribute("ChaosSkybridge", true)
+        expect(#PlatformFinishKit.buildServiceHatch(
+            parent, platform, "Classic", "High", theme, 1)).toBe(0)
+        parent:Destroy()
+    end)
+
     it("adds bounded structural diagonal braces only under safe visual decks", function()
         local root = Instance.new("Folder")
         root.Parent = workspace
