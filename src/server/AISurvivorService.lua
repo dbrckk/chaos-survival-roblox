@@ -793,6 +793,8 @@ local function createRig(record)
     record.turnPauseUntil = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
+    record.recoveryAttemptCount = 0
+    record.lastRecoveryAt = 0
     record.lastProgressTarget = nil
     record.threat = nil
     record.threatSeenAt = nil
@@ -915,6 +917,8 @@ local function sendToLobby(record)
     record.lastProgressTarget = nil
     record.lastProgressAt = 0
     record.stuckCount = 0
+    record.recoveryAttemptCount = 0
+    record.lastRecoveryAt = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
     record.moveDirection = Vector3.zero
@@ -967,6 +971,7 @@ local function sendToArena(record)
     record.districtTraverse = nil
     record.nextDistrictTraverseAt = os.clock() + 3
     record.nextRouteJumpAt = 0
+    record.nextGapProbeAt = 0
     record.nextDistrictStageCheckAt = 0
     record.signalInterestRoute = nil
     record.signalInterestUntil = 0
@@ -979,6 +984,8 @@ local function sendToArena(record)
     record.lastProgressTarget = nil
     record.lastProgressAt = 0
     record.stuckCount = 0
+    record.recoveryAttemptCount = 0
+    record.lastRecoveryAt = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
     record.model:SetAttribute("BotStallRecoveryCount", 0)
@@ -1069,6 +1076,7 @@ local function newRecord(slot)
         districtTraverse = nil,
         nextDistrictTraverseAt = 0,
         nextRouteJumpAt = 0,
+        nextGapProbeAt = 0,
         nextDistrictStageCheckAt = 0,
         signalInterestRoute = nil,
         signalInterestUntil = 0,
@@ -1082,6 +1090,8 @@ local function newRecord(slot)
         lastProgressPosition = nil,
         lastProgressAt = 0,
         stuckCount = 0,
+        recoveryAttemptCount = 0,
+        lastRecoveryAt = 0,
         failedTarget = nil,
         failedTargetUntil = 0,
         lastProgressTarget = nil,
@@ -1788,13 +1798,25 @@ local function arenaCandidates(root)
         return result
     end
 
+    local variantId = arenaVariantId()
+    local groundBase = arena:FindFirstChild("Base")
+    local groundTopY = groundBase and groundBase:IsA("BasePart")
+        and (groundBase.Position.Y + groundBase.Size.Y * 0.5)
+        or config.ArenaCenter.Y + 1
+    -- On a raised bridge, spawn markers are far below the real landing
+    -- and cannot be reached by walking. They must obey the same vertical
+    -- safety filter as the actual physical platform candidates.
     local spawns = arena:FindFirstChild("Spawns")
     for _, part in ipairs(sortedParts(spawns)) do
-        table.insert(result, {part = part, position = part.Position + Vector3.new(0, 2.5, 0)})
+        local position = part.Position + Vector3.new(0, 2.5, 0)
+        if AISurvivorRules.reachableElevation(
+            root and root.Position.Y or position.Y, position.Y, variantId
+        ) then
+            table.insert(result, {part = part, position = position})
+        end
     end
 
     local platforms = arena:FindFirstChild("Platforms")
-    local variantId = arenaVariantId()
     for _, part in ipairs(sortedParts(platforms)) do
         local position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0)
         if AISurvivorRules.platformAvailable(
@@ -1805,6 +1827,8 @@ local function arenaCandidates(root)
             root and root.Position.Y or position.Y,
             position.Y,
             variantId
+        ) and AISurvivorRules.elevatedWaypointNearby(
+            root and root.Position or position, position, groundTopY
         ) and AISurvivorRules.outerStepReachable(
             part:GetAttribute("PerimeterStep"),
             root and root.Position, position,
@@ -1843,8 +1867,13 @@ local function arenaCandidates(root)
         end
     end
 
-    local base = arena:FindFirstChild("Base")
-    if base and base:IsA("BasePart") then
+    local base = groundBase
+    if base and base:IsA("BasePart")
+        and AISurvivorRules.reachableElevation(
+            root and root.Position.Y or base.Position.Y,
+            base.Position.Y + base.Size.Y * 0.5 + 2.6,
+            variantId
+        ) then
         local halfX = math.max(5, base.Size.X * 0.5 - 7)
         local halfZ = math.max(5, base.Size.Z * 0.5 - 7)
         for _ = 1, 4 do
@@ -1966,6 +1995,10 @@ local function socialArenaTarget(record, root, traits, now)
     end
 
     local eligible = {}
+    local arenaGround = arenaBase()
+    local groundTopY = arenaGround
+        and (arenaGround.Position.Y + arenaGround.Size.Y * 0.5)
+        or config.ArenaCenter.Y + 1
     for _, player in ipairs(Players:GetPlayers()) do
         local humanRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         local humanHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -1976,6 +2009,9 @@ local function socialArenaTarget(record, root, traits, now)
             and humanHumanoid and humanHumanoid.Health > 0
             and AISurvivorRules.reachableElevation(
                 root.Position.Y, humanRoot.Position.Y, arenaVariantId()
+            )
+            and AISurvivorRules.elevatedWaypointNearby(
+                root.Position, humanRoot.Position, groundTopY
             )
         then
             table.insert(eligible, {
@@ -1999,6 +2035,9 @@ local function socialArenaTarget(record, root, traits, now)
                 and otherHumanoid and otherHumanoid.Health > 0
                 and AISurvivorRules.reachableElevation(
                     root.Position.Y, otherRoot.Position.Y, arenaVariantId()
+                )
+                and AISurvivorRules.elevatedWaypointNearby(
+                    root.Position, otherRoot.Position, groundTopY
                 )
             then
                 table.insert(eligible, {
@@ -2081,11 +2120,39 @@ local function socialArenaTarget(record, root, traits, now)
     end
 
     target = clampToArena(target)
+    local safeDeck = nil
+    if root.Position.Y > groundTopY + 8 then
+        -- Rooftop social spacing can put an otherwise harmless rival
+        -- chase OUTSIDE a 12-stud bridge. Use the partner's actual
+        -- grounded physical deck, not an imaginary landing coordinate.
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {
+            record.model, partnerRoot.Parent
+        }
+        params.RespectCanCollide = true
+        local surface = workspace:Raycast(
+            partnerRoot.Position + Vector3.new(0, 1, 0),
+            Vector3.new(0, -6, 0), params
+        )
+        local part = surface and surface.Instance
+        if not part or not part:IsA("BasePart")
+            or not part.Parent or part.Parent.Name ~= "Platforms"
+            or surface.Normal.Y < 0.78
+            or not AISurvivorRules.platformAvailable(
+                part.CanCollide, part.Transparency,
+                part:GetAttribute("CollapsePhase")
+            ) then return nil end
+        safeDeck = part
+        target = AISurvivorRules.clampWaypointToDeck(
+            safeDeck.CFrame, safeDeck.Size, target
+        ) or target
+    end
     -- A social impulse may not override the existing server hazard evaluator.
     if scoreCandidate(record, root, {position = target}, traits) < -32 then
         return nil
     end
-    return target
+    return target, safeDeck
 end
 
 local function separateTarget(record, target)
@@ -2554,11 +2621,18 @@ local function chooseArenaTarget(record, root, now)
         record.nextAssistAt = now + 2.8 + record.slot * 0.15
     end
 
-    local socialTarget = socialArenaTarget(record, root, traits, now)
+    local socialTarget, socialDeck =
+        socialArenaTarget(record, root, traits, now)
     if socialTarget then
         record.targetIsPad = false
-        record.targetPart = nil
-        return separateTarget(record, socialTarget), 0.65 + math.random() * 1.0
+        record.targetPart = socialDeck
+        local waypoint = separateTarget(record, socialTarget)
+        if socialDeck then
+            waypoint = AISurvivorRules.clampWaypointToDeck(
+                socialDeck.CFrame, socialDeck.Size, waypoint
+            ) or socialTarget
+        end
+        return waypoint, 0.65 + math.random() * 1.0
     end
 
     -- When a Flux Relay can be reached before its charge window ends,
@@ -2733,7 +2807,10 @@ local function chooseArenaTarget(record, root, now)
         record.failedTargetUntil
     )
     if #candidates == 0 then
-        return clampToArena(config.ArenaCenter + Vector3.new(math.random(-18, 18), 3, math.random(-18, 18))), 1.5
+        -- No reachable physical waypoint? Stay on the CURRENT footing
+        -- rather than ordering a sky-deck bot to run toward a random
+        -- ground point and fall to its death. Hazard evasion still wins.
+        return root.Position, 1.5
     end
 
     local ranked = {}
@@ -2762,6 +2839,11 @@ local function chooseArenaTarget(record, root, now)
         and selected.part.Parent.Name == "Platforms"
     then
         record.targetPart = selected.part
+        -- Don't let crowd-avoidance vectors push a real sky landing off
+        -- its collision surface. The world location is authoritative.
+        target = AISurvivorRules.clampWaypointToDeck(
+            selected.part.CFrame, selected.part.Size, target
+        ) or selected.position
     end
 
     local hold = record.profile.TargetHoldMin
@@ -2981,7 +3063,7 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     local directions = AISurvivorRules.recoveryDirections(
         root.Position, failedDestination or record.failedTarget
             or (root.Position + root.CFrame.LookVector * 8),
-        (record.slot or 1) + (record.stuckCount or 0))
+        (record.slot or 1) + (record.recoveryAttemptCount or 0))
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
@@ -3027,13 +3109,21 @@ local function nearbyRecoveryStep(record, root, failedDestination)
             if not blocked then
                 -- Midpoint AND endpoint need real walkable support; matching
                 -- the measured current floor handles differing rig scales.
-                local midpointY = groundAt(
+                -- A 6.5-stud detour can cross a narrow gap hidden
+                -- between safe midpoint/endpoint samples. Probe every
+                -- quarter and bound elevation changes between neighbors.
+                local quarterY = groundAt(
+                    root.Position + actualStep * 0.25)
+                local midpointY = quarterY and groundAt(
                     root.Position + actualStep * 0.50)
-                local endpointY = groundAt(candidate)
-                if midpointY and endpointY
-                    and AISurvivorRules.recoveryGroundIsContinuous(
-                        root.Position.Y, midpointY, endpointY,
-                        actualStep.Magnitude, originFloorY) then
+                local threeQuarterY = midpointY and groundAt(
+                    root.Position + actualStep * 0.75)
+                local endpointY = threeQuarterY and groundAt(candidate)
+                if AISurvivorRules.recoveryGroundSamplesSafe(
+                    root.Position.Y, originFloorY, quarterY,
+                    midpointY, threeQuarterY, endpointY,
+                    actualStep.Magnitude
+                ) then
                     return Vector3.new(
                         candidate.X, root.Position.Y, candidate.Z)
                 end
@@ -3087,6 +3177,12 @@ local function recoverIfStuck(record, humanoid, root, now)
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
+    -- Preserve the recovery-side sequence even when short detours make
+    -- progress. Previously that success reset stuckCount and sent every
+    -- later attempt around the exact same obstacle on the same side.
+    record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
+        record.recoveryAttemptCount, record.lastRecoveryAt, now)
+    record.lastRecoveryAt = now
     record.failedTarget = goal
     record.failedTargetUntil = now + 7.5
     -- Physical stations and expedition reservations cannot be held by
@@ -3153,6 +3249,73 @@ local function recoverIfStuck(record, humanoid, root, now)
     return true
 end
 
+-- Ordinary AI height-based jumps never fire across the eight flat
+-- promenade decks and ten flat Sky Spine decks. Probe at a bounded
+-- cadence ONLY while the bot is actually approaching a real elevated
+-- platform; jump with native Humanoid physics if the intervening gap
+-- has no footing and the far side has a safe, level landing.
+local function tryPhysicalSkyGapJump(record, humanoid, root, now, target)
+    local deck = record.targetPart
+    if not deck or not deck:IsA("BasePart")
+        or not deck.Parent or deck.Parent.Name ~= "Platforms"
+        or typeof(target) ~= "Vector3"
+        or humanoid.FloorMaterial == Enum.Material.Air
+        or now < (record.nextRouteJumpAt or 0)
+        or now < (record.nextGapProbeAt or 0) then return false end
+    local base = arenaBase()
+    if not base then return false end
+    local delta = target - root.Position
+    local travel = Vector3.new(delta.X, 0, delta.Z)
+    if travel.Magnitude < 4.2 or travel.Magnitude > 34
+        or root.Position.Y < base.Position.Y + base.Size.Y * 0.5 + 7
+        or not AISurvivorRules.platformAvailable(
+            deck.CanCollide, deck.Transparency,
+            deck:GetAttribute("CollapsePhase")
+        ) then return false end
+
+    record.nextGapProbeAt = now + 0.20
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {record.model}
+    params.RespectCanCollide = true
+    local forward = travel.Unit
+    local function floorAt(distance)
+        local result = workspace:Raycast(
+            root.Position + forward * distance + Vector3.new(0, 1.5, 0),
+            Vector3.new(0, -7, 0),
+            params
+        )
+        if result and result.Normal.Y >= 0.78
+            and result.Instance and result.Instance.CanCollide
+            and AISurvivorRules.platformAvailable(
+                result.Instance.CanCollide,
+                result.Instance.Transparency,
+                result.Instance:GetAttribute("CollapsePhase")
+            ) then
+            return result
+        end
+        return nil
+    end
+
+    local origin = floorAt(0)
+    if not origin or not origin.Instance.Parent
+        or origin.Instance.Parent.Name ~= "Platforms" then return false end
+    local gap = floorAt(3.4)
+    if gap then return false end
+    local landing = floorAt(7.2)
+    if not landing or not landing.Instance.Parent
+        or landing.Instance.Parent.Name ~= "Platforms" then return false end
+    if AISurvivorRules.skyGapJumpReady(
+        true, root.Position.Y - (base.Position.Y + base.Size.Y * 0.5),
+        travel.Magnitude, origin.Position.Y, false, landing.Position.Y
+    ) then
+        humanoid.Jump = true
+        record.nextRouteJumpAt = now + 0.80
+        return true
+    end
+    return false
+end
+
 local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaBounded)
     if not target then
         humanoid:Move(Vector3.zero)
@@ -3168,8 +3331,15 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
         return
     end
 
+    -- Narrow server-owned sky crossings need accurate physical heading,
+    -- not a blended previous turn that curves off a 12-stud walkway.
+    -- Ordinary ground roaming keeps its humanlike steering inertia.
     local direct = urgent == true
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
+        or AISurvivorRules.committedWorldRoute(
+            record.targetIsSkyrail, record.targetPart,
+            record.districtTraverse ~= nil
+        )
 
     local previousTarget = record.lastMoveTarget
     local changedTarget = not previousTarget
@@ -3982,6 +4152,9 @@ local function stepRecord(record, now)
             -- The old generic height check fired on every brain tick,
             -- even while airborne, overriding the bounded parkour jump
             -- cooldown and creating unnatural pogo-stick movement.
+            if not urgentTarget then
+                tryPhysicalSkyGapJump(record, humanoid, root, now, record.target)
+            end
             if delta.Y > 2.2 and horizontal.Magnitude < 10
                 and humanoid.FloorMaterial ~= Enum.Material.Air
                 and now >= (record.nextRouteJumpAt or 0)

@@ -89,6 +89,17 @@ describe("AI survivor rules", function()
         expect(committed(false, target)).toBe(true)
         target:SetAttribute("FluxRelayIndex", nil)
         expect(committed(false, target)).toBe(false)
+        target:SetAttribute("PromenadeLane", 1)
+        expect(committed(false, target)).toBe(true)
+        expect(AISurvivorRules.allowRouteStrafe(
+            false, false, target)).toBe(false)
+        target:SetAttribute("PromenadeLane", nil)
+        target:SetAttribute("SkySpineStep", 5)
+        expect(committed(false, target)).toBe(true)
+        expect(AISurvivorRules.allowRouteStrafe(
+            false, false, target)).toBe(false)
+        target:SetAttribute("SkySpineStep", nil)
+        expect(committed(false, target)).toBe(false)
 
         -- Removed targets must not keep a bot committed to a stale model.
         target.Parent = nil
@@ -118,6 +129,13 @@ describe("AI survivor rules", function()
         expect(chooseAgain("round", 11, 8, destination, false, waypoint)).toBe(false)
         waypoint:SetAttribute("PerimeterStep", 6)
         expect(strafe(false, false, waypoint)).toBe(true)
+        waypoint:SetAttribute("RouteTier", 3)
+        expect(strafe(false, false, waypoint)).toBe(false)
+        waypoint:SetAttribute("RouteTier", 4)
+        expect(strafe(false, false, waypoint)).toBe(false)
+        waypoint:SetAttribute("RouteTier", 2)
+        expect(strafe(false, false, waypoint)).toBe(true)
+        waypoint:SetAttribute("RouteTier", nil)
         expect(strafe(false, false, waypoint, true)).toBe(false)
         expect(chooseAgain("round", 11, 8, destination,
             false, waypoint, false, true)).toBe(false)
@@ -173,6 +191,16 @@ describe("AI survivor rules", function()
         expect(#directions(start, start, 1)).toBe(0)
         expect(#directions(nil, goal, 1)).toBe(0)
 
+        -- Consecutive stalls must alternate detour directions even after
+        -- a short successful lateral move reset the ordinary stall count.
+        local nextAttempt = AISurvivorRules.nextRecoveryAttempt
+        expect(nextAttempt(0, 1, 2)).toBe(1)
+        expect(nextAttempt(1, 2, 3)).toBe(2)
+        expect(nextAttempt(7, 3, 4)).toBe(8)
+        expect(nextAttempt(8, 4, 5)).toBe(1)
+        expect(nextAttempt(3, 1, 15)).toBe(1)
+        expect(nextAttempt(3, 15, 14)).toBe(1)
+
         local supported = AISurvivorRules.recoveryGroundIsContinuous
         -- Root 2.7 studs above actual floor; halfway + endpoint MUST
         -- both be supported at the SAME accessible height.
@@ -208,6 +236,17 @@ describe("AI survivor rules", function()
         local onlyBlocked = {bad}
         expect(AISurvivorRules.filterRecentlyFailedCandidates(
             onlyBlocked, Vector3.new(4, 4, 4), 2, 9.5)).toBe(onlyBlocked)
+
+        -- A landing that looks safe only at its midpoint/end must not
+        -- encourage bots to walk over a missing quarter of real floor.
+        local continuous = AISurvivorRules.recoveryGroundSamplesSafe
+        expect(continuous(9.7, 7, 7, 7, 7.1, 7, 6.5)).toBe(true)
+        expect(continuous(9.7, 7, nil, 7, 7, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7, nil, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 9, 7, 7, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7.1, 9, 7, 6.5)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7, 7, 7, 2)).toBe(false)
+        expect(continuous(9.7, 7, 7, 7, 7, 7, 6.5)).toBe(true)
 
         local stalled = AISurvivorRules.isGenuineStall
         expect(stalled(start, start, goal, 1.16, true, true)).toBe(true)
@@ -917,6 +956,49 @@ describe("AI survivor rules", function()
         expect(AISurvivorRules.reachableElevation(3, 11.4, "Towers")).toBe(true)
         expect(AISurvivorRules.reachableElevation(3, 12, "Towers")).toBe(false)
         expect(AISurvivorRules.reachableElevation(12, 6, "Towers")).toBe(true)
+        -- A high sky platform is not a walkable shortcut to floor level.
+        expect(AISurvivorRules.reachableElevation(24, 4, "Classic")).toBe(false)
+        expect(AISurvivorRules.reachableElevation(24, 14, "Towers")).toBe(true)
+        expect(AISurvivorRules.reachableElevation(24, 13.9, "Towers")).toBe(false)
+        -- On high platforms, the next 20-32-stud sky lane is a valid
+        -- target, but an equally high deck across 200 studs of void is not.
+        local nearby = AISurvivorRules.elevatedWaypointNearby
+        expect(nearby(Vector3.new(10, 4, 0),
+            Vector3.new(210, 4, 0), 1)).toBe(true)
+        expect(nearby(Vector3.new(10, 15, 0),
+            Vector3.new(42, 15, 0), 1)).toBe(true)
+        expect(nearby(Vector3.new(10, 15, 0),
+            Vector3.new(55, 15, 0), 1)).toBe(false)
+        expect(nearby(Vector3.new(10, 15, 0),
+            Vector3.new(210, 15, 0), 1)).toBe(false)
+        expect(nearby(nil, Vector3.new(42, 15, 0), 1)).toBe(false)
+        -- Crowd avoidance must not turn a narrow, rotated roof landing
+        -- into a waypoint in empty space or change its foot height.
+        local clampRoof = AISurvivorRules.clampWaypointToDeck
+        local deckFrame = CFrame.new(30, 14, -20)
+            * CFrame.Angles(0, math.rad(35), 0)
+        local deckSize = Vector3.new(12, 2, 10)
+        local requested = deckFrame:PointToWorldSpace(
+            Vector3.new(18, 3, -9))
+        local clamped = clampRoof(deckFrame, deckSize, requested)
+        local localClamped = deckFrame:PointToObjectSpace(clamped)
+        expect(math.abs(localClamped.X - 4) < 0.001).toBe(true)
+        expect(math.abs(localClamped.Z + 3) < 0.001).toBe(true)
+        expect(math.abs(localClamped.Y - 3) < 0.001).toBe(true)
+        expect(clampRoof(nil, deckSize, requested)).toBe(nil)
+
+        -- A 2.4-stud level gap now calls for a real Humanoid jump;
+        -- never leap without an available floor on the far side.
+        local skyJump = AISurvivorRules.skyGapJumpReady
+        expect(skyJump(true, 15, 24, 20, false, 20)).toBe(true)
+        expect(skyJump(true, 15, 24, 20, true, 20)).toBe(false)
+        expect(skyJump(false, 15, 24, 20, false, 20)).toBe(false)
+        expect(skyJump(true, 6, 24, 20, false, 20)).toBe(false)
+        expect(skyJump(true, 15, 45, 20, false, 20)).toBe(false)
+        expect(skyJump(true, 15, 24, 20, false, 23)).toBe(false)
+        expect(skyJump(true, 15, 24, 20, false, nil)).toBe(false)
+        expect(skyJump(true, 15, 24, 20, false, math.huge)).toBe(false)
+
     end)
 
     it("preserves plausible route continuity per arena", function()

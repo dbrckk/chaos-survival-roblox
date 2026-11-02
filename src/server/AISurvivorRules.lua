@@ -421,7 +421,14 @@ function AISurvivorRules.committedWorldRoute(targetIsSkyrail, targetPart, active
             return true
         end
     end
+    -- The connected 200-stud promenades and transverse Sky Spine
+    -- have real 2.4-stud gaps. A casual lateral strafe or random
+    -- rethink near their edges sent bots into open air despite the
+    -- intentional guided route. Treat only these actual decks as
+    -- committed for the existing bounded five-second grace period.
     return step == 1 or step == 2
+        or targetPart:GetAttribute("PromenadeLane") ~= nil
+        or targetPart:GetAttribute("SkySpineStep") ~= nil
         or targetPart:GetAttribute("GridCircuitIndex") ~= nil
         or targetPart:GetAttribute("FluxRelayIndex") ~= nil
 end
@@ -446,6 +453,23 @@ end
 -- a fixed RightVector made seven NPCs ricochet at the same obstacle.
 -- Alternate their first sidestep by slot; both directions and a small
 -- retreat remain valid physical walk paths, never teleport/flight.
+-- Recovery side alternation must survive a successfully completed detour.
+-- Reset only after a genuine 12-second period without another stall;
+-- ordinary progress toward the sideways detour is not proof the original
+-- obstacle has been cleared.
+function AISurvivorRules.nextRecoveryAttempt(previous, lastAt, now)
+    local time = tonumber(now) or 0
+    local prior = tonumber(previous) or 0
+    local previousAt = tonumber(lastAt) or 0
+    if time ~= time or previousAt ~= previousAt
+        or math.abs(time) == math.huge
+        or math.abs(previousAt) == math.huge
+        or time < previousAt or time - previousAt > 12 then
+        prior = 0
+    end
+    return (math.floor(math.max(0, prior)) % 8) + 1
+end
+
 function AISurvivorRules.recoveryDirections(position, target, slot)
     if typeof(position) ~= "Vector3" or typeof(target) ~= "Vector3" then
         return {}
@@ -523,6 +547,32 @@ function AISurvivorRules.filterRecentlyFailedCandidates(
     return #viable > 0 and viable or candidates
 end
 
+-- Five grounded samples along a detour prevent a bot from trying
+-- to cross the unseen void between two otherwise safe landing spots.
+-- This is a pure rule, so Roblox engine specs can certify it without
+-- simulating an entire AI round or relying on arbitrary NPC rig height.
+function AISurvivorRules.recoveryGroundSamplesSafe(
+    rootY, originY, quarterY, midpointY, threeQuarterY, endpointY, distance)
+    -- ipairs skips nil holes in Lua arrays: validate every sample
+    -- explicitly before iterating, so an actual gap is always rejected.
+    if type(originY) ~= "number" or type(quarterY) ~= "number"
+        or type(midpointY) ~= "number"
+        or type(threeQuarterY) ~= "number"
+        or type(endpointY) ~= "number" then return false end
+    for _, height in ipairs({originY, quarterY, midpointY,
+        threeQuarterY, endpointY}) do
+        if type(height) ~= "number" or height ~= height
+            or math.abs(height) == math.huge then return false end
+    end
+    if not AISurvivorRules.recoveryGroundIsContinuous(
+        rootY, midpointY, endpointY, distance, originY
+    ) then return false end
+    return math.abs(quarterY - originY) <= 1.25
+        and math.abs(midpointY - quarterY) <= 1.25
+        and math.abs(threeQuarterY - midpointY) <= 1.25
+        and math.abs(endpointY - threeQuarterY) <= 1.25
+end
+
 function AISurvivorRules.isGenuineStall(
     previousPosition, position, target, elapsed, grounded, moving)
     if grounded ~= true or moving ~= true
@@ -564,7 +614,13 @@ end
 -- knock an NPC off a narrow perimeter step or out of a mastery trigger.
 function AISurvivorRules.allowRouteStrafe(
     targetIsPad, targetIsSkyrail, targetPart, activeExpedition)
+    -- Mid/high-tier genuine parkour decks are too narrow for arbitrary
+    -- sideways crowd-avoidance curves, even when the route was chosen
+    -- casually rather than by a deliberate expedition.
+    local tier = typeof(targetPart) == "Instance"
+        and tonumber(targetPart:GetAttribute("RouteTier")) or nil
     return targetIsPad ~= true
+        and (not tier or tier < 3)
         and not AISurvivorRules.committedWorldRoute(
             targetIsSkyrail, targetPart, activeExpedition
         )
@@ -730,12 +786,73 @@ end
 
 function AISurvivorRules.reachableElevation(currentY, targetY, variantId)
     local rise = (tonumber(targetY) or 0) - (tonumber(currentY) or 0)
-    if rise <= 0 then
-        return true
-    end
+    -- A downward target is not automatically walkable: choosing the
+    -- arena floor from a 20-stud sky bridge makes bots simply run off
+    -- the edge. Descend through nearby physical steps instead; the
+    -- urgent threat-escape system can still preempt normal roaming.
+    if rise < -10 then return false end
+    if rise <= 0 then return true end
 
     local limit = variantId == "Towers" and 8.5 or 7.5
     return rise <= limit
+end
+
+-- Elevated bots should choose the NEXT physical 20-32-stud sky
+-- landing, not another sky bridge on the opposite side of the 320-stud
+-- world. The latter looked like a valid same-height waypoint to the
+-- old AI and sent runners straight into empty air. Ground runners keep
+-- the long-distance freedom needed to reach a real entrance terrace.
+-- Short level crossings have 2.4-stud REAL air gaps. A human
+-- naturally jumps, but ordinary bot height-based jumps never fire
+-- when the destination is at the same altitude. Only authorize a
+-- normal Humanoid jump when grounded support is present beneath the
+-- bot, missing directly ahead, and resumes on a reachable landing.
+-- Sample physics separately in the runtime, never fabricate a floor.
+function AISurvivorRules.skyGapJumpReady(
+    grounded, heightAboveBase, horizontalDistance,
+    originFloorY, gapIsSupported, landingFloorY)
+    if grounded ~= true or gapIsSupported ~= false then return false end
+    if type(heightAboveBase) ~= "number"
+        or type(horizontalDistance) ~= "number"
+        or type(originFloorY) ~= "number"
+        or type(landingFloorY) ~= "number" then return false end
+    for _, value in ipairs({
+        heightAboveBase, horizontalDistance, originFloorY, landingFloorY
+    }) do
+        if value ~= value or math.abs(value) == math.huge then return false end
+    end
+    return heightAboveBase >= 7
+        and horizontalDistance >= 4.2
+        and horizontalDistance <= 34
+        and math.abs(landingFloorY - originFloorY) <= 2.0
+end
+
+-- Bot-to-bot separation can displace a center waypoint by several
+-- studs. Clamp the result inside the ACTUAL physics deck with room for
+-- an R15 collision capsule, rather than asking a survivor to dodge an
+-- ally by walking off the edge of a 10-stud sky walkway.
+function AISurvivorRules.clampWaypointToDeck(deckFrame, deckSize, waypoint)
+    if typeof(deckFrame) ~= "CFrame" or typeof(deckSize) ~= "Vector3"
+        or typeof(waypoint) ~= "Vector3" then return nil end
+    local localPoint = deckFrame:PointToObjectSpace(waypoint)
+    local safeHalfX = math.max(0, deckSize.X * 0.5 - 2)
+    local safeHalfZ = math.max(0, deckSize.Z * 0.5 - 2)
+    return deckFrame:PointToWorldSpace(Vector3.new(
+        math.clamp(localPoint.X, -safeHalfX, safeHalfX),
+        localPoint.Y,
+        math.clamp(localPoint.Z, -safeHalfZ, safeHalfZ)
+    ))
+end
+
+function AISurvivorRules.elevatedWaypointNearby(
+    current, destination, groundTopY)
+    if typeof(current) ~= "Vector3"
+        or typeof(destination) ~= "Vector3"
+        or type(groundTopY) ~= "number" then return false end
+    if current.Y <= groundTopY + 8 then return true end
+    local dx = current.X - destination.X
+    local dz = current.Z - destination.Z
+    return dx * dx + dz * dz <= 34 * 34
 end
 
 function AISurvivorRules.routeContinuity(variantId, currentPosition, targetPosition, center, directionBias)

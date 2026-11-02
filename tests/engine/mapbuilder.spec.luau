@@ -1739,6 +1739,28 @@ describe("Chaos Survival engine", function()
                         "SkyRouteMonument" .. index
                             .. "_MonumentalOverpass")
                     expect(arch ~= nil and arch:IsA("BasePart")).toBe(true)
+                    local beamBottom =
+                        deck.CFrame:PointToObjectSpace(arch.Position).Y
+                        - arch.Size.Y * 0.5
+                    for _, side in ipairs({-1, 1}) do
+                        local column = decor:FindFirstChild(
+                            "SkyRouteMonument" .. index
+                                .. "_VerticalBridgePylon" .. side)
+                        local topOfColumn = deck.CFrame:PointToObjectSpace(
+                            column.Position).Y + column.Size.Y * 0.5
+                        -- Every stage's load pylons MUST touch its beam,
+                        -- including taller late-stage summit structures.
+                        expect(topOfColumn - beamBottom >= 0.15).toBe(true)
+                        expect(topOfColumn - beamBottom <= 0.80).toBe(true)
+                    end
+                    local beacon = decor:FindFirstChild(
+                        "SkyRouteMonument" .. index
+                            .. "_RouteStageBeacon")
+                    expect(beacon ~= nil).toBe(true)
+                    local beaconTop = deck.CFrame:PointToObjectSpace(
+                        beacon.Position).Y + beacon.Size.Y * 0.5
+                    expect(beaconTop >= beamBottom).toBe(true)
+                    expect(beaconTop - beamBottom < 0.5).toBe(true)
                     expect(deck.CFrame:PointToObjectSpace(
                         arch.Position).Y >= deck.Size.Y * 0.5 + 11)
                         .toBe(true)
