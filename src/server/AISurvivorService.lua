@@ -34,6 +34,10 @@ local skyShieldModuleInPlace = script and script.Parent:FindFirstChild("ArenaSky
 local ArenaSkyShieldNetwork = if skyShieldModuleInPlace
     then require(skyShieldModuleInPlace)
     else require("./ArenaSkyShieldNetwork")
+local skySwitchModule = script and script.Parent:FindFirstChild("SkySpineSwitchyard")
+local SkySpineSwitchyard = if skySwitchModule
+    then require(skySwitchModule)
+    else require("./SkySpineSwitchyard")
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
@@ -920,6 +924,8 @@ local function sendToLobby(record)
     record.assistShield = nil
     record.shieldHoldAt = nil
     record.nextShieldAt = 0
+    record.spineControl = nil
+    record.spineHoldAt = nil
     pivotRecord(record, getLobbyPosition(record))
 end
 
@@ -976,6 +982,8 @@ local function sendToArena(record)
     record.assistShield = nil
     record.shieldHoldAt = nil
     record.nextShieldAt = os.clock() + 0.75 + record.slot * 0.16
+    record.spineControl = nil
+    record.spineHoldAt = nil
     pivotRecord(record, spawn)
 end
 
@@ -1031,6 +1039,8 @@ local function newRecord(slot)
         assistShield = nil,
         shieldHoldAt = nil,
         nextShieldAt = 0,
+        spineControl = nil,
+        spineHoldAt = nil,
         nextJump = 0,
         nextPadAt = 0,
         target = nil,
@@ -3386,6 +3396,41 @@ local function stepRecord(record, now)
                 record.shieldHoldAt = nil
             end
         end
+    end
+
+    -- A bot physically reaching the high Sky Spine can perform the SAME
+    -- hold-to-connect action as a person. No pathfinding teleport, paid
+    -- boost or fake ProximityPrompt signal: the real server geometry is
+    -- rechecked before the nine interdeck gaps become safe platforms.
+    if record.inRound and currentState.phase == "round"
+        and not urgentTarget and not record.assistShield
+        and not record.assistRelay then
+        local switchCore = SkySpineSwitchyard.botOpportunity(
+            record.model, now)
+        if switchCore then
+            if record.spineControl ~= switchCore then
+                record.spineControl = switchCore
+                record.spineHoldAt = now + SkySpineSwitchyard.HoldSeconds
+            end
+            humanoid:Move(Vector3.zero)
+            if now < (record.spineHoldAt or 0) then return end
+            local connected = SkySpineSwitchyard.activateBot(
+                record.model, switchCore)
+            record.spineControl = nil
+            record.spineHoldAt = nil
+            if connected then
+                record.target = nil
+                record.nextThink = 0
+                record.model:SetAttribute("BotSkySpineConnected", true)
+                showBotSignal(record, "SKYWAY OPEN!", now)
+            end
+        else
+            record.spineControl = nil
+            record.spineHoldAt = nil
+        end
+    else
+        record.spineControl = nil
+        record.spineHoldAt = nil
     end
 
     -- Physical cooperation never outranks a real impact/escape, and

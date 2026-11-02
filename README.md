@@ -4,6 +4,12 @@ Fast multiplayer disaster-survival game built with Luau + Rojo.
 
 **Eight-participant round roster (published, awaiting physical playtest):** the owner has set the starting place to eight human visitor slots. The public build now contains the READY-time autofill logic for up to **seven original AI bots**, aiming for eight participants at the start of a round (not eight survivors at every instant). The exact-sha public publishing workflow succeeded on 1 November; Android and multiplayer observation must still confirm live spawns and performance. See [eight-seat autofill and validation](docs/EIGHT_PARTICIPANT_BOT_AUTOFILL_2026-11-01.md).
 
+## New AAA-scale Sky Spine interchange — developed source candidate
+
+Every 320×320 arena now has a **third genuinely collidable 200+ stud sky bridge** crossing PERPENDICULAR to the previous twin sky promenades. Ten permanently safe 12-stud landing decks create an H-shaped elevated parkour network with two playable junctions. Each world has an **original monumental sky fortress** (radar, cargo hoist, routing fins, orbital core or storm crane), engineered trim and navigation.
+
+**Real environmental interaction:** from either of two elevated command machines, a human or physically present bot can hold a Roblox prompt for 0.7 s to **turn nine previously open 2.4-stud sky gaps into an ACTUAL solid continuous rescue crossing** for ALL eight participants, for the rest of that round. Before activation, the ten permanent decks remain jumpable. No temporary walkway can vanish under a running player; no extra pay-to-win or teleport. [Complete design, safety and release criteria](docs/SKY_SPINE_COOPERATIVE_INTERCHANGE_2026-11-02.md). **Code is not public until next exact-SHA Cloud/Android release certification and actual publish.**
+
 ## Public experience status
 
 [**Play Chaos Survival on Roblox**](https://www.roblox.com/games/95351659174730/Chaos-Survival) · [Creator Dashboard](https://create.roblox.com/dashboard/creations/experiences/10771083668/overview)

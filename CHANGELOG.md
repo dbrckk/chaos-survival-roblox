@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-02 — Full-scale 200+ stud Sky Spine with real cooperative rescue switchboards (source only)
+
+- **Third fully playable 200–248-stud elevated 3D crossing on ALL five worlds**: ten new genuine 12-stud-wide server collision decks with 2.4-stud standard jumps, creating an H-shaped platforming network physically joining both existing sky promenades. No renumbered legacy platforms; Harbor 127–136 append after its historic 126 decks. All ten decks permanently survive random platform collapse.
+- **Five monumental native 3D sky fortress identities**, elevated framed gateways, underdeck trusses, PBR-native materials and glowing navigation rails. Server layout preserves actual collision geometry through ShrinkingArena while all decorative pieces stay noncolliding and follow their own physical decks.
+- **Cooperative sky-switchyard objective**: two elevated, physically interactive consoles. An active survivor or AI bot standing at either one can hold 0.7 s to lock **NINE genuine previously open jump gaps** into permanently solid rescue bridges with real illuminated side rails for the remainder of the round. This is shared with all eight participants and cannot be exploited via client remotes or duplicated. No ghost connectors are generated in ShrinkingArena rounds.
+- Existing engine tests expanded for ten authentic new decks, 2.4-stud geometry and nine server-owned initially noncolliding gap fillers on all five worlds, with exact platform counts updated. **The new code is not yet proven by same-SHA Cloud/Android or published.** [Gameplay and acceptance](docs/SKY_SPINE_COOPERATIVE_INTERCHANGE_2026-11-02.md).
+
+
 ## 2026-11-02 — Real linked storm-defense corridors across all five arenas (source)
 
 - **Major new cooperative survival mechanic:** two different human/bot-operated Skyline generator shields activated concurrently now form an actual **18-stud-wide, up to 24-stud-high protected corridor** across the playable 320-stud terrain. Real Meteor/Bomb impacts to participants inside the projected corridor receive the SAME 58% mitigation as existing single shields; protection stops at the shorter of the two 8-second live durations, never stacks and cannot grant immunity outside the route.

@@ -12,6 +12,7 @@ local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local OrbitalRouteSignKit = require("../../src/client/OrbitalRouteSignKit")
 local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
 local SpawnSafety = require("../../src/server/SpawnSafety")
+local SkySpineSwitchyard = require("../../src/server/SkySpineSwitchyard")
 local ArenaPresentation = require("../../src/shared/ArenaPresentation")
 local VisualTheme = require("../../src/shared/VisualTheme")
 
@@ -160,6 +161,7 @@ describe("Chaos Survival engine", function()
         expect(#(platforms :: Folder):GetChildren()).toBe(
             #ArenaVariants.get("Classic").Platforms + 52
                 + #ArenaVariants.get("Classic").PromenadePlatforms
+                + #ArenaVariants.get("Classic").SkySpinePlatforms
         )
         -- Route-tier identity is replicated with the physical decks and
         -- reflects intentional jumpable paths, not client-only cosmetics.
@@ -841,6 +843,7 @@ describe("Chaos Survival engine", function()
                 original + 52 + #(variant.SkywayPlatforms or {})
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
+                    + #(variant.SkySpinePlatforms or {})
             )
             -- Continuous floor-to-sky paths are mandatory during a
             -- collapse: the suspended viaduct is not useful if its
@@ -1238,6 +1241,7 @@ describe("Chaos Survival engine", function()
                 branchEnd + 4 + #(variant.SkywayPlatforms or {})
                     + #(variant.SpokePlatforms or {})
                     + #(variant.PromenadePlatforms or {})
+                    + #(variant.SkySpinePlatforms or {})
             )
 
             for route = 1, 4 do
@@ -1525,6 +1529,95 @@ describe("Chaos Survival engine", function()
                 from, {}, Config.ArenaCenter, variantId
             )).toBe(nil)
 
+            root:Destroy()
+        end
+    end)
+
+
+    it("builds real permanent Sky Spine decks and a secure nine-gap team-activated sky bridge", function()
+        for _, id in ipairs(ArenaVariants.Order) do
+            local variant = ArenaVariants.get(id)
+            local root = MapBuilder.build(Config, id, ArenaVariants)
+            local arena = root:FindFirstChild("Arena")
+            local platforms = arena:FindFirstChild("Platforms")
+            local decor = arena:FindFirstChild("Decor")
+            local index = #variant.Platforms + #variant.PerimeterPlatforms
+                + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
+                + #(variant.SkywayPlatforms or {})
+                + #(variant.SpokePlatforms or {})
+                + #variant.PromenadePlatforms
+            local previous = nil
+            for step = 1, 10 do
+                local deck = platforms:FindFirstChild(
+                    "Platform" .. (index + step))
+                expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
+                expect(deck.CanCollide and deck.Anchored).toBe(true)
+                expect(deck:GetAttribute("SkySpineInterchange")).toBe(true)
+                expect(deck:GetAttribute("SkySpineStep")).toBe(step)
+                expect(deck:GetAttribute("ChaosPermanentRoute")).toBe(true)
+                expect(deck:GetAttribute("RouteTier")).toBe(4)
+                expect(deck.Size.X).toBe(12)
+                if previous then
+                    local gapPos, gapSize = SkySpineSwitchyard.gapBetween(
+                        previous, deck)
+                    expect(typeof(gapPos)).toBe("Vector3")
+                    expect(typeof(gapSize)).toBe("Vector3")
+                    expect(math.abs(gapSize.Z - 3.2) < 0.001).toBe(true)
+                end
+                previous = deck
+                local art = decor:FindFirstChild(
+                    "SkySpine" .. (index + step) .. "_LightedEdge-1")
+                expect(art ~= nil and art:IsA("BasePart")).toBe(true)
+                expect(art.CanCollide).toBe(false)
+                expect(art:GetAttribute("PerimeterPlatformIndex"))
+                    .toBe(index + step)
+            end
+
+            local ctx = {
+                Active = function() return true end,
+                IsContestantActive = function() return true end,
+                Cleanup = {}, OnCleanup = {},
+                RoundSeconds = 65, ActiveDisasters = {},
+            }
+            expect(SkySpineSwitchyard.allowed(ctx)).toBe(true)
+            local built = SkySpineSwitchyard.start(ctx)
+            expect(built).toBe(9)
+            local station = arena:FindFirstChild("SkySpineSwitchyard")
+            expect(station ~= nil).toBe(true)
+            expect(station:GetAttribute("SkySpineGapCount")).toBe(9)
+            expect(station:GetAttribute("SkySpineConnected")).toBe(false)
+            for gap = 1, 9 do
+                local bridge = station:FindFirstChild(
+                    "SpineGapBridge" .. gap)
+                expect(bridge ~= nil and bridge:IsA("BasePart")).toBe(true)
+                expect(bridge.Anchored).toBe(true)
+                expect(bridge.CanCollide).toBe(false)
+                expect(bridge.CanTouch).toBe(false)
+                expect(bridge.CanQuery).toBe(false)
+                expect(bridge.Transparency).toBe(1)
+                expect(bridge:GetAttribute("ChaosPermanentRoute")).toBe(true)
+            end
+            for _, step in ipairs({3, 8}) do
+                local control = station:FindFirstChild(
+                    "SkySpineCommand" .. step)
+                expect(control ~= nil).toBe(true)
+                local core = control:FindFirstChild("CommandCore")
+                expect(core ~= nil).toBe(true)
+                expect(core:FindFirstChild("ConnectSkySpine")
+                    :IsA("ProximityPrompt")).toBe(true)
+            end
+            expect(SkySpineSwitchyard.botOpportunity(nil, os.clock()))
+                .toBe(nil)
+            expect(SkySpineSwitchyard.activateBot(nil, nil))
+                .toBe(false)
+            -- A shrinking map must NEVER build non-following rescue
+            -- connectors that look solid over a retracted empty floor.
+            ctx.ActiveDisasters = {ShrinkingArena = true}
+            expect(SkySpineSwitchyard.allowed(ctx)).toBe(false)
+            for _, finish in ipairs(ctx.OnCleanup) do finish() end
+            for _, item in ipairs(ctx.Cleanup) do
+                if item and item.Parent then item:Destroy() end
+            end
             root:Destroy()
         end
     end)

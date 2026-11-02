@@ -543,6 +543,40 @@ for _, variantId in ipairs(ArenaVariants.Order) do
         end
     end
     variant.PromenadePlatforms = promenades
+
+    -- SKY SPINE: third genuine elevated megabridge, transverse to the
+    -- existing twin 200-stud sky promenades. It joins the *middle* of both
+    -- existing safe 8-step routes, making the rooftops a connected H-shaped
+    -- survival network rather than two isolated corridors.
+    --
+    -- Append AFTER every existing PlatformN ID. Ten 12-stud-wide solid
+    -- landings; 2.4-stud R15-jump gaps; generous 4.8-stud overlap at
+    -- each original promenade. A real collidable player path at exactly
+    -- the same sky height, not a painted / implied bridge.
+    local north = promenades[4]
+    local south = promenades[12]
+    assert(north and south
+        and math.abs(north.offset.X - south.offset.X) < 0.001
+        and math.abs(north.offset.Y - south.offset.Y) < 0.001,
+        "Sky Spine needs equal-height, aligned north/south promenades")
+    local span = south.offset.Z - north.offset.Z
+    local interval = math.abs(span) / 10
+    assert(interval > 17 and interval < 32,
+        "Sky Spine requires 10 genuinely jumpable crossing decks")
+    local spine = {}
+    for step = 1, 10 do
+        local fraction = (step - 0.5) / 10
+        spine[step] = {
+            offset = north.offset
+                + Vector3.new(0, 0, span * fraction),
+            size = Vector3.new(12, 2, interval - 2.4),
+            RouteTier = 4,
+            ParkourGrade = (step == 5 or step == 6) and 4 or 3,
+            PermanentRoute = true,
+            SkySpineStep = step,
+        }
+    end
+    variant.SkySpinePlatforms = spine
 end
 
 local legacyRecent = {}
