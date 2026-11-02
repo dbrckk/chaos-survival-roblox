@@ -79,6 +79,7 @@ local ArenaDistrictCaches = require(script.ArenaDistrictCaches)
 local ArenaDistrictTransit = require(script.ArenaDistrictTransit)
 local ArenaStructuralCollapse = require(script.ArenaStructuralCollapse)
 local ArenaSkyShieldNetwork = require(script.ArenaSkyShieldNetwork)
+local SkySpineSwitchyard = require(script.SkySpineSwitchyard)
 local DistrictSignalRush = require(script.DistrictSignalRush)
 local RoundChallenge = require(script.RoundChallenge)
 local HighGroundMastery = require(script.HighGroundMastery)
@@ -1623,6 +1624,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
     -- Every arena has two tangible cooperative consoles. Humans can
     -- share one emergency dash with nearby allies; solo rounds still
     -- grant their operator a real cooldown refill or reserve.
+    -- The newly authored physical H-shaped Sky Spine can be made
+    -- gapless for the entire round by a player reaching either of the
+    -- two genuine elevated switch stations. Never alter existing decks.
+    local spineOk, spineResult = pcall(SkySpineSwitchyard.start, ctx)
+    if not spineOk then
+        warn("Cooperative Sky Spine switchyard failed:", spineResult)
+    end
+
     local relayOk, relayResult = pcall(TeamDashRelay.start, ctx)
     if not relayOk then
         warn("Team DASH relays failed to start:", relayResult)
