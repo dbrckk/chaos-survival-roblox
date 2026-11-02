@@ -441,6 +441,51 @@ function AISurvivorRules.forwardTravel(from, to, target)
     return moved:Dot(heading.Unit)
 end
 
+-- Physical local detours after confirmed loss of forward progress. A
+-- world-space target is NOT the same as the bot's current facing; using
+-- a fixed RightVector made seven NPCs ricochet at the same obstacle.
+-- Alternate their first sidestep by slot; both directions and a small
+-- retreat remain valid physical walk paths, never teleport/flight.
+function AISurvivorRules.recoveryDirections(position, target, slot)
+    if typeof(position) ~= "Vector3" or typeof(target) ~= "Vector3" then
+        return {}
+    end
+    local heading = Vector3.new(
+        target.X - position.X, 0, target.Z - position.Z)
+    if heading.Magnitude < 0.5 then return {} end
+    local forward = heading.Unit
+    local right = Vector3.new(-forward.Z, 0, forward.X)
+    local sign = math.floor(tonumber(slot) or 1) % 2 == 0 and -1 or 1
+    local first = right * sign
+    local other = -first
+    return {
+        (first + forward * 0.28).Unit,
+        (other + forward * 0.28).Unit,
+        first,
+        other,
+        (first - forward * 0.42).Unit,
+        (other - forward * 0.42).Unit,
+        -forward,
+    }
+end
+
+-- A new target is a success only if its intended world-space progress
+-- is measurable. Repeated side-to-side oscillations are still a stall.
+-- Return false for held prompts and nonmovement so optional co-op
+-- interactions never trigger recovery attempts.
+function AISurvivorRules.isGenuineStall(
+    previousPosition, position, target, elapsed, grounded, moving)
+    if grounded ~= true or moving ~= true
+        or typeof(previousPosition) ~= "Vector3"
+        or typeof(position) ~= "Vector3"
+        or typeof(target) ~= "Vector3"
+        or type(elapsed) ~= "number" or elapsed < 1.15 then
+        return false
+    end
+    return AISurvivorRules.forwardTravel(
+        previousPosition, position, target) < 0.85
+end
+
 function AISurvivorRules.shouldReplanTarget(phase, now, nextThink, target, targetIsSkyrail, targetPart, urgent, activeExpedition)
     -- Replanning a casual goal must never overwrite a live disaster escape
     -- after the ordinary timer expires. Survival always takes precedence.
