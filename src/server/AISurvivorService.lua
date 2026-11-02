@@ -2484,14 +2484,20 @@ local function chooseArenaTarget(record, root, now)
         record.nextShieldAt = now + 2.9 + record.slot * 0.18
     end
 
-    local physicalRoute, routeHold = districtTraverseTarget(record, root, now)
-    if physicalRoute then
-        return physicalRoute, routeHold
-    end
-    local signalTarget, signalHold = liveDistrictSignalTarget(
-        record, root, now, traits)
-    if signalTarget then
-        return signalTarget, signalHold
+    -- Once the bot has committed to helping a real teammate, don't
+    -- start a competing multistep parkour route before it finishes
+    -- the actual console approach/hold. Urgent hazards still override
+    -- this in stepRecord before any cooperative action.
+    if not record.assistShield then
+        local physicalRoute, routeHold = districtTraverseTarget(record, root, now)
+        if physicalRoute then
+            return physicalRoute, routeHold
+        end
+        local signalTarget, signalHold = liveDistrictSignalTarget(
+            record, root, now, traits)
+        if signalTarget then
+            return signalTarget, signalHold
+        end
     end
     -- Bots can use REAL server-owned world consoles, but only as helpers
     -- for live nearby HUMAN contestants. No client event, teleport,
