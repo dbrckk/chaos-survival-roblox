@@ -1,0 +1,51 @@
+name: One-time PR558 safety and build validation
+on:
+  push:
+    branches:
+      - fix/elevated-ai-grounded-route-20261102
+    paths:
+      - .github/workflows/one-time-pr558-build-20261102.yml
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.repository == 'dbrckk/chaos-survival-roblox'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Luau syntax across actual project
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 \
+            -o /tmp/luau.zip \
+            https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          unzip -tq /tmp/luau.zip >/dev/null
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
+            xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+      - name: Guard mobile VFX and Cloud spec batching
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/validate_mobile_vfx_first_frame.py
+          python tools/prepare_cloud_batches.py --self-test
+      - name: Build exact candidate place with Rojo 7.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 \
+            -o /tmp/rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -tq /tmp/rojo.zip >/dev/null
+          mkdir -p /tmp/rojo
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          python tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          mkdir -p build
+          /tmp/rojo/rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" build/ChaosSurvival.rbxlx
