@@ -1,3 +1,4 @@
+# Second milestone: require full-size landing support after arena shrink.
 name: One-time PR558 safety and build validation
 on:
   push:
