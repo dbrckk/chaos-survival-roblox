@@ -490,6 +490,21 @@ task.spawn(function()
                 end
             end
         end
+        -- Four original peripheral facade retrofits have genuine individual
+        -- positions; reuse the existing district architecture LOD sampler.
+        -- No additional Heartbeat, new script or fake collidable geometry.
+        local retrofits = decor and decor:FindFirstChild("OriginalExteriorRetrofits")
+        if retrofits and retrofits:IsA("Folder") then
+            for _, retrofit in ipairs(retrofits:GetChildren()) do
+                if retrofit:IsA("Model")
+                    and retrofit:GetAttribute("OriginalExteriorRetrofit") == true
+                    and retrofit:GetAttribute("SourceIsOriginal") == true
+                    and retrofit:GetAttribute("CosmeticOnly") == true then
+                    applyFolder(retrofit, DISTRICT_ARCHITECTURE_LOD,
+                        profile, retrofit:GetPivot().Position, cameraPoint)
+                end
+            end
+        end
         local hero = SceneryLodRules.heroArchitectureOwner(workspace)
         if hero then
             -- Server-authored original hero model also lives beyond the
