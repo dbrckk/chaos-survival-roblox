@@ -925,6 +925,24 @@ function AISurvivorRules.clampWaypointToDeck(deckFrame, deckSize, waypoint)
     ))
 end
 
+-- Meteor/Bomb evasions are selected along physical lanes, never
+-- into the air around a tall roof. On a 320-stud arena floor, retain
+-- the ordinary long dodge. On an elevated landing, stay inside its
+-- actual oriented collision footprint. No valid deck = HOLD position.
+function AISurvivorRules.safeElevatedImpactEscape(
+    origin, destination, groundTopY, deckFrame, deckSize)
+    if typeof(origin) ~= "Vector3" or typeof(destination) ~= "Vector3"
+        or type(groundTopY) ~= "number"
+        or groundTopY ~= groundTopY
+        or math.abs(groundTopY) == math.huge then return nil end
+    if origin.Y <= groundTopY + 8 then return destination end
+    if typeof(deckSize) ~= "Vector3"
+        or deckSize.X < 6 or deckSize.Z < 6 then return origin end
+    return AISurvivorRules.clampWaypointToDeck(
+        deckFrame, deckSize, destination
+    ) or origin
+end
+
 function AISurvivorRules.elevatedWaypointNearby(
     current, destination, groundTopY)
     if typeof(current) ~= "Vector3"
