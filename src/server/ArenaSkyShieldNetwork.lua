@@ -456,6 +456,9 @@ function Shield.start(ctx)
                 -- Never leave a visible shield or residual damage benefit
                 -- floating above the void.
                 entry.activeUntil = 0
+                entry.model:SetAttribute("ShieldActiveUntil", 0)
+                entry.label.Text = "SHIELD OFFLINE\nUNSAFE FLOOR"
+                entry.label.TextColor3 = entry.theme.Detail
                 if entry.domeTween then entry.domeTween:Cancel() end
                 if entry.crownTween then entry.crownTween:Cancel() end
                 entry.dome.Transparency = 1
