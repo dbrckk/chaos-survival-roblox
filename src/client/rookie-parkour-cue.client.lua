@@ -4,9 +4,11 @@
 -- No new Parts, collision, rewards, network traffic, lights or RenderStepped.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
+local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -585,6 +587,15 @@ local function update()
         end
     end
 
+    -- Physical wayfinding is always subordinate to the authoritative
+    -- imminent-disaster instruction. The hazard UI owns the SAME mobile
+    -- notification lane, and it can preempt this marker immediately.
+    -- On desktop the world-space depth-tested sign remains unchanged.
+    if UserInputService.TouchEnabled
+        and MobileHudNotices.current() == "imminent-hazard" then
+        hide()
+        return true
+    end
     local sign = gui()
     -- Calm teal for normal rookie guidance, sea-green for cargo. Retain
     -- depth testing and a single HUD owner on all Android tiers.
