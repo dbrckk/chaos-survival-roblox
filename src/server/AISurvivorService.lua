@@ -3009,13 +3009,8 @@ local function recoverIfStuck(record, humanoid, root, now)
         return false
     end
 
-    local displacement = root.Position - record.lastProgressPosition
-    local target = record.target
-    local toward = Vector3.new(target.X - record.lastProgressPosition.X,
-        0, target.Z - record.lastProgressPosition.Z)
-    local traveled = Vector3.new(displacement.X, 0, displacement.Z)
-    local forward = toward.Magnitude > 0.2
-        and traveled:Dot(toward.Unit) or traveled.Magnitude
+    local forward = AISurvivorRules.forwardTravel(
+        record.lastProgressPosition, root.Position, record.target)
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
 
