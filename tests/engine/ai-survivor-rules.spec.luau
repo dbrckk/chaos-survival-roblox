@@ -965,6 +965,21 @@ describe("AI survivor rules", function()
         expect(nearby(Vector3.new(10, 15, 0),
             Vector3.new(210, 15, 0), 1)).toBe(false)
         expect(nearby(nil, Vector3.new(42, 15, 0), 1)).toBe(false)
+        -- Crowd avoidance must not turn a narrow, rotated roof landing
+        -- into a waypoint in empty space or change its foot height.
+        local clampRoof = AISurvivorRules.clampWaypointToDeck
+        local deckFrame = CFrame.new(30, 14, -20)
+            * CFrame.Angles(0, math.rad(35), 0)
+        local deckSize = Vector3.new(12, 2, 10)
+        local requested = deckFrame:PointToWorldSpace(
+            Vector3.new(18, 3, -9))
+        local clamped = clampRoof(deckFrame, deckSize, requested)
+        local localClamped = deckFrame:PointToObjectSpace(clamped)
+        expect(math.abs(localClamped.X - 4) < 0.001).toBe(true)
+        expect(math.abs(localClamped.Z + 3) < 0.001).toBe(true)
+        expect(math.abs(localClamped.Y - 3) < 0.001).toBe(true)
+        expect(clampRoof(nil, deckSize, requested)).toBe(nil)
+
         -- A 2.4-stud level gap now calls for a real Humanoid jump;
         -- never leap without an available floor on the far side.
         local skyJump = AISurvivorRules.skyGapJumpReady
