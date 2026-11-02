@@ -1,0 +1,46 @@
+name: One-Time PR564 Luau + Full Rojo Place Build
+on:
+  push:
+    branches: [feat/premium-structural-pbr-cladding-20261102]
+    paths: ['.github/workflows/one-time-pr564-original-cladding-source-validation.yml']
+permissions:
+  contents: read
+jobs:
+  source-and-place:
+    if: github.repository == 'dbrckk/chaos-survival-roblox'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile all Luau sources with pinned 0.740
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 90 \
+            -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          unzip -tq /tmp/luau.zip >/dev/null
+          mkdir -p /tmp/luau && unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
+            xargs -0 -n1 /tmp/luau/luau-compile > /dev/null
+      - name: Validate mobile visual first-frame budget
+        run: python tools/validate_mobile_vfx_first_frame.py
+      - name: Install pinned Rojo 7.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 90 \
+            -o /tmp/rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -tq /tmp/rojo.zip >/dev/null
+          mkdir -p /tmp/rojo && unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo && echo /tmp/rojo >> "$GITHUB_PATH"
+      - name: Build full original arena place
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" build/ChaosSurvival.rbxlx
+          echo "PR564 source compiled and full place build succeeded; NO ROBLOX PUBLISH"
