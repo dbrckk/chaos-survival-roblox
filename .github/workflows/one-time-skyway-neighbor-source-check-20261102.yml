@@ -1,3 +1,4 @@
+# Final candidate includes safe rooftop social pursuit and floor-only mobility filtering.
 name: One-Time Skyway Neighbor Source Validation 2026-11-02
 on:
   push:
