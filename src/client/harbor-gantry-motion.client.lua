@@ -39,7 +39,7 @@ local function restore(record)
 end
 
 local function clear()
-    for _, record in ipairs(cranes) do restore(record) end
+    for _, record in pairs(cranes) do restore(record) end
     restore(radar)
     table.clear(cranes)
     radar = nil
@@ -176,8 +176,9 @@ end
 local function step(profile, dt)
     local camera = workspace.CurrentCamera
     if not camera or not fleet or not fleet.Parent
-        or profile.Count == 0 then
-        for _, record in ipairs(cranes) do restore(record) end
+        or profile.Count == 0
+        or player:GetAttribute("ReduceMotion") == true then
+        for _, record in pairs(cranes) do restore(record) end
         restore(radar)
         return
     end
@@ -185,7 +186,7 @@ local function step(profile, dt)
     -- Zero trig/CFrame writes for hidden cranes and distant camera views.
     -- Medium animates only the TWO nearest; High animates all four.
     local visible = {}
-    for _, record in ipairs(cranes) do
+    for _, record in pairs(cranes) do
         local part = record.reference
         if part and part.Parent
             and part.LocalTransparencyModifier < 0.9 then
@@ -202,7 +203,7 @@ local function step(profile, dt)
     end
 
     clock += math.clamp(tonumber(dt) or 0, 0, 0.25)
-    for _, record in ipairs(cranes) do
+    for _, record in pairs(cranes) do
         if chosen[record] then applyCrane(record, clock)
         else restore(record) end
     end
