@@ -20,6 +20,7 @@ local HeroArchitecture = require("./HeroArchitecture")
 local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 local HarborScenery = require("./HarborScenery")
 local PromenadeArchitecture = require("./PromenadeArchitecture")
+local SkySpineArchitecture = require("./SkySpineArchitecture")
 
 local MapBuilder = {}
 
@@ -2600,6 +2601,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for _, definition in ipairs(variant.PromenadePlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
+    -- The new REAL transverse Sky Spine is appended after both historical
+    -- promenade lanes; no legacy platform, bridge or AI route ID changes.
+    for _, definition in ipairs(variant.SkySpinePlatforms or {}) do
+        table.insert(platformDefinitions, definition)
+    end
 
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -2676,6 +2682,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform:SetAttribute("PromenadeLane", definition.PromenadeLane)
             platform:SetAttribute("PromenadeStep", definition.PromenadeStep)
             platform.Color = theme.Structure:Lerp(theme.Detail, 0.52)
+            platform.Material = theme.PanelMaterial
+                or VisualTheme.Materials.Structure
+        end
+        if definition.SkySpineStep then
+            -- Ten physical, permanently supported transverse crossing
+            -- decks at the same sky altitude as both long promenades.
+            platform:SetAttribute("SkySpineStep", definition.SkySpineStep)
+            platform:SetAttribute("SkySpineInterchange", true)
+            platform.Color = theme.Structure:Lerp(theme.Secondary, 0.45)
             platform.Material = theme.PanelMaterial
                 or VisualTheme.Materials.Structure
         end
@@ -2853,6 +2868,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- 200-stud promenades. Every noncolliding part is owned by its
         -- physical PlatformN, including ShrinkingArena movement/scaling.
         -- None adds a blocking wall beneath the high walkways.
+        if definition.SkySpineStep then
+            SkySpineArchitecture.decorate(
+                decor, platform, i, definition, variant.Id, theme)
+        end
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme)
