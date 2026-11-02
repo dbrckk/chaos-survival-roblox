@@ -861,6 +861,20 @@ end
 -- move to an AVAILABLE, physically adjacent deck rather than running
 -- toward the arena's distant centre through empty air. This shared
 -- predicate is deterministic and exercised in the Roblox engine.
+-- A doomed elevated platform is not a reason to IGNORE a fresh
+-- bomb, meteor or active crane lane. Hold only if no safer active
+-- disaster response exists. The choice is a pure, testable rule.
+function AISurvivorRules.collapseFallbackTarget(
+    activeThreatTarget, noSafeDeck, currentPosition)
+    if typeof(activeThreatTarget) == "Vector3" then
+        return activeThreatTarget
+    end
+    if noSafeDeck == true and typeof(currentPosition) == "Vector3" then
+        return currentPosition
+    end
+    return nil
+end
+
 function AISurvivorRules.safeCollapseNeighbor(
     threatenedFrame, threatenedSize,
     candidateFrame, candidateSize, available)
