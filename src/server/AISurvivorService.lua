@@ -3045,14 +3045,11 @@ local function nearbyRecoveryStep(record, root, failedDestination)
                 local threeQuarterY = midpointY and groundAt(
                     root.Position + actualStep * 0.75)
                 local endpointY = threeQuarterY and groundAt(candidate)
-                if quarterY and midpointY and threeQuarterY and endpointY
-                    and AISurvivorRules.recoveryGroundIsContinuous(
-                        root.Position.Y, midpointY, endpointY,
-                        actualStep.Magnitude, originFloorY)
-                    and math.abs(quarterY - originFloorY) <= 1.25
-                    and math.abs(midpointY - quarterY) <= 1.25
-                    and math.abs(threeQuarterY - midpointY) <= 1.25
-                    and math.abs(endpointY - threeQuarterY) <= 1.25 then
+                if AISurvivorRules.recoveryGroundSamplesSafe(
+                    root.Position.Y, originFloorY, quarterY,
+                    midpointY, threeQuarterY, endpointY,
+                    actualStep.Magnitude
+                ) then
                     return Vector3.new(
                         candidate.X, root.Position.Y, candidate.Z)
                 end
