@@ -129,8 +129,8 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     for side = -1, 1, 2 do
         structure("LoadPylon" .. side, Vector3.new(1.6, crownHeight, 1.8),
             CFrame.new(0, crownHeight * 0.5, side * 7.6), steel)
-        structure("DiagonalStay" .. side, Vector3.new(0.65, 7.3, 1.1),
-            CFrame.new(0, 8.6, side * 8.3)
+        structure("DiagonalStay" .. side, Vector3.new(0.65, crownHeight * 0.55, 1.1),
+            CFrame.new(0, crownHeight * 0.66, side * 8.3)
                 * CFrame.Angles(math.rad(side * 16), 0, 0),
             alloy)
     end
