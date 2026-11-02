@@ -477,12 +477,20 @@ end
 -- surprise raised slab. Collidable support must be validated by actual
 -- engine raycasts at BOTH places before these numeric constraints apply.
 function AISurvivorRules.recoveryGroundIsContinuous(
-    rootY, midpointY, endpointY, distance)
+    rootY, midpointY, endpointY, distance, originFloorY)
     for _, value in ipairs({rootY, midpointY, endpointY, distance}) do
         if type(value) ~= "number" or value ~= value
             or math.abs(value) == math.huge then return false end
     end
-    local floorY = rootY - 2.7
+    -- The historical 2.7-stud HRP offset is still supported for callers
+    -- without physics. Live navigation supplies the actual grounded
+    -- raycast height: body scaling and platform thickness must not make
+    -- every valid detour look like a vertical cliff.
+    if originFloorY ~= nil and (
+        type(originFloorY) ~= "number" or originFloorY ~= originFloorY
+        or math.abs(originFloorY) == math.huge
+    ) then return false end
+    local floorY = originFloorY or (rootY - 2.7)
     return distance >= 4.5 and distance <= 8.2
         and math.abs(midpointY - floorY) <= 2.4
         and math.abs(endpointY - floorY) <= 2.4
