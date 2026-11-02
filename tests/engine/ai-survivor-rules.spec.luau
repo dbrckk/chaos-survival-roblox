@@ -954,6 +954,17 @@ describe("AI survivor rules", function()
         expect(nearby(Vector3.new(10, 15, 0),
             Vector3.new(210, 15, 0), 1)).toBe(false)
         expect(nearby(nil, Vector3.new(42, 15, 0), 1)).toBe(false)
+        -- A 2.4-stud level gap now calls for a real Humanoid jump;
+        -- never leap without an available floor on the far side.
+        local skyJump = AISurvivorRules.skyGapJumpReady
+        expect(skyJump(true, 15, 24, 20, false, 20)).toBe(true)
+        expect(skyJump(true, 15, 24, 20, true, 20)).toBe(false)
+        expect(skyJump(false, 15, 24, 20, false, 20)).toBe(false)
+        expect(skyJump(true, 6, 24, 20, false, 20)).toBe(false)
+        expect(skyJump(true, 15, 45, 20, false, 20)).toBe(false)
+        expect(skyJump(true, 15, 24, 20, false, 23)).toBe(false)
+        expect(skyJump(true, 15, 24, 20, false, nil)).toBe(false)
+        expect(skyJump(true, 15, 24, 20, false, math.huge)).toBe(false)
 
     end)
 
