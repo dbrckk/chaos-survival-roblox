@@ -473,6 +473,22 @@ end
 -- is measurable. Repeated side-to-side oscillations are still a stall.
 -- Return false for held prompts and nonmovement so optional co-op
 -- interactions never trigger recovery attempts.
+-- Reject seemingly safe detour endpoints separated by a gap or a
+-- surprise raised slab. Collidable support must be validated by actual
+-- engine raycasts at BOTH places before these numeric constraints apply.
+function AISurvivorRules.recoveryGroundIsContinuous(
+    rootY, midpointY, endpointY, distance)
+    for _, value in ipairs({rootY, midpointY, endpointY, distance}) do
+        if type(value) ~= "number" or value ~= value
+            or math.abs(value) == math.huge then return false end
+    end
+    local floorY = rootY - 2.7
+    return distance >= 4.5 and distance <= 8.2
+        and math.abs(midpointY - floorY) <= 2.4
+        and math.abs(endpointY - floorY) <= 2.4
+        and math.abs(midpointY - endpointY) <= 1.25
+end
+
 function AISurvivorRules.isGenuineStall(
     previousPosition, position, target, elapsed, grounded, moving)
     if grounded ~= true or moving ~= true
