@@ -416,6 +416,18 @@ describe("Disaster impact", function()
         local middle = (first + second) * 0.5
         expect(Shield.LinkHalfWidth).toBe(9)
         expect(Shield.MaxLinkedStations).toBe(4)
+        local generatorA = {floorValid = true, activeUntil = 30}
+        local generatorB = {floorValid = true, activeUntil = 28}
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(28)
+        expect(Shield.pairDeadline(generatorA, generatorB, 28)).toBe(nil)
+        generatorB.floorValid = false
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(nil)
+        generatorB.floorValid = true
+        generatorB.activeUntil = 24
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(nil)
+        generatorB.activeUntil = 28
+        generatorA.activeUntil = 0
+        expect(Shield.pairDeadline(generatorA, generatorB, 25)).toBe(nil)
         expect(Shield.linkContains(first, second,
             middle + Vector3.new(0, 3, 0), 1)).toBe(true)
         -- Both endpoints correspond to genuinely separately activated
