@@ -1817,6 +1817,29 @@ local function arenaCandidates(root)
     end
 
     local platforms = arena:FindFirstChild("Platforms")
+    local standingDeck = nil
+    if root and platforms and root.Position.Y > groundTopY + 8 then
+        -- One server physics ray per decision, never one per waypoint.
+        -- A 34-stud center-distance limit alone allowed diagonally
+        -- separated sky decks with no possible human jump between them.
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {root.Parent}
+        params.RespectCanCollide = true
+        local floor = workspace:Raycast(
+            root.Position + Vector3.new(0, 1, 0),
+            Vector3.new(0, -7.5, 0), params
+        )
+        local floorPart = floor and floor.Instance
+        if floor and floor.Normal.Y >= 0.78 and floorPart
+            and floorPart.Parent == platforms
+            and AISurvivorRules.platformAvailable(
+                floorPart.CanCollide, floorPart.Transparency,
+                floorPart:GetAttribute("CollapsePhase")
+            ) then
+            standingDeck = floorPart
+        end
+    end
     for _, part in ipairs(sortedParts(platforms)) do
         local position = part.Position + Vector3.new(0, part.Size.Y * 0.5 + 2.4, 0)
         if AISurvivorRules.platformAvailable(
@@ -1829,6 +1852,11 @@ local function arenaCandidates(root)
             variantId
         ) and AISurvivorRules.elevatedWaypointNearby(
             root and root.Position or position, position, groundTopY
+        ) and (not standingDeck or part == standingDeck
+            or AISurvivorRules.neighboringPhysicalDeck(
+                standingDeck.CFrame, standingDeck.Size,
+                part.CFrame, part.Size
+            )
         ) and AISurvivorRules.outerStepReachable(
             part:GetAttribute("PerimeterStep"),
             root and root.Position, position,
@@ -1889,7 +1917,7 @@ local function arenaCandidates(root)
         end
     end
 
-    return result
+    return result, standingDeck
 end
 
 local function scoreCandidate(record, root, candidate, traits)
@@ -2802,8 +2830,9 @@ local function chooseArenaTarget(record, root, now)
     record.targetIsPad = false
     record.targetPart = nil
 
+    local rawCandidates, standingDeck = arenaCandidates(root)
     local candidates = AISurvivorRules.filterRecentlyFailedCandidates(
-        arenaCandidates(root), record.failedTarget, now,
+        rawCandidates, record.failedTarget, now,
         record.failedTargetUntil
     )
     if #candidates == 0 then
@@ -2815,9 +2844,18 @@ local function chooseArenaTarget(record, root, now)
 
     local ranked = {}
     for _, candidate in ipairs(candidates) do
+        -- Once already standing on an upper deck, prefer progressing
+        -- to a physically adjacent platform instead of repeatedly
+        -- standing at the center of the same roof. Hazard penalties
+        -- are still scored independently and retain absolute priority.
+        local continuation = standingDeck
+            and candidate.part and candidate.part ~= standingDeck
+            and candidate.part.Parent == standingDeck.Parent
+            and 10 or 0
         table.insert(ranked, {
             candidate = candidate,
-            score = scoreCandidate(record, root, candidate, traits),
+            score = scoreCandidate(record, root, candidate, traits)
+                + continuation,
         })
     end
     table.sort(ranked, function(a, b)
@@ -3303,8 +3341,9 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target)
     local gap = floorAt(3.4)
     if gap then return false end
     local landing = floorAt(7.2)
-    if not landing or not landing.Instance.Parent
-        or landing.Instance.Parent.Name ~= "Platforms" then return false end
+    -- A nearby unrelated deck does not prove that the SELECTED next
+    -- waypoint is reachable. Jump only toward its exact solid floor.
+    if not landing or landing.Instance ~= deck then return false end
     if AISurvivorRules.skyGapJumpReady(
         true, root.Position.Y - (base.Position.Y + base.Size.Y * 0.5),
         travel.Magnitude, origin.Position.Y, false, landing.Position.Y
