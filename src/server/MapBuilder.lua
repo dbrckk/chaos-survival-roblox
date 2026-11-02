@@ -918,9 +918,11 @@ local function addArenaFoundation(decor, config, variant, theme)
         "ArenaDeckInset",
         Vector3.new(math.max(8, baseSize.X - 7), 0.14, math.max(8, baseSize.Z - 7)),
         center + Vector3.new(0, 1.08, 0),
-        theme.Surface:Lerp(theme.Detail, 0.22),
+        theme.Surface:Lerp(theme.Detail, 0.43),
         theme.PanelMaterial or VisualTheme.Materials.Panel
     )
+    -- A broad neutral midtone keeps the REAL floor readable on mobile;
+    -- subdued route paint and red/orange disaster telegraphs stay distinct.
     deckInset.Transparency = 0.03
 
     local laneLengthX = math.max(18, baseSize.X - 18)
@@ -1621,9 +1623,11 @@ local function addPlatformFinish(decor, platform, index, theme)
             math.max(1, platform.Size.Z - 0.8)
         ),
         platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + 0.055, 0),
-        theme.Surface:Lerp(theme.Structure, 0.26),
+        theme.Surface:Lerp(theme.Detail, 0.48),
         theme.PanelMaterial or VisualTheme.Materials.Panel
     )
+    -- Neutral midtone landings remain visible without light emitters;
+    -- progression changes tint, while hazards still own bright warning hues.
     -- Quiet, durable walking inset: hazards keep visual priority and the
     -- rim now reads as a separate machined structural layer.
     topPanel.Transparency = 0.07
@@ -1634,11 +1638,11 @@ local function addPlatformFinish(decor, platform, index, theme)
         -- Recolor the existing inset only: no extra geometry, lights,
         -- expensive material or warning-color overlap on low-end phones.
         topPanel.Color = theme.Surface:Lerp(
-            theme.Detail, 0.20 + math.clamp(parkourGrade, 1, 4) * 0.07
+            theme.Detail, 0.44 + math.clamp(parkourGrade, 1, 4) * 0.055
         )
     elseif routeTier then
         topPanel.Color = theme.Surface:Lerp(
-            theme.Detail, 0.24 + (math.clamp(routeTier, 1, 4) - 1) * 0.06
+            theme.Detail, 0.45 + (math.clamp(routeTier, 1, 4) - 1) * 0.05
         )
     end
 
