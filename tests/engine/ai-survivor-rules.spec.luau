@@ -89,6 +89,17 @@ describe("AI survivor rules", function()
         expect(committed(false, target)).toBe(true)
         target:SetAttribute("FluxRelayIndex", nil)
         expect(committed(false, target)).toBe(false)
+        target:SetAttribute("PromenadeLane", 1)
+        expect(committed(false, target)).toBe(true)
+        expect(AISurvivorRules.allowRouteStrafe(
+            false, false, target)).toBe(false)
+        target:SetAttribute("PromenadeLane", nil)
+        target:SetAttribute("SkySpineStep", 5)
+        expect(committed(false, target)).toBe(true)
+        expect(AISurvivorRules.allowRouteStrafe(
+            false, false, target)).toBe(false)
+        target:SetAttribute("SkySpineStep", nil)
+        expect(committed(false, target)).toBe(false)
 
         -- Removed targets must not keep a bot committed to a stale model.
         target.Parent = nil
