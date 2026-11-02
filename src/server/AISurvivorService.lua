@@ -975,7 +975,7 @@ local function sendToArena(record)
     record.nextAssistAt = os.clock() + 1.6 + record.slot * 0.25
     record.assistShield = nil
     record.shieldHoldAt = nil
-    record.nextShieldAt = os.clock() + 2.5 + record.slot * 0.4
+    record.nextShieldAt = os.clock() + 0.75 + record.slot * 0.16
     pivotRecord(record, spawn)
 end
 
@@ -2458,21 +2458,13 @@ local function chooseArenaTarget(record, root, now)
     local traits = decisionTraits(record)
     record.targetIsSkyrail = false
     record.skyrailDirection = nil
-    local physicalRoute, routeHold = districtTraverseTarget(record, root, now)
-    if physicalRoute then
-        return physicalRoute, routeHold
-    end
-    local signalTarget, signalHold = liveDistrictSignalTarget(
-        record, root, now, traits)
-    if signalTarget then
-        return signalTarget, signalHold
-    end
     -- During a real Meteor/Bomb round, a bot may proactively operate one
     -- of four huge protective machines to defend live HUMAN contestants.
     -- It walks normally, waits for the genuine physical hold, and must
     -- abandon the plan as soon as any warning demands emergency evasion.
     if record.inRound and currentState.phase == "round"
         and not record.assistRelay and not record.assistShield
+        and not record.districtTraverse
         and now >= (record.nextShieldAt or 0)
         and not hasDisaster("ShrinkingArena")
         and not hasDisaster("RisingLava")
@@ -2492,6 +2484,15 @@ local function chooseArenaTarget(record, root, now)
         record.nextShieldAt = now + 2.9 + record.slot * 0.18
     end
 
+    local physicalRoute, routeHold = districtTraverseTarget(record, root, now)
+    if physicalRoute then
+        return physicalRoute, routeHold
+    end
+    local signalTarget, signalHold = liveDistrictSignalTarget(
+        record, root, now, traits)
+    if signalTarget then
+        return signalTarget, signalHold
+    end
     -- Bots can use REAL server-owned world consoles, but only as helpers
     -- for live nearby HUMAN contestants. No client event, teleport,
     -- fabricated DASH token or interaction while the floor is contracting.
