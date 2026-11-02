@@ -368,9 +368,24 @@ local function humanBeneficiary(round, entry)
             local character = player.Character
             local hum = character and character:FindFirstChildOfClass("Humanoid")
             local root = character and character:FindFirstChild("HumanoidRootPart")
-            if hum and hum.Health > 0 and root and root:IsA("BasePart")
-                and Shield.contains(entry.center, root.Position, entry.groundY)
-            then return true end
+            if hum and hum.Health > 0 and root and root:IsA("BasePart") then
+                if Shield.contains(entry.center, root.Position, entry.groundY) then
+                    return true
+                end
+                -- A solo human can still coordinate with a real AI teammate:
+                -- if another generator is ALREADY live and this machine
+                -- would create a protective lane passing over the human,
+                -- that is a genuinely useful bot activation as well.
+                local now = os.clock()
+                for _, other in ipairs(round.stations) do
+                    if other ~= entry and other.floorValid
+                        and now < other.activeUntil
+                        and Shield.linkContains(other.center, entry.center,
+                            root.Position, entry.groundY) then
+                        return true
+                    end
+                end
+            end
         end
     end
     return false
