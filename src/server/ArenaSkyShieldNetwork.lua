@@ -150,8 +150,11 @@ local function build(folder, ground, index, variant)
         Enum.Material.Glass, 1)
     dome.Shape = Enum.PartType.Cylinder
     local ring = visual(model, "ActiveFieldCrown",
-        Vector3.new(0.20, Shield.Radius * 2, Shield.Radius * 2),
-        base * CFrame.new(0, 0.19, 0) * CFrame.Angles(0, 0, math.pi * 0.5),
+        -- A compact overhead crown rather than an opaque floor disk:
+        -- warning circles must remain legible through the shield.
+        Vector3.new(0.20, 8, 8),
+        base * CFrame.new(0, 10.25, 0)
+            * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Secondary, Enum.Material.Glass, 1)
     ring.Shape = Enum.PartType.Cylinder
     -- Eight thin perimeter edges instead of a floor-covering warning disc.
