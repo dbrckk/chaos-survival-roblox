@@ -30,6 +30,10 @@ local relayModuleInPlace = script and script.Parent:FindFirstChild("TeamDashRela
 local TeamDashRelay = if relayModuleInPlace
     then require(script.Parent.TeamDashRelay)
     else require("./TeamDashRelay")
+local skyShieldModuleInPlace = script and script.Parent:FindFirstChild("ArenaSkyShieldNetwork")
+local ArenaSkyShieldNetwork = if skyShieldModuleInPlace
+    then require(skyShieldModuleInPlace)
+    else require("./ArenaSkyShieldNetwork")
 local LobbyActivities = if script
     then require(script.Parent.LobbyActivities)
     else require("./LobbyActivities")
@@ -909,9 +913,13 @@ local function sendToLobby(record)
     record.socialPartnerUserId = nil
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
+    ArenaSkyShieldNetwork.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = 0
+    record.assistShield = nil
+    record.shieldHoldAt = nil
+    record.nextShieldAt = 0
     pivotRecord(record, getLobbyPosition(record))
 end
 
@@ -961,14 +969,19 @@ local function sendToArena(record)
     record.socialPartnerUserId = nil
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
+    ArenaSkyShieldNetwork.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = os.clock() + 1.6 + record.slot * 0.25
+    record.assistShield = nil
+    record.shieldHoldAt = nil
+    record.nextShieldAt = os.clock() + 2.5 + record.slot * 0.4
     pivotRecord(record, spawn)
 end
 
 local function destroyRecord(record)
     TeamDashRelay.releaseBot(record.model)
+    ArenaSkyShieldNetwork.releaseBot(record.model)
     destroyTracks(record)
     if record.model and record.model.Parent then
         record.model:Destroy()
@@ -1015,6 +1028,9 @@ local function newRecord(slot)
         assistRelay = nil,
         assistHoldAt = nil,
         nextAssistAt = 0,
+        assistShield = nil,
+        shieldHoldAt = nil,
+        nextShieldAt = 0,
         nextJump = 0,
         nextPadAt = 0,
         target = nil,
@@ -2451,11 +2467,37 @@ local function chooseArenaTarget(record, root, now)
     if signalTarget then
         return signalTarget, signalHold
     end
+    -- During a real Meteor/Bomb round, a bot may proactively operate one
+    -- of four huge protective machines to defend live HUMAN contestants.
+    -- It walks normally, waits for the genuine physical hold, and must
+    -- abandon the plan as soon as any warning demands emergency evasion.
+    if record.inRound and currentState.phase == "round"
+        and not record.assistRelay and not record.assistShield
+        and now >= (record.nextShieldAt or 0)
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado")
+        and root.Position.Y <= config.ArenaCenter.Y + 7.5 then
+        local helpPoint, station = ArenaSkyShieldNetwork.botOpportunity(
+            record.model, now
+        )
+        if helpPoint then
+            record.assistShield = station
+            record.shieldHoldAt = nil
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextShieldAt = now + 12
+            return helpPoint, 1.5
+        end
+        record.nextShieldAt = now + 2.9 + record.slot * 0.18
+    end
+
     -- Bots can use REAL server-owned world consoles, but only as helpers
     -- for live nearby HUMAN contestants. No client event, teleport,
     -- fabricated DASH token or interaction while the floor is contracting.
     -- Reserve one of two consoles to avoid seven NPCs swarming it.
     if record.inRound and currentState.phase == "round"
+        and not record.assistShield
         and now >= (record.nextAssistAt or 0)
         and not hasDisaster("ShrinkingArena")
         and not hasDisaster("RisingLava")
@@ -3278,6 +3320,64 @@ local function stepRecord(record, now)
         end
         if not urgentTarget then
             urgentTarget = skybridgeShutterEscape(record, root, now)
+        end
+    end
+
+    -- Do not teleport or auto-activate AI. Hold time and proximity are
+    -- checked AGAIN against the actual model on the shield service.
+    -- An imminent impact always cancels the cooperative approach.
+    if record.assistShield then
+        local approach, station = nil, nil
+        if not urgentTarget and record.inRound
+            and currentState.phase == "round"
+            and not hasDisaster("ShrinkingArena")
+            and not hasDisaster("RisingLava")
+            and not hasDisaster("Tornado") then
+            approach, station = ArenaSkyShieldNetwork.botOpportunity(
+                record.model, now, record.assistShield
+            )
+        end
+        if not station then
+            ArenaSkyShieldNetwork.releaseBot(record.model)
+            record.assistShield = nil
+            record.shieldHoldAt = nil
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
+            record.nextShieldAt = now + 4
+        else
+            record.target = approach
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextThink = now + 1.1
+            local flat = Vector3.new(
+                approach.X - root.Position.X, 0,
+                approach.Z - root.Position.Z
+            ).Magnitude
+            if flat <= 4.3 then
+                if not record.shieldHoldAt then
+                    record.shieldHoldAt = now + ArenaSkyShieldNetwork.HoldSeconds
+                end
+                humanoid:Move(Vector3.zero)
+                if now < record.shieldHoldAt then return end
+                local helped = ArenaSkyShieldNetwork.activateBot(
+                    record.model, now, record.assistShield
+                )
+                ArenaSkyShieldNetwork.releaseBot(record.model)
+                record.assistShield = nil
+                record.shieldHoldAt = nil
+                record.target = nil
+                record.nextThink = 0
+                record.nextShieldAt = now + 14
+                if helped then
+                    showBotSignal(record, "SHIELD UP!", now)
+                    record.model:SetAttribute("BotTeamShieldsUsed",
+                        (tonumber(record.model:GetAttribute(
+                            "BotTeamShieldsUsed")) or 0) + 1)
+                end
+            else
+                record.shieldHoldAt = nil
+            end
         end
     end
 
