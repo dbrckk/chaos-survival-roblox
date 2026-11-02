@@ -2728,7 +2728,10 @@ local function chooseArenaTarget(record, root, now)
     record.targetIsPad = false
     record.targetPart = nil
 
-    local candidates = arenaCandidates(root)
+    local candidates = AISurvivorRules.filterRecentlyFailedCandidates(
+        arenaCandidates(root), record.failedTarget, now,
+        record.failedTargetUntil
+    )
     if #candidates == 0 then
         return clampToArena(config.ArenaCenter + Vector3.new(math.random(-18, 18), 3, math.random(-18, 18))), 1.5
     end
