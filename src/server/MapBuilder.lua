@@ -1709,15 +1709,32 @@ local function addPlatformFinish(decor, platform, index, theme)
             Vector3.new(halfX + bevelDepth * 0.27, bevelY, 0)},
     }
     for edgeIndex, spec in ipairs(edgeSpecs) do
-        local bevel = decorPart(
-            decor,
-            "PlatformBevel" .. index .. "_" .. edgeIndex,
-            spec[1],
-            Vector3.new(platform.Position.X, 0, platform.Position.Z) + spec[2],
-            edgeColor,
-            edgeMaterial
-        )
+        -- All four previously rectangular strips now have a genuine
+        -- *sloped* bevel silhouette. Use the same four Parts, sizes,
+        -- exact names and real deck owner, so collapse/shrink tracking
+        -- still follows the actual playable platform with zero extra
+        -- geometry, lights or physics load even on Low-tier Android.
+        local bevel = Instance.new("WedgePart")
+        bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex
+        bevel.Size = edgeIndex <= 2 and spec[1]
+            or Vector3.new(spec[1].Z, spec[1].Y, spec[1].X)
+        local where = Vector3.new(
+            platform.Position.X, 0, platform.Position.Z) + spec[2]
+        local direction = (edgeIndex - 1) * math.pi * 0.5
+        bevel.CFrame = CFrame.new(where)
+            * CFrame.Angles(0, direction, 0)
+        bevel.Color = edgeColor
+        bevel.Material = theme.StructureMaterial or edgeMaterial
         bevel.Transparency = 0.08
+        bevel.Anchored = true
+        bevel.CanCollide = false
+        bevel.CanTouch = false
+        bevel.CanQuery = false
+        bevel.CastShadow = false
+        bevel.TopSurface = Enum.SurfaceType.Smooth
+        bevel.BottomSurface = Enum.SurfaceType.Smooth
+        bevel:SetAttribute("OriginalStructuralBevel", true)
+        bevel.Parent = decor
     end
 
     local underFrame = decorPart(
