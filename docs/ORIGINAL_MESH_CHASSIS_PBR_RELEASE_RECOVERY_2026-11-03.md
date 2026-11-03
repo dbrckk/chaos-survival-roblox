@@ -20,3 +20,9 @@ This is a **test-to-source mismatch**, not an instruction to loosen collision, o
 The branch-only full Luau/Android VFX/complete Rojo milestone **passed**: [41611257710](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41611257710).
 
 **This document does not constitute a successful public release.** The next main SHA must independently pass Build Validation **and all five real Roblox Cloud engine shards** before the existing guarded public publisher may update Universe `10771083668` / Place `95351659174730`. Authentic Roblox Studio screenshots for all five arenas and physical Android FPS, textures, shadow visibility and loading still remain outstanding; do not mark full AAA visuals or Android QA completed merely because the compiler passed.
+
+## Follow-up: actual PBR allocation versus eligibility
+
+The restored steel I-beam whitelist is necessary but by itself insufficient: the owner's old four much larger base slabs beat a narrow steel flange on surface-area priority. A client with one/two per-owner PBR selections could therefore spend both approved slots on flat slabs and render neither new flange in armor PBR. The same existing scoring function now adds a **local structural score of 2200 for the two original explicitly tagged I-beams**, within the unchanged global/device quotas, allowing Medium to select the camera-relevant one and High up to both when the global budget permits. Source MeshPart UVs still cannot be touched.
+
+The extended preexisting material engine test compares a marked I-beam with a larger original FoundationShoulder and asserts the unchanged owner quota. Eligibility does not guarantee PBR on every far model: camera-distance rules, Android tier and global limits still apply.
