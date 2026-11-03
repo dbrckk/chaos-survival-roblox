@@ -34,7 +34,78 @@ local observedBase = nil
 local baseListeners = {}
 local mounted = {}
 
+-- The approved keel occupies these exact underfloor stations. Only when a
+-- genuine sanitized owner MeshPart model is mounted do we suppress the
+-- overlapping, purely decorative Roblox block fallback. Every part is
+-- restored on LOD exit, disaster shrink, missing asset or stream unload.
+-- This eliminates floating generic pylons protruding through premium art.
+local NATIVE_OVERLAPS = {
+    NorthWest = {"UnderSupport1", "UnderSupportGlow1"},
+    NorthEast = {"UnderSupport2", "UnderSupportGlow2"},
+    SouthWest = {"UnderSupport3", "UnderSupportGlow3"},
+    SouthEast = {"UnderSupport4", "UnderSupportGlow4"},
+}
+local CENTRAL_OVERLAPS = {
+    Orbital = {"UnderOrbitalHub"},
+    Towers = {"UnderTowerCore", "UnderTowerCoreGlow"},
+    Crossroads = {"UnderCrossroadsJunction"},
+}
+local hiddenNatives = {}
+
+local function restoreNativeFallbacks()
+    for part, opacity in pairs(hiddenNatives) do
+        if part.Parent and part.Transparency == 1
+            and not part.CanCollide and not part.CanTouch
+            and not part.CanQuery then
+            part.Transparency = opacity
+        end
+        hiddenNatives[part] = nil
+    end
+end
+
+local function syncNativeFallbacks(arena)
+    local nativeFolder = workspace:FindFirstChild("ArenaUnderstructureLocal")
+    local desired = {}
+    if nativeFolder and nativeFolder:IsA("Folder") then
+        for slotName, entry in pairs(mounted) do
+            if entry.model and entry.model.Parent == bucket then
+                local names = slotName == "CentralCore"
+                    and CENTRAL_OVERLAPS[arena:GetAttribute("VariantId")]
+                    or NATIVE_OVERLAPS[slotName]
+                if names then
+                    for _, name in ipairs(names) do
+                        local part = nativeFolder:FindFirstChild(name)
+                        if part and part:IsA("Part")
+                            and part.Anchored and not part.CanCollide
+                            and not part.CanTouch and not part.CanQuery
+                            and not part.CastShadow then
+                            desired[part] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+    for part, opacity in pairs(hiddenNatives) do
+        if not desired[part] then
+            if part.Parent and part.Transparency == 1
+                and not part.CanCollide and not part.CanTouch
+                and not part.CanQuery then
+                part.Transparency = opacity
+            end
+            hiddenNatives[part] = nil
+        end
+    end
+    for part in pairs(desired) do
+        if hiddenNatives[part] == nil then
+            hiddenNatives[part] = part.Transparency
+            part.Transparency = 1
+        end
+    end
+end
+
 local function removeAll()
+    restoreNativeFallbacks()
     for key, entry in pairs(mounted) do
         if entry.model then entry.model:Destroy() end
         mounted[key] = nil
@@ -195,6 +266,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
             mounted[key] = mount(slot, base, source, bounds)
         end
     end
+    syncNativeFallbacks(arena)
 end
 
 function Kit.count()
