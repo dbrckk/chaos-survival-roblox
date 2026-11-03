@@ -33,6 +33,20 @@ describe("Shrinking Arena mobility integration", function()
         local originalDeckSize = deck.Size
         local base = arena:FindFirstChild("Base")
         local originalFloorX = base.Size.X
+        local originalBaseFrame = base.CFrame
+        local frame = decor:FindFirstChild("ArenaUndercarriage")
+        expect(frame ~= nil and frame:IsA("Model")).toBe(true)
+        local originalRails = {}
+        for _, rail in ipairs(frame:GetChildren()) do
+            expect(rail:IsA("BasePart")).toBe(true)
+            expect(rail.CanCollide).toBe(false)
+            originalRails[rail] = {
+                cframe = rail.CFrame,
+                size = rail.Size,
+                relative = originalBaseFrame:ToObjectSpace(rail.CFrame),
+            }
+        end
+        expect(#frame:GetChildren()).toBe(4)
 
         -- The cosmetic pieces must remain attached to their associated
         -- physical deck, not to the arena center or their old world pose.
@@ -76,6 +90,21 @@ describe("Shrinking Arena mobility integration", function()
             .toBe(true)
         expect(math.abs(deck.Size.Z - originalDeckSize.Z * scale) < 0.02)
             .toBe(true)
+        for rail, original in pairs(originalRails) do
+            local p = original.relative.Position
+            local expected = originalBaseFrame
+                * CFrame.new(p.X * scale, p.Y, p.Z * scale)
+                * (original.relative - p)
+            expect((rail.Position - expected.Position).Magnitude < 0.02)
+                .toBe(true)
+            local size = Vector3.new(
+                original.size.X * scale,
+                original.size.Y,
+                original.size.Z * scale
+            )
+            expect((rail.Size - size).Magnitude < 0.02).toBe(true)
+            expect(rail.CanCollide).toBe(false)
+        end
         for piece, original in pairs(snapshot) do
             local p = original.relative.Position
             local expected = deck.CFrame
@@ -99,6 +128,11 @@ describe("Shrinking Arena mobility integration", function()
             .toBe(true)
         expect((deck.Size - originalDeckSize).Magnitude < 0.001)
             .toBe(true)
+        for rail, original in pairs(originalRails) do
+            expect((rail.Position - original.cframe.Position).Magnitude < 0.001)
+                .toBe(true)
+            expect((rail.Size - original.size).Magnitude < 0.001).toBe(true)
+        end
         for piece, original in pairs(snapshot) do
             expect((piece.Position - original.cframe.Position).Magnitude < 0.001)
                 .toBe(true)
