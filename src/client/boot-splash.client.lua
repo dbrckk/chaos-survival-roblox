@@ -69,6 +69,7 @@ card.Parent = backdrop
 UITheme.addCorner(card, UDim.new(0, 24))
 UITheme.addStroke(card, UITheme.Colors.Cyan, 1.4, 0.38)
 UITheme.addGradient(card, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+UITheme.addMachinedFrame(card, UITheme.Colors.Cyan, false)
 
 local sizeConstraint = Instance.new("UISizeConstraint")
 sizeConstraint.MinSize = Vector2.new(280, 154)
