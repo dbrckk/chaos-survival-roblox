@@ -10,10 +10,12 @@ local PremiumGroundMeshKit = {}
 -- Roblox import/moderation proof: GitHub Actions #41622860616.
 local APPROVED_GROUND_ID = 72507987666671
 local TEMPLATE_NAME = "PremiumGroundTile"
+-- Keep creator-approved 3D tiles resident across minor camera changes.
+-- Preserve all existing hard limits on mobile model and MeshPart counts.
 local BUDGET = {
-    Low = {count = 1, distance = 112},
-    Medium = {count = 3, distance = 180},
-    High = {count = 6, distance = 245},
+    Low = {count = 1, distance = 112, retention = 18},
+    Medium = {count = 3, distance = 180, retention = 24},
+    High = {count = 6, distance = 245, retention = 28},
 }
 
 local folder = Instance.new("Folder")
@@ -195,7 +197,7 @@ local function mount(ground, decor, base, template)
 end
 
 -- Exclusively called by the EXISTING arena/scenery LOD sampling owner.
-function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady)
+function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -226,16 +228,45 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady)
         return
     end
 
+    -- Rank the same small number of imported 3D tiles for visible ground.
+    -- A third-person camera can sit closer to tiles BEHIND the player than
+    -- tiles on screen; raw nearest-first spends Android meshes off screen.
+    -- Keep underfoot panels even during camera rotation or steep pitch.
+    local look = typeof(cameraLook) == "Vector3"
+        and Vector3.new(cameraLook.X, 0, cameraLook.Z)
+        or Vector3.zero
+    local hasFacing = look.Magnitude > 0.2
+    if hasFacing then look = look.Unit end
+
     local candidates = {}
     for _, part in ipairs(decor:GetChildren()) do
         if originalSurface(part, decor, base) then
-            local distance = (part.Position - cameraPoint).Magnitude
-            if distance <= budget.distance then
-                candidates[#candidates + 1] = {part = part, distance = distance}
+            local toTile = part.Position - cameraPoint
+            local distance = toTile.Magnitude
+            local resident = mounted[part] ~= nil
+            -- Only current, unmodified cosmetics receive an EXIT margin.
+            -- New tiles still enter at exactly the previous tier distance.
+            if distance <= budget.distance
+                + (resident and budget.retention or 0) then
+                local priority = distance
+                    - (resident and budget.retention * 0.55 or 0)
+                local horizontal = Vector3.new(toTile.X, 0, toTile.Z)
+                if hasFacing and horizontal.Magnitude > 54
+                    and horizontal.Unit:Dot(look) < -0.15 then
+                    priority += 72
+                end
+                candidates[#candidates + 1] = {
+                    part = part,
+                    distance = distance,
+                    priority = priority,
+                }
             end
         end
     end
     table.sort(candidates, function(a, b)
+        if a.priority ~= b.priority then
+            return a.priority < b.priority
+        end
         if a.distance ~= b.distance then
             return a.distance < b.distance
         end
