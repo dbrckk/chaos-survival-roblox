@@ -39,3 +39,13 @@ Il faut collecter pour chaque asset **le véritable ID Model et la modération `
 - Au jalon de livraison **sur SHA exact** : Luau + Rojo, Build Validation, cinq suites moteur Cloud, publication uniquement après réussite, captures authentiques Studio/Android sur les cinq arènes en Low/Medium/High et mesure FPS/mémoire.
 
 **À ce stade, la production des sources et leur conversion sont vérifiées ; la modération Roblox, les IDs propriétaires, l'insertion runtime et le contrôle sur téléphone sont des étapes distinctes qui ne peuvent être cochées sans preuve.**
+
+## Creator-owned import confirmed; runtime integration
+
+The four one-time Roblox Open Cloud import jobs all returned a **real approved Model package ID** (not a glTF preview URL): [run #41629861517](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629861517). Exact verified IDs: observatory `132020956214241`, freight `88725004643299`, turbine `84217436280282`, aerial `135791763112202`.
+
+`PremiumDistrictFacadeAssets.lua` now loads only these four IDs on the server, sanitizes each into inert approved MeshParts using `OriginalMeshScenery.sanitize`, and publishes authenticated templates in ReplicatedStorage. Any failed moderation/load/geometry check leaves the original authored native building intact.
+
+`PremiumDistrictFacadeMeshKit.lua` composes the real 3D roofs and facades on the existing sixteen buildings, choosing the four profiles by verified `DistrictProfile`, anchored to the actual `ServiceEntryDoor` and its authored rotated building origin. All imported parts are **client-local, cosmetic, anchored, noncolliding, non-queryable and shadow-free**. The existing scenery LOD scheduler caps residency at **Low 1 / Medium 3 / High 6** nearest buildings, with 130/190/255-stud distances; no new frame poller, network remote or additional gameplay geometry. No existing server doorway or district wayfinding is removed.
+
+**Release acceptance:** branch Luau compilation, mobile VFX gate, full Rojo build, then main exact-SHA Build Validation and all five Roblox Cloud engine shards. Source and engine passing cannot certify actual Roblox import orientation, mobile memory/FPS, or screenshots; the Android visual review is still outstanding.
