@@ -25,6 +25,15 @@ Légende
 [FAIT]      Implémenté dans le repo
 [QA]        Implémenté mais validation visuelle sur appareil réel nécessaire
 
+LOT 3 NOVEMBRE 2026 — SOCLES AUTHENTIQUES DES MONUMENTS EXTERIEURS
+[QA]     VIS-021 : kit client `ApprovedFoundationChassisMeshKit.lua` monte un
+         vrai châssis 3D original approuvé et réversible sous les modèles
+         importés proches, masquant leurs fondations Part/WedgePart basiques.
+         Budget Android Low 0 / Medium 1 / High 2 ; aucune nouvelle collision,
+         boucle de rendu ou import Roblox. Le code GitHub ne certifie PAS le
+         build Cloud, la publication publique ni la validation Android.
+         Voir docs/ORIGINAL_3D_EXTERIOR_FOUNDATION_REPLACEMENT_2026-11-03.md
+
 PHASE 1 — DIRECTION ARTISTIQUE ET FONDATIONS
 -------------------------------------------
 [FAIT]     1.1 Créer une palette centrale Neon Chaos Arena.
