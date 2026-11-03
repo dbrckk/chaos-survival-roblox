@@ -526,12 +526,14 @@ describe("Chaos Survival engine", function()
             ground.Parent = decor
         end
         local camera = Vector3.new(0, 14, 0)
+        -- The verified 2,976-triangle source now uses 2/8/24 resident
+        -- Low/Medium/High caps, but this small engine fixture has 8 bays.
         PremiumGroundMeshKit.sync(arena, camera, "Low", true)
-        expect(PremiumGroundMeshKit.count()).toBe(1)
+        expect(PremiumGroundMeshKit.count()).toBe(2)
         PremiumGroundMeshKit.sync(arena, camera, "Medium", true)
-        expect(PremiumGroundMeshKit.count()).toBe(3)
+        expect(PremiumGroundMeshKit.count()).toBe(8)
         PremiumGroundMeshKit.sync(arena, camera, "High", true)
-        expect(PremiumGroundMeshKit.count()).toBe(6)
+        expect(PremiumGroundMeshKit.count()).toBe(8)
         local cosmeticBucket = workspace:FindFirstChild("OriginalPremiumGroundMeshesLocal")
         expect(cosmeticBucket ~= nil).toBe(true)
         for _, clone in ipairs(cosmeticBucket:GetChildren()) do
