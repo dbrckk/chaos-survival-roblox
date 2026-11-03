@@ -12,6 +12,7 @@ local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacade
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
+local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
 local player = Players.LocalPlayer
@@ -483,6 +484,17 @@ task.spawn(function()
         local keelMeshes = ArenaKeelMeshKit.count()
         if player:GetAttribute("LocalOriginalArenaKeelCount") ~= keelMeshes then
             player:SetAttribute("LocalOriginalArenaKeelCount", keelMeshes)
+        end
+        -- Real original 3,072-triangle approved 3D chassis replace ONLY
+        -- near-camera marked cosmetic underfloor beam bays. Low 1 / Medium
+        -- 2 / High 4; every bay has a self-restoring native fallback.
+        -- Reuse the SAME established camera sampler and part census.
+        UnderstructureBeamMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady)
+        local beamMeshes = UnderstructureBeamMeshKit.count()
+        if player:GetAttribute("LocalOriginalUnderstructureBeamCount")
+            ~= beamMeshes then
+            player:SetAttribute("LocalOriginalUnderstructureBeamCount", beamMeshes)
         end
         -- Count real, approved underdeck MODEL instances separately: the
         -- same adaptive scenery owner already counts their MeshParts
