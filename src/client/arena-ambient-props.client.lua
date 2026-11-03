@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local PremiumAmbientMotionMeshKit = require(script.Parent.PremiumAmbientMotionMeshKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -28,6 +29,9 @@ local function clear()
     end
     table.clear(tracked)
     folder:ClearAllChildren()
+    if player:GetAttribute("LocalOriginalAmbientMotion3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalAmbientMotion3DCount", 0)
+    end
 end
 
 local function makeProp(name, size, color, position, material)
@@ -51,11 +55,11 @@ end
 local function tierLimits()
     local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     if profile.Name == "Low" then
-        return 2, 0.42
+        return 2, 0.42, "Low"
     elseif profile.Name == "Medium" then
-        return 4, 0.72
+        return 4, 0.72, "Medium"
     end
-    return 6, 1
+    return 6, 1, "High"
 end
 
 local function arenaTheme()
@@ -77,18 +81,30 @@ local function applyPhaseVisibility()
 
     for _, item in ipairs(tracked) do
         local p = item.part
-        if p and p.Parent then
-            local baseTransparency = tonumber(p:GetAttribute("AmbientBaseTransparency")) or 0.18
-            p.Transparency = math.clamp(baseTransparency + roundDim, 0, 0.86)
-        end
+        if item.mesh and item.mesh.Parent then
+            -- Genuine triangulated Model has replaced BOTH primitive body and
+            -- glow. Keep the native Parts invisible through scenery-LOD
+            -- transparency changes; phase changes act on real MeshParts.
+            if p and p.Parent then p.Transparency = 1 end
+            if item.glow and item.glow.Parent then
+                item.glow.Transparency = 1
+            end
+            PremiumAmbientMotionMeshKit.phase(item, lastPhase, item.pulse)
+        else
+            if p and p.Parent then
+                local baseTransparency =
+                    tonumber(p:GetAttribute("AmbientBaseTransparency")) or 0.18
+                p.Transparency = math.clamp(baseTransparency + roundDim, 0, 0.86)
+            end
 
-        if item.glow and item.glow.Parent then
-            local glowBase = tonumber(item.glow:GetAttribute("AmbientBaseTransparency")) or 0.18
-            item.glow.Transparency = math.clamp(
-                glowBase + (lastPhase == "round" and 0.22 or 0.06),
-                0,
-                0.90
-            )
+            if item.glow and item.glow.Parent then
+                local glowBase =
+                    tonumber(item.glow:GetAttribute("AmbientBaseTransparency")) or 0.18
+                item.glow.Transparency = math.clamp(
+                    glowBase + (lastPhase == "round" and 0.22 or 0.06),
+                    0, 0.90
+                )
+            end
         end
     end
 end
@@ -110,7 +126,7 @@ local function rebuild()
     halfX = base.Size.X * 0.5
     halfZ = base.Size.Z * 0.5
 
-    local limit = tierLimits()
+    local limit, _, tierName = tierLimits()
     local accent, secondary = arenaTheme()
 
     if currentVariant == "Classic" then
@@ -237,6 +253,16 @@ local function rebuild()
         end
     end
 
+    -- Five creator-approved original 3D mechanical silhouettes replace
+    -- native rectangular drones, lift cabins, beacon strips, stock spheres
+    -- and cargo blocks. Leave the old animated Parts as invisible position
+    -- anchors; genuine meshes follow the SAME 10Hz owner and ReduceMotion.
+    local replaced = PremiumAmbientMotionMeshKit.install(
+        folder, tracked, currentVariant, tierName
+    )
+    if player:GetAttribute("LocalOriginalAmbientMotion3DCount") ~= replaced then
+        player:SetAttribute("LocalOriginalAmbientMotion3DCount", replaced)
+    end
     applyPhaseVisibility()
 end
 
@@ -288,6 +314,44 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 
+-- Roblox AssetService imports may arrive after the first map has rendered.
+-- Rebuild only when the APPROVED mesh for the CURRENT world streams in,
+-- not five times unconditionally for unrelated worlds.
+local templateConnections = {}
+local templateHolder = nil
+local function bindAmbientTemplates(holder)
+    if holder == templateHolder then return end
+    for _, connection in ipairs(templateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(templateConnections)
+    templateHolder = holder
+    if holder and holder:IsA("Folder") then
+        local function changed(child)
+            if child.Name == currentVariant then scheduleRebuild() end
+        end
+        templateConnections[#templateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        templateConnections[#templateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+        if holder:FindFirstChild(currentVariant) then scheduleRebuild() end
+    end
+end
+
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "ApprovedAmbientMotionTemplates" then
+        bindAmbientTemplates(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == templateHolder then
+        bindAmbientTemplates(nil)
+        scheduleRebuild()
+    end
+end)
+bindAmbientTemplates(ReplicatedStorage:FindFirstChild(
+    "ApprovedAmbientMotionTemplates"))
+
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
@@ -325,13 +389,15 @@ task.spawn(function()
                         if item.glow and item.glow.Parent then
                             item.glow.Position = p.Position + Vector3.new(0, 0, -0.2)
                             local roundBias = lastPhase == "round" and 0.24 or 0
-                            item.glow.Transparency = math.clamp(
+                            if not item.mesh then
+                                item.glow.Transparency = math.clamp(
                                 0.18
                                     + roundBias
                                     + ((math.sin(now * 2 * modeSpeed + item.index * modeDirection) + 1) * 0.5) * 0.18,
                                 0,
-                                0.90
-                            )
+                                    0.90
+                                )
+                            end
                         end
                     elseif currentVariant == "Towers" then
                         local travel = math.sin(now * 0.72 * modeSpeed + item.index * 0.85 * modeDirection)
@@ -340,7 +406,12 @@ task.spawn(function()
                     elseif currentVariant == "Crossroads" then
                         local pulse = (math.sin(now * 2.2 * modeSpeed + item.index * 0.9 * modeDirection) + 1) * 0.5
                         local roundBias = lastPhase == "round" and 0.18 or 0
-                        p.Transparency = math.clamp(0.22 + roundBias + pulse * 0.20, 0, 0.84)
+                        if item.mesh then
+                            item.pulse = pulse
+                            PremiumAmbientMotionMeshKit.phase(item, lastPhase, pulse)
+                        else
+                            p.Transparency = math.clamp(0.22 + roundBias + pulse * 0.20, 0, 0.84)
+                        end
                     elseif currentVariant == "Orbital" then
                         local angle = item.angle + now * 0.15 * motionScale * modeSpeed * modeDirection
                         local lift = math.sin(now * 0.9 * modeSpeed + item.index)
@@ -362,6 +433,9 @@ task.spawn(function()
                             item.glow.Position = p.Position
                                 + Vector3.new(0, p.Size.Y * 0.5 + 0.1, 0)
                         end
+                    end
+                    if item.mesh then
+                        PremiumAmbientMotionMeshKit.move(item)
                     end
                 end
             end
