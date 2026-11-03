@@ -43,6 +43,25 @@ describe("PBR protection for original Harbor timber", function()
         expect(PbrDistrictRules.eligiblePart(steel)).toBe(true)
         expect(PbrDistrictRules.materialKey(steel.Name, steel.Material, owned))
             .toBe("armor")
+        -- High/Medium owner quotas were already 2/1. The two real I-beams
+        -- must outrank the flat original foundation in those very slots,
+        -- otherwise the new PBR relief is eligible but never rendered.
+        local flat = Instance.new("Part")
+        flat.Name = "FoundationShoulder"
+        flat.Size = Vector3.new(29, 0.62, 13)
+        flat.Material = Enum.Material.Metal
+        flat.Anchored = true
+        flat.CanCollide = false
+        flat.CanTouch = false
+        flat.CanQuery = false
+        flat:SetAttribute("OriginalFoundationVisual", true)
+        flat.Parent = owned
+        expect(PbrDistrictRules.eligiblePart(flat)).toBe(true)
+        expect(PbrDistrictRules.priority(steel) > PbrDistrictRules.priority(flat))
+            .toBe(true)
+        expect(PbrDistrictRules.ownerLimit("Medium", owned)).toBe(1)
+        expect(PbrDistrictRules.ownerLimit("High", owned)).toBe(2)
+        flat:Destroy()
         steel:SetAttribute("OriginalFoundationVisual", false)
         expect(PbrDistrictRules.eligiblePart(steel)).toBe(false)
         steel:SetAttribute("OriginalFoundationVisual", true)
