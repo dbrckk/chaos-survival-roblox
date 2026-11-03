@@ -3,6 +3,7 @@
 -- These are Roblox MODEL package IDs (not MeshPart.MeshId values).
 -- All native, gameplay-authoritative floor/route/hazard parts remain intact.
 local AssetService = game:GetService("AssetService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OriginalMeshScenery = {}
 
@@ -635,6 +636,45 @@ function OriginalMeshScenery.loadLanes()
     return lanes
 end
 
+-- Already-sanitized approved perimeter gate can also serve as an original
+-- architectural portal on the sixteen existing district buildings. Replicate
+-- ONE inert template (not sixteen server-built copies); the client LOD owner
+-- will mount at most 0/2/4 near-camera copies at Low/Medium/High.
+-- An unavailable, rejected or unapproved asset leaves native doors intact.
+local function publishDistrictGatewayTemplate(clean, assetName)
+    if assetName ~= "perimeter_gate" then return end
+    local partCount = 0
+    for _, descendant in ipairs(clean:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            if not descendant:IsA("MeshPart") then return end
+            partCount += 1
+        end
+    end
+    if partCount == 0 or partCount > MAX_PARTS then return end
+    local _, size = clean:GetBoundingBox()
+    if size.X < 6 or size.X > 18
+        or size.Y < 7 or size.Y > 18
+        or size.Z <= 0 or size.Z > 8 then
+        return
+    end
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedDistrictGatewayTemplates")
+    if not holder then
+        holder = Instance.new("Folder")
+        holder.Name = "ApprovedDistrictGatewayTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+    end
+    if holder:FindFirstChild("OriginalDistrictGate") then return end
+    local template = clean:Clone()
+    template.Name = "OriginalDistrictGate"
+    template:SetAttribute("OwnerVerified", true)
+    template:SetAttribute("CosmeticOnly", true)
+    template:SetAttribute("Original3DAssetId", ASSETS.perimeter_gate)
+    template:SetAttribute("DistrictGatewayTemplate", true)
+    template.Parent = holder
+    holder:SetAttribute("OriginalDistrictGateReady", true)
+end
+
 local started = false
 local templates = {}
 
@@ -678,6 +718,7 @@ function OriginalMeshScenery.start()
                     return
                 end
                 templates[assetName] = clean
+                publishDistrictGatewayTemplate(clean, assetName)
                 refreshArena()
                 return
             end
