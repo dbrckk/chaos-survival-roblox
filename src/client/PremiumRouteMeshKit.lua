@@ -102,8 +102,12 @@ local function addModel(entry, platform, template, offset, scale, yaw)
     -- The top of the original mesh sits 0.11 studs above the physical top,
     -- matching the existing non-colliding 0.10-stud native panel paint.
     -- This is NOT a substitute for any authoritative walkable surface.
+    local localOffset = typeof(offset) == "Vector3"
+        and offset or Vector3.new(offset, 0, 0)
     local target = platform.CFrame
-        * CFrame.new(offset, platform.Size.Y * 0.5 + 0.11 - dimensions.Y * 0.5, 0)
+        * CFrame.new(localOffset.X,
+            platform.Size.Y * 0.5 + 0.11 - dimensions.Y * 0.5,
+            localOffset.Z)
         * CFrame.Angles(0, yaw, 0)
 
     local parts = {}
@@ -192,21 +196,12 @@ local function mount(platform, template, count)
         local offset = isBridge
             and ((i - 0.5) * segment - length * 0.5)
             or 0
-        -- For Z-long skybridges, the segment axis is locally Z, not X:
-        -- the yaw rotates the imported mesh before it is welded in place.
-        local modelOffset = offset
-        if isBridge and platform.Size.Z > platform.Size.X then
-            modelOffset = 0
-        end
+        -- The imported module's X axis is rotated into the actual long
+        -- bridge axis; the tile translation follows that SAME axis.
+        -- No fake physical Part is introduced for the orientation change.
+        local modelOffset = isBridge and platform.Size.Z > platform.Size.X
+            and Vector3.new(0, 0, offset) or offset
         local before = #entry.models
-        if isBridge and platform.Size.Z > platform.Size.X then
-            -- addModel's X-only local offset is converted by rotating the
-            -- *platform-relative* target, not by shifting the real collider.
-            -- Construct a virtual noncolliding source-aligned frame below.
-            -- The clone will instead be placed with an explicit local
-            -- Z transform in addModel via the optional 2D offset below.
-            modelOffset = Vector3.new(0, 0, offset)
-        end
         if not addModel(entry, platform, template, modelOffset, scale, yaw)
             or #entry.models == before then
             for _, model in ipairs(entry.models) do model:Destroy() end
