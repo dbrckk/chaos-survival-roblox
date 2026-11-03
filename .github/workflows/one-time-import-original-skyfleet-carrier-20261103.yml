@@ -1,0 +1,29 @@
+# Owner-authorized exactly-once Roblox Assets import of original skyfleet 3D.
+# The source OBJ generator and seven-material glTF conversion passed source
+# workflow #41633912610 (4,118 real triangles; 7 material primitives).
+# This workflow NEVER touches or publishes the playable Roblox place.
+name: One-time Import Original Colossal Skyfleet Carrier 2026-11-03
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-original-skyfleet-carrier-20261103.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-skyfleet-carrier-upload-once-20261103
+  cancel-in-progress: false
+jobs:
+  import-creator-original:
+    name: Creator-owned moderated original carrier Model
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: skyfleet_carrier
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit

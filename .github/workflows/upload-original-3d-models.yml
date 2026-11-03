@@ -50,6 +50,7 @@ on:
           - district_freight
           - district_turbine
           - district_aerial
+          - skyfleet_carrier
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -104,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -131,13 +132,18 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
-          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]]; then
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ]; then
             echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
           fi
           if [ "$CHOICE" = "premium_ground_tile" ]; then
             python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
+          elif [ "$CHOICE" = "skyfleet_carrier" ]; then
+            # Deterministic creator-owned colossal carrier art: source-only,
+            # never accept an uploaded arbitrary OBJ from a workflow input.
+            python3 tools/generate_original_skyfleet_carrier.py \
+              --output assets/source/chaos_skyfleet_carrier.obj
           elif [[ "$CHOICE" == district_* ]]; then
             # Generate the FOUR deterministic profile meshes from our single
             # original and source-gated stdlib generator. No binary inputs.
@@ -206,7 +212,8 @@ jobs:
                    "district_observatory": "Chaos Original District Observatory 3D",
                    "district_freight": "Chaos Original District Freight 3D",
                    "district_turbine": "Chaos Original District Turbine 3D",
-                   "district_aerial": "Chaos Original District Aerial 3D"}
+                   "district_aerial": "Chaos Original District Aerial 3D",
+                   "skyfleet_carrier": "Chaos Original Colossal 3D Skyfleet Carrier"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],
