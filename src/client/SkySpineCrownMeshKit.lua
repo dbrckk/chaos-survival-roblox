@@ -7,7 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local ASSET_ID = 71492051540032
 local BUDGET = {
-    -- Low Android previously never showed the new imported crown at all.\n    -- Exactly one camera-near 1,696-triangle authentic crown is cheaper\n    -- than adding more server Parts; keep strict 122-stud visibility.\n    Low = {count = 1, distance = 122, retention = 14},
+    -- Low Android now shows one approved crown at 122 studs.
+    -- The authentic near-camera sculpture shares the main visual census.
+    Low = {count = 1, distance = 122, retention = 14},
     Medium = {count = 1, distance = 175, retention = 22},
     High = {count = 2, distance = 245, retention = 28},
 }
