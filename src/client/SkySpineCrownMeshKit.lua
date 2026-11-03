@@ -82,7 +82,7 @@ local function authentic(deck, arena, base)
         or not deck.CanCollide or deck.Transparency >= 0.75
         or math.abs(deck.Size.X - 12) > 0.15
         or deck.Size.Y < 1.8 or deck.Size.Y > 2.2
-        or deck.Size.Z < 16 or deck.Size.Z > 33
+        or deck.Size.Z < 14.5 or deck.Size.Z > 33
         or base.Size.X < 318 or base.Size.Z < 318 then
         return false
     end
