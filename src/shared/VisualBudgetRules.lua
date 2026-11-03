@@ -37,6 +37,10 @@ VisualBudgetRules.LocalFolders = {
     -- meshes over the real district doors; count all clone MeshParts.
     -- Low 1 / Medium 2 / High 4 resident MODEL maximum (not Parts).
     "OriginalDistrictGatewaysLocal",
+    -- Four owner-approved original UV-authored facade/roofline models,
+    -- chosen by near-field camera LOD across the 16 real districts.
+    -- Count MeshParts, not models; strict Low/Medium/High caps 1/2/4.
+    "OriginalDistrictRooflinesLocal",
     "ArenaAmbientPropsLocal",
     "ArenaFocalLightingLocal",
     "ArenaSurfaceDetailLocal",
