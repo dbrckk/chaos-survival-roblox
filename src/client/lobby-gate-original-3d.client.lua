@@ -1,4 +1,3 @@
---!strict
 -- Exactly one original creator-approved 3D portal outside the real lobby
 -- arena gate. Native GateLeft/Right/Top and its animated SurfaceGui stay
 -- authoritative and unobscured. Entirely event-driven: zero frame loops.
