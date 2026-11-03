@@ -16,7 +16,8 @@ from pathlib import Path
 
 from generate_original_skyfleet_carrier import MATERIALS, Sculpture
 
-KINDS = ("floor_corner_guard", "floor_anchor_bolt", "floor_harbor_tie")
+KINDS = ("floor_corner_guard", "floor_anchor_bolt",
+         "floor_anchor_bolt_large", "floor_harbor_tie")
 
 
 def corner(m: Sculpture):
@@ -109,6 +110,10 @@ def tie(m: Sculpture):
 BUILDERS = {
     "floor_corner_guard": corner,
     "floor_anchor_bolt": bolt,
+    # Purpose-built enlarged authoring coordinates: all curves retain
+    # proportional detail after Roblox import then client ScaleTo(.1).
+    # This is a NEW source payload, not a blind retry of an uncertain POST.
+    "floor_anchor_bolt_large": bolt,
     "floor_harbor_tie": tie,
 }
 # Deliberate small geometry; validate by kind rather than applying the
@@ -116,14 +121,27 @@ BUILDERS = {
 LIMITS = {
     "floor_corner_guard": ((4.8,5.4),(.25,.55),(4.8,5.4),(300,1400)),
     "floor_anchor_bolt": ((.32,.60),(.16,.29),(.32,.60),(240,1200)),
+    "floor_anchor_bolt_large": ((3.2,6.0),(1.6,2.9),(3.2,6.0),(240,1200)),
     "floor_harbor_tie": ((.92,1.20),(.23,.48),(.92,1.20),(350,1700)),
 }
+
+
+class EnlargedBoltSculpture(Sculpture):
+    """Produce NEW geometry at 10× authoring scale for safe asset import.
+
+    Mesh proportions and triangles remain identical. Roblox's imported
+    geometry is returned to true 0.4-stud mechanical size by ScaleTo(.1).
+    """
+    def add(self, name, material, verts, triangles):
+        return super().add(name, material,
+                           [tuple(value*10 for value in point)
+                            for point in verts], triangles)
 
 
 def export(kind: str, target: Path) -> dict:
     if kind not in BUILDERS:
         raise ValueError("Unknown original floor hardware")
-    art=Sculpture()
+    art=EnlargedBoltSculpture() if kind == "floor_anchor_bolt_large" else Sculpture()
     art.lines[0]="# Original compact 3D mechanical hardware: "+kind
     art.lines[2]="o ChaosOriginal_"+kind
     BUILDERS[kind](art)
