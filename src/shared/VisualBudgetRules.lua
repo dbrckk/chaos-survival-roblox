@@ -52,7 +52,7 @@ VisualBudgetRules.LocalFolders = {
     -- Approved owner-imported arena lobby gate: seven inert original
     -- MeshParts on one client-local Model, no lights or extra frame owner.
     "OriginalLobbyGate3DLocal",
-    -- Real original approved 1,696-triangle high-bridge crown; 0/1/2
+    -- Real original approved 1,696-triangle high-bridge crown; 1/1/2
     -- imported Models on Low/Medium/High respectively, counted against
     -- the SAME adaptive Android Parts budget as all other visual meshes.
     "OriginalSkySpineCrownLocal",
