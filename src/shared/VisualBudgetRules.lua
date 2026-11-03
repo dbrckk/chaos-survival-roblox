@@ -59,6 +59,9 @@ VisualBudgetRules.LocalFolders = {
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/2/4 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
+    -- Approved 3,072-triangle 3D chassis over original underfloor beams;
+    -- four residents maximum and all MeshParts count against Android caps.
+    "OriginalUnderstructureBeamsLocal",
     "LobbyCoreOrbitLocal",
     "LobbyCrewBeaconLocal",
     "ResultConstellationLocal",
