@@ -131,6 +131,14 @@
       "source": "assets/source/chaos_underdeck_chassis.obj",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41644715829
+    },
+    {
+      "name": "lobby_gate",
+      "asset_id": "136009650118642",
+      "moderation": "Approved",
+      "source": "tools/generate_original_lobby_gate.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41648061984
     }
   ]
 }
