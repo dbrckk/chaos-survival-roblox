@@ -43,6 +43,8 @@ on:
           - plasma_foundry
           - sky_transit_exchange
           - orbital_halo_array
+          - premium_jump_deck
+          - premium_skybridge_module
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -97,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -124,6 +126,8 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ]; then
+            echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
           fi
@@ -183,11 +187,13 @@ jobs:
                    "perimeter_gate": "Chaos Perimeter Gate",
                    "plasma_foundry": "Chaos Plasma Foundry",
                    "sky_transit_exchange": "Chaos Sky Transit Exchange",
-                   "orbital_halo_array": "Chaos Orbital Halo Array"}
+                   "orbital_halo_array": "Chaos Orbital Halo Array",
+                   "premium_jump_deck": "Chaos Premium Armored Jump Deck",
+                   "premium_skybridge_module": "Chaos Premium Structural Skybridge Module"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],
-              "description": "Original 3D scenery for the creator-owned Chaos Survival experience.",
+              "description": "Original decorative UV-ready 3D geometry for the creator-owned Chaos Survival experience; no gameplay collisions.",
               "creationContext": {"creator": creator},
           }
           with open(sys.argv[1], "w", encoding="utf-8") as stream:
