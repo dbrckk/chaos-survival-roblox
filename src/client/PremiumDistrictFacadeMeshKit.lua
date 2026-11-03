@@ -1,18 +1,22 @@
--- Four distinct original imported 3D district facade / roofline silhouettes.
--- Reuses the one existing scenery LOD camera tick, never a new render loop.
--- All original building geometry, wayfinding signs and gameplay remain live.
+-- Four distinct creator-approved genuine MeshPart district facades/rooflines.
+-- Mount authentic 3D INSTEAD of the overlapping primitive Roblox roofline,
+-- while preserving server-owned foundations, door, wayfinding signs and
+-- gameplay. The original native silhouette returns whenever 3D leaves.
+-- Reuses the existing scenery LOD camera tick; no new RenderStepped loop.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PremiumDistrictFacadeMeshKit = {}
 local NAMES = {"Observatory", "Freight", "Turbine", "Aerial"}
 local IDS = {132020956214241, 88725004643299,
     84217436280282, 135791763112202}
--- Keep the EXACT 1/3/6 imported-model limits. Only already-mounted
--- safe models gain a small exit margin, preventing mobile clone thrash.
+-- On High, twelve of sixteen district profiles can replace their native
+-- blockout rooflines with approved true 3D; on Medium five nearer profiles.
+-- Low Android retains one verified model, keeping its original GPU bound.
+-- Exact camera-ranked residency with exit-only hysteresis, no new loops.
 local BUDGET = {
     Low = {count = 1, distance = 130, retention = 16},
-    Medium = {count = 3, distance = 190, retention = 22},
-    High = {count = 6, distance = 255, retention = 28},
+    Medium = {count = 5, distance = 205, retention = 22},
+    High = {count = 12, distance = 270, retention = 28},
 }
 local holder = Instance.new("Folder")
 holder.Name = "ApprovedDistrictFacadesLocal"
@@ -22,10 +26,76 @@ local mounted = {}
 local watchedBase = nil
 local baseChanged = nil
 
+-- These are EXACT server-authored primitive roof/facade duplicates that
+-- genuine approved meshes replace. DO NOT hide core volumetric load-bearing
+-- silhouettes, foundation/LOD anchors, doors or actual sector signage.
+-- The client owns only cosmetic Transparency; server physics is untouched.
+local NATIVE_REPLACED = {
+    AngledRoofL = true, AngledRoofR = true,
+    ["TopRail-1"] = true, TopRail1 = true,
+    ServiceEntryLintel = true, ServiceEntryCanopy = true,
+    ["PortalHydraulicColumn-1"] = true, PortalHydraulicColumn1 = true,
+    ["SurveyInstrumentCabinet-1"] = true, SurveyInstrumentCabinet1 = true,
+    ["FreightWinchHousing-1"] = true, FreightWinchHousing1 = true,
+    ["TurbineDuctCollar-1"] = true, TurbineDuctCollar1 = true,
+    ["AerialCableConduit-1"] = true, AerialCableConduit1 = true,
+}
+local PROFILE_ROOF = {
+    [1] = {
+        ["ObservatoryFin-1"] = true, ObservatoryFin1 = true,
+        OrbitalSurveyLens = true,
+    },
+    [2] = {
+        CrossGantry = true, CabShell = true, CabGlass = true,
+        ["GantryBlade-1"] = true, GantryBlade1 = true,
+    },
+    [3] = {
+        ["VentTurbine-1"] = true, VentTurbine0 = true, VentTurbine1 = true,
+        ["VentArmour-1"] = true, VentArmour0 = true, VentArmour1 = true,
+    },
+    [4] = {
+        AerialMast = true, ["CrossAerial-1"] = true,
+        CrossAerial1 = true, SignalCrystal = true,
+    },
+}
+
+local function restoreNative(entry)
+    for part, alpha in pairs(entry.replaced) do
+        -- Never overwrite another system's newer transparency choice.
+        if part.Parent == entry.building and part.Transparency == 1
+            and not part.CanCollide and not part.CanTouch
+            and not part.CanQuery then
+            part.Transparency = alpha
+        end
+        entry.replaced[part] = nil
+    end
+end
+
+local function suppressNative(entry)
+    local roof = PROFILE_ROOF[entry.slot]
+    if not roof then return end
+    for _, part in ipairs(entry.building:GetChildren()) do
+        if part:IsA("BasePart") and part.Parent == entry.building
+            and part.Anchored and not part.CanCollide
+            and not part.CanTouch and not part.CanQuery
+            and (NATIVE_REPLACED[part.Name] == true
+                or roof[part.Name] == true)
+            and part.Transparency < 1 then
+            if entry.replaced[part] == nil then
+                entry.replaced[part] = part.Transparency
+            end
+            part.Transparency = 1
+        end
+    end
+end
+
 local function dispose(entry)
     for _, connection in ipairs(entry.connections or {}) do
         connection:Disconnect()
     end
+    -- Restore the native art FIRST so LOD exits cannot leave holes in
+    -- streamed buildings even if the imported model is removed this tick.
+    restoreNative(entry)
     entry.model:Destroy()
 end
 
@@ -150,20 +220,29 @@ local function mount(building, district, base, slot, door, source)
     local entry = {
         model = clone, building = building, door = door,
         doorFrame = door.CFrame, doorSize = door.Size,
-        slot = slot, pieces = pieces, connections = {},
+        slot = slot, pieces = pieces, connections = {}, replaced = {},
     }
     local function immediatelyHideUnsafe()
-        -- The district may stream out, the door may move or the first
-        -- shrink step may begin BEFORE the 0.65/0.90s scenery tick.
-        -- Never leave a floating imported facade during that interval.
+        -- Shrink/stream-out or door motion can occur BEFORE the next LOD
+        -- tick. Immediately reveal every native roofline and hide imported
+        -- art, without ever revealing a non-authoritative walkable surface.
         if not valid(entry, district, base) then
+            restoreNative(entry)
             for _, mesh in ipairs(entry.pieces) do
                 if mesh.Parent and mesh.LocalTransparencyModifier ~= 1 then
                     mesh.LocalTransparencyModifier = 1
                 end
             end
+        else
+            for _, mesh in ipairs(entry.pieces) do
+                if mesh.Parent and mesh.LocalTransparencyModifier ~= 0 then
+                    mesh.LocalTransparencyModifier = 0
+                end
+            end
+            suppressNative(entry)
         end
     end
+    entry.reconcile = immediatelyHideUnsafe
     for _, property in ipairs({"CFrame", "Size", "Transparency"}) do
         entry.connections[#entry.connections + 1] =
             door:GetPropertyChangedSignal(property):Connect(immediatelyHideUnsafe)
@@ -259,6 +338,10 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
         if not mounted[building] then
             mounted[building] = mount(building, district, base,
                 desired.slot, desired.door, template(desired.slot))
+        elseif mounted[building].reconcile then
+            -- Local facade hardware may have appeared on the same tick;
+            -- hide newly redundant native trim while the verified 3D lives.
+            mounted[building].reconcile()
         end
     end
 end
