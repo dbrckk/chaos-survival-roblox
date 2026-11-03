@@ -11,6 +11,7 @@ local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
 local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonumentMeshKit)
 local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
+local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
@@ -523,6 +524,19 @@ task.spawn(function()
                 index <= maxVisible and ORIGINAL_MESH_LOD
                     or ORIGINAL_MESH_HIDDEN,
                 profile, model:GetPivot().Position, cameraPoint)
+        end
+        -- The closest genuine imported exterior structures still sit on
+        -- 4-11 primitive Roblox foundation blocks. Replace the native
+        -- cosmetics with a source-approved 3,072-triangle sculpted chassis;
+        -- Low 0 / Medium 1 / High 2, reversible on shrink/stream/LOD loss.
+        -- Parent under the existing imported owner to share its LOD census.
+        ApprovedFoundationChassisMeshKit.sync(arena, imported, cameraPoint,
+            profile.Name, cameraReady)
+        local foundationMeshes = ApprovedFoundationChassisMeshKit.count()
+        if player:GetAttribute("LocalApprovedFoundationChassis3DCount")
+            ~= foundationMeshes then
+            player:SetAttribute("LocalApprovedFoundationChassis3DCount",
+                foundationMeshes)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
