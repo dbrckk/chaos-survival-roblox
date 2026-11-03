@@ -1,8 +1,8 @@
 # CHAOS SURVIVAL — INVENTAIRE URGENT DES VISUELS NON CERTIFIÉS PREMIUM
 
-**État contrôlé le 3 novembre 2026 — main `49329942899ff0e9895d6756e40b08690582dcca`**. Dépôt : `dbrckk/chaos-survival-roblox`. Ce document est un **registre d'actions** couvrant l'intégralité des familles d'éléments visuels auditées, pas une déclaration qu'aucun travail n'existe déjà.
+**Inventaire initial contrôlé le 3 novembre 2026 — main `49329942899ff0e9895d6756e40b08690582dcca` ; statut de livraison actualisé au SHA `38f1a3b184b85848a479cfe8bd9d4a49a6b06540`**. Dépôt : `dbrckk/chaos-survival-roblox`. Ce document est un **registre d'actions** couvrant l'intégralité des familles d'éléments visuels auditées, pas une déclaration qu'aucun travail n'existe déjà.
 
-**Version publique dernière confirmée** : SHA `3a482589f07d2d4987de2633f7e411681950fc08`, [publication réussie #41604892233](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41604892233). **Dernière tentative de publier les nouveaux socles** : [#41606177846](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41606177846) en échec car [Roblox Cloud #41606219369](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41606219369) a **357 réussites / 1 échec** dans `tests/engine/arena-variants.spec.luau` (`addFoundation`: attendu 4, obtenu 11). **Aucune publication du dernier main n'est démontrée.**
+**Publication publique dernière confirmée :** SHA `38f1a3b184b85848a479cfe8bd9d4a49a6b06540`, [Build Validation #41621176592](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41621176592), [Roblox Cloud (cinq suites) #41621187036](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41621187036), [publication #41621772081](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41621772081). **Historique résolu :** échec antérieur de `addFoundation` (4 éléments attendus, 11 produits) dans [#41606219369](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41606219369). L'exécution moteur ultérieure est verte. **Les captures et mesures physiques Android ne sont toujours pas certifiées.**
 
 ### Méthode de preuve
 - **[C]** Écart **confirmé dans le code ou la validation** (présence d'une primitive/source générique, asset de secours ou test bloqué). Ce n'est pas automatiquement un défaut perceptible sur chaque appareil.
@@ -15,7 +15,7 @@
 
 ## 0. Bloquants de livraison et preuves de qualité
 
-- [ ] **VIS-001 · P0 · C** — Réparer la discordance de la finition 3D importée : `OriginalMeshScenery.addFoundation` renvoie 11 éléments, tandis que `tests/engine/arena-variants.spec.luau` en attend 4 ; adapter les assertions aux sept nouvelles pièces **après vérification des contraintes physiques et de l'idempotence**. Aucune publication sur ce SHA tant que les cinq suites moteur ne sont pas vertes.
+- [x] **VIS-001 · P0 · C · RÉSOLU** — Discordance historique `OriginalMeshScenery.addFoundation` (11 éléments au lieu de 4) corrigée et revalidée : cinq suites moteur réussies au SHA `38f1a3b`, puis publication publique confirmée. Cette preuve de test ne remplace pas le contrôle visuel Android.
 - [ ] **VIS-002 · P0 · V** — Obtenir des captures réelles du **lobby + cinq arènes** sur les niveaux graphiques Low, Medium, High, en vue de proximité, moyenne et panoramique. Le code et les tests moteur ne prouvent ni la forme, ni les ombres, ni les textures finales.
 - [ ] **VIS-003 · P0 · V** — Obtenir le lot de **75 captures Studio authentiques (15 par arène)** au moyen du workflow de QA déjà présent, sans falsifier de capture ni lancer un Windows éphémère sans opérateur authentifié.
 - [ ] **VIS-004 · P0 · V** — Comparer les mêmes séquences sur **un vrai téléphone Android** : luminosité, lisibilité des bots, efficacité des matériaux, température, FPS, mémoire et pires saccades. Un runner Cloud n'est pas un benchmark mobile.
