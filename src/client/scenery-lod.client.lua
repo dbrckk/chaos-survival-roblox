@@ -8,6 +8,7 @@ local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
+local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
@@ -442,6 +443,15 @@ task.spawn(function()
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+        -- Five-arena original 2,976-triangle industrial floor: share the
+        -- existing 0.65/0.90s camera cadence instead of another loop.
+        -- Low = 1, Medium = 3, High = 6 original approved local tiles;
+        -- base/shrink changes hide art immediately via instance events.
+        PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+        local floorMeshes = PremiumGroundMeshKit.count()
+        if player:GetAttribute("LocalOriginalGroundMeshCount") ~= floorMeshes then
+            player:SetAttribute("LocalOriginalGroundMeshCount", floorMeshes)
+        end
         -- Client-only diagnostics count genuine imported MODEL instances,
         -- not fabricated FPS or proof that Roblox textures finished drawing.
         local routeMeshes = PremiumRouteMeshKit.count()
