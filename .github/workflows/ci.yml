@@ -226,7 +226,7 @@ jobs:
           assert "OriginalMeshScenery.sanitize(raw)" in skyfleet_source
           gate_source = Path("src/server/PremiumLobbyGateMeshAssets.lua").read_text()
           gate_client = Path("src/client/lobby-gate-original-3d.client.lua").read_text()
-          gate_asset = re.search(r"local ASSET_ID = (\\d+)", gate_source)
+          gate_asset = re.search(r"local ASSET_ID = (\d+)", gate_source)
           assert gate_asset and gate_asset.group(1) == approved["lobby_gate"]
           assert "OriginalMeshScenery.sanitize(raw)" in gate_source
           assert "AssetService.LoadAssetAsync" in gate_source
