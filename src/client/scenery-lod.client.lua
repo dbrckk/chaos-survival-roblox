@@ -10,6 +10,7 @@ local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
+local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
 local player = Players.LocalPlayer
@@ -462,6 +463,17 @@ task.spawn(function()
         local routeMeshes = PremiumRouteMeshKit.count()
         if player:GetAttribute("LocalOriginalRouteMeshCount") ~= routeMeshes then
             player:SetAttribute("LocalOriginalRouteMeshCount", routeMeshes)
+        end
+        -- An actual approved, sculpted high interchange on the TWO
+        -- real Sky Spine center decks, never on a painted phantom bridge.
+        -- Same camera sampler, strict Android Low 0 / Medium 1 / High 2.
+        SkySpineCrownMeshKit.sync(arena, cameraPoint, profile.Name,
+            cameraReady, cameraLook)
+        local crownMeshes = SkySpineCrownMeshKit.count()
+        if player:GetAttribute("LocalOriginalSkySpineCrownCount")
+            ~= crownMeshes then
+            player:SetAttribute("LocalOriginalSkySpineCrownCount",
+                crownMeshes)
         end
         -- Count real, approved underdeck MODEL instances separately: the
         -- same adaptive scenery owner already counts their MeshParts
