@@ -39,6 +39,12 @@ describe("Chaos Survival engine", function()
         template("PremiumJumpDeck", 98478693994864, Vector3.new(11.9, 1.5, 11.9))
         template("PremiumSkybridgeModule", 94023662427980,
             Vector3.new(10, 1.3, 4.9))
+        -- Authorized run #41644715829 produced this real Approved
+        -- 3,072-triangle original production source. In-engine stand-in
+        -- here tests the placement contract, not network moderation:
+        -- 7-source-material/real-ID guards are enforced by release CI.
+        template("OriginalUnderdeckChassis", 84582262145054,
+            Vector3.new(23.3, 4.0, 10.0))
         local arena = Instance.new("Folder")
         arena.Name = "PremiumRouteSmokeArena"
         arena.Parent = workspace
@@ -73,6 +79,7 @@ describe("Chaos Survival engine", function()
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
         -- One true imported deck and three repeated actual bridge modules.
         expect(PremiumRouteMeshKit.count()).toBe(4)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
         expect(deck.CanCollide).toBe(true)
         expect(bridge.CanCollide).toBe(true)
         expect(deck.Size).toBe(Vector3.new(12, 2, 12))
@@ -98,24 +105,41 @@ describe("Chaos Survival engine", function()
         crossing.Parent = platforms
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        -- Closer permanent crossing wins the unchanged one-bridge Medium
-        -- quota; two authentic imported UV bridge modules replace cuboids.
-        expect(PremiumRouteMeshKit.count()).toBe(2)
+        -- This genuine, safe 26x12 crossing gets TWO approved 3D bridge
+        -- modules PLUS ONE real original underdeck chassis on Medium.
+        -- The machine is always below the physical collider, never a
+        -- second invisible/phantom walkable bridge.
+        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         expect(crossing.CanCollide).toBe(true)
+        local underfolder = workspace:FindFirstChild("PremiumRouteMeshLocal")
+        local machine = underfolder:FindFirstChild("OriginalEngineeredUnderdeck3D")
+        expect(machine ~= nil).toBe(true)
+        local meshPart = machine:FindFirstChildWhichIsA("MeshPart", true)
+        expect(meshPart ~= nil).toBe(true)
+        expect(meshPart.CanCollide).toBe(false)
+        expect(meshPart.CanTouch).toBe(false)
+        expect(meshPart.CanQuery).toBe(false)
+        local frame, dimensions = machine:GetBoundingBox()
+        expect(frame.Position.Y + dimensions.Y * 0.5
+            < crossing.Position.Y - crossing.Size.Y * 0.5).toBe(true)
         crossing:SetAttribute("PromenadeLane", nil)
         crossing:SetAttribute("PromenadeStep", nil)
         crossing:SetAttribute("SkySpineStep", 5)
         crossing:SetAttribute("SkySpineInterchange", true)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        expect(PremiumRouteMeshKit.count()).toBe(2)
+        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         crossing:SetAttribute("ChaosPermanentRoute", false)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
         expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
         base.Size = Vector3.new(230, 2, 230)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
         expect(PremiumRouteMeshKit.count()).toBe(0)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
         expect(deck.CanCollide).toBe(true)
         expect(bridge.CanCollide).toBe(true)
         PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
