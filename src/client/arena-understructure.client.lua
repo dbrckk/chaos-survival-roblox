@@ -252,24 +252,29 @@ local function rebuild()
         hub.CastShadow = false
 
         if tier.Name ~= "Low" then
+            -- Split each long native spoke at the genuine sculpted keel's
+            -- 28-stud boundary. The inner half is hidden ONLY while the
+            -- verified central MeshPart module occupies that volume; the
+            -- outer half stays visible and never loses its radial support.
+            -- The old 90-degree tangent error made spokes miss the reactor.
             local spokeCount = tier.Name == "High" and 6 or 4
+            local radius = math.min(halfX, halfZ) * 0.34
             for i = 1, spokeCount do
                 local angle = ((i - 1) / spokeCount) * math.pi * 2
-                local radius = math.min(halfX, halfZ) * 0.34
-                local pos = center + Vector3.new(
-                    math.cos(angle) * radius * 0.5,
-                    -7.5,
-                    math.sin(angle) * radius * 0.5
-                )
-                makePart(
-                    "UnderOrbitalSpoke" .. i,
-                    Vector3.new(radius, 0.70, 1.30),
-                    CFrame.new(pos)
-                        * CFrame.Angles(0, -(angle + math.pi * 0.5), 0),
-                    i % 3 == 0 and theme.Secondary or theme.Detail,
-                    i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                    i % 3 == 0 and 0.58 or 0.18
-                )
+                local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
+                local orientation = CFrame.Angles(0, -angle, 0)
+                for _, half in ipairs({"Inner", "Outer"}) do
+                    local segmentCenter = radius * (half == "Inner" and .25 or .75)
+                    makePart(
+                        "UnderOrbital" .. half .. "Spoke" .. i,
+                        Vector3.new(radius * .5, .70, 1.30),
+                        CFrame.new(center + radial * segmentCenter
+                            + Vector3.new(0, -7.5, 0)) * orientation,
+                        i % 3 == 0 and theme.Secondary or theme.Detail,
+                        i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
+                        i % 3 == 0 and .58 or .18
+                    )
+                end
             end
         end
 
@@ -332,9 +337,9 @@ local function rebuild()
             for i = 1, 4 do
             local angle = math.rad(45 + (i - 1) * 90)
             local pos = center + Vector3.new(
-                math.cos(angle) * halfX * 0.56,
+                math.cos(angle) * halfX * 0.90,
                 -(base.Size.Y * 0.5) - 4.0,
-                math.sin(angle) * halfZ * 0.56
+                math.sin(angle) * halfZ * 0.90
             )
                 makePart(
                     "UnderTowerBrace" .. i,
