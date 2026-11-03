@@ -398,7 +398,7 @@ describe("Chaos Survival engine", function()
             part.Name = name
             part.CFrame = cframe
             part.Size = size
-            part.Transparency = .23
+            part.Transparency = .25
             part.Anchored = true
             part.CanCollide = false
             part.CanTouch = false
@@ -416,7 +416,7 @@ describe("Chaos Survival engine", function()
         UnderstructureBeamMeshKit.sync(arena, camera, "Low", true)
         expect(UnderstructureBeamMeshKit.count()).toBe(1)
         expect(beams[1].Transparency).toBe(1)
-        expect(beams[6].Transparency).toBe(.23)
+        expect(beams[6].Transparency).toBe(.25)
         local originals = workspace:FindFirstChild("OriginalUnderstructureBeamsLocal")
         expect(originals ~= nil).toBe(true)
         local clone = originals:FindFirstChild(
@@ -443,7 +443,7 @@ describe("Chaos Survival engine", function()
         -- owner-approved importer and Android tier caps.
         UnderstructureBeamMeshKit.reset()
         for _, beam in ipairs(beams) do
-            expect(beam.Transparency).toBe(.23)
+            expect(beam.Transparency).toBe(.25)
             beam:Destroy()
         end
         arena:SetAttribute("VariantId", "Crossroads")
@@ -461,15 +461,15 @@ describe("Chaos Survival engine", function()
         -- BOTH 3D mounts and restore the original cosmetic beams.
         base.Size = Vector3.new(230, 2, 230)
         expect(UnderstructureBeamMeshKit.count()).toBe(0)
-        expect(north.Transparency).toBe(.23)
-        expect(east.Transparency).toBe(.23)
+        expect(north.Transparency).toBe(.25)
+        expect(east.Transparency).toBe(.25)
         expect(base.CanCollide).toBe(true)
         base.Size = Vector3.new(320, 2, 320)
         source:SetAttribute("OwnerVerified", false)
         UnderstructureBeamMeshKit.sync(arena, Vector3.new(0, 25, -42),
             "Medium", true)
         expect(UnderstructureBeamMeshKit.count()).toBe(0)
-        expect(north.Transparency).toBe(.23)
+        expect(north.Transparency).toBe(.25)
 
         UnderstructureBeamMeshKit.reset()
         nativeBucket:Destroy()
