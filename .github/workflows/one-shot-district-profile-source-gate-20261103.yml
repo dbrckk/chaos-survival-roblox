@@ -1,0 +1,78 @@
+# Source milestone for four true triangulated and UV/tangent district meshes.
+# Never uploads to Roblox and never publishes the game.
+name: One-shot Original Four District 3D Profiles Source Gate
+on:
+  push:
+    branches: [feat/original-3d-district-roofline-kit-20261103]
+    paths:
+      - tools/generate_district_profile_meshes.py
+      - .github/workflows/one-shot-district-profile-source-gate-20261103.yml
+permissions:
+  contents: read
+jobs:
+  original-3d-source:
+    name: Generate and validate four original imported-ready district rooflines
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate authored OBJ and glTF sources without Roblox upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/district-previews
+          python3 tools/generate_district_profile_meshes.py \
+            --output-dir build/district-previews \
+            | tee build/district-previews/original-source-metrics.json
+          for profile in observatory freight turbine aerial; do
+            python3 tools/obj_to_gltf.py \
+              --source "build/district-previews/chaos_district_$profile.obj" \
+              --materials assets/source/chaos_route_kit.mtl \
+              --output "build/district-previews/chaos_district_$profile.gltf"
+          done
+          python3 - <<'PY'
+          import base64, json
+          from pathlib import Path
+          folder = Path('build/district-previews')
+          metrics = json.loads((folder/'original-source-metrics.json').read_text())
+          rows = metrics['original_district_3d_models']
+          assert len(rows) == 4
+          assert {x['profile'] for x in rows} == {
+              'observatory', 'freight', 'turbine', 'aerial'}
+          assert len({x['sha256'] for x in rows}) == 4
+          for row in rows:
+              profile = row['profile']
+              assert 200 <= row['triangles'] <= 12000
+              assert 3 <= row['groups'] <= 512
+              gltf = json.loads((folder / ('chaos_district_'+profile+'.gltf')).read_text())
+              assert gltf['asset']['version'] == '2.0'
+              raw = base64.b64decode(gltf['buffers'][0]['uri'].split(',', 1)[1])
+              assert len(raw) == gltf['buffers'][0]['byteLength']
+              assert all(x['byteOffset'] + x['byteLength'] <= len(raw)
+                         for x in gltf['bufferViews'])
+              prims = gltf['meshes'][0]['primitives']
+              assert len(prims) >= 4
+              assert all(p['mode'] == 4 and
+                         {'POSITION','NORMAL','TEXCOORD_0','TANGENT'}
+                         <= set(p['attributes']) for p in prims)
+              triangles = sum(gltf['accessors'][p['attributes']['POSITION']]['count']//3
+                              for p in prims)
+              assert triangles == row['triangles']
+              bounds = [gltf['accessors'][p['attributes']['POSITION']]
+                        for p in prims]
+              assert max(a['max'][0] for a in bounds) <= 14.01
+              assert min(a['min'][0] for a in bounds) >= -14.01
+              assert min(a['min'][1] for a in bounds) >= -0.05
+              assert max(a['max'][1] for a in bounds) <= 46.01
+              assert min(a['min'][2] for a in bounds) >= -13.01
+              assert max(a['max'][2] for a in bounds) <= 13.01
+              print('ART SOURCE VALID:',profile,triangles,'real triangles')
+          print('SOURCE MILESTONE ONLY: no Roblox asset upload or place publish')
+          PY
+      - name: Archive four real 3D asset previews for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-district-four-meshes-source
+          path: build/district-previews/
+          retention-days: 14
+          if-no-files-found: error
