@@ -115,7 +115,7 @@ jobs:
               "reactor_spire", "service_crane", "perimeter_gate",
               "plasma_foundry", "sky_transit_exchange", "orbital_halo_array"
           }
-          route_names = {"premium_jump_deck", "premium_skybridge_module"}
+          route_names = {"premium_jump_deck", "premium_skybridge_module", "premium_ground_tile"}
           assert {m["name"] for m in models} == scenery_names | route_names
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
@@ -145,18 +145,19 @@ jobs:
           route_block = re.search(r"local APPROVED = \{(.*?)\n\}", route_source, re.S)
           assert route_block, "Missing real original jump/skybridge asset allowlist"
           route_ids = dict(re.findall(
-              r"(PremiumJumpDeck|PremiumSkybridgeModule)\s*=\s*(\d+)",
+              r"(PremiumJumpDeck|PremiumSkybridgeModule|PremiumGroundTile)\s*=\s*(\d+)",
               route_block.group(1),
           ))
           approved = {m["name"]: m["asset_id"] for m in models}
           assert route_ids == {
               "PremiumJumpDeck": approved["premium_jump_deck"],
               "PremiumSkybridgeModule": approved["premium_skybridge_module"],
+              "PremiumGroundTile": approved["premium_ground_tile"],
           }, "Approved production 3D route IDs do not match runtime allowlist"
           assert "AssetService.LoadAssetAsync" in source
           assert "OriginalMeshScenery.sanitize(imported)" in source
           assert "OriginalMeshScenery.sanitize(raw)" in route_source
-          print("Verified 8 genuine owned Model IDs and safe shared sanitizer.")
+          print("Verified 9 genuine owned Model IDs and safe shared sanitizer.")
           PY
 
       - name: Install Rojo 7.7.0

@@ -29,6 +29,10 @@ VisualBudgetRules.LocalFolders = {
     -- cosmetics welded to physical routes. Count every visible MeshPart
     -- against the SAME Android frame/instance budget; never bypass census.
     "PremiumRouteMeshLocal",
+    -- Authenticated original 2,976-triangle floor tiles share the exact
+    -- mobile Part/GPU census instead of bypassing adaptive backpressure.
+    -- Camera-tier limits: 1/3/6 local tiles, at most seven MeshParts each.
+    "OriginalPremiumGroundMeshesLocal",
     "ArenaAmbientPropsLocal",
     "ArenaFocalLightingLocal",
     "ArenaSurfaceDetailLocal",

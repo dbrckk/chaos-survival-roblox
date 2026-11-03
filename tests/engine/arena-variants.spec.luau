@@ -11,13 +11,15 @@ local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
-    it("exposes only the two approved original route MeshPart package IDs", function()
+    it("exposes only the three approved original route and ground MeshPart packages", function()
         -- Source-level safety gate only; Roblox rendering itself requires
         -- authenticated Studio/Android capture after public publishing.
         expect(PremiumRouteMeshAssets.approvedId("PremiumJumpDeck"))
             .toBe(98478693994864)
         expect(PremiumRouteMeshAssets.approvedId("PremiumSkybridgeModule"))
             .toBe(94023662427980)
+        expect(PremiumRouteMeshAssets.approvedId("PremiumGroundTile"))
+            .toBe(72507987666671)
         expect(PremiumRouteMeshAssets.approvedId("RandomFreeModel")).toBe(nil)
         expect(PremiumRouteMeshAssets.approvedId(nil)).toBe(nil)
     end)

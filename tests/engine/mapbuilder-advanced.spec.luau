@@ -6,6 +6,7 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
+local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
@@ -86,6 +87,87 @@ describe("Chaos Survival engine", function()
         expect(deck.CanCollide).toBe(true)
         expect(bridge.CanCollide).toBe(true)
         PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
+        arena:Destroy()
+        holder:Destroy()
+    end)
+    it("renders real original 3D ground MeshParts within Android tier caps and never leaves a phantom floor", function()
+        -- Reuse the existing authenticated source→client engine integration
+        -- suite at the public release milestone; do not invent image mocks
+        -- or weaken the real world collision/shrinking restrictions.
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local holder = Instance.new("Folder")
+        holder.Name = "PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+        local template = Instance.new("Model")
+        template.Name = "PremiumGroundTile"
+        template:SetAttribute("OwnerVerified", true)
+        template:SetAttribute("CosmeticOnly", true)
+        template:SetAttribute("Original3DAssetId", 72507987666671)
+        local mesh = Instance.new("MeshPart")
+        mesh.Name = "ImportedOriginal3DGeometry"
+        mesh.Size = Vector3.new(48.5, 0.25, 48.5)
+        mesh.Anchored = true
+        mesh.Parent = template
+        template.Parent = holder
+
+        local arena = Instance.new("Folder")
+        arena.Name = "Ground3DSourceSmokeArena"
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.Anchored = true
+        base.CanCollide = true
+        base.Parent = arena
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        for index = 1, 8 do
+            local ground = Instance.new("Part")
+            ground.Name = "PremiumGroundModule" .. index
+            ground.Size = Vector3.new(49.133, 0.035, 49.133)
+            ground.CFrame = base.CFrame
+                * CFrame.new(((index - 1) % 4 - 1.5) * 50.33, 1.153,
+                    (math.floor((index - 1) / 4) - 0.5) * 50.33)
+            ground.Anchored = true
+            ground.CanCollide = false
+            ground.CanTouch = false
+            ground.CanQuery = false
+            ground:SetAttribute("OriginalGroundFinish", true)
+            ground:SetAttribute("PremiumArchitecturalSurface", true)
+            ground.Parent = decor
+        end
+        local camera = Vector3.new(0, 14, 0)
+        PremiumGroundMeshKit.sync(arena, camera, "Low", true)
+        expect(PremiumGroundMeshKit.count()).toBe(1)
+        PremiumGroundMeshKit.sync(arena, camera, "Medium", true)
+        expect(PremiumGroundMeshKit.count()).toBe(3)
+        PremiumGroundMeshKit.sync(arena, camera, "High", true)
+        expect(PremiumGroundMeshKit.count()).toBe(6)
+        local cosmeticBucket = workspace:FindFirstChild("OriginalPremiumGroundMeshesLocal")
+        expect(cosmeticBucket ~= nil).toBe(true)
+        for _, clone in ipairs(cosmeticBucket:GetChildren()) do
+            expect(clone:IsA("Model")).toBe(true)
+            expect(clone:GetAttribute("OriginalGroundMeshId")).toBe(72507987666671)
+            for _, part in ipairs(clone:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                end
+            end
+        end
+        -- A real shrink must remove ALL cosmetic floor meshes. Never move,
+        -- hide, resize or replace the server's authoritative ground Base.
+        base.Size = Vector3.new(231, 2, 231)
+        PremiumGroundMeshKit.sync(arena, camera, "High", true)
+        expect(PremiumGroundMeshKit.count()).toBe(0)
+        expect(base.CanCollide).toBe(true)
+        expect(base.Size).toBe(Vector3.new(231, 2, 231))
+        PremiumGroundMeshKit.sync(nil, Vector3.zero, "Low", false)
         arena:Destroy()
         holder:Destroy()
     end)

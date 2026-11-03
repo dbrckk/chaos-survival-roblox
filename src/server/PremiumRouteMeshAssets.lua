@@ -1,5 +1,5 @@
--- Eight original Roblox Model packages now exist in the owner inventory;
--- these TWO approved imports are genuine triangulated UV/tangent 3D assets.
+-- Nine original Roblox Model packages now exist in the owner inventory;
+-- these THREE approved imports are genuine triangulated UV/tangent 3D assets.
 -- The loader is cosmetic-only and never changes live authoritative platforms.
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,8 +10,9 @@ local PremiumRouteMeshAssets = {}
 local APPROVED = {
     PremiumJumpDeck = 98478693994864,
     PremiumSkybridgeModule = 94023662427980,
+    PremiumGroundTile = 72507987666671,
 }
-local ORDER = {"PremiumJumpDeck", "PremiumSkybridgeModule"}
+local ORDER = {"PremiumJumpDeck", "PremiumSkybridgeModule", "PremiumGroundTile"}
 local started = false
 
 -- Public provenance for QA and static Roblox Cloud suites. Do not accept
@@ -64,7 +65,8 @@ function PremiumRouteMeshAssets.start()
                 safe:SetAttribute("OwnerVerified", true)
                 safe:SetAttribute("Original3DAssetId", assetId)
                 safe:SetAttribute("CosmeticOnly", true)
-                safe:SetAttribute("PremiumRoute3D", true)
+                safe:SetAttribute("PremiumRoute3D", name ~= "PremiumGroundTile")
+                safe:SetAttribute("PremiumGround3D", name == "PremiumGroundTile")
                 safe.Parent = folder
                 folder:SetAttribute(name .. "Ready", true)
                 return
