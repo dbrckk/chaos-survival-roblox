@@ -7,6 +7,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local ArenaDetailKit = require(script.Parent.ArenaDetailKit)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
+local PremiumServiceEquipmentMeshKit = require(script.Parent.PremiumServiceEquipmentMeshKit)
 
 local player = Players.LocalPlayer
 
@@ -360,6 +361,21 @@ local function rebuild()
         addClassic(base, theme, tier)
     end
 
+    -- Replace camera/crate/bollard/canister/mooring primitive assemblies
+    -- with genuinely triangulated, owner-approved 3D machines, when their
+    -- sanitized template has arrived. Unlike a cosmetic overlay, all native
+    -- fixture pieces are hidden only AFTER the replacement is complete.
+    -- Imported MeshParts are direct folder children, so the existing floor
+    -- follower and scenery LOD also handle them without an extra loop.
+    local camera = workspace.CurrentCamera
+    local originalEquipment = PremiumServiceEquipmentMeshKit.replace(
+        folder, variant, tier.Name, camera and camera.CFrame.Position or nil
+    )
+    if player:GetAttribute("LocalOriginalServiceEquipment3DCount")
+        ~= originalEquipment then
+        player:SetAttribute("LocalOriginalServiceEquipment3DCount", originalEquipment)
+    end
+
     -- Move rigid machines and their diegetic labels inward with the
     -- shrinking floor, without changing their dimensions or collision.
     -- Otherwise crates and camera tripods appear beyond the walkable edge.
@@ -412,6 +428,42 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+
+-- AssetService loads the five owned packages asynchronously after join.
+-- Rebuild once a genuine template arrives; a join-time native fallback must
+-- not remain permanently visible throughout the entire Android session.
+-- Rebuild is already coalesced and recreates only the small service bundle.
+local equipmentHolderConnections = {}
+local equipmentHolder = nil
+local function bindEquipmentHolder(holder)
+    if holder == equipmentHolder then return end
+    for _, connection in ipairs(equipmentHolderConnections) do
+        connection:Disconnect()
+    end
+    table.clear(equipmentHolderConnections)
+    equipmentHolder = holder
+    if holder and holder:IsA("Folder") then
+        equipmentHolderConnections[#equipmentHolderConnections + 1] =
+            holder.ChildAdded:Connect(scheduleRebuild)
+        equipmentHolderConnections[#equipmentHolderConnections + 1] =
+            holder.ChildRemoved:Connect(scheduleRebuild)
+        scheduleRebuild()
+    end
+end
+
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "ApprovedServiceEquipmentTemplates" then
+        bindEquipmentHolder(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == equipmentHolder then
+        bindEquipmentHolder(nil)
+        scheduleRebuild()
+    end
+end)
+bindEquipmentHolder(ReplicatedStorage:FindFirstChild(
+    "ApprovedServiceEquipmentTemplates"))
 
 bindMap(workspace:FindFirstChild("GeneratedMap"))
 scheduleRebuild()
