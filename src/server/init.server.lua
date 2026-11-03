@@ -51,6 +51,7 @@ local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
 local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
+local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
@@ -186,6 +187,9 @@ if not isStudioE2E then
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)
+    -- Six original, owner-approved shallow floor relief assets are cosmetic.
+    -- Late serialized loading must not block hazard timers, bots or joining.
+    task.defer(PremiumFloorReliefAssets.start)
     task.defer(PremiumLobbyGateMeshAssets.start)
 end
 LobbySpawnSafety.start()
