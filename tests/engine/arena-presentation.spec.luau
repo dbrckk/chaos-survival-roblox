@@ -11,6 +11,8 @@ local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
 local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
+local ArenaSkyFleetKit = require("../../src/client/ArenaSkyFleetKit")
+local PremiumSkyfleetMeshAssets = require("../../src/server/PremiumSkyfleetMeshAssets")
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 local ArenaSceneryFrames = require("../../src/shared/ArenaSceneryFrames")
 local MobileReadabilityKit = require("../../src/client/MobileReadabilityKit")
@@ -25,6 +27,59 @@ local function planarUnit(vector)
 end
 
 describe("Arena presentation", function()
+    it("keeps the owner-approved 3D skyfleet safe across all five maps and tiers", function()
+        -- The actual Model was approved by Roblox Assets (#41634338244).
+        -- An absent/late template must always retain a fully playable
+        -- collision-free fallback. This is an engine invariant, not a
+        -- claim that the mesh has been visually inspected on Android.
+        expect(PremiumSkyfleetMeshAssets.approvedId()).toBe(84239592388200)
+        local variants = {"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}
+        local tiers = {"Low", "Medium", "High"}
+        for _, variant in ipairs(variants) do
+            for _, tier in ipairs(tiers) do
+                local root = Instance.new("Folder")
+                root.Name = "OriginalSkyfleetEngineTest"
+                local base = Instance.new("Part")
+                base.Anchored = true
+                base.Size = Vector3.new(320, 3, 320)
+                base.CFrame = CFrame.new(0, 0, 0)
+                base.Parent = root
+                local bundle = ArenaSkyFleetKit.build(root, base,
+                    variant, VisualTheme.arena(variant), tier)
+                expect(bundle ~= nil).toBe(true)
+                if bundle then
+                    expect(#bundle.ships).toBe(ArenaSkyFleetKit.profile(tier).ships)
+                    expect(bundle.totalParts <=
+                        ArenaSkyFleetKit.profile(tier).ships
+                            * ArenaSkyFleetKit.profile(tier).maxPerShip).toBe(true)
+                    for _, ship in ipairs(bundle.ships) do
+                        expect(#ship.parts > 0).toBe(true)
+                        expect(ship.model:GetAttribute("CosmeticOnly")).toBe(true)
+                        expect(ship.model:GetAttribute("LocalOriginal3D")).toBe(true)
+                        for _, entry in ipairs(ship.parts) do
+                            local part = entry.part
+                            expect(part:IsA("BasePart")).toBe(true)
+                            expect(part.Anchored).toBe(true)
+                            expect(part.CanCollide).toBe(false)
+                            expect(part.CanTouch).toBe(false)
+                            expect(part.CanQuery).toBe(false)
+                            expect(part.CastShadow).toBe(false)
+                        end
+                    end
+                    -- Both active 3D motion and ReduceMotion must preserve
+                    -- real engineering frame transforms and safety.
+                    ArenaSkyFleetKit.pose(bundle, 1.4, "round",
+                        false, false, {"Tornado"})
+                    ArenaSkyFleetKit.pose(bundle, 1.4, "round",
+                        true, false, {})
+                    expect(ArenaSkyFleetKit.matches(bundle, base,
+                        variant, tier, root)).toBe(true)
+                end
+                root:Destroy()
+            end
+        end
+    end)
+
     it("shrinks center wayfinding paint but leaves pad-owned route indicators untouched", function()
         local root = Instance.new("Folder")
         root.Parent = workspace
