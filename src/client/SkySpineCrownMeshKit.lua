@@ -302,8 +302,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
                 local priority = dist - (resident and budget.retention * 0.6 or 0)
                 if typeof(cameraLook) == "Vector3" and cameraLook.Magnitude > 0.5
                     and dist > 40 then
-                    local facing = (deck.Position - cameraPoint).Unit
-                        :Dot(cameraLook.Unit)
+                    local direction = (deck.Position - cameraPoint).Unit
+                    local facing = direction:Dot(cameraLook.Unit)
                     priority -= math.min(32, dist * 0.18) * facing
                 end
                 choices[#choices + 1] = {deck = deck, score = priority}
