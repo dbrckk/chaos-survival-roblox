@@ -10,15 +10,20 @@ local PremiumRouteMeshKit = {}
 local ASSETS = {
     PremiumJumpDeck = 98478693994864,
     PremiumSkybridgeModule = 94023662427980,
+    -- Official creator-owner Approved import #41644715829, 3,072 triangles.
+    OriginalUnderdeckChassis = 84582262145054,
 }
 -- Hysteresis keeps the SAME approved imported route art resident as the
 -- camera moves across a threshold. A new route must be within distance;
 -- an already mounted safe route gets a small exit margin, never more slots.
 -- Stable residency avoids repeated MeshPart clone/weld churn on Android.
 local BUDGET = {
-    Low = {decks = 2, bridges = 1, segments = 1, distance = 100, retention = 18},
-    Medium = {decks = 5, bridges = 1, segments = 3, distance = 170, retention = 22},
-    High = {decks = 9, bridges = 2, segments = 5, distance = 245, retention = 28},
+    Low = {decks = 2, bridges = 1, segments = 1, underdecks = 0,
+        distance = 100, retention = 18},
+    Medium = {decks = 5, bridges = 1, segments = 3, underdecks = 2,
+        distance = 170, retention = 22},
+    High = {decks = 9, bridges = 2, segments = 5, underdecks = 4,
+        distance = 245, retention = 28},
 }
 
 local folder = Instance.new("Folder")
@@ -156,6 +161,85 @@ local function addModel(entry, platform, template, offset, scale, yaw)
     return true
 end
 
+-- Genuine originally authored 3,072-triangle multi-web machine chassis.
+-- Place it STRICTLY below the true collidable Part's LOWER face: never a
+-- false jumpable floor, ghost safe route, gameplay collider or Roblox Part.
+-- Long X source is rotated with an equally real Z-oriented walkway.
+-- The same mesh-owner entry, hazard event listeners, weld cleanup and
+-- existing camera sampler control this entire extra underdeck model.
+local function addUnderdeckModel(entry, platform, template)
+    if not template then return false end
+    local _, sourceSize = template:GetBoundingBox()
+    if sourceSize.X < 20 or sourceSize.X > 26
+        or sourceSize.Y < 3 or sourceSize.Y > 8
+        or sourceSize.Z < 8 or sourceSize.Z > 13 then
+        return false
+    end
+    local length = math.max(platform.Size.X, platform.Size.Z)
+    local width = math.min(platform.Size.X, platform.Size.Z)
+    -- Small square jump tiles need no invisible 3K-triangle machinery.
+    if length < 17 or width < 9.5 then return false end
+    local scale = math.min(
+        length * 0.88 / sourceSize.X,
+        width * 0.88 / sourceSize.Z,
+        1.06)
+    if scale < 0.56 then return false end
+    local clone = template:Clone()
+    local ok = pcall(function() clone:ScaleTo(scale) end)
+    if not ok then clone:Destroy(); return false end
+
+    local frame, size = clone:GetBoundingBox()
+    if size.X <= 0 or size.Y <= 0 or size.Z <= 0
+        or size.X > 32 or size.Z > 18 or size.Y > 9 then
+        clone:Destroy()
+        return false
+    end
+    -- Source model center must be at or below the true platform's lower
+    -- face. A small air gap lets the edge cast a visible real 3D profile.
+    local yaw = platform.Size.Z > platform.Size.X and math.pi * 0.5 or 0
+    local target = platform.CFrame
+        * CFrame.new(0, -platform.Size.Y * 0.5 - 0.06 - size.Y * 0.5, 0)
+        * CFrame.Angles(0, yaw, 0)
+    local pieces = {}
+    for _, part in ipairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            -- Never accept unexpected Parts in an imported model when this
+            -- authored source is specifically a multi-material MeshPart kit.
+            if not part:IsA("MeshPart") then
+                clone:Destroy()
+                return false
+            end
+            part.CFrame = target * frame:ToObjectSpace(part.CFrame)
+            part.Anchored = false
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = false
+            part.Massless = true
+            pieces[#pieces + 1] = part
+        end
+    end
+    if #pieces == 0 or #pieces > 16 then
+        clone:Destroy()
+        return false
+    end
+    clone.Name = "OriginalEngineeredUnderdeck3D"
+    clone:SetAttribute("OriginalUnderdeckArt", true)
+    clone:SetAttribute("CosmeticOnly", true)
+    clone:SetAttribute("OriginalPremiumRouteAssetId",
+        template:GetAttribute("Original3DAssetId"))
+    clone.Parent = folder
+    for _, piece in ipairs(pieces) do
+        local weld = Instance.new("WeldConstraint")
+        weld.Name = "OriginalUnderdeckSafeCosmeticWeld"
+        weld.Part0 = platform
+        weld.Part1 = piece
+        weld.Parent = piece
+    end
+    entry.models[#entry.models + 1] = clone
+    return true
+end
+
 local function syncVisibility(entry, platform)
     local safe = safePlatform(platform, entry.initialSize)
     -- Never hide the live platform itself or move the gameplay part.
@@ -178,7 +262,7 @@ local function syncVisibility(entry, platform)
     end
 end
 
-local function mount(platform, template, count, bridgeCandidate)
+local function mount(platform, template, count, bridgeCandidate, underdeckTemplate)
     local _, bounds = template:GetBoundingBox()
     if bounds.X < 3 or bounds.Y < 0.1 or bounds.Z < 3 then
         return nil
@@ -201,6 +285,7 @@ local function mount(platform, template, count, bridgeCandidate)
         count = countToMount,
         panel = nil,
         originalPanelAlpha = 0,
+        underdeck = underdeckTemplate ~= nil,
     }
     local yaw = isBridge and (platform.Size.Z > platform.Size.X
         and math.pi * 0.5 or 0) or 0
@@ -220,6 +305,12 @@ local function mount(platform, template, count, bridgeCandidate)
             for _, model in ipairs(entry.models) do model:Destroy() end
             return nil
         end
+    end
+
+    if underdeckTemplate then
+        -- Source outside bounds or an unavailable owner Model is simply a
+        -- safe optional fallback: never invalidate the real route art.
+        addUnderdeckModel(entry, platform, underdeckTemplate)
     end
 
     local index = tonumber(platform.Name:match("^Platform(%d+)$")
@@ -401,9 +492,37 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, came
         end
     end
 
+    -- A 3K-triangle hollow chassis is genuinely useful on long visible
+    -- sky route foundations; never attach it to every streamed platform.
+    -- The existing 0/2/4 UNDERDECK MODEL quota is additional but stays
+    -- inside the SAME PremiumRouteMeshLocal adaptive Android Parts ledger.
+    -- Prefer eligible real 26-stud connector routes, then large safe decks.
+    local underdeckTemplate = getTemplate("OriginalUnderdeckChassis")
+    local underdeckSlots = budget.underdecks
+    if underdeckTemplate and underdeckSlots > 0 then
+        local ranked = {}
+        for _, item in ipairs(bridges) do
+            if wanted[item.platform] then ranked[#ranked + 1] = item end
+        end
+        for _, item in ipairs(decks) do
+            if wanted[item.platform] then ranked[#ranked + 1] = item end
+        end
+        table.sort(ranked, byDistance)
+        for _, item in ipairs(ranked) do
+            if underdeckSlots <= 0 then break end
+            local size = item.platform.Size
+            if math.max(size.X, size.Z) >= 17
+                and math.min(size.X, size.Z) >= 9.5 then
+                wanted[item.platform].underdeck = underdeckTemplate
+                underdeckSlots -= 1
+            end
+        end
+    end
+
     for platform, entry in pairs(mounted) do
         local desired = wanted[platform]
-        if not desired or desired.count ~= entry.count then
+        if not desired or desired.count ~= entry.count
+            or (desired.underdeck ~= nil) ~= entry.underdeck then
             restore(entry)
             mounted[platform] = nil
         end
@@ -411,7 +530,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, came
     for platform, desired in pairs(wanted) do
         if not mounted[platform] then
             mounted[platform] = mount(platform, desired.template, desired.count,
-                desired.bridge)
+                desired.bridge, desired.underdeck)
         end
     end
 end
@@ -420,6 +539,20 @@ function PremiumRouteMeshKit.count()
     local n = 0
     for _, entry in pairs(mounted) do
         n += #entry.models
+    end
+    return n
+end
+
+-- Diagnostics count REAL imported additional Model instances (not a
+-- pretended on-device screenshot or guessed complete texture residency).
+function PremiumRouteMeshKit.underdeckCount()
+    local n = 0
+    for _, entry in pairs(mounted) do
+        for _, model in ipairs(entry.models) do
+            if model.Parent and model:GetAttribute("OriginalUnderdeckArt") == true then
+                n += 1
+            end
+        end
     end
     return n
 end

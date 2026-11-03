@@ -463,6 +463,13 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalRouteMeshCount") ~= routeMeshes then
             player:SetAttribute("LocalOriginalRouteMeshCount", routeMeshes)
         end
+        -- Count real, approved underdeck MODEL instances separately: the
+        -- same adaptive scenery owner already counts their MeshParts
+        -- in the existing PremiumRouteMeshLocal budget census.
+        local underdecks = PremiumRouteMeshKit.underdeckCount()
+        if player:GetAttribute("LocalOriginalUnderdeckMeshCount") ~= underdecks then
+            player:SetAttribute("LocalOriginalUnderdeckMeshCount", underdecks)
+        end
 
         -- Rank at most eight approved, creator-owned imported Models by
         -- actual camera proximity. This makes REAL meshes visible on Android

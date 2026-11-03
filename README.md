@@ -1,5 +1,12 @@
 # Chaos Survival — Roblox
 
+## Original underdeck 3D approuvé et intégré — lot 3 novembre 2026
+
+Un modèle original de treillis, châssis industriel et groupes mécaniques de **3 072 vrais triangles**, en **sept matériaux**, a été créé puis approuvé par Roblox (Model **84582262145054**, [workflow #41644715829](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41644715829)). Le kit client existant fixe des copies purement visuelles **sous les vraies plateformes physiques** lorsque suffisamment grandes et sûres, en nombre strictement limité (Android **Low 0 / Medium 2 / High 4**). Aucun faux chemin, collision, lumière, API payante, nouveau polling ni téléchargement d'asset client.
+
+**État de publication :** intégration de code réalisée ; ne pas supposer que l'asset est visible publiquement avant le build, les cinq suites moteur Roblox et le workflow de publication réussis **sur le SHA exact**. L'audit Android des textures, silhouettes et FPS reste ouvert. [Dossier d'intégration et preuve de modération](docs/ORIGINAL_UNDERDECK_CHASSIS_SOURCE_AND_IMPORT_2026-11-03.md).
+
+
 ## Vrais ponts 3D sur les 26 paliers des promenades et Sky Spine — 3 novembre 2026
 
 **Grand lot de formes 3D :** les deux vraies passerelles panoramiques (16 paliers) et le Sky Spine (10 paliers) des cinq arènes peuvent désormais réutiliser les **véritables MeshParts de pont originaux approuvés Roblox**, et non seulement des cubes natifs. Le kit classe les objets à partir des vrais attributs serveur de route permanente et place les 3D en priorité **devant la caméra**, dans les quotas Android existants, sans modifier une seule collision ni créer de faux pont. Les quatre ponts Towers existants restent inchangés ; leurs dangers continuent de masquer immédiatement les habillages 3D.
