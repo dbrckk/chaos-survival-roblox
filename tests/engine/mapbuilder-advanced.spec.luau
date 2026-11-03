@@ -220,9 +220,12 @@ describe("Chaos Survival engine", function()
         local deck5, native5 = makeDeck(201, 5, 0)
         local deck6, native6 = makeDeck(202, 6, 24)
         local camera = Vector3.new(0, 20, 0)
+        -- Low Android now mounts one genuine near-camera crown, not a
+        -- permanent primitive-only fallback. Physical deck remains solid.
         SkySpineCrownMeshKit.sync(arena, camera, "Low", true)
-        expect(SkySpineCrownMeshKit.count()).toBe(0)
-        expect(native5.LocalTransparencyModifier).toBe(0)
+        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(native5.LocalTransparencyModifier).toBe(1)
+        expect(deck5.CanCollide).toBe(true)
 
         SkySpineCrownMeshKit.sync(arena, camera, "Medium", true,
             Vector3.new(0, 0, 1))
