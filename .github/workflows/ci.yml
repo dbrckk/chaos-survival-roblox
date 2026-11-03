@@ -140,10 +140,10 @@ jobs:
               if m["name"] in scenery_names
           }, "Original skyline 3D IDs diverged from approved registry"
           route_source = Path("src/server/PremiumRouteMeshAssets.lua").read_text()
-          route_block = re.search(r"local APPROVED = \\{(.*?)\\n\\}", route_source, re.S)
+          route_block = re.search(r"local APPROVED = \{(.*?)\n\}", route_source, re.S)
           assert route_block, "Missing real original jump/skybridge asset allowlist"
           route_ids = dict(re.findall(
-              r"(PremiumJumpDeck|PremiumSkybridgeModule)\\s*=\\s*(\\d+)",
+              r"(PremiumJumpDeck|PremiumSkybridgeModule)\s*=\s*(\d+)",
               route_block.group(1),
           ))
           approved = {m["name"]: m["asset_id"] for m in models}
