@@ -11,14 +11,21 @@ local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
 
--- Server-owned original meshes are purely decorative and have reliable
--- Roblox-native horizon fallback. Low-end Android never renders them;
--- Medium renders them near the arena, High renders them everywhere.
--- Reuse the one existing scenery LOD loop (no extra RenderStepped).
+-- Six APPROVED creator-owned real 3D mesh packages supply the distant
+-- skyline. Previously Low never showed any MeshPart and Medium's 140-stud
+-- distance hid them from most of a 320-stud arena, leaving players with
+-- only native fallback boxes. Use a strict camera-ranked residency budget:
+-- 1 nearest original on Low, 3 on Medium, all on High. No new assets, loops,
+-- remote fetches or PBR quota: this only controls already replicated meshes.
 local ORIGINAL_MESH_LOD = {
-    LowDistance = 0,
-    MediumDistance = 140,
+    LowDistance = 150,
+    MediumDistance = 245,
 }
+local ORIGINAL_MESH_HIDDEN = {
+    LowDistance = 0,
+    MediumDistance = 0,
+}
+local ORIGINAL_MESH_LIMIT = {Low = 1, Medium = 3, High = 8}
 
 -- The existing exterior fleet includes 4 gantries and one full cargo
 -- vessel. Low Android keeps ONLY the 14 structural cargo silhouette
@@ -429,12 +436,22 @@ task.spawn(function()
         local generated = workspace:FindFirstChild("GeneratedMap")
         local arena = generated and generated:FindFirstChild("Arena")
         local decor = arena and arena:FindFirstChild("Decor")
-        -- Cull imported MeshParts by EACH model pivot. These six approved
-        -- asset types are positioned outside the playable 320-stud floor:
-        -- arena-center culling hid even a nearby model on Android Medium.
-        -- Low still hides them, High still shows them, and no new loop runs.
-        for _, model in ipairs(SceneryLodRules.original3DVisualOwners(arena)) do
-            applyFolder(model, ORIGINAL_MESH_LOD,
+        -- Rank at most eight approved, creator-owned imported Models by
+        -- actual camera proximity. This makes REAL meshes visible on Android
+        -- rather than native fallback only, while permitting at most one
+        -- imported model on Low and three on Medium at any one time.
+        local imported = SceneryLodRules.original3DVisualOwners(arena)
+        table.sort(imported, function(a, b)
+            local da = (a:GetPivot().Position - cameraPoint).Magnitude
+            local db = (b:GetPivot().Position - cameraPoint).Magnitude
+            if da ~= db then return da < db end
+            return a.Name < b.Name
+        end)
+        local maxVisible = ORIGINAL_MESH_LIMIT[profile.Name] or 1
+        for index, model in ipairs(imported) do
+            applyFolder(model,
+                index <= maxVisible and ORIGINAL_MESH_LOD
+                    or ORIGINAL_MESH_HIDDEN,
                 profile, model:GetPivot().Position, cameraPoint)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
