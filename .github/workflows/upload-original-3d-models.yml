@@ -54,6 +54,7 @@ on:
           - underdeck_chassis
           - lobby_gate
           - sky_spine_crown
+          - arena_keel
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -108,7 +109,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -135,7 +136,7 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
-          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ] || [ "$CHOICE" = "underdeck_chassis" ] || [ "$CHOICE" = "lobby_gate" ] || [ "$CHOICE" = "sky_spine_crown" ]; then
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ] || [ "$CHOICE" = "underdeck_chassis" ] || [ "$CHOICE" = "lobby_gate" ] || [ "$CHOICE" = "sky_spine_crown" ] || [ "$CHOICE" = "arena_keel" ]; then
             echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
@@ -149,6 +150,10 @@ jobs:
           elif [ "$CHOICE" = "sky_spine_crown" ]; then
             python3 tools/generate_original_sky_spine_crown.py \
               --output assets/source/chaos_sky_spine_crown.obj
+          elif [ "$CHOICE" = "arena_keel" ]; then
+            # Creator-authored real triangulated under-arena keel; never a collider.
+            python3 tools/generate_original_arena_keel.py \
+              --output assets/source/chaos_arena_keel.obj
           elif [ "$CHOICE" = "underdeck_chassis" ]; then
             # Authored open-frame 3D sub-deck sculpture, never a gameplay Part.
             python3 tools/generate_original_underdeck_chassis.py \
@@ -230,7 +235,8 @@ jobs:
                    "skyfleet_carrier": "Chaos Original Colossal 3D Skyfleet Carrier",
                    "underdeck_chassis": "Chaos Original 3D Underslung Engineering Chassis",
                    "lobby_gate": "Chaos Original Sculpted Arena Lobby Gate 3D",
-                   "sky_spine_crown": "Chaos Sky Spine Crown 3D"}
+                   "sky_spine_crown": "Chaos Sky Spine Crown 3D",
+                   "arena_keel": "Chaos Sculpted Arena Keel 3D"}
           display_name = names[os.environ["CHOICE"]]
           # Roblox returned INVALID_ARGUMENT "Asset name length is invalid"
           # on 3 Nov 2026 for the previous 54-character Sky Spine name.
