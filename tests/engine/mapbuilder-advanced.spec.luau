@@ -529,9 +529,11 @@ describe("Chaos Survival engine", function()
         PremiumGroundMeshKit.sync(arena, camera, "Low", true)
         expect(PremiumGroundMeshKit.count()).toBe(1)
         PremiumGroundMeshKit.sync(arena, camera, "Medium", true)
-        expect(PremiumGroundMeshKit.count()).toBe(3)
+        expect(PremiumGroundMeshKit.count()).toBe(5)
         PremiumGroundMeshKit.sync(arena, camera, "High", true)
-        expect(PremiumGroundMeshKit.count()).toBe(6)
+        -- The small fixture contains eight eligible panels; High permits
+        -- twelve real 3D modules in a complete 36-panel arena.
+        expect(PremiumGroundMeshKit.count()).toBe(8)
         local cosmeticBucket = workspace:FindFirstChild("OriginalPremiumGroundMeshesLocal")
         expect(cosmeticBucket ~= nil).toBe(true)
         for _, clone in ipairs(cosmeticBucket:GetChildren()) do
