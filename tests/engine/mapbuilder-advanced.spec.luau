@@ -6,6 +6,7 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
+local SkySpineCrownMeshKit = require("../../src/client/SkySpineCrownMeshKit")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
@@ -143,6 +144,120 @@ describe("Chaos Survival engine", function()
         expect(deck.CanCollide).toBe(true)
         expect(bridge.CanCollide).toBe(true)
         PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
+        arena:Destroy()
+        holder:Destroy()
+    end)
+    it("places owner-approved Sky Spine 3D only on real center interchange decks, preserving safe native fallback", function()
+        -- The approved production Model ID and 1,696 real triangles are
+        -- source/asset gated by build and Roblox upload #41660854748.
+        -- This actual-engine scene checks collision, metadata, placement,
+        -- LOD budgets, warning invisibility and native reappearance, not
+        -- speculative network moderation or an Android screenshot.
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local holder = Instance.new("Folder")
+        holder.Name = "PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+        local source = Instance.new("Model")
+        source.Name = "OriginalSkySpineCrown"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("PremiumSkySpineCrown3D", true)
+        source:SetAttribute("Original3DAssetId", 71492051540032)
+        local imported = Instance.new("MeshPart")
+        imported.Name = "ApprovedSourceBounds"
+        imported.Size = Vector3.new(18.8, 20.52, 3.86)
+        imported.Anchored = true
+        imported.Parent = source
+        source.Parent = holder
+
+        local arena = Instance.new("Folder")
+        arena.Name = "SkySpineOriginal3DEngineArena"
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.Anchored = true
+        base.Parent = arena
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+
+        local function makeDeck(index, step, offset)
+            local deck = Instance.new("Part")
+            deck.Name = "Platform" .. index
+            deck.Position = Vector3.new(0, 15, offset)
+            deck.Size = Vector3.new(12, 2, 20)
+            deck.Anchored = true
+            deck.CanCollide = true
+            deck:SetAttribute("ChaosPermanentRoute", true)
+            deck:SetAttribute("SkySpineInterchange", true)
+            deck:SetAttribute("SkySpineStep", step)
+            deck.Parent = platforms
+            local crown = Instance.new("Part")
+            crown.Name = "SkySpine" .. index .. "_InterchangeCrown"
+            crown.Anchored = true
+            crown.CanCollide = false
+            crown:SetAttribute("SkySpineDecor", true)
+            crown:SetAttribute("PerimeterPlatformIndex", index)
+            crown.Parent = decor
+            return deck, crown
+        end
+        local deck5, native5 = makeDeck(201, 5, 0)
+        local deck6, native6 = makeDeck(202, 6, 24)
+        local camera = Vector3.new(0, 20, 0)
+        SkySpineCrownMeshKit.sync(arena, camera, "Low", true)
+        expect(SkySpineCrownMeshKit.count()).toBe(0)
+        expect(native5.LocalTransparencyModifier).toBe(0)
+
+        SkySpineCrownMeshKit.sync(arena, camera, "Medium", true,
+            Vector3.new(0, 0, 1))
+        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(native5.LocalTransparencyModifier).toBe(1)
+        expect(native6.LocalTransparencyModifier).toBe(0)
+        expect(deck5.CanCollide).toBe(true)
+        local localMeshes = workspace:FindFirstChild("OriginalSkySpineCrownLocal")
+        expect(localMeshes ~= nil).toBe(true)
+        local crownModel = localMeshes:FindFirstChild("OriginalApprovedSkySpineCrown3D")
+        expect(crownModel ~= nil).toBe(true)
+        expect(crownModel:GetAttribute("Original3DAssetId")).toBe(71492051540032)
+        for _, part in ipairs(crownModel:GetDescendants()) do
+            if part:IsA("BasePart") then
+                expect(part:IsA("MeshPart")).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.CastShadow).toBe(false)
+            end
+        end
+
+        deck5:SetAttribute("CollapsePhase", "Warning")
+        -- Must react immediately to the real hazard BEFORE the next LOD tick.
+        expect(native5.LocalTransparencyModifier).toBe(0)
+        local geom = crownModel:FindFirstChildWhichIsA("MeshPart", true)
+        expect(geom.LocalTransparencyModifier).toBe(1)
+        SkySpineCrownMeshKit.sync(arena, camera, "Medium", true)
+        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(native6.LocalTransparencyModifier).toBe(1)
+        deck5:SetAttribute("CollapsePhase", "Normal")
+        SkySpineCrownMeshKit.sync(arena, camera, "High", true)
+        expect(SkySpineCrownMeshKit.count()).toBe(2)
+        expect(native5.LocalTransparencyModifier).toBe(1)
+        expect(native6.LocalTransparencyModifier).toBe(1)
+
+        -- A false physical platform cannot gain a cosmetic fake arch.
+        deck5:SetAttribute("ChaosPermanentRoute", false)
+        expect(native5.LocalTransparencyModifier).toBe(0)
+        SkySpineCrownMeshKit.sync(arena, camera, "High", true)
+        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(deck5.CanCollide).toBe(true)
+        base.Size = Vector3.new(230, 2, 230)
+        expect(native6.LocalTransparencyModifier).toBe(0)
+        expect(SkySpineCrownMeshKit.count()).toBe(0)
+        SkySpineCrownMeshKit.sync(nil, Vector3.zero, "Low", false)
         arena:Destroy()
         holder:Destroy()
     end)
