@@ -270,16 +270,28 @@ local function rebuild()
                 local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
                 local orientation = CFrame.Angles(0, -angle, 0)
                 for _, half in ipairs({"Inner", "Outer"}) do
-                    local segmentCenter = radius * (half == "Inner" and .25 or .75)
-                    makePart(
+                    local outer = half == "Outer"
+                    local segmentCenter = radius * (outer and .75 or .25)
+                    -- Radial outer drive arms now receive genuine approved
+                    -- seven-material MeshParts instead of neon-colored
+                    -- 27-stud native bars; inner arms stay as exact safe
+                    -- fallbacks until the central keel can hide them.
+                    local beam = makePart(
                         "UnderOrbital" .. half .. "Spoke" .. i,
-                        Vector3.new(radius * .5, .70, 1.30),
+                        outer and Vector3.new(23.3, 2.2, 9.0)
+                            or Vector3.new(radius * .5, .70, 1.30),
                         CFrame.new(center + radial * segmentCenter
-                            + Vector3.new(0, -7.5, 0)) * orientation,
+                            + Vector3.new(0,
+                                outer and (-base.Size.Y * .5 - 4.35) or -7.5,
+                                0)) * orientation,
                         i % 3 == 0 and theme.Secondary or theme.Detail,
-                        i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                        i % 3 == 0 and .58 or .18
+                        outer and Enum.Material.Metal
+                            or (i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal),
+                        outer and .20 or (i % 3 == 0 and .58 or .18)
                     )
+                    if outer then
+                        beam:SetAttribute("OriginalUnderstructureBeam", true)
+                    end
                 end
             end
         end
