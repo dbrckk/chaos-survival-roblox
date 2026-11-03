@@ -445,7 +445,8 @@ task.spawn(function()
         -- the SAME existing camera-tier loop owns all local MeshPart
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
-        PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+        PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
+            cameraReady, cameraLook)
         -- Five-arena original 2,976-triangle industrial floor: share the
         -- existing 0.65/0.90s camera cadence instead of another loop.
         -- Low = 1, Medium = 3, High = 6 original approved local tiles;
