@@ -9,6 +9,7 @@ local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
+local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonumentMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
@@ -605,6 +606,25 @@ task.spawn(function()
                         profile, landmark:GetPivot().Position, cameraPoint)
                 end
             end
+        end
+        -- On the same camera pass, replace the four corner towers'
+        -- primitive silhouettes with REAL approved observatory/freight/
+        -- turbine/aerial MeshParts. Preserve foundation and original
+        -- native fallback if source, streaming or shrink is unavailable.
+        ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, cameraLook)
+        local cornerModels = ApprovedCornerMonumentMeshKit.count()
+        if player:GetAttribute("LocalOriginalCornerMonumentCount")
+            ~= cornerModels then
+            player:SetAttribute("LocalOriginalCornerMonumentCount",
+                cornerModels)
+        end
+        local nativeCornersReplaced =
+            ApprovedCornerMonumentMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalCornerPiecesReplaced")
+            ~= nativeCornersReplaced then
+            player:SetAttribute("LocalOriginalCornerPiecesReplaced",
+                nativeCornersReplaced)
         end
         -- Four original peripheral facade retrofits have genuine individual
         -- positions; reuse the existing district architecture LOD sampler.
