@@ -17,7 +17,7 @@ import re
 import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SHARDS = ("gameplay", "matrix", "core_a", "core_b1", "core_b2")
+SHARDS = ("gameplay_hazards", "gameplay_world", "gameplay_rounds", "matrix", "core_a", "core_b1", "core_b2")
 MAX_FILES_PER_BATCH = 4
 MAX_SOURCE_BYTES = 105_000
 TERMINATOR = re.compile(r"\nreturn\s+nil\s*\Z")
@@ -101,7 +101,7 @@ def generate(source_config: pathlib.Path, output_config: pathlib.Path) -> None:
             f"extra={sorted(seen - actual)}"
         )
 
-    # Keep the exact same five named suites and target Roblox universe/place,
+    # Keep all seven named suites and the same Roblox universe/place,
     # only replacing 73 original spec entries with fewer generated specs.
     output_lines = []
     for shard in SHARDS:
