@@ -906,16 +906,34 @@ local function addArenaFoundation(decor, config, variant, theme)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
 
-    local undercarriage = decorPart(
-        decor,
-        "ArenaUndercarriage",
-        Vector3.new(math.max(8, baseSize.X - 5), 2.4, math.max(8, baseSize.Z - 5)),
-        center + Vector3.new(0, -2.1, 0),
-        theme.Structure,
-        VisualTheme.Materials.Structure
-    )
-    undercarriage.Transparency = 0.04
-    undercarriage:SetAttribute("PremiumArchitecturalSurface", true)
+    -- The previous 315 x 315 x 2.4 decorative brick visually swallowed
+    -- the source-authentic sculpted keel and underside beam MeshParts.
+    -- Keep the nonphysical foundation identity, but make it an OPEN
+    -- manufactured load frame: no giant generic slab, no fake floor and
+    -- no overlapping walkable collision. Its slim native steel rails are
+    -- only a graceful fallback if the owner-approved 3D art is unavailable.
+    local undercarriage = Instance.new("Model")
+    undercarriage.Name = "ArenaUndercarriage"
+    undercarriage:SetAttribute("CosmeticOnly", true)
+    undercarriage.Parent = decor
+    local insetX = math.max(4, baseSize.X * 0.5 - 3.0)
+    local insetZ = math.max(4, baseSize.Z * 0.5 - 3.0)
+    for side = -1, 1, 2 do
+        local northSouth = decorPart(
+            undercarriage, "FoundryX" .. tostring(side),
+            Vector3.new(math.max(8, baseSize.X - 12), 2.2, 2.8),
+            center + Vector3.new(0, -2.25, side * insetZ),
+            theme.Structure, VisualTheme.Materials.Structure)
+        northSouth.Transparency = 0.06
+        northSouth:SetAttribute("PremiumArchitecturalSurface", true)
+        local eastWest = decorPart(
+            undercarriage, "FoundryZ" .. tostring(side),
+            Vector3.new(2.8, 2.2, math.max(8, baseSize.Z - 12)),
+            center + Vector3.new(side * insetX, -2.25, 0),
+            theme.Structure, VisualTheme.Materials.Structure)
+        eastWest.Transparency = 0.06
+        eastWest:SetAttribute("PremiumArchitecturalSurface", true)
+    end
 
     local deckInset = decorPart(
         decor,
