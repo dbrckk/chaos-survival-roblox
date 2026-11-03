@@ -83,6 +83,38 @@
       "moderation": "Approved",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41622860616
+    },
+    {
+      "name": "district_observatory",
+      "asset_id": "132020956214241",
+      "source": "assets/source/chaos_district_observatory.obj",
+      "moderation": "Approved",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41629861517
+    },
+    {
+      "name": "district_freight",
+      "asset_id": "88725004643299",
+      "source": "assets/source/chaos_district_freight.obj",
+      "moderation": "Approved",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41629861517
+    },
+    {
+      "name": "district_turbine",
+      "asset_id": "84217436280282",
+      "source": "assets/source/chaos_district_turbine.obj",
+      "moderation": "Approved",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41629861517
+    },
+    {
+      "name": "district_aerial",
+      "asset_id": "135791763112202",
+      "source": "assets/source/chaos_district_aerial.obj",
+      "moderation": "Approved",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41629861517
     }
   ]
 }
