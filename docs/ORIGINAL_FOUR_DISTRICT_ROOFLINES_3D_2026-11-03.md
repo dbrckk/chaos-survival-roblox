@@ -1,6 +1,6 @@
 # Chaos Survival — quatre véritables façades/toitures 3D originales
 
-**3 novembre 2026.** Cible : **VIS-011 / VIS-032 / VIS-029** et remplacement des bâtiments Roblox génériques par des meshes industriels modulaires de qualité vérifiable. Le lot crée et valide de nouvelles sources 3D, **sans prétendre à leur présence en jeu avant approbation Roblox et intégration runtime**.
+**3 novembre 2026.** Cible : **VIS-011 / VIS-032 / VIS-029**. La première étape a produit et validé quatre sources originales ; **l'étape d'import a ensuite réussi et les quatre nouveaux assets ont été approuvés par Roblox**. L'intégration au runtime est traitée dans le lot source suivant, et **aucune nouvelle publication publique ni capture Android n'est encore certifiée pour celui-ci**.
 
 ## Art 3D original produit et techniquement validé
 
@@ -39,3 +39,29 @@ Il faut collecter pour chaque asset **le véritable ID Model et la modération `
 - Au jalon de livraison **sur SHA exact** : Luau + Rojo, Build Validation, cinq suites moteur Cloud, publication uniquement après réussite, captures authentiques Studio/Android sur les cinq arènes en Low/Medium/High et mesure FPS/mémoire.
 
 **À ce stade, la production des sources et leur conversion sont vérifiées ; la modération Roblox, les IDs propriétaires, l'insertion runtime et le contrôle sur téléphone sont des étapes distinctes qui ne peuvent être cochées sans preuve.**
+
+## Import Roblox réellement confirmé après l'étape source
+
+Le workflow ponctuel [#41629861517](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629861517) a terminé **avec succès** les quatre jobs séquentiels le 3 novembre 2026. Les logs de chaque job prouvent le vrai résultat AssetService/Open Cloud et la modération `Approved` :
+
+| Famille | ID Model officiel | Job de preuve |
+| --- | ---: | ---: |
+| Observatoire | `132020956214241` | `125896379760` |
+| Fret | `88725004643299` | `125896565265` |
+| Turbines | `84217436280282` | `125896733257` |
+| Communications | `135791763112202` | `125896917704` |
+
+Le registre `assets/source/roblox-asset-registry.json` est étendu de 9 à **13 vrais packages Model approuvés** après la preuve d'import, sans fabriquer des IDs de MeshPart.
+
+### Intégration réelle dans le runtime
+
+- `DistrictRooflineAssets.lua` utilise uniquement ces quatre IDs approuvés et **le sanitizer existant** `OriginalMeshScenery.sanitize`, réplique les templates sûrs dans `ReplicatedStorage` et charge la série dans un unique worker asynchrone non bloquant.
+- `DistrictRooflineMeshKit.lua` apparie chaque profil `DistrictProfile=1..4` au véritable mesh original (observatoire/fret/turbine/communications) sur les modèles `ArenaDistrictArchitecture3D`, sans copier de geometry importée dans le serveur de gameplay.
+- Chaque modèle 3D se place sur l'ancrage réel de `ServiceEntryDoor`, sans collision/Touch/Query ni ombre. Le profil de fret est reculé pour protéger les quatre signes de secteur existants. Aucun écran de sécurité ni collider du serveur n'est remplacé.
+- **Plafonds fixes : Low 1 / Medium 2 / High 4 modèles,** rétention petite et priorité à la caméra. Toutes les nouvelles MeshParts sont recensées dans `OriginalDistrictRooflinesLocal` du budget graphique partagé ; aucun nouveau cycle par frame.
+- Première diminution de la taille de l'arène et déplacement/stream-out d'une porte : retirer/cacher les clones immédiatement. Changement d'arène : vider les anciennes pièces ; asset non disponible : modèle natif inchangé.
+- Le build de référence inclut maintenant la génération/validation des quatre nouveaux glTF, **13 IDs approuvés** et le contrôle que le registre correspond réellement aux IDs source.
+
+### Limites avant certification AAA
+
+La présence dans GitHub **n'atteste pas** que les nouveaux modèles ont été visibles sur une partie Roblox publique ou physiquement inspectés depuis Android. La prochaine release exige les mêmes contrôles *exact-SHA* que les précédentes (Rojo/Luau, cinq suites moteur Roblox Cloud, éditeur public gardé) et les captures Android/Studio restent nécessaires pour vérifier orientation, ombrage, signalétique, premier plan et qualité des textures. Ces modèles possèdent des UV/tangentes et des facteurs PBR mais **pas encore quatre normal maps 2K propres et mesurées sur smartphone**.
