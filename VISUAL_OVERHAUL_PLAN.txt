@@ -34,6 +34,15 @@ LOT 3 NOVEMBRE 2026 — SOCLES AUTHENTIQUES DES MONUMENTS EXTERIEURS
          build Cloud, la publication publique ni la validation Android.
          Voir docs/ORIGINAL_3D_EXTERIOR_FOUNDATION_REPLACEMENT_2026-11-03.md
 
+LOT 3 NOVEMBRE 2026 — CINQ VRAIES MACHINES INDUSTRIELLES 3D
+[QA]     VIS-024 : source OBJ originaux caméra Classic, locker Towers, signal
+         Crossroads, cellule Orbital et amarrage Harbor. Cinq modèles Roblox
+         créateur approuvés #41729439190, allowlist serveur et montage des
+         vrais MeshParts dans ArenaServicePropsLocal avec fallback natif.
+         Limites Low 1 / Medium 2 / High 4. Aucun collider ni boucle en plus.
+         Reste à certifier Build/Cloud et rendu Android, pas encore public.
+         docs/ORIGINAL_FIVE_ARENA_SERVICE_MESHES_2026-11-03.md
+
 PHASE 1 — DIRECTION ARTISTIQUE ET FONDATIONS
 -------------------------------------------
 [FAIT]     1.1 Créer une palette centrale Neon Chaos Arena.
