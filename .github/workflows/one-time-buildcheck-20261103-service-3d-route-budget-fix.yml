@@ -1,0 +1,33 @@
+# Source-only release milestone. This workflow does NOT run Roblox Cloud
+# nor upload/publish the existing public place. Triggered once, exact path.
+name: One-time Source Build Check 2026-11-03 Service 3D Route Budget Repair
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-buildcheck-20261103-service-3d-route-budget-fix.yml
+permissions:
+  contents: read
+  actions: write
+jobs:
+  start-build:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispatch build and pinned Luau parser only; NO PUBLICATION
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ACTUAL="$(gh api "repos/$REPO/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$HEAD_SHA" != "$ACTUAL" ]; then
+            echo "::error::Ref moved. Refusing stale build check."; exit 1
+          fi
+          gh api --method POST "repos/$REPO/actions/workflows/ci.yml/dispatches" -f ref=main
+          echo "Source Build Validation dispatched for exact main SHA $HEAD_SHA. No Cloud test or Roblox publish."
