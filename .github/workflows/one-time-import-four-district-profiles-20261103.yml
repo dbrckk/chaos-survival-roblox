@@ -1,0 +1,66 @@
+# Authorized once-only source-to-Roblox import: four original creator-owned
+# district roofline/facade 3D meshes. Real source UV/tangents validated by
+# GitHub workflow 41629230431 before this file was created.
+# This workflow NEVER publishes or modifies the playable Roblox place.
+# Each dependent job prevents burst AssetService/moderation rate limits.
+name: One-time Import Four Original District 3D Meshes 2026-11-03
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-four-district-profiles-20261103.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-district-3d-source-import-once-20261103
+  cancel-in-progress: false
+jobs:
+  original-district-observatory:
+    name: Import original observatory building facade
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: district_observatory
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+
+  original-district-freight:
+    name: Import original freight building facade
+    needs: [original-district-observatory]
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: district_freight
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+
+  original-district-turbine:
+    name: Import original turbine building facade
+    needs: [original-district-freight]
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: district_turbine
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+
+  original-district-aerial:
+    name: Import original aerial building facade
+    needs: [original-district-turbine]
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: district_aerial
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
