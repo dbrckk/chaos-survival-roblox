@@ -7,6 +7,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 local PremiumFloorReliefMeshKit = require(script.Parent.PremiumFloorReliefMeshKit)
+local PremiumFloorHardwareMeshKit = require(script.Parent.PremiumFloorHardwareMeshKit)
 local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
 
 local player = Players.LocalPlayer
@@ -27,6 +28,9 @@ local function clear()
     folder:ClearAllChildren()
     if player:GetAttribute("LocalOriginalFloorRelief3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalFloorRelief3DCount", 0)
+    end
+    if player:GetAttribute("LocalOriginalFloorHardware3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalFloorHardware3DCount", 0)
     end
 end
 
@@ -441,8 +445,20 @@ local function rebuild()
         ~= originalCount then
         player:SetAttribute("LocalOriginalFloorRelief3DCount", originalCount)
     end
-    -- The existing ONE base.Size listener follows genuine floor MeshParts
-    -- and native art together; no extra RenderStepped or hazard owner.
+    -- On Medium/High ALL remaining local primitive floor detail families
+    -- (corner WedgeParts, circular fasteners, Harbor berth tie-downs) are
+    -- substituted by actual owner-approved sculpted MeshParts as well.
+    -- Both kits must run BEFORE the same one Base.Size shrink snapshot.
+    local hardwareCount = PremiumFloorHardwareMeshKit.install(
+        folder, base, variant, tier.Name,
+        camera and camera.CFrame.Position or nil
+    )
+    if player:GetAttribute("LocalOriginalFloorHardware3DCount")
+        ~= hardwareCount then
+        player:SetAttribute("LocalOriginalFloorHardware3DCount", hardwareCount)
+    end
+    -- The existing ONE base.Size listener follows both genuine floor
+    -- MeshPart families and native fallback without any extra loop.
     stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
 end
 
@@ -508,7 +524,13 @@ local function bindReliefTemplates(holder)
                 player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
             local needed = tier.Name == "Low" and "Essential"
                 or tostring(variant or "Classic")
-            if child.Name == needed then scheduleRefresh() end
+            if child.Name == needed
+                or tier.Name ~= "Low" and child.Name == "AnchorBolt"
+                or tier.Name == "High" and child.Name == "CornerGuard"
+                or tier.Name == "High" and variant == "Harbor"
+                    and child.Name == "HarborTie" then
+                scheduleRefresh()
+            end
         end
         reliefTemplateConnections[#reliefTemplateConnections + 1] =
             holder.ChildAdded:Connect(changed)
