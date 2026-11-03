@@ -176,7 +176,7 @@ local function mount(building, district, base, slot, door, source)
     return entry
 end
 
-function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady)
+function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -186,26 +186,60 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
         clear()
         return
     end
+    local base = arena:FindFirstChild("Base")
     local decor = arena:FindFirstChild("Decor")
     local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
-    if not district or not district:IsA("Folder") then
+    if not base or not base:IsA("BasePart")
+        or not district or not district:IsA("Folder")
+        or base.Size.X < 318 or base.Size.Z < 318 then
         clear()
         return
     end
+    if base ~= watchedBase then
+        if baseChanged then baseChanged:Disconnect() end
+        watchedBase = base
+        baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
+            if base.Size.X < 318 or base.Size.Z < 318 then
+                clearMounted()
+            end
+        end)
+    end
+
+    local look = typeof(cameraLook) == "Vector3"
+        and Vector3.new(cameraLook.X, 0, cameraLook.Z)
+        or Vector3.zero
+    local hasFacing = look.Magnitude > 0.2
+    if hasFacing then look = look.Unit end
+
     local candidates = {}
     for _, building in ipairs(district:GetChildren()) do
         local slot, door = eligible(building, district)
         if slot and template(slot) then
-            local distance = (door.Position - cameraPoint).Magnitude
-            if distance <= budget.distance then
+            local delta = door.Position - cameraPoint
+            local distance = delta.Magnitude
+            local resident = mounted[building] ~= nil
+            -- The existing model gets a small *exit-only* margin; new
+            -- assets still enter within the previous strict camera range.
+            if distance <= budget.distance
+                + (resident and budget.retention or 0) then
+                local priority = distance
+                    - (resident and budget.retention * 0.55 or 0)
+                local horizontal = Vector3.new(delta.X, 0, delta.Z)
+                if hasFacing and horizontal.Magnitude > 42
+                    and horizontal.Unit:Dot(look) < -0.15 then
+                    -- Prefer true original 3D facades on screen rather
+                    -- than spending precious Android meshes behind camera.
+                    priority += 80
+                end
                 candidates[#candidates + 1] = {
                     building = building, slot = slot, door = door,
-                    distance = distance,
+                    distance = distance, priority = priority,
                 }
             end
         end
     end
     table.sort(candidates, function(a, b)
+        if a.priority ~= b.priority then return a.priority < b.priority end
         if a.distance ~= b.distance then return a.distance < b.distance end
         return a.building.Name < b.building.Name
     end)
@@ -216,15 +250,15 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
     for building, entry in pairs(mounted) do
         local desired = wanted[building]
         if not desired or desired.slot ~= entry.slot
-            or not valid(entry, district) then
-            entry.model:Destroy()
+            or not valid(entry, district, base) then
+            dispose(entry)
             mounted[building] = nil
         end
     end
     for building, desired in pairs(wanted) do
         if not mounted[building] then
-            mounted[building] = mount(building, district, desired.slot,
-                desired.door, template(desired.slot))
+            mounted[building] = mount(building, district, base,
+                desired.slot, desired.door, template(desired.slot))
         end
     end
 end
