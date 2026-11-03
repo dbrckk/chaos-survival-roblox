@@ -1,0 +1,66 @@
+name: One-shot Original Skyfleet Carrier 3D Art Source Gate
+on:
+  push:
+    branches: [feat/original-premium-skyfleet-carrier-mesh-20261103]
+    paths: [.github/workflows/one-shot-original-colossal-skyfleet-art-20261103.yml]
+permissions:
+  contents: read
+jobs:
+  source-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate the original 3D sculpted carrier and inspect full OBJ
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/skycarrier
+          python3 tools/generate_original_skyfleet_carrier.py \
+            --output build/skycarrier/chaos_skyfleet_carrier.obj \
+            > build/skycarrier/geometry.json
+          cat build/skycarrier/geometry.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("build/skycarrier/geometry.json").read_text())
+          assert 1400 <= data["triangles"] <= 11000
+          assert data["dimensions"][0] > 45
+          assert data["dimensions"][1] > 12
+          assert data["dimensions"][2] > 45
+          assert len(data["materials"]) == 7
+          PY
+      - name: Validate embedded true glTF 2 PBR and complete UV tangent topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/obj_to_gltf.py \
+            --source build/skycarrier/chaos_skyfleet_carrier.obj \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output build/skycarrier/chaos_skyfleet_carrier.gltf \
+            > build/skycarrier/export.json
+          python3 - <<'PY'
+          import base64,json
+          from pathlib import Path
+          f=Path("build/skycarrier")
+          report=json.loads((f/"geometry.json").read_text())
+          gltf=json.loads((f/"chaos_skyfleet_carrier.gltf").read_text())
+          assert gltf["asset"]["version"]=="2.0"
+          raw=base64.b64decode(gltf["buffers"][0]["uri"].split(",",1)[1],validate=True)
+          assert len(raw)==gltf["buffers"][0]["byteLength"]
+          prim=gltf["meshes"][0]["primitives"]
+          assert len(prim)==7
+          assert sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"]//3 for p in prim)==report["triangles"]
+          for p in prim:
+              assert p["mode"]==4
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(p["attributes"])
+              counts={gltf["accessors"][a]["count"] for a in p["attributes"].values()}
+              assert len(counts)==1
+          print("Original 3D skycarrier validated; all true triangle UVs/tangents present.")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-skyfleet-carrier-obj-gltf-source
+          path: build/skycarrier/
+          retention-days: 14
+          if-no-files-found: error
