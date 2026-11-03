@@ -7,6 +7,7 @@ local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
+local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
@@ -488,6 +489,16 @@ task.spawn(function()
                 profile, scenery:GetPivot().Position, cameraPoint)
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
+        -- The 16 original native facades now gain a bounded set of TRUE,
+        -- creator-approved imported 3D industrial portal MeshParts at close
+        -- range. A single existing LOD owner selects at most 1/2/4.
+        -- All original server-authored doors remain visible if unavailable.
+        DistrictGatewayMeshKit.sync(arena, cameraPoint, profile.Name,
+            cameraReady, cameraLook)
+        local gatewayCount = DistrictGatewayMeshKit.count()
+        if player:GetAttribute("LocalOriginalGatewayMeshCount") ~= gatewayCount then
+            player:SetAttribute("LocalOriginalGatewayMeshCount", gatewayCount)
+        end
         local localFacadeParts = 0
         if district and district:IsA("Folder") then
             for _, structure in ipairs(district:GetChildren()) do
