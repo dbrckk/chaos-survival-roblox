@@ -357,8 +357,89 @@ function OriginalMeshScenery.addFoundation(model, assetName, target, size)
         p:SetAttribute("OriginalFoundationVisual", true)
         p.Parent = model
     end
+    -- The four original square foundation blocks above were still visible
+    -- as raw primitive pedestals beneath genuine approved 3D MeshParts.
+    -- Each imported asset now receives a dimensional structural load frame:
+    -- diagonal bracing, inset metallic rails and compact corner machinery.
+    -- Every part remains entirely below the imported mesh bounding box,
+    -- decorative/noncolliding and inside its existing atomic LOD model.
+    local braces = {
+        reactor_spire = {profile = "radial", height = 3.0},
+        service_crane = {profile = "industrial", height = 2.4},
+        perimeter_gate = {profile = "industrial", height = 2.7},
+        plasma_foundry = {profile = "industrial", height = 3.1},
+        sky_transit_exchange = {profile = "radial", height = 2.8},
+        orbital_halo_array = {profile = "radial", height = 2.6},
+    }
+    local frame = braces[assetName]
+    local minimumSpan = math.min(size.X, size.Z)
+    local details = 0
+    if frame and minimumSpan >= 5 then
+        local height = frame.height
+        local armX = math.max(2.0, size.X * 0.42)
+        local armZ = math.max(2.0, size.Z * 0.42)
+        local function detail(name, dimensions, offset, color, material, wedge)
+            local p = Instance.new(wedge and "WedgePart" or "Part")
+            p.Name = name
+            p.Size = dimensions
+            p.CFrame = target * offset
+            p.Material = material
+            p.Color = color
+            p.Transparency = 0.035
+            p.Anchored = true
+            p.CanCollide = false
+            p.CanTouch = false
+            p.CanQuery = false
+            p.CastShadow = false
+            p.TopSurface = Enum.SurfaceType.Smooth
+            p.BottomSurface = Enum.SurfaceType.Smooth
+            p:SetAttribute("OriginalFoundationVisual", true)
+            p.Parent = model
+            details += 1
+        end
+        -- A load-bearing-looking I-beam under the approved mesh,
+        -- offset from the mesh by >=0.12 studs. No fake climbable steps.
+        local braceY = -halfY - 1.9
+        local steel = accent:Lerp(Color3.fromRGB(34, 44, 59), 0.32)
+        local rim = accent:Lerp(Color3.fromRGB(181, 191, 196), 0.22)
+        detail("OriginalChassisFrontIBeam",
+            Vector3.new(armX * 2, 0.52, 0.68),
+            CFrame.new(0, braceY, -armZ * 0.75),
+            steel, Enum.Material.DiamondPlate, false)
+        detail("OriginalChassisRearIBeam",
+            Vector3.new(armX * 2, 0.52, 0.68),
+            CFrame.new(0, braceY, armZ * 0.75),
+            steel, Enum.Material.DiamondPlate, false)
+        for _, side in ipairs({-1, 1}) do
+            local sideOffset = side * armX * 0.83
+            detail("OriginalTaperedLoadButtress" .. tostring(side),
+                Vector3.new(1.1, height, math.max(2.3, armZ * 1.1)),
+                CFrame.new(sideOffset, -halfY - 2.2, 0)
+                    * CFrame.Angles(0, side * math.rad(14), 0),
+                rim, Enum.Material.CorrodedMetal, true)
+            detail("OriginalVerticalServiceRail" .. tostring(side),
+                Vector3.new(0.38, 2.9, math.max(1.2, armZ * 0.72)),
+                CFrame.new(sideOffset * 0.70, -halfY - 2.35, 0),
+                steel, Enum.Material.Metal, false)
+        end
+        if frame.profile == "radial" then
+            -- Unique radial cooling equipment for reactor, orbital and
+            -- sky-transit packages, not identical mass-produced boxes.
+            detail("OriginalRadialHeatExchanger",
+                Vector3.new(math.max(2.0, armX * 0.66), 0.50,
+                    math.max(2.0, armZ * 0.66)),
+                CFrame.new(0, -halfY - 4.7, 0),
+                rim, Enum.Material.Foil, false)
+        else
+            detail("OriginalIndustrialServiceManifold",
+                Vector3.new(math.max(2.0, armX * 0.84), 0.58,
+                    math.max(2.0, armZ * 0.58)),
+                CFrame.new(0, -halfY - 4.7, 0),
+                steel, Enum.Material.DiamondPlate, false)
+        end
+    end
     model:SetAttribute("OriginalFoundationBuilt", true)
-    return #specs
+    return #specs + details
 end
 
 -- Idempotent on the same live arena. The original native horizon and
