@@ -29,11 +29,12 @@ jobs:
           set -euo pipefail
           mkdir -p build/mesh-previews
           python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
-          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile; do
+          python3 tools/generate_district_profile_meshes.py --output-dir assets/source
+          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
               palette="assets/source/chaos_perimeter_gate.mtl"
-            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ]; then
+            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ] || [[ "$model" == district_* ]]; then
               palette="assets/source/chaos_route_kit.mtl"
             fi
             python tools/obj_to_gltf.py \
@@ -54,7 +55,8 @@ jobs:
           for name in ("reactor_spire", "service_crane", "perimeter_gate",
                        "plasma_foundry", "sky_transit_exchange", "orbital_halo_array",
                        "premium_jump_deck", "premium_skybridge_module",
-                        "premium_ground_tile"):
+                       "premium_ground_tile", "district_observatory",
+                       "district_freight", "district_turbine", "district_aerial"):
               gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
@@ -116,7 +118,11 @@ jobs:
               "plasma_foundry", "sky_transit_exchange", "orbital_halo_array"
           }
           route_names = {"premium_jump_deck", "premium_skybridge_module", "premium_ground_tile"}
-          assert {m["name"] for m in models} == scenery_names | route_names
+          district_names = {
+              "district_observatory", "district_freight",
+              "district_turbine", "district_aerial"
+          }
+          assert {m["name"] for m in models} == scenery_names | route_names | district_names
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -154,10 +160,24 @@ jobs:
               "PremiumSkybridgeModule": approved["premium_skybridge_module"],
               "PremiumGroundTile": approved["premium_ground_tile"],
           }, "Approved production 3D route IDs do not match runtime allowlist"
+          district_source = Path("src/server/DistrictRooflineAssets.lua").read_text()
+          district_block = re.search(r"local APPROVED = \{(.*?)\n\}", district_source, re.S)
+          assert district_block, "Missing newly approved real building mesh allowlist"
+          district_ids = dict(re.findall(
+              r"(DistrictObservatory|DistrictFreight|DistrictTurbine|DistrictAerial)\s*=\s*(\d+)",
+              district_block.group(1),
+          ))
+          assert district_ids == {
+              "DistrictObservatory": approved["district_observatory"],
+              "DistrictFreight": approved["district_freight"],
+              "DistrictTurbine": approved["district_turbine"],
+              "DistrictAerial": approved["district_aerial"],
+          }, "Original 3D architecture IDs diverged from Roblox Approved receipts"
           assert "AssetService.LoadAssetAsync" in source
           assert "OriginalMeshScenery.sanitize(imported)" in source
           assert "OriginalMeshScenery.sanitize(raw)" in route_source
-          print("Verified 9 genuine owned Model IDs and safe shared sanitizer.")
+          assert "OriginalMeshScenery.sanitize(imported)" in district_source
+          print("Verified 13 genuine owned Model IDs and safe shared sanitizer.")
           PY
 
       - name: Install Rojo 7.7.0
