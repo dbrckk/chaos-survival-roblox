@@ -16,11 +16,13 @@ local APPROVED = {
     OriginalUnderdeckChassis = 84582262145054,
     -- Approved, creator-owned 1696-triangle crown import #41660854748.
     OriginalSkySpineCrown = 71492051540032,
+    -- Approved genuine 3,332-triangle suspended original, #41669929967.
+    OriginalArenaKeel = 121436301473005,
 }
 local ORDER = {
     "PremiumJumpDeck", "PremiumSkybridgeModule",
     "PremiumGroundTile", "OriginalUnderdeckChassis",
-    "OriginalSkySpineCrown",
+    "OriginalSkySpineCrown", "OriginalArenaKeel",
 }
 local started = false
 
@@ -85,6 +87,21 @@ function PremiumRouteMeshAssets.start()
                     end
                 end
 
+                if name == "OriginalArenaKeel" then
+                    -- Uploaded art is 56.2x14.8x54 studs, seven MeshParts.
+                    -- Match the verified original underfloor geometry before
+                    -- replicating any creator asset to players. X/Z rotation
+                    -- is possible during Roblox import.
+                    local _, box = safe:GetBoundingBox()
+                    if meshCount > 12 or box.Y < 14 or box.Y > 20
+                        or box.X < 52 or box.X > 60
+                        or box.Z < 52 or box.Z > 60 then
+                        safe:Destroy()
+                        warn("Approved arena keel source geometry mismatch")
+                        return
+                    end
+                end
+
                 safe.Name = name
                 safe:SetAttribute("OwnerVerified", true)
                 safe:SetAttribute("Original3DAssetId", assetId)
@@ -96,6 +113,8 @@ function PremiumRouteMeshAssets.start()
                     name == "OriginalUnderdeckChassis")
                 safe:SetAttribute("PremiumSkySpineCrown3D",
                     name == "OriginalSkySpineCrown")
+                safe:SetAttribute("PremiumArenaKeel3D",
+                    name == "OriginalArenaKeel")
                 safe.Parent = folder
                 folder:SetAttribute(name .. "Ready", true)
                 return
