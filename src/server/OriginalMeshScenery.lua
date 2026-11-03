@@ -675,6 +675,57 @@ local function publishDistrictGatewayTemplate(clean, assetName)
     holder:SetAttribute("OriginalDistrictGateReady", true)
 end
 
+-- The five MAIN arena hero monuments already have original owner-approved
+-- Model packages in ASSETS. Publish sanitized MeshParts ONCE as templates,
+-- reusing the source cache/import requests of this existing service.
+-- Their visible replacements are client-only and never add collisions.
+local HERO_SOURCE = {
+    reactor_spire = true,
+    sky_transit_exchange = true,
+    plasma_foundry = true,
+    orbital_halo_array = true,
+    service_crane = true,
+}
+local function publishHeroStructureTemplate(clean, assetName)
+    if not HERO_SOURCE[assetName] then return end
+    local count = 0
+    for _, descendant in ipairs(clean:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            if not descendant:IsA("MeshPart") then return end
+            count += 1
+        elseif descendant:IsA("LuaSourceContainer") then
+            return
+        end
+    end
+    if count < 1 or count > MAX_PARTS then return end
+    local _, size = clean:GetBoundingBox()
+    if size.X <= 0 or size.Y <= 0 or size.Z <= 0
+        or size.X > MAX_DIMENSION or size.Y > MAX_DIMENSION
+        or size.Z > MAX_DIMENSION then
+        return
+    end
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedHeroStructureTemplates")
+    if not holder then
+        holder = Instance.new("Folder")
+        holder.Name = "ApprovedHeroStructureTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+    end
+    if not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true
+        or holder:FindFirstChild(assetName) then
+        return
+    end
+    local source = clean:Clone()
+    source.Name = assetName
+    source:SetAttribute("OwnerVerified", true)
+    source:SetAttribute("Original3DAssetId", ASSETS[assetName])
+    source:SetAttribute("CosmeticOnly", true)
+    source:SetAttribute("ApprovedHero3D", true)
+    source.Parent = holder
+    holder:SetAttribute(assetName .. "Ready", true)
+end
+
 local started = false
 local templates = {}
 
@@ -719,6 +770,7 @@ function OriginalMeshScenery.start()
                 end
                 templates[assetName] = clean
                 publishDistrictGatewayTemplate(clean, assetName)
+                publishHeroStructureTemplate(clean, assetName)
                 refreshArena()
                 return
             end

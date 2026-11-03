@@ -10,6 +10,7 @@ local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
 local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonumentMeshKit)
+local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
@@ -648,6 +649,24 @@ task.spawn(function()
             -- geometric visual owner, unlike the arena's central Base.
             applyFolder(hero, HERO_ARCHITECTURE_LOD,
                 profile, hero:GetPivot().Position, cameraPoint)
+        end
+        -- Genuine approved source-authored 3D now REPLACES the five huge
+        -- primitive skyline heroes, one distinct asset per arena variant.
+        -- Sync after native LOD: the mounted kit owns only the static
+        -- noncolliding transparency fallback, never LocalTransparencyModifier.
+        -- Reuse this exact camera pass; no additional heartbeat or API calls.
+        ApprovedHeroStructureMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady)
+        local authenticHeroes = ApprovedHeroStructureMeshKit.count()
+        if player:GetAttribute("LocalApprovedHeroStructure3DCount")
+            ~= authenticHeroes then
+            player:SetAttribute("LocalApprovedHeroStructure3DCount",
+                authenticHeroes)
+        end
+        local nativeHeroPieces = ApprovedHeroStructureMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalHeroPartsReplaced")
+            ~= nativeHeroPieces then
+            player:SetAttribute("LocalOriginalHeroPartsReplaced", nativeHeroPieces)
         end
 
         -- A pad's Highlight and particle emitter have separate parents.
