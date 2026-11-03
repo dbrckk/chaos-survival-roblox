@@ -1,0 +1,106 @@
+# Owner-approved one-time import. Only this new workflow file's exact
+# creation on main can trigger the asset upload; ordinary gameplay commits
+# cannot create paid/quota-consuming assets or republish the Roblox place.
+name: One-time Import Original Service Equipment 3D 2026-11-03
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-service-equipment-20261103.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-service-equipment-owner-source-20261103
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    name: Validate original service meshes before any upload
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model:
+          - service_camera
+          - service_maintenance
+          - service_wayfinder
+          - service_orbital
+          - service_mooring
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source geometry + glTF 2.0 UV/tangent provenance
+        shell: bash
+        env:
+          MODEL: ${{ matrix.model }}
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_service_equipment.py \
+            --model "$MODEL" \
+            --output "$RUNNER_TEMP/chaos_${MODEL}.obj" \
+            > "$RUNNER_TEMP/service-geometry.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/chaos_${MODEL}.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/chaos_${MODEL}.gltf" \
+            > "$RUNNER_TEMP/service-export.json"
+          python3 - "$RUNNER_TEMP/service-geometry.json" \
+            "$RUNNER_TEMP/chaos_${MODEL}.gltf" "$MODEL" <<'PY'
+          import json,sys,base64
+          from pathlib import Path
+          source=json.loads(Path(sys.argv[1]).read_text())
+          gltf=json.loads(Path(sys.argv[2]).read_text())
+          assert source["asset"]==sys.argv[3]
+          assert 240<=source["triangles"]<=4200
+          assert 15<=source["groups"]<=128
+          assert .8<=min(source["dimensions"]) and max(source["dimensions"])<=5
+          assert {m["name"] for m in gltf["materials"]}=={
+            "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert len(gltf["meshes"][0]["primitives"])==7
+          triangles=sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"]//3
+              for p in gltf["meshes"][0]["primitives"])
+          assert triangles==source["triangles"],(triangles,source["triangles"])
+          assert all({"POSITION","NORMAL","TEXCOORD_0","TANGENT"}
+              <=set(p["attributes"]) for p in gltf["meshes"][0]["primitives"])
+          payload=base64.b64decode(gltf["buffers"][0]["uri"].split(",",1)[1],
+                                  validate=True)
+          assert len(payload)==gltf["buffers"][0]["byteLength"]
+          print("SOURCE VALIDATED",sys.argv[3],triangles,
+                "triangles, seven original material groups")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-3d-${{ matrix.model }}-source
+          path: |
+            ${{ runner.temp }}/chaos_${{ matrix.model }}.obj
+            ${{ runner.temp }}/chaos_${{ matrix.model }}.gltf
+            ${{ runner.temp }}/service-geometry.json
+            ${{ runner.temp }}/service-export.json
+          retention-days: 14
+
+  import-approved-owner:
+    needs: source-gate
+    name: Creator-owned Roblox Model import ${{ matrix.model }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model:
+          - service_camera
+          - service_maintenance
+          - service_wayfinder
+          - service_orbital
+          - service_mooring
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
