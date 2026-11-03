@@ -15,4 +15,13 @@ The **Sky Spine** on all five arenas is a real collidable ten-platform crossing,
 ## Next implementation gate
 After the asset ID and moderation are actually returned, add it to `assets/source/roblox-asset-registry.json`, build a server-sanitized replicated template using `OriginalMeshScenery.sanitize`, then a client-side LOD kit that authenticates `SkySpineInterchange` plus `SkySpineStep` and preserves `PerimeterPlatformIndex` hazard visibility. Enforce **Low=0 / Medium=1 / High=2** local crowns, reuse existing scenery scheduler, and retire/hide matching native crown components only while an authentic safe 3D model is mounted. Finish with actual Roblox engine suite, Android low-tier visibility checks and exact-SHA guarded public publication.
 
-**No claim of public visual improvement until that next runtime/release gate passes.**
+## Import propriétaire effectivement vérifié
+
+- Diagnostic HTTP 400 de la première tentative : nom d'asset trop long, 54 caractères, refus `INVALID_ARGUMENT`. Correction du titre en `Chaos Sky Spine Crown 3D` et garde d'import `3..49` caractères.
+- [Open Cloud owner upload #41660854748](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41660854748) : **Model `71492051540032` créé, moderation = `Approved`**, triangulation et 7 familles de matériaux attestées par la source.
+- `PremiumRouteMeshAssets` valide le package serveur avec `OriginalMeshScenery.sanitize`, bounds de la sculpture et limite 12 MeshParts, puis replie un template vérifié. Aucun asset réseau ne charge côté client.
+- `SkySpineCrownMeshKit` n'accepte que les vrais `PlatformN` collisionnels, `SkySpineStep=5/6`, `ChaosPermanentRoute=true` et `SkySpineInterchange=true`. Il conserve les rails et la surface physique, remplace la grande silhouette haute native seulement quand un modèle approuvé est monté, restaure en catastrophe, suit le porteur par weld cosmétique et gère le streaming tardif.
+- Plafonds visuels réels : Low=0, Medium=1, High=2, dossier inscrit dans `VisualBudgetRules.LocalFolders` et compteur de modèles `LocalOriginalSkySpineCrownCount` exposé au QA. Le runtime partage `scenery-lod.client.lua` sans nouvelle tâche de rendu.
+- Test moteur sur cinq définitions d'arène, hazard collapse, shrink, provenance, collisions et duplication des éléments natifs via StreamingEnabled ajouté à `tests/engine/mapbuilder-advanced.spec.luau`.
+
+**Nouveau jalon :** build source + 5 suites moteur réelles + publication exacte du commit uniquement après leur succès ; rendu et fluidité AAA sur Android à vérifier par capture/mesure, non certifiés par la CI.

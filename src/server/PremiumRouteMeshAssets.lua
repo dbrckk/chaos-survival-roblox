@@ -1,5 +1,5 @@
--- Fifteen approved creator-owned Model packages in the repository;
--- these FOUR approved route/art imports are genuine UV/tangent 3D assets.
+-- Seventeen approved creator-owned Model packages in the repository;
+-- these FIVE approved route/art imports are genuine UV/tangent 3D assets.
 -- Original underdeck is a 3,072-triangle seven-material open-frame Model
 -- authenticated by Roblox upload receipt #41644715829, moderation Approved.
 -- The loader is cosmetic-only and never changes live authoritative platforms.
@@ -14,10 +14,13 @@ local APPROVED = {
     PremiumSkybridgeModule = 94023662427980,
     PremiumGroundTile = 72507987666671,
     OriginalUnderdeckChassis = 84582262145054,
+    -- Approved, creator-owned 1696-triangle crown import #41660854748.
+    OriginalSkySpineCrown = 71492051540032,
 }
 local ORDER = {
     "PremiumJumpDeck", "PremiumSkybridgeModule",
     "PremiumGroundTile", "OriginalUnderdeckChassis",
+    "OriginalSkySpineCrown",
 }
 local started = false
 
@@ -66,6 +69,21 @@ function PremiumRouteMeshAssets.start()
                     warn("Premium route import contained no real MeshPart", name)
                     return
                 end
+                if name == "OriginalSkySpineCrown" then
+                    -- The approved source has an 18.8 x 20.52 x 3.86
+                    -- stud OPEN gateway. Roblox can swap imported X/Z.
+                    -- A maliciously mismatched asset must never replicate.
+                    local _, box = safe:GetBoundingBox()
+                    local width = math.max(box.X, box.Z)
+                    local depth = math.min(box.X, box.Z)
+                    if meshCount > 12 or width < 17 or width > 21
+                        or box.Y < 19 or box.Y > 23
+                        or depth < 3 or depth > 7 then
+                        safe:Destroy()
+                        warn("Original Sky Spine crown geometry provenance mismatch")
+                        return
+                    end
+                end
 
                 safe.Name = name
                 safe:SetAttribute("OwnerVerified", true)
@@ -76,6 +94,8 @@ function PremiumRouteMeshAssets.start()
                 safe:SetAttribute("PremiumGround3D", name == "PremiumGroundTile")
                 safe:SetAttribute("PremiumUnderdeck3D",
                     name == "OriginalUnderdeckChassis")
+                safe:SetAttribute("PremiumSkySpineCrown3D",
+                    name == "OriginalSkySpineCrown")
                 safe.Parent = folder
                 folder:SetAttribute(name .. "Ready", true)
                 return
@@ -90,7 +110,7 @@ function PremiumRouteMeshAssets.start()
         end
     end
 
-    -- One serialized non-blocking importer lane. Four simultaneous cloud
+    -- One serialized non-blocking importer lane. Five simultaneous cloud
     -- loads would compete with the already-approved district facade and
     -- skyfleet source lanes under Roblox Assets rate limits. The original
     -- three route templates retain priority; native fallback is always
