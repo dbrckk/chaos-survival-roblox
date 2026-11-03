@@ -14,10 +14,10 @@ permissions:
 
 jobs:
   engine:
-    name: engine (all five suites)
+    name: engine (all seven suites)
     runs-on: ubuntu-latest
     timeout-minutes: 80
-    # All five shards share ONE job and ONE cross-branch mutex.
+    # All seven shards share ONE job and ONE cross-branch mutex.
     # The previous max-parallel: 1 was per workflow run, so six PRs
     # could still hammer the same owner-wide Roblox execution quota.
     concurrency:
@@ -130,7 +130,7 @@ jobs:
           backend = "cloud"
           default = false
 
-          [suites.gameplay]
+          [suites.gameplay_hazards]
           include = [
             "tests/engine/arena-mechanics.spec.luau",
             "tests/engine/chaos-fusion.spec.luau",
@@ -142,6 +142,12 @@ jobs:
             "tests/engine/elimination-cause-rules.spec.luau",
             "tests/engine/disaster-residue.spec.luau",
             "tests/engine/disaster-runtime.spec.luau",
+          ]
+          backend = "cloud"
+          default = false
+
+          [suites.gameplay_world]
+          include = [
             "tests/engine/disaster-setpiece.spec.luau",
             "tests/engine/disaster-visuals.spec.luau",
             "tests/engine/meteor-core-sculpt.spec.luau",
@@ -152,6 +158,12 @@ jobs:
             "tests/engine/mapbuilder.spec.luau",
             "tests/engine/mapbuilder-advanced.spec.luau",
             "tests/engine/parkour-flow.spec.luau",
+          ]
+          backend = "cloud"
+          default = false
+
+          [suites.gameplay_rounds]
+          include = [
             "tests/engine/movement-safety.spec.luau",
             "tests/engine/round-challenge.spec.luau",
             "tests/engine/round-cleanup-resilience.spec.luau",
@@ -193,7 +205,7 @@ jobs:
               config = tomllib.load(handle)
 
           assigned = []
-          for suite in ("core_a", "core_b1", "core_b2", "gameplay", "matrix"):
+          for suite in ("core_a", "core_b1", "core_b2", "gameplay_hazards", "gameplay_world", "gameplay_rounds", "matrix"):
               assigned.extend(config["suites"][suite]["include"])
 
           actual = sorted(glob.glob("tests/engine/**/*.spec.luau", recursive=True))
@@ -319,6 +331,6 @@ jobs:
 
           # Keep each suite separately named/reported for release auditing.
           # No simultaneous jobs submit execution tasks to the same owner.
-          for suite in gameplay matrix core_a core_b1 core_b2; do
+          for suite in gameplay_hazards gameplay_world gameplay_rounds matrix core_a core_b1 core_b2; do
             run_suite "$suite"
           done
