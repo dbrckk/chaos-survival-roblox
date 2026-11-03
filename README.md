@@ -8,7 +8,7 @@ Deux **nouveaux assets 3D originaux triangulés**, et non des Parts natives, son
 
 **[Inventaire détaillé : 124 actions visuelles priorisées (33 P0 / 80 P1 / 11 P2)](docs/URGENT_AAA_VISUAL_BACKLOG_2026-11-03.md)** : assets 3D/2D, meshes originaux, textures PBR, ciel/lumières, météo, onze catastrophes, avatars/IA, UI mobile, caméra, LOD, vignettes et critères de livraison. **Ce registre ne certifie pas encore un rendu AAA.**
 
-**Attention :** le dernier main a un **échec de test Roblox Cloud** pour les nouveaux châssis de meshes importés (attendu 4 pièces de fondation, obtenu 11). La publication a été bloquée ; la précédente version publique, validée sur le commit `3a482589f07d2d4987de2633f7e411681950fc08`, est toujours la dernière livraison confirmée. Ne pas prendre un build Rojo réussi pour une publication Roblox.
+**État vérifié au 3 novembre 2026 :** le blocage historique des socles 3D (4 pièces attendues contre 11 générées) a été corrigé. Le commit `38f1a3b184b85848a479cfe8bd9d4a49a6b06540` a passé [Build Validation #41621176592](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41621176592), [les cinq suites moteur Roblox #41621187036](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41621187036) et [la publication publique #41621772081](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41621772081). **La validation visuelle sur Android reste à faire ; les changements postérieurs à ce SHA ne sont pas publiés.** Les anciens jalons « non live » détaillés plus bas sont des historiques, pas l'état courant de `main`.
 
 Fast multiplayer disaster-survival game built with Luau + Rojo.
 
