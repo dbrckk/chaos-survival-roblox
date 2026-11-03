@@ -167,9 +167,14 @@ local FOLDERS = {
         LowDistance = 165,
         MediumDistance = 245,
     },
+    -- The original surface owner spans an actual 320-stud arena.
+    -- Center-based 105/160 cutoffs hid approved relief and source plates
+    -- from players near a real rim. Keep six Low genuine 3D plates and
+    -- tier-capped Medium/High reliefs readable across the whole active deck.
+    -- This still uses the existing camera sampler and Android Part census.
     ArenaSurfaceReliefLocal = {
-        LowDistance = 105,
-        MediumDistance = 160,
+        LowDistance = 240,
+        MediumDistance = 300,
     },
     ArenaSilhouetteBreakupLocal = {
         LowDistance = 145,
