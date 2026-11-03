@@ -354,4 +354,20 @@ function PremiumDistrictFacadeMeshKit.count()
     return n
 end
 
+-- Real resident native pieces replaced by owner-approved MeshParts, not
+-- estimated visual progress. Shares the existing client scenery cadence.
+function PremiumDistrictFacadeMeshKit.replacedNativeCount()
+    local n = 0
+    for _, entry in pairs(mounted) do
+        if entry.model.Parent then
+            for native in pairs(entry.replaced) do
+                if native.Parent == entry.building and native.Transparency == 1 then
+                    n += 1
+                end
+            end
+        end
+    end
+    return n
+end
+
 return PremiumDistrictFacadeMeshKit
