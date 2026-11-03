@@ -242,12 +242,36 @@ jobs:
           PY
           request_json="$(cat "$RUNNER_TEMP/asset-request.json")"
           # One intentional POST, no blind retries: uploads are not idempotent.
-          curl --silent --show-error --fail-with-body \
+          # A failed POST can return a useful validation JSON body. Keep
+          # secrets out of logs and never retry blindly (POST not idempotent).
+          http_code="$(curl --silent --show-error \
+            --output "$RUNNER_TEMP/upload-operation.json" \
+            --write-out '%{http_code}' \
             -H "x-api-key: ${ASSET_API_KEY}" \
             --form-string "request=${request_json}" \
             --form "fileContent=@$RUNNER_TEMP/chaos_original.gltf;type=model/gltf+json" \
-            https://apis.roblox.com/assets/v1/assets \
-            > "$RUNNER_TEMP/upload-operation.json"
+            https://apis.roblox.com/assets/v1/assets)"
+          if [ "$http_code" != "200" ] && [ "$http_code" != "201" ] && [ "$http_code" != "202" ]; then
+            echo "::error::Roblox asset create returned HTTP ${http_code}; no retry performed"
+            python3 - "$RUNNER_TEMP/upload-operation.json" <<'PY'
+          import json,sys
+          from pathlib import Path
+          body=Path(sys.argv[1]).read_text(errors="replace")
+          try:
+              error=json.loads(body)
+              # Report only Roblox validation fields, never echo request,
+              # credentials, headers, or potentially private response data.
+              if isinstance(error,dict):
+                  print("Roblox validation code:",str(error.get("code","unknown"))[:100])
+                  print("Roblox validation message:",str(error.get("message","unknown"))[:600])
+                  print("Roblox validation details:",str(error.get("details",[]))[:900])
+              else:
+                  print("Roblox returned non-object error JSON")
+          except ValueError:
+              print("Roblox returned non-JSON validation response")
+          PY
+            exit 1
+          fi
           python - "$RUNNER_TEMP/upload-operation.json" <<'PY'
           import json, pathlib, sys
           result = json.loads(pathlib.Path(sys.argv[1]).read_text())
