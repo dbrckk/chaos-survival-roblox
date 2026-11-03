@@ -10,7 +10,8 @@
     "game_place_id": "95351659174730",
     "models_inserted_in_game": false,
     "android_visual_qa_completed": false,
-    "service_models_inserted_in_game": false
+    "service_models_inserted_in_game": false,
+    "ambient_models_inserted_in_game": false
   },
   "models": [
     {
@@ -196,6 +197,46 @@
       "source": "tools/generate_original_service_equipment.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41729439190
+    },
+    {
+      "name": "ambient_drone",
+      "asset_id": "102850052145878",
+      "moderation": "Approved",
+      "source": "tools/generate_original_ambient_motion.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41733818047
+    },
+    {
+      "name": "ambient_lift",
+      "asset_id": "72210530094580",
+      "moderation": "Approved",
+      "source": "tools/generate_original_ambient_motion.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41733818047
+    },
+    {
+      "name": "ambient_transit",
+      "asset_id": "116186226477876",
+      "moderation": "Approved",
+      "source": "tools/generate_original_ambient_motion.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41733818047
+    },
+    {
+      "name": "ambient_satellite",
+      "asset_id": "127850230318627",
+      "moderation": "Approved",
+      "source": "tools/generate_original_ambient_motion.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41733818047
+    },
+    {
+      "name": "ambient_cargo",
+      "asset_id": "131294203899636",
+      "moderation": "Approved",
+      "source": "tools/generate_original_ambient_motion.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41733818047
     }
   ]
 }
