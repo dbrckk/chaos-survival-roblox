@@ -10,12 +10,15 @@ local PremiumGroundMeshKit = {}
 -- Roblox import/moderation proof: GitHub Actions #41622860616.
 local APPROVED_GROUND_ID = 72507987666671
 local TEMPLATE_NAME = "PremiumGroundTile"
--- Keep creator-approved 3D tiles resident across minor camera changes.
--- Preserve all existing hard limits on mobile model and MeshPart counts.
+-- The 6x6 arena has 36 manufactured floor bays, but a six-model High
+-- cap left most of the camera-facing deck as generic native slab art.
+-- Spend genuine 3D on the nearest visible bays, not the whole world:
+-- mobile Low remains ONE imported tile; Medium is five; High twelve.
+-- No new source assets, stream loops or physical surfaces are created.
 local BUDGET = {
     Low = {count = 1, distance = 112, retention = 18},
-    Medium = {count = 3, distance = 180, retention = 24},
-    High = {count = 6, distance = 245, retention = 28},
+    Medium = {count = 5, distance = 200, retention = 24},
+    High = {count = 12, distance = 260, retention = 28},
 }
 
 local folder = Instance.new("Folder")
