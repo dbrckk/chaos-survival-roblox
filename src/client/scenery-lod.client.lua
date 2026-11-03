@@ -234,12 +234,13 @@ local FOLDERS = {
 
 local function cameraPosition()
     local camera = workspace.CurrentCamera
-    if not camera then return Vector3.zero, false end
+    if not camera then return Vector3.zero, false, Vector3.zero end
     local viewport = camera.ViewportSize
     -- Streaming can complete before Android creates a usable viewport.
     -- Keep existing LOD computation, but defer new optional Parts until
     -- a real camera is available to show them.
-    return camera.CFrame.Position, viewport.X > 0 and viewport.Y > 0
+    return camera.CFrame.Position, viewport.X > 0 and viewport.Y > 0,
+        camera.CFrame.LookVector
 end
 
 local function classifyDescendant(descendant)
@@ -373,7 +374,7 @@ task.spawn(function()
         local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), isTouch)
 
         local arenaOrigin, lobbyOrigin = currentOrigins()
-        local cameraPoint, cameraReady = cameraPosition()
+        local cameraPoint, cameraReady, cameraLook = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
             if folderName ~= "PracticePadPolishLocal" then
                 local folder = workspace:FindFirstChild(folderName)
@@ -447,7 +448,8 @@ task.spawn(function()
         -- existing 0.65/0.90s camera cadence instead of another loop.
         -- Low = 1, Medium = 3, High = 6 original approved local tiles;
         -- base/shrink changes hide art immediately via instance events.
-        PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+        PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,
+            cameraReady, cameraLook)
         local floorMeshes = PremiumGroundMeshKit.count()
         if player:GetAttribute("LocalOriginalGroundMeshCount") ~= floorMeshes then
             player:SetAttribute("LocalOriginalGroundMeshCount", floorMeshes)
