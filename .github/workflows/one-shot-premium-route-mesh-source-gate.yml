@@ -1,0 +1,53 @@
+name: One-shot Premium Route Mesh Production Source Gate
+on:
+  push:
+    branches: [feat/real-premium-deck-bridge-mesh-source-20261103]
+    paths: ['.github/workflows/one-shot-premium-route-mesh-source-gate.yml']
+permissions:
+  contents: read
+jobs:
+  source-geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Convert both genuinely authored original 3D route meshes to embedded glTF PBR and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          for model in premium_jump_deck premium_skybridge_module; do
+            python tools/obj_to_gltf.py --source "assets/source/chaos_${model}.obj" --materials assets/source/chaos_route_kit.mtl --output "/tmp/chaos_${model}.gltf" > "/tmp/${model}.json"
+          done
+          python - <<'PY'
+          import base64,json,pathlib
+          for model in ("premium_jump_deck", "premium_skybridge_module"):
+              data=json.loads(pathlib.Path("/tmp/chaos_"+model+".gltf").read_text())
+              primitives=data["meshes"][0]["primitives"]
+              assert len(primitives)>=6
+              assert data["asset"]["version"]=="2.0"
+              total=sum(data["accessors"][p["attributes"]["POSITION"]]["count"]//3 for p in primitives)
+              assert 700<=total<=15000,(model,total)
+              for p in primitives:
+                  a=p["attributes"]
+                  assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(a)
+                  n=[data["accessors"][a[q]]["count"] for q in ("POSITION","NORMAL","TEXCOORD_0","TANGENT")]
+                  assert len(set(n))==1
+              buf=base64.b64decode(data["buffers"][0]["uri"].split(",",1)[1],validate=True)
+              assert len(buf)==data["buffers"][0]["byteLength"]
+              print(model,"real 3D triangulated facets",total,"material layers",len(primitives),"binary bytes",len(buf))
+          PY
+      - name: Compile all Luau and complete Rojo experience
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          mkdir -p /tmp/luau && unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 | xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+          python tools/validate_mobile_vfx_first_frame.py
+          curl -fLsS --retry 3 -o /tmp/rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          mkdir -p /tmp/rojo && unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          python tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          /tmp/rojo/rojo build default.project.json -o /tmp/chaos.rbxlx
+          test -s /tmp/chaos.rbxlx
