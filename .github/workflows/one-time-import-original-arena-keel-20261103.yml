@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/one-time-import-original-arena-keel-chassis-20261103.yml'
+      - '.github/workflows/one-time-import-original-arena-keel-20261103.yml'
 permissions:
   contents: read
 concurrency:
