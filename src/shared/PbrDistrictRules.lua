@@ -123,7 +123,12 @@ end
 function PbrDistrictRules.ownerLimit(tierName, owner)
     if PbrDistrictRules.isPremiumArchitecturalOwner(owner) then
         if owner:IsA("Folder") then
-            return tierName == "High" and 12 or (tierName == "Medium" and 7 or 0)
+            -- Original floor modules and real platform landing skins were
+            -- competing for just 7/12 slots across the entire 320-stud
+            -- map. Use a bounded larger share of the SAME creator-owned
+            -- four MaterialVariants without exceeding the unchanged
+            -- 32 Medium / 72 High Android global material limit.
+            return tierName == "High" and 18 or (tierName == "Medium" and 10 or 0)
         end
         return tierName == "High" and 2 or (tierName == "Medium" and 1 or 0)
     end

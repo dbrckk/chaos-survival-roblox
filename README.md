@@ -3,6 +3,11 @@
 Fast multiplayer disaster-survival game built with Luau + Rojo.
 
 
+## Current premium visual milestone (3 November 2026)
+
+**Live baseline:** the existing public Chaos Survival place was updated at exact main SHA `22308afc4dded7e84c165734cd72dbf40a7cc7bb` ([verified Roblox publisher](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41601949632)). The next art-direction milestone is tracked in [premium 2D/3D, PBR and lighting production notes](docs/PREMIUM_ART_PASS_2026-11-03.md). It changes rectangular landing lip Parts into four true sloping 3D wedges, displays a strictly bounded number of **already approved original imported MeshPart models** on Android, creates original resolution-independent machined UI frame artwork, reduces colored environmental wash, lifts mobile readability and expands the existing PBR allocation within unchanged Android global limits. This source milestone is **not confirmed live** until its new exact source SHA is built, tested on all five Cloud engine shards, and published through the guarded existing-place workflow. Physical Android capture and frame-rate validation remain separate from source/Cloud correctness.
+
+
 ## New original volumetric arena floors (source candidate; not live yet)
 
 The [second major visual architecture pass](docs/FIVE_ARENA_VOLUMETRIC_GROUND_2026-11-02.md) gives **all five arenas 73 original, non-colliding floor/undercarriage details per active map**, including 36 original structural floor panels eligible for the existing licensed 2K PBR camera budget. The real shrink owner now scales this artwork with the survival floor: no phantom platforms, AI walls or hazard masking. The preceding [PR #564](https://github.com/dbrckk/chaos-survival-roblox/pull/564) structural corner cladding passed exact-SHA Build Validation and all five real-engine suites on 2 November (source SHA 2732da8), but neither the new floor treatment nor that cladding has been published to the public Roblox experience. Await full validation before deployment.

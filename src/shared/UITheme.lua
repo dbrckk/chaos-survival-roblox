@@ -4,10 +4,10 @@ local Players = game:GetService("Players")
 local UITheme = {}
 
 UITheme.Colors = {
-    Panel = Color3.fromRGB(13, 18, 28),
-    PanelRaised = Color3.fromRGB(22, 29, 42),
-    PanelSoft = Color3.fromRGB(32, 40, 56),
-    Border = Color3.fromRGB(82, 105, 145),
+    Panel = Color3.fromRGB(19, 27, 39),
+    PanelRaised = Color3.fromRGB(30, 41, 57),
+    PanelSoft = Color3.fromRGB(45, 60, 78),
+    Border = Color3.fromRGB(94, 122, 157),
     Text = Color3.fromRGB(244, 248, 255),
     Muted = Color3.fromRGB(180, 194, 216),
     Cyan = Color3.fromRGB(72, 205, 255),
@@ -77,6 +77,84 @@ function UITheme.addCorner(parent, radius)
     corner.CornerRadius = radius or UITheme.Corners.Medium
     corner.Parent = parent
     return corner
+end
+
+-- Original scalable 2D industrial frame language. Unlike a generic UICorner
+-- or rectangular ImageLabel this is a deterministic, crisp machined drawing:
+-- engraved corner registers, rivets and brushed inlaid rails. Pure UI geometry
+-- makes it independent of external texture IDs or image-loading latency.
+-- Use only on the four large HUD / READY / results / boot surfaces.
+function UITheme.addMachinedFrame(parent, accent, isCompact)
+    if not parent or not parent:IsA("GuiObject") then return nil end
+    local existing = parent:FindFirstChild("ChaosMachinedFrame")
+    if existing then return existing end
+
+    local color = accent or UITheme.Colors.Cyan
+    local zIndex = parent.ZIndex
+    local art = Instance.new("Frame")
+    art.Name = "ChaosMachinedFrame"
+    art.Size = UDim2.fromScale(1, 1)
+    art.Position = UDim2.fromScale(0, 0)
+    art.BackgroundTransparency = 1
+    art.BorderSizePixel = 0
+    art.Active = false
+    art.ZIndex = zIndex
+    art.Parent = parent
+
+    local function mark(name, anchor, position, size, rotation, shade, alpha)
+        local item = Instance.new("Frame")
+        item.Name = name
+        item.AnchorPoint = anchor
+        item.Position = position
+        item.Size = size
+        item.Rotation = rotation or 0
+        item.BackgroundColor3 = shade
+        item.BackgroundTransparency = alpha
+        item.BorderSizePixel = 0
+        item.Active = false
+        item.ZIndex = zIndex
+        item.Parent = art
+        return item
+    end
+
+    local inset = isCompact and 10 or 14
+    local long = isCompact and 13 or 21
+    local opaque = color:Lerp(UITheme.Colors.Text, 0.36)
+
+    -- The nonintersecting edge ticks never obscure the text or hazard glyph.
+    for _, side in ipairs({-1, 1}) do
+        local y = side == -1 and UDim2.new(0, inset, 0, 7)
+            or UDim2.new(0, inset, 1, -7)
+        mark(side == -1 and "UpperEngravedRail" or "LowerEngravedRail",
+            Vector2.new(0, 0.5), y, UDim2.fromOffset(long * 2, 2),
+            0, color, 0.34)
+        local opposite = side == -1 and UDim2.new(1, -inset, 0, 7)
+            or UDim2.new(1, -inset, 1, -7)
+        mark(side == -1 and "UpperOppositeRail" or "LowerOppositeRail",
+            Vector2.new(1, 0.5), opposite,
+            UDim2.fromOffset(long * 2, 2), 0, color, 0.34)
+    end
+
+    for corner = 1, 4 do
+        local left = corner % 2 == 1
+        local upper = corner <= 2
+        local signX = left and 1 or -1
+        local signY = upper and 1 or -1
+        local x = left and 0 or 1
+        local y = upper and 0 or 1
+        local outer = UDim2.new(x, signX * inset, y, signY * inset)
+        local name = "MachinedRegister" .. corner
+        mark(name .. "Cut",
+            Vector2.new(0.5, 0.5), outer,
+            UDim2.fromOffset(isCompact and 9 or 13, 2),
+            left == upper and -43 or 43, opaque, 0.18)
+        mark(name .. "Rivet",
+            Vector2.new(0.5, 0.5),
+            UDim2.new(x, signX * (inset + 10), y, signY * (inset + 8)),
+            UDim2.fromOffset(3, 3), 45,
+            UITheme.Colors.Text, 0.38)
+    end
+    return art
 end
 
 function UITheme.addTextConstraint(parent, minSize, maxSize)

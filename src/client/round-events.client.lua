@@ -60,6 +60,7 @@ size.Parent = card
 
 local stroke = UITheme.addStroke(card, UITheme.Colors.Cyan, 1.8, 1)
 local gradient = UITheme.addGradient(card, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+UITheme.addMachinedFrame(card, UITheme.Colors.Cyan, true)
 
 local accent = Instance.new("Frame")
 accent.AnchorPoint = Vector2.new(0.5, 0)
