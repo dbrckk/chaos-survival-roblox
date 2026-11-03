@@ -49,7 +49,7 @@
 
 ## 2. Textures, UV, PBR et matériaux
 
-- [ ] **VIS-029 · P0 · C** — Réduire les surfaces exposées en **matériaux natifs génériques** (`Slate`, `Metal`, `DiamondPlate`, `Neon`, `Foil`, `CorrodedMetal`) ; les déplacer vers des presets UV/PBR appropriés sans remplacer les matériaux de danger/collision. `VisualTheme.lua`, nombreux constructeurs.
+- [ ] **VIS-029 · P0 · C** — Réduire les surfaces exposées en **matériaux natifs génériques** (`Slate`, `Metal`, `DiamondPlate`, `Neon`, `Foil`, `CorrodedMetal`) ; les déplacer vers des presets UV/PBR appropriés sans remplacer les matériaux de danger/collision. `VisualTheme.lua`, nombreux constructeurs. **Passe de lisibilité native amorcée :** surfaces et structures des cinq arènes rehaussées, Foil trop miroir retiré de Towers, aucun vrai PBR ajouté sur Low. Reste à remplacer toutes les surfaces encore génériques par des vraies matières compatibles et à vérifier Android.
 - [ ] **VIS-030 · P0 · V** — Vérifier sur appareil que les **16 images PBR approuvées / quatre familles** (albedo/couleur, normal, roughness, metallic) sont réellement affichées sur les bonnes surfaces, et non uniquement référencées par le code. `pbr-district-materials.client.lua`.
 - [ ] **VIS-031 · P0 · V** — Vérifier les **textures du premier plan** (sols, panneaux, atterrissages) en Low/Medium/High ; le budget global Android et la priorisation PBR peuvent encore laisser des régions entières en fallback natif. `PbrDistrictRules.lua`.
 - [ ] **VIS-032 · P1 · C** — Créer des **UV continus, échelles texel cohérentes, normal baking et textures propres par famille 3D** ; un Assemblage WedgePart ne remplace pas un mesh UV-authored.
@@ -65,11 +65,11 @@
 
 ## 3. Lumière, ciel, météo et post-traitement
 
-- [ ] **VIS-042 · P0 · V** — Éliminer tout rendu **trop sombre** pour les personnages, sols, paliers et bords. Tester tous les cinq grades lumineux dans une vraie manche Android ; l'utilisateur a déjà signalé des silhouettes presque noires.
-- [ ] **VIS-043 · P0 · V** — Établir une **hiérarchie key/fill/rim** lisible : éclairer les volumes réels et les bots sans noyer les avertissements ; une hausse globale de `Brightness` ne suffit pas. `arena-lighting.client.lua`.
+- [ ] **VIS-042 · P0 · V** — Éliminer tout rendu **trop sombre** pour les personnages, sols, paliers et bords. Tester tous les cinq grades lumineux dans une vraie manche Android ; l'utilisateur a déjà signalé des silhouettes presque noires. **Nouveau profil source :** ambient/outdoor fill de chacun des cinq mondes relevé, atmosphère allégée et Low/Medium diffus rehaussé ; test vidéo Android encore indispensable.
+- [ ] **VIS-043 · P0 · V** — Établir une **hiérarchie key/fill/rim** lisible : éclairer les volumes réels et les bots sans noyer les avertissements ; une hausse globale de `Brightness` ne suffit pas. `arena-lighting.client.lua`. **Changement source :** projecteurs existants moins néon, mélange contrôlé avec une lumière blanche neutre, intensité de manche augmentée mais sans créer de nouvelles sources ; vérifier les vrais volumes 3D sur appareil.
 - [ ] **VIS-044 · P0 · V** — Tester l'**enchaînement normal→READY→catastrophe→résultat** : pas de saut d'exposition, de lumière incohérente ou de catastrophe qui écrase les volumes importants.
 - [ ] **VIS-045 · P0 · V** — Vérifier que le **désastre Darkness** conserve son intention de gameplay sans rendre les commandes ou avertissements essentiels illisibles ; ne pas le neutraliser par une lumière artificielle excessive.
-- [ ] **VIS-046 · P1 · C** — Créer une vraie **direction de soleil, orientation de reflets et ambiances par carte** plutôt qu'un simple tableau de teintes/ClockTime/GlobalShadows. `arena-lighting.client.lua`, `ArenaFocalLightingRules.lua`.
+- [ ] **VIS-046 · P1 · C** — Créer une vraie **direction de soleil, orientation de reflets et ambiances par carte** plutôt qu'un simple tableau de teintes/ClockTime/GlobalShadows. `arena-lighting.client.lua`, `ArenaFocalLightingRules.lua`. **Cinq directions solaires réellement définies :** ClockTime et GeographicLatitude spécifiques à chaque arène, sans duplication de contrôleur ni de lampes ; rendu final à photographier.
 - [ ] **VIS-047 · P1 · V** — Recalibrer **ombres proches et longues, AO perçue, biais d'ombre, contact au sol et douceur** sur structures et personnages ; vérifier également le mode Low sans ombres dynamiques.
 - [ ] **VIS-048 · P1 · V** — Donner des **points lumineux motivés** aux portiques, ponts, consoles et équipements ; vérifier direction, portée et coût des SpotLights/PointLights existants.
 - [ ] **VIS-049 · P1 · V** — Évaluer le **bloom**, halos et seuils pour éviter que les néons éblouissent, masquent les panneaux ou rendent le métal plastique. `ArenaPostProcessLayer.lua`, `arena-lighting.client.lua`.
@@ -78,9 +78,9 @@
 - [ ] **VIS-052 · P1 · V** — Terminer l'**atmosphère volumétrique perçue** : contraste proche/moyen/loin, densité de haze, couleurs du ciel et disparition graduelle du décor. `CloudLayer.lua`, `environment-depth.client.lua`.
 - [ ] **VIS-053 · P1 · V** — Finaliser les **nuages, couches de ciel, vent et visibilité** selon l'arène sans créer un voile permanent qui cache les modèles 3D.
 - [ ] **VIS-054 · P1 · V** — Tester **pluie, brouillard, givrage, tempête, lave, météo sombre** : lumière motivée par la scène et cohérence des effets avec les lumières d'origine.
-- [ ] **VIS-055 · P1 · V** — Recalibrer les **matériaux métalliques au specular** et aux changements de vue pour que l'augmentation du PBR n'introduise pas de reflets excessifs.
+- [ ] **VIS-055 · P1 · V** — Recalibrer les **matériaux métalliques au specular** et aux changements de vue pour que l'augmentation du PBR n'introduise pas de reflets excessifs. **Passe source :** coefficients spéculaires des cinq mondes abaissés pendant que le diffus monte ; regarder les reflets sur les vrais meshes et SurfaceAppearances.
 - [ ] **VIS-056 · P1 · V** — Vérifier les **sources lumineuses animées** (balises, moteurs, arcs, éclairs) : pas de clignotement agressif ni déphasage avec l'animation du prop.
-- [ ] **VIS-057 · P1 · V** — Rendre les **cinq arènes identifiables par l'éclairage**, tout en gardant une courbe de luminance similaire pour l'équité entre cartes.
+- [ ] **VIS-057 · P1 · V** — Rendre les **cinq arènes identifiables par l'éclairage**, tout en gardant une courbe de luminance similaire pour l'équité entre cartes. **Source actuelle :** cinq paires heure solaire/latitude désormais distinctes et matières natives différenciées ; validation de luminance équitable et identité perçue toujours ouverte.
 - [ ] **VIS-058 · P2 · V** — Créer un **jeu de profils lumière accessibles/Reduced Motion/Low** avec effet visuel prévisible et sans conflit entre contrôleurs `Lighting` et effets de catastrophe.
 
 ## 4. Catastrophes, VFX et réaction du monde
