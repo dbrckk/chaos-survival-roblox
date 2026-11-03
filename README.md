@@ -1,5 +1,11 @@
 # Chaos Survival — Roblox
 
+## Version publique vérifiée et prochaine amélioration du sol 3D (3 novembre 2026)
+
+La version publique la plus récente **vérifiée au moment de ce relevé** est `c297b2a34384d2c169e9123b2939df4d19f7386d` : [Build Validation #41624260822](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41624260822), [cinq suites moteur Roblox #41624270887](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41624270887), et [publication publique #41624914108](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41624914108) confirmés. Les véritables dalles industrielles 3D sont donc publiées, **mais leur qualité perceptive et leurs performances Android ne sont pas certifiées par captures natives**.
+
+Le prochain chantier cible [la sélection des vrais sols 3D visibles devant le joueur](docs/ORIGINAL_GROUND_CAMERA_PRIORITY_2026-11-03.md) avec un budget mobile inchangé. L'amélioration source ne devient live qu'après nouvelle validation et publication exact-SHA. Les sections historiques ci-dessous documentent des jalons antérieurs et ne doivent pas être prises pour le dernier statut de production.
+
 ## Production de vrais assets 3D de plateformes / ponts — 3 novembre 2026
 
 Deux **nouveaux assets 3D originaux triangulés**, et non des Parts natives, sont prêts à importer dans l'inventaire Roblox du créateur : **1 156 triangles** pour le plateau de saut industriel, **920 triangles** pour un tronçon de passerelle. Chaque mesh possède des normales, UV, tangentes et sept matériaux originaux. Source et procédure : [pipeline de vrais assets de plateformes et passerelles](docs/REAL_3D_PREMIUM_DECK_BRIDGE_ART_PIPELINE_2026-11-03.md). **Import Roblox vérifié et approuvé** : plateau original Model `98478693994864`, module de passerelle Model `94023662427980` ([preuve d'import](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41614704198)). Les vrais modèles sont intégrés par `PremiumRouteMeshAssets` et `PremiumRouteMeshKit` dans le code source ; les plateformes physiques et leurs catastrophes restent inchangées. Leur rendu public et leurs performances Android sont à confirmer après validation/publication exacte du nouveau commit.
