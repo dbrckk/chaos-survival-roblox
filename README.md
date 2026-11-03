@@ -2,7 +2,7 @@
 
 ## Production de vrais assets 3D de plateformes / ponts — 3 novembre 2026
 
-Deux **nouveaux assets 3D originaux triangulés**, et non des Parts natives, sont prêts à importer dans l'inventaire Roblox du créateur : **1 156 triangles** pour le plateau de saut industriel, **920 triangles** pour un tronçon de passerelle. Chaque mesh possède des normales, UV, tangentes et sept matériaux originaux. Source et procédure : [pipeline de vrais assets de plateformes et passerelles](docs/REAL_3D_PREMIUM_DECK_BRIDGE_ART_PIPELINE_2026-11-03.md). Leurs **IDs d'import et leur approbation sont à confirmer** avant de les monter en jeu ; les plateformes physiques existantes et leur logique de catastrophes restent inchangées.
+Deux **nouveaux assets 3D originaux triangulés**, et non des Parts natives, sont prêts à importer dans l'inventaire Roblox du créateur : **1 156 triangles** pour le plateau de saut industriel, **920 triangles** pour un tronçon de passerelle. Chaque mesh possède des normales, UV, tangentes et sept matériaux originaux. Source et procédure : [pipeline de vrais assets de plateformes et passerelles](docs/REAL_3D_PREMIUM_DECK_BRIDGE_ART_PIPELINE_2026-11-03.md). **Import Roblox vérifié et approuvé** : plateau original Model `98478693994864`, module de passerelle Model `94023662427980` ([preuve d'import](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41614704198)). Les vrais modèles sont intégrés par `PremiumRouteMeshAssets` et `PremiumRouteMeshKit` dans le code source ; les plateformes physiques et leurs catastrophes restent inchangées. Leur rendu public et leurs performances Android sont à confirmer après validation/publication exacte du nouveau commit.
 
 ## Registre urgent visuel AAA — 3 novembre 2026
 
