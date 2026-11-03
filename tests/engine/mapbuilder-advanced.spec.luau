@@ -81,6 +81,38 @@ describe("Chaos Survival engine", function()
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
         expect(PremiumRouteMeshKit.count()).toBe(3)
         expect(nativePanel.LocalTransparencyModifier).toBe(0)
+
+        -- Public milestone: genuine approved bridge geometry now follows
+        -- the LIVE physical Sky Promenade and Sky Spine, not fake local art.
+        -- A plain 26 x 12 platform cannot impersonate a crossing route
+        -- without the server's permanent and authored lane attributes.
+        local crossing = Instance.new("Part")
+        crossing.Name = "Platform3"
+        crossing.Size = Vector3.new(26, 2, 12)
+        crossing.Position = Vector3.new(3, 4, 0)
+        crossing.Anchored = true
+        crossing.CanCollide = true
+        crossing:SetAttribute("ChaosPermanentRoute", true)
+        crossing:SetAttribute("PromenadeLane", 1)
+        crossing:SetAttribute("PromenadeStep", 3)
+        crossing.Parent = platforms
+        PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
+            "Medium", true, Vector3.new(1, 0, 0))
+        -- Closer permanent crossing wins the unchanged one-bridge Medium
+        -- quota; two authentic imported UV bridge modules replace cuboids.
+        expect(PremiumRouteMeshKit.count()).toBe(2)
+        expect(crossing.CanCollide).toBe(true)
+        crossing:SetAttribute("PromenadeLane", nil)
+        crossing:SetAttribute("PromenadeStep", nil)
+        crossing:SetAttribute("SkySpineStep", 5)
+        crossing:SetAttribute("SkySpineInterchange", true)
+        PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
+            "Medium", true, Vector3.new(1, 0, 0))
+        expect(PremiumRouteMeshKit.count()).toBe(2)
+        crossing:SetAttribute("ChaosPermanentRoute", false)
+        PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
+            "Medium", true, Vector3.new(1, 0, 0))
+        expect(PremiumRouteMeshKit.count()).toBe(3)
         base.Size = Vector3.new(230, 2, 230)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
         expect(PremiumRouteMeshKit.count()).toBe(0)
