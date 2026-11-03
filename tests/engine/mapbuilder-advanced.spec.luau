@@ -206,6 +206,17 @@ describe("Chaos Survival engine", function()
             crown.Parent = decor
             return deck, crown
         end
+        -- The importer must accept every real high-route deck length,
+        -- not just the synthetic 20-stud smoke fixture in this scene.
+        for _, variantId in ipairs(ArenaVariants.Order) do
+            local real = ArenaVariants.get(variantId)
+            for step = 5, 6 do
+                local size = real.SkySpinePlatforms[step].size
+                expect(size.X).toBe(12)
+                expect(size.Y).toBe(2)
+                expect(size.Z >= 14.5 and size.Z <= 33).toBe(true)
+            end
+        end
         local deck5, native5 = makeDeck(201, 5, 0)
         local deck6, native6 = makeDeck(202, 6, 24)
         local camera = Vector3.new(0, 20, 0)
@@ -224,6 +235,15 @@ describe("Chaos Survival engine", function()
         local crownModel = localMeshes:FindFirstChild("OriginalApprovedSkySpineCrown3D")
         expect(crownModel ~= nil).toBe(true)
         expect(crownModel:GetAttribute("Original3DAssetId")).toBe(71492051540032)
+        -- An authentic late-replicated server crown must be occluded too.
+        -- StreamingEnabled can deliver these native Parts after the mesh.
+        local streamedNative = Instance.new("Part")
+        streamedNative.Name = "SkySpine201_CommandRadar"
+        streamedNative.CanCollide = false
+        streamedNative:SetAttribute("SkySpineDecor", true)
+        streamedNative:SetAttribute("PerimeterPlatformIndex", 201)
+        streamedNative.Parent = decor
+        expect(streamedNative.LocalTransparencyModifier).toBe(1)
         for _, part in ipairs(crownModel:GetDescendants()) do
             if part:IsA("BasePart") then
                 expect(part:IsA("MeshPart")).toBe(true)
@@ -237,6 +257,7 @@ describe("Chaos Survival engine", function()
         deck5:SetAttribute("CollapsePhase", "Warning")
         -- Must react immediately to the real hazard BEFORE the next LOD tick.
         expect(native5.LocalTransparencyModifier).toBe(0)
+        expect(streamedNative.LocalTransparencyModifier).toBe(0)
         local geom = crownModel:FindFirstChildWhichIsA("MeshPart", true)
         expect(geom.LocalTransparencyModifier).toBe(1)
         SkySpineCrownMeshKit.sync(arena, camera, "Medium", true)
