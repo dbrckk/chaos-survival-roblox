@@ -34,6 +34,15 @@ LOT 3 NOVEMBRE 2026 — SOCLES AUTHENTIQUES DES MONUMENTS EXTERIEURS
          build Cloud, la publication publique ni la validation Android.
          Voir docs/ORIGINAL_3D_EXTERIOR_FOUNDATION_REPLACEMENT_2026-11-03.md
 
+LOT 3 NOVEMBRE 2026 — CINQ VRAIS MACHINES D'AMBIANCE ANIMÉES
+[QA]     VIS-026 : drones Classic, cabines Towers, balises Crossroads, satellites
+         Orbital, fret Harbor ont désormais chacun un authentique mesh 3D
+         nouveau, original, approuvé Roblox #41733818047 (5/5).
+         Runtime client/serveur non-collidant, cinq familles, budgets
+         Low 2 / Medium 4 / High 6, même boucle 10 Hz, ReduceMotion.
+         Source et réception Roblox validées ; test Android/publication non.
+         docs/ORIGINAL_ANIMATED_AMBIENT_3D_REPLACEMENT_2026-11-03.md
+
 LOT 3 NOVEMBRE 2026 — CINQ VRAIES MACHINES INDUSTRIELLES 3D
 [QA]     VIS-024 : source OBJ originaux caméra Classic, locker Towers, signal
          Crossroads, cellule Orbital et amarrage Harbor. Cinq modèles Roblox
