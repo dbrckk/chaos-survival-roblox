@@ -198,11 +198,15 @@ jobs:
               "ambient_drone", "ambient_lift", "ambient_transit",
               "ambient_satellite", "ambient_cargo",
           }
+          relief_names = {
+              "relief_essential", "relief_classic", "relief_towers",
+              "relief_crossroads", "relief_orbital", "relief_harbor",
+          }
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
-              | ambient_names)
+              | ambient_names | relief_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -217,7 +221,9 @@ jobs:
                       "service_camera", "service_maintenance", "service_wayfinder",
                       "service_orbital", "service_mooring",
                       "ambient_drone", "ambient_lift", "ambient_transit",
-                      "ambient_satellite", "ambient_cargo"):
+                      "ambient_satellite", "ambient_cargo",
+                      "relief_essential", "relief_classic", "relief_towers",
+                      "relief_crossroads", "relief_orbital", "relief_harbor"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
@@ -234,6 +240,12 @@ jobs:
                           "ambient_transit": "tools/generate_original_ambient_motion.py",
                           "ambient_satellite": "tools/generate_original_ambient_motion.py",
                           "ambient_cargo": "tools/generate_original_ambient_motion.py",
+                          "relief_essential": "tools/generate_original_floor_relief.py",
+                          "relief_classic": "tools/generate_original_floor_relief.py",
+                          "relief_towers": "tools/generate_original_floor_relief.py",
+                          "relief_crossroads": "tools/generate_original_floor_relief.py",
+                          "relief_orbital": "tools/generate_original_floor_relief.py",
+                          "relief_harbor": "tools/generate_original_floor_relief.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -361,7 +373,45 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 28
+          assert len(models) == 34
+          relief_server = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          relief_client = Path("src/client/PremiumFloorReliefMeshKit.lua").read_text()
+          relief_script = Path("src/client/arena-surface-relief.client.lua").read_text()
+          for variant, source_kind in (
+              ("Essential", "relief_essential"), ("Classic", "relief_classic"),
+              ("Towers", "relief_towers"), ("Crossroads", "relief_crossroads"),
+              ("Orbital", "relief_orbital"), ("Harbor", "relief_harbor"),
+          ):
+              assert (variant + " = " + approved[source_kind]) in relief_server
+              assert ("id = " + approved[source_kind]) in relief_client
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == source_kind) == 41736767816
+          for required in (
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedFloorReliefTemplates",
+              "AssetService.LoadAssetAsync",
+          ):
+              assert required in relief_server
+          for required in (
+              "PremiumFloorReliefMeshKit.install(",
+              "LocalOriginalFloorRelief3DCount",
+              "ArenaFloorFollowerKit.bind(base, folder)",
+          ):
+              assert required in relief_script
+          for required in (
+              "Low = 6, Medium = 16, High = 28",
+              "obj.CanCollide = false",
+              "obj.CanTouch = false",
+              "obj.CanQuery = false",
+              "obj.CastShadow = false",
+              "source:GetAttribute(\"OwnerVerified\") ~= true",
+          ):
+              assert required in relief_client, required
+          assert "RunService" not in relief_client
+          assert "ApprovedFloorReliefTemplates" in relief_script
+          assert "ArenaSurfaceReliefLocal" in census
+          assert "PremiumFloorReliefAssets.start" in Path(
+              "src/server/init.server.lua").read_text()
           ambient_source = Path("src/server/PremiumAmbientMotionAssets.lua").read_text()
           ambient_mesh = Path("src/client/PremiumAmbientMotionMeshKit.lua").read_text()
           ambient_script = Path("src/client/arena-ambient-props.client.lua").read_text()
@@ -480,7 +530,7 @@ jobs:
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
-          print("Verified 28 genuine owned approved Models including 5 original animated machines and 5 service miniatures, Android safety and authentic owner receipts.")
+          print("Verified 34 creator-owned Approved 3D Models including six original shallow floor sculptures, strict collision safety, Android quotas and owner receipts.")
           PY
 
       - name: Install Rojo 7.7.0
