@@ -1,0 +1,30 @@
+# Owner-requested true original 3D production assets, not another Part/Wedge coat.
+# This file triggers ONCE when first added to main, never for later commits.
+# Existing audited uploader performs source-glTF checks, single asset POST,
+# 24-poll status check, preserves nonsecret asset ID metadata as an artifact.
+# Do not place on public game until both are moderated and certified.
+name: One-time Import Original Premium Jump Deck and Skybridge (2026-11-03)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-import-premium-route-mesh-20261103.yml'
+permissions:
+  contents: read
+jobs:
+  import-original-production-geometry:
+    name: Import original 3D ${{ matrix.model }} to existing Roblox owner
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - premium_jump_deck
+          - premium_skybridge_module
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
