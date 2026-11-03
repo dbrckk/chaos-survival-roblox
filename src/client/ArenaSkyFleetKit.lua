@@ -2,7 +2,98 @@
 -- platform routes. This is presentation only: no physics, touch, query,
 -- remotes, hazard interference, assets or artificial traversal surfaces.
 -- Each scene is one disposable local bundle, not a replicated map mutation.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
+
+-- Roblox Assets Open Cloud action #41634338244: owner 9774173158,
+-- real approved creator-owned Model (never guessed MeshPart.MeshId).
+local SKYFLEET_CARRIER_ID = 84239592388200
+
+local function originalCarrier()
+    local folder = ReplicatedStorage:FindFirstChild("PremiumSkyfleetMeshTemplates")
+    if not folder or folder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local model = folder:FindFirstChild("OriginalSkyfleetCarrier")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("PremiumSkyfleet3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= SKYFLEET_CARRIER_ID then
+        return nil
+    end
+    local n = 0
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            if not descendant:IsA("MeshPart") then return nil end
+            n += 1
+        elseif descendant:IsA("LuaSourceContainer") then
+            return nil
+        end
+    end
+    if n < 1 or n > 16 then return nil end
+    local _, bounds = model:GetBoundingBox()
+    if math.min(bounds.X, bounds.Z) < 37
+        or math.max(bounds.X, bounds.Z) < 45
+        or math.max(bounds.X, bounds.Z) > 65
+        or bounds.Y < 9 or bounds.Y > 30 then return nil end
+    return model
+end
+
+function Kit.hasOriginalCarrier()
+    return originalCarrier() ~= nil
+end
+
+-- The animated skyfleet already owns an LOD-protected list of local Parts.
+-- Register the REAL imported MeshParts in that same pose stream; never
+-- introduce a second render, server physics, parts or effect update task.
+local function mountOriginalCarrier(ship, source)
+    if not source then return false end
+    local clone = source:Clone()
+    local sourceFrame, bounds = clone:GetBoundingBox()
+    if math.min(bounds.X, bounds.Z) < 37
+        or math.max(bounds.X, bounds.Z) > 65
+        or bounds.Y < 9 or bounds.Y > 30 then
+        clone:Destroy()
+        return false
+    end
+    local entries = {}
+    for _, mesh in ipairs(clone:GetDescendants()) do
+        if mesh:IsA("BasePart") then
+            if not mesh:IsA("MeshPart") then
+                clone:Destroy()
+                return false
+            end
+            local offset = sourceFrame:ToObjectSpace(mesh.CFrame)
+            mesh.CFrame = ship.rest * offset
+            mesh.Anchored = true
+            mesh.CanCollide = false
+            mesh.CanTouch = false
+            mesh.CanQuery = false
+            mesh.CastShadow = false
+            mesh.Massless = true
+            mesh:SetAttribute("CosmeticOnly", true)
+            mesh:SetAttribute("ChaosSkyFleet", true)
+            entries[#entries + 1] = {
+                part = mesh, offset = offset, role = nil,
+                baseTransparency = mesh.Transparency,
+                baseColor = mesh.Color,
+            }
+        end
+    end
+    if #entries < 1 or #entries > 16 then
+        clone:Destroy()
+        return false
+    end
+    clone.Name = "Original3DSkyfleetAirframe"
+    clone:SetAttribute("CosmeticOnly", true)
+    clone:SetAttribute("Original3DAssetId", SKYFLEET_CARRIER_ID)
+    clone.Parent = ship.model
+    for _, entry in ipairs(entries) do
+        ship.parts[#ship.parts + 1] = entry
+    end
+    return true
+end
 
 local PROFILES = {
     Low = {ships = 2, maxPerShip = 13, interval = 0.40, detailed = false, high = false},
@@ -276,6 +367,9 @@ function Kit.matches(bundle, base, variant, tier, parent)
     return type(bundle) == "table" and bundle.base == base
         and bundle.variant == variant and bundle.tier == tier
         and bundle.folder and bundle.folder.Parent == parent
+        -- Late approved Roblox AssetService load must replace fallback
+        -- native blocks on the first authentic template arrival.
+        and bundle.usesOriginalMesh == Kit.hasOriginalCarrier()
 end
 
 function Kit.build(parent, base, variant, theme, tier)
@@ -288,9 +382,11 @@ function Kit.build(parent, base, variant, theme, tier)
     folder.Name = "SkyFleet_" .. variant
     folder:SetAttribute("CosmeticOnly", true)
     folder.Parent = parent
+    local imported = originalCarrier()
     local bundle = {
         base = base, variant = variant, tier = tier, folder = folder,
-        ships = {}, totalParts = 0,
+        ships = {}, totalParts = 0, usesOriginalMesh = imported ~= nil,
+        importedCarriers = 0,
     }
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5
     for i = 1, profile.ships do
@@ -311,8 +407,17 @@ function Kit.build(parent, base, variant, theme, tier)
         model:SetAttribute("FleetSlot", i)
         model.Parent = folder
         local ship = {model = model, rest = rest, parts = {}, index = i}
-        constructCommon(ship, theme, variant, profile)
+        -- One true 4,118-triangle carrier replaces ALL basic common-hull
+        -- Parts/Wedges. Variant-specific articulated mechanisms stay visible.
+        if mountOriginalCarrier(ship, imported) then
+            bundle.importedCarriers += 1
+        else
+            constructCommon(ship, theme, variant, profile)
+        end
         BUILD_VARIANT[variant](ship, theme, profile)
+        -- Model pivot remains tied to the real distant craft center even
+        -- when imported MeshParts were moved from a prefab world pivot.
+        model.WorldPivot = rest
         assert(#ship.parts <= profile.maxPerShip,
             "SkyFleet exceeded per-tier authored 3D geometry budget")
         bundle.totalParts += #ship.parts
@@ -320,6 +425,7 @@ function Kit.build(parent, base, variant, theme, tier)
     end
     folder:SetAttribute("FleetPartCount", bundle.totalParts)
     folder:SetAttribute("FleetShipCount", #bundle.ships)
+    folder:SetAttribute("OriginalPremiumSkyfleetCount", bundle.importedCarriers)
     return bundle
 end
 
