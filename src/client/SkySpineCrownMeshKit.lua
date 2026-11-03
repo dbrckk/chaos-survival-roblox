@@ -97,18 +97,23 @@ local function authentic(deck, arena, base)
     return true
 end
 
-local function originalUpperParts(decor, deck)
+local function isOriginalUpperPart(piece, deck)
     local index = deck.Name:match("^Platform(%d+)$")
+    if not index or not piece:IsA("BasePart")
+        or piece:GetAttribute("SkySpineDecor") ~= true
+        or piece:GetAttribute("PerimeterPlatformIndex") ~= tonumber(index) then
+        return false
+    end
+    local suffix = piece.Name:match("^SkySpine" .. index .. "_(.+)$")
+    return suffix ~= nil and ORIGINAL_NATIVE[suffix] == true
+end
+
+local function originalUpperParts(decor, deck)
     local upper = {}
-    if not decor or not index then return upper end
+    if not decor then return upper end
     for _, piece in ipairs(decor:GetChildren()) do
-        if piece:IsA("BasePart")
-            and piece:GetAttribute("SkySpineDecor") == true
-            and piece:GetAttribute("PerimeterPlatformIndex") == tonumber(index) then
-            local suffix = piece.Name:match("^SkySpine" .. index .. "_(.+)$")
-            if suffix and ORIGINAL_NATIVE[suffix] then
-                upper[#upper + 1] = piece
-            end
+        if isOriginalUpperPart(piece, deck) then
+            upper[#upper + 1] = piece
         end
     end
     return upper
@@ -197,10 +202,24 @@ local function mount(deck, arena, base, decor, template)
         deck = deck, arena = arena, base = base, initialSize = deck.Size,
         model = clone, pieces = pieces, native = {}, connections = {},
     }
-    for _, part in ipairs(originalUpperParts(decor, deck)) do
+    local knownNative = {}
+    local function watchNative(part)
+        -- StreamingEnabled may replicate the real server crown AFTER the
+        -- approved mesh was mounted. Never show overlapping native blocks
+        -- above the new sculpted 3D silhouette on a late streaming packet.
+        if knownNative[part] or not isOriginalUpperPart(part, deck) then
+            return
+        end
+        knownNative[part] = true
         entry.native[#entry.native + 1] = {
             part = part, original = part.LocalTransparencyModifier,
         }
+        if entry.model.Parent == folder and safeAfterMount(entry) then
+            part.LocalTransparencyModifier = 1
+        end
+    end
+    for _, part in ipairs(originalUpperParts(decor, deck)) do
+        watchNative(part)
     end
     clone.Name = "OriginalApprovedSkySpineCrown3D"
     clone:SetAttribute("CosmeticOnly", true)
@@ -232,6 +251,8 @@ local function mount(deck, arena, base, decor, template)
     end
     entry.connections[#entry.connections + 1] =
         deck.AncestryChanged:Connect(changed)
+    entry.connections[#entry.connections + 1] =
+        decor.ChildAdded:Connect(watchNative)
     updateVisibility(entry)
     return entry
 end
