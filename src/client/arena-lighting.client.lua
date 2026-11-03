@@ -229,6 +229,22 @@ local function applyMood(duration)
         0,
         1
     )
+
+    -- Source-only visual QA identity. Numeric values describe our
+    -- *authored* profile, not measured FPS, screenshots, shadows or
+    -- final disaster-controlled exposure. No RemoteEvents or new loops.
+    local diagnostic = {
+        LocalLightingArtVariant = currentVariant,
+        LocalLightingSolarClock = mood.ClockTime or 15,
+        LocalLightingLatitude = mood.Latitude or 36,
+        LocalLightingQualityTier = quality.Name,
+    }
+    for name, value in pairs(diagnostic) do
+        if player:GetAttribute(name) ~= value then
+            player:SetAttribute(name, value)
+        end
+    end
+
     local colorShiftTop = Color3.new():Lerp(mood.ColorShiftTop or Color3.new(), colorShiftScale)
     local colorShiftBottom = Color3.new():Lerp(mood.ColorShiftBottom or Color3.new(), colorShiftScale)
 
