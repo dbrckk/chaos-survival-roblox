@@ -123,6 +123,14 @@
       "moderation": "Approved",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41634338244
+    },
+    {
+      "name": "underdeck_chassis",
+      "asset_id": "84582262145054",
+      "moderation": "Approved",
+      "source": "assets/source/chaos_underdeck_chassis.obj",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41644715829
     }
   ]
 }
