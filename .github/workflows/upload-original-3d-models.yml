@@ -230,10 +230,17 @@ jobs:
                    "skyfleet_carrier": "Chaos Original Colossal 3D Skyfleet Carrier",
                    "underdeck_chassis": "Chaos Original 3D Underslung Engineering Chassis",
                    "lobby_gate": "Chaos Original Sculpted Arena Lobby Gate 3D",
-                   "sky_spine_crown": "Chaos Original Sculpted Sky Spine Interchange Crown 3D"}
+                   "sky_spine_crown": "Chaos Sky Spine Crown 3D"}
+          display_name = names[os.environ["CHOICE"]]
+          # Roblox returned INVALID_ARGUMENT "Asset name length is invalid"
+          # on 3 Nov 2026 for the previous 54-character Sky Spine name.
+          # All 16 previous imports had <=48 characters; reject long
+          # strings BEFORE any non-idempotent POST or quota consumption.
+          if not (3 <= len(display_name) <= 49) or display_name != display_name.strip():
+              raise SystemExit("Invalid asset display name length/whitespace (3..49 characters)")
           request = {
               "assetType": "Model",
-              "displayName": names[os.environ["CHOICE"]],
+              "displayName": display_name,
               "description": "Original decorative UV-ready 3D geometry for the creator-owned Chaos Survival experience; no gameplay collisions.",
               "creationContext": {"creator": creator},
           }
