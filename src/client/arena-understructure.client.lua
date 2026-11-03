@@ -207,6 +207,34 @@ local function rebuild()
         end
     end
 
+    -- Towers and Harbor previously exposed only bare Roblox support blocks.
+    -- Give both themes genuine source-authentic 3D beam bays, identical in
+    -- size and safety envelope to the approved Classic/Crossroads chassis.
+    -- The existing camera-ranked UnderstructureBeamMeshKit replaces only
+    -- nearby bays; native collision-free fallback remains on every tier.
+    if variant == "Towers" or variant == "Harbor" then
+        local positions = {-108, -84, -60, 60, 84, 108}
+        for _, axis in ipairs({"X", "Z"}) do
+            local alongX = axis == "X"
+            for index, offset in ipairs(positions) do
+                local beam = makePart(
+                    "Under" .. variant .. "Beam" .. axis .. index,
+                    alongX and Vector3.new(23.3, 2.2, 6.0)
+                        or Vector3.new(6.0, 2.2, 23.3),
+                    base.CFrame * CFrame.new(
+                        alongX and offset or 0,
+                        -base.Size.Y * .5 - 4.4,
+                        alongX and 0 or offset
+                    ),
+                    theme.Structure:Lerp(VisualTheme.World.Deep, .32),
+                    Enum.Material.Metal,
+                    tier.Name == "Low" and .30 or .16
+                )
+                beam:SetAttribute("OriginalUnderstructureBeam", true)
+            end
+        end
+    end
+
     if variant == "Orbital" then
         local hub = makePart(
             "UnderOrbitalHub",
