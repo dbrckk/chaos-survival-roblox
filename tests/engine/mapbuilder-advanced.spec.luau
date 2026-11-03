@@ -5,6 +5,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
+local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
@@ -16,6 +17,78 @@ local ArenaPresentation = require("../../src/shared/ArenaPresentation")
 local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("Chaos Survival engine", function()
+    it("mounts genuine MeshPart route art only on live physical platforms and preserves shrink/collapse safety", function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local holder = Instance.new("Folder")
+        holder.Name = "PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+        local function template(name, id, size)
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("OwnerVerified", true)
+            model:SetAttribute("CosmeticOnly", true)
+            model:SetAttribute("Original3DAssetId", id)
+            local geometry = Instance.new("MeshPart")
+            geometry.Size = size
+            geometry.Anchored = true
+            geometry.Parent = model
+            model.Parent = holder
+        end
+        template("PremiumJumpDeck", 98478693994864, Vector3.new(11.9, 1.5, 11.9))
+        template("PremiumSkybridgeModule", 94023662427980,
+            Vector3.new(10, 1.3, 4.9))
+        local arena = Instance.new("Folder")
+        arena.Name = "PremiumRouteSmokeArena"
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.Anchored = true
+        base.Parent = arena
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local deck = Instance.new("Part")
+        deck.Name = "Platform1"
+        deck.Size = Vector3.new(12, 2, 12)
+        deck.Anchored = true
+        deck.CanCollide = true
+        deck.Parent = platforms
+        local nativePanel = Instance.new("Part")
+        nativePanel.Name = "PlatformPanel1"
+        nativePanel.Parent = decor
+        local bridge = Instance.new("Part")
+        bridge.Name = "Skybridge2"
+        bridge:SetAttribute("ChaosSkybridge", true)
+        bridge.Size = Vector3.new(49, 2, 4.5)
+        bridge.Position = Vector3.new(18, 4, 0)
+        bridge.Anchored = true
+        bridge.CanCollide = true
+        bridge.Parent = platforms
+        PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
+        -- One true imported deck and three repeated actual bridge modules.
+        expect(PremiumRouteMeshKit.count()).toBe(4)
+        expect(deck.CanCollide).toBe(true)
+        expect(bridge.CanCollide).toBe(true)
+        expect(deck.Size).toBe(Vector3.new(12, 2, 12))
+        expect(nativePanel.LocalTransparencyModifier).toBe(1)
+        deck:SetAttribute("CollapsePhase", "Warning")
+        PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
+        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(nativePanel.LocalTransparencyModifier).toBe(0)
+        base.Size = Vector3.new(230, 2, 230)
+        PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
+        expect(PremiumRouteMeshKit.count()).toBe(0)
+        expect(deck.CanCollide).toBe(true)
+        expect(bridge.CanCollide).toBe(true)
+        PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
+        arena:Destroy()
+        holder:Destroy()
+    end)
     it("builds sixteen physical side lookouts without changing original route indices", function()
         for _, id in ipairs(ArenaVariants.Order) do
             local variant = ArenaVariants.get(id)
