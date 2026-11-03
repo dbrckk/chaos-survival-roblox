@@ -82,6 +82,7 @@ top.Parent = root
 UITheme.addCorner(top, UITheme.Corners.Large)
 local topStroke = UITheme.addStroke(top, UITheme.Colors.Border, 1.2, 0.32)
 local topGradient = UITheme.addGradient(top, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+UITheme.addMachinedFrame(top, UITheme.Colors.Blue, true)
 
 local topAccent = Instance.new("Frame")
 topAccent.Name = "PhaseAccent"
@@ -407,6 +408,7 @@ countdownCard.Parent = root
 UITheme.addCorner(countdownCard, UDim.new(0, 22))
 local countdownStroke = UITheme.addStroke(countdownCard, UITheme.Colors.Cyan, 1.8, 0.20)
 UITheme.addGradient(countdownCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+UITheme.addMachinedFrame(countdownCard, UITheme.Colors.Cyan, true)
 
 local countdownScale = Instance.new("UIScale")
 countdownScale.Scale = 1
@@ -1673,6 +1675,7 @@ resultCard.Parent = root
 UITheme.addCorner(resultCard, UDim.new(0, 22))
 local resultStroke = UITheme.addStroke(resultCard, UITheme.Colors.Blue, 1.6, 0.24)
 local resultGradient = UITheme.addGradient(resultCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
+UITheme.addMachinedFrame(resultCard, UITheme.Colors.Gold, false)
 
 local resultAccent = Instance.new("Frame")
 resultAccent.AnchorPoint = Vector2.new(0.5, 0)
