@@ -577,6 +577,16 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalDistrictFacadeMeshCount",
                 facadeMeshCount)
         end
+        -- Count the ACTUAL native facade/roofline pieces displaced by
+        -- genuine approved MeshParts, not just imported models rendered
+        -- on top of primitive building masses. No extra update loop.
+        local replacedRoofPieces =
+            PremiumDistrictFacadeMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalDistrictRooflinesReplaced")
+            ~= replacedRoofPieces then
+            player:SetAttribute("LocalOriginalDistrictRooflinesReplaced",
+                replacedRoofPieces)
+        end
         -- The counter measures LOCAL instances, not server replication,
         -- GPU time or device FPS. Keep it stable on unchanged LOD passes.
         if player:GetAttribute("LocalFacadeDetailCount") ~= localFacadeParts then
