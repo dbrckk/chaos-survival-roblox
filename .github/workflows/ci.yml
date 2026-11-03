@@ -189,10 +189,11 @@ jobs:
           underdeck_names = {"underdeck_chassis"}
           lobby_gate_names = {"lobby_gate"}
           sky_spine_crown_names = {"sky_spine_crown"}
+          arena_keel_names = {"arena_keel"}
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
-              | sky_spine_crown_names)
+              | sky_spine_crown_names | arena_keel_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -203,12 +204,13 @@ jobs:
               for attr in ("source", "source_materials"):
                   path = Path(model[attr])
                   if attr == "source" and model["name"] in (
-                      "lobby_gate", "sky_spine_crown"):
+                      "lobby_gate", "sky_spine_crown", "arena_keel"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
                           "lobby_gate": "tools/generate_original_lobby_gate.py",
                           "sky_spine_crown": "tools/generate_original_sky_spine_crown.py",
+                          "arena_keel": "tools/generate_original_arena_keel.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -231,7 +233,7 @@ jobs:
           route_block = re.search(r"local APPROVED = \{(.*?)\n\}", route_source, re.S)
           assert route_block, "Missing real original jump/skybridge asset allowlist"
           route_ids = dict(re.findall(
-              r"(PremiumJumpDeck|PremiumSkybridgeModule|PremiumGroundTile|OriginalUnderdeckChassis|OriginalSkySpineCrown)\s*=\s*(\d+)",
+              r"(PremiumJumpDeck|PremiumSkybridgeModule|PremiumGroundTile|OriginalUnderdeckChassis|OriginalSkySpineCrown|OriginalArenaKeel)\s*=\s*(\d+)",
               route_block.group(1),
           ))
           approved = {m["name"]: m["asset_id"] for m in models}
@@ -241,6 +243,7 @@ jobs:
               "PremiumGroundTile": approved["premium_ground_tile"],
               "OriginalUnderdeckChassis": approved["underdeck_chassis"],
               "OriginalSkySpineCrown": approved["sky_spine_crown"],
+               "OriginalArenaKeel": approved["arena_keel"],
           }, "Approved production 3D route IDs do not match runtime allowlist"
           facade_source = Path("src/server/PremiumDistrictFacadeAssets.lua").read_text()
           facade_block = re.search(r"local APPROVED = \{(.*?)\n\}", facade_source, re.S)
@@ -335,7 +338,39 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          print("Verified 17 genuine owned approved Models, original 1696-triangle Sky Spine sculpture, 1/1/2 Android resident caps, native hazard fallbacks and source asset provenance.")
+          assert len(models) == 18
+          assert approved["arena_keel"] == "121436301473005"
+          assert next(m["workflow_run_id"] for m in models
+                      if m["name"] == "arena_keel") == 41669929967
+          keel = Path("src/client/ArenaKeelMeshKit.lua").read_text()
+          assert "OriginalArenaKeel = 121436301473005" in route_source
+          assert 'PremiumArenaKeel3D' in route_source
+          assert "local ASSET_ID = 121436301473005" in keel
+          assert 'OriginalArenaKeelLocal' in census
+          assert "ArenaKeelMeshKit.sync(arena, cameraPoint" in scenery
+          assert "LocalOriginalArenaKeelCount" in scenery
+          assert "Low = {count = 1" in keel
+          assert "Medium = {count = 2" in keel
+          assert "High = {count = 4" in keel
+          for safety in ("part.CanCollide = false", "part.CanTouch = false",
+                         "part.CanQuery = false", "part.CastShadow = false",
+                         "base:GetPropertyChangedSignal(\"Size\")",
+                         'source:GetAttribute("OwnerVerified") ~= true',
+                         "Original3DAssetId"):
+              assert safety in keel, safety
+          keel_art = json.loads(Path(
+              "build/mesh-previews/chaos_arena_keel.gltf").read_text())
+          keel_source = json.loads(Path(
+              "build/mesh-previews/arena-keel-source.json").read_text())
+          keel_parts = keel_art["meshes"][0]["primitives"]
+          assert keel_source["asset"] == "arena_keel"
+          assert keel_source["triangles"] == 3332
+          assert len(keel_parts) == 7
+          assert sum(keel_art["accessors"][p["attributes"]["POSITION"]]["count"]//3
+                     for p in keel_parts) == 3332
+          assert "ArenaKeelMeshKit" in Path(
+              "tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          print("Verified 18 genuine owned approved Models, 3,332-triangle arena keel and 1,696-triangle Sky Spine, strict Android residency, physics/hazard fallbacks and creator receipts.")
           PY
 
       - name: Install Rojo 7.7.0
