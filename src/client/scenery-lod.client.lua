@@ -450,10 +450,10 @@ task.spawn(function()
         -- animated collapse, shrink and stream changes hide cosmetics.
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
-        -- Five-arena original 2,976-triangle industrial floor: share the
-        -- existing 0.65/0.90s camera cadence instead of another loop.
-        -- Low = 1, Medium = 3, High = 6 original approved local tiles;
-        -- base/shrink changes hide art immediately via instance events.
+        -- Genuine approved 2,976-triangle manufactured floor tiles use
+        -- the existing 0.65/0.90s camera sampler (never a new loop).
+        -- Near-camera Low = 1, Medium = 5, High = 12 3D floor modules.
+        -- Base/shrink changes hide art immediately via instance events.
         PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
         local floorMeshes = PremiumGroundMeshKit.count()
@@ -477,17 +477,17 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalSkySpineCrownCount",
                 crownMeshes)
         end
-        -- One more genuinely imported, source-gated 3D silhouette under
-        -- the arena, 1/2/4 MODEL copies on Low/Medium/High. No new loop.
+        -- Source-gated sculpted undercarriages: 1/3/5 approved MeshPart
+        -- Model copies on Low/Medium/High; no additional update loop.
         -- Dismount immediately on shrink to prevent phantom 3D decking.
         ArenaKeelMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
         local keelMeshes = ArenaKeelMeshKit.count()
         if player:GetAttribute("LocalOriginalArenaKeelCount") ~= keelMeshes then
             player:SetAttribute("LocalOriginalArenaKeelCount", keelMeshes)
         end
-        -- Real original 3,072-triangle approved 3D chassis replace ONLY
-        -- near-camera marked cosmetic underfloor beam bays. Low 1 / Medium
-        -- 2 / High 4; every bay has a self-restoring native fallback.
+        -- Real 3,072-triangle approved 3D chassis replace ONLY marked
+        -- cosmetic underfloor bays: Low 1 / Medium 4 / High 12.
+        -- Each native socket remains a self-restoring safe fallback.
         -- Reuse the SAME established camera sampler and part census.
         UnderstructureBeamMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady)
