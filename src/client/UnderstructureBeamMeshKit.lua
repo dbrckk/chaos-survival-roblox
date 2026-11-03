@@ -12,7 +12,7 @@ local BUDGET = {
     Medium = {count = 2, distance = 210, retention = 20},
     High = {count = 4, distance = 290, retention = 25},
 }
-local VARIANTS = {Classic = true, Crossroads = true}
+local VARIANTS = {Classic = true, Crossroads = true, Towers = true, Harbor = true}
 
 local bucket = Instance.new("Folder")
 bucket.Name = "OriginalUnderstructureBeamsLocal"
@@ -93,7 +93,9 @@ local function safeCandidate(part, folder)
     return part ~= nil and part:IsA("Part") and part.Parent == folder
         and part:GetAttribute("OriginalUnderstructureBeam") == true
         and (part.Name:match("^UnderClassicBeam[XY]%d+$") ~= nil
-            or part.Name:match("^UnderCrossroadsBeam[NEWS]%d+$") ~= nil)
+            or part.Name:match("^UnderCrossroadsBeam[NEWS]%d+$") ~= nil
+            or part.Name:match("^UnderTowersBeam[XY]%d+$") ~= nil
+            or part.Name:match("^UnderHarborBeam[XY]%d+$") ~= nil)
         and part.Anchored and not part.CanCollide
         and not part.CanTouch and not part.CanQuery
         and part.Size.Y >= 1 and part.Size.Y <= 3
