@@ -17,13 +17,17 @@ local ASSETS = {
 -- camera moves across a threshold. A new route must be within distance;
 -- an already mounted safe route gets a small exit margin, never more slots.
 -- Stable residency avoids repeated MeshPart clone/weld churn on Android.
+-- More visible real platforms, but NEVER unlimited cloning: the worst
+-- High residency is twelve jump decks plus three four-segment bridges,
+-- with at most four optional chassis models under supported routes.
+-- No additional source assets, work loops or new physical platforms.
 local BUDGET = {
     Low = {decks = 2, bridges = 1, segments = 1, underdecks = 0,
         distance = 100, retention = 18},
-    Medium = {decks = 5, bridges = 1, segments = 3, underdecks = 2,
-        distance = 170, retention = 22},
-    High = {decks = 9, bridges = 2, segments = 5, underdecks = 4,
-        distance = 245, retention = 28},
+    Medium = {decks = 8, bridges = 2, segments = 3, underdecks = 2,
+        distance = 195, retention = 22},
+    High = {decks = 12, bridges = 3, segments = 4, underdecks = 4,
+        distance = 260, retention = 28},
 }
 
 local folder = Instance.new("Folder")
@@ -385,13 +389,13 @@ local function eligible(platform, cameraPoint, maxDistance, retention, cameraLoo
     if dist > maxDistance + (resident and retention or 0) then return nil end
     -- Between equally useful routes, keep already visible art instead of
     -- replacing MeshParts every LOD tick for tiny camera movements. The
-    -- hard deck/bridge/segment caps remain exactly the same on every tier.
+    -- hard deck/bridge/segment caps remain enforced per tier.
     local priority = dist - (resident and retention * 0.65 or 0)
-    -- The old nearest-only sort frequently filled ALL 2/5/9 approved deck
-    -- mesh slots with platforms BEHIND the third-person Android camera.
-    -- Prefer the real next leap in front (without creating any assets or
-    -- increasing limits). Under 48 studs keep an omnidirectional stable
-    -- landing: rotating the camera must not suddenly evict the current deck.
+    -- Nearest-only sorting used to fill scarce mesh slots with routes
+    -- BEHIND the third-person camera. Prefer the next real leap in front,
+    -- while keeping a stable landing within 48 studs and retaining every
+    -- tier's explicit MeshPart/model quota.
+    -- Rotating the camera must not suddenly evict the current landing.
     if typeof(cameraLook) == "Vector3" and cameraLook.Magnitude > 0.5
         and dist > 48 then
         local direction = (platform.Position - cameraPoint) / dist

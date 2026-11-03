@@ -452,7 +452,7 @@ task.spawn(function()
             cameraReady, cameraLook)
         -- Five-arena original 2,976-triangle industrial floor: share the
         -- existing 0.65/0.90s camera cadence instead of another loop.
-        -- Low = 1, Medium = 3, High = 6 original approved local tiles;
+        -- Low = 2, Medium = 8, High = 24 original approved local tiles;
         -- base/shrink changes hide art immediately via instance events.
         PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
@@ -478,7 +478,7 @@ task.spawn(function()
                 crownMeshes)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
-        -- the arena, 1/2/4 MODEL copies on Low/Medium/High. No new loop.
+        -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
         -- Dismount immediately on shrink to prevent phantom 3D decking.
         ArenaKeelMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
         local keelMeshes = ArenaKeelMeshKit.count()
@@ -487,7 +487,7 @@ task.spawn(function()
         end
         -- Real original 3,072-triangle approved 3D chassis replace ONLY
         -- near-camera marked cosmetic underfloor beam bays. Low 1 / Medium
-        -- 2 / High 4; every bay has a self-restoring native fallback.
+        -- 4 / High 12; every bay has a self-restoring native fallback.
         -- Reuse the SAME established camera sampler and part census.
         UnderstructureBeamMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady)

@@ -31,7 +31,7 @@ VisualBudgetRules.LocalFolders = {
     "PremiumRouteMeshLocal",
     -- Authenticated original 2,976-triangle floor tiles share the exact
     -- mobile Part/GPU census instead of bypassing adaptive backpressure.
-    -- Camera-tier limits: 1/3/6 local tiles, at most seven MeshParts each.
+    -- Camera-tier limits: 2/8/24 local tiles, at most seven MeshParts each.
     "OriginalPremiumGroundMeshesLocal",
     -- A near-camera client kit mounts approved creator-owned 3D portal
     -- meshes over the real district doors; count all clone MeshParts.
@@ -57,10 +57,10 @@ VisualBudgetRules.LocalFolders = {
     -- the SAME adaptive Android Parts budget as all other visual meshes.
     "OriginalSkySpineCrownLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
-    -- 1/2/4 tiered residents included in existing 440/680/900 budget.
+    -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
     -- Approved 3,072-triangle 3D chassis over original underfloor beams;
-    -- four residents maximum and all MeshParts count against Android caps.
+    -- twelve High-tier residents maximum; all MeshParts count against caps.
     "OriginalUnderstructureBeamsLocal",
     "LobbyCoreOrbitLocal",
     "LobbyCrewBeaconLocal",

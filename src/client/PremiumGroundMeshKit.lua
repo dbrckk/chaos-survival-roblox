@@ -10,12 +10,14 @@ local PremiumGroundMeshKit = {}
 -- Roblox import/moderation proof: GitHub Actions #41622860616.
 local APPROVED_GROUND_ID = 72507987666671
 local TEMPLATE_NAME = "PremiumGroundTile"
--- Keep creator-approved 3D tiles resident across minor camera changes.
--- Preserve all existing hard limits on mobile model and MeshPart counts.
+-- One approved tile is 2,976 source triangles / at most seven MeshParts.
+-- Each tier is an EXPLICIT camera-resident source-mesh budget, not an
+-- unrestricted clone-per-tile. Low keeps 5,952 triangles maximum; Medium
+-- 23,808; High 71,424. The real 36-piece base and hazards stay unchanged.
 local BUDGET = {
-    Low = {count = 1, distance = 112, retention = 18},
-    Medium = {count = 3, distance = 180, retention = 24},
-    High = {count = 6, distance = 245, retention = 28},
+    Low = {count = 2, distance = 125, retention = 18},
+    Medium = {count = 8, distance = 195, retention = 24},
+    High = {count = 24, distance = 260, retention = 28},
 }
 
 local folder = Instance.new("Folder")
@@ -27,10 +29,47 @@ local activeArena = nil
 local watchedBase = nil
 local baseChanged = nil
 
+-- Recessed native maintenance seams/gussets were still drawn OVER approved
+-- sculpted MeshParts. Suppress only the exact nonphysical source overlays
+-- belonging to an actively resident verified tile, never warning cues.
+-- Capture native transparency for exact fallback recovery after LOD exit.
+local OVERLAY_PREFIXES = {
+    "PremiumGroundServiceInlay",
+    "PremiumGroundGusset",
+}
+
+local function restoreOverlays(entry)
+    for native, alpha in pairs(entry.overlays or {}) do
+        if native.Parent == entry.decor
+            and not native.CanCollide and not native.CanTouch
+            and not native.CanQuery and native.LocalTransparencyModifier == 1 then
+            native.LocalTransparencyModifier = alpha
+        end
+        entry.overlays[native] = nil
+    end
+end
+
+local function suppressOverlays(entry)
+    for _, prefix in ipairs(OVERLAY_PREFIXES) do
+        local native = entry.decor:FindFirstChild(prefix .. tostring(entry.index))
+        if native and native:IsA("BasePart")
+            and native.Parent == entry.decor and native.Anchored
+            and not native.CanCollide and not native.CanTouch
+            and not native.CanQuery and not native.CastShadow
+            and native.Size.Y <= 0.1 then
+            if entry.overlays[native] == nil then
+                entry.overlays[native] = native.LocalTransparencyModifier
+            end
+            native.LocalTransparencyModifier = 1
+        end
+    end
+end
+
 local function restore(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    restoreOverlays(entry)
     entry.model:Destroy()
 end
 
@@ -94,6 +133,9 @@ local function validTemplate()
 end
 
 local function hide(entry)
+    -- Shrink, stream unload or a changed source surface: the real game
+    -- returns to native art immediately, without a phantom 3D overlay.
+    restoreOverlays(entry)
     for _, piece in ipairs(entry.pieces) do
         if piece.Parent and piece.LocalTransparencyModifier ~= 1 then
             piece.LocalTransparencyModifier = 1
@@ -145,7 +187,10 @@ local function mount(ground, decor, base, template)
     -- PremiumGroundModule center (+0.153), i.e. below danger text/glyphs.
     -- Keep real PBR underlay visible through the manufactured 3D seams.
     local number = tonumber(ground.Name:match("(%d+)$")) or 1
-    local yaw = number % 2 == 0 and math.pi * 0.5 or 0
+    -- The original 4x4 sculpted machined plates have asymmetric details.
+    -- Quarter-turn modules by row/column to break visible tiling repetition.
+    local yaw = ((math.floor((number - 1) / 6) + (number - 1) % 6) % 4)
+        * math.pi * 0.5
     local frame = ground.CFrame
         * CFrame.new(0, 0.032 - dimensions.Y * 0.5, 0)
         * CFrame.Angles(0, yaw, 0)
@@ -179,12 +224,19 @@ local function mount(ground, decor, base, template)
     local entry = {
         model = clone, ground = ground, decor = decor,
         initialSize = ground.Size, initialCFrame = ground.CFrame,
-        pieces = pieces, connections = {},
+        pieces = pieces, connections = {}, index = number, overlays = {},
     }
     local function onGroundChanged()
-        -- Immediate on first shrink step, not 0.65s later in the LOD loop.
-        -- The original noncolliding 2K PBR tiles remain visible as fallback.
-        if not safeAfterMount(entry, base) then hide(entry) end
+        -- Hide untrusted/changed 3D immediately, and restore the native
+        -- finish. Reversible if a harmless transparency change is undone.
+        if not safeAfterMount(entry, base) then
+            hide(entry)
+            return
+        end
+        for _, piece in ipairs(entry.pieces) do
+            if piece.Parent then piece.LocalTransparencyModifier = 0 end
+        end
+        suppressOverlays(entry)
     end
     for _, prop in ipairs({"Size", "CFrame", "Transparency"}) do
         entry.connections[#entry.connections + 1] =
@@ -289,6 +341,14 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, camera
     for ground in pairs(wanted) do
         if not mounted[ground] then
             mounted[ground] = mount(ground, decor, base, template)
+        end
+    end
+    -- Decor may stream in after its 3D floor Module. Reconcile a maximum
+    -- of two native seams per already-mounted tile using the existing
+    -- 0.65/0.90-second scenery sampler, without another listener/loop.
+    for _, entry in pairs(mounted) do
+        if entry and safeAfterMount(entry, base) then
+            suppressOverlays(entry)
         end
     end
 end
