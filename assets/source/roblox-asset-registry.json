@@ -12,7 +12,8 @@
     "android_visual_qa_completed": false,
     "service_models_inserted_in_game": false,
     "ambient_models_inserted_in_game": false,
-    "floor_relief_models_inserted_in_game": false
+    "floor_relief_models_inserted_in_game": false,
+    "floor_hardware_models_inserted_in_game": false
   },
   "models": [
     {
@@ -286,6 +287,30 @@
       "source": "tools/generate_original_floor_relief.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41736767816
+    },
+    {
+      "name": "floor_corner_guard",
+      "asset_id": "102215174919938",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_hardware.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41740585965
+    },
+    {
+      "name": "floor_anchor_bolt_large",
+      "asset_id": "92226531849432",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_hardware.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41740889677
+    },
+    {
+      "name": "floor_harbor_tie",
+      "asset_id": "135412901717584",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_hardware.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41740585965
     }
   ]
 }
