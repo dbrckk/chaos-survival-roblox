@@ -1,3 +1,7 @@
+## Original premium service machines — five unique approved assets, source candidate
+
+The five arenas now have purpose-built, fully triangulated original 3D models for Classic cameras, Towers industrial maintenance, Crossroads route sentinels, Orbital power canisters, and Harbor mooring bollards. All five Roblox owner MODEL assets were **moderated Approved** in [import #41729439190](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41729439190). They are integrated with a server asset allowlist, safety sanitizer, client camera-tier quotas (Low 1 / Medium 2 / High 4), no-collision replacements of native fixtures, and the existing shrink/LOD owners. **Approved assets and merged GitHub code do not establish public release or mobile visual QA.** [Exact source/asset and QA notes](docs/ORIGINAL_FIVE_ARENA_SERVICE_MESHES_2026-11-03.md).
+
 # Chaos Survival — Roblox
 
 ## Nouvelle architecture 3D Sky Spine originale (3 novembre 2026)
