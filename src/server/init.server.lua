@@ -50,6 +50,7 @@ local PremiumRouteMeshAssets = require(script.PremiumRouteMeshAssets)
 local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
 local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
+local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
@@ -182,6 +183,9 @@ if not isStudioE2E then
     task.defer(PremiumSkyfleetMeshAssets.start)
     -- Five late-loading moderated miniature machines; never block a round.
     task.defer(PremiumServiceEquipmentAssets.start)
+    -- Optional creator-approved animated sky traffic; safely delayed and
+    -- serialized so original model API calls never block an actual round.
+    task.defer(PremiumAmbientMotionAssets.start)
     task.defer(PremiumLobbyGateMeshAssets.start)
 end
 LobbySpawnSafety.start()
