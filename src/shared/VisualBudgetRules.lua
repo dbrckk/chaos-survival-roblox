@@ -37,6 +37,12 @@ VisualBudgetRules.LocalFolders = {
     -- meshes over the real district doors; count all clone MeshParts.
     -- Low 1 / Medium 2 / High 4 resident MODEL maximum (not Parts).
     "OriginalDistrictGatewaysLocal",
+    -- Four approved, original triangulated district facade/roofline families
+    -- mounted locally by PremiumDistrictFacadeMeshKit. Count *every*
+    -- imported MeshPart against Android 440/680/900 Part budgets. This
+    -- fixes the actual failed Build Validation #41630960261 and ensures
+    -- genuine meshes cannot silently bypass adaptive quality pressure.
+    "ApprovedDistrictFacadesLocal",
     "ArenaAmbientPropsLocal",
     "ArenaFocalLightingLocal",
     "ArenaSurfaceDetailLocal",
