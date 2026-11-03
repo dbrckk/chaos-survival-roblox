@@ -42,14 +42,20 @@ local mounted = {}
 -- overlapping, purely decorative Roblox block fallback. Every part is
 -- restored on LOD exit, disaster shrink, missing asset or stream unload.
 -- This eliminates floating generic pylons protruding through premium art.
+-- Towers' angled braces are placed inside their corner keel module.
+-- Never hide them if the genuine MeshPart module is missing or over budget.
 local NATIVE_OVERLAPS = {
-    NorthWest = {"UnderSupport1", "UnderSupportGlow1"},
-    NorthEast = {"UnderSupport2", "UnderSupportGlow2"},
-    SouthWest = {"UnderSupport3", "UnderSupportGlow3"},
-    SouthEast = {"UnderSupport4", "UnderSupportGlow4"},
+    NorthWest = {"UnderSupport1", "UnderSupportGlow1", "UnderTowerBrace3"},
+    NorthEast = {"UnderSupport2", "UnderSupportGlow2", "UnderTowerBrace4"},
+    SouthWest = {"UnderSupport3", "UnderSupportGlow3", "UnderTowerBrace2"},
+    SouthEast = {"UnderSupport4", "UnderSupportGlow4", "UnderTowerBrace1"},
 }
 local CENTRAL_OVERLAPS = {
-    Orbital = {"UnderOrbitalHub"},
+    -- Outer radial halves remain as visible supports beyond the 56-stud keel.
+    Orbital = {"UnderOrbitalHub",
+        "UnderOrbitalInnerSpoke1", "UnderOrbitalInnerSpoke2",
+        "UnderOrbitalInnerSpoke3", "UnderOrbitalInnerSpoke4",
+        "UnderOrbitalInnerSpoke5", "UnderOrbitalInnerSpoke6"},
     Towers = {"UnderTowerCore", "UnderTowerCoreGlow"},
     Crossroads = {"UnderCrossroadsJunction"},
 }
