@@ -190,10 +190,14 @@ jobs:
           lobby_gate_names = {"lobby_gate"}
           sky_spine_crown_names = {"sky_spine_crown"}
           arena_keel_names = {"arena_keel"}
+          service_names = {
+              "service_camera", "service_maintenance", "service_wayfinder",
+              "service_orbital", "service_mooring",
+          }
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
-              | sky_spine_crown_names | arena_keel_names)
+              | sky_spine_crown_names | arena_keel_names | service_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -204,13 +208,20 @@ jobs:
               for attr in ("source", "source_materials"):
                   path = Path(model[attr])
                   if attr == "source" and model["name"] in (
-                      "lobby_gate", "sky_spine_crown", "arena_keel"):
+                      "lobby_gate", "sky_spine_crown", "arena_keel",
+                      "service_camera", "service_maintenance", "service_wayfinder",
+                      "service_orbital", "service_mooring"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
                           "lobby_gate": "tools/generate_original_lobby_gate.py",
                           "sky_spine_crown": "tools/generate_original_sky_spine_crown.py",
                           "arena_keel": "tools/generate_original_arena_keel.py",
+                          "service_camera": "tools/generate_original_service_equipment.py",
+                          "service_maintenance": "tools/generate_original_service_equipment.py",
+                          "service_wayfinder": "tools/generate_original_service_equipment.py",
+                          "service_orbital": "tools/generate_original_service_equipment.py",
+                          "service_mooring": "tools/generate_original_service_equipment.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -338,7 +349,27 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 18
+          assert len(models) == 23
+          service_source = Path("src/server/PremiumServiceEquipmentAssets.lua").read_text()
+          service_client = Path("src/client/PremiumServiceEquipmentMeshKit.lua").read_text()
+          service_script = Path("src/client/arena-service-props.client.lua").read_text()
+          for arena, model in (
+              ("Classic", "service_camera"), ("Towers", "service_maintenance"),
+              ("Crossroads", "service_wayfinder"), ("Orbital", "service_orbital"),
+              ("Harbor", "service_mooring"),
+          ):
+              assert (arena + " = " + approved[model]) in service_source
+              assert ("id = " + approved[model]) in service_client
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == model) == 41729439190
+          assert "OriginalMeshScenery.sanitize(raw)" in service_source
+          assert "PremiumServiceEquipmentMeshKit.replace(" in service_script
+          assert "LocalOriginalServiceEquipment3DCount" in service_script
+          for safe in ("part.CanCollide = false", "part.CanTouch = false",
+                       "part.CanQuery = false", "part.CastShadow = false",
+                       'source:GetAttribute("OwnerVerified") ~= true',
+                       "Low = 1, Medium = 2, High = 4"):
+              assert safe in service_client, safe
           assert approved["arena_keel"] == "121436301473005"
           assert next(m["workflow_run_id"] for m in models
                       if m["name"] == "arena_keel") == 41669929967
@@ -401,7 +432,7 @@ jobs:
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: Classic + Crossroads, tier 1/2/4, source-only, native restoration, no new LOD loop.")
-          print("Verified 18 genuine owned approved Models, 3,332-triangle arena keel and 1,696-triangle Sky Spine, strict Android residency, physics/hazard fallbacks and creator receipts.")
+          print("Verified 23 genuine owned approved Models including 5 original miniatures, authenticated source receipts, mobile quotas, and physics/hazard fallbacks.")
           PY
 
       - name: Install Rojo 7.7.0
