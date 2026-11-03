@@ -9,7 +9,8 @@
   "publication": {
     "game_place_id": "95351659174730",
     "models_inserted_in_game": false,
-    "android_visual_qa_completed": false
+    "android_visual_qa_completed": false,
+    "service_models_inserted_in_game": false
   },
   "models": [
     {
@@ -155,6 +156,46 @@
       "source": "tools/generate_original_arena_keel.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41669929967
+    },
+    {
+      "name": "service_camera",
+      "asset_id": "108954400662606",
+      "moderation": "Approved",
+      "source": "tools/generate_original_service_equipment.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41729439190
+    },
+    {
+      "name": "service_maintenance",
+      "asset_id": "106083832432833",
+      "moderation": "Approved",
+      "source": "tools/generate_original_service_equipment.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41729439190
+    },
+    {
+      "name": "service_wayfinder",
+      "asset_id": "94223777350022",
+      "moderation": "Approved",
+      "source": "tools/generate_original_service_equipment.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41729439190
+    },
+    {
+      "name": "service_orbital",
+      "asset_id": "127295681925871",
+      "moderation": "Approved",
+      "source": "tools/generate_original_service_equipment.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41729439190
+    },
+    {
+      "name": "service_mooring",
+      "asset_id": "137255432266916",
+      "moderation": "Approved",
+      "source": "tools/generate_original_service_equipment.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41729439190
     }
   ]
 }
