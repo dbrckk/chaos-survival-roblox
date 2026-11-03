@@ -65,6 +65,15 @@ local function safePlatform(platform, initialSize)
         -- Warning and Gone must reveal the ORIGINAL gameplay hazard paint.
         return false
     end
+    -- Skybridge shutters have their own independent server hazard state.
+    -- The collision bridge stays solid during Warning/Raising/Raised, so
+    -- CanCollide/CollapsePhase alone would leave decorative MeshParts
+    -- covering the authoritative orange warning strip and gate approach.
+    -- Restore the genuine server route paint immediately, before LOD tick.
+    local shutter = platform:GetAttribute("BridgeShutterPhase")
+    if shutter ~= nil and shutter ~= "Idle" then
+        return false
+    end
     if initialSize and (math.abs(platform.Size.X - initialSize.X) >= 0.09
         or math.abs(platform.Size.Z - initialSize.Z) >= 0.09) then
         -- No false safe 3D bridge/deck during independent shrinking routes.
@@ -227,8 +236,10 @@ local function mount(platform, template, count)
         entry.connections[#entry.connections + 1] =
             platform:GetPropertyChangedSignal(prop):Connect(refresh)
     end
-    entry.connections[#entry.connections + 1] =
-        platform:GetAttributeChangedSignal("CollapsePhase"):Connect(refresh)
+    for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase"}) do
+        entry.connections[#entry.connections + 1] =
+            platform:GetAttributeChangedSignal(attribute):Connect(refresh)
+    end
     refresh()
     return entry
 end
