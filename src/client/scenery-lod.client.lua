@@ -11,6 +11,7 @@ local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
+local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
 local player = Players.LocalPlayer
@@ -466,7 +467,7 @@ task.spawn(function()
         end
         -- An actual approved, sculpted high interchange on the TWO
         -- real Sky Spine center decks, never on a painted phantom bridge.
-        -- Same camera sampler, strict Android Low 0 / Medium 1 / High 2.
+        -- Same camera sampler, strict Android Low 1 / Medium 1 / High 2.
         SkySpineCrownMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
         local crownMeshes = SkySpineCrownMeshKit.count()
@@ -474,6 +475,14 @@ task.spawn(function()
             ~= crownMeshes then
             player:SetAttribute("LocalOriginalSkySpineCrownCount",
                 crownMeshes)
+        end
+        -- One more genuinely imported, source-gated 3D silhouette under
+        -- the arena, 1/2/4 MODEL copies on Low/Medium/High. No new loop.
+        -- Dismount immediately on shrink to prevent phantom 3D decking.
+        ArenaKeelMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+        local keelMeshes = ArenaKeelMeshKit.count()
+        if player:GetAttribute("LocalOriginalArenaKeelCount") ~= keelMeshes then
+            player:SetAttribute("LocalOriginalArenaKeelCount", keelMeshes)
         end
         -- Count real, approved underdeck MODEL instances separately: the
         -- same adaptive scenery owner already counts their MeshParts
