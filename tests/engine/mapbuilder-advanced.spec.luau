@@ -8,6 +8,7 @@ local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local SkySpineCrownMeshKit = require("../../src/client/SkySpineCrownMeshKit")
 local ArenaKeelMeshKit = require("../../src/client/ArenaKeelMeshKit")
+local UnderstructureBeamMeshKit = require("../../src/client/UnderstructureBeamMeshKit")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
@@ -355,6 +356,127 @@ describe("Chaos Survival engine", function()
         arena:Destroy()
         holder:Destroy()
     end)
+    it("swaps authentic 3D underfloor beam bays on Classic and Crossroads with safe native rollback", function()
+        -- The imported production source is approved Model 84582262145054.
+        -- The smoke fixture has matching real MeshPart dimensions; runtime
+        -- still verifies the exact owner provenance and sanitized geometry.
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local holder = Instance.new("Folder")
+        holder.Name = "PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+        local source = Instance.new("Model")
+        source.Name = "OriginalUnderdeckChassis"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("PremiumUnderdeck3D", true)
+        source:SetAttribute("Original3DAssetId", 84582262145054)
+        local realGeometry = Instance.new("MeshPart")
+        realGeometry.Name = "SourceBoundsFixture"
+        realGeometry.Size = Vector3.new(23.3, 4.8, 9.9)
+        realGeometry.Anchored = true
+        realGeometry.Parent = source
+        source.Parent = holder
+
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId", "Classic")
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.CFrame = CFrame.new(0, 10, 0)
+        base.Anchored = true
+        base.CanCollide = true
+        base.Parent = arena
+        local nativeBucket = Instance.new("Folder")
+        nativeBucket.Name = "ArenaUnderstructureLocal"
+        nativeBucket.Parent = workspace
+
+        local function nativeBeam(name, cframe, size)
+            local part = Instance.new("Part")
+            part.Name = name
+            part.CFrame = cframe
+            part.Size = size
+            part.Transparency = .23
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part:SetAttribute("OriginalUnderstructureBeam", true)
+            part.Parent = nativeBucket
+            return part
+        end
+        local beams = {}
+        for index, offset in ipairs({-84, -60, -36, 36, 60, 84}) do
+            beams[index] = nativeBeam("UnderClassicBeamX" .. index,
+                CFrame.new(offset, 4.6, 0), Vector3.new(23.3, 2.2, 6))
+        end
+        local camera = Vector3.new(-84, 27, 0)
+        UnderstructureBeamMeshKit.sync(arena, camera, "Low", true)
+        expect(UnderstructureBeamMeshKit.count()).toBe(1)
+        expect(beams[1].Transparency).toBe(1)
+        expect(beams[6].Transparency).toBe(.23)
+        local originals = workspace:FindFirstChild("OriginalUnderstructureBeamsLocal")
+        expect(originals ~= nil).toBe(true)
+        local clone = originals:FindFirstChild(
+            "OriginalApprovedUnderstructure3D_UnderClassicBeamX1")
+        expect(clone ~= nil and clone:IsA("Model")).toBe(true)
+        expect(clone:GetAttribute("Original3DAssetId")).toBe(84582262145054)
+        for _, part in ipairs(clone:GetDescendants()) do
+            if part:IsA("BasePart") then
+                expect(part:IsA("MeshPart")).toBe(true)
+                expect(part.CanCollide).toBe(false)
+                expect(part.CanTouch).toBe(false)
+                expect(part.CanQuery).toBe(false)
+                expect(part.Position.Y + part.Size.Y * .5
+                    < base.Position.Y - base.Size.Y * .5).toBe(true)
+            end
+        end
+        UnderstructureBeamMeshKit.sync(arena, camera, "Medium", true)
+        expect(UnderstructureBeamMeshKit.count()).toBe(2)
+        UnderstructureBeamMeshKit.sync(arena, camera, "High", true)
+        expect(UnderstructureBeamMeshKit.count()).toBe(4)
+        expect(base.CanCollide).toBe(true)
+
+        -- Crossroads has different non-physical beams but the SAME
+        -- owner-approved importer and Android tier caps.
+        UnderstructureBeamMeshKit.reset()
+        for _, beam in ipairs(beams) do
+            expect(beam.Transparency).toBe(.23)
+            beam:Destroy()
+        end
+        arena:SetAttribute("VariantId", "Crossroads")
+        local north = nativeBeam("UnderCrossroadsBeamN1",
+            CFrame.new(0, 4.1, -42), Vector3.new(7, 2, 23.3))
+        local east = nativeBeam("UnderCrossroadsBeamE1",
+            CFrame.new(42, 4.1, 0), Vector3.new(23.3, 2, 7))
+        UnderstructureBeamMeshKit.sync(arena, Vector3.new(0, 25, -42),
+            "Medium", true)
+        expect(UnderstructureBeamMeshKit.count()).toBe(2)
+        expect(north.Transparency).toBe(1)
+        expect(east.Transparency).toBe(1)
+
+        -- A genuine Shrinking Arena size change must synchronously remove
+        -- BOTH 3D mounts and restore the original cosmetic beams.
+        base.Size = Vector3.new(230, 2, 230)
+        expect(UnderstructureBeamMeshKit.count()).toBe(0)
+        expect(north.Transparency).toBe(.23)
+        expect(east.Transparency).toBe(.23)
+        expect(base.CanCollide).toBe(true)
+        base.Size = Vector3.new(320, 2, 320)
+        source:SetAttribute("OwnerVerified", false)
+        UnderstructureBeamMeshKit.sync(arena, Vector3.new(0, 25, -42),
+            "Medium", true)
+        expect(UnderstructureBeamMeshKit.count()).toBe(0)
+        expect(north.Transparency).toBe(.23)
+
+        UnderstructureBeamMeshKit.reset()
+        nativeBucket:Destroy()
+        arena:Destroy()
+        holder:Destroy()
+    end)
+
     it("renders real original 3D ground MeshParts within Android tier caps and never leaves a phantom floor", function()
         -- Reuse the existing authenticated source→client engine integration
         -- suite at the public release milestone; do not invent image mocks

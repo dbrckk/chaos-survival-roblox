@@ -370,6 +370,37 @@ jobs:
                      for p in keel_parts) == 3332
           assert "ArenaKeelMeshKit" in Path(
               "tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          # Exact real approved import 84582262145054 is REUSED for
+          # replaceable understructure bays; no external marketplace mesh.
+          beams = Path("src/client/UnderstructureBeamMeshKit.lua").read_text()
+          understructure = Path("src/client/arena-understructure.client.lua").read_text()
+          engine = Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          assert approved["underdeck_chassis"] == "84582262145054"
+          assert "local ASSET_ID = 84582262145054" in beams
+          assert 'OriginalUnderstructureBeamsLocal' in census
+          assert 'LocalOriginalUnderstructureBeamCount' in scenery
+          assert 'UnderstructureBeamMeshKit.sync(arena, cameraPoint' in scenery
+          assert 'UnderstructureBeamMeshKit.reset()' in understructure
+          assert 'OriginalUnderstructureBeam' in understructure
+          assert 'UnderClassicBeam' in understructure
+          assert 'UnderCrossroadsBeam' in understructure
+          assert 'UnderClassicChassisX' not in understructure
+          assert 'UnderCrossroadsTrunk' not in understructure
+          assert 'UnderstructureBeamMeshKit' in engine
+          assert 'Low = {count = 1' in beams
+          assert 'Medium = {count = 2' in beams
+          assert 'High = {count = 4' in beams
+          for required in ('source:GetAttribute("OwnerVerified") ~= true',
+                           'source:GetAttribute("Original3DAssetId") ~= ASSET_ID',
+                           'base:GetPropertyChangedSignal("Size")',
+                           'piece.CanCollide = false',
+                           'piece.CanTouch = false',
+                           'piece.CanQuery = false',
+                           'native.Transparency = 1',
+                           'entry.native.Transparency = entry.originalTransparency'):
+              assert required in beams, required
+          assert 'RunService' not in beams and 'task.spawn' not in beams
+          print("Authenticated approved 3D underfloor beam replacements: Classic + Crossroads, tier 1/2/4, source-only, native restoration, no new LOD loop.")
           print("Verified 18 genuine owned approved Models, 3,332-triangle arena keel and 1,696-triangle Sky Spine, strict Android residency, physics/hazard fallbacks and creator receipts.")
           PY
 

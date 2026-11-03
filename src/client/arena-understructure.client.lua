@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
+local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
@@ -15,6 +16,9 @@ folder.Parent = workspace
 local stopFollowingBase = nil
 
 local function clear()
+    -- The approved beam models must restore their native fallbacks before
+    -- this map's cosmetic parts are rebuilt for streaming or tier changes.
+    UnderstructureBeamMeshKit.reset()
     if stopFollowingBase then
         stopFollowingBase()
         stopFollowingBase = nil
@@ -113,25 +117,30 @@ local function rebuild()
     end
 
     if variant == "Classic" then
+        -- Replace two 198-stud monolithic slabs with 12 independently
+        -- cullable mechanical bays, surrounding the approved central keel.
+        -- Each 23.3-stud bay has its own safe native fallback; the nearby
+        -- bays can be covered by genuine owner-approved imported 3D.
         local chassisY = bottomY - 4.4
-        local beamX = makePart(
-            "UnderClassicChassisX",
-            Vector3.new(base.Size.X * 0.62, 2.2, 6.0),
-            CFrame.new(center.X, chassisY, center.Z),
-            theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
-            Enum.Material.DiamondPlate,
-            tier.Name == "Low" and 0.30 or 0.14
-        )
-        local beamZ = makePart(
-            "UnderClassicChassisZ",
-            Vector3.new(6.0, 2.2, base.Size.Z * 0.62),
-            CFrame.new(center.X, chassisY - 0.35, center.Z),
-            theme.Structure:Lerp(VisualTheme.World.Deep, 0.36),
-            Enum.Material.Metal,
-            tier.Name == "Low" and 0.32 or 0.16
-        )
-        beamX.CastShadow = false
-        beamZ.CastShadow = false
+        for _, axis in ipairs({"X", "Z"}) do
+            local alongX = axis == "X"
+            for index, offset in ipairs({-84, -60, -36, 36, 60, 84}) do
+                local beam = makePart(
+                    "UnderClassicBeam" .. axis .. index,
+                    alongX and Vector3.new(23.3, 2.2, 6.0)
+                        or Vector3.new(6.0, 2.2, 23.3),
+                    CFrame.new(center + Vector3.new(
+                        alongX and offset or 0,
+                        (chassisY - center.Y) - (alongX and 0 or .35),
+                        alongX and 0 or offset
+                    )),
+                    theme.Structure:Lerp(VisualTheme.World.Deep, .35),
+                    Enum.Material.Metal,
+                    tier.Name == "Low" and .30 or .16
+                )
+                beam:SetAttribute("OriginalUnderstructureBeam", true)
+            end
+        end
 
         if tier.Name ~= "Low" then
             for side = -1, 1, 2 do
@@ -168,53 +177,32 @@ local function rebuild()
         )
         junction.CastShadow = false
 
-        local trunks = {
-            {
-                name = "North",
-                size = Vector3.new(7.0, 2.0, halfZ * 0.84),
-                offset = Vector3.new(0, -4.9, -halfZ * 0.42),
-            },
-            {
-                name = "South",
-                size = Vector3.new(7.0, 2.0, halfZ * 0.84),
-                offset = Vector3.new(0, -4.9, halfZ * 0.42),
-            },
-            {
-                name = "West",
-                size = Vector3.new(halfX * 0.84, 2.0, 7.0),
-                offset = Vector3.new(-halfX * 0.42, -4.9, 0),
-            },
-            {
-                name = "East",
-                size = Vector3.new(halfX * 0.84, 2.0, 7.0),
-                offset = Vector3.new(halfX * 0.42, -4.9, 0),
-            },
-        }
-        for i, def in ipairs(trunks) do
-            local trunk = makePart(
-                "UnderCrossroadsTrunk" .. def.name,
-                def.size,
-                CFrame.new(center + def.offset),
-                theme.Structure,
-                Enum.Material.Concrete,
-                tier.Name == "Low" and 0.34 or 0.18
-            )
-            trunk.CastShadow = false
-
-            local trunkGlow = tier.Name == "High" and i % 2 == 1
-                or tier.Name == "Medium" and i == 1
-            if trunkGlow then
-                local glowSize = def.size.X > def.size.Z
-                    and Vector3.new(def.size.X * 0.70, 0.24, 7.15)
-                    or Vector3.new(7.15, 0.24, def.size.Z * 0.70)
-                makePart(
-                    "UnderCrossroadsTrunkGlow" .. i,
-                    glowSize,
-                    trunk.CFrame * CFrame.new(0, 1.12, 0),
-                    i % 2 == 0 and theme.Secondary or theme.Accent,
-                    Enum.Material.Neon,
-                    tier.Name == "High" and 0.60 or 0.68
+        -- The former four 134-stud untextured blocks are now sixteen
+        -- individual beam bays. A real imported 3D chassis can replace each
+        -- bay without hiding other spans when Android runs out of budget.
+        -- Central space stays open for the independent Arena Keel mesh.
+        for _, leg in ipairs({
+            {name = "N", axis = "Z", sign = -1},
+            {name = "E", axis = "X", sign = 1},
+            {name = "W", axis = "X", sign = -1},
+            {name = "S", axis = "Z", sign = 1},
+        }) do
+            local alongX = leg.axis == "X"
+            for index, distance in ipairs({42, 66, 90, 114}) do
+                local beam = makePart(
+                    "UnderCrossroadsBeam" .. leg.name .. index,
+                    alongX and Vector3.new(23.3, 2.0, 7.0)
+                        or Vector3.new(7.0, 2.0, 23.3),
+                    CFrame.new(center + Vector3.new(
+                        alongX and distance * leg.sign or 0,
+                        -4.9,
+                        alongX and 0 or distance * leg.sign
+                    )),
+                    theme.Structure:Lerp(VisualTheme.World.Deep, .28),
+                    Enum.Material.Metal,
+                    tier.Name == "Low" and .34 or .18
                 )
+                beam:SetAttribute("OriginalUnderstructureBeam", true)
             end
         end
     end
