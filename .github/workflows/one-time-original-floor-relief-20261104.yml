@@ -1,0 +1,111 @@
+# Owner-approved one-shot import of five NEW ambient 3D machines.
+# Never publishes the playable place; only uploads moderated Model assets
+# from deterministic source generated in this repository.
+name: One-time Original Premium Floor Relief 3D Import 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-floor-relief-20261104.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: chaos-floor-relief-source-once-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    name: Original PBR floor + UV/tangent gate — ${{ matrix.model }}
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model:
+          - relief_essential
+          - relief_classic
+          - relief_towers
+          - relief_crossroads
+          - relief_orbital
+          - relief_harbor
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate authored 3D source, glTF 2.0, material mapping and triangles
+        shell: bash
+        env:
+          MODEL: ${{ matrix.model }}
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_floor_relief.py \
+            --model "$MODEL" --output "$RUNNER_TEMP/chaos_${MODEL}.obj" \
+            > "$RUNNER_TEMP/source.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/chaos_${MODEL}.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/chaos_${MODEL}.gltf" \
+            > "$RUNNER_TEMP/export.json"
+          python3 - "$RUNNER_TEMP/source.json" "$RUNNER_TEMP/chaos_${MODEL}.gltf" "$MODEL" <<'PY'
+          import json,sys,base64
+          from pathlib import Path
+          metadata=json.loads(Path(sys.argv[1]).read_text())
+          document=json.loads(Path(sys.argv[2]).read_text())
+          assert metadata["asset"]==sys.argv[3]
+          assert 180 <= metadata["triangles"] <= 2600
+          assert 15 <= metadata["groups"] <= 160
+          assert .08 <= metadata["dimensions"][1] <= .38
+          assert .5 <= metadata["dimensions"][2] <= 5
+          assert 3 <= metadata["dimensions"][0] <= 11
+          assert document["asset"]["version"]=="2.0"
+          assert {m["name"] for m in document["materials"]}=={
+              "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          pieces=document["meshes"][0]["primitives"]
+          assert len(pieces)==7
+          triangle_count=0
+          for piece in pieces:
+              attrs=piece["attributes"]
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+              triangle_count+=document["accessors"][attrs["POSITION"]]["count"]//3
+          assert triangle_count==metadata["triangles"],(triangle_count,metadata["triangles"])
+          data=document["buffers"][0]
+          raw=base64.b64decode(data["uri"].split(",",1)[1],validate=True)
+          assert len(raw)==data["byteLength"]
+          print("VERIFIED original shallow collision-free 3D floor source",sys.argv[3],
+                "triangles",triangle_count,"7 material primitives; safe import")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: authored-3d-${{ matrix.model }}-source
+          path: |
+            ${{ runner.temp }}/chaos_${{ matrix.model }}.obj
+            ${{ runner.temp }}/chaos_${{ matrix.model }}.gltf
+            ${{ runner.temp }}/source.json
+            ${{ runner.temp }}/export.json
+          retention-days: 14
+
+  import-owner:
+    name: Import creator-approved shallow floor Model — ${{ matrix.model }}
+    needs: source-gate
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model:
+          - relief_essential
+          - relief_classic
+          - relief_towers
+          - relief_crossroads
+          - relief_orbital
+          - relief_harbor
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
