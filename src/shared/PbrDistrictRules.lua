@@ -480,6 +480,17 @@ function PbrDistrictRules.priority(part)
             structuralScore = 2400
         end
     end
+    -- The last two newly approved original 2K armored I-beams otherwise
+    -- lose BOTH of the per-imported-model PBR slots to much bigger flat
+    -- basement rectangles. Make the visible steel ribs competitive, but
+    -- never increase owner/global quotas or affect any imported MeshPart.
+    if PbrDistrictRules.isApprovedImportedFoundationOwner(part.Parent)
+        and part:GetAttribute("OriginalFoundationVisual") == true
+        and part:IsA("Part")
+        and (name == "originalchassisfrontibeam"
+            or name == "originalchassisrearibeam") then
+        structuralScore = 2200
+    end
     local architecturalFace = name:find("housing", 1, true)
         or name:find("shell", 1, true)
         or name:find("panel", 1, true)
