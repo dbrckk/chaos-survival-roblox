@@ -1,5 +1,7 @@
--- Nine original Roblox Model packages now exist in the owner inventory;
--- these THREE approved imports are genuine triangulated UV/tangent 3D assets.
+-- Fifteen approved creator-owned Model packages in the repository;
+-- these FOUR approved route/art imports are genuine UV/tangent 3D assets.
+-- Original underdeck is a 3,072-triangle seven-material open-frame Model
+-- authenticated by Roblox upload receipt #41644715829, moderation Approved.
 -- The loader is cosmetic-only and never changes live authoritative platforms.
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,8 +13,12 @@ local APPROVED = {
     PremiumJumpDeck = 98478693994864,
     PremiumSkybridgeModule = 94023662427980,
     PremiumGroundTile = 72507987666671,
+    OriginalUnderdeckChassis = 84582262145054,
 }
-local ORDER = {"PremiumJumpDeck", "PremiumSkybridgeModule", "PremiumGroundTile"}
+local ORDER = {
+    "PremiumJumpDeck", "PremiumSkybridgeModule",
+    "PremiumGroundTile", "OriginalUnderdeckChassis",
+}
 local started = false
 
 -- Public provenance for QA and static Roblox Cloud suites. Do not accept
@@ -65,8 +71,11 @@ function PremiumRouteMeshAssets.start()
                 safe:SetAttribute("OwnerVerified", true)
                 safe:SetAttribute("Original3DAssetId", assetId)
                 safe:SetAttribute("CosmeticOnly", true)
-                safe:SetAttribute("PremiumRoute3D", name ~= "PremiumGroundTile")
+                safe:SetAttribute("PremiumRoute3D",
+                    name == "PremiumJumpDeck" or name == "PremiumSkybridgeModule")
                 safe:SetAttribute("PremiumGround3D", name == "PremiumGroundTile")
+                safe:SetAttribute("PremiumUnderdeck3D",
+                    name == "OriginalUnderdeckChassis")
                 safe.Parent = folder
                 folder:SetAttribute(name .. "Ready", true)
                 return
@@ -81,9 +90,16 @@ function PremiumRouteMeshAssets.start()
         end
     end
 
-    for _, name in ipairs(ORDER) do
-        task.spawn(loadOne, name)
-    end
+    -- One serialized non-blocking importer lane. Four simultaneous cloud
+    -- loads would compete with the already-approved district facade and
+    -- skyfleet source lanes under Roblox Assets rate limits. The original
+    -- three route templates retain priority; native fallback is always
+    -- present while an optional import is outstanding.
+    task.spawn(function()
+        for _, name in ipairs(ORDER) do
+            loadOne(name)
+        end
+    end)
 end
 
 return PremiumRouteMeshAssets
