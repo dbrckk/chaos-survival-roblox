@@ -178,9 +178,10 @@ jobs:
           assert "OriginalMeshScenery.sanitize(raw)" in route_source
           assert "OriginalMeshScenery.sanitize(raw)" in facade_source
           skyfleet_source = Path("src/server/PremiumSkyfleetMeshAssets.lua").read_text()
-          asset_match = re.search(r"local ASSET_ID = (\\d+)", skyfleet_source)
-          assert asset_match and asset_match.group(1) == approved["skyfleet_carrier"], \\
-              "Original 3D skyfleet live ID diverges from verified Roblox owner record"
+          asset_match = re.search(r"local ASSET_ID = (\d+)", skyfleet_source)
+          assert asset_match, "Original 3D skyfleet owned asset ID constant is missing"
+          assert asset_match.group(1) == approved["skyfleet_carrier"], (
+              "Original 3D skyfleet live ID diverges from verified Roblox owner record")
           assert "OriginalMeshScenery.sanitize(raw)" in skyfleet_source
           print("Verified 14 genuine owned Model IDs and safe shared sanitizer.")
           PY
