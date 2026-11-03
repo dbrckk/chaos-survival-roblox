@@ -74,7 +74,7 @@ local function rebuild()
         local horizontal = i % 2 == 0
         for socket = 1, socketsPerRib do
             local along = socketsPerRib == 1 and 0
-                or (socket == 1 and -1 or 1) * math.min(halfX, halfZ) * 0.53
+                or (socket == 1 and -1 or 1) * math.min(halfX, halfZ) * 0.39
             local across = t * (horizontal and halfZ or halfX) * 0.68
             local offset = horizontal
                 and Vector3.new(along, -base.Size.Y * .5 - 4.35, across)
