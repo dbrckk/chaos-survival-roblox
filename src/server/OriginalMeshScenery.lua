@@ -301,7 +301,7 @@ end
 -- The imported meshes stand beyond the arena's physical floor. Give them
 -- grounded structural mass instead of leaving their bottom silhouette
 -- apparently floating in space. All original art remains immutable; these
--- four simple, low-cost Roblox Parts are authored AFTER sanitization,
+-- original chassis details are authored AFTER sanitization,
 -- inside the cosmetic model and inside the imported model's X/Z footprint.
 -- They are automatically hidden together with the MeshPart on Android Low.
 local FOUNDATION_COLORS = {
@@ -353,7 +353,7 @@ function OriginalMeshScenery.addFoundation(model, assetName, target, size)
         p.TopSurface = Enum.SurfaceType.Smooth
         p.BottomSurface = Enum.SurfaceType.Smooth
         -- Explicit provenance: imported package geometry can have arbitrary
-        -- names, but only these four locally authored parts may get PBR.
+        -- names. Only approved foundation skins and steel I-beams may use PBR.
         p:SetAttribute("OriginalFoundationVisual", true)
         p.Parent = model
     end
@@ -438,6 +438,10 @@ function OriginalMeshScenery.addFoundation(model, assetName, target, size)
                 steel, Enum.Material.DiamondPlate, false)
         end
     end
+    -- Useful for authentic runtime capture verification: a tiny, narrow
+    -- imported mesh legitimately receives only four safe base layers,
+    -- while all six approved full-size imported assets receive eleven.
+    model:SetAttribute("OriginalFoundationPieceCount", #specs + details)
     model:SetAttribute("OriginalFoundationBuilt", true)
     return #specs + details
 end
@@ -506,7 +510,7 @@ function OriginalMeshScenery.mount(arena, templates)
                     -- Setting WorldPivot changes NO geometry or collision.
                     clone.WorldPivot = target
                     -- Roblox StreamingEnabled: keep the imported MeshPart
-                    -- and its four structural supports visually coherent
+                    -- and its approved layered structural chassis coherent
                     -- as one atomic unit. Unlike Persistent, this can still
                     -- stream out normally when the camera moves away.
                     clone.ModelStreamingMode = Enum.ModelStreamingMode.Atomic

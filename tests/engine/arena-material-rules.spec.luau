@@ -20,6 +20,39 @@ describe("PBR protection for original Harbor timber", function()
         part.Material = Enum.Material.Metal
         expect(PbrDistrictRules.eligiblePart(part)).toBe(true)
         part:Destroy()
+
+        -- Reuse this existing material ownership regression case to
+        -- establish genuine 2K relief on newly authored I-beam faces.
+        -- No broader imported MeshPart/foreign model can enter the pool.
+        local owned = Instance.new("Model")
+        owned:SetAttribute("Original3DAssetId", 95878714550124)
+        owned:SetAttribute("CosmeticOnly", true)
+        owned:SetAttribute("ChaosDistantScenery", true)
+        owned:SetAttribute("OriginalFoundationBuilt", true)
+        local steel = Instance.new("Part")
+        steel.Name = "OriginalChassisFrontIBeam"
+        steel.Size = Vector3.new(18, 0.52, 0.68)
+        steel.Anchored = true
+        steel.CanCollide = false
+        steel.CanTouch = false
+        steel.CanQuery = false
+        steel.Material = Enum.Material.DiamondPlate
+        steel:SetAttribute("OriginalFoundationVisual", true)
+        steel.Parent = owned
+        expect(PbrDistrictRules.eligibleOwner(owned)).toBe(true)
+        expect(PbrDistrictRules.eligiblePart(steel)).toBe(true)
+        expect(PbrDistrictRules.materialKey(steel.Name, steel.Material, owned))
+            .toBe("armor")
+        steel:SetAttribute("OriginalFoundationVisual", false)
+        expect(PbrDistrictRules.eligiblePart(steel)).toBe(false)
+        steel:SetAttribute("OriginalFoundationVisual", true)
+        steel.Name = "OriginalTaperedLoadButtress1"
+        expect(PbrDistrictRules.eligiblePart(steel)).toBe(false)
+        steel.Name = "OriginalChassisFrontIBeam"
+        owned:SetAttribute("Original3DAssetId", 0)
+        expect(PbrDistrictRules.eligibleOwner(owned)).toBe(false)
+        expect(PbrDistrictRules.eligiblePart(steel)).toBe(false)
+        owned:Destroy()
     end)
 end)
 

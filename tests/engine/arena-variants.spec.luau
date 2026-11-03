@@ -283,9 +283,41 @@ describe("Arena variants", function()
                 expect(model ~= nil).toBe(true)
                 expect(model.ModelStreamingMode).toBe(Enum.ModelStreamingMode.Atomic)
                 expect(model:GetAttribute("OriginalFoundationBuilt")).toBe(true)
+                -- Real approved meshes are 12+ studs across and receive
+                -- the four base foundations plus seven authored chassis
+                -- details (2 I-beams, 2 tapered ribs, 2 rails, 1 machine).
+                -- Check the full result across ALL five arena placements.
+                local supports = {}
+                for _, part in ipairs(model:GetChildren()) do
+                    if part:GetAttribute("OriginalFoundationVisual") == true then
+                        supports[part.Name] = part
+                    end
+                end
+                expect(#model:GetChildren()).toBe(12)
+                local count = 0
+                for _ in pairs(supports) do count += 1 end
+                expect(count).toBe(11)
+                expect(model:GetAttribute("OriginalFoundationPieceCount"))
+                    .toBe(11)
+                local detailKind = if placement.asset == "reactor_spire"
+                    or placement.asset == "sky_transit_exchange"
+                    or placement.asset == "orbital_halo_array"
+                    then "OriginalRadialHeatExchanger"
+                    else "OriginalIndustrialServiceManifold"
+                expect(supports[detailKind] ~= nil).toBe(true)
+                expect(supports.OriginalChassisFrontIBeam ~= nil
+                    and supports.OriginalChassisFrontIBeam:IsA("Part")).toBe(true)
+                expect(supports.OriginalChassisRearIBeam ~= nil
+                    and supports.OriginalChassisRearIBeam:IsA("Part")).toBe(true)
+                for _, side in ipairs({"-1", "1"}) do
+                    local rib = supports["OriginalTaperedLoadButtress" .. side]
+                    expect(rib ~= nil and rib:IsA("WedgePart")).toBe(true)
+                    expect(supports["OriginalVerticalServiceRail" .. side] ~= nil)
+                        .toBe(true)
+                end
                 for _, name in ipairs({"FoundationShoulder", "FoundationInset",
                     "FoundationBallast", "FoundationGroundPad"}) do
-                    local support = model:FindFirstChild(name)
+                    local support = supports[name]
                     expect(support ~= nil and support:IsA("BasePart")).toBe(true)
                     if support and support:IsA("BasePart") then
                         expect(support.CanCollide).toBe(false)
@@ -337,11 +369,30 @@ describe("Arena variants", function()
         local instance = Instance.new("Model")
         local center = CFrame.new(14, 30, -12) * CFrame.Angles(0, 0.65, 0)
         local size = Vector3.new(32, 28, 15)
+        -- The authored 32 x 15 exterior supports now include seven
+        -- additional structural details. Do not silently waive the count:
+        -- the earlier stale expectation of FOUR blocked the live release.
         expect(OriginalMeshScenery.addFoundation(
-            instance, "sky_transit_exchange", center, size)).toBe(4)
+            instance, "sky_transit_exchange", center, size)).toBe(11)
         expect(OriginalMeshScenery.addFoundation(
             instance, "sky_transit_exchange", center, size)).toBe(0)
-        expect(#instance:GetChildren()).toBe(4)
+        expect(#instance:GetChildren()).toBe(11)
+        expect(instance:GetAttribute("OriginalFoundationPieceCount")).toBe(11)
+        local uniqueNames = {}
+        for _, p in ipairs(instance:GetChildren()) do
+            expect(uniqueNames[p.Name] == nil).toBe(true)
+            uniqueNames[p.Name] = true
+            expect(p:GetAttribute("OriginalFoundationVisual")).toBe(true)
+        end
+        for _, name in ipairs({
+            "FoundationShoulder", "FoundationInset", "FoundationBallast",
+            "FoundationGroundPad", "OriginalChassisFrontIBeam",
+            "OriginalChassisRearIBeam", "OriginalTaperedLoadButtress-1",
+            "OriginalTaperedLoadButtress1", "OriginalVerticalServiceRail-1",
+            "OriginalVerticalServiceRail1", "OriginalRadialHeatExchanger",
+        }) do
+            expect(uniqueNames[name]).toBe(true)
+        end
         for _, p in ipairs(instance:GetChildren()) do
             expect(p:IsA("BasePart")).toBe(true)
             expect(p.Size.X <= size.X).toBe(true)
