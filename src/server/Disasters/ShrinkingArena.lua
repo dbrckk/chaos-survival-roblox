@@ -118,6 +118,30 @@ function D.start(ctx)
         end
     end
 
+        -- The premium arena undercarriage now has four open-frame rails
+        -- instead of a 315-stud solid slab. Include those nested visual
+        -- rails in the existing shrink/restore ledger so they never hang
+        -- beyond the REAL shrinking collision floor. No extra listeners.
+        local foundation = decor:FindFirstChild("ArenaUndercarriage")
+        if foundation and foundation:IsA("Model")
+            and foundation:GetAttribute("CosmeticOnly") == true then
+            for _, rail in ipairs(foundation:GetChildren()) do
+                if rail:IsA("BasePart")
+                    and rail.Name:match("^Foundry[XZ][%-]?1$")
+                    and rail.Anchored and not rail.CanCollide
+                    and not rail.CanTouch and not rail.CanQuery then
+                    floorDetails[#floorDetails+1] = {
+                        part = rail,
+                        size = rail.Size,
+                        cframe = rail.CFrame,
+                        localCFrame = originalCFrame:ToObjectSpace(rail.CFrame),
+                        localPosition = originalCFrame:PointToObjectSpace(rail.Position),
+                    }
+                end
+            end
+        end
+    end
+
     local movableParts = {}
     local platformStates = {}
     local platforms = arena:FindFirstChild("Platforms")
