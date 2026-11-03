@@ -14,15 +14,24 @@ local APPROVED = {
     Crossroads = 84038993323581,
     Orbital = 123089585720736,
     Harbor = 94830155055482,
+    -- One piece of mechanical art for each remaining primitive family.
+    -- The bolt source is authored at 10x scale for reliable Roblox import;
+    -- the client scales it to the actual compact mechanical dimensions.
+    CornerGuard = 102215174919938,
+    AnchorBolt = 92226531849432,
+    HarborTie = 135412901717584,
 }
-local ORDER = {"Essential", "Classic", "Towers", "Crossroads", "Orbital", "Harbor"}
+local ORDER = {
+    "Essential", "Classic", "Towers", "Crossroads", "Orbital", "Harbor",
+    "CornerGuard", "AnchorBolt", "HarborTie",
+}
 local started = false
 
 function Kit.approvedId(variant)
     return APPROVED[variant]
 end
 
-local function validRelief(model)
+local function validRelief(model, kind)
     local pieces = 0
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
@@ -34,6 +43,21 @@ local function validRelief(model)
     end
     if pieces < 1 or pieces > 12 then return false end
     local _, size = model:GetBoundingBox()
+    if kind == "CornerGuard" then
+        return size.X >= 4.7 and size.X <= 5.6
+            and size.Z >= 4.7 and size.Z <= 5.6
+            and size.Y >= .24 and size.Y <= .56
+    elseif kind == "AnchorBolt" then
+        -- Deliberately imported at 10× scale. A .4-stud upload previously
+        -- produced an ambiguous HTTP 500; never blindly re-submit it.
+        return size.X >= 3.1 and size.X <= 6.1
+            and size.Z >= 3.1 and size.Z <= 6.1
+            and size.Y >= 1.5 and size.Y <= 3.0
+    elseif kind == "HarborTie" then
+        return size.X >= .90 and size.X <= 1.25
+            and size.Z >= .90 and size.Z <= 1.25
+            and size.Y >= .21 and size.Y <= .52
+    end
     return size.X >= 2.7 and size.X <= 12
         and size.Z >= .45 and size.Z <= 5.5
         and size.Y >= .06 and size.Y <= .75
@@ -51,8 +75,9 @@ function Kit.start()
     if not holder:IsA("Folder") then return end
     holder:SetAttribute("OwnerVerified", true)
 
-    -- The gameplay map and core imports have first priority. Six shallow
-    -- decorative Models load only on an optional late, serialized lane.
+    -- Gameplay and core imports have first priority. Six floor relief
+    -- models followed by THREE small mechanical sculpt families load late
+    -- through one serialized lane (no extra concurrent AssetService load).
     -- Failure always leaves the original nonphysical floor art intact.
     task.spawn(function()
         task.wait(34)
@@ -64,7 +89,7 @@ function Kit.start()
                     if ok and raw and raw:IsA("Model") then
                         local clean = OriginalMeshScenery.sanitize(raw)
                         raw:Destroy()
-                        if not clean or not validRelief(clean) then
+                        if not clean or not validRelief(clean, name) then
                             if clean then clean:Destroy() end
                             warn("Original approved floor geometry refused", name)
                             break
