@@ -69,6 +69,34 @@ local function scheduleRebuild()
     end)
 end
 
+-- Genuine original carrier appears late after a deliberately staggered
+-- server AssetService fetch. Rebuild native fallback only on a real new
+-- approved template event, never by polling the Roblox asset service.
+local premiumFolderConnection = nil
+local function watchPremiumCarrier(container)
+    if premiumFolderConnection then
+        premiumFolderConnection:Disconnect()
+        premiumFolderConnection = nil
+    end
+    if not container or not container:IsA("Folder")
+        or container.Name ~= "PremiumSkyfleetMeshTemplates" then return end
+    premiumFolderConnection = container.ChildAdded:Connect(function(child)
+        if child.Name == "OriginalSkyfleetCarrier"
+            and child:IsA("Model") then
+            scheduleRebuild()
+        end
+    end)
+    if container:FindFirstChild("OriginalSkyfleetCarrier") then
+        scheduleRebuild()
+    end
+end
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "PremiumSkyfleetMeshTemplates" then
+        watchPremiumCarrier(child)
+    end
+end)
+watchPremiumCarrier(ReplicatedStorage:FindFirstChild("PremiumSkyfleetMeshTemplates"))
+
 local function bindMap(generated)
     if watchedMap == generated then return end
     if disconnectReadiness then
