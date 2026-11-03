@@ -11,11 +11,15 @@ local PROFILE = {
     [3] = {name = "Turbine", id = 84217436280282},
     [4] = {name = "Aerial", id = 135791763112202},
 }
--- Mobile Low retains a single genuine skyline silhouette. Four original
--- monuments can be resident on High: no new remote fetches or render loops.
+-- A full four-corner manufactured skyline must not revert to
+-- primitive Parts on ordinary desktop/Android Medium quality. All FOUR
+-- creator-approved profile MeshParts can now be resident on Medium, still
+-- camera ranked and distance limited. Low remains one for slow phones.
+-- This changes only existing local cosmetic clones, not server geometry,
+-- replication, source loading, colliders or the LOD update cadence.
 local BUDGET = {
     Low = {count = 1, distance = 145, retention = 16},
-    Medium = {count = 2, distance = 225, retention = 22},
+    Medium = {count = 4, distance = 280, retention = 22},
     High = {count = 4, distance = 330, retention = 26},
 }
 
