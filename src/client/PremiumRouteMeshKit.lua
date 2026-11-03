@@ -17,13 +17,17 @@ local ASSETS = {
 -- camera moves across a threshold. A new route must be within distance;
 -- an already mounted safe route gets a small exit margin, never more slots.
 -- Stable residency avoids repeated MeshPart clone/weld churn on Android.
+-- More actual visible jump surfaces receive owner-approved sculpted deck
+-- meshes instead of the flat original PlatformPanel. Retain Low Android
+-- caps, bridge segment caps, and the existing 0/2/4 underdeck sculpture
+-- cap: all changes are cosmetics, ranked by safe route/camera relevance.
 local BUDGET = {
     Low = {decks = 2, bridges = 1, segments = 1, underdecks = 0,
         distance = 100, retention = 18},
-    Medium = {decks = 5, bridges = 1, segments = 3, underdecks = 2,
-        distance = 170, retention = 22},
-    High = {decks = 9, bridges = 2, segments = 5, underdecks = 4,
-        distance = 245, retention = 28},
+    Medium = {decks = 7, bridges = 1, segments = 3, underdecks = 2,
+        distance = 190, retention = 22},
+    High = {decks = 14, bridges = 2, segments = 5, underdecks = 4,
+        distance = 260, retention = 28},
 }
 
 local folder = Instance.new("Folder")
