@@ -8,6 +8,7 @@ local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
+local DistrictRooflineMeshKit = require(script.Parent.DistrictRooflineMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
@@ -523,6 +524,16 @@ task.spawn(function()
                         (cameraPoint - origin).Magnitude, isTouch, cameraReady)
                 end
             end
+        end
+        -- Four authenticated original 3D facades + rooflines replace
+        -- visible primitive blockouts at the camera's nearest 1/2/4
+        -- district buildings. After native LOD, source doors are known
+        -- to be visible; cosmetic import is always optional/fallback.
+        DistrictRooflineMeshKit.sync(arena, cameraPoint, profile.Name,
+            cameraReady, cameraLook)
+        local rooflineCount = DistrictRooflineMeshKit.count()
+        if player:GetAttribute("LocalOriginalDistrictRooflineCount") ~= rooflineCount then
+            player:SetAttribute("LocalOriginalDistrictRooflineCount", rooflineCount)
         end
         -- The counter measures LOCAL instances, not server replication,
         -- GPU time or device FPS. Keep it stable on unchanged LOD passes.
