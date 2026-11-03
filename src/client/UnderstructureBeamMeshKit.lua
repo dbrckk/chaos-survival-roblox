@@ -7,10 +7,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
 local ASSET_ID = 84582262145054
+-- Each approved chassis instance is exactly 3,072 source triangles and
+-- at most seven real MeshParts. Cap residency rather than stamping more
+-- native blocks: Android Low stays at one, Medium four, High twelve.
+-- High therefore draws at most 36,864 chassis triangles / 84 MeshParts.
+-- Models share one verified source mesh package and remain camera-ranked.
 local BUDGET = {
     Low = {count = 1, distance = 140, retention = 14},
-    Medium = {count = 2, distance = 210, retention = 20},
-    High = {count = 4, distance = 290, retention = 25},
+    Medium = {count = 4, distance = 225, retention = 22},
+    High = {count = 12, distance = 290, retention = 25},
 }
 local VARIANTS = {Classic = true, Crossroads = true, Towers = true, Harbor = true, Orbital = true}
 
