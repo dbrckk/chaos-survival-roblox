@@ -28,11 +28,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/mesh-previews
-          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module; do
+          python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
+          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
               palette="assets/source/chaos_perimeter_gate.mtl"
-            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ]; then
+            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ]; then
               palette="assets/source/chaos_route_kit.mtl"
             fi
             python tools/obj_to_gltf.py \
@@ -52,7 +53,8 @@ jobs:
                       "models": []}
           for name in ("reactor_spire", "service_crane", "perimeter_gate",
                        "plasma_foundry", "sky_transit_exchange", "orbital_halo_array",
-                       "premium_jump_deck", "premium_skybridge_module"):
+                       "premium_jump_deck", "premium_skybridge_module",
+                        "premium_ground_tile"):
               gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
