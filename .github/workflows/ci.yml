@@ -31,8 +31,9 @@ jobs:
           python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
           python3 tools/generate_district_profile_meshes.py --output-dir assets/source
           python3 tools/generate_original_skyfleet_carrier.py --output assets/source/chaos_skyfleet_carrier.obj
-          # Source candidate only: this 3D model has NOT been approved or
-          # registered yet. Validate before the one-shot creator upload.
+          # Verified source of Roblox owner-approved Model 84582262145054,
+          # approval receipt #41644715829. Independently revalidate
+          # authored triangles, UV/tangents and 7-source PBR material groups.
           python3 tools/generate_original_underdeck_chassis.py --output assets/source/chaos_underdeck_chassis.obj
           python3 tools/obj_to_gltf.py \
             --source assets/source/chaos_underdeck_chassis.obj \
@@ -60,11 +61,11 @@ jobs:
           assert len(binary) == buf["byteLength"] and len(binary) > 1000
           print(f"Staged original underdeck OBJ→glTF passed: {triangles} real triangles, 7 material families.")
           PY
-          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial skyfleet_carrier; do
+          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial skyfleet_carrier underdeck_chassis; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
               palette="assets/source/chaos_perimeter_gate.mtl"
-            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ] || [[ "$model" == district_* ]] || [ "$model" = "skyfleet_carrier" ]; then
+            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ] || [[ "$model" == district_* ]] || [ "$model" = "skyfleet_carrier" ] || [ "$model" = "underdeck_chassis" ]; then
               palette="assets/source/chaos_route_kit.mtl"
             fi
             python tools/obj_to_gltf.py \
@@ -87,7 +88,7 @@ jobs:
                        "premium_jump_deck", "premium_skybridge_module",
                        "premium_ground_tile", "district_observatory",
                        "district_freight", "district_turbine", "district_aerial",
-                       "skyfleet_carrier"):
+                       "skyfleet_carrier", "underdeck_chassis"):
               gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
@@ -152,7 +153,10 @@ jobs:
           district_names = {"district_observatory", "district_freight",
                             "district_turbine", "district_aerial"}
           skyfleet_names = {"skyfleet_carrier"}
-          assert {m["name"] for m in models} == scenery_names | route_names | district_names | skyfleet_names
+          underdeck_names = {"underdeck_chassis"}
+          assert {m["name"] for m in models} == (
+              scenery_names | route_names | district_names
+              | skyfleet_names | underdeck_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -181,7 +185,7 @@ jobs:
           route_block = re.search(r"local APPROVED = \{(.*?)\n\}", route_source, re.S)
           assert route_block, "Missing real original jump/skybridge asset allowlist"
           route_ids = dict(re.findall(
-              r"(PremiumJumpDeck|PremiumSkybridgeModule|PremiumGroundTile)\s*=\s*(\d+)",
+              r"(PremiumJumpDeck|PremiumSkybridgeModule|PremiumGroundTile|OriginalUnderdeckChassis)\s*=\s*(\d+)",
               route_block.group(1),
           ))
           approved = {m["name"]: m["asset_id"] for m in models}
@@ -189,6 +193,7 @@ jobs:
               "PremiumJumpDeck": approved["premium_jump_deck"],
               "PremiumSkybridgeModule": approved["premium_skybridge_module"],
               "PremiumGroundTile": approved["premium_ground_tile"],
+              "OriginalUnderdeckChassis": approved["underdeck_chassis"],
           }, "Approved production 3D route IDs do not match runtime allowlist"
           facade_source = Path("src/server/PremiumDistrictFacadeAssets.lua").read_text()
           facade_block = re.search(r"local APPROVED = \{(.*?)\n\}", facade_source, re.S)
@@ -212,7 +217,27 @@ jobs:
           assert asset_match.group(1) == approved["skyfleet_carrier"], (
               "Original 3D skyfleet live ID diverges from verified Roblox owner record")
           assert "OriginalMeshScenery.sanitize(raw)" in skyfleet_source
-          print("Verified 14 genuine owned Model IDs and safe shared sanitizer.")
+          assert approved["underdeck_chassis"] == "84582262145054"
+          assert next(
+              m["workflow_run_id"] for m in models
+              if m["name"] == "underdeck_chassis"
+          ) == 41644715829
+          client = Path("src/client/PremiumRouteMeshKit.lua").read_text()
+          assert "OriginalUnderdeckChassis = 84582262145054" in client
+          assert "OriginalUnderdeckArt" in client
+          assert "function PremiumRouteMeshKit.underdeckCount()" in client
+          assert "underdecks = 0" in client and "underdecks = 2" in client
+          assert "underdecks = 4" in client
+          assert "part.CanCollide = false" in client
+          assert "part.CanQuery = false" in client
+          assert "part.CanTouch = false" in client
+          assert "OriginalUnderdeckSafeCosmeticWeld" in client
+          assert "base.Size.X < 318 or base.Size.Z < 318" in client
+          census = Path("src/shared/VisualBudgetRules.lua").read_text()
+          assert '"PremiumRouteMeshLocal"' in census
+          assert "LocalOriginalUnderdeckMeshCount" in Path(
+              "src/client/scenery-lod.client.lua").read_text()
+          print("Verified 15 genuine owned Model IDs and safe shared sanitizer; exact Approved underdeck source/runtime census intact.")
           PY
 
       - name: Install Rojo 7.7.0
