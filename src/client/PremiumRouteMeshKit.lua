@@ -395,7 +395,7 @@ local function eligible(platform, cameraPoint, maxDistance, retention, cameraLoo
     -- BEHIND the third-person camera. Prefer the next real leap in front,
     -- while keeping a stable landing within 48 studs and retaining every
     -- tier's explicit MeshPart/model quota.
-    -- landing: rotating the camera must not suddenly evict the current deck.
+    -- Rotating the camera must not suddenly evict the current landing.
     if typeof(cameraLook) == "Vector3" and cameraLook.Magnitude > 0.5
         and dist > 48 then
         local direction = (platform.Position - cameraPoint) / dist
