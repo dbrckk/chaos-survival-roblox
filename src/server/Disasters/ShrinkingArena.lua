@@ -116,7 +116,6 @@ function D.start(ctx)
                 end
             end
         end
-    end
 
         -- The premium arena undercarriage now has four open-frame rails
         -- instead of a 315-stud solid slab. Include those nested visual
