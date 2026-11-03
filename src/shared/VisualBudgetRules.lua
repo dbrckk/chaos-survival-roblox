@@ -33,6 +33,10 @@ VisualBudgetRules.LocalFolders = {
     -- mobile Part/GPU census instead of bypassing adaptive backpressure.
     -- Camera-tier limits: 1/3/6 local tiles, at most seven MeshParts each.
     "OriginalPremiumGroundMeshesLocal",
+    -- A near-camera client kit mounts approved creator-owned 3D portal
+    -- meshes over the real district doors; count all clone MeshParts.
+    -- Low 1 / Medium 2 / High 4 resident MODEL maximum (not Parts).
+    "OriginalDistrictGatewaysLocal",
     "ArenaAmbientPropsLocal",
     "ArenaFocalLightingLocal",
     "ArenaSurfaceDetailLocal",
