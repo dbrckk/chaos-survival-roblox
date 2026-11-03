@@ -56,6 +56,9 @@ VisualBudgetRules.LocalFolders = {
     -- imported Models on Low/Medium/High respectively, counted against
     -- the SAME adaptive Android Parts budget as all other visual meshes.
     "OriginalSkySpineCrownLocal",
+    -- Seven authentic material MeshParts per approved hanging keel MODEL;
+    -- 1/2/4 tiered residents included in existing 440/680/900 budget.
+    "OriginalArenaKeelLocal",
     "LobbyCoreOrbitLocal",
     "LobbyCrewBeaconLocal",
     "ResultConstellationLocal",

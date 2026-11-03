@@ -7,6 +7,7 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local SkySpineCrownMeshKit = require("../../src/client/SkySpineCrownMeshKit")
+local ArenaKeelMeshKit = require("../../src/client/ArenaKeelMeshKit")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
@@ -282,6 +283,75 @@ describe("Chaos Survival engine", function()
         expect(native6.LocalTransparencyModifier).toBe(0)
         expect(SkySpineCrownMeshKit.count()).toBe(0)
         SkySpineCrownMeshKit.sync(nil, Vector3.zero, "Low", false)
+        arena:Destroy()
+        holder:Destroy()
+    end)
+    it("mounts genuine approved suspended arena keel only BELOW real collision base, tiered and shrink safe", function()
+        -- Source #41669929967 was moderation Approved. The CI registry
+        -- verifies its real imported 3,332-triangle 7-material provenance.
+        -- This Roblox engine scene checks actual Model/CFrame/physics/LOD
+        -- contracts independently of any mocked image of the final game.
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local holder = Instance.new("Folder")
+        holder.Name = "PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        holder.Parent = ReplicatedStorage
+        local source = Instance.new("Model")
+        source.Name = "OriginalArenaKeel"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("PremiumArenaKeel3D", true)
+        source:SetAttribute("Original3DAssetId", 121436301473005)
+        local imported = Instance.new("MeshPart")
+        imported.Name = "RealSourceGeometryFixture"
+        imported.Size = Vector3.new(56.2, 14.8, 54)
+        imported.Anchored = true
+        imported.Parent = source
+        source.Parent = holder
+
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId", "Classic")
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.Anchored = true
+        base.CanCollide = true
+        base.CFrame = CFrame.new(100, 10, 240)
+        base.Parent = arena
+        local camera = base.Position + Vector3.new(0, 17, 0)
+        ArenaKeelMeshKit.sync(arena, camera, "Low", true)
+        expect(ArenaKeelMeshKit.count()).toBe(1)
+        local bucket = workspace:FindFirstChild("OriginalArenaKeelLocal")
+        expect(bucket ~= nil).toBe(true)
+        for _, model in ipairs(bucket:GetChildren()) do
+            expect(model:IsA("Model")).toBe(true)
+            expect(model:GetAttribute("Original3DAssetId")).toBe(121436301473005)
+            for _, part in ipairs(model:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(part.CanCollide).toBe(false)
+                    expect(part.CanTouch).toBe(false)
+                    expect(part.CanQuery).toBe(false)
+                    expect(part.CastShadow).toBe(false)
+                    local upper = part.Position.Y + part.Size.Y * .5
+                    expect(upper < base.Position.Y - base.Size.Y * .5).toBe(true)
+                end
+            end
+        end
+        ArenaKeelMeshKit.sync(arena, camera, "Medium", true)
+        expect(ArenaKeelMeshKit.count()).toBe(2)
+        ArenaKeelMeshKit.sync(arena, camera, "High", true)
+        expect(ArenaKeelMeshKit.count()).toBe(4)
+        expect(base.CanCollide).toBe(true)
+        -- The real disaster changes authoritative Size: remove all 3D
+        -- immediately, even BEFORE the next camera sampler callback.
+        base.Size = Vector3.new(230, 2, 230)
+        expect(ArenaKeelMeshKit.count()).toBe(0)
+        ArenaKeelMeshKit.sync(arena, camera, "High", true)
+        expect(ArenaKeelMeshKit.count()).toBe(0)
+        ArenaKeelMeshKit.sync(nil, Vector3.zero, "Low", false)
         arena:Destroy()
         holder:Destroy()
     end)
