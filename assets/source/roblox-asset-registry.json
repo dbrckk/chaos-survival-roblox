@@ -11,7 +11,8 @@
     "models_inserted_in_game": false,
     "android_visual_qa_completed": false,
     "service_models_inserted_in_game": false,
-    "ambient_models_inserted_in_game": false
+    "ambient_models_inserted_in_game": false,
+    "floor_relief_models_inserted_in_game": false
   },
   "models": [
     {
@@ -237,6 +238,54 @@
       "source": "tools/generate_original_ambient_motion.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41733818047
+    },
+    {
+      "name": "relief_essential",
+      "asset_id": "71267601603297",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_relief.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41736767816
+    },
+    {
+      "name": "relief_classic",
+      "asset_id": "102746904688141",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_relief.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41736767816
+    },
+    {
+      "name": "relief_towers",
+      "asset_id": "74708751016233",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_relief.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41736767816
+    },
+    {
+      "name": "relief_crossroads",
+      "asset_id": "84038993323581",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_relief.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41736767816
+    },
+    {
+      "name": "relief_orbital",
+      "asset_id": "123089585720736",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_relief.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41736767816
+    },
+    {
+      "name": "relief_harbor",
+      "asset_id": "94830155055482",
+      "moderation": "Approved",
+      "source": "tools/generate_original_floor_relief.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41736767816
     }
   ]
 }
