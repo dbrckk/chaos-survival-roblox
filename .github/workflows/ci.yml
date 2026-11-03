@@ -64,6 +64,36 @@ jobs:
           assert len(binary) == buf["byteLength"] and len(binary) > 1000
           print(f"Staged original underdeck OBJ→glTF passed: {triangles} real triangles, 7 material families.")
           PY
+          # Work-in-progress, ORIGINAL sculpted arena keel: source validation
+          # ONLY. Never claim Roblox approval or load a fabricated asset ID.
+          python3 tools/generate_original_arena_keel.py \
+            --output assets/source/chaos_arena_keel.obj > build/mesh-previews/arena-keel-source.json
+          python3 tools/obj_to_gltf.py \
+            --source assets/source/chaos_arena_keel.obj \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output build/mesh-previews/chaos_arena_keel.gltf
+          python3 - <<'PY'
+          import base64, json
+          from pathlib import Path
+          summary = json.loads(Path("build/mesh-previews/arena-keel-source.json").read_text())
+          assert summary["asset"] == "arena_keel"
+          assert 1800 <= summary["triangles"] <= 8000
+          assert summary["bounds_max"][1] <= -0.48
+          assert all(0 < n < 65 for n in summary["dimensions"])
+          art = json.loads(Path("build/mesh-previews/chaos_arena_keel.gltf").read_text())
+          assert art["asset"]["version"] == "2.0"
+          assert {m["name"] for m in art["materials"]} == {
+              "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
+          sections = art["meshes"][0]["primitives"]
+          assert len(sections) == 7
+          assert sum(art["accessors"][p["attributes"]["POSITION"]]["count"] // 3
+                     for p in sections) == summary["triangles"]
+          assert all({"POSITION", "NORMAL", "TEXCOORD_0", "TANGENT"}
+                     <= set(p["attributes"]) for p in sections)
+          payload = base64.b64decode(art["buffers"][0]["uri"].split(",",1)[1], validate=True)
+          assert len(payload) == art["buffers"][0]["byteLength"]
+          print("Original Arena Keel real 3D source passed geometry, UV, tangent, seven-material and 65-stud safety gates. NO Roblox upload.")
+          PY
           for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial skyfleet_carrier underdeck_chassis sky_spine_crown; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
@@ -1405,6 +1435,8 @@ jobs:
             build/mesh-previews/chaos_reactor_spire.gltf
             build/mesh-previews/chaos_service_crane.gltf
             build/mesh-previews/chaos_perimeter_gate.gltf
+            build/mesh-previews/chaos_arena_keel.gltf
+            build/mesh-previews/arena-keel-source.json
             build/mesh-previews/manifest.json
           if-no-files-found: error
           retention-days: 30
