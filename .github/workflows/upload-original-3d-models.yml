@@ -73,6 +73,7 @@ on:
           - relief_harbor
           - floor_corner_guard
           - floor_anchor_bolt
+          - floor_anchor_bolt_large
           - floor_harbor_tie
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
@@ -128,7 +129,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel|service_camera|service_maintenance|service_wayfinder|service_orbital|service_mooring|ambient_drone|ambient_lift|ambient_transit|ambient_satellite|ambient_cargo|relief_essential|relief_classic|relief_towers|relief_crossroads|relief_orbital|relief_harbor|floor_corner_guard|floor_anchor_bolt|floor_harbor_tie) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel|service_camera|service_maintenance|service_wayfinder|service_orbital|service_mooring|ambient_drone|ambient_lift|ambient_transit|ambient_satellite|ambient_cargo|relief_essential|relief_classic|relief_towers|relief_crossroads|relief_orbital|relief_harbor|floor_corner_guard|floor_anchor_bolt|floor_anchor_bolt_large|floor_harbor_tie) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -286,6 +287,7 @@ jobs:
                    "relief_harbor": "Chaos Original 3D Harbor Forged Tie Down",
                    "floor_corner_guard": "Chaos Sculpted 3D Perimeter Corner Guard",
                    "floor_anchor_bolt": "Chaos 3D Captive Industrial Anchor Bolt",
+                   "floor_anchor_bolt_large": "Chaos Original Large Authored 3D Bolt",
                    "floor_harbor_tie": "Chaos 3D Harbor Forged Tie Down Eye"}
           display_name = names[os.environ["CHOICE"]]
           # Roblox returned INVALID_ARGUMENT "Asset name length is invalid"
