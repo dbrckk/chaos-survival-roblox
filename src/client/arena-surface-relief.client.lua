@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
+local PremiumFloorReliefMeshKit = require(script.Parent.PremiumFloorReliefMeshKit)
 local ArenaPresentation = require(ReplicatedStorage.Shared.ArenaPresentation)
 
 local player = Players.LocalPlayer
@@ -24,6 +25,9 @@ local function clear()
         stopFollowingBase = nil
     end
     folder:ClearAllChildren()
+    if player:GetAttribute("LocalOriginalFloorRelief3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalFloorRelief3DCount", 0)
+    end
 end
 
 local function makePart(name, size, cframe, color, material, transparency, castShadow)
@@ -399,7 +403,17 @@ local function rebuild()
 
     if tier.Name == "Low" then
         addEssentialDeckRelief(base, theme)
-        -- Android Low-tier plates must shrink too, not just richer scenes.
+        local camera = workspace.CurrentCamera
+        local originalCount = PremiumFloorReliefMeshKit.install(
+            folder, variant, tier.Name,
+            camera and camera.CFrame.Position or nil
+        )
+        if player:GetAttribute("LocalOriginalFloorRelief3DCount")
+            ~= originalCount then
+            player:SetAttribute("LocalOriginalFloorRelief3DCount", originalCount)
+        end
+        -- Critical: the genuine MeshParts are direct folder children BEFORE
+        -- this snapshot, so Shrinking Arena moves/resizes them safely.
         stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
         return
     end
@@ -418,6 +432,17 @@ local function rebuild()
     elseif variant == "Classic" then
         addClassic(base, theme, tier)
     end
+    local camera = workspace.CurrentCamera
+    local originalCount = PremiumFloorReliefMeshKit.install(
+        folder, variant, tier.Name,
+        camera and camera.CFrame.Position or nil
+    )
+    if player:GetAttribute("LocalOriginalFloorRelief3DCount")
+        ~= originalCount then
+        player:SetAttribute("LocalOriginalFloorRelief3DCount", originalCount)
+    end
+    -- The existing ONE base.Size listener follows genuine floor MeshParts
+    -- and native art together; no extra RenderStepped or hazard owner.
     stopFollowingBase = ArenaFloorFollowerKit.bind(base, folder)
 end
 
@@ -461,6 +486,51 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
+
+-- Assets load server-side in a bounded late lane. When the approved
+-- Essential/arena variant Model arrives, replace the native source plates
+-- without restarting the round or waiting for the next map swap.
+local reliefTemplateConnections = {}
+local reliefTemplates = nil
+local function bindReliefTemplates(holder)
+    if holder == reliefTemplates then return end
+    for _, connection in ipairs(reliefTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(reliefTemplateConnections)
+    reliefTemplates = holder
+    if holder and holder:IsA("Folder") then
+        local function changed(child)
+            local generated = workspace:FindFirstChild("GeneratedMap")
+            local arena = generated and generated:FindFirstChild("Arena")
+            local variant = arena and arena:GetAttribute("VariantId")
+            local tier = VfxQuality.deviceTier(
+                player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+            local needed = tier.Name == "Low" and "Essential"
+                or tostring(variant or "Classic")
+            if child.Name == needed then scheduleRefresh() end
+        end
+        reliefTemplateConnections[#reliefTemplateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        reliefTemplateConnections[#reliefTemplateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+        scheduleRefresh()
+    end
+end
+
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "ApprovedFloorReliefTemplates" then
+        bindReliefTemplates(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == reliefTemplates then
+        bindReliefTemplates(nil)
+        scheduleRefresh()
+    end
+end)
+bindReliefTemplates(ReplicatedStorage:FindFirstChild(
+    "ApprovedFloorReliefTemplates"))
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 rebuild()
