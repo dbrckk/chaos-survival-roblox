@@ -1,15 +1,18 @@
 -- Creator-owned approved Model #121436301473005, import #41669929967.
 -- Genuine 3,332-triangle seven-material suspended arena undercarriage.
 -- Always cosmetic: the real arena Base remains the sole solid floor.
--- Low/Medium/High keep at most 1/2/4 source-authentic 3D modules.
+-- Low/Medium/High keep at most 1/3/5 source-authentic 3D modules.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
 local ASSET_ID = 121436301473005
+-- Five authentic undercarriages fully cover the center and all four
+-- support stations on High without leaving a primitive corner pylon.
+-- One model is 3,332 triangles; five are 16,660 triangles at most.
 local BUDGET = {
     Low = {count = 1, distance = 150, retention = 18},
-    Medium = {count = 2, distance = 220, retention = 24},
-    High = {count = 4, distance = 290, retention = 30},
+    Medium = {count = 3, distance = 225, retention = 24},
+    High = {count = 5, distance = 290, retention = 30},
 }
 local VARIANTS = {
     Classic = true, Towers = true, Crossroads = true,
