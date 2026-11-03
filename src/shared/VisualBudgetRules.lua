@@ -49,6 +49,9 @@ VisualBudgetRules.LocalFolders = {
     "ChaosEnvironmentDepthLocal",
     "ChaosWorldPolishLocal",
     "ArenaCinematicDisasterAtmosphereLocal",
+    -- Approved owner-imported arena lobby gate: seven inert original
+    -- MeshParts on one client-local Model, no lights or extra frame owner.
+    "OriginalLobbyGate3DLocal",
     "LobbyCoreOrbitLocal",
     "LobbyCrewBeaconLocal",
     "ResultConstellationLocal",
