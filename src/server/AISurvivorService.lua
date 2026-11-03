@@ -904,6 +904,7 @@ end
 local function cancelGroundNavigation(record)
     record.groundNavigation = nil
     record.groundNavigationPending = false
+    record.groundNavigationStartedAt = nil
     record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
 end
 
@@ -3347,6 +3348,7 @@ local function requestGroundNavigation(record, root, goal, now)
 
     record.nextGroundNavigationAt = now + 9
     record.groundNavigationPending = true
+    record.groundNavigationStartedAt = now
     record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
     local token = record.groundNavigationToken
     local rig = record.model
@@ -3370,6 +3372,7 @@ local function requestGroundNavigation(record, root, goal, now)
             return
         end
         record.groundNavigationPending = false
+        record.groundNavigationStartedAt = nil
         if not ok or not waypoints or #waypoints < 3
             or #waypoints > 24 or not rig or not rig.Parent
             or not record.inRound or currentState.phase ~= "round"
@@ -3438,6 +3441,20 @@ local function requestGroundNavigation(record, root, goal, now)
 end
 
 local function advanceGroundNavigation(record, root, now)
+    if AISurvivorRules.groundNavigationQueryTimedOut(
+        record.groundNavigationPending,
+        record.groundNavigationStartedAt, now
+    ) then
+        -- Invalidate the still-yielding callback before releasing the
+        -- pending state. A late engine response cannot retarget this NPC.
+        cancelGroundNavigation(record)
+        record.nextGroundNavigationAt = now + 3
+        if record.model then
+            record.model:SetAttribute("BotPathTimeoutCount",
+                (tonumber(record.model:GetAttribute(
+                    "BotPathTimeoutCount")) or 0) + 1)
+        end
+    end
     local route = record.groundNavigation
     if not route then return end
     if now > route.expires or #warningParts() > 0

@@ -818,6 +818,18 @@ end
 -- every same-height sky waypoint. If its supporting deck vanished,
 -- the bot needs a local safe recovery, not a 30-stud run over void.
 -- On the ground the normal candidate system remains unrestricted.
+-- ComputeAsync is a yielding external engine call. A stalled query
+-- must never monopolize the bot's navigation state indefinitely;
+-- the async callback is invalidated separately with its generation token.
+function AISurvivorRules.groundNavigationQueryTimedOut(
+    pending, startedAt, now)
+    return pending == true
+        and type(startedAt) == "number"
+        and type(now) == "number"
+        and now == now and startedAt == startedAt
+        and now - startedAt >= 6
+end
+
 function AISurvivorRules.elevatedRouteHasSupport(
     rootY, baseTopY, standingDeckConfirmed)
     if type(rootY) ~= "number" or type(baseTopY) ~= "number"

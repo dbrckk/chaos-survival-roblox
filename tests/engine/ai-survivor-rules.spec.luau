@@ -1119,6 +1119,16 @@ describe("AI survivor rules", function()
         -- target, but an equally high deck across 200 studs of void is not.
         -- A bot whose bridge collapsed underfoot cannot pick a
         -- new remote roof just because the elevation matches.
+        -- A hung Roblox pathfinder must not keep a bot in pending
+        -- navigation forever, and completed queries never time out.
+        local timedOut = AISurvivorRules.groundNavigationQueryTimedOut
+        expect(timedOut(true, 100, 105.9)).toBe(false)
+        expect(timedOut(true, 100, 106)).toBe(true)
+        expect(timedOut(true, 100, 112)).toBe(true)
+        expect(timedOut(false, 100, 112)).toBe(false)
+        expect(timedOut(true, nil, 112)).toBe(false)
+        expect(timedOut(true, 100, nil)).toBe(false)
+
         local hasSupport = AISurvivorRules.elevatedRouteHasSupport
         expect(hasSupport(5, 1, false)).toBe(true)
         expect(hasSupport(9, 1, false)).toBe(true)
