@@ -11,10 +11,14 @@ local ASSETS = {
     PremiumJumpDeck = 98478693994864,
     PremiumSkybridgeModule = 94023662427980,
 }
+-- Hysteresis keeps the SAME approved imported route art resident as the
+-- camera moves across a threshold. A new route must be within distance;
+-- an already mounted safe route gets a small exit margin, never more slots.
+-- Stable residency avoids repeated MeshPart clone/weld churn on Android.
 local BUDGET = {
-    Low = {decks = 2, bridges = 1, segments = 1, distance = 100},
-    Medium = {decks = 5, bridges = 1, segments = 3, distance = 170},
-    High = {decks = 9, bridges = 2, segments = 5, distance = 245},
+    Low = {decks = 2, bridges = 1, segments = 1, distance = 100, retention = 18},
+    Medium = {decks = 5, bridges = 1, segments = 3, distance = 170, retention = 22},
+    High = {decks = 9, bridges = 2, segments = 5, distance = 245, retention = 28},
 }
 
 local folder = Instance.new("Folder")
@@ -244,7 +248,9 @@ local function mount(platform, template, count)
     return entry
 end
 
-local function eligible(platform, cameraPoint, maxDistance)
+local function eligible(platform, cameraPoint, maxDistance, retention)
+    -- Read genuine safety before residency: NEVER keep cosmetic meshes on
+    -- a collapsing, shrinking, transparent or shutter-warning platform.
     if not safePlatform(platform) then return nil end
     local isBridge = platform:GetAttribute("ChaosSkybridge") == true
         and platform.Name:match("^Skybridge%d+$") ~= nil
@@ -254,9 +260,20 @@ local function eligible(platform, cameraPoint, maxDistance)
         math.max(platform.Size.X, platform.Size.Z)
     if width < (isBridge and 3.8 or 8) or width > 26 then return nil end
     if not isBridge and length / width > 1.85 then return nil end
+
+    local resident = mounted[platform] ~= nil
     local dist = (cameraPoint - platform.Position).Magnitude
-    if dist > maxDistance then return nil end
-    return {platform = platform, bridge = isBridge, distance = dist}
+    if dist > maxDistance + (resident and retention or 0) then return nil end
+    -- Between equally useful routes, keep already visible art instead of
+    -- replacing MeshParts every LOD tick for tiny camera movements. The
+    -- hard deck/bridge/segment caps remain exactly the same on every tier.
+    local priority = dist - (resident and retention * 0.65 or 0)
+    return {
+        platform = platform,
+        bridge = isBridge,
+        distance = dist,
+        priority = priority,
+    }
 end
 
 -- Called BY the existing LOD scheduler, not a new time-based loop.
@@ -296,7 +313,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
     local decks, bridges = {}, {}
     for _, platform in ipairs(platforms:GetChildren()) do
         if platform:IsA("BasePart") then
-            local item = eligible(platform, cameraPoint, budget.distance)
+            local item = eligible(platform, cameraPoint, budget.distance, budget.retention)
             if item then
                 local bucket = item.bridge and bridges or decks
                 bucket[#bucket + 1] = item
@@ -304,10 +321,13 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
         end
     end
     local function byDistance(a, b)
-        if a.distance == b.distance then
-            return a.platform.Name < b.platform.Name
+        if a.priority == b.priority then
+            if a.distance == b.distance then
+                return a.platform.Name < b.platform.Name
+            end
+            return a.distance < b.distance
         end
-        return a.distance < b.distance
+        return a.priority < b.priority
     end
     table.sort(decks, byDistance)
     table.sort(bridges, byDistance)
