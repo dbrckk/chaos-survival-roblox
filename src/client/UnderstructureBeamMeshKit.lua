@@ -101,7 +101,9 @@ local function safeCandidate(part, folder)
             or part.Name:match("^UnderCrossroadsBeam[NEWS]%d+$") ~= nil
             or part.Name:match("^UnderTowersBeam[XY]%d+$") ~= nil
             or part.Name:match("^UnderHarborBeam[XY]%d+$") ~= nil
-            or part.Name:match("^UnderOrbitalBeam%d+$") ~= nil)
+            or part.Name:match("^UnderOrbitalBeam%d+$") ~= nil
+            or part.Name:match("^UnderRibBeam%d+_%d+$") ~= nil
+            or part.Name:match("^UnderClassicDataBay[LR]$") ~= nil)
         and part.Anchored and not part.CanCollide
         and not part.CanTouch and not part.CanQuery
         and part.Size.Y >= 1 and part.Size.Y <= 3
