@@ -59,6 +59,22 @@
       "source": "assets/source/chaos_orbital_halo_array.obj",
       "source_materials": "assets/source/chaos_industrial_materials.mtl",
       "workflow_run_id": 40245986454
+    },
+    {
+      "name": "premium_jump_deck",
+      "asset_id": "98478693994864",
+      "source": "assets/source/chaos_premium_jump_deck.obj",
+      "moderation": "Approved",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41614704198
+    },
+    {
+      "name": "premium_skybridge_module",
+      "asset_id": "94023662427980",
+      "source": "assets/source/chaos_premium_skybridge_module.obj",
+      "moderation": "Approved",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41614704198
     }
   ]
 }

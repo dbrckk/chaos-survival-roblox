@@ -28,10 +28,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/mesh-previews
-          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array; do
+          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
               palette="assets/source/chaos_perimeter_gate.mtl"
+            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ]; then
+              palette="assets/source/chaos_route_kit.mtl"
             fi
             python tools/obj_to_gltf.py \
               --source "assets/source/chaos_${model}.obj" \
@@ -46,10 +48,11 @@ jobs:
           from pathlib import Path
 
           manifest = {"source_commit": os.environ["GITHUB_SHA"],
-                      "import_status": "NOT_UPLOADED_TO_ROBLOX",
+                      "import_status": "BUILD_ONLY_NO_NEW_ASSET_UPLOAD",
                       "models": []}
           for name in ("reactor_spire", "service_crane", "perimeter_gate",
-                       "plasma_foundry", "sky_transit_exchange", "orbital_halo_array"):
+                       "plasma_foundry", "sky_transit_exchange", "orbital_halo_array",
+                       "premium_jump_deck", "premium_skybridge_module"):
               gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
@@ -106,10 +109,12 @@ jobs:
           assert registry["publication"]["models_inserted_in_game"] is False
           assert registry["publication"]["android_visual_qa_completed"] is False
           models = registry["models"]
-          assert {m["name"] for m in models} == {
+          scenery_names = {
               "reactor_spire", "service_crane", "perimeter_gate",
               "plasma_foundry", "sky_transit_exchange", "orbital_halo_array"
           }
+          route_names = {"premium_jump_deck", "premium_skybridge_module"}
+          assert {m["name"] for m in models} == scenery_names | route_names
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -130,12 +135,26 @@ jobs:
               r"(reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array)\s*=\s*(\d+)",
               block.group(1),
           ))
-          assert deployed_ids == {m["name"]: m["asset_id"] for m in models}, (
-              "Runtime owned 3D asset IDs diverged from the approved registry"
-          )
+          assert deployed_ids == {
+              m["name"]: m["asset_id"] for m in models
+              if m["name"] in scenery_names
+          }, "Original skyline 3D IDs diverged from approved registry"
+          route_source = Path("src/server/PremiumRouteMeshAssets.lua").read_text()
+          route_block = re.search(r"local APPROVED = \{(.*?)\n\}", route_source, re.S)
+          assert route_block, "Missing real original jump/skybridge asset allowlist"
+          route_ids = dict(re.findall(
+              r"(PremiumJumpDeck|PremiumSkybridgeModule)\s*=\s*(\d+)",
+              route_block.group(1),
+          ))
+          approved = {m["name"]: m["asset_id"] for m in models}
+          assert route_ids == {
+              "PremiumJumpDeck": approved["premium_jump_deck"],
+              "PremiumSkybridgeModule": approved["premium_skybridge_module"],
+          }, "Approved production 3D route IDs do not match runtime allowlist"
           assert "AssetService.LoadAssetAsync" in source
           assert "OriginalMeshScenery.sanitize(imported)" in source
-          print("Verified original source provenance, runtime IDs, and sanitizer.")
+          assert "OriginalMeshScenery.sanitize(raw)" in route_source
+          print("Verified 8 genuine owned Model IDs and safe shared sanitizer.")
           PY
 
       - name: Install Rojo 7.7.0

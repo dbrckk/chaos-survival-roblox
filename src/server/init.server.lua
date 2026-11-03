@@ -46,6 +46,7 @@ if RunService:IsStudio() then
 end
 local MapBuilder = require(script.MapBuilder)
 local OriginalMeshScenery = require(script.OriginalMeshScenery)
+local PremiumRouteMeshAssets = require(script.PremiumRouteMeshAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -168,6 +169,9 @@ MapBuilder.build(Config, "Classic", ArenaVariants)
 -- Engine E2E suites exercise the generated native map deterministically.
 if not isStudioE2E then
     task.defer(OriginalMeshScenery.start)
+    -- Only approved, sanitized original MeshParts; load separately so
+    -- joining/AI/hazards never wait on extra optional 3D artwork.
+    task.defer(PremiumRouteMeshAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)

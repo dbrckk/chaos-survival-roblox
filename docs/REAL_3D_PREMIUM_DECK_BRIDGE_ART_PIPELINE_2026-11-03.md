@@ -26,3 +26,18 @@ The existing audited `upload-original-3d-models.yml` supports both new source na
 - Check five arènes, readable landing top, Low/Medium/High, collapse, shrink, stream swaps and 30-minute session; require actual Android screenshots/FPS before claiming AAA production quality.
 
 Do not claim VIS-009/010 completed merely because the original OBJ files now exist. The full task is **source → import → validation → runtime integration → engine/build → public publish → Android visual review**.
+
+## Roblox Open Cloud result — 3 November 2026
+
+The dedicated importer **completed successfully**: both original production mesh packages returned **Roblox moderation Approved**, with real creator-owned asset IDs.
+
+| Source | Approved Roblox Model package ID | Evidence |
+| --- | --- | --- |
+| Premium Armored Jump Deck | `98478693994864` | [import run #41614704198](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41614704198) |
+| Premium Structural Skybridge Module | `94023662427980` | Same run, second parallel import job |
+
+Source integration: `src/server/PremiumRouteMeshAssets.lua` loads only those exact two owned IDs with AssetService, uses the existing strict original package sanitizer and caches inert MeshPart templates in ReplicatedStorage. No client uploads and no executable descendants. Failed imports always leave gameplay-native platforms.
+
+The client `PremiumRouteMeshKit.lua` uses the **existing scenery LOD loop** (no additional render poller): camera-nearest cosmetic model caps are **Low: two jump decks plus one bridge segment; Medium: five decks plus three bridge segments; High: nine decks plus up to ten bridge segments**. Real MeshParts are scaled to fit the official platform footprint and welded without collision, touch, query or shadows to the genuine platform Part. On shrinking arena, changing platform footprint, CollapsePhase Warning/Gone, CanCollide=false or transparent platform, the model is immediately hidden/removed and the original warning panel revealed. The normal original floor always remains available as a fallback.
+
+**Not yet visual certification:** the glTF package contains seven authored material colors and metallic/roughness parameters, with UV/tangent data; do not claim new 2K normal-map textures. The approved 2K native MaterialVariants remain separate. Real Studio/Android screenshots, memory/FPS, mesh orientation and warning visibility remain mandatory before claiming final AAA art.
