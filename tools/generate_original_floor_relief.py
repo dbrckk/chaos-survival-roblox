@@ -98,10 +98,14 @@ def crossroads(m):
                     0,.16,0,.75,.025,.095,.018)
     m.beveled_block("DovetailRail","ALLOY",
                     0,-.072,0,2.5,.09,.40,.044)
+    m.beveled_block("LateralReturnNotch","ALLOY",
+                    0,.092,.21,1.10,.021,.09,.018)
 
 
 def orbital(m):
     frame(m,"OrbitalMagneticTrack",5.42,1.08,"CERAMIC")
+    m.beveled_block("MagnetInsulatingArmor","ARMOR",
+                    0,.118,0,4.6,.041,.57,.07)
     for side in (-1,1):
         m.beveled_block("DielectricGuide%d"%side,"ALLOY",
                         0,.119,side*.37,4.60,.067,.15,.032)
