@@ -381,8 +381,8 @@ jobs:
           assert "ArenaKeelMeshKit.sync(arena, cameraPoint" in scenery
           assert "LocalOriginalArenaKeelCount" in scenery
           assert "Low = {count = 1" in keel
-          assert "Medium = {count = 2" in keel
-          assert "High = {count = 4" in keel
+          assert "Medium = {count = 3" in keel
+          assert "High = {count = 5" in keel
           for safety in ("part.CanCollide = false", "part.CanTouch = false",
                          "part.CanQuery = false", "part.CastShadow = false",
                          "base:GetPropertyChangedSignal(\"Size\")",
@@ -419,8 +419,8 @@ jobs:
           assert 'UnderCrossroadsTrunk' not in understructure
           assert 'UnderstructureBeamMeshKit' in engine
           assert 'Low = {count = 1' in beams
-          assert 'Medium = {count = 2' in beams
-          assert 'High = {count = 4' in beams
+          assert 'Medium = {count = 4' in beams
+          assert 'High = {count = 12' in beams
           for required in ('source:GetAttribute("OwnerVerified") ~= true',
                            'source:GetAttribute("Original3DAssetId") ~= ASSET_ID',
                            'base:GetPropertyChangedSignal("Size")',
@@ -431,7 +431,7 @@ jobs:
                            'entry.native.Transparency = entry.originalTransparency'):
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
-          print("Authenticated approved 3D underfloor beam replacements: Classic + Crossroads, tier 1/2/4, source-only, native restoration, no new LOD loop.")
+          print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
           print("Verified 23 genuine owned approved Models including 5 original miniatures, authenticated source receipts, mobile quotas, and physics/hazard fallbacks.")
           PY
 
