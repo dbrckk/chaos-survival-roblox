@@ -91,9 +91,14 @@ local FOLDERS = {
         LowDistance = 150,
         MediumDistance = 220,
     },
+    -- Five creator-approved airborne/industrial MeshPart families replace
+    -- the native ambient primitives outside the 320-stud playable edge.
+    -- Center-origin culling at 125 would hide the ENTIRE pack from players
+    -- approaching an edge, despite strict 2/4/6 Model quotas. Keep the
+    -- authored traffic visible on Low/Medium, with no new LOD sampler.
     ArenaAmbientPropsLocal = {
-        LowDistance = 125,
-        MediumDistance = 185,
+        LowDistance = 230,
+        MediumDistance = 290,
     },
     ArenaSurfaceDetailLocal = {
         LowDistance = 115,
