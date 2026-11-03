@@ -7,22 +7,40 @@ local PremiumDistrictFacadeMeshKit = {}
 local NAMES = {"Observatory", "Freight", "Turbine", "Aerial"}
 local IDS = {132020956214241, 88725004643299,
     84217436280282, 135791763112202}
+-- Keep the EXACT 1/3/6 imported-model limits. Only already-mounted
+-- safe models gain a small exit margin, preventing mobile clone thrash.
 local BUDGET = {
-    Low = {count = 1, distance = 130},
-    Medium = {count = 3, distance = 190},
-    High = {count = 6, distance = 255},
+    Low = {count = 1, distance = 130, retention = 16},
+    Medium = {count = 3, distance = 190, retention = 22},
+    High = {count = 6, distance = 255, retention = 28},
 }
 local holder = Instance.new("Folder")
 holder.Name = "ApprovedDistrictFacadesLocal"
 holder.Parent = workspace
 local activeArena = nil
 local mounted = {}
+local watchedBase = nil
+local baseChanged = nil
 
-local function clear()
+local function dispose(entry)
+    for _, connection in ipairs(entry.connections or {}) do
+        connection:Disconnect()
+    end
+    entry.model:Destroy()
+end
+
+local function clearMounted()
     for building, entry in pairs(mounted) do
-        entry.model:Destroy()
+        dispose(entry)
         mounted[building] = nil
     end
+end
+
+local function clear()
+    clearMounted()
+    if baseChanged then baseChanged:Disconnect() end
+    baseChanged = nil
+    watchedBase = nil
     holder:ClearAllChildren()
 end
 
@@ -76,27 +94,34 @@ local function eligible(building, district)
     if not door or not door:IsA("Part") or door.Parent ~= building
         or door.CanCollide or door.CanQuery or door.CanTouch
         or door.Size.X < 4 or door.Size.X > 5.5
-        or door.Size.Y < 4 or door.Size.Y > 5.5 then
+        or door.Size.Y < 4 or door.Size.Y > 5.5
+        or door.Transparency >= 0.7
+        or door:GetAttribute("SceneryLodHidden") == true
+        or door.LocalTransparencyModifier >= 0.95 then
         return nil
     end
     return slot, door
 end
 
-local function valid(entry, district)
+local function valid(entry, district, base)
     local slot, door = eligible(entry.building, district)
-    return slot == entry.slot and door == entry.door
+    return base and base.Parent and base:IsA("BasePart")
+        and base.Size.X >= 318 and base.Size.Z >= 318
+        and slot == entry.slot and door == entry.door
         and (door.CFrame.Position - entry.doorFrame.Position).Magnitude < 0.08
+        and (door.Size - entry.doorSize).Magnitude < 0.08
         and door.CFrame.LookVector:Dot(entry.doorFrame.LookVector) > 0.999
+        and door.CFrame.RightVector:Dot(entry.doorFrame.RightVector) > 0.999
 end
 
-local function mount(building, district, slot, door, source)
+local function mount(building, district, base, slot, door, source)
     local clone = source:Clone()
     local sourceFrame, size = clone:GetBoundingBox()
     -- Source OBJ was authored with ground at Y=0 and centered X/Z.
     -- Recover the exact rotated server building origin from its own door.
     local origin = door.CFrame * CFrame.new(0.35, -4, 4.36)
     local target = origin * CFrame.new(0, size.Y * 0.5, 0)
-    local pieces = 0
+    local pieces = {}
     for _, item in ipairs(clone:GetDescendants()) do
         if item:IsA("BasePart") then
             if not item:IsA("MeshPart") then
@@ -110,10 +135,10 @@ local function mount(building, district, slot, door, source)
             item.CanTouch = false
             item.CanQuery = false
             item.CastShadow = false
-            pieces += 1
+            pieces[#pieces + 1] = item
         end
     end
-    if pieces < 1 or pieces > 24 then
+    if #pieces < 1 or #pieces > 24 then
         clone:Destroy()
         return nil
     end
@@ -122,11 +147,36 @@ local function mount(building, district, slot, door, source)
     clone:SetAttribute("DistrictIndex", building:GetAttribute("DistrictIndex"))
     clone:SetAttribute("CosmeticOnly", true)
     clone.Parent = holder
-    return {model = clone, building = building, door = door,
-        doorFrame = door.CFrame, slot = slot}
+    local entry = {
+        model = clone, building = building, door = door,
+        doorFrame = door.CFrame, doorSize = door.Size,
+        slot = slot, pieces = pieces, connections = {},
+    }
+    local function immediatelyHideUnsafe()
+        -- The district may stream out, the door may move or the first
+        -- shrink step may begin BEFORE the 0.65/0.90s scenery tick.
+        -- Never leave a floating imported facade during that interval.
+        if not valid(entry, district, base) then
+            for _, mesh in ipairs(entry.pieces) do
+                if mesh.Parent and mesh.LocalTransparencyModifier ~= 1 then
+                    mesh.LocalTransparencyModifier = 1
+                end
+            end
+        end
+    end
+    for _, property in ipairs({"CFrame", "Size", "Transparency"}) do
+        entry.connections[#entry.connections + 1] =
+            door:GetPropertyChangedSignal(property):Connect(immediatelyHideUnsafe)
+    end
+    entry.connections[#entry.connections + 1] =
+        door.AncestryChanged:Connect(immediatelyHideUnsafe)
+    entry.connections[#entry.connections + 1] =
+        building.AncestryChanged:Connect(immediatelyHideUnsafe)
+    immediatelyHideUnsafe()
+    return entry
 end
 
-function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady)
+function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -136,26 +186,60 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
         clear()
         return
     end
+    local base = arena:FindFirstChild("Base")
     local decor = arena:FindFirstChild("Decor")
     local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
-    if not district or not district:IsA("Folder") then
+    if not base or not base:IsA("BasePart")
+        or not district or not district:IsA("Folder")
+        or base.Size.X < 318 or base.Size.Z < 318 then
         clear()
         return
     end
+    if base ~= watchedBase then
+        if baseChanged then baseChanged:Disconnect() end
+        watchedBase = base
+        baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
+            if base.Size.X < 318 or base.Size.Z < 318 then
+                clearMounted()
+            end
+        end)
+    end
+
+    local look = typeof(cameraLook) == "Vector3"
+        and Vector3.new(cameraLook.X, 0, cameraLook.Z)
+        or Vector3.zero
+    local hasFacing = look.Magnitude > 0.2
+    if hasFacing then look = look.Unit end
+
     local candidates = {}
     for _, building in ipairs(district:GetChildren()) do
         local slot, door = eligible(building, district)
         if slot and template(slot) then
-            local distance = (door.Position - cameraPoint).Magnitude
-            if distance <= budget.distance then
+            local delta = door.Position - cameraPoint
+            local distance = delta.Magnitude
+            local resident = mounted[building] ~= nil
+            -- The existing model gets a small *exit-only* margin; new
+            -- assets still enter within the previous strict camera range.
+            if distance <= budget.distance
+                + (resident and budget.retention or 0) then
+                local priority = distance
+                    - (resident and budget.retention * 0.55 or 0)
+                local horizontal = Vector3.new(delta.X, 0, delta.Z)
+                if hasFacing and horizontal.Magnitude > 42
+                    and horizontal.Unit:Dot(look) < -0.15 then
+                    -- Prefer true original 3D facades on screen rather
+                    -- than spending precious Android meshes behind camera.
+                    priority += 80
+                end
                 candidates[#candidates + 1] = {
                     building = building, slot = slot, door = door,
-                    distance = distance,
+                    distance = distance, priority = priority,
                 }
             end
         end
     end
     table.sort(candidates, function(a, b)
+        if a.priority ~= b.priority then return a.priority < b.priority end
         if a.distance ~= b.distance then return a.distance < b.distance end
         return a.building.Name < b.building.Name
     end)
@@ -166,15 +250,15 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
     for building, entry in pairs(mounted) do
         local desired = wanted[building]
         if not desired or desired.slot ~= entry.slot
-            or not valid(entry, district) then
-            entry.model:Destroy()
+            or not valid(entry, district, base) then
+            dispose(entry)
             mounted[building] = nil
         end
     end
     for building, desired in pairs(wanted) do
         if not mounted[building] then
-            mounted[building] = mount(building, district, desired.slot,
-                desired.door, template(desired.slot))
+            mounted[building] = mount(building, district, base,
+                desired.slot, desired.door, template(desired.slot))
         end
     end
 end

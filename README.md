@@ -1,5 +1,12 @@
 # Chaos Survival — Roblox
 
+## Correction bloquante : vrais bâtiments 3D approuvés et budget Android
+
+**3 novembre 2026 :** quatre vrais MeshParts de façades et toits ont été importés et modérés [Approved #41629861517](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629861517), puis intégrés au code source des 16 bâtiments des cinq arènes. La tentative de release sur `edd1b259` a pourtant **échoué** : [Build Validation #41630960261](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41630960261) bloquait le nouveau dossier graphique `ApprovedDistrictFacadesLocal` absent des budgets, même si [les cinq suites Roblox moteur #41630970496](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41630970496) ont réussi. Le jeu public **n'a donc pas été mis à jour par cette tentative**.
+
+Le correctif inscrit les vrais meshes dans le budget partagé, réduit la concurrence des imports Roblox, masque instantanément le décor quand un bâtiment disparait ou que l'arène rétrécit et stabilise la sélection caméra sur Android. Les quotas originaux **Low 1 / Medium 3 / High 6** restent identiques. [Diagnostic, détails et garde de publication exact-SHA](docs/APPROVED_DISTRICT_3D_RELEASE_RECOVERY_2026-11-03.md). **La sortie publique de ce correctif doit être confirmée par la réussite d'un nouveau build, des cinq suites et du publisher sur le même SHA ; aucune capture native Android n'est encore certifiée.**
+
+
 ## Version publique vérifiée et prochaine amélioration du sol 3D (3 novembre 2026)
 
 La version publique la plus récente **vérifiée au moment de ce relevé** est `c297b2a34384d2c169e9123b2939df4d19f7386d` : [Build Validation #41624260822](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41624260822), [cinq suites moteur Roblox #41624270887](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41624270887), et [publication publique #41624914108](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41624914108) confirmés. Les véritables dalles industrielles 3D sont donc publiées, **mais leur qualité perceptive et leurs performances Android ne sont pas certifiées par captures natives**.

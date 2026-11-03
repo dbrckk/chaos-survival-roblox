@@ -1,5 +1,6 @@
--- Four creator-owned, Roblox-moderation-approved original 3D building facades.
--- Sanitized exactly once on the server; clients clone only inert templates.
+-- Four Roblox Approved original industrial 3D facade + roofline Models.
+-- Official creator asset IDs: GitHub Action #41629861517 (four Approved).
+-- Optional cosmetic art only. Never alter authoritative game geometry.
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
@@ -18,6 +19,23 @@ function PremiumDistrictFacadeAssets.approvedId(name)
     return APPROVED[name]
 end
 
+local function validatedGeometry(model)
+    local meshCount = 0
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not part:IsA("MeshPart") then return false end
+            meshCount += 1
+        elseif part:IsA("LuaSourceContainer") then
+            return false
+        end
+    end
+    if meshCount < 1 or meshCount > 24 then return false end
+    local _, bounds = model:GetBoundingBox()
+    return bounds.X >= 8 and bounds.X <= 31
+        and bounds.Y >= 12 and bounds.Y <= 48
+        and bounds.Z >= 3 and bounds.Z <= 28
+end
+
 function PremiumDistrictFacadeAssets.start()
     if started then return end
     started = true
@@ -29,57 +47,47 @@ function PremiumDistrictFacadeAssets.start()
     end
     holder:SetAttribute("OwnerVerified", true)
 
-    for _, name in ipairs(ORDER) do
-        task.spawn(function()
-            for attempt = 1, 3 do
-                local ok, raw = pcall(AssetService.LoadAssetAsync,
-                    AssetService, APPROVED[name])
-                if ok and raw and raw:IsA("Model") then
-                    local clean = OriginalMeshScenery.sanitize(raw)
-                    raw:Destroy()
-                    if not clean then
-                        warn("Approved original district facade failed sanitizer", name)
-                        return
-                    end
-                    local meshes = 0
-                    for _, item in ipairs(clean:GetDescendants()) do
-                        if item:IsA("BasePart") then
-                            if not item:IsA("MeshPart") then
-                                clean:Destroy()
-                                warn("District facade must be original MeshParts", name)
-                                return
-                            end
-                            meshes += 1
-                        end
-                    end
-                    local _, bounds = clean:GetBoundingBox()
-                    if meshes < 1 or meshes > 24
-                        or bounds.X < 8 or bounds.X > 31
-                        or bounds.Y < 12 or bounds.Y > 48
-                        or bounds.Z < 3 or bounds.Z > 28 then
-                        clean:Destroy()
-                        warn("District facade geometry outside verified profile", name)
-                        return
-                    end
-                    clean.Name = name
-                    clean:SetAttribute("OwnerVerified", true)
-                    clean:SetAttribute("CosmeticOnly", true)
-                    clean:SetAttribute("Original3DAssetId", APPROVED[name])
-                    clean:SetAttribute("DistrictFacade3D", true)
-                    clean.Parent = holder
-                    holder:SetAttribute(name .. "Ready", true)
+    local function loadOne(name)
+        for attempt = 1, 3 do
+            local ok, raw = pcall(AssetService.LoadAssetAsync,
+                AssetService, APPROVED[name])
+            if ok and raw and raw:IsA("Model") then
+                local clean = OriginalMeshScenery.sanitize(raw)
+                raw:Destroy()
+                if not clean or not validatedGeometry(clean) then
+                    if clean then clean:Destroy() end
+                    warn("Original approved district facade rejected by geometry gate",
+                        name)
                     return
                 end
-                if ok and typeof(raw) == "Instance" then raw:Destroy() end
-                if attempt == 3 then
-                    warn("Approved original district facade unavailable; native facade retained",
-                        name, tostring(raw))
-                else
-                    task.wait(attempt * 3)
-                end
+                clean.Name = name
+                clean:SetAttribute("OwnerVerified", true)
+                clean:SetAttribute("CosmeticOnly", true)
+                clean:SetAttribute("Original3DAssetId", APPROVED[name])
+                clean:SetAttribute("DistrictFacade3D", true)
+                clean.Parent = holder
+                holder:SetAttribute(name .. "Ready", true)
+                return
             end
-        end)
+            if ok and typeof(raw) == "Instance" then raw:Destroy() end
+            if attempt == 3 then
+                warn("Original approved district facade unavailable; native fallback remains",
+                    name, tostring(raw))
+                return
+            end
+            task.wait(attempt * 3)
+        end
     end
+
+    -- OriginalMeshScenery already has two 3D asset network lanes; the
+    -- earlier facade loader spawned FOUR simultaneous AssetService calls
+    -- at player join, adding unnecessary owner-wide API throttling.
+    -- Use ONE sequential lane, non-blocking to rounds and player spawn.
+    task.spawn(function()
+        for _, name in ipairs(ORDER) do
+            loadOne(name)
+        end
+    end)
 end
 
 return PremiumDistrictFacadeAssets
