@@ -35,7 +35,7 @@ def build():
                 x, z, sx, sz = side * 26.0, 0, 1.6, 54.0
                 x2, z2, sx2, sz2 = side * 24.2, 0, 1.2, 51.0
             m.beveled_block("CastOuterRace" + tag, "ARMOR",
-                            x, -1.2, z, sx, 1.7, sz, .40)
+                            x, -1.4, z, sx, 1.7, sz, .40)
             m.beveled_block("RecessedLowerRace" + tag, "CARBON",
                             x2, -4.1, z2, sx2, .95, sz2, .29)
             m.beveled_block("BrushedLip" + tag, "BRUSHED",
