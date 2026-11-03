@@ -5,11 +5,22 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local ArenaTargeting = require("../../src/server/ArenaTargeting")
 local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
+local PremiumRouteMeshAssets = require("../../src/server/PremiumRouteMeshAssets")
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 
 describe("Arena variants", function()
+    it("exposes only the two approved original route MeshPart package IDs", function()
+        -- Source-level safety gate only; Roblox rendering itself requires
+        -- authenticated Studio/Android capture after public publishing.
+        expect(PremiumRouteMeshAssets.approvedId("PremiumJumpDeck"))
+            .toBe(98478693994864)
+        expect(PremiumRouteMeshAssets.approvedId("PremiumSkybridgeModule"))
+            .toBe(94023662427980)
+        expect(PremiumRouteMeshAssets.approvedId("RandomFreeModel")).toBe(nil)
+        expect(PremiumRouteMeshAssets.approvedId(nil)).toBe(nil)
+    end)
     it("loads all six approved 3D packages through two bounded independent lanes", function()
         local lanes = OriginalMeshScenery.loadLanes()
         expect(#lanes).toBe(2)
