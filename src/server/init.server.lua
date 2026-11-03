@@ -48,6 +48,7 @@ local MapBuilder = require(script.MapBuilder)
 local OriginalMeshScenery = require(script.OriginalMeshScenery)
 local PremiumRouteMeshAssets = require(script.PremiumRouteMeshAssets)
 local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
+local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -174,6 +175,9 @@ if not isStudioE2E then
     -- joining/AI/hazards never wait on extra optional 3D artwork.
     task.defer(PremiumRouteMeshAssets.start)
     task.defer(PremiumDistrictFacadeAssets.start)
+    -- Heavy original skyfleet art is purely optional and loads later to
+    -- avoid Roblox owner-wide AssetService throttling at player arrival.
+    task.defer(PremiumSkyfleetMeshAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)

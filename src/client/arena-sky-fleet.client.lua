@@ -69,6 +69,60 @@ local function scheduleRebuild()
     end)
 end
 
+-- Genuine original carrier appears late after a deliberately staggered
+-- server AssetService fetch. Rebuild native fallback only on a real new
+-- approved template event, never by polling the Roblox asset service.
+local premiumFolderConnection = nil
+local premiumRemovedConnection = nil
+local premiumReadyConnection = nil
+local function watchPremiumCarrier(container)
+    for _, connection in ipairs({
+        premiumFolderConnection, premiumRemovedConnection,
+        premiumReadyConnection
+    }) do
+        if connection then connection:Disconnect() end
+    end
+    premiumFolderConnection = nil
+    premiumRemovedConnection = nil
+    premiumReadyConnection = nil
+    if not container or not container:IsA("Folder")
+        or container.Name ~= "PremiumSkyfleetMeshTemplates" then
+        scheduleRebuild()
+        return
+    end
+    -- Replication can announce the Model before its attributes have
+    -- arrived: also listen to the server's ready flag, once only.
+    premiumFolderConnection = container.ChildAdded:Connect(function(child)
+        if child.Name == "OriginalSkyfleetCarrier"
+            and child:IsA("Model") then
+            scheduleRebuild()
+        end
+    end)
+    premiumRemovedConnection = container.ChildRemoved:Connect(function(child)
+        if child.Name == "OriginalSkyfleetCarrier" then
+            -- Preserve the native fallback after a server asset revocation.
+            scheduleRebuild()
+        end
+    end)
+    premiumReadyConnection =
+        container:GetAttributeChangedSignal("SkyfleetCarrierReady")
+        :Connect(scheduleRebuild)
+    if container:FindFirstChild("OriginalSkyfleetCarrier") then
+        scheduleRebuild()
+    end
+end
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "PremiumSkyfleetMeshTemplates" then
+        watchPremiumCarrier(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child.Name == "PremiumSkyfleetMeshTemplates" then
+        watchPremiumCarrier(nil)
+    end
+end)
+watchPremiumCarrier(ReplicatedStorage:FindFirstChild("PremiumSkyfleetMeshTemplates"))
+
 local function bindMap(generated)
     if watchedMap == generated then return end
     if disconnectReadiness then

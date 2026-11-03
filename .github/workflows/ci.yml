@@ -30,11 +30,12 @@ jobs:
           mkdir -p build/mesh-previews
           python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
           python3 tools/generate_district_profile_meshes.py --output-dir assets/source
-          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial; do
+          python3 tools/generate_original_skyfleet_carrier.py --output assets/source/chaos_skyfleet_carrier.obj
+          for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial skyfleet_carrier; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
               palette="assets/source/chaos_perimeter_gate.mtl"
-            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ] || [[ "$model" == district_* ]]; then
+            elif [ "$model" = "premium_jump_deck" ] || [ "$model" = "premium_skybridge_module" ] || [ "$model" = "premium_ground_tile" ] || [[ "$model" == district_* ]] || [ "$model" = "skyfleet_carrier" ]; then
               palette="assets/source/chaos_route_kit.mtl"
             fi
             python tools/obj_to_gltf.py \
@@ -56,7 +57,8 @@ jobs:
                        "plasma_foundry", "sky_transit_exchange", "orbital_halo_array",
                        "premium_jump_deck", "premium_skybridge_module",
                        "premium_ground_tile", "district_observatory",
-                       "district_freight", "district_turbine", "district_aerial"):
+                       "district_freight", "district_turbine", "district_aerial",
+                       "skyfleet_carrier"):
               gltf = json.loads(Path("build/mesh-previews/chaos_" + name + ".gltf").read_text())
               assert gltf["asset"]["version"] == "2.0"
               buffer = gltf["buffers"][0]
@@ -120,7 +122,8 @@ jobs:
           route_names = {"premium_jump_deck", "premium_skybridge_module", "premium_ground_tile"}
           district_names = {"district_observatory", "district_freight",
                             "district_turbine", "district_aerial"}
-          assert {m["name"] for m in models} == scenery_names | route_names | district_names
+          skyfleet_names = {"skyfleet_carrier"}
+          assert {m["name"] for m in models} == scenery_names | route_names | district_names | skyfleet_names
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -174,7 +177,13 @@ jobs:
           assert "OriginalMeshScenery.sanitize(imported)" in source
           assert "OriginalMeshScenery.sanitize(raw)" in route_source
           assert "OriginalMeshScenery.sanitize(raw)" in facade_source
-          print("Verified 13 genuine owned Model IDs and safe shared sanitizer.")
+          skyfleet_source = Path("src/server/PremiumSkyfleetMeshAssets.lua").read_text()
+          asset_match = re.search(r"local ASSET_ID = (\d+)", skyfleet_source)
+          assert asset_match, "Original 3D skyfleet owned asset ID constant is missing"
+          assert asset_match.group(1) == approved["skyfleet_carrier"], (
+              "Original 3D skyfleet live ID diverges from verified Roblox owner record")
+          assert "OriginalMeshScenery.sanitize(raw)" in skyfleet_source
+          print("Verified 14 genuine owned Model IDs and safe shared sanitizer.")
           PY
 
       - name: Install Rojo 7.7.0
