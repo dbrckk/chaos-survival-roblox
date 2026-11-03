@@ -1,0 +1,65 @@
+name: One-shot Live Original 3D Skyfleet Source and Roblox Place Gate
+on:
+  push:
+    branches: [feat/live-original-3d-skyfleet-carrier-20261103]
+    paths: [.github/workflows/one-shot-live-original-skyfleet-3d-build-20261103.yml]
+permissions:
+  contents: read
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate all 14 genuine original Roblox Model sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
+          python3 tools/generate_district_profile_meshes.py --output-dir assets/source
+          python3 tools/generate_original_skyfleet_carrier.py \
+            --output assets/source/chaos_skyfleet_carrier.obj
+          python3 tools/obj_to_gltf.py \
+            --source assets/source/chaos_skyfleet_carrier.obj \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output /tmp/chaos_skyfleet_carrier.gltf
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          record=json.loads(Path("assets/source/roblox-asset-registry.json").read_text())
+          assert len(record["models"])==14
+          assert len({x["asset_id"] for x in record["models"]})==14
+          assert all(x["moderation"]=="Approved" for x in record["models"])
+          assert all(Path(x["source"]).is_file() for x in record["models"])
+          owned=next(x for x in record["models"] if x["name"]=="skyfleet_carrier")
+          assert owned["asset_id"]=="84239592388200"
+          assert owned["workflow_run_id"]==41634338244
+          src=Path("src/server/PremiumSkyfleetMeshAssets.lua").read_text()
+          assert re.search(r"local ASSET_ID = 84239592388200\b",src)
+          assert "OriginalMeshScenery.sanitize(raw)" in src
+          place=Path("src/client/ArenaSkyFleetKit.lua").read_text()
+          assert "mountOriginalCarrier" in place and "originalCarrier" in place
+          assert "Kit.hasOriginalCarrier" in place
+          print("All fourteen approved Model sources and original live skyfleet binding validated.")
+          PY
+      - name: Compile every Luau game source and existing engine spec
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          mkdir -p /tmp/luau && unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 | xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+      - name: Validate shared Android VFX budget
+        run: python tools/validate_mobile_vfx_first_frame.py
+      - name: Build complete creator-owned Roblox place at branch SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 -o /tmp/rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          mkdir -p /tmp/rojo && unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          /tmp/rojo/rojo build default.project.json -o /tmp/ChaosSurvival.rbxlx
+          test -s /tmp/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" /tmp/ChaosSurvival.rbxlx
