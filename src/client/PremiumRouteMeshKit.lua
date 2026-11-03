@@ -391,10 +391,10 @@ local function eligible(platform, cameraPoint, maxDistance, retention, cameraLoo
     -- replacing MeshParts every LOD tick for tiny camera movements. The
     -- hard deck/bridge/segment caps remain enforced per tier.
     local priority = dist - (resident and retention * 0.65 or 0)
-    -- The old nearest-only sort frequently filled ALL route mesh
-    -- mesh slots with platforms BEHIND the third-person Android camera.
-    -- Prefer the real next leap in front (without creating any assets or
-    -- increasing limits). Under 48 studs keep an omnidirectional stable
+    -- Nearest-only sorting used to fill scarce mesh slots with routes
+    -- BEHIND the third-person camera. Prefer the next real leap in front,
+    -- while keeping a stable landing within 48 studs and retaining every
+    -- tier's explicit MeshPart/model quota.
     -- landing: rotating the camera must not suddenly evict the current deck.
     if typeof(cameraLook) == "Vector3" and cameraLook.Magnitude > 0.5
         and dist > 48 then
