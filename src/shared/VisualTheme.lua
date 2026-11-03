@@ -40,8 +40,8 @@ VisualTheme.Arenas = {
         FloorMaterial = Enum.Material.DiamondPlate,
         StructureMaterial = Enum.Material.Metal,
         PanelMaterial = Enum.Material.DiamondPlate,
-        Surface = Color3.fromRGB(31, 39, 55),
-        Structure = Color3.fromRGB(62, 76, 102),
+        Surface = Color3.fromRGB(45, 56, 72),
+        Structure = Color3.fromRGB(76, 91, 114),
         Accent = Color3.fromRGB(72, 185, 255),
         Secondary = Color3.fromRGB(120, 100, 255),
         Detail = Color3.fromRGB(112, 135, 170),
@@ -49,10 +49,12 @@ VisualTheme.Arenas = {
     Towers = {
         FloorMaterial = Enum.Material.Metal,
         StructureMaterial = Enum.Material.Metal,
-        -- Bright machined alloy, unlike Classic's industrial checker plate.
-        PanelMaterial = Enum.Material.Foil,
-        Surface = Color3.fromRGB(28, 38, 52),
-        Structure = Color3.fromRGB(55, 76, 92),
+        -- Matte machined alloy is more readable than chrome-like Foil on
+        -- Android Low. The approved PBR titanium still replaces this
+        -- *only* on explicitly eligible cosmetic surfaces Medium/High.
+        PanelMaterial = Enum.Material.Metal,
+        Surface = Color3.fromRGB(42, 58, 70),
+        Structure = Color3.fromRGB(70, 91, 102),
         Accent = Color3.fromRGB(62, 215, 225),
         Secondary = Color3.fromRGB(78, 135, 255),
         Detail = Color3.fromRGB(104, 160, 180),
@@ -63,8 +65,8 @@ VisualTheme.Arenas = {
         -- Weathered intersection infrastructure; map accent stays distinct
         -- from amber/red disaster telegraphs.
         PanelMaterial = Enum.Material.CorrodedMetal,
-        Surface = Color3.fromRGB(37, 32, 50),
-        Structure = Color3.fromRGB(73, 59, 92),
+        Surface = Color3.fromRGB(51, 46, 62),
+        Structure = Color3.fromRGB(84, 72, 101),
         Accent = Color3.fromRGB(213, 86, 255),
         Secondary = Color3.fromRGB(255, 105, 185),
         Detail = Color3.fromRGB(156, 115, 188),
@@ -75,8 +77,8 @@ VisualTheme.Arenas = {
         -- Hard reactor composite with built-in tile surface detail; a
         -- coherent alternative to featureless smooth plastic panels.
         PanelMaterial = Enum.Material.CeramicTiles,
-        Surface = Color3.fromRGB(23, 43, 48),
-        Structure = Color3.fromRGB(50, 79, 82),
+        Surface = Color3.fromRGB(40, 61, 64),
+        Structure = Color3.fromRGB(66, 94, 96),
         Accent = Color3.fromRGB(76, 235, 190),
         Secondary = Color3.fromRGB(74, 188, 255),
         Detail = Color3.fromRGB(100, 170, 160),
@@ -87,8 +89,8 @@ VisualTheme.Arenas = {
         FloorMaterial = Enum.Material.Concrete,
         StructureMaterial = Enum.Material.Metal,
         PanelMaterial = Enum.Material.WoodPlanks,
-        Surface = Color3.fromRGB(26, 48, 59),
-        Structure = Color3.fromRGB(45, 75, 85),
+        Surface = Color3.fromRGB(43, 66, 75),
+        Structure = Color3.fromRGB(64, 91, 99),
         Accent = Color3.fromRGB(70, 195, 211),
         Secondary = Color3.fromRGB(111, 163, 215),
         Detail = Color3.fromRGB(122, 172, 173),

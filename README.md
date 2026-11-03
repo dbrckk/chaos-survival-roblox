@@ -1,5 +1,12 @@
 # Chaos Survival — Roblox
 
+## Direction artistique de la lumière et des matériaux — cinq arènes
+
+**Lot de production visuelle 3 novembre 2026 :** nouveaux véritables angles solaires différents par arène (`ClockTime` **et** `GeographicLatitude`, pas seulement une teinte), meilleure lumière diffusée sur les façades et sols de premier plan, neutralisation des couleurs trop saturées des projecteurs existants, et rehaussement des matières natives de secours Low Android sur Classic/Towers/Crossroads/Orbital/Harbor. La lumière ne relance plus de dizaines de tweens sur chaque mise à jour du compte à rebours. Le changement n'ajoute **aucune** lumière et conserve les plafonds PBR Android **0/32/72**, les projecteurs **0/2/3**, les IDs d'assets Roblox approuvés et l'autorité visuelle des catastrophes.
+
+**Statut :** source modifiée, publication et rendu Android de ce nouveau lot à vérifier au SHA exact avant toute certification. [Plan, réglages, budgets et protocole Android](docs/AAA_LIGHTING_MATERIAL_ART_DIRECTION_2026-11-03.md).
+
+
 ## Correction bloquante : vrais bâtiments 3D approuvés et budget Android
 
 **3 novembre 2026 :** quatre vrais MeshParts de façades et toits ont été importés et modérés [Approved #41629861517](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629861517), puis intégrés au code source des 16 bâtiments des cinq arènes. La tentative de release sur `edd1b259` a pourtant **échoué** : [Build Validation #41630960261](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41630960261) bloquait le nouveau dossier graphique `ApprovedDistrictFacadesLocal` absent des budgets, même si [les cinq suites Roblox moteur #41630970496](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41630970496) ont réussi. Le jeu public **n'a donc pas été mis à jour par cette tentative**.

@@ -47,12 +47,18 @@ local function clear()
 end
 
 local function colorFor(theme, role)
+    -- Physically motivated neutral fixture light. The five arenas keep
+    -- distinctive colored machinery/decals; light photons should not
+    -- bleach metal, concrete or hazard glyphs into flat saturated neon.
+    -- No new SpotLights: reuse exactly the same 0/2/3 owner-controlled
+    -- fixtures, brightness/motion/phase budgets and existing sources.
+    local neutral = Color3.fromRGB(229, 237, 242)
     if role == "Secondary" then
-        return theme.Secondary
+        return theme.Secondary:Lerp(neutral, 0.52)
     elseif role == "Detail" then
-        return theme.Detail
+        return theme.Detail:Lerp(neutral, 0.68)
     end
-    return theme.Accent
+    return theme.Accent:Lerp(neutral, 0.44)
 end
 
 local function targetBrightness(light)

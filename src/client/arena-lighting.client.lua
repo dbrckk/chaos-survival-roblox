@@ -38,23 +38,24 @@ local clouds = CloudLayer.getOrCreate()
 local MOODS = {
     Classic = {
         Tint = Color3.fromRGB(237, 243, 255),
-        Ambient = Color3.fromRGB(137, 147, 161),
-        Outdoor = Color3.fromRGB(175, 187, 200),
+        Ambient = Color3.fromRGB(151, 160, 175),
+        Outdoor = Color3.fromRGB(190, 202, 211),
         Saturation = 0.025,
-        Contrast = 0.018,
+        Contrast = 0.032,
         ColorShiftTop = Color3.fromRGB(8, 14, 24),
         ColorShiftBottom = Color3.fromRGB(4, 7, 13),
         ShadowSoftness = 0.34,
         CloudColor = Color3.fromRGB(205, 220, 245),
         AtmosColor = Color3.fromRGB(200, 217, 238),
         AtmosDecay = Color3.fromRGB(68, 82, 116),
-        Density = 0.18,
-        Haze = 1.20,
+        Density = 0.155,
+        Haze = 0.92,
         Glare = 0.10,
-        ClockTime = 15.10,
-        Exposure = 0.17,
-        EnvironmentDiffuse = 0.34,
-        EnvironmentSpecular = 0.78,
+        ClockTime = 14.25,
+        Latitude = 36,
+        Exposure = 0.13,
+        EnvironmentDiffuse = 0.45,
+        EnvironmentSpecular = 0.70,
         SunRays = 0.030,
         AtmosOffset = 0.10,
         CloudCover = 0.34,
@@ -63,23 +64,24 @@ local MOODS = {
     },
     Towers = {
         Tint = Color3.fromRGB(232, 246, 249),
-        Ambient = Color3.fromRGB(135, 146, 153),
-        Outdoor = Color3.fromRGB(178, 191, 196),
+        Ambient = Color3.fromRGB(150, 165, 172),
+        Outdoor = Color3.fromRGB(189, 201, 207),
         Saturation = 0.015,
-        Contrast = 0.030,
+        Contrast = 0.041,
         ColorShiftTop = Color3.fromRGB(4, 18, 22),
         ColorShiftBottom = Color3.fromRGB(3, 8, 12),
         ShadowSoftness = 0.26,
         CloudColor = Color3.fromRGB(190, 225, 232),
         AtmosColor = Color3.fromRGB(189, 222, 230),
         AtmosDecay = Color3.fromRGB(48, 82, 92),
-        Density = 0.20,
-        Haze = 1.35,
+        Density = 0.155,
+        Haze = 1.00,
         Glare = 0.08,
-        ClockTime = 14.80,
-        Exposure = 0.17,
-        EnvironmentDiffuse = 0.38,
-        EnvironmentSpecular = 0.84,
+        ClockTime = 11.30,
+        Latitude = 59,
+        Exposure = 0.14,
+        EnvironmentDiffuse = 0.47,
+        EnvironmentSpecular = 0.72,
         SunRays = 0.026,
         AtmosOffset = 0.14,
         CloudCover = 0.48,
@@ -88,23 +90,24 @@ local MOODS = {
     },
     Crossroads = {
         Tint = Color3.fromRGB(238, 232, 249),
-        Ambient = Color3.fromRGB(144, 139, 153),
-        Outdoor = Color3.fromRGB(179, 174, 188),
+        Ambient = Color3.fromRGB(153, 150, 164),
+        Outdoor = Color3.fromRGB(192, 184, 200),
         Saturation = 0.035,
-        Contrast = 0.026,
+        Contrast = 0.036,
         ColorShiftTop = Color3.fromRGB(18, 7, 24),
         ColorShiftBottom = Color3.fromRGB(8, 4, 13),
         ShadowSoftness = 0.42,
         CloudColor = Color3.fromRGB(226, 198, 238),
         AtmosColor = Color3.fromRGB(210, 203, 225),
         AtmosDecay = Color3.fromRGB(78, 48, 96),
-        Density = 0.17,
-        Haze = 1.10,
+        Density = 0.155,
+        Haze = 0.90,
         Glare = 0.12,
-        ClockTime = 15.30,
-        Exposure = 0.18,
-        EnvironmentDiffuse = 0.30,
-        EnvironmentSpecular = 0.72,
+        ClockTime = 16.15,
+        Latitude = 27,
+        Exposure = 0.14,
+        EnvironmentDiffuse = 0.44,
+        EnvironmentSpecular = 0.68,
         SunRays = 0.036,
         AtmosOffset = 0.08,
         CloudCover = 0.42,
@@ -113,23 +116,24 @@ local MOODS = {
     },
     Orbital = {
         Tint = Color3.fromRGB(232, 250, 245),
-        Ambient = Color3.fromRGB(128, 146, 146),
-        Outdoor = Color3.fromRGB(172, 189, 186),
+        Ambient = Color3.fromRGB(145, 165, 162),
+        Outdoor = Color3.fromRGB(190, 207, 202),
         Saturation = 0.030,
-        Contrast = 0.022,
+        Contrast = 0.035,
         ColorShiftTop = Color3.fromRGB(5, 20, 17),
         ColorShiftBottom = Color3.fromRGB(3, 9, 9),
         ShadowSoftness = 0.30,
         CloudColor = Color3.fromRGB(190, 232, 220),
         AtmosColor = Color3.fromRGB(190, 222, 217),
         AtmosDecay = Color3.fromRGB(44, 88, 78),
-        Density = 0.19,
-        Haze = 1.25,
+        Density = 0.145,
+        Haze = 0.85,
         Glare = 0.09,
-        ClockTime = 13.85,
-        Exposure = 0.17,
-        EnvironmentDiffuse = 0.42,
-        EnvironmentSpecular = 0.88,
+        ClockTime = 12.10,
+        Latitude = 72,
+        Exposure = 0.14,
+        EnvironmentDiffuse = 0.49,
+        EnvironmentSpecular = 0.77,
         SunRays = 0.032,
         AtmosOffset = 0.18,
         CloudCover = 0.26,
@@ -143,8 +147,8 @@ local MOODS = {
     -- one existing atmosphere layer and Android Low/Medium/High budgets.
     Harbor = {
         Tint = Color3.fromRGB(237, 240, 230),
-        Ambient = Color3.fromRGB(138, 146, 144),
-        Outdoor = Color3.fromRGB(181, 190, 186),
+        Ambient = Color3.fromRGB(155, 166, 161),
+        Outdoor = Color3.fromRGB(194, 204, 197),
         Saturation = -0.008,
         Contrast = 0.040,
         ColorShiftTop = Color3.fromRGB(13, 16, 13),
@@ -153,13 +157,14 @@ local MOODS = {
         CloudColor = Color3.fromRGB(212, 222, 217),
         AtmosColor = Color3.fromRGB(204, 216, 213),
         AtmosDecay = Color3.fromRGB(83, 96, 101),
-        Density = 0.15,
-        Haze = 1.02,
+        Density = 0.175,
+        Haze = 1.10,
         Glare = 0.065,
-        ClockTime = 15.00,
-        Exposure = 0.16,
-        EnvironmentDiffuse = 0.39,
-        EnvironmentSpecular = 0.79,
+        ClockTime = 10.75,
+        Latitude = 44,
+        Exposure = 0.13,
+        EnvironmentDiffuse = 0.47,
+        EnvironmentSpecular = 0.69,
         SunRays = 0.025,
         AtmosOffset = 0.07,
         CloudCover = 0.45,
@@ -208,11 +213,11 @@ local function applyMood(duration)
     local depthMotionScale = reducedMotion and 0.45 or 1
     local farIntensity = 0.12 * depthQualityScale * depthPhaseScale * depthMotionScale
     local nearIntensity = 0.035 * depthQualityScale * depthPhaseScale * depthMotionScale
-    local renderScale = quality.Name == "Low" and 0.48
-        or (quality.Name == "Medium" and 0.76 or 1)
+    local renderScale = quality.Name == "Low" and 0.65
+        or (quality.Name == "Medium" and 0.86 or 1)
     local environmentDiffuse = (mood.EnvironmentDiffuse or 0.30) * renderScale
     local environmentSpecular = (mood.EnvironmentSpecular or 0.70) * renderScale
-    local exposure = (mood.Exposure or 0) * (quality.Name == "Low" and 0.45 or 1)
+    local exposure = (mood.Exposure or 0) * (quality.Name == "Low" and 0.65 or 1)
     local sunRayIntensity = (mood.SunRays or 0.025)
         * (phase == "round" and 0 or (phase == "ready" and 0.35 or 1))
         * (quality.Name == "Low" and 0 or 1)
@@ -224,6 +229,22 @@ local function applyMood(duration)
         0,
         1
     )
+
+    -- Source-only visual QA identity. Numeric values describe our
+    -- *authored* profile, not measured FPS, screenshots, shadows or
+    -- final disaster-controlled exposure. No RemoteEvents or new loops.
+    local diagnostic = {
+        LocalLightingArtVariant = currentVariant,
+        LocalLightingSolarClock = mood.ClockTime or 15,
+        LocalLightingLatitude = mood.Latitude or 36,
+        LocalLightingQualityTier = quality.Name,
+    }
+    for name, value in pairs(diagnostic) do
+        if player:GetAttribute(name) ~= value then
+            player:SetAttribute(name, value)
+        end
+    end
+
     local colorShiftTop = Color3.new():Lerp(mood.ColorShiftTop or Color3.new(), colorShiftScale)
     local colorShiftBottom = Color3.new():Lerp(mood.ColorShiftBottom or Color3.new(), colorShiftScale)
 
@@ -252,6 +273,9 @@ local function applyMood(duration)
         ColorShift_Bottom = colorShiftBottom,
         ShadowSoftness = shadowSoftness,
         ClockTime = mood.ClockTime or 15,
+        GeographicLatitude = mood.Latitude or 36,
+        -- Five physically distinct sun elevations and latitudes provide
+        -- deliberate key-light/shadow directions without new light Parts.
         -- Balanced daylight rather than almost-black dusk: players must
         -- distinguish real platform sides from empty sky on phones.
         -- Server disaster warnings/blackouts still own their own effects.
@@ -392,7 +416,13 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 
 stateEvent.OnClientEvent:Connect(function(state)
-    phase = tostring(state.phase or "waiting")
+    if type(state) ~= "table" then return end
+    local nextPhase = tostring(state.phase or "waiting")
+    -- RoundState countdown packets may arrive every second; the timer
+    -- does NOT change the five authored sun/sky profiles. Avoid spawning
+    -- overlapping atmosphere and Lighting tweens for identical phases.
+    if nextPhase == phase then return end
+    phase = nextPhase
     applyMood(phase == "round" and 0.35 or 0.65)
 end)
 

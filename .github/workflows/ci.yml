@@ -362,6 +362,59 @@ jobs:
           print("Server settlement, reward receipt and replay continuity contracts intact.")
           PY
 
+      - name: Guard authentic five-arena sun and native-PBR art budget
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          script = Path("src/client/arena-lighting.client.lua").read_text()
+          theme = Path("src/shared/VisualTheme.lua").read_text()
+          focals = Path("src/shared/ArenaFocalLightingRules.lua").read_text()
+          focal_source = Path("src/client/arena-focal-lighting.client.lua").read_text()
+          pbr = Path("src/shared/PbrDistrictRules.lua").read_text()
+          worlds = ("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+          art = {}
+          for index, world in enumerate(worlds):
+              start = script.index("    " + world + " = {", script.index("local MOODS = {"))
+              end = script.find("\n    },", start)
+              assert end > start
+              body = script[start:end]
+              def number(field):
+                  match = re.search(r"^        " + field + r" = ([0-9.]+),", body, re.M)
+                  assert match, (world,field)
+                  return float(match.group(1))
+              time = number("ClockTime")
+              latitude = number("Latitude")
+              density = number("Density")
+              diffuse = number("EnvironmentDiffuse")
+              specular = number("EnvironmentSpecular")
+              assert 10 <= time < 17 and 20 <= latitude <= 80
+              assert 0.10 <= density <= 0.20
+              assert 0.35 <= diffuse <= 0.55
+              assert 0.6 <= specular <= 0.80
+              art[world] = (time,latitude)
+          assert len(set(art.values())) == 5
+          assert "GeographicLatitude = mood.Latitude or 36" in script
+          assert "if nextPhase == phase then return end" in script
+          assert "disasterOwnsEnvironment = phase == \"round\" or phase == \"ready\"" in script
+          assert "disasterOwnsPostProcess = disasterOwnsEnvironment" in script
+          assert "PbrDistrictRules" in pbr
+          assert "return touch and 32 or 48" in pbr
+          assert "return touch and 72 or 144" in pbr
+          assert "return 0" in pbr
+          assert "if tierName == \"Low\" then" in focals
+          assert "return 3" in focals
+          assert "local neutral = Color3.fromRGB(" in focal_source
+          for world in worlds:
+              block = theme.split("    " + world + " = {", 1)[1].split("\n    },", 1)[0]
+              surface = re.search(r"Surface = Color3.fromRGB\((\d+), (\d+), (\d+)\)", block)
+              assert surface and min(map(int,surface.groups())) >= 40
+          print("Five unique solar directions and safe readable Android material fallbacks verified.",art)
+          print("PBR 0/32/72 material tiers, 0/2/3 spotlight tiers and disaster Lighting ownership intact.")
+          PY
+
       - name: Enforce Lighting property ownership
         shell: bash
         run: |
@@ -382,6 +435,7 @@ jobs:
               "ColorShift_Bottom",
               "ShadowSoftness",
               "ClockTime",
+              "GeographicLatitude",
           }
           shared_active = {
               "ExposureCompensation",
