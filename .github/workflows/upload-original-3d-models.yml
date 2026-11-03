@@ -46,6 +46,10 @@ on:
           - premium_jump_deck
           - premium_skybridge_module
           - premium_ground_tile
+          - district_observatory
+          - district_freight
+          - district_turbine
+          - district_aerial
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -100,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -127,13 +131,17 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
-          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ]; then
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]]; then
             echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
           fi
           if [ "$CHOICE" = "premium_ground_tile" ]; then
             python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
+          elif [[ "$CHOICE" == district_* ]]; then
+            # Generate the FOUR deterministic profile meshes from our single
+            # original and source-gated stdlib generator. No binary inputs.
+            python3 tools/generate_district_profile_meshes.py --output-dir assets/source
           fi
           test -f "assets/source/chaos_${CHOICE}.obj"
 
@@ -194,7 +202,11 @@ jobs:
                    "orbital_halo_array": "Chaos Orbital Halo Array",
                    "premium_jump_deck": "Chaos Premium Armored Jump Deck",
                    "premium_skybridge_module": "Chaos Premium Structural Skybridge Module",
-                   "premium_ground_tile": "Chaos Premium Industrial 3D Ground Module"}
+                   "premium_ground_tile": "Chaos Premium Industrial 3D Ground Module",
+                   "district_observatory": "Chaos Original District Observatory 3D",
+                   "district_freight": "Chaos Original District Freight 3D",
+                   "district_turbine": "Chaos Original District Turbine 3D",
+                   "district_aerial": "Chaos Original District Aerial 3D"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],
