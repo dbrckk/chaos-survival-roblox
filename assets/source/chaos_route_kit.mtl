@@ -1,0 +1,24 @@
+# Original Chaos Survival 3D engineered route-kit palette, authored in project.
+# PBR metallic-roughness factors are added by tools/obj_to_gltf.py; these RGB
+# values are deliberate authored material masks, not borrowed stock textures.
+newmtl ARMOR
+Kd 0.34 0.415 0.52
+Ke 0 0 0
+newmtl BRUSHED
+Kd 0.59 0.655 0.705
+Ke 0 0 0
+newmtl CARBON
+Kd 0.085 0.105 0.139
+Ke 0 0 0
+newmtl GRIP
+Kd 0.235 0.294 0.348
+Ke 0 0 0
+newmtl ALLOY
+Kd 0.415 0.495 0.545
+Ke 0 0 0
+newmtl CERAMIC
+Kd 0.635 0.67 0.686
+Ke 0 0 0
+newmtl SIGNAL
+Kd 0.175 0.52 0.592
+Ke 0.010 0.035 0.044
