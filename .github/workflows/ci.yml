@@ -202,11 +202,15 @@ jobs:
               "relief_essential", "relief_classic", "relief_towers",
               "relief_crossroads", "relief_orbital", "relief_harbor",
           }
+          floor_hardware_names = {
+              "floor_corner_guard", "floor_anchor_bolt_large",
+              "floor_harbor_tie",
+          }
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
-              | ambient_names | relief_names)
+              | ambient_names | relief_names | floor_hardware_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -223,7 +227,9 @@ jobs:
                       "ambient_drone", "ambient_lift", "ambient_transit",
                       "ambient_satellite", "ambient_cargo",
                       "relief_essential", "relief_classic", "relief_towers",
-                      "relief_crossroads", "relief_orbital", "relief_harbor"):
+                      "relief_crossroads", "relief_orbital", "relief_harbor",
+                      "floor_corner_guard", "floor_anchor_bolt_large",
+                      "floor_harbor_tie"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
@@ -246,6 +252,9 @@ jobs:
                           "relief_crossroads": "tools/generate_original_floor_relief.py",
                           "relief_orbital": "tools/generate_original_floor_relief.py",
                           "relief_harbor": "tools/generate_original_floor_relief.py",
+                          "floor_corner_guard": "tools/generate_original_floor_hardware.py",
+                          "floor_anchor_bolt_large": "tools/generate_original_floor_hardware.py",
+                          "floor_harbor_tie": "tools/generate_original_floor_hardware.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -373,7 +382,47 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 34
+          assert len(models) == 37
+          hardware = Path("src/client/PremiumFloorHardwareMeshKit.lua").read_text()
+          floor_src = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          relief_client = Path("src/client/arena-surface-relief.client.lua").read_text()
+          for name, client_name, receipt in (
+              ("floor_corner_guard", "CornerGuard", 41740585965),
+              ("floor_anchor_bolt_large", "AnchorBolt", 41740889677),
+              ("floor_harbor_tie", "HarborTie", 41740585965),
+          ):
+              assert (client_name+" = "+approved[name]) in floor_src
+              assert ("id = "+approved[name]) in hardware
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == name) == receipt
+          for check in (
+              "PremiumFloorHardwareMeshKit.install(",
+              "LocalOriginalFloorHardware3DCount",
+              "ArenaFloorFollowerKit.bind(base, folder)",
+              'child.Name == "AnchorBolt"',
+              'child.Name == "CornerGuard"',
+              'child.Name == "HarborTie"',
+          ):
+              assert check in relief_client, check
+          for check in (
+              'part.CanCollide = false', 'part.CanTouch = false',
+              'part.CanQuery = false', 'part.CastShadow = false',
+              'source:GetAttribute("OwnerVerified") ~= true',
+              'kind == "CornerGuard"',
+              'kind == "HarborTie"',
+              'kind == "AnchorBolt"',
+              'tier == "Medium" and 6 or 12',
+              'obj.Transparency = 1',
+          ):
+              # The old fallback renderer remains untouched and self-restores
+              # on a map/tier rebuild; the new module never modifies colliders.
+              if check == 'obj.Transparency = 1':
+                  assert 'anchor.Transparency = 1' in hardware
+              else:
+                  assert check in hardware, check
+          assert "RunService" not in hardware
+          assert "ApprovedFloorReliefTemplates" in hardware
+          assert "ArenaSurfaceReliefLocal" in census
           relief_server = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
           relief_client = Path("src/client/PremiumFloorReliefMeshKit.lua").read_text()
           relief_script = Path("src/client/arena-surface-relief.client.lua").read_text()
@@ -530,7 +579,7 @@ jobs:
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
-          print("Verified 34 creator-owned Approved 3D Models including six original shallow floor sculptures, strict collision safety, Android quotas and owner receipts.")
+          print("Verified 37 creator-owned Approved Model assets including three authentic corner/bolt/Harbor machine sculptures, strict Android/hazard safety and provenance.")
           PY
 
       - name: Install Rojo 7.7.0
