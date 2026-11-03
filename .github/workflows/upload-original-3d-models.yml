@@ -45,6 +45,7 @@ on:
           - orbital_halo_array
           - premium_jump_deck
           - premium_skybridge_module
+          - premium_ground_tile
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -99,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -126,10 +127,13 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
-          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ]; then
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ]; then
             echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
+          fi
+          if [ "$CHOICE" = "premium_ground_tile" ]; then
+            python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
           fi
           test -f "assets/source/chaos_${CHOICE}.obj"
 
@@ -189,7 +193,8 @@ jobs:
                    "sky_transit_exchange": "Chaos Sky Transit Exchange",
                    "orbital_halo_array": "Chaos Orbital Halo Array",
                    "premium_jump_deck": "Chaos Premium Armored Jump Deck",
-                   "premium_skybridge_module": "Chaos Premium Structural Skybridge Module"}
+                   "premium_skybridge_module": "Chaos Premium Structural Skybridge Module",
+                   "premium_ground_tile": "Chaos Premium Industrial 3D Ground Module"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],
