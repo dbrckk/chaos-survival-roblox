@@ -136,6 +136,47 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
         add(model, origin, "BeaconTensionMast", CFrame.new(0, 10.8, 0),
             Vector3.new(0.50, 4.8, 0.50), hardware,
             palette.secondary, nil, false)
+        if variant == "Crossroads" then
+            -- Crossroads' original gantries are 28-stud horizontal beams,
+            -- NOT 12-stud towers. The generic upright casing did not
+            -- cover their toy-like rectangular span. Match the original
+            -- physical beam's true axis without replacing its signals.
+            local source = decor:FindFirstChild("CrossroadGantry" .. i)
+            if source and source:IsA("BasePart") then
+                local alongX = source.Size.X > source.Size.Z
+                local span = math.max(source.Size.X, source.Size.Z)
+                -- Keep the original gantry and its danger/signal cues.
+                -- This decorative frame uses WORLD axes from the source:
+                -- the outer beams remain beyond the shrinking arena.
+                local beamFrame = CFrame.new(source.Position)
+                local function girder(name, offset, dimensions, material, color, shape)
+                    add(model, beamFrame, name, CFrame.new(offset),
+                        dimensions, color, material, shape, false)
+                end
+                local beamSize = alongX
+                    and Vector3.new(span + 1.6, 0.62, 0.90)
+                    or Vector3.new(0.90, 0.62, span + 1.6)
+                local flangeSize = alongX
+                    and Vector3.new(span + 1.6, 0.48, 0.64)
+                    or Vector3.new(0.64, 0.48, span + 1.6)
+                girder("LongSpanUpperStructuralFlange",
+                    Vector3.new(0, 1.50, 0), beamSize,
+                    palette.metal, body)
+                girder("LongSpanLowerStructuralFlange",
+                    Vector3.new(0, -1.45, 0), flangeSize,
+                    palette.secondary, hardware)
+                for _, side in ipairs({-1, 1}) do
+                    local offset = alongX
+                        and Vector3.new(side * (span * 0.34), -0.28, 0)
+                        or Vector3.new(0, -0.28, side * (span * 0.34))
+                    girder("LongSpanDiagonalReinforcement" .. tostring(side),
+                        offset,
+                        alongX and Vector3.new(2.4, 2.6, 0.74)
+                            or Vector3.new(0.74, 2.6, 2.4),
+                        palette.metal, inset, "WedgePart")
+                end
+            end
+        end
         pieces += #model:GetChildren()
     end
     return pieces
