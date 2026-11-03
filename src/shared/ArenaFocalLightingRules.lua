@@ -76,11 +76,15 @@ end
 function ArenaFocalLightingRules.phaseScale(phase, finalRush)
     local state = tostring(phase or "waiting")
     if state == "ready" then
-        return 0.82
+        -- The original two/three architectural beams act as a soft
+        -- approach light over the safe route, not a white flood.
+        return 0.78
     elseif state == "round" then
-        return finalRush == true and 0.08 or 0.30
+        -- Keep real facades perceptible while retaining disaster-led
+        -- visibility, especially during final rush / blackout.
+        return finalRush == true and 0.08 or 0.40
     elseif state == "result" then
-        return 0.48
+        return 0.42
     end
     return 0
 end
