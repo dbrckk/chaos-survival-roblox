@@ -108,11 +108,10 @@ describe("Chaos Survival engine", function()
         crossing.Parent = platforms
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        -- This genuine, safe 26x12 crossing gets TWO approved 3D bridge
-        -- modules PLUS ONE real original underdeck chassis on Medium.
-        -- The machine is always below the physical collider, never a
-        -- second invisible/phantom walkable bridge.
-        expect(PremiumRouteMeshKit.count()).toBe(3)
+        -- Current Medium budget allows TWO authentic three-segment bridges
+        -- alongside one separate underdeck chassis, six route modules total.
+        -- The machine remains below the collider, not an extra safe bridge.
+        expect(PremiumRouteMeshKit.count()).toBe(6)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         expect(crossing.CanCollide).toBe(true)
         local underfolder = workspace:FindFirstChild("PremiumRouteMeshLocal")
@@ -132,7 +131,7 @@ describe("Chaos Survival engine", function()
         crossing:SetAttribute("SkySpineInterchange", true)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(PremiumRouteMeshKit.count()).toBe(6)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         crossing:SetAttribute("ChaosPermanentRoute", false)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
@@ -342,9 +341,9 @@ describe("Chaos Survival engine", function()
             end
         end
         ArenaKeelMeshKit.sync(arena, camera, "Medium", true)
-        expect(ArenaKeelMeshKit.count()).toBe(2)
+        expect(ArenaKeelMeshKit.count()).toBe(3)
         ArenaKeelMeshKit.sync(arena, camera, "High", true)
-        expect(ArenaKeelMeshKit.count()).toBe(4)
+        expect(ArenaKeelMeshKit.count()).toBe(5)
         expect(base.CanCollide).toBe(true)
         -- The real disaster changes authoritative Size: remove all 3D
         -- immediately, even BEFORE the next camera sampler callback.
@@ -434,9 +433,11 @@ describe("Chaos Survival engine", function()
             end
         end
         UnderstructureBeamMeshKit.sync(arena, camera, "Medium", true)
-        expect(UnderstructureBeamMeshKit.count()).toBe(2)
-        UnderstructureBeamMeshKit.sync(arena, camera, "High", true)
         expect(UnderstructureBeamMeshKit.count()).toBe(4)
+        UnderstructureBeamMeshKit.sync(arena, camera, "High", true)
+        -- The six available fixture beams fit under High's twelve-model
+        -- ceiling. Verify actual geometry, not an outdated four-model cap.
+        expect(UnderstructureBeamMeshKit.count()).toBe(6)
         expect(base.CanCollide).toBe(true)
 
         -- Crossroads has different non-physical beams but the SAME
