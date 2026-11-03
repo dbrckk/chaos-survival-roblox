@@ -1,5 +1,11 @@
 # Chaos Survival — Roblox
 
+## Nouvelle architecture 3D Sky Spine originale (3 novembre 2026)
+
+**Vrai modèle triangulé approuvé par Roblox, ID `71492051540032` (1 696 triangles, 7 matériaux), import réussi : [action #41660854748](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41660854748).** Le premier import a été refusé pour un nom d'asset trop long ; la correction est vérifiée. Les deux ponts centraux réels de Sky Spine (`SkySpineStep=5/6`) reçoivent maintenant leur propre silhouette industrielle sculptée et authentifiée, et les anciennes poutres natives hautes sont masquées *seulement* pendant que les nouveaux MeshParts sont réellement présents. La structure, le colliseur, le routage des robots, le danger, les rails et les repères restent de source serveur.
+
+**Qualité Android :** Low 0, Medium 1, High 2 nouveaux modèles simultanés, déjà inscrits au même plafond de Parts/effets, sans boucle LOD supplémentaire. Les modèles ne créent ni collisions ni faux itinéraires ; collapse, shrink, streaming tardif et changement de carte restaurent immédiatement l'original. **Statut de publication :** source fusionnée/import approuvé ; confirmer les cinq suites moteur + publication publique au SHA exact avant de déclarer cette mise à jour visible en jeu. [Source et critères QA](docs/ORIGINAL_SKY_SPINE_CROWN_3D_SOURCE_2026-11-03.md).
+
 ## Original underdeck 3D approuvé et intégré — lot 3 novembre 2026
 
 Un modèle original de treillis, châssis industriel et groupes mécaniques de **3 072 vrais triangles**, en **sept matériaux**, a été créé puis approuvé par Roblox (Model **84582262145054**, [workflow #41644715829](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41644715829)). Le kit client existant fixe des copies purement visuelles **sous les vraies plateformes physiques** lorsque suffisamment grandes et sûres, en nombre strictement limité (Android **Low 0 / Medium 2 / High 4**). Aucun faux chemin, collision, lumière, API payante, nouveau polling ni téléchargement d'asset client.
