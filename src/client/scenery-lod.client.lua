@@ -496,16 +496,6 @@ task.spawn(function()
         -- All original server-authored doors remain visible if unavailable.
         DistrictGatewayMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
-        -- Four approved creator-owned 3D roofline/facade profiles share
-        -- the same camera and Android LOD cadence as the original gates.
-        PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady)
-        local facadeMeshCount = PremiumDistrictFacadeMeshKit.count()
-        if player:GetAttribute("LocalOriginalDistrictFacadeMeshCount")
-            ~= facadeMeshCount then
-            player:SetAttribute("LocalOriginalDistrictFacadeMeshCount",
-                facadeMeshCount)
-        end
         local gatewayCount = DistrictGatewayMeshKit.count()
         if player:GetAttribute("LocalOriginalGatewayMeshCount") ~= gatewayCount then
             player:SetAttribute("LocalOriginalGatewayMeshCount", gatewayCount)
@@ -534,6 +524,17 @@ task.spawn(function()
                         (cameraPoint - origin).Magnitude, isTouch, cameraReady)
                 end
             end
+        end
+        -- Run AFTER the authoritative native district LOD, so source
+        -- doors already have their actual visible/hidden state. Never
+        -- show imported facades on an offscreen, culled or shrunk building.
+        PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, cameraLook)
+        local facadeMeshCount = PremiumDistrictFacadeMeshKit.count()
+        if player:GetAttribute("LocalOriginalDistrictFacadeMeshCount")
+            ~= facadeMeshCount then
+            player:SetAttribute("LocalOriginalDistrictFacadeMeshCount",
+                facadeMeshCount)
         end
         -- The counter measures LOCAL instances, not server replication,
         -- GPU time or device FPS. Keep it stable on unchanged LOD passes.
