@@ -52,6 +52,7 @@ on:
           - district_aerial
           - skyfleet_carrier
           - underdeck_chassis
+          - lobby_gate
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -106,7 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -133,13 +134,17 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
-          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ] || [ "$CHOICE" = "underdeck_chassis" ]; then
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ] || [ "$CHOICE" = "underdeck_chassis" ] || [ "$CHOICE" = "lobby_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
           fi
           if [ "$CHOICE" = "premium_ground_tile" ]; then
             python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
+          elif [ "$CHOICE" = "lobby_gate" ]; then
+            # Creator-authored 3D main portal, leaving passage and UI sign open.
+            python3 tools/generate_original_lobby_gate.py \
+              --output assets/source/chaos_lobby_gate.obj
           elif [ "$CHOICE" = "underdeck_chassis" ]; then
             # Authored open-frame 3D sub-deck sculpture, never a gameplay Part.
             python3 tools/generate_original_underdeck_chassis.py \
@@ -219,7 +224,8 @@ jobs:
                    "district_turbine": "Chaos Original District Turbine 3D",
                    "district_aerial": "Chaos Original District Aerial 3D",
                    "skyfleet_carrier": "Chaos Original Colossal 3D Skyfleet Carrier",
-                   "underdeck_chassis": "Chaos Original 3D Underslung Engineering Chassis"}
+                   "underdeck_chassis": "Chaos Original 3D Underslung Engineering Chassis",
+                   "lobby_gate": "Chaos Original Sculpted Arena Lobby Gate 3D"}
           request = {
               "assetType": "Model",
               "displayName": names[os.environ["CHOICE"]],

@@ -1,0 +1,65 @@
+# One-shot import only; no Roblox place publication and no runtime changes.
+# Owner authorized creator 9774173158 for the Chaos Survival experience.
+name: One-time Import Original Lobby Gate 3D 2026-11-03
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-import-original-lobby-gate-20261103.yml'
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-lobby-gate-owner-upload-once-20261103
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    name: Verify original real 3D portal and open passage before owner import
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require correct original source bounds, UV, material split and normals
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_lobby_gate.py --output assets/source/chaos_lobby_gate.obj > "$RUNNER_TEMP/lobby-art.json"
+          python3 tools/obj_to_gltf.py --source assets/source/chaos_lobby_gate.obj --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/lobby-art.gltf"
+          python3 - "$RUNNER_TEMP/lobby-art.json" "$RUNNER_TEMP/lobby-art.gltf" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          src=json.loads(Path(sys.argv[1]).read_text())
+          doc=json.loads(Path(sys.argv[2]).read_text())
+          assert src["name"]=="lobby_gate" and 1000<=src["triangles"]<=8500
+          assert 24<=src["dimensions"][0]<=28 and 18<=src["dimensions"][1]<=22
+          assert 4<=src["dimensions"][2]<=8 and src["bounds_min"][1]>=0
+          assert doc["asset"]["version"]=="2.0"
+          assert {m["name"] for m in doc["materials"]}=={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          parts=doc["meshes"][0]["primitives"]
+          assert len(parts)==7
+          assert sum(doc["accessors"][p["attributes"]["POSITION"]]["count"]//3 for p in parts)==src["triangles"]
+          assert all({"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(p["attributes"]) for p in parts)
+          payload=base64.b64decode(doc["buffers"][0]["uri"].split(",",1)[1],validate=True)
+          assert len(payload)==doc["buffers"][0]["byteLength"]
+          print("ORIGINAL SCULPTED PORTAL VERIFIED; opening remains unoccluded by source",src)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chaos-original-lobby-gate-3d-source
+          path: |
+            ${{ runner.temp }}/lobby-art.gltf
+            ${{ runner.temp }}/lobby-art.json
+          retention-days: 14
+  import-approved-owner:
+    name: Upload only source-gated original Roblox Model asset
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: lobby_gate
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
