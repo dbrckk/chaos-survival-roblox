@@ -510,7 +510,13 @@ describe("Chaos Survival engine", function()
                         .toBe(true)
                     expect(math.abs(pivot.Z - box.Position.Z) < 0.05)
                         .toBe(true)
-                    -- Four supports extend below the original mesh.
+                    -- This deliberately narrow 13x12x3 sanitized test
+                    -- mesh receives FOUR base layers, not the seven wider
+                    -- chassis details reserved for true approved assets.
+                    -- Keep both sizes covered: imported scene LOD must
+                    -- still pivot on the actual mesh after augmentation.
+                    expect(placed:GetAttribute("OriginalFoundationPieceCount"))
+                        .toBe(4)
                     expect(math.abs(pivot.Y - box.Position.Y) < 8)
                         .toBe(true)
                     expect((pivot - Vector3.new(900, 80, -900)).Magnitude > 400)
