@@ -6,6 +6,10 @@ La version publique la plus récente **vérifiée au moment de ce relevé** est 
 
 Le prochain chantier cible [la sélection des vrais sols 3D visibles devant le joueur](docs/ORIGINAL_GROUND_CAMERA_PRIORITY_2026-11-03.md) avec un budget mobile inchangé. L'amélioration source ne devient live qu'après nouvelle validation et publication exact-SHA. Les sections historiques ci-dessous documentent des jalons antérieurs et ne doivent pas être prises pour le dernier statut de production.
 
+## Quatre véritables modèles 3D de façades/toits — production 3 novembre 2026
+
+**Nouveau jalon de géométrie originale :** quatre familles industrielles `observatory` (1 524 triangles), `freight` (1 740), `turbine` (2 256) et `aerial` (2 376), avec vraies surfaces 3D, UV et tangentes. Les quatre conversions OBJ → glTF ont **réussi** dans le [workflow source #41629230431](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629230431). [Dossier complet](docs/ORIGINAL_FOUR_DISTRICT_ROOFLINES_3D_2026-11-03.md). Le workflow de l'importeur Roblox existant est étendu pour générer ces assets depuis le projet ; leur **import et modération ne sont pas présumés réussis** tant que la réponse Roblox n'a pas été vérifiée. Pas de changement de jeu public avant intégration et validation exact-SHA.
+
 ## Portails industriels 3D authentiques sur les bâtiments (chantier source, 3 novembre 2026)
 
 Le dernier lot visuel réutilise le vrai portail `perimeter_gate` approuvé chez le créateur Roblox (Model `137284215564363`) pour habiller les entrées des **16 bâtiments de districts** au plus près de la caméra. Le serveur expose une seule copie saine du package chargé à l'origine ; le client monte uniquement **1 portail Low / 2 Medium / 4 High** à la fois, sans collision, réseau supplémentaire, faux AssetId ni boucle de rendu. Les façades natives restent toujours visibles en secours. [Source, restrictions, budget Android et validations à obtenir](docs/APPROVED_3D_DISTRICT_GATEWAYS_2026-11-03.md). **Ce changement reste candidat dans le code tant qu'une validation complète et une publication exact-SHA ne sont pas réussies.**
