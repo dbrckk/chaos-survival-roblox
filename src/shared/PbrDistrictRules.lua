@@ -5,7 +5,8 @@ local PbrDistrictRules = {}
 
 -- Exact creator-owned original-model asset packages shipped by this game.
 -- Geometry inside these packages keeps its authored SurfaceAppearance;
--- only four local, explicitly marked foundation Parts may receive PBR.
+-- only four local original foundations and two approved steel I-beam
+-- finish Parts may enter PBR; imported MeshParts keep authored UV/PBR.
 local APPROVED_ORIGINAL_IDS = {
     [102992487644269] = true, [119468460691888] = true,
     [137284215564363] = true, [95926792159328] = true,
@@ -14,6 +15,11 @@ local APPROVED_ORIGINAL_IDS = {
 local FOUNDATION_PARTS = {
     FoundationShoulder = true, FoundationInset = true,
     FoundationBallast = true, FoundationGroundPad = true,
+    -- Original metal structural rails below approved imported meshes.
+    -- The angled WedgePart buttresses and service fittings remain native
+    -- to preserve exact UV/collision and the fixed Android material budget.
+    OriginalChassisFrontIBeam = true,
+    OriginalChassisRearIBeam = true,
 }
 
 function PbrDistrictRules.isApprovedImportedFoundationOwner(owner)
@@ -410,6 +416,13 @@ function PbrDistrictRules.materialKey(partName, material, owner)
     if name == "foundationshoulder" then return "titanium" end
     if name == "foundationinset" then return "oxidized" end
     if name == "foundationgroundpad" then return "armor" end
+    if PbrDistrictRules.isApprovedImportedFoundationOwner(owner)
+        and (name == "originalchassisfrontibeam"
+            or name == "originalchassisrearibeam") then
+        -- Structural plating now has the actual creator-owned 2K armor
+        -- normal/roughness/metalness maps, not smooth generic titanium.
+        return "armor"
+    end
     -- Some brand-new Orbital containment wings are legitimately ceramic
     -- but their NAME contains no "ceramic". Respect that native ceramic
     -- first rather than replacing it with a reflective titanium variant.
