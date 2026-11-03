@@ -8,6 +8,7 @@ local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
+local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 
@@ -495,6 +496,16 @@ task.spawn(function()
         -- All original server-authored doors remain visible if unavailable.
         DistrictGatewayMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
+        -- Four approved creator-owned 3D roofline/facade profiles share
+        -- the same camera and Android LOD cadence as the original gates.
+        PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady)
+        local facadeMeshCount = PremiumDistrictFacadeMeshKit.count()
+        if player:GetAttribute("LocalOriginalDistrictFacadeMeshCount")
+            ~= facadeMeshCount then
+            player:SetAttribute("LocalOriginalDistrictFacadeMeshCount",
+                facadeMeshCount)
+        end
         local gatewayCount = DistrictGatewayMeshKit.count()
         if player:GetAttribute("LocalOriginalGatewayMeshCount") ~= gatewayCount then
             player:SetAttribute("LocalOriginalGatewayMeshCount", gatewayCount)
