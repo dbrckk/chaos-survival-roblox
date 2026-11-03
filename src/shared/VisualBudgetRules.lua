@@ -25,6 +25,10 @@ VisualBudgetRules.LocalFolders = {
     "ArenaServicePropsLocal",
     "ArenaNavigationLanguageLocal",
     "ArenaPlatformIdentityLocal",
+    -- Actual owner-approved imported deck and skybridge MeshParts are local
+    -- cosmetics welded to physical routes. Count every visible MeshPart
+    -- against the SAME Android frame/instance budget; never bypass census.
+    "PremiumRouteMeshLocal",
     "ArenaAmbientPropsLocal",
     "ArenaFocalLightingLocal",
     "ArenaSurfaceDetailLocal",

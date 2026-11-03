@@ -16,6 +16,31 @@ local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 
 describe("visual budget rules", function()
+    it("counts all approved route MeshParts in the existing Android budget ledger", function()
+        local registered = false
+        for _, name in ipairs(VisualBudgetRules.LocalFolders) do
+            if name == "PremiumRouteMeshLocal" then registered = true end
+        end
+        expect(registered).toBe(true)
+        local root = Instance.new("Folder")
+        local original = Instance.new("Folder")
+        original.Name = "PremiumRouteMeshLocal"
+        original.Parent = root
+        local model = Instance.new("Model")
+        model.Name = "OriginalPremiumRouteMesh"
+        model.Parent = original
+        local deck = Instance.new("MeshPart")
+        deck.Parent = model
+        local bridge = Instance.new("MeshPart")
+        bridge.Parent = model
+        -- Genuine imported material Parts are BaseParts, not VFX emitters.
+        local metrics, counted, byOwner = VisualBudgetRules.collect(root)
+        expect(counted).toBe(1)
+        expect(metrics.Parts).toBe(2)
+        expect(metrics.Effects).toBe(0)
+        expect(byOwner.PremiumRouteMeshLocal.Parts).toBe(2)
+        root:Destroy()
+    end)
     it("moves original Harbor cargo and crane trolleys only inside client LOD limits", function()
         local rules = HarborGantryMotionRules
         expect(rules.profile("Low", false).Count).toBe(0)
