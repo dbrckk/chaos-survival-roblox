@@ -74,6 +74,9 @@ def lift(m: Sculpture):
     for k in range(4):
         m.beveled_block("RoofCoolingSlot%d" % k, "CARBON",
                         -.61+k*.4, 2.56, .13, .18, .05, .92, .025)
+    for k in range(3):
+        m.beveled_block("LowerLandingIndex%d" % k, "ALLOY",
+                        -.65+k*.65, -2.31, -1.01, .29, .15, .14, .035)
 
 
 def transit(m: Sculpture):
@@ -97,6 +100,10 @@ def transit(m: Sculpture):
     for k in range(3):
         m.beveled_block("PassiveHeatSink%d" % k, "GRIP",
                         -.62+k*.62, -.16, .55, .36, .24, .12, .05)
+    for k in range(3):
+        m.rod("DirectionalSamplingProbe%d" % k, "ALLOY",
+              (-.62+k*.62, .44, .32), (-.62+k*.62, .67, .43),
+              .037, 8)
 
 
 def satellite(m: Sculpture):
@@ -124,6 +131,9 @@ def satellite(m: Sculpture):
               (math.cos(a)*.78, 1.05, math.sin(a)*.78), .040, 8)
     m.beveled_block("PolarTelemetryChip", "SIGNAL",
                     0, 1.05, 0, .33, .08, .40, .03)
+    for k in range(4):
+        m.beveled_block("GyroReactionVent%d" % k, "BRUSHED",
+                        -.47+k*.31, -.16, .76, .17, .31, .12, .04)
 
 
 def cargo(m: Sculpture):
