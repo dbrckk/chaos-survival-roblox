@@ -35,7 +35,7 @@ def frame(m, name, length, width, material="ARMOR"):
 
 def bolt(m,name,x,z):
     # Eight-sided tiny retaining heads, no fake Part cylinder.
-    m.rod(name,"BRUSHED",(x,.09,z),(x,.127,z),.052,8)
+    m.rod(name,"BRUSHED",(x,.09,z),(x,.155,z),.052,8)
 
 
 def essential(m):
