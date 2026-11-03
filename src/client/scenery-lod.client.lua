@@ -442,6 +442,12 @@ task.spawn(function()
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+        -- Client-only diagnostics count genuine imported MODEL instances,
+        -- not fabricated FPS or proof that Roblox textures finished drawing.
+        local routeMeshes = PremiumRouteMeshKit.count()
+        if player:GetAttribute("LocalOriginalRouteMeshCount") ~= routeMeshes then
+            player:SetAttribute("LocalOriginalRouteMeshCount", routeMeshes)
+        end
 
         -- Rank at most eight approved, creator-owned imported Models by
         -- actual camera proximity. This makes REAL meshes visible on Android
