@@ -7,6 +7,7 @@ local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
+local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
@@ -436,6 +437,12 @@ task.spawn(function()
         local generated = workspace:FindFirstChild("GeneratedMap")
         local arena = generated and generated:FindFirstChild("Arena")
         local decor = arena and arena:FindFirstChild("Decor")
+        -- Premium real imported 3D on PHYSICAL jump decks and bridges:
+        -- the SAME existing camera-tier loop owns all local MeshPart
+        -- creation/cleanup. Original colliders and hazard cues stay live;
+        -- animated collapse, shrink and stream changes hide cosmetics.
+        PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name, cameraReady)
+
         -- Rank at most eight approved, creator-owned imported Models by
         -- actual camera proximity. This makes REAL meshes visible on Android
         -- rather than native fallback only, while permitting at most one
