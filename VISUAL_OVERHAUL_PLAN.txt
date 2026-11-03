@@ -34,6 +34,20 @@ LOT 3 NOVEMBRE 2026 — SOCLES AUTHENTIQUES DES MONUMENTS EXTERIEURS
          build Cloud, la publication publique ni la validation Android.
          Voir docs/ORIGINAL_3D_EXTERIOR_FOUNDATION_REPLACEMENT_2026-11-03.md
 
+LOT 4 NOVEMBRE 2026 — SIX SCULPTURES ORIGINALES DE RELIEFS DE SOL
+[QA]     VIS-026 : Low Essential plate 3D + cinq familles de sols propres aux
+         arènes (Classic, Towers, Crossroads, Orbital, Harbor).
+         Les six nouvelles sources OBJ triangulées à UV/tangentes + sept
+         groupes de matières sont Roblox Model Approved #41736767816.
+         Serveur autorisé, client MeshPart pur sans physique, remplacement
+         des plaques principales uniquement après montage complet, avec
+         repli natif. Shrink: snapshot du dossier APRÈS implantation des
+         MeshParts; même listener Base.Size existant. LOD rim 240/300.
+         Android Low 6 / Medium 16 / High 28 vrais modèles max.
+         Reste : petits rivets, coins WedgePart, attaches Harbor, QA
+         perceptuelle Android et publication du jeu non vérifiées.
+         docs/ORIGINAL_FLOOR_RELIEF_3D_REPLACEMENT_2026-11-04.md
+
 LOT 3 NOVEMBRE 2026 — CINQ VRAIS MACHINES D'AMBIANCE ANIMÉES
 [QA]     VIS-026 : drones Classic, cabines Towers, balises Crossroads, satellites
          Orbital, fret Harbor ont désormais chacun un authentique mesh 3D
