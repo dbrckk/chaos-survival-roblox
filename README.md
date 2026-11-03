@@ -6,6 +6,12 @@ La version publique la plus récente **vérifiée au moment de ce relevé** est 
 
 Le prochain chantier cible [la sélection des vrais sols 3D visibles devant le joueur](docs/ORIGINAL_GROUND_CAMERA_PRIORITY_2026-11-03.md) avec un budget mobile inchangé. L'amélioration source ne devient live qu'après nouvelle validation et publication exact-SHA. Les sections historiques ci-dessous documentent des jalons antérieurs et ne doivent pas être prises pour le dernier statut de production.
 
+## Intégration des quatre véritables profils architecturaux 3D — 3 novembre 2026
+
+Les **quatre nouveaux Modèles Roblox** (observatoire `132020956214241`, fret `88725004643299`, turbines `84217436280282`, communications `135791763112202`) ont réellement été **approuvés** : [import propriétaire réussi #41629861517](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629861517). Source : vrais meshes OBJ/glTF avec 1 524 / 1 740 / 2 256 / 2 376 triangles, pas des primitives `Part`.
+
+Le code charge et assainit ces quatre packages via le serveur, les réutilise en habillages locaux sur les 16 bâtiments, et limite la résidence Android à **Low 1 / Medium 2 / High 4**. Les façades, les entrées, les panneaux de navigation, les collisions et les catastrophes originels sont conservés. **Le runtime n'est pas déclaré public ni visuellement certifié Android tant que la validation et la publication exact-SHA ne sont pas terminées.** Documentation : [quatre architectures 3D et preuves](docs/ORIGINAL_FOUR_DISTRICT_ROOFLINES_3D_2026-11-03.md).
+
 ## Quatre véritables modèles 3D de façades/toits — production 3 novembre 2026
 
 **Nouveau jalon de géométrie originale :** quatre familles industrielles `observatory` (1 524 triangles), `freight` (1 740), `turbine` (2 256) et `aerial` (2 376), avec vraies surfaces 3D, UV et tangentes. Les quatre conversions OBJ → glTF ont **réussi** dans le [workflow source #41629230431](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41629230431). [Dossier complet](docs/ORIGINAL_FOUR_DISTRICT_ROOFLINES_3D_2026-11-03.md). Le workflow de l'importeur Roblox existant est étendu pour générer ces assets depuis le projet ; leur **import et modération ne sont pas présumés réussis** tant que la réponse Roblox n'a pas été vérifiée. Pas de changement de jeu public avant intégration et validation exact-SHA.
