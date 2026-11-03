@@ -178,12 +178,12 @@ local function syncVisibility(entry, platform)
     end
 end
 
-local function mount(platform, template, count)
+local function mount(platform, template, count, bridgeCandidate)
     local _, bounds = template:GetBoundingBox()
     if bounds.X < 3 or bounds.Y < 0.1 or bounds.Z < 3 then
         return nil
     end
-    local isBridge = platform:GetAttribute("ChaosSkybridge") == true
+    local isBridge = bridgeCandidate == true
     local width = math.min(platform.Size.X, platform.Size.Z)
     local length = math.max(platform.Size.X, platform.Size.Z)
     local countToMount = isBridge and count or 1
@@ -248,12 +248,40 @@ local function mount(platform, template, count)
     return entry
 end
 
-local function eligible(platform, cameraPoint, maxDistance, retention)
+-- Physically walkable, permanent connector decks have always used native
+-- cuboids, even though real owner-approved UV/tangent bridge MeshParts are
+-- already in ReplicatedStorage. The five maps have two eight-deck sky
+-- promenades and a ten-deck Sky Spine supported by true server collisions.
+-- Only those named, server-authored, safe route structures can share the
+-- very same authenticated skybridge kit as Towers' four gated bridges.
+-- NEVER label an arbitrary fake bridge or local cosmetic Part as walkable.
+local function isPermanentConnector(platform)
+    if not platform.Name:match("^Platform%d+$")
+        or platform:GetAttribute("ChaosPermanentRoute") ~= true then
+        return false
+    end
+    local lane = platform:GetAttribute("PromenadeLane")
+    local step = platform:GetAttribute("PromenadeStep")
+    if type(lane) == "number" and lane % 1 == 0
+        and lane >= 1 and lane <= 2
+        and type(step) == "number" and step % 1 == 0
+        and step >= 1 and step <= 8 then
+        return true
+    end
+    local spine = platform:GetAttribute("SkySpineStep")
+    return platform:GetAttribute("SkySpineInterchange") == true
+        and type(spine) == "number"
+        and spine % 1 == 0 and spine >= 1 and spine <= 10
+end
+
+local function eligible(platform, cameraPoint, maxDistance, retention, cameraLook)
     -- Read genuine safety before residency: NEVER keep cosmetic meshes on
     -- a collapsing, shrinking, transparent or shutter-warning platform.
     if not safePlatform(platform) then return nil end
-    local isBridge = platform:GetAttribute("ChaosSkybridge") == true
+    local gatedBridge = platform:GetAttribute("ChaosSkybridge") == true
         and platform.Name:match("^Skybridge%d+$") ~= nil
+    local connector = isPermanentConnector(platform)
+    local isBridge = gatedBridge or connector
     local isDeck = platform.Name:match("^Platform%d+$") ~= nil
     if not isBridge and not isDeck then return nil end
     local width, length = math.min(platform.Size.X, platform.Size.Z),
@@ -268,16 +296,35 @@ local function eligible(platform, cameraPoint, maxDistance, retention)
     -- replacing MeshParts every LOD tick for tiny camera movements. The
     -- hard deck/bridge/segment caps remain exactly the same on every tier.
     local priority = dist - (resident and retention * 0.65 or 0)
+    -- The old nearest-only sort frequently filled ALL 2/5/9 approved deck
+    -- mesh slots with platforms BEHIND the third-person Android camera.
+    -- Prefer the real next leap in front (without creating any assets or
+    -- increasing limits). Under 48 studs keep an omnidirectional stable
+    -- landing: rotating the camera must not suddenly evict the current deck.
+    if typeof(cameraLook) == "Vector3" and cameraLook.Magnitude > 0.5
+        and dist > 48 then
+        local direction = (platform.Position - cameraPoint) / dist
+        local facing = direction:Dot(cameraLook.Unit)
+        if facing > 0 then
+            priority -= math.min(58, dist * 0.22) * facing
+        else
+            priority += math.min(38, dist * 0.17) * -facing
+        end
+    end
+    -- Landmark crossing routes are highly visible from the upper world,
+    -- but never override an actual closer, solid, warning-free landing.
+    if connector then priority -= 6 end
     return {
         platform = platform,
         bridge = isBridge,
+        connector = connector,
         distance = dist,
         priority = priority,
     }
 end
 
 -- Called BY the existing LOD scheduler, not a new time-based loop.
-function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
+function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, cameraLook)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -313,7 +360,8 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
     local decks, bridges = {}, {}
     for _, platform in ipairs(platforms:GetChildren()) do
         if platform:IsA("BasePart") then
-            local item = eligible(platform, cameraPoint, budget.distance, budget.retention)
+            local item = eligible(platform, cameraPoint, budget.distance,
+                budget.retention, cameraLook)
             if item then
                 local bucket = item.bridge and bridges or decks
                 bucket[#bucket + 1] = item
@@ -337,7 +385,8 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
     local bridgeTemplate = getTemplate("PremiumSkybridgeModule")
     if deckTemplate then
         for i = 1, math.min(#decks, budget.decks) do
-            wanted[decks[i].platform] = {template = deckTemplate, count = 1}
+            wanted[decks[i].platform] = {template = deckTemplate, count = 1,
+                bridge = false}
         end
     end
     if bridgeTemplate then
@@ -347,7 +396,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
             local count = math.min(budget.segments,
                 math.max(1, math.floor(span / 9.5)))
             wanted[bridges[i].platform] = {
-                template = bridgeTemplate, count = count,
+                template = bridgeTemplate, count = count, bridge = true,
             }
         end
     end
@@ -361,7 +410,8 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady)
     end
     for platform, desired in pairs(wanted) do
         if not mounted[platform] then
-            mounted[platform] = mount(platform, desired.template, desired.count)
+            mounted[platform] = mount(platform, desired.template, desired.count,
+                desired.bridge)
         end
     end
 end

@@ -362,6 +362,51 @@ jobs:
           print("Server settlement, reward receipt and replay continuity contracts intact.")
           PY
 
+      - name: Guard real 3D permanent sky-route residency and repaired material contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          route = Path("src/client/PremiumRouteMeshKit.lua").read_text()
+          lod = Path("src/client/scenery-lod.client.lua").read_text()
+          map_builder = Path("src/server/MapBuilder.lua").read_text()
+          truth = Path("tests/engine/mapbuilder.spec.luau").read_text()
+          engine = Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          must_have = (
+              "PremiumJumpDeck = 98478693994864",
+              "PremiumSkybridgeModule = 94023662427980",
+              "ChaosPermanentRoute",
+              "PromenadeLane",
+              "PromenadeStep",
+              "SkySpineStep",
+              "SkySpineInterchange",
+              "BridgeShutterPhase",
+              "CollapsePhase",
+              "isPermanentConnector(platform)",
+              "if not safePlatform(platform) then return nil end",
+              "base.Size.X < 318 or base.Size.Z < 318",
+              "CanCollide = false",
+              "CanTouch = false",
+              "CanQuery = false",
+              "cameraLook",
+          )
+          assert all(text in route for text in must_have)
+          assert "decks = 2, bridges = 1, segments = 1" in route
+          assert "decks = 5, bridges = 1, segments = 3" in route
+          assert "decks = 9, bridges = 2, segments = 5" in route
+          assert "PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name," in lod
+          assert "cameraReady, cameraLook)" in lod
+          assert 'platform:SetAttribute("ChaosPermanentRoute", true)' in map_builder
+          assert 'platform:SetAttribute("SkySpineInterchange", true)' in map_builder
+          assert "Towers = Enum.Material.Metal" in truth
+          assert "Towers = Enum.Material.Foil" not in truth
+          assert 'crossing:SetAttribute("PromenadeLane", 1)' in engine
+          assert 'crossing:SetAttribute("SkySpineInterchange", true)' in engine
+          assert 'crossing:SetAttribute("ChaosPermanentRoute", false)' in engine
+          print("Authentic approved 3D permanent crossings, Android MeshPart caps, safe hazard ownership and Towers Cloud contract verified.")
+          PY
+
       - name: Guard authentic five-arena sun and native-PBR art budget
         shell: bash
         run: |

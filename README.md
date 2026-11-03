@@ -1,5 +1,12 @@
 # Chaos Survival — Roblox
 
+## Vrais ponts 3D sur les 26 paliers des promenades et Sky Spine — 3 novembre 2026
+
+**Grand lot de formes 3D :** les deux vraies passerelles panoramiques (16 paliers) et le Sky Spine (10 paliers) des cinq arènes peuvent désormais réutiliser les **véritables MeshParts de pont originaux approuvés Roblox**, et non seulement des cubes natifs. Le kit classe les objets à partir des vrais attributs serveur de route permanente et place les 3D en priorité **devant la caméra**, dans les quotas Android existants, sans modifier une seule collision ni créer de faux pont. Les quatre ponts Towers existants restent inchangés ; leurs dangers continuent de masquer immédiatement les habillages 3D.
+
+**Correction de livraison essentielle :** [Build #41639154856](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41639154856) du précédent lot lumière a réussi, mais [Cloud #41639166067](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41639166067) a relevé une attente obsolète `Foil` pour Towers après remplacement voulu par `Metal` ; [publication #41639140940](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41639140940) a correctement refusé l'ancien candidat. La règle du test est corrigée sans revenir à l'aspect miroir. Le nouveau lot ne sera déclaré **public** qu'après validation du build, des cinq suites réelles et du publisher sur **le même commit**, puis la qualité visible devra être vérifiée sur un vrai Android. [Détails et protocole de sécurité](docs/ORIGINAL_3D_PERMANENT_SKY_ROUTE_ART_2026-11-03.md).
+
+
 ## Direction artistique de la lumière et des matériaux — cinq arènes
 
 **Lot de production visuelle 3 novembre 2026 :** nouveaux véritables angles solaires différents par arène (`ClockTime` **et** `GeographicLatitude`, pas seulement une teinte), meilleure lumière diffusée sur les façades et sols de premier plan, neutralisation des couleurs trop saturées des projecteurs existants, et rehaussement des matières natives de secours Low Android sur Classic/Towers/Crossroads/Orbital/Harbor. La lumière ne relance plus de dizaines de tweens sur chaque mise à jour du compte à rebours. Le changement n'ajoute **aucune** lumière et conserve les plafonds PBR Android **0/32/72**, les projecteurs **0/2/3**, les IDs d'assets Roblox approuvés et l'autorité visuelle des catastrophes.

@@ -21,7 +21,10 @@ describe("Chaos Survival engine", function()
     it("gives all five physical parkour maps distinct deck materials", function()
         local expected = {
             Classic = Enum.Material.DiamondPlate,
-            Towers = Enum.Material.Foil,
+            -- Source of truth: Towers now uses a matte native metal fallback
+            -- rather than bright chrome Foil on Android Low. Its approved
+            -- high-tier PBR MaterialVariant still owns eligible surfaces.
+            Towers = Enum.Material.Metal,
             Crossroads = Enum.Material.CorrodedMetal,
             Orbital = Enum.Material.CeramicTiles,
             Harbor = Enum.Material.WoodPlanks,
