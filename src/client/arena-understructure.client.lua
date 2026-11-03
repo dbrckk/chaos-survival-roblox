@@ -61,26 +61,35 @@ local function rebuild()
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
 
+    -- The original 262-stud thin Roblox slats looked like unfinished
+    -- blockout geometry. Replace them with short, spaced mechanical bays
+    -- shaped to receive the existing owner-verified 3,072-triangle mesh.
+    -- Keep only 4/12/16 nonphysical native sockets on Low/Medium/High;
+    -- genuine 3D is camera-ranked by the shared scenery LOD sampler.
+    -- The approved central/corner keel carries the long-span silhouette.
     local ribCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    local socketsPerRib = tier.Name == "Low" and 1 or 2
     for i = 1, ribCount do
         local t = ribCount == 1 and 0 or ((i - 1) / (ribCount - 1)) * 2 - 1
         local horizontal = i % 2 == 0
-
-        local size = horizontal
-            and Vector3.new(base.Size.X * 0.82, 0.75, 1.15)
-            or Vector3.new(1.15, 0.75, base.Size.Z * 0.82)
-        local offset = horizontal
-            and Vector3.new(0, -1.0 - ((i % 3) * 0.22), t * halfZ * 0.68)
-            or Vector3.new(t * halfX * 0.68, -1.0 - ((i % 3) * 0.22), 0)
-
-        makePart(
-            "UnderRib" .. i,
-            size,
-            CFrame.new(Vector3.new(center.X, bottomY, center.Z) + offset),
-            theme.Structure:Lerp(VisualTheme.World.Deep, 0.38),
-            Enum.Material.Metal,
-            tier.Name == "Low" and 0.24 or 0.12
-        )
+        for socket = 1, socketsPerRib do
+            local along = socketsPerRib == 1 and 0
+                or (socket == 1 and -1 or 1) * math.min(halfX, halfZ) * 0.39
+            local across = t * (horizontal and halfZ or halfX) * 0.68
+            local offset = horizontal
+                and Vector3.new(along, -base.Size.Y * .5 - 4.35, across)
+                or Vector3.new(across, -base.Size.Y * .5 - 4.35, along)
+            local beam = makePart(
+                "UnderRibBeam" .. i .. "_" .. socket,
+                horizontal and Vector3.new(23.3, 2.2, 9.0)
+                    or Vector3.new(9.0, 2.2, 23.3),
+                base.CFrame * CFrame.new(offset),
+                theme.Structure:Lerp(VisualTheme.World.Deep, .38),
+                Enum.Material.Metal,
+                tier.Name == "Low" and .34 or .20
+            )
+            beam:SetAttribute("OriginalUnderstructureBeam", true)
+        end
     end
 
     local cornerOffsets = {
@@ -143,27 +152,24 @@ local function rebuild()
         end
 
         if tier.Name ~= "Low" then
+            -- These used to be two 13-stud DiamondPlate cuboids with large
+            -- floating Neon slabs. Use authentic approved 3D service
+            -- modules instead; their native sockets are only fail-safes.
+            -- Width and length exactly match the sanitized 23.3x9 chassis.
             for side = -1, 1, 2 do
                 local bay = makePart(
                     side < 0 and "UnderClassicDataBayL" or "UnderClassicDataBayR",
-                    Vector3.new(13, 4.2, 8.0),
-                    CFrame.new(
-                        center + Vector3.new(side * halfX * 0.30, -6.7, halfZ * 0.14)
+                    Vector3.new(23.3, 2.2, 9.0),
+                    base.CFrame * CFrame.new(
+                        side * halfX * .30,
+                        -base.Size.Y * .5 - 4.80,
+                        halfZ * .14
                     ),
-                    theme.Detail:Lerp(VisualTheme.World.Deep, 0.24),
-                    Enum.Material.DiamondPlate,
-                    0.16
+                    theme.Detail:Lerp(VisualTheme.World.Deep, .24),
+                    Enum.Material.Metal,
+                    .22
                 )
-                if tier.Name == "High" or side < 0 then
-                    makePart(
-                        side < 0 and "UnderClassicDataGlowL" or "UnderClassicDataGlowR",
-                        Vector3.new(8.5, 0.30, 8.12),
-                        bay.CFrame * CFrame.new(0, 2.26, 0),
-                        side < 0 and theme.Accent or theme.Secondary,
-                        Enum.Material.Neon,
-                        tier.Name == "High" and 0.58 or 0.66
-                    )
-                end
+                bay:SetAttribute("OriginalUnderstructureBeam", true)
             end
         end
     elseif variant == "Crossroads" then
