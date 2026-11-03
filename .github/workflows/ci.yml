@@ -31,6 +31,35 @@ jobs:
           python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
           python3 tools/generate_district_profile_meshes.py --output-dir assets/source
           python3 tools/generate_original_skyfleet_carrier.py --output assets/source/chaos_skyfleet_carrier.obj
+          # Source candidate only: this 3D model has NOT been approved or
+          # registered yet. Validate before the one-shot creator upload.
+          python3 tools/generate_original_underdeck_chassis.py --output assets/source/chaos_underdeck_chassis.obj
+          python3 tools/obj_to_gltf.py \
+            --source assets/source/chaos_underdeck_chassis.obj \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output build/mesh-previews/chaos_underdeck_chassis.gltf
+          python3 - <<'PY'
+          import json, base64
+          from pathlib import Path
+          doc = json.loads(Path("build/mesh-previews/chaos_underdeck_chassis.gltf").read_text())
+          assert doc["asset"]["version"] == "2.0"
+          assert {v["name"] for v in doc["materials"]} == {
+              "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"
+          }
+          primitives = doc["meshes"][0]["primitives"]
+          assert len(primitives) == 7
+          triangles = sum(
+              doc["accessors"][p["attributes"]["POSITION"]]["count"] // 3
+              for p in primitives
+          )
+          assert 1400 <= triangles <= 8500, triangles
+          assert all({"POSITION", "NORMAL", "TEXCOORD_0", "TANGENT"}
+                     <= set(p["attributes"]) for p in primitives)
+          buf = doc["buffers"][0]
+          binary = base64.b64decode(buf["uri"].split(",",1)[1], validate=True)
+          assert len(binary) == buf["byteLength"] and len(binary) > 1000
+          print(f"Staged original underdeck OBJ→glTF passed: {triangles} real triangles, 7 material families.")
+          PY
           for model in reactor_spire service_crane perimeter_gate plasma_foundry sky_transit_exchange orbital_halo_array premium_jump_deck premium_skybridge_module premium_ground_tile district_observatory district_freight district_turbine district_aerial skyfleet_carrier; do
             palette="assets/source/chaos_industrial_materials.mtl"
             if [ "$model" = "perimeter_gate" ]; then
