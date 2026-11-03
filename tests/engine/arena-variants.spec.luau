@@ -294,19 +294,21 @@ describe("Arena variants", function()
                     end
                 end
                 expect(#model:GetChildren()).toBe(12)
-                expect((function()
-                    local count = 0
-                    for _ in pairs(supports) do count += 1 end
-                    return count
-                end)()).toBe(11)
+                local count = 0
+                for _ in pairs(supports) do count += 1 end
+                expect(count).toBe(11)
+                expect(model:GetAttribute("OriginalFoundationPieceCount"))
+                    .toBe(11)
                 local detailKind = if placement.asset == "reactor_spire"
                     or placement.asset == "sky_transit_exchange"
                     or placement.asset == "orbital_halo_array"
                     then "OriginalRadialHeatExchanger"
                     else "OriginalIndustrialServiceManifold"
                 expect(supports[detailKind] ~= nil).toBe(true)
-                expect(supports.OriginalChassisFrontIBeam:IsA("Part")).toBe(true)
-                expect(supports.OriginalChassisRearIBeam:IsA("Part")).toBe(true)
+                expect(supports.OriginalChassisFrontIBeam ~= nil
+                    and supports.OriginalChassisFrontIBeam:IsA("Part")).toBe(true)
+                expect(supports.OriginalChassisRearIBeam ~= nil
+                    and supports.OriginalChassisRearIBeam:IsA("Part")).toBe(true)
                 for _, side in ipairs({"-1", "1"}) do
                     local rib = supports["OriginalTaperedLoadButtress" .. side]
                     expect(rib ~= nil and rib:IsA("WedgePart")).toBe(true)
@@ -375,6 +377,7 @@ describe("Arena variants", function()
         expect(OriginalMeshScenery.addFoundation(
             instance, "sky_transit_exchange", center, size)).toBe(0)
         expect(#instance:GetChildren()).toBe(11)
+        expect(instance:GetAttribute("OriginalFoundationPieceCount")).toBe(11)
         local uniqueNames = {}
         for _, p in ipairs(instance:GetChildren()) do
             expect(uniqueNames[p.Name] == nil).toBe(true)
