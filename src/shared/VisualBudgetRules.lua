@@ -43,6 +43,12 @@ VisualBudgetRules.LocalFolders = {
     -- fixes the actual failed Build Validation #41630960261 and ensures
     -- genuine meshes cannot silently bypass adaptive quality pressure.
     "ApprovedDistrictFacadesLocal",
+    -- Five genuine creator-approved hero skyline MeshParts replace native
+    -- silhouettes and must count in the existing Android Parts budget.
+    "ApprovedOriginalHeroStructuresLocal",
+    -- Four original corner monuments are also client MeshPart owners;
+    -- they were previously absent from the persistent visual ledger.
+    "ApprovedOriginalCornerMonumentsLocal",
     "ArenaAmbientPropsLocal",
     "ArenaFocalLightingLocal",
     "ArenaSurfaceDetailLocal",
