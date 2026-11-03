@@ -1720,7 +1720,8 @@ local function addPlatformFinish(decor, platform, index, theme)
             or Vector3.new(spec[1].Z, spec[1].Y, spec[1].X)
         local where = Vector3.new(
             platform.Position.X, 0, platform.Position.Z) + spec[2]
-        local direction = (edgeIndex - 1) * math.pi * 0.5
+        local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
+        local direction = facings[edgeIndex]
         bevel.CFrame = CFrame.new(where)
             * CFrame.Angles(0, direction, 0)
         bevel.Color = edgeColor
