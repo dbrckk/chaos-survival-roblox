@@ -307,7 +307,6 @@ jobs:
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
           print("Verified 17 genuine owned approved Models, original 1696-triangle Sky Spine sculpture, 0/1/2 Android resident caps, native hazard fallbacks and source asset provenance.")
           PY
-          PY
 
       - name: Install Rojo 7.7.0
         shell: bash
