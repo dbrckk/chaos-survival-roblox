@@ -273,24 +273,33 @@ local function rebuild()
             end
         end
 
-        local segments = tier.Name == "Low" and 6 or 10
+        -- The original orbital ring was a chain of thin 0.45-stud Roblox
+        -- strips. Each curved-ring station now has a source-authentic,
+        -- 23.3-stud mechanical chassis bay as its near-camera 3D replacement.
+        -- All native bays remain cosmetic-only and automatically reappear
+        -- if the approved owner asset is unavailable or over mobile budget.
+        -- Extra stations improve the ring silhouette without extra lights.
+        local segments = tier.Name == "Low" and 10
+            or (tier.Name == "Medium" and 12 or 16)
         local radius = math.min(halfX, halfZ) * 0.64
         for i = 1, segments do
             local angle = ((i - 1) / segments) * math.pi * 2
             local tangent = angle + math.pi * 0.5
-            local pos = center + Vector3.new(
-                math.cos(angle) * radius,
-                -(base.Size.Y * 0.5) - 2.0,
-                math.sin(angle) * radius
+            local beam = makePart(
+                "UnderOrbitalBeam" .. i,
+                Vector3.new(23.3, 2.2, 7.0),
+                base.CFrame
+                    * CFrame.new(
+                        math.cos(angle) * radius,
+                        -base.Size.Y * 0.5 - 4.4,
+                        math.sin(angle) * radius
+                    )
+                    * CFrame.Angles(0, -tangent, 0),
+                i % 3 == 0 and theme.Detail or theme.Structure,
+                Enum.Material.Metal,
+                tier.Name == "Low" and 0.30 or 0.16
             )
-            makePart(
-                "UnderOrbitalArc" .. i,
-                Vector3.new(radius * 0.34, 0.45, 1.15),
-                CFrame.new(pos) * CFrame.Angles(0, -tangent, 0),
-                i % 3 == 0 and theme.Accent or theme.Structure,
-                i % 3 == 0 and Enum.Material.Neon or Enum.Material.Metal,
-                i % 3 == 0 and 0.58 or 0.18
-            )
+            beam:SetAttribute("OriginalUnderstructureBeam", true)
         end
     elseif variant == "Towers" then
         local coreDepth = tier.Name == "Low" and 12 or 18
