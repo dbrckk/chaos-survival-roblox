@@ -1,5 +1,9 @@
 # Chaos Survival — Roblox
 
+## Production de vrais assets 3D de plateformes / ponts — 3 novembre 2026
+
+Deux **nouveaux assets 3D originaux triangulés**, et non des Parts natives, sont prêts à importer dans l'inventaire Roblox du créateur : **1 156 triangles** pour le plateau de saut industriel, **920 triangles** pour un tronçon de passerelle. Chaque mesh possède des normales, UV, tangentes et sept matériaux originaux. Source et procédure : [pipeline de vrais assets de plateformes et passerelles](docs/REAL_3D_PREMIUM_DECK_BRIDGE_ART_PIPELINE_2026-11-03.md). Leurs **IDs d'import et leur approbation sont à confirmer** avant de les monter en jeu ; les plateformes physiques existantes et leur logique de catastrophes restent inchangées.
+
 ## Registre urgent visuel AAA — 3 novembre 2026
 
 **[Inventaire détaillé : 124 actions visuelles priorisées (33 P0 / 80 P1 / 11 P2)](docs/URGENT_AAA_VISUAL_BACKLOG_2026-11-03.md)** : assets 3D/2D, meshes originaux, textures PBR, ciel/lumières, météo, onze catastrophes, avatars/IA, UI mobile, caméra, LOD, vignettes et critères de livraison. **Ce registre ne certifie pas encore un rendu AAA.**
