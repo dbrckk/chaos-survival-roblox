@@ -34,6 +34,20 @@ LOT 3 NOVEMBRE 2026 — SOCLES AUTHENTIQUES DES MONUMENTS EXTERIEURS
          build Cloud, la publication publique ni la validation Android.
          Voir docs/ORIGINAL_3D_EXTERIOR_FOUNDATION_REPLACEMENT_2026-11-03.md
 
+LOT 4 NOVEMBRE 2026 — DERNIÈRES MICRO-MACHINES DE SOL EN VRAIE 3D
+[QA]     VIS-026 : quatre WedgePart de coin + lentilles, 6/12 attaches
+         de service et quatre ferrures de Harbor désormais remplaçables
+         à 100 % sur les paliers Medium/High par de vrais MeshParts,
+         sculptés UV/tangentes et créés dans le Roblox du propriétaire.
+         Angles + Harbor modérés Approved #41740585965.
+         Boulon source 10x (nouveau OBJ, pas retry HTTP 500) Approved
+         #41740889677. Android Low n'avait aucune de ces primitives ;
+         Medium 6 originaux, High 16, ou 20 sur Harbor.
+         Même shrink follower, même budget graphique, zéro collision.
+         37 actifs originaux Approved. Validation Build/Cloud et captures
+         Android du SHA de ce lot nécessaires avant de publier.
+         docs/ORIGINAL_FINAL_FLOOR_HARDWARE_3D_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — SIX SCULPTURES ORIGINALES DE RELIEFS DE SOL
 [QA]     VIS-026 : Low Essential plate 3D + cinq familles de sols propres aux
          arènes (Classic, Towers, Crossroads, Orbital, Harbor).
