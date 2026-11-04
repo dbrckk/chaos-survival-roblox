@@ -1,3 +1,19 @@
+LOT 4 NOVEMBRE 2026 — VRAIES ARCHITECTURES MIDGROUND CLASSIC & CROSSROADS
+[QA]     Les quatre masses broadcast Classic et quatre blocs transit
+         Crossroads possèdent désormais des substitutions authentiques 3D
+         utilisant 4 Models Roblox Approved déjà existants (observatoire,
+         aérien, turbine, fret) — un style différent par emplacement.
+         Outboard >=18 studs de la surface physique ; aucun collider.
+         Natif de chaque index masqué seulement après installation du
+         modèle complet, restauration sur LOD/pression, streaming et
+         map change. Android 1/2/4 Model en Low/Medium/High à pression
+         normale ; 0/1/2 au niveau 1, 0 pour toutes au niveau 2.
+         Aucun nouveau téléchargement Roblox ni boucle RenderStepped.
+         Orbital n'est PAS substitué par ces façades : ses sphères sont
+         proches des trajets, il faut des sources compactes dédiées.
+         Publication et QA Android réelles non vérifiées.
+         docs/APPROVED_MIDGROUND_SKYLINE_REPLACEMENT_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — TOUR DE REFROIDISSEMENT AUTHENTIQUE EN ANDROID LOW
 [QA]     Tower Run Low substitue maintenant UNE tour rectangulaire native
          par sept vrais MeshParts Approved (tour creuse ou turbine selon

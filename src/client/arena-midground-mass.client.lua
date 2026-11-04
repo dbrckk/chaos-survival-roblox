@@ -45,6 +45,26 @@ local function frame(base, x, y, z, yaw)
         * CFrame.Angles(0, math.rad(yaw or 0), 0)
 end
 
+-- Mark ONLY newly authored, nonphysical outboard architecture for
+-- authentic per-index replacement; never mark platform or hazard geometry.
+local function snapshotMidgroundParts()
+    local before = {}
+    for _, part in ipairs(folder:GetChildren()) do before[part] = true end
+    return before
+end
+
+local function markMidgroundParts(before, variant, index)
+    for _, part in ipairs(folder:GetChildren()) do
+        if not before[part] and part:IsA("BasePart")
+            and part.Anchored and not part.CanCollide
+            and not part.CanTouch and not part.CanQuery then
+            part:SetAttribute("OriginalMidgroundSkylineIndex", index)
+            part:SetAttribute("OriginalMidgroundSkylineVariant", variant)
+            part:SetAttribute("CosmeticOnly", true)
+        end
+    end
+end
+
 local function buildClassic(base, theme, tier)
     local hx = base.Size.X * 0.5
     local hz = base.Size.Z * 0.5
@@ -58,6 +78,7 @@ local function buildClassic(base, theme, tier)
     }
 
     for i = 1, count do
+        local before = snapshotMidgroundParts()
         local d = defs[i]
         local body = makePart(
             "ClassicBroadcastMass" .. i,
@@ -82,6 +103,7 @@ local function buildClassic(base, theme, tier)
                 tier.Name == "High" and 0.16 or 0.24
             )
         end
+        markMidgroundParts(before, "Classic", i)
     end
 end
 
@@ -150,6 +172,7 @@ local function buildCrossroads(base, theme, tier)
     }
 
     for i = 1, count do
+        local before = snapshotMidgroundParts()
         local d = defs[i]
         local body = makePart(
             "CrossroadsTransitMass" .. i,
@@ -178,6 +201,7 @@ local function buildCrossroads(base, theme, tier)
                 tier.Name == "High" and 0.12 or 0.22
             )
         end
+        markMidgroundParts(before, "Crossroads", i)
     end
 end
 

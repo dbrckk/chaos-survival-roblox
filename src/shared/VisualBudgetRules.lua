@@ -5,6 +5,9 @@ VisualBudgetRules.LocalFolders = {
     "ArenaSurfaceReliefLocal",
     "ArenaSilhouetteBreakupLocal",
     "ArenaMidgroundMassLocal",
+    -- Authentic four-way outboard Classic/Crossroads skyline replacements.
+    -- Same 440/680/900 mobile Parts census; genuine mesh caps 1/2/4.
+    "OriginalMidgroundSkylineLocal",
     -- Four near-playable sector scenes are purely local and tier-capped.
     "DistrictSectorSetpiecesLocal",
     "ArenaUnderstructureLocal",

@@ -22,6 +22,7 @@ local HarborHeroStationMeshKit = require(script.Parent.HarborHeroStationMeshKit)
 local HarborMidgroundBargeMeshKit = require(script.Parent.HarborMidgroundBargeMeshKit)
 local HarborSeaMeshKit = require(script.Parent.HarborSeaMeshKit)
 local TowerCoolingSpireMeshKit = require(script.Parent.TowerCoolingSpireMeshKit)
+local ApprovedMidgroundSkylineMeshKit = require(script.Parent.ApprovedMidgroundSkylineMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -604,6 +605,24 @@ task.spawn(function()
             ~=trueCoolingSpires then
             player:SetAttribute("LocalOriginalTowerCoolingSpireCount",
                 trueCoolingSpires)
+        end
+        -- Replace the remaining outboard Classic/Grid broadcast boxes
+        -- and Crossroads transit blocks with FOUR different already
+        -- approved original 3D facade sources per arena, no new CDN load.
+        -- Existing LOD/pressure cadence, all old native details reversible.
+        ApprovedMidgroundSkylineMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local skyline=ApprovedMidgroundSkylineMeshKit.count()
+        if player:GetAttribute("LocalOriginalMidgroundSkylineCount")
+            ~=skyline then
+            player:SetAttribute("LocalOriginalMidgroundSkylineCount",skyline)
+        end
+        local replaced=ApprovedMidgroundSkylineMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalMidgroundNativeReplaced")
+            ~=replaced then
+            player:SetAttribute("LocalOriginalMidgroundNativeReplaced",
+                replaced)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
