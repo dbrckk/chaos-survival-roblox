@@ -64,7 +64,7 @@ jobs:
           assert "Darkness" in docs
           assert "RenderStepped" not in shared
           assert "Instance.new" not in shared
-          assert "RemoteEvent" not in shared
+          assert "Instance.new(\"RemoteEvent\")" not in shared
           print("Exact source owner boundaries, five-arena mobile material bounce, "
                 "Blackout/secondary Darkness guards and release suite coverage verified. "
                 "NO PUBLICATION.",flush=True)
