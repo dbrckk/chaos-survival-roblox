@@ -1,6 +1,7 @@
 # Important major milestone: approved original 3D Harbor container freighter, no
 # game publishing. This file alone triggers the checks on exact main SHA.
 # Final exact SHA includes approved asset provenance registry and roadmap.
+# Retry after aligning strict CI approved asset and generated source allowlists.
 name: One-time QA 2026-11-04 Harbor Freighter 3D No Publish
 on:
   push:
