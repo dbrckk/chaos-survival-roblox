@@ -62,6 +62,7 @@ local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAs
 local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets)
 local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
 local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAssets)
+local PremiumHarborMidgroundBargeAssets = require(script.PremiumHarborMidgroundBargeAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -221,6 +222,9 @@ if not isStudioE2E then
     -- Replace the client-only signal station with original 3D sculpture,
     -- retaining its existing animated radar, lens, cable and weight.
     task.defer(PremiumHarborHeroStationAssets.start)
+    -- Approved original chined cargo barges, after important first-screen
+    -- assets. Entirely cosmetic: do not delay lobby or disaster logic.
+    task.defer(PremiumHarborMidgroundBargeAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
