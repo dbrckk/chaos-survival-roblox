@@ -5,6 +5,45 @@
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
+      },
+      "OriginalGroundPbrTemplates": {
+        "$className": "Folder",
+        "BrushedTitanium": {
+          "$className": "SurfaceAppearance",
+          "$properties": {
+            "ColorMap": "rbxassetid://93512804494811",
+            "NormalMap": "rbxassetid://134136390827741",
+            "RoughnessMap": "rbxassetid://99840526887005",
+            "MetalnessMap": "rbxassetid://125325987942142"
+          }
+        },
+        "OxidizedSteel": {
+          "$className": "SurfaceAppearance",
+          "$properties": {
+            "ColorMap": "rbxassetid://82285382088265",
+            "NormalMap": "rbxassetid://104267080578064",
+            "RoughnessMap": "rbxassetid://111840273888747",
+            "MetalnessMap": "rbxassetid://129876668948085"
+          }
+        },
+        "DiamondArmor": {
+          "$className": "SurfaceAppearance",
+          "$properties": {
+            "ColorMap": "rbxassetid://86680602350796",
+            "NormalMap": "rbxassetid://94326474312318",
+            "RoughnessMap": "rbxassetid://121848704472466",
+            "MetalnessMap": "rbxassetid://106394628880013"
+          }
+        },
+        "ReactorCeramic": {
+          "$className": "SurfaceAppearance",
+          "$properties": {
+            "ColorMap": "rbxassetid://116332723277416",
+            "NormalMap": "rbxassetid://83976763267230",
+            "RoughnessMap": "rbxassetid://131401137724195",
+            "MetalnessMap": "rbxassetid://100056220542598"
+          }
+        }
       }
     },
     "ServerScriptService": {
