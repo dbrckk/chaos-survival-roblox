@@ -682,14 +682,17 @@ function PlatformFinishKit.carapaceCount(tier, index)
     return 0
 end
 
-function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index)
+function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index, selectedForOriginal)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not CARAPACE_PROFILES[variant]
         or platform:GetAttribute("ChaosSkybridge") == true then
         return {}
     end
     local budget = PlatformFinishKit.carapaceCount(tier, index)
-    if budget == 0 then return {} end
+    -- A selected verified original may replace a previously undecorated
+    -- physical deck. Never construct NEW native fallback parts solely
+    -- because a source was selected: preserve the legacy 3/4/8 cadence.
+    if budget == 0 and selectedForOriginal ~= true then return {} end
 
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
     -- Narrow skywalks and the giant structural spans already have their
@@ -703,9 +706,10 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
     -- The native art below is only built when the genuine mesh is absent.
     if PremiumPlatformSideMeshKit then
         local original = PremiumPlatformSideMeshKit.carapace(
-            parent, platform, variant, tier, index)
+            parent, platform, variant, tier, index, selectedForOriginal)
         if original then return original end
     end
+    if budget == 0 then return {} end
 
     local p = CARAPACE_PROFILES[variant]
     local shellColor = theme.Structure:Lerp(theme.Detail, p.tint)

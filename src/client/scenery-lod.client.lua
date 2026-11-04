@@ -472,7 +472,8 @@ task.spawn(function()
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
-            cameraReady, cameraLook)
+            cameraReady, cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
         -- Five-arena original 2,976-triangle sculpted floor: healthy
         -- High can now replace all 36 genuine 49-stud native floor bays,
         -- Medium 12 and Low 2. The EXISTING GPU/instance backpressure

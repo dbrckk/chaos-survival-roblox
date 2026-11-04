@@ -13,6 +13,8 @@ local PlatformNativeTrimReplacementKit = require(
     script.Parent.PlatformNativeTrimReplacementKit)
 local PremiumLargeStructureMeshKit = require(
     script.Parent.PremiumLargeStructureMeshKit)
+local PremiumPlatformSideMeshKit = require(
+    script.Parent.PremiumPlatformSideMeshKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
 
 local player = Players.LocalPlayer
@@ -107,6 +109,9 @@ local function clear()
     PlatformNativeTrimReplacementKit.reset()
     if player:GetAttribute("LocalNativeStructuralPartsReplaced") ~= 0 then
         player:SetAttribute("LocalNativeStructuralPartsReplaced", 0)
+    end
+    if player:GetAttribute("LocalOriginalNearRouteCarapaceCount") ~= 0 then
+        player:SetAttribute("LocalOriginalNearRouteCarapaceCount", 0)
     end
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
@@ -472,6 +477,11 @@ local function rebuild()
     local originalLargeCount = 0
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
+    local camera = workspace.CurrentCamera
+    local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
+        ordered, variant, tier.Name, base,
+        camera and camera.CFrame.Position or nil)
+    local mountedCameraCarapaces = 0
 
     for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
@@ -525,7 +535,12 @@ local function rebuild()
                 folder, platform, tier.Name, visualIndex)
             local carapacePieces = largeHullPieces
                 or PlatformFinishKit.buildCarapace(
-                    folder, platform, variant, tier.Name, theme, visualIndex)
+                    folder, platform, variant, tier.Name, theme, visualIndex,
+                    nearCameraCarapaces[platform] == true)
+            if carapacePieces[1] and carapacePieces[1]:GetAttribute(
+                "NearCameraCarapace3D") == true then
+                mountedCameraCarapaces += 1
+            end
             local authenticCarapace = carapacePieces[1] ~= nil
                 and carapacePieces[1]:GetAttribute(
                     "Original3DStructuralSide") == true
@@ -727,6 +742,13 @@ local function rebuild()
     -- This preserves all gameplay lights, warning rails, platforms and
     -- the original fallback in the server. Streams are handled by its
     -- Folder.ChildAdded observer with exact name/index provenance.
+    -- Actual successful true-3D structural shell count, not the number
+    -- of requested candidates; persisted only as client diagnostics.
+    if player:GetAttribute("LocalOriginalNearRouteCarapaceCount")
+        ~= mountedCameraCarapaces then
+        player:SetAttribute("LocalOriginalNearRouteCarapaceCount",
+            mountedCameraCarapaces)
+    end
     PlatformNativeTrimReplacementKit.bind(
         arena, replacements, function(nativeCount)
             if player:GetAttribute("LocalNativeStructuralPartsReplaced")

@@ -419,12 +419,28 @@ local function eligible(platform, cameraPoint, maxDistance, retention, cameraLoo
 end
 
 -- Called BY the existing LOD scheduler, not a new time-based loop.
-function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, cameraLook)
+function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
+    cameraLook, pressure)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local budget = BUDGET[quality] or BUDGET.Low
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0),0,2)
+    local deckCap, bridgeCap, underdeckCap =
+        budget.decks, budget.bridges, budget.underdecks
+    -- This is the existing 0.65/0.90-second cosmetic LOD sampler. Under
+    -- actual frame pressure, evict optional dense 3D BEFORE lowering
+    -- server-owned real routes or hazard warnings (those never change).
+    if stress == 1 then
+        deckCap = math.max(1,math.ceil(deckCap*.68))
+        bridgeCap = math.max(0,math.floor(bridgeCap*.70))
+        underdeckCap = math.floor(underdeckCap*.50)
+    elseif stress == 2 then
+        deckCap = math.max(1,math.ceil(deckCap*.38))
+        bridgeCap = 0
+        underdeckCap = 0
+    end
     if not arena or not cameraReady or typeof(cameraPoint) ~= "Vector3" then
         clearMounted()
         return
@@ -479,13 +495,13 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, came
     local deckTemplate = getTemplate("PremiumJumpDeck")
     local bridgeTemplate = getTemplate("PremiumSkybridgeModule")
     if deckTemplate then
-        for i = 1, math.min(#decks, budget.decks) do
+        for i = 1, math.min(#decks, deckCap) do
             wanted[decks[i].platform] = {template = deckTemplate, count = 1,
                 bridge = false}
         end
     end
     if bridgeTemplate then
-        for i = 1, math.min(#bridges, budget.bridges) do
+        for i = 1, math.min(#bridges, bridgeCap) do
             local span = math.max(bridges[i].platform.Size.X,
                 bridges[i].platform.Size.Z)
             local count = math.min(budget.segments,
@@ -502,7 +518,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, came
     -- inside the SAME PremiumRouteMeshLocal adaptive Android Parts ledger.
     -- Prefer eligible real 26-stud connector routes, then large safe decks.
     local underdeckTemplate = getTemplate("OriginalUnderdeckChassis")
-    local underdeckSlots = budget.underdecks
+    local underdeckSlots = underdeckCap
     if underdeckTemplate and underdeckSlots > 0 then
         local ranked = {}
         for _, item in ipairs(bridges) do

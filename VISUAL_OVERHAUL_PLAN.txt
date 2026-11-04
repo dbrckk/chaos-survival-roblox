@@ -1,3 +1,17 @@
+LOT 5 NOVEMBRE 2026 — PRIORITÉ STRUCTURES SCULPTÉES PRÈS CAMÉRA
+[QA]     Index modulo 6/12 remplacés par sélection réelle des decks
+         physiques sûrs les plus proches de la caméra (si arène chargée)
+         sinon du centre. 16 High / 8 Medium / 0 Low carapaces 3D
+         originales Approved, sans ajout de faux colliders, lumière ou
+         RenderStepped. Source tardive du serveur prise en charge par
+         watchers existants et rebuild qualitatif. Native fallback
+         historique conservé, pas de nouveaux WedgePart en remplacement
+         d'un vrai modèle absent. PremiumRouteMeshKit s'adapte aussi
+         à OptionalVfxPressure, même sampler 0.65/0.90 s.
+         Source testée structurellement ; runtime Android non observé,
+         tests moteur de ce SHA à déclencher au jalon.
+         docs/NEAR_CAMERA_APPROVED_PLATFORM_CARAPACE_2026-11-05.md
+
 LOT 4 NOVEMBRE 2026 — CORRECTION GLOBAL DU RENDU TROP SOMBRE EN MANCHE
 [QA]     Identification réelle : juice imposait EnvironmentDiffuseScale
          = 0.34 à toutes les arènes pendant la manche, annulant le

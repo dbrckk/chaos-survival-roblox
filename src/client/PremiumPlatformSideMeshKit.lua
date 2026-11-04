@@ -107,22 +107,84 @@ local function stage(parent, platform, source, name, scale, target)
     return publishParts(parent, copy, pieces, name)
 end
 
--- Sparse real 3D whole-underside skins instead of seven native wedges,
+-- The previous fixed "every sixth/every twelfth" sample could leave ALL
+-- jump decks nearest the player with native WedgePart skirts. At a map/
+-- quality rebuild, reserve the SAME bounded source-backed owner for REAL
+-- safe platforms closest to the play area, not arbitrary index parity.
+-- This is a snapshot (not live camera tracking); PremiumRouteMeshKit already
+-- owns continuous camera-LOD for upper deck paint and bridge covers.
+-- The server keeps all colliders, collapse cues and source fallbacks.
+function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint)
+    local chosen = {}
+    local limit = tier == "High" and 16 or (tier == "Medium" and 8 or 0)
+    if limit == 0 or type(platforms) ~= "table"
+        or not base or not base:IsA("BasePart") then
+        return chosen
+    end
+    -- Do not reserve slots until the actual seven-material model has
+    -- replicated and passed the same OwnerVerified/provenance/size gate
+    -- that the mount itself requires.
+    if not verified(variant) then return chosen end
+    local focus = base.Position
+    if typeof(cameraPoint) == "Vector3" then
+        local localCamera = base.CFrame:PointToObjectSpace(cameraPoint)
+        if math.abs(localCamera.X) <= base.Size.X*.5 + 16
+            and math.abs(localCamera.Z) <= base.Size.Z*.5 + 16
+            and math.abs(localCamera.Y) <= 130 then
+            focus = cameraPoint
+        end
+    end
+    local candidates = {}
+    for _, platform in ipairs(platforms) do
+        if platform:IsA("BasePart") and platform.Parent
+            and platform.Name:match("^Platform%d+$")
+            and platform.Anchored and platform.CanCollide
+            and platform.Transparency < .75
+            and platform:GetAttribute("ChaosSkybridge") ~= true then
+            local phase = platform:GetAttribute("CollapsePhase")
+            local x,z = platform.Size.X,platform.Size.Z
+            local long,short = math.max(x,z),math.min(x,z)
+            if (phase == nil or phase == "Normal" or phase == "Safe")
+                and short >= 7.1 and long <= 36
+                and long / short <= 2.6 then
+                local delta=platform.Position-focus
+                -- Upper decks remain attractive but distant unused edge
+                -- platforms must not consume the scarce true-mesh budget.
+                local score=Vector3.new(delta.X,delta.Y*.60,delta.Z).Magnitude
+                if platform:GetAttribute("ChaosPermanentRoute") == true then
+                    score-=6
+                end
+                candidates[#candidates+1]={part=platform,score=score}
+            end
+        end
+    end
+    table.sort(candidates,function(a,b)
+        if a.score ~= b.score then return a.score < b.score end
+        return a.part.Name < b.part.Name
+    end)
+    for i=1,math.min(#candidates,limit) do
+        chosen[candidates[i].part]=true
+    end
+    return chosen
+end
+
+-- Genuine whole-underside skins replace native wedges,
 -- bars and fake keel blocks on a selected subset of existing platforms.
 -- High 1/6, Medium 1/12, Low 0. Original assets replace native
 -- wedge/rail/brace clusters instead of simply stacking extra primitives.
 -- Candidate only: real Android GPU and silhouette QA still required.
-function Kit.carapace(parent, platform, variant, tier, index)
+function Kit.carapace(parent, platform, variant, tier, index, selected)
     if tier == "Low" or platform:GetAttribute("ChaosSkybridge") == true then
         return nil
     end
     local id = tonumber(index)
-    -- High: one authentic shell per 6 eligible indices; Medium: per 12.
-    -- Both are multiples of PlatformFinishKit.carapaceCount's 3/4 cadence,
-    -- so every chosen platform is actually eligible for genuine replacement.
-    -- No new Models are created on Low and all geometry gates remain intact.
+    if not id or id < 1 then return nil end
+    -- Explicit TRUE only for one of the 16/8 nearest genuine safe decks.
+    -- FALSE never mounts an extra model; nil preserves the old 1/6/1/12
+    -- legacy API for independent consumers / test harnesses.
+    if selected == false then return nil end
     local step = tier == "High" and 6 or 12
-    if not id or id < 1 or id % step ~= 1 then return nil end
+    if selected ~= true and id % step ~= 1 then return nil end
     local source, original = verified(variant)
     if not source or not parent or not platform or not platform:IsA("BasePart")
         or not platform.Parent or not platform.CanCollide
@@ -137,7 +199,7 @@ function Kit.carapace(parent, platform, variant, tier, index)
     if scale < .62 then return nil end
     local yaw = (sz > sx) ~= (original.Z > original.X)
         and math.pi * .5 or 0
-    return stage(parent, platform, source, variant, scale,
+    local parts = stage(parent, platform, source, variant, scale,
         function(size)
             if size.Y <= 0 or size.Y > 4.55
                 or math.max(size.X,size.Z) > long*.96
@@ -150,6 +212,14 @@ function Kit.carapace(parent, platform, variant, tier, index)
                 * CFrame.new(0, sy*.5 - .16 - size.Y*.5, 0)
                 * CFrame.Angles(0, yaw, 0)
         end)
+    if parts and selected == true then
+        -- Diagnostic of ACTUAL mounted approved sources, not merely
+        -- selected candidates, rendered pixels or a performance result.
+        for _, part in ipairs(parts) do
+            part:SetAttribute("NearCameraCarapace3D", true)
+        end
+    end
+    return parts
 end
 
 -- Authored side-only bridge truss hardware replaces selected native
