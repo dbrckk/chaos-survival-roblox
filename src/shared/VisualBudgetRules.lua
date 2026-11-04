@@ -90,6 +90,10 @@ VisualBudgetRules.LocalFolders = {
     -- 7 imported MeshParts per Model, 0/2/4 Android tier/source caps.
     -- Count their 3D impact against existing global Parts budgets.
     "OriginalHarborMidgroundBargesLocal",
+    -- Authentic 960-stud authored coast annulus: 7 real marine PBR
+    -- MeshParts, always an integral world landmark on Android tiers.
+    -- Never part of player physics or an untracked giant hidden slab.
+    "OriginalHarborSculptedSeaLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
