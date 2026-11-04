@@ -57,6 +57,44 @@ jobs:
               total+=gltf["accessors"][attrs["POSITION"]]["count"]//3
           assert total==source["triangles"]
           PY
+          # Six newly Approved creator-owned tall structural supports and
+          # under-bridge cradles. Verify the executable source each milestone.
+          for kind in column_classic column_towers column_crossroads column_orbital column_harbor long_route_cradle; do
+            python3 tools/generate_original_large_supports.py \
+              --model "$kind" --output "assets/source/chaos_${kind}.obj" \
+              > "build/mesh-previews/chaos_${kind}-source.json"
+            python3 tools/obj_to_gltf.py \
+              --source "assets/source/chaos_${kind}.obj" \
+              --materials assets/source/chaos_route_kit.mtl \
+              --output "build/mesh-previews/chaos_${kind}.gltf"
+          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for kind in ("column_classic","column_towers","column_crossroads",
+                       "column_orbital","column_harbor","long_route_cradle"):
+              stem=Path("build/mesh-previews/chaos_"+kind)
+              meta=json.loads(Path(str(stem)+"-source.json").read_text())
+              document=json.loads(Path(str(stem)+".gltf").read_text())
+              assert meta["asset"]==kind
+              assert 380<=meta["triangles"]<=5500
+              assert 19<=meta["groups"]<=150
+              assert {m["name"] for m in document["materials"]}=={
+                  "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+              prims=document["meshes"][0]["primitives"]
+              assert len(prims)==7
+              n=0
+              for prim in prims:
+                  attrs=prim["attributes"]
+                  assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+                  n+=document["accessors"][attrs["POSITION"]]["count"]//3
+              assert n==meta["triangles"]
+              x,y,z=meta["dimensions"]
+              if kind=="long_route_cradle":
+                  assert 21.5<=x<=23 and 2<=y<=4 and 9.4<=z<=10.5
+              else:
+                  assert 1.7<=x<=2.4 and 13.6<=y<=14.5 and 1.6<=z<=2.4
+          PY
           # Six new moderated original platform/skybridge models. Rebuild
           # their actual OBJ and embedded glTF at every release milestone;
           # a registry ID alone does not prove real UV/tangent geometry.
