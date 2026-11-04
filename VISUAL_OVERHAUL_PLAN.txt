@@ -1,3 +1,14 @@
+LOT 4 NOVEMBRE 2026 — SUBSTITUTION RÉELLE DES PRIMITIVES DES DECKS
+[QA]     Nouvel owner visuel client: masque de manière locale/réversible
+         les WedgeParts PlatformBevel, PlatformUnderFrame et SkybridgeRib
+         uniquement quand les vraies pièces approuvées existent pour le
+         même index de deck/bridge. Tous avertissements et collisions restent.
+         Le shrink des treillis réels redimensionne X ou Z selon le long axe
+         importé en glTF/Roblox. Compteur d'éléments natifs réellement masqués
+         LocalNativeStructuralPartsReplaced; pas de nouvelles Part/loops.
+         Gros piliers, plateformes incompatibles, rails lumineux restent.
+         docs/ORIGINAL_PLATFORM_CARAPACES_BRIDGE_2026-11-04.md
+
 CHAOS SURVIVAL — VISUAL OVERHAUL MASTER PLAN
 =============================================
 
