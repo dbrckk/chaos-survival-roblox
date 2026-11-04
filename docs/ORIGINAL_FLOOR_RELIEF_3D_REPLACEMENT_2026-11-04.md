@@ -49,3 +49,13 @@ Les autres arènes ont entre 4 et 14 reliefs principaux, donc restent sous ces p
 - Les sept groupes métalliques ont des matériaux glTF et UV/tangentes, **pas de nouvelles cartes raster PBR 2K**. Les assets PBR raster déjà approuvés appartiennent à un autre chantier visuel.
 
 Le registre conserve `floor_relief_models_inserted_in_game=false` tant que la publication du SHA exact n'est pas démontrée.
+
+## Extension du 4 novembre — plateformes mobiles
+
+`PlatformFinishKit.buildServiceHatch` réutilise maintenant les **cinq véritables meshes de relief déjà approuvés**, au lieu d'empiler systématiquement trois Parts rectangulaires sur les trappes de maintenance des plateformes mobiles. Il conserve la construction native si le Model n'est pas encore disponible, si les dimensions ne permettent pas un montage sans dépassement, ou si le budget caméra ne permet pas le remplacement.
+
+Les pièces réelles sont des `MeshPart` massless, non-colliding, welded au vrai `platform` et enregistrées dans l'owner de visibilité et de rétrécissement existant. Le flux de streaming tardif réactive le rebuild de ce propriétaire lorsque le Model approuvé pour l'arène courante arrive ; pas de RenderStepped supplémentaire.
+
+**Budget limité :** seulement une plateforme sur 18 en Medium, une sur 9 en High, aucune en Low. Les trappes des autres plateformes gardent leur finition légère d'origine. Le lot ne crée pas de nouveaux AssetId et ne modifie aucune physique de déplacement.
+
+**Preuve de code :** commits `c9b07822`, `d490c416`, `30f068c3`. Ce lot additionnel n'est pas encore couvert par un nouveau Build/Cloud et n'a pas été publié.
