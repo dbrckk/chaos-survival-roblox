@@ -1,0 +1,172 @@
+# Important major milestone: FOUR original actively moving Harbor 3D cranes, no
+# game publishing. This file alone triggers the checks on exact main SHA.
+# Exact main SHA includes seven material groups, 57 approved assets and native animation.
+name: One-time QA 2026-11-04 Kinetic Harbor Gantries 3D No Publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261104-kinetic-harbor-gantries-no-publish.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-harbor-kinetic-gantries-qa-20261104
+  cancel-in-progress: false
+
+jobs:
+  validate-exact-sha:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source integrity guard for the actual visual batch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          asset=Path("src/server/PremiumHarborGantryAssets.lua").read_text()
+          client=Path("src/client/HarborGantryKineticMeshKit.lua").read_text()
+          art=Path("tools/generate_original_harbor_gantry.py").read_text()
+          importer=Path(".github/workflows/upload-original-3d-models.yml").read_text()
+          init=Path("src/server/init.server.lua").read_text()
+          lod=Path("src/client/scenery-lod.client.lua").read_text()
+          budget=Path("src/shared/VisualBudgetRules.lua").read_text()
+          native=Path("src/server/HarborScenery.lua").read_text()
+          motion=Path("src/client/harbor-gantry-motion.client.lua").read_text()
+          rules=Path("src/shared/HarborGantryMotionRules.lua").read_text()
+          registry=json.loads(Path("assets/source/roblox-asset-registry.json").read_text())
+          assert len(registry["models"])==57
+          ids={m["name"]:m["asset_id"] for m in registry["models"]}
+          expected={
+              "harbor_gantry_container":"86657004812104",
+              "harbor_gantry_drum":"82714598831399",
+              "harbor_gantry_kinetic_container":"75684193304551",
+              "harbor_gantry_kinetic_drum":"98809955094422",
+          }
+          assert all(ids.get(k)==v for k,v in expected.items())
+          for id in ("75684193304551","98809955094422"):
+              assert id in asset and id in client
+          assert "OriginalMeshScenery.sanitize(raw)" in asset
+          assert "ApprovedHarborKineticGantryTemplates" in asset
+          assert "PremiumHarborGantryAssets.start" in init
+          assert "OriginalHarborGantryKineticRole" in client
+          assert "OriginalHarborGantryKineticRole" in asset
+          assert "roles.Static~=4" in client and "counts.Static ~= 4" in asset
+          assert "HarborGantryKineticMeshKit.sync" in lod
+          assert "LocalOriginalHarborKineticGantryCount" in lod
+          assert "LocalOriginalHarborKineticMeshPartCount" in lod
+          assert "OriginalHarborKineticGantryLocal" in budget
+          assert "EXPECTED_SECTOR" in client and "GantrySector" in native
+          assert "MainCrossgirder" in native and "MainCrossgirder" in client
+          assert "TrolleyCabin" in native and "TrolleyCabin" in client
+          assert "CargoSpreader" in native and "CargoSpreader" in client
+          assert "HoistCable" in native and "HoistCable" in client
+          assert "getAttribute" not in client or "Original3DAssetId" in client
+          assert 'GetPropertyChangedSignal("CFrame")' in client
+          assert 'GetPropertyChangedSignal("Size")' in client
+          assert "e.cable.Size.Y/13.0" in client
+          assert "followNativeMotion" in client and "CFrame" in motion
+          assert "Motion.pose" in motion and "role" in rules
+          assert "ReduceMotion" in motion and "LocalTransparencyModifier" in motion
+          assert "part.Transparency=alpha" in client
+          assert 'CanCollide=false' in client and 'CanTouch=false' in client
+          assert 'Low = {models=0' in client
+          assert 'Medium = {models=2' in client
+          assert 'High = {models=4' in client
+          assert "harbor_gantry_kinetic_container" in importer
+          assert "harbor_gantry_kinetic_drum" in importer
+          assert "KINETIC_MATERIAL_ROLES" in art
+          assert "MOVING_TROLLEY" in art and "MOVING_CABLE" in art
+          assert "MOVING_LOAD" in art and "TaperedTenSidedQuayPier" in art
+          assert "RunService" not in client and "task.spawn" not in client
+          print("Verified four genuine KINETIC Harbor cranes, three separate moving MeshParts, real native motion, Android fallbacks and 57-model receipts; NO PUBLISH")
+          PY
+      - name: Source-only milestone validation (NEVER publish)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          repo=os.environ["REPO"]
+          candidate=os.environ["CANDIDATE_SHA"]
+          base="https://api.github.com/repos/"+repo
+          headers={
+              "Authorization":"Bearer "+os.environ["GH_TOKEN"],
+              "Accept":"application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28",
+              "User-Agent":"chaos-harbor-kinetic-gantries-source-only",
+          }
+
+          def api(path,payload=None):
+              body=json.dumps(payload).encode() if payload is not None else None
+              request=urllib.request.Request(base+path,data=body,
+                  method="POST" if body is not None else "GET",
+                  headers={**headers,"Content-Type":"application/json"})
+              for attempt in range(6):
+                  try:
+                      with urllib.request.urlopen(request,timeout=40) as r:
+                          if payload is not None:
+                              if r.status!=204:
+                                  raise RuntimeError("Invalid dispatch response")
+                              return {}
+                          return json.load(r)
+                  except (urllib.error.URLError,TimeoutError):
+                      if attempt==5: raise
+                      time.sleep(3*(attempt+1))
+
+          def verify_head():
+              actual=api("/git/ref/heads/main")["object"]["sha"]
+              if actual!=candidate:
+                  raise SystemExit("main moved; abandon stale SHA QA")
+
+          verify_head()
+          print("VALIDATION ONLY, NO PUBLICATION",candidate,flush=True)
+          names={"Build Validation":"ci.yml",
+                 "Roblox Open Cloud Engine Tests":"roblox-cloud-test.yml"}
+          for name,path in names.items():
+              verify_head()
+              api("/actions/workflows/"+path+"/dispatches",{"ref":"main"})
+              print("Dispatched",name,flush=True)
+              time.sleep(4)
+
+          for attempt in range(400):
+              verify_head()
+              runs=api("/actions/runs?head_sha="+candidate+"&per_page=100")
+              states={}
+              for run in runs.get("workflow_runs",[]):
+                  if run.get("head_sha")!=candidate or run.get("event")!="workflow_dispatch":
+                      continue
+                  name=run.get("name")
+                  if name in names and (name not in states or
+                      run.get("created_at","") > states[name].get("created_at","")):
+                      states[name]=run
+              if attempt%6==0:
+                  print("Milestone:",{name:
+                      (states.get(name) or {}).get("status","pending")+"/"+
+                      str((states.get(name) or {}).get("conclusion"))
+                      for name in names},flush=True)
+              if any(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")!="success" for n in names):
+                  raise SystemExit("Exact-SHA source milestone FAILED; no publish")
+              if all(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")=="success" for n in names):
+                  verify_head()
+                  print("Exact-SHA Build + Cloud passed. NO PUBLISH.",candidate,flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Exact-SHA QA timed out; no publish")
+          PY
