@@ -734,7 +734,7 @@ local function rebuild()
                 player:SetAttribute("LocalNativeStructuralPartsReplaced",
                     nativeCount)
             end
-        end, actualSupportParts)
+        end, actualSupportParts, folder)
     if player:GetAttribute("LocalOriginalLargeStructure3DCount")
         ~= originalLargeCount then
         player:SetAttribute("LocalOriginalLargeStructure3DCount",
