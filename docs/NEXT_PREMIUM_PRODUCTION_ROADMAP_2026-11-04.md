@@ -4,7 +4,7 @@
 
 > **Cap de production :** fiabilité > jeu réellement fonctionnel > sécurité/équité > architecture > performance > rendu visuel > fonctionnalités secondaires. Le **rendu visible, les vraies routes et les bots** constituent les prochains gros investissements, pas l'accumulation d'ornements. Terminer chaque lot au niveau final visé avant de passer au suivant. Ne créer aucune version publique intermédiaire ni tests unitaires supplémentaires. Exécuter les builds/tests moteur aux jalons importants seulement.
 
-**Lot 1 — avancement source (5 novembre 2026) :** nouvelle sélection de carapaces réelles selon la proximité de la zone jouée plutôt que des numéros modulo 6/12 ; plafonds 16 High et 8 Medium, aucun modèle Low, fallback natif strict. Le sampler existant adapte désormais les MeshParts de route et underdecks à la pression graphique. [Dossier technique](NEAR_CAMERA_APPROVED_PLATFORM_CARAPACE_2026-11-05.md). **Montage en jeu et certification Android non encore prouvés.**
+**Lot 1 — avancement source (4 novembre 2026) :** nouvelle sélection de carapaces réelles selon la proximité de la zone jouée plutôt que des numéros modulo 6/12 ; plafonds 16 High et 8 Medium, aucun modèle Low, fallback natif strict. Le sampler existant adapte désormais les MeshParts de route et underdecks à la pression graphique. [Dossier technique](NEAR_CAMERA_APPROVED_PLATFORM_CARAPACE_2026-11-04.md). **Montage en jeu et certification Android non encore prouvés.**
 
 ## 1. État réellement vérifié du produit
 

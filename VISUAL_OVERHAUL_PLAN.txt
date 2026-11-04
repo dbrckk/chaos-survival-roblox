@@ -1,4 +1,4 @@
-LOT 5 NOVEMBRE 2026 — PRIORITÉ STRUCTURES SCULPTÉES PRÈS CAMÉRA
+LOT 4 NOVEMBRE 2026 — PRIORITÉ STRUCTURES SCULPTÉES PRÈS CAMÉRA
 [QA]     Index modulo 6/12 remplacés par sélection réelle des decks
          physiques sûrs les plus proches de la caméra (si arène chargée)
          sinon du centre. 16 High / 8 Medium / 0 Low carapaces 3D
@@ -10,7 +10,7 @@ LOT 5 NOVEMBRE 2026 — PRIORITÉ STRUCTURES SCULPTÉES PRÈS CAMÉRA
          à OptionalVfxPressure, même sampler 0.65/0.90 s.
          Source testée structurellement ; runtime Android non observé,
          tests moteur de ce SHA à déclencher au jalon.
-         docs/NEAR_CAMERA_APPROVED_PLATFORM_CARAPACE_2026-11-05.md
+         docs/NEAR_CAMERA_APPROVED_PLATFORM_CARAPACE_2026-11-04.md
 
 LOT 4 NOVEMBRE 2026 — CORRECTION GLOBAL DU RENDU TROP SOMBRE EN MANCHE
 [QA]     Identification réelle : juice imposait EnvironmentDiffuseScale
