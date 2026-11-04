@@ -63,6 +63,7 @@ local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets
 local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
 local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAssets)
 local PremiumHarborMidgroundBargeAssets = require(script.PremiumHarborMidgroundBargeAssets)
+local PremiumHarborSeaAssets = require(script.PremiumHarborSeaAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -225,6 +226,9 @@ if not isStudioE2E then
     -- Approved original chined cargo barges, after important first-screen
     -- assets. Entirely cosmetic: do not delay lobby or disaster logic.
     task.defer(PremiumHarborMidgroundBargeAssets.start)
+    -- Massive true ocean model: one original noncolliding coastal annulus,
+    -- zero triangles inside Harbor's authoritative survival floor.
+    task.defer(PremiumHarborSeaAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
