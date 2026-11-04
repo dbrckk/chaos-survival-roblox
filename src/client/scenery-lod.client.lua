@@ -20,6 +20,7 @@ local HarborFreighterMeshKit = require(script.Parent.HarborFreighterMeshKit)
 local HarborGantryKineticMeshKit = require(script.Parent.HarborGantryKineticMeshKit)
 local HarborHeroStationMeshKit = require(script.Parent.HarborHeroStationMeshKit)
 local HarborMidgroundBargeMeshKit = require(script.Parent.HarborMidgroundBargeMeshKit)
+local HarborSeaMeshKit = require(script.Parent.HarborSeaMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -579,6 +580,16 @@ task.spawn(function()
             ~= originalBarges then
             player:SetAttribute("LocalOriginalHarborBargeCount",
                 originalBarges)
+        end
+        -- Authentic source-authored coastal sea around the REAL
+        -- 320-stud Storm Harbor arena: 7 sculpted UV/tangent MeshParts,
+        -- zero water colliders or fake surfaces above gameplay. The sea
+        -- is a primary environment silhouette on Low/Medium/High,
+        -- not optional particle spam, and uses THIS existing LOD clock.
+        HarborSeaMeshKit.sync(arena,cameraPoint,profile.Name,cameraReady)
+        local ocean=HarborSeaMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborSeaCount")~=ocean then
+            player:SetAttribute("LocalOriginalHarborSeaCount",ocean)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
