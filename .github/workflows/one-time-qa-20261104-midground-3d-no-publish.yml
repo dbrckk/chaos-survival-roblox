@@ -42,7 +42,7 @@ jobs:
           sourceids={"Observatory":132020956214241,
               "Freight":88725004643299,"Turbine":84217436280282,
               "Aerial":135791763112202}
-          registered={x["asset_id"] for x in registry["models"]
+          registered={int(x["asset_id"]) for x in registry["models"]
               if x["moderation"]=="Approved"}
           assert len(registry["models"])==62 and len(registered)==62
           for name, asset in sourceids.items():
