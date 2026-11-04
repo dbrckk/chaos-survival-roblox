@@ -490,6 +490,14 @@
       "source": "tools/generate_original_harbor_barge.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41862430789
+    },
+    {
+      "name": "harbor_sea_apron",
+      "asset_id": "111296950975600",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_sea.py",
+      "source_materials": "assets/source/chaos_harbor_sea.mtl",
+      "workflow_run_id": 41889798492
     }
   ]
 }
