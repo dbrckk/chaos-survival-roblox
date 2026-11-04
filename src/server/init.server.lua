@@ -61,6 +61,7 @@ local PremiumHarborPromenadePortalAssets = require(script.PremiumHarborPromenade
 local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAssets)
 local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets)
 local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
+local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -217,6 +218,9 @@ if not isStudioE2E then
     -- Four original distant industrial gantries: cargo and cable variants
     -- have independently animated genuine mesh components. Optional.
     task.defer(PremiumHarborGantryAssets.start)
+    -- Replace the client-only signal station with original 3D sculpture,
+    -- retaining its existing animated radar, lens, cable and weight.
+    task.defer(PremiumHarborHeroStationAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
