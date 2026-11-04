@@ -473,21 +473,40 @@ local function rebuild()
             )) do
                 registerVisual(platform, piece)
             end
-            for _, piece in ipairs(PlatformFinishKit.buildArmor(
-                folder, platform, variant, tier.Name, theme
-            )) do
+            -- Build authentic 3D structural art first. If it succeeds,
+            -- completely avoid the native WedgePart armor/brace/rail layers
+            -- that previously occupied the SAME physical deck silhouette.
+            -- Native fallback is still built in full if a real mesh is
+            -- unavailable, unsuitable for this deck, or fails to load.
+            local carapacePieces = PlatformFinishKit.buildCarapace(
+                folder, platform, variant, tier.Name, theme, visualIndex)
+            local authenticCarapace = carapacePieces[1] ~= nil
+                and carapacePieces[1]:GetAttribute(
+                    "Original3DStructuralSide") == true
+            local sidePieces = {}
+            if not authenticCarapace then
+                sidePieces = PlatformFinishKit.buildSideRails(
+                    folder, platform, tier.Name, theme, variant, visualIndex)
+            end
+            local authenticBridge = sidePieces[1] ~= nil
+                and sidePieces[1]:GetAttribute(
+                    "Original3DStructuralSide") == true
+            if not authenticCarapace and not authenticBridge then
+                for _, piece in ipairs(PlatformFinishKit.buildArmor(
+                    folder, platform, variant, tier.Name, theme
+                )) do
+                    registerVisual(platform, piece)
+                end
+            end
+            for _, piece in ipairs(sidePieces) do
                 registerVisual(platform, piece)
             end
-            for _, piece in ipairs(PlatformFinishKit.buildSideRails(
-                folder, platform, tier.Name, theme, variant
-            )) do
-                registerVisual(platform, piece)
-            end
-
-            for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(
-                folder, platform, variant, tier.Name, theme
-            )) do
-                registerVisual(platform, piece)
+            if not authenticCarapace and not authenticBridge then
+                for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(
+                    folder, platform, variant, tier.Name, theme
+                )) do
+                    registerVisual(platform, piece)
+                end
             end
             -- Textured-looking three-layer native hardware on a strictly
             -- bounded subset of actual jump decks. Shares this existing
@@ -498,13 +517,9 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
 
-            -- Original 3D machined/wedge armor replaces the visible
-            -- rectangular toy-block silhouette on selected real decks.
-            -- Registered here under the EXISTING collapse/shrink/streaming
-            -- owner; never spawn a new per-frame cosmetics task.
-            for _, piece in ipairs(PlatformFinishKit.buildCarapace(
-                folder, platform, variant, tier.Name, theme, visualIndex
-            )) do
+            -- New authentic MeshParts and native carapace fallback both
+            -- enter the EXISTING collapse/shrink snapshot and visibility owner.
+            for _, piece in ipairs(carapacePieces) do
                 registerVisual(platform, piece)
             end
 
