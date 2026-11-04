@@ -1,6 +1,6 @@
-# Major second-arena visual milestone: five authentic Tower Run cooling spires, no
+# Major second-arena visual milestone: five authentic Tower Run cooling installations in TWO sculpted types, no
 # game publishing. This file alone triggers the checks on exact main SHA.
-# Exact main SHA: 61 Roblox approved assets, true source-modeled industrial sculptures and all 7 engine suites.
+# Exact main SHA: 62 Roblox Approved assets, TWO original cooling meshes and all 7 real-engine suites.
 name: One-time QA 2026-11-04 Tower Run True 3D Cooling Spires No Publish
 on:
   push:
@@ -33,10 +33,13 @@ jobs:
           from pathlib import Path
           import json
           server=Path("src/server/PremiumTowerCoolingSpireAssets.lua").read_text()
+          hollowServer=Path("src/server/PremiumTowersHollowStackAssets.lua").read_text()
           client=Path("src/client/TowerCoolingSpireMeshKit.lua").read_text()
           sculptor=Path("tools/generate_original_towers_cooling_spire.py").read_text()
+          hollowArt=Path("tools/generate_original_towers_cooling_stack.py").read_text()
           uploader=Path(".github/workflows/upload-original-3d-models.yml").read_text()
           source_gate=Path(".github/workflows/one-time-original-towers-cooling-spire-20261104.yml").read_text()
+          hollowGate=Path(".github/workflows/one-time-original-towers-hollow-stack-20261104.yml").read_text()
           init=Path("src/server/init.server.lua").read_text()
           sampler=Path("src/client/scenery-lod.client.lua").read_text()
           visual_budget=Path("src/shared/VisualBudgetRules.lua").read_text()
@@ -44,8 +47,16 @@ jobs:
           matrix=Path("tests/engine/gameplay-matrix.spec.luau").read_text()
           ci=Path(".github/workflows/ci.yml").read_text()
           docs=Path("docs/ORIGINAL_TOWER_RUN_COOLING_SPIRES_2026-11-04.md").read_text()
+          dualDocs=Path("docs/ORIGINAL_TOWERS_COOLING_VARIANTS_2026-11-04.md").read_text()
           registry=json.loads(Path("assets/source/roblox-asset-registry.json").read_text())
-          assert len(registry["models"])==61
+          assert len(registry["models"])==62
+          hollow=next(x for x in registry["models"]
+              if x["name"]=="towers_cooling_stack")
+          assert hollow["asset_id"]=="97498534364335"
+          assert hollow["moderation"]=="Approved"
+          assert hollow["workflow_run_id"]==41904135484
+          assert hollow["source"]=="tools/generate_original_towers_cooling_stack.py"
+          assert hollow["source_materials"]=="assets/source/chaos_route_kit.mtl"
           model=next(x for x in registry["models"]
               if x["name"]=="towers_cooling_spire")
           assert model["asset_id"]=="95543769387033"
@@ -55,6 +66,29 @@ jobs:
           assert model["source_materials"]=="assets/source/chaos_route_kit.mtl"
           assert "95543769387033" in server and "95543769387033" in client
           assert "95543769387033" in docs
+          assert "97498534364335" in dualDocs
+          assert "95543769387033" in dualDocs
+          assert "97498534364335" in hollowServer
+          assert "97498534364335" in client
+          assert "OriginalMeshScenery.sanitize(raw)" in hollowServer
+          assert "ApprovedTowersHollowStackTemplates" in hollowServer
+          assert "ApprovedTowersHollowStackTemplates" in client
+          assert "HollowCoolingStack" in hollowServer and "HollowCoolingStack" in client
+          assert "OriginalTowersHollowStack3D" in hollowServer and "OriginalTowersHollowStack3D" in client
+          assert "Original3DTriangleCount" in hollowServer and "9980" in client
+          assert "ReferenceNativeStackHeight" in hollowServer
+          assert "PremiumTowersHollowStackAssets.start" in init
+          assert "HOLLOW_SOURCE_SCALE=.46" in client
+          assert "HOLLOW_BODY_HEIGHT=44" in client
+          assert "hollowSource()" in client and "sourceForIndex(index)" in client
+          assert "index%2==1" in client
+          assert "SixteenFacetedDoubleWalledCoolingChimney" in hollowArt
+          assert "BracedTopExhaustRing" in hollowArt
+          assert "GalvanizedHighServiceLadderRail" in hollowArt
+          assert "OriginalISOContainerShell" not in hollowArt
+          assert "towers_cooling_stack" in uploader
+          assert "towers_cooling_stack" in hollowGate
+          assert "towers_cooling_stack" in ci
           assert "OriginalMeshScenery.sanitize(raw)" in server
           assert "ApprovedTowerCoolingSpireTemplates" in server and "ApprovedTowerCoolingSpireTemplates" in client
           assert "RealCoolingSpire" in server and "RealCoolingSpire" in client
@@ -87,11 +121,11 @@ jobs:
           assert "WideForgedVentTorusCap" in sculptor
           assert "towers_cooling_spire" in uploader
           assert "towers_cooling_spire" in ci
-          assert "assert len(models) == 61" in ci
+          assert "assert len(models) == 62" in ci
           assert "RunService" not in client and "task.spawn" not in client
           assert 'for first=1,#entries-1,2 do' in matrix
           assert 'retains at least 40 unique compatible Double Chaos pairs' in matrix
-          print("Verified five ORIGINAL approved industrial Tower Run sculptures, 6380 triangles, seven UV/tangent MeshParts, low/pressure fallback, 61 source models and full gameplay matrix; NO PUBLICATION")
+          print("Verified five ORIGINAL approved Tower Run industrial 3D installations with TWO distinct Approved profiles (6380/9980 triangles, 7 UV/tangent MeshParts each), 62 source Models, exact mobile LOD/fallback and gameplay matrix. NO PUBLICATION")
           PY
       - name: Source-only milestone validation (NEVER publish)
         shell: bash
