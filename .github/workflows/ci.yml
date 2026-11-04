@@ -1287,6 +1287,15 @@ jobs:
           ):
               assert token in lod, token
           assert 'LocalApproved3DGroundResident' in rules
+          assert 'LocalApproved3DGroundResident' in Path(
+              "src/client/pbr-district-materials.client.lua").read_text()
+          assert 'originalPbrReplaced' in kit
+          assert 'old.Parent = nil' in kit
+          assert 'appearance.Parent = part' in kit
+          assert 'if attached then attached:Destroy() end' in kit
+          assert "clone.DescendantRemoving:Connect(" in ground
+          assert 'PremiumGroundPbrKit.attach(entry, "Classic")' in specs
+          assert "SourceImportedMaterialFactors" in specs
           assert 'kit.tileBudget' in specs
           assert 'kit.family("Harbor")' in specs
           for bad in (".ColorMap =", ".NormalMap =",
