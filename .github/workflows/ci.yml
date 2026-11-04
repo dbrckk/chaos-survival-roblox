@@ -646,6 +646,7 @@ jobs:
           assert "ArenaPlatformIdentityLocal" in census
           support_server = Path("src/server/PremiumLargeStructureAssets.lua").read_text()
           support_mesh = Path("src/client/PremiumLargeStructureMeshKit.lua").read_text()
+          native_trim = Path("src/client/PlatformNativeTrimReplacementKit.lua").read_text()
           for variant, source in (
               ("Classic","column_classic"),("Towers","column_towers"),
               ("Crossroads","column_crossroads"),("Orbital","column_orbital"),
