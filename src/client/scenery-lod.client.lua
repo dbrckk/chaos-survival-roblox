@@ -14,6 +14,7 @@ local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructure
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
+local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -506,6 +507,19 @@ task.spawn(function()
             ~= crownMeshes then
             player:SetAttribute("LocalOriginalSkySpineCrownCount",
                 crownMeshes)
+        end
+        -- True original 3D harbor freight gantries over the SIX existing
+        -- two-lane promenade arch sockets. No additional scanning loop:
+        -- these share this exact camera-distance and Android tier pass.
+        -- High up to six, Medium two, Low zero, pressure demotes optional
+        -- detail but NEVER hides an actual platform or danger cue.
+        HarborPromenadePortalMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local gantries = HarborPromenadePortalMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborPromenadeCount")
+            ~= gantries then
+            player:SetAttribute("LocalOriginalHarborPromenadeCount",gantries)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
