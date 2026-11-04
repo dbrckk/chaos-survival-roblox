@@ -1,0 +1,101 @@
+# Creates exactly one original, geometrically enclosed 3D column asset.
+# Source and UV checks precede any non-idempotent Roblox POST.
+# Does NOT update or publish the playable Roblox experience.
+name: One-time Authored Enclosing Lobby Pylon Shell 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-enclosing-lobby-pylon-shell-20261104.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: chaos-lobby-enclosing-pylon-shell-once-20261104
+  cancel-in-progress: false
+
+jobs:
+  verify-geometry:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove the source's closed full-width collision envelope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_lobby_pylon_shell.py \
+            --output "$RUNNER_TEMP/chaos_lobby_pylon_shell.obj" \
+            > "$RUNNER_TEMP/pylon-source.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/chaos_lobby_pylon_shell.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/chaos_lobby_pylon_shell.gltf" \
+            > "$RUNNER_TEMP/pylon-export.json"
+          python3 - "$RUNNER_TEMP/pylon-source.json" \
+            "$RUNNER_TEMP/chaos_lobby_pylon_shell.gltf" <<'PY'
+          import base64, json, sys
+          from pathlib import Path
+
+          source = json.loads(Path(sys.argv[1]).read_text())
+          model = json.loads(Path(sys.argv[2]).read_text())
+          assert source["asset"] == "lobby_pylon_shell"
+          assert 25 <= source["groups"] <= 96
+          assert 500 <= source["triangles"] <= 4200
+          assert set(source["materials"]) == {
+              "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          x,y,z=source["dimensions"]
+          assert 3.45 <= x <= 4.05 and 10.25 <= y <= 10.75
+          assert 3.40 <= z <= 4.05
+          core=source["closed_core"]
+          assert core["collider_width"] == 2.2
+          assert core["collider_height"] == 10
+          assert core["height"] >= 10.35
+          assert core["width"]-core["bevel"] >= 2.6
+          assert core["minimum_corner_margin"] >= 0.2
+          # Validate actual authoritative core geometry from the exported
+          # source OBJ: not merely "a bounding box happens to be large".
+          obj = Path(sys.argv[1]).with_name(
+              "chaos_lobby_pylon_shell.obj").read_text()
+          assert "g ClosedCollisionEnclosingCore" in obj
+          assert "g CastLowerFoot" in obj
+          assert "g FrontDielectricMainCassette" in obj
+          assert model["asset"]["version"] == "2.0"
+          parts = model["meshes"][0]["primitives"]
+          assert len(parts) == 7
+          assert {m["name"] for m in model["materials"]} == set(source["materials"])
+          assert all({"POSITION","NORMAL","TEXCOORD_0","TANGENT"}
+                     <= set(p["attributes"]) for p in parts)
+          triangles=sum(
+              model["accessors"][p["attributes"]["POSITION"]]["count"]//3
+              for p in parts)
+          assert triangles == source["triangles"]
+          buf=model["buffers"][0]
+          raw=base64.b64decode(buf["uri"].split(",",1)[1], validate=True)
+          assert len(raw)==buf["byteLength"]
+          print("Verified creator-authored closed lobby collision shell:",
+                triangles,"triangles, seven UV/tangent materials")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lobby-pylon-shell-verified-source
+          path: |
+            ${{ runner.temp }}/chaos_lobby_pylon_shell.obj
+            ${{ runner.temp }}/chaos_lobby_pylon_shell.gltf
+            ${{ runner.temp }}/pylon-source.json
+            ${{ runner.temp }}/pylon-export.json
+          retention-days: 14
+
+  upload-original-model:
+    needs: verify-geometry
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: lobby_pylon_shell
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
