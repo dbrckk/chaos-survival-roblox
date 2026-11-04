@@ -1,0 +1,93 @@
+# Source-authored monumental cooling megaspire for Tower Run.
+# NEVER publishes or modifies any live Roblox Place.
+name: One-time Original Tower Run Cooling Spire 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-towers-cooling-spire-20261104.yml
+permissions:
+  contents: read
+concurrency:
+  group: original-towers-cooling-spire-20261104
+  cancel-in-progress: false
+
+jobs:
+  verify-source:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify truly sculpted Tower Run megaspire and seven UV tangent materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_towers_cooling_spire.py \
+            --output "$RUNNER_TEMP/towers_cooling_spire.obj" \
+            > "$RUNNER_TEMP/towers_cooling_spire.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/towers_cooling_spire.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/towers_cooling_spire.gltf" \
+            > "$RUNNER_TEMP/towers_cooling_spire.export.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          info=json.loads((root/"towers_cooling_spire.json").read_text())
+          gltf=json.loads((root/"towers_cooling_spire.gltf").read_text())
+          obj=(root/"towers_cooling_spire.obj").read_text()
+          assert info["name"]=="towers_cooling_spire"
+          assert info["source_scale"]==.42 and info["source_y_shift"]==31
+          assert 120<=info["groups"]<=255
+          assert 3000<=info["triangles"]<=9500
+          x,y,z=info["dimensions"]
+          assert 5.0<=x<=7.5 and 28.2<=y<=31.0 and 4.7<=z<=7.5
+          names=(
+              "TwelveSidedTaperedPressureCore",
+              "SixteenSidedPrimaryVentilationChimney",
+              "DualAuxiliaryRegulationVessel",
+              "WideForgedVentTorusCap",
+              "FinnedOuterDrainPipe",
+              "MachinedTowerVentInsert",
+              "ExhaustSpiralProtectiveBracing",
+          )
+          assert all(n in obj for n in names)
+          palette={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert set(info["materials"])==palette
+          assert set(m["name"] for m in gltf["materials"])==palette
+          assert len(gltf["meshes"][0]["primitives"])==7
+          triangles=0
+          for p in gltf["meshes"][0]["primitives"]:
+              a=p["attributes"]
+              assert {"POSITION","NORMAL","TANGENT","TEXCOORD_0"}<=set(a)
+              triangles+=gltf["accessors"][a["POSITION"]]["count"]//3
+          assert triangles==info["triangles"]
+          data=base64.b64decode(gltf["buffers"][0]["uri"].split(",",1)[1],validate=True)
+          assert len(data)==gltf["buffers"][0]["byteLength"]
+          print("TRUE original Tower Run monumental cooling spire verified",
+                triangles,"triangles, 7 UV/tangent meshes; no game publication")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-tower-cooling-spire-source
+          path: |
+            ${{ runner.temp }}/towers_cooling_spire.obj
+            ${{ runner.temp }}/towers_cooling_spire.gltf
+            ${{ runner.temp }}/towers_cooling_spire.json
+            ${{ runner.temp }}/towers_cooling_spire.export.json
+          retention-days: 14
+
+  owner-import:
+    needs: verify-source
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: towers_cooling_spire
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
