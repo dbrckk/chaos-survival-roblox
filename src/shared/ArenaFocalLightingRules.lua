@@ -43,14 +43,44 @@ function ArenaFocalLightingRules.anchorFrame(baseFrame, baseSize, definition)
     end
     local offset = definition.Offset
     local halfX, halfZ = baseSize.X * 0.5, baseSize.Z * 0.5
-    local position = baseFrame:PointToWorldSpace(Vector3.new(
-        offset.X * halfX, offset.Y, offset.Z * halfZ
+    -- Legacy positions placed fixtures beyond the 320-stud arena edge
+    -- (normalized offsets up to +/-1.18), while their 42-58-stud lights
+    -- aimed more than 100 studs toward the centre: the cone ended before
+    -- reaching the target. Keep housings IN the authored arena and aim
+    -- directly at illuminated routes, without allocating extra lights.
+    local clampedX = math.clamp(offset.X, -1, 1)
+    local clampedZ = math.clamp(offset.Z, -1, 1)
+    local destinationLocal = Vector3.new(
+        clampedX * halfX * 0.42, 4.0,
+        clampedZ * halfZ * 0.42
+    )
+    local proposed = Vector3.new(
+        clampedX * halfX * 0.62, offset.Y,
+        clampedZ * halfZ * 0.62
+    )
+    -- Huge arenas must not break the beam: reserve 28% of the physical
+    -- SpotLight.Range for the cone's ground coverage, not merely the
+    -- distance from fixture to the aimed point. Preserve vertical height.
+    local range = math.clamp(tonumber(definition.Range) or 48, 8, 80)
+    local vertical = proposed.Y - destinationLocal.Y
+    local maxHorizontal = math.sqrt(math.max(
+        0, (range * 0.72)^2 - vertical^2
     ))
-    local destination = baseFrame:PointToWorldSpace(Vector3.new(
-        math.clamp(offset.X, -1, 1) * halfX * 0.42,
-        4.0,
-        math.clamp(offset.Z, -1, 1) * halfZ * 0.42
-    ))
+    local horizontal = Vector3.new(
+        proposed.X - destinationLocal.X, 0,
+        proposed.Z - destinationLocal.Z
+    )
+    local horizontalLength = horizontal.Magnitude
+    if horizontalLength > maxHorizontal and horizontalLength > 0 then
+        local factor = maxHorizontal / horizontalLength
+        proposed = Vector3.new(
+            destinationLocal.X + horizontal.X * factor,
+            proposed.Y,
+            destinationLocal.Z + horizontal.Z * factor
+        )
+    end
+    local position = baseFrame:PointToWorldSpace(proposed)
+    local destination = baseFrame:PointToWorldSpace(destinationLocal)
     if (destination - position).Magnitude < 0.01 then return nil end
     return CFrame.lookAt(position, destination, baseFrame.UpVector)
 end

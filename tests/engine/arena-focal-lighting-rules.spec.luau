@@ -44,9 +44,9 @@ describe("Arena focal lighting rules", function()
                 base, smallSize, definitions[1]
             )
             local expected = Vector3.new(
-                definitions[1].Offset.X * 73,
+                math.clamp(definitions[1].Offset.X, -1, 1) * 73 * 0.62,
                 definitions[1].Offset.Y,
-                definitions[1].Offset.Z * 51
+                math.clamp(definitions[1].Offset.Z, -1, 1) * 51 * 0.62
             )
             expect(typeof(start)).toBe("CFrame")
             expect(typeof(shrunk)).toBe("CFrame")
@@ -55,6 +55,24 @@ describe("Arena focal lighting rules", function()
             expect(start.Position ~= shrunk.Position).toBe(true)
             expect(ArenaFocalLightingRules.anchorFrame(nil, largeSize,
                 definitions[1]) == nil).toBe(true)
+            -- Existing fixtures must illuminate an actual reachable
+            -- 320-stud arena surface instead of aiming past their range.
+            for _, fixture in ipairs(definitions) do
+                local frame = ArenaFocalLightingRules.anchorFrame(
+                    CFrame.identity, Vector3.new(320, 3.5, 320), fixture)
+                local target = Vector3.new(
+                    math.clamp(fixture.Offset.X, -1, 1) * 160 * 0.42,
+                    4,
+                    math.clamp(fixture.Offset.Z, -1, 1) * 160 * 0.42
+                )
+                expect(typeof(frame)).toBe("CFrame")
+                expect((frame.Position - target).Magnitude
+                    <= fixture.Range * 0.73).toBe(true)
+                expect(math.abs(frame.Position.X) <= 160).toBe(true)
+                expect(math.abs(frame.Position.Z) <= 160).toBe(true)
+                expect(frame.LookVector:Dot(
+                    (target - frame.Position).Unit) > 0.999).toBe(true)
+            end
         end
     end)
 
