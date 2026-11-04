@@ -119,6 +119,9 @@ local function clear()
     table.clear(routeCueStates)
     table.clear(visualsByPlatform)
     folder:ClearAllChildren()
+    if player:GetAttribute("LocalOriginalPlatformSideMeshPartCount") ~= 0 then
+        player:SetAttribute("LocalOriginalPlatformSideMeshPartCount", 0)
+    end
 end
 
 local function registerVisual(platform, visual)
@@ -624,6 +627,19 @@ local function rebuild()
             syncCollapse()
         end
     end
+    -- Count genuine moderated structural MeshParts on this one active map.
+    -- Attribute is diagnostic only, never used to control physics or tier.
+    local genuineCount = 0
+    for _, piece in ipairs(folder:GetChildren()) do
+        if piece:IsA("MeshPart")
+            and piece:GetAttribute("Original3DStructuralSide") == true then
+            genuineCount += 1
+        end
+    end
+    if player:GetAttribute("LocalOriginalPlatformSideMeshPartCount")
+        ~= genuineCount then
+        player:SetAttribute("LocalOriginalPlatformSideMeshPartCount", genuineCount)
+    end
 end
 
 local disconnectBaseWatch = nil
@@ -750,19 +766,56 @@ local function watchPlatformReliefTemplates(holder)
         scheduleRebuild()
     end
 end
+-- Owner-approved platform carapaces arrive well after the map.
+-- Rebuild the same existing PlatformIdentity owner on a relevant arrival.
+-- All previously registered welds/shrink listeners are disconnected by clear.
+local sideTemplateConnections = {}
+local watchedSideTemplates = nil
+local function watchSideTemplates(holder)
+    if watchedSideTemplates == holder then return end
+    for _, connection in ipairs(sideTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(sideTemplateConnections)
+    watchedSideTemplates = holder
+    if holder and holder:IsA("Folder") then
+        local function changed(child)
+            local generated = workspace:FindFirstChild("GeneratedMap")
+            local arena = generated and generated:FindFirstChild("Arena")
+            local variant = arena and tostring(
+                arena:GetAttribute("VariantId") or "Classic")
+            if variant == child.Name or child.Name == "Bridge" then
+                scheduleRebuild()
+            end
+        end
+        sideTemplateConnections[#sideTemplateConnections+1] =
+            holder.ChildAdded:Connect(changed)
+        sideTemplateConnections[#sideTemplateConnections+1] =
+            holder.ChildRemoved:Connect(changed)
+        scheduleRebuild()
+    end
+end
+
 ReplicatedStorage.ChildAdded:Connect(function(child)
     if child.Name == "ApprovedFloorReliefTemplates" then
         watchPlatformReliefTemplates(child)
+    elseif child.Name == "ApprovedPlatformSideTemplates" then
+        watchSideTemplates(child)
     end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
     if child == currentPlatformReliefTemplates then
         watchPlatformReliefTemplates(nil)
         scheduleRebuild()
+    elseif child == watchedSideTemplates then
+        watchSideTemplates(nil)
+        scheduleRebuild()
     end
 end)
 watchPlatformReliefTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates"))
+watchSideTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedPlatformSideTemplates"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;
