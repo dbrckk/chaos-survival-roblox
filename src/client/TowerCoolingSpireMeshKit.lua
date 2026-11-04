@@ -136,9 +136,14 @@ end
 
 local function alive(e)
     if not e or not e.model or e.model.Parent~=folder
-        or e.arena~=activeArena or e.body.Parent~=e.mid
-        or e.source.Parent==nil or e.base.Size.X<160
-        or e.base.Size.Z<160 or not e.body.Anchored
+        or e.arena~=activeArena
+        or e.arena.Parent~=workspace:FindFirstChild("GeneratedMap")
+        or e.base.Parent~=e.arena
+        or e.mid.Parent~=workspace or e.body.Parent~=e.mid
+        or e.source.Parent~=e.sourceHolder
+        or e.sourceHolder.Parent~=ReplicatedStorage
+        or e.base.Size.X<160 or e.base.Size.Z<160
+        or not e.body.Anchored
         or e.body.CanCollide or e.body.CanTouch or e.body.CanQuery
         or e.body:GetAttribute("OriginalTowerCoolingSpireIndex")~=e.index
         or (e.body.Size-e.originalSize).Magnitude>.15 then return false end
@@ -257,7 +262,8 @@ local function mount(arena,base,mid,body,index,approved,tier)
     end
     local e={
         arena=arena,base=base,mid=mid,body=body,index=index,
-        source=approved,model=clone,pieces=pieces,native=native,
+        source=approved,sourceHolder=approved.Parent,
+        model=clone,pieces=pieces,native=native,
         originalSize=body.Size,connections={},disposing=false,
     }
     clone.Name=(hollow and "ApprovedOriginalHollowTowerRunStack"
