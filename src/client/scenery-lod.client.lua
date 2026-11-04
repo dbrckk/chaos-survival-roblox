@@ -471,10 +471,24 @@ task.spawn(function()
         -- Shrink/streaming already restore native geometry immediately.
         PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"), isTouch,
+            player:GetAttribute("PbrMaterialsDisabled") == true)
         local floorMeshes = PremiumGroundMeshKit.count()
         if player:GetAttribute("LocalOriginalGroundMeshCount") ~= floorMeshes then
             player:SetAttribute("LocalOriginalGroundMeshCount", floorMeshes)
+        end
+        -- True 2K Normal/Albedo/Roughness/Metalness SurfaceAppearance
+        -- instances attached to the ALREADY verified 3D UV tile models.
+        -- These are counts of actually mounted instances, not a claim of
+        -- texture residency, frame rate or visual sign-off on Android.
+        local pbrTiles, pbrAppearances = PremiumGroundMeshKit.pbrCount()
+        if player:GetAttribute("LocalGroundPbr2KTileCount") ~= pbrTiles then
+            player:SetAttribute("LocalGroundPbr2KTileCount", pbrTiles)
+        end
+        if player:GetAttribute("LocalGroundPbr2KAppearanceCount")
+            ~= pbrAppearances then
+            player:SetAttribute("LocalGroundPbr2KAppearanceCount",
+                pbrAppearances)
         end
         -- Client-only diagnostics count genuine imported MODEL instances,
         -- not fabricated FPS or proof that Roblox textures finished drawing.
