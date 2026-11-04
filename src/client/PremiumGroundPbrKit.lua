@@ -88,10 +88,28 @@ end
 
 function Kit.detach(entry)
     if type(entry) ~= "table" then return end
+    -- Always destroy OUR optional 2K templates, including a streamed-out
+    -- clone that no longer has Parent. No retained GPU objects or leaked
+    -- SurfaceAppearance instances after a map/quality/pressure change.
     for _, attached in ipairs(entry.originalPbr or {}) do
-        if attached and attached.Parent then attached:Destroy() end
+        if attached then attached:Destroy() end
+    end
+    -- Some Roblox glTF imports add a SurfaceAppearance even for untextured
+    -- metallic/roughness FACTORS. On premium close-up, swap that original
+    -- appearance for our real audited 4-map 2K atlas; NEVER destroy it.
+    -- Exact source appearance is returned if the player turns PBR off,
+    -- a model streams out or frame pressure rises.
+    for _, source in ipairs(entry.originalPbrReplaced or {}) do
+        local part, appearance = source.part, source.appearance
+        if appearance and part and entry.model
+            and part:IsDescendantOf(entry.model) then
+            appearance.Parent = part
+        elseif appearance then
+            appearance:Destroy()
+        end
     end
     entry.originalPbr = nil
+    entry.originalPbrReplaced = nil
     entry.originalPbrVariant = nil
     entry.originalPbrCount = nil
 end
@@ -131,40 +149,53 @@ function Kit.attach(entry, variant)
         return #entry.originalPbr
     end
     Kit.detach(entry)
-    local work = {}
+    entry.originalPbr = {}
+    entry.originalPbrReplaced = {}
     for _, piece in ipairs(entry.pieces) do
         if not piece:IsA("MeshPart")
             or not piece:IsDescendantOf(entry.model) then
-            for _, appearance in ipairs(work) do appearance:Destroy() end
+            Kit.detach(entry)
             return 0
         end
-        if not piece:FindFirstChildOfClass("SurfaceAppearance") then
-            local materialName = finishForPart(variant, piece)
-            local ref = materialName and template(materialName)
-            if materialName and not ref then
-                for _, appearance in ipairs(work) do appearance:Destroy() end
+        local materialName = finishForPart(variant, piece)
+        if materialName then
+            local ref = template(materialName)
+            if not ref then
+                Kit.detach(entry)
                 return 0
             end
-            if ref then
-                local ok, appearance = pcall(function()
-                    local clone = ref:Clone()
-                    clone.Name = "OriginalApprovedGroundPbr2K"
-                    clone.Parent = piece
-                    return clone
-                end)
-                if not ok or not appearance then
-                    for _, item in ipairs(work) do item:Destroy() end
-                    return 0
-                end
-                work[#work + 1] = appearance
+            -- Imported glTF without explicit source texture images may
+            -- still carry one engine-created SurfaceAppearance for its
+            -- material factors. Preserve EXACT original instance, swap
+            -- only on this authenticated local 3D clone, and restore
+            -- on rollback; never overwrite PluginSecurity texture fields.
+            local old = piece:FindFirstChildOfClass("SurfaceAppearance")
+            if old then
+                old.Parent = nil
+                entry.originalPbrReplaced[#entry.originalPbrReplaced+1] = {
+                    part = piece, appearance = old,
+                }
             end
+            local ok, appearance = pcall(function()
+                local clone = ref:Clone()
+                clone.Name = "OriginalApprovedGroundPbr2K"
+                clone.Parent = piece
+                return clone
+            end)
+            if not ok or not appearance then
+                Kit.detach(entry)
+                return 0
+            end
+            entry.originalPbr[#entry.originalPbr+1] = appearance
         end
     end
-    if #work < 1 then return 0 end
-    entry.originalPbr = work
+    if #entry.originalPbr < 1 then
+        Kit.detach(entry)
+        return 0
+    end
     entry.originalPbrVariant = variant
-    entry.originalPbrCount = #work
-    return #work
+    entry.originalPbrCount = #entry.originalPbr
+    return #entry.originalPbr
 end
 
 return Kit
