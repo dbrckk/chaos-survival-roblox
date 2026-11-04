@@ -682,11 +682,11 @@ jobs:
           ):
               assert required in platform_script, required
           assert "SkipRouteFootprint" in platform_finish
-          assert "verifiedSupports[part]" in native_trim
-          assert 'kind == "cradle"' in native_trim
           # Genuine source mesh mount must precede masking these server-
           # authored NONPHYSICAL fallback shapes, never gameplay/warnings.
           native_trim = Path("src/client/PlatformNativeTrimReplacementKit.lua").read_text()
+          assert "verifiedSupports[part]" in native_trim
+          assert 'kind == "cradle"' in native_trim
           for required in (
               "function Kit.bind(arena, replacements, onChange)",
               "function Kit.reset()", "function Kit.count()",
