@@ -15,6 +15,7 @@ local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundatio
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
+local HarborDockCaissonMeshKit = require(script.Parent.HarborDockCaissonMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -520,6 +521,24 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalHarborPromenadeCount")
             ~= gantries then
             player:SetAttribute("LocalOriginalHarborPromenadeCount",gantries)
+        end
+        -- Up to twelve real ORIGINAL 3D forged Harbor cargo skins on
+        -- actual HarborRoute/HarborSpokeRoute jump landing parts, not new
+        -- fake routes. This reuses the same camera/LOD/pressure owner,
+        -- with all 7 MeshParts per verified source counted in the ledger.
+        HarborDockCaissonMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local dockModels, dockPieces = HarborDockCaissonMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborDockCaissonCount")
+            ~= dockModels then
+            player:SetAttribute("LocalOriginalHarborDockCaissonCount",
+                dockModels)
+        end
+        if player:GetAttribute("LocalOriginalHarborDockMeshPartCount")
+            ~= dockPieces then
+            player:SetAttribute("LocalOriginalHarborDockMeshPartCount",
+                dockPieces)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
