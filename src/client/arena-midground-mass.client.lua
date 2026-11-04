@@ -98,6 +98,13 @@ local function buildTowers(base, theme, tier)
     }
 
     for i = 1, count do
+        -- The approved real 3D cooling megaspire owns exactly one indexed
+        -- Tower Run silhouette (including its ArenaDetailKit hardware).
+        -- Other arenas and hazard parts are NEVER marked or hidden.
+        local originalChildren = {}
+        for _, existing in ipairs(folder:GetChildren()) do
+            originalChildren[existing] = true
+        end
         local d = defs[i]
         local body = makePart(
             "TowerCoolingMass" .. i,
@@ -121,6 +128,12 @@ local function buildTowers(base, theme, tier)
                 Enum.Material.CorrodedMetal,
                 tier.Name == "High" and 0.12 or 0.20
             )
+        end
+        for _, part in ipairs(folder:GetChildren()) do
+            if not originalChildren[part] and part:IsA("BasePart") then
+                part:SetAttribute("OriginalTowerCoolingSpireIndex", i)
+                part:SetAttribute("CosmeticOnly", true)
+            end
         end
     end
 end
