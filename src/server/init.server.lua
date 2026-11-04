@@ -53,6 +53,7 @@ local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAsse
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
+local PremiumLargeDeckHullAssets = require(script.PremiumLargeDeckHullAssets)
 local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
@@ -192,6 +193,7 @@ if not isStudioE2E then
     -- Late serialized loading must not block hazard timers, bots or joining.
     task.defer(PremiumFloorReliefAssets.start)
     task.defer(PremiumPlatformSideAssets.start)
+    task.defer(PremiumLargeDeckHullAssets.start)
     task.defer(PremiumLobbyGateMeshAssets.start)
 end
 LobbySpawnSafety.start()
