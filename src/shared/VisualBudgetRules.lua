@@ -86,6 +86,10 @@ VisualBudgetRules.LocalFolders = {
     -- native hero Part/WedgePart cosmetics. Only seven imported MeshParts,
     -- three follow already animated radar/cable/weight Parts; budget 0/1/1.
     "OriginalHarborHeroStationLocal",
+    -- Four uniquely sculpted authentic 3D shallow-draft Harbor barges;
+    -- 7 imported MeshParts per Model, 0/2/4 Android tier/source caps.
+    -- Count their 3D impact against existing global Parts budgets.
+    "OriginalHarborMidgroundBargesLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
