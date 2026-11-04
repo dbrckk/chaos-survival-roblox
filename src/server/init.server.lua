@@ -58,6 +58,7 @@ local PremiumLargeStructureAssets = require(script.PremiumLargeStructureAssets)
 local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
 local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets)
 local PremiumHarborPromenadePortalAssets = require(script.PremiumHarborPromenadePortalAssets)
+local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -205,6 +206,9 @@ if not isStudioE2E then
     -- Distinct real 3D cargo-gantry art over six already-collidable Harbor
     -- promenades. Does not add a lane, support, hazard or server task loop.
     task.defer(PremiumHarborPromenadePortalAssets.start)
+    -- Approved seven-material caissons skin Harbor's real jump decks.
+    -- Late-load; native walkable platforms and all danger cues stay intact.
+    task.defer(PremiumHarborDockCaissonAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
