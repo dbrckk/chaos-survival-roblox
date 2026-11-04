@@ -82,6 +82,10 @@ VisualBudgetRules.LocalFolders = {
     -- Trolley/Cable/Load animation. Strict source/Android LOD caps 0/2/4.
     -- Count *all* imported parts in the SAME 440/680/900 visual ledger.
     "OriginalHarborKineticGantryLocal",
+    -- Full authentic near-camera 3D maritime signal tower, replacing 14+
+    -- native hero Part/WedgePart cosmetics. Only seven imported MeshParts,
+    -- three follow already animated radar/cable/weight Parts; budget 0/1/1.
+    "OriginalHarborHeroStationLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
