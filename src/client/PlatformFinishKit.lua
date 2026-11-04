@@ -302,11 +302,25 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
             -- Short bolts, trims and armor stay rigid, while long paint and
             -- side bands shorten with the real deck. No fake walkway edges.
             local size = data.size
-            piece.Size = snapshot.alongX
-                and Vector3.new(size.X > 2.2 and size.X * ratio or size.X,
-                    size.Y, size.Z)
-                or Vector3.new(size.X, size.Y,
-                    size.Z > 2.2 and size.Z * ratio or size.Z)
+            -- Creator-owned glTF girder meshes can have their LONG LOCAL
+            -- axis on X or Z independently of the physical skybridge's
+            -- WORLD long axis. Compress the actual authored axis, not the
+            -- Roblox platform axis, or a rotated girder becomes a ghost
+            -- structure beyond the shrinking collision deck.
+            local importedAxis = piece:GetAttribute("OriginalBridgeLongAxis")
+            if importedAxis == "X" then
+                piece.Size = Vector3.new(
+                    math.max(0.05, size.X * ratio), size.Y, size.Z)
+            elseif importedAxis == "Z" then
+                piece.Size = Vector3.new(
+                    size.X, size.Y, math.max(0.05, size.Z * ratio))
+            else
+                piece.Size = snapshot.alongX
+                    and Vector3.new(size.X > 2.2 and size.X * ratio or size.X,
+                        size.Y, size.Z)
+                    or Vector3.new(size.X, size.Y,
+                        size.Z > 2.2 and size.Z * ratio or size.Z)
+            end
             local localFrame = CFrame.new(scaled) * rotation
             local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
             if joint and joint:IsA("Weld") then
