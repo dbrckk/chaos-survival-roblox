@@ -8,6 +8,8 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
+local PlatformNativeTrimReplacementKit = require(
+    script.Parent.PlatformNativeTrimReplacementKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
 
 local player = Players.LocalPlayer
@@ -85,6 +87,12 @@ local function refreshOutpostMotion(platform)
 end
 
 local function clear()
+    -- Restore any server-authored visual fallback before destroying our
+    -- verified owner-replacement meshes. Colliders are never touched.
+    PlatformNativeTrimReplacementKit.reset()
+    if player:GetAttribute("LocalNativeStructuralPartsReplaced") ~= 0 then
+        player:SetAttribute("LocalNativeStructuralPartsReplaced", 0)
+    end
     for platform, state in pairs(outpostMotions) do
         stopOutpostMotion(state)
         for _, connection in ipairs(state.connections or {}) do
@@ -434,6 +442,7 @@ local function rebuild()
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local index = 0
+    local replacements = {}
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
 
     for _, platform in ipairs(ordered) do
@@ -494,6 +503,11 @@ local function rebuild()
             local authenticBridge = sidePieces[1] ~= nil
                 and sidePieces[1]:GetAttribute(
                     "Original3DStructuralSide") == true
+            if authenticCarapace then
+                replacements[tostring(visualIndex)] = "carapace"
+            elseif authenticBridge then
+                replacements[tostring(visualIndex)] = "bridge"
+            end
             if not authenticCarapace and not authenticBridge then
                 for _, piece in ipairs(PlatformFinishKit.buildArmor(
                     folder, platform, variant, tier.Name, theme
@@ -627,6 +641,19 @@ local function rebuild()
             syncCollapse()
         end
     end
+    -- Once genuine owner-approved MeshParts are fully built, mask ONLY
+    -- corresponding nonphysical server WedgePart/underframe/bridge ribs.
+    -- This preserves all gameplay lights, warning rails, platforms and
+    -- the original fallback in the server. Streams are handled by its
+    -- Folder.ChildAdded observer with exact name/index provenance.
+    PlatformNativeTrimReplacementKit.bind(
+        arena, replacements, function(nativeCount)
+            if player:GetAttribute("LocalNativeStructuralPartsReplaced")
+                ~= nativeCount then
+                player:SetAttribute("LocalNativeStructuralPartsReplaced",
+                    nativeCount)
+            end
+        end)
     -- Count genuine moderated structural MeshParts on this one active map.
     -- Attribute is diagnostic only, never used to control physics or tier.
     local genuineCount = 0
