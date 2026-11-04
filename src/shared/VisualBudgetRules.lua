@@ -66,6 +66,10 @@ VisualBudgetRules.LocalFolders = {
     -- imported Models on Low/Medium/High respectively, counted against
     -- the SAME adaptive Android Parts budget as all other visual meshes.
     "OriginalSkySpineCrownLocal",
+    -- Six genuine APPROVED Harbor cargo gantries (7 MeshParts each)
+    -- replace the nine obsolete native Promenade Parts per selected arch.
+    -- Count all MeshParts in the existing 440/680/900 Android ledger.
+    "OriginalHarborPromenadePortalsLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
