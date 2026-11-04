@@ -70,6 +70,11 @@ VisualBudgetRules.LocalFolders = {
     -- replace the nine obsolete native Promenade Parts per selected arch.
     -- Count all MeshParts in the existing 440/680/900 Android ledger.
     "OriginalHarborPromenadePortalsLocal",
+    -- Twelve High / five Medium (zero Low) approved original Harbor
+    -- cargo caissons are seven real MeshParts EACH, tier/FPS reduced.
+    -- Every locally welded visual remains in the Android 440/680/900
+    -- instance census. Physical platform tops remain native.
+    "OriginalHarborDockCaissonsLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
