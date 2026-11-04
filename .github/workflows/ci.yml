@@ -104,6 +104,50 @@ jobs:
               print("Original noncolliding platform structure:",kind,total,
                     "triangles, 7 authentic material MeshParts")
           PY
+          # Six genuine source-authored 14-stud columns/22-stud open-lattice
+          # foundations. Validate self-contained glTF, geometric bounds,
+          # normals, UV/tangent and SEVEN distinct mesh/material groups.
+          for kind in column_classic column_towers column_crossroads column_orbital column_harbor long_route_cradle; do
+            python3 tools/generate_original_large_supports.py \
+              --model "$kind" --output "assets/source/chaos_${kind}.obj" \
+              > "build/mesh-previews/chaos_${kind}-source.json"
+            python3 tools/obj_to_gltf.py \
+              --source "assets/source/chaos_${kind}.obj" \
+              --materials assets/source/chaos_route_kit.mtl \
+              --output "build/mesh-previews/chaos_${kind}.gltf"
+          done
+          python3 - <<'PY'
+          import json,base64
+          from pathlib import Path
+          kinds=("column_classic","column_towers","column_crossroads",
+                 "column_orbital","column_harbor","long_route_cradle")
+          for kind in kinds:
+              base=Path("build/mesh-previews/chaos_"+kind)
+              desc=json.loads(Path(str(base)+"-source.json").read_text())
+              gltf=json.loads(Path(str(base)+".gltf").read_text())
+              assert desc["asset"]==kind
+              assert 380<=desc["triangles"]<=5500
+              assert 19<=desc["groups"]<=150
+              assert {m["name"] for m in gltf["materials"]}=={
+                  "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+              prims=gltf["meshes"][0]["primitives"]
+              assert len(prims)==7
+              tris=0
+              for part in prims:
+                  attrs=part["attributes"]
+                  assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+                  tris+=gltf["accessors"][attrs["POSITION"]]["count"]//3
+              assert tris==desc["triangles"]
+              buf=gltf["buffers"][0]
+              raw=base64.b64decode(buf["uri"].split(",",1)[1],validate=True)
+              assert len(raw)==buf["byteLength"]
+              x,y,z=desc["dimensions"]
+              if kind=="long_route_cradle":
+                  assert 21.5<=x<=23 and 2<=y<=4 and 9.4<=z<=10.5
+              else:
+                  assert 1.7<=x<=2.4 and 13.6<=y<=14.5 and 1.6<=z<=2.4
+              print("Genuine original 3D tall support:",kind,tris,"triangles")
+          PY
           python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
           python3 tools/generate_district_profile_meshes.py --output-dir assets/source
           python3 tools/generate_original_skyfleet_carrier.py --output assets/source/chaos_skyfleet_carrier.obj
