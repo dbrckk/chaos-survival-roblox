@@ -47,9 +47,10 @@ local function genuine(arena,base,ship)
         or base.Size.Z<318 or not ship:IsA("Model")
         or ship.Name~="HarborCargoVessel"
         or ship:GetAttribute("HarborVesselScenery")~=true
-        or ship:GetAttribute("CosmeticOnly")~=true
-        or ship.Parent~=arena:FindFirstChild("Decor")
-            :FindFirstChild("StormHarborGantryFleet") then return false end
+        or ship:GetAttribute("CosmeticOnly")~=true then return false end
+    local decor=arena:FindFirstChild("Decor")
+    local fleet=decor and decor:FindFirstChild("StormHarborGantryFleet")
+    if not fleet or ship.Parent~=fleet then return false end
     local deck=ship:FindFirstChild("MainCargoDeck")
     local hull=ship:FindFirstChild("MainHull")
     if not deck or not hull or not deck:IsA("BasePart")
