@@ -644,6 +644,27 @@ jobs:
           assert "PremiumPlatformSideAssets.start" in Path(
               "src/server/init.server.lua").read_text()
           assert "ArenaPlatformIdentityLocal" in census
+          ground_mesh = Path("src/client/PremiumGroundMeshKit.lua").read_text()
+          ground_lod = Path("src/client/scenery-lod.client.lua").read_text()
+          # Healthy High must now genuinely cover all 36 authored ground
+          # bays, not just 24; optional Android pressure must reclaim the
+          # expensive real imported MeshParts on slow devices. Never touch
+          # the physics floor or disaster safety overlays.
+          for check in (
+              "High = {count = 36,", "Medium = {count = 12,",
+              "Low = {count = 2,",
+              "High = {36, 24, 16}", "Medium = {12, 8, 4}",
+              "Low = {2, 2, 1}",
+              "function PremiumGroundMeshKit.residencyCount(tier, pressure)",
+              "math.min(budget.count, residentLimit, #candidates)",
+              'ground.CanCollide or ground.CanTouch or ground.CanQuery',
+              'restoreOverlays(entry)',
+              "if base.Size.X < 318 or base.Size.Z < 318",
+          ):
+              assert check in ground_mesh, check
+          assert 'player:GetAttribute("OptionalVfxPressure")' in ground_lod
+          assert "PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name," in ground_lod
+          assert "RunService" not in ground_mesh
           support_server = Path("src/server/PremiumLargeStructureAssets.lua").read_text()
           support_mesh = Path("src/client/PremiumLargeStructureMeshKit.lua").read_text()
           native_trim = Path("src/client/PlatformNativeTrimReplacementKit.lua").read_text()
