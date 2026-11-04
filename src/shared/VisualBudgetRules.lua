@@ -75,6 +75,9 @@ VisualBudgetRules.LocalFolders = {
     -- Every locally welded visual remains in the Android 440/680/900
     -- instance census. Physical platform tops remain native.
     "OriginalHarborDockCaissonsLocal",
+    -- One 7-MeshPart 4,918-triangle authentic Harbor container freighter,
+    -- instead of the many distant native Part/WedgePart cargo shapes.
+    "OriginalHarborFreighterLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
