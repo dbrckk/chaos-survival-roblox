@@ -370,6 +370,10 @@ jobs:
               "deck_carapace_harbor", "bridge_side_girder",
           }
           large_hull_names = {"large_deck_hull"}
+          harbor_original_names = {
+              "harbor_promenade_portal", "harbor_dock_caisson",
+              "harbor_freighter",
+          }
           large_support_names = {
               "column_classic", "column_towers", "column_crossroads",
               "column_orbital", "column_harbor", "long_route_cradle",
@@ -379,7 +383,8 @@ jobs:
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
               | ambient_names | relief_names | floor_hardware_names
-              | platform_side_names | large_hull_names | large_support_names)
+              | platform_side_names | large_hull_names | large_support_names
+              | harbor_original_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
