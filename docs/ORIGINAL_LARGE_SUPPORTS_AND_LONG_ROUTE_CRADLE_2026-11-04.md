@@ -37,3 +37,11 @@ Une coque carrée **indépendante** `large_deck_hull` (`125929150866282`) couvre
 5. Les **supports de toute la carte** ne sont pas encore remplacés. Les arènes de 320 studs, les centaines de modules serveur restants, les textures raster PBR complètes, les gros rails et les éclairages sont toujours des travaux distincts.
 
 **Statut public : non publié.** `publication.large_support_models_inserted_in_game=false`. Les six nouveaux packages sont modérés **Approved**, pas « validés sur Android ».
+
+## Extension : couverture réelle des pylônes et repli visuel immédiat
+
+Les cinq pylônes 3D originaux sont maintenant sélectionnés plus fréquemment parmi les vrais `PlatformSupport` : **High 1 plateforme sur 4** au lieu de 1/7, **Medium 1 sur 8** au lieu de 1/13. Ce changement ne relève **pas** les plafonds existants de 16 modules High et 8 modules Medium ; il permet d'utiliser les places disponibles plus tôt dans la carte et réduit la proportion de grands poteaux Roblox natifs, lorsque les modèles authentifiés et les dimensions correspondent. Les supports non éligibles conservent leur forme d'origine.
+
+Un nouveau garde-fou suit `ChildRemoved` du dossier des véritables meshes installés. Si un élément authentifié disparaît sans reconstruction (streaming/teardown), le client **restaure immédiatement** tous les anciens habillages masqués (`LocalTransparencyModifier` initial), remet les ensembles de remplacement à zéro et conserve les collisions et signaux serveur. Un seul signal par dossier, aucun `RenderStepped`. Lors de la reconstruction normale, le signal est déconnecté avant le nettoyage pour éviter un cycle parasite. Le compteur `LocalNativeStructuralPartsReplaced` revient alors à zéro.
+
+**Contrôle requis :** Build Validation + sept suites moteur au commit exact de cette extension. Les captures Android réelles et la publication publique restent distinctes de la validation de source.
