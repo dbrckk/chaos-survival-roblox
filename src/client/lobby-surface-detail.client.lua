@@ -1,6 +1,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
+local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local PremiumLobbyGroundMeshKit = require(script.Parent.PremiumLobbyGroundMeshKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 
@@ -10,8 +13,17 @@ local folder = Instance.new("Folder")
 folder.Name = "LobbySurfaceDetailLocal"
 folder.Parent = workspace
 
+local clearingOwn = false
 local function clear()
+    clearingOwn = true
     folder:ClearAllChildren()
+    clearingOwn = false
+    if player:GetAttribute("LocalOriginalLobbyGroundMeshPartCount") ~= 0 then
+        player:SetAttribute("LocalOriginalLobbyGroundMeshPartCount", 0)
+    end
+    if player:GetAttribute("LocalOriginalLobbyGroundTileCount") ~= 0 then
+        player:SetAttribute("LocalOriginalLobbyGroundTileCount", 0)
+    end
 end
 
 local function makePart(name, size, cframe, color, material, transparency)
@@ -42,12 +54,27 @@ local function rebuild()
         return
     end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+    -- Only verified real imported UV meshes replace the native line grid.
+    -- All gameplay panels, the 74-stud collision Floor, and spawn remain.
+    local meshParts, meshTiles = PremiumLobbyGroundMeshKit.install(
+        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure")
+    )
+    if player:GetAttribute("LocalOriginalLobbyGroundMeshPartCount")
+        ~= meshParts then
+        player:SetAttribute("LocalOriginalLobbyGroundMeshPartCount", meshParts)
+    end
+    if player:GetAttribute("LocalOriginalLobbyGroundTileCount")
+        ~= meshTiles then
+        player:SetAttribute("LocalOriginalLobbyGroundTileCount", meshTiles)
+    end
     local top = floor.CFrame * CFrame.new(0, floor.Size.Y * 0.5 + 0.04, 0)
     local halfX = floor.Size.X * 0.5
     local halfZ = floor.Size.Z * 0.5
 
-    local seamCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
+    local seamCount = meshTiles > 0 and 0
+        or (tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8))
     for i = 1, seamCount do
         local t = (i / (seamCount + 1)) * 2 - 1
         local horizontal = i % 2 == 0
@@ -151,20 +178,96 @@ local function rebuild()
     end
 end
 
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then
-        task.defer(rebuild)
-    end
-end)
+-- Existing server asset lane can publish PremiumGroundTile after the
+-- lobby is first shown. One deferred reconstruction replaces native lines
+-- only once actual original MeshParts are ready, not on a fixed timer.
+local refreshPending = false
+local disconnectFloorWatch = nil
+local watchedMap = nil
+local watchedTemplates = nil
+local templateConnections = {}
 
-workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
+
+local function bindMap(generated)
+    if disconnectFloorWatch then disconnectFloorWatch() end
+    disconnectFloorWatch = nil
+    watchedMap = generated
+    if generated then
+        disconnectFloorWatch = MapVisualReadiness.watch(
+            generated, "Lobby", "Floor", scheduleRefresh)
+    else
         clear()
     end
+    scheduleRefresh()
+end
+
+local function bindTemplates(holder)
+    if watchedTemplates == holder then return end
+    for _, connection in ipairs(templateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(templateConnections)
+    watchedTemplates = holder
+    if holder and holder:IsA("Folder") then
+        local function changed(child)
+            if child.Name == "PremiumGroundTile" then scheduleRefresh() end
+        end
+        templateConnections[#templateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        templateConnections[#templateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+        templateConnections[#templateConnections + 1] =
+            holder:GetAttributeChangedSignal("OwnerVerified")
+                :Connect(scheduleRefresh)
+    end
+    scheduleRefresh()
+end
+
+-- Approved client meshes do not normally stream out, but any unexpected
+-- removal must restore their native backdrop without a manual reload.
+-- Suppress our own ClearAllChildren teardown to avoid rebuild recursion.
+folder.DescendantRemoving:Connect(function(item)
+    if not clearingOwn and item:IsA("MeshPart")
+        and item:GetAttribute("OriginalLobbyGround3D") == true then
+        scheduleRefresh()
+    end
 end)
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
-    task.defer(rebuild)
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GeneratedMap"
+        and child == workspace:FindFirstChild("GeneratedMap") then
+        bindMap(child)
+    end
+end)
+workspace.ChildRemoved:Connect(function(child)
+    if child == watchedMap then
+        bindMap(workspace:FindFirstChild("GeneratedMap"))
+    end
 end)
 
-rebuild()
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "PremiumRouteMeshTemplates" then
+        bindTemplates(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == watchedTemplates then
+        bindTemplates(ReplicatedStorage:FindFirstChild(
+            "PremiumRouteMeshTemplates"))
+    end
+end)
+
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRefresh)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleRefresh)
+
+bindMap(workspace:FindFirstChild("GeneratedMap"))
+bindTemplates(ReplicatedStorage:FindFirstChild("PremiumRouteMeshTemplates"))
+scheduleRefresh()
