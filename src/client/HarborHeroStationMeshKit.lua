@@ -254,6 +254,17 @@ local function mount(arena,scene,source)
             native:GetPropertyChangedSignal("CFrame"):Connect(function()
                 syncMotion(e)
             end)
+        -- The existing hero owner resets original alpha during
+        -- ReduceMotion/phase rest-pose events. Keep the native animation
+        -- provider alive but visually masked for the FULL duration of
+        -- an authenticated 3D replacement, without a second frame loop.
+        e.connections[#e.connections+1]=
+            native:GetPropertyChangedSignal("Transparency"):Connect(function()
+                if not e.disposing and alive(e)
+                    and native.Transparency~=1 then
+                    native.Transparency=1
+                end
+            end)
     end
     local function changed()
         if not alive(e) then visibility(e) end
