@@ -28,6 +28,53 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/mesh-previews
+          # Six new moderated original platform/skybridge models. Rebuild
+          # their actual OBJ and embedded glTF at every release milestone;
+          # a registry ID alone does not prove real UV/tangent geometry.
+          for kind in deck_carapace_classic deck_carapace_towers deck_carapace_crossroads deck_carapace_orbital deck_carapace_harbor bridge_side_girder; do
+            python3 tools/generate_original_platform_carapaces.py \
+              --model "$kind" --output "assets/source/chaos_${kind}.obj" \
+              > "build/mesh-previews/chaos_${kind}-source.json"
+            python3 tools/obj_to_gltf.py \
+              --source "assets/source/chaos_${kind}.obj" \
+              --materials assets/source/chaos_route_kit.mtl \
+              --output "build/mesh-previews/chaos_${kind}.gltf"
+          done
+          python3 - <<'PY'
+          import base64, json
+          from pathlib import Path
+          kinds = ("deck_carapace_classic", "deck_carapace_towers",
+                   "deck_carapace_crossroads", "deck_carapace_orbital",
+                   "deck_carapace_harbor", "bridge_side_girder")
+          for kind in kinds:
+              base=Path("build/mesh-previews/chaos_" + kind)
+              desc=json.loads(Path(str(base)+"-source.json").read_text())
+              gltf=json.loads(Path(str(base)+".gltf").read_text())
+              assert desc["asset"] == kind
+              assert 350 <= desc["triangles"] <= 5000
+              assert 18 <= desc["groups"] <= 145
+              assert gltf["asset"]["version"] == "2.0"
+              assert {m["name"] for m in gltf["materials"]} == {
+                  "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+              segments=gltf["meshes"][0]["primitives"]
+              assert len(segments)==7
+              total=0
+              for segment in segments:
+                  attrs=segment["attributes"]
+                  assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"} <= set(attrs)
+                  total+=gltf["accessors"][attrs["POSITION"]]["count"]//3
+              assert total==desc["triangles"]
+              blob=gltf["buffers"][0]
+              raw=base64.b64decode(blob["uri"].split(",",1)[1],validate=True)
+              assert len(raw)==blob["byteLength"]
+              x,y,z=desc["dimensions"]
+              if kind=="bridge_side_girder":
+                  assert 9.3<=x<=10.6 and 1.3<=y<=2.3 and .5<=z<=1.3
+              else:
+                  assert 10.8<=x<=12 and 2.1<=y<=3.5 and 8.1<=z<=9.1
+              print("Original noncolliding platform structure:",kind,total,
+                    "triangles, 7 authentic material MeshParts")
+          PY
           python3 tools/generate_premium_ground_tile.py --output assets/source/chaos_premium_ground_tile.obj
           python3 tools/generate_district_profile_meshes.py --output-dir assets/source
           python3 tools/generate_original_skyfleet_carrier.py --output assets/source/chaos_skyfleet_carrier.obj
@@ -206,11 +253,17 @@ jobs:
               "floor_corner_guard", "floor_anchor_bolt_large",
               "floor_harbor_tie",
           }
+          platform_side_names = {
+              "deck_carapace_classic", "deck_carapace_towers",
+              "deck_carapace_crossroads", "deck_carapace_orbital",
+              "deck_carapace_harbor", "bridge_side_girder",
+          }
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
-              | ambient_names | relief_names | floor_hardware_names)
+              | ambient_names | relief_names | floor_hardware_names
+              | platform_side_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -229,7 +282,10 @@ jobs:
                       "relief_essential", "relief_classic", "relief_towers",
                       "relief_crossroads", "relief_orbital", "relief_harbor",
                       "floor_corner_guard", "floor_anchor_bolt_large",
-                      "floor_harbor_tie"):
+                      "floor_harbor_tie",
+                      "deck_carapace_classic", "deck_carapace_towers",
+                      "deck_carapace_crossroads", "deck_carapace_orbital",
+                      "deck_carapace_harbor", "bridge_side_girder"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
@@ -255,6 +311,12 @@ jobs:
                           "floor_corner_guard": "tools/generate_original_floor_hardware.py",
                           "floor_anchor_bolt_large": "tools/generate_original_floor_hardware.py",
                           "floor_harbor_tie": "tools/generate_original_floor_hardware.py",
+                          "deck_carapace_classic": "tools/generate_original_platform_carapaces.py",
+                          "deck_carapace_towers": "tools/generate_original_platform_carapaces.py",
+                          "deck_carapace_crossroads": "tools/generate_original_platform_carapaces.py",
+                          "deck_carapace_orbital": "tools/generate_original_platform_carapaces.py",
+                          "deck_carapace_harbor": "tools/generate_original_platform_carapaces.py",
+                          "bridge_side_girder": "tools/generate_original_platform_carapaces.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -382,7 +444,59 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 37
+          assert len(models) == 43
+          platform_server = Path("src/server/PremiumPlatformSideAssets.lua").read_text()
+          platform_mesh = Path("src/client/PremiumPlatformSideMeshKit.lua").read_text()
+          platform_finish = Path("src/client/PlatformFinishKit.lua").read_text()
+          platform_script = Path("src/client/arena-platform-identity.client.lua").read_text()
+          for variant, source_name in (
+              ("Classic", "deck_carapace_classic"),
+              ("Towers", "deck_carapace_towers"),
+              ("Crossroads", "deck_carapace_crossroads"),
+              ("Orbital", "deck_carapace_orbital"),
+              ("Harbor", "deck_carapace_harbor"),
+              ("Bridge", "bridge_side_girder"),
+          ):
+              assert (variant + " = " + approved[source_name]) in platform_server
+              assert (variant + " = " + approved[source_name]) in platform_mesh
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == source_name) == 41798024000
+          for required in (
+              "AssetService.LoadAssetAsync",
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedPlatformSideTemplates",
+              "validModel(clean, name)",
+          ):
+              assert required in platform_server, required
+          for required in (
+              "Kit.carapace", "Kit.bridgeGirders",
+              "Original3DStructuralSide", "CanCollide = false",
+              "CanTouch = false", "CanQuery = false",
+              "CastShadow = false", "ChaosPlatformTrimWeld",
+              "source:GetAttribute", "Original3DAssetId",
+          ):
+              # String safety guards must be present in the actual owning code.
+              if required=="source:GetAttribute":
+                  assert 'model:GetAttribute("Original3DAssetId")' in platform_mesh
+              else:
+                  assert required in platform_mesh, required
+          assert "RunService" not in platform_mesh
+          for required in (
+              "PremiumPlatformSideMeshKit.carapace(",
+              "PremiumPlatformSideMeshKit.bridgeGirders(",
+              "if original then return original end",
+          ):
+              assert required in platform_finish
+          for required in (
+              "LocalOriginalPlatformSideMeshPartCount",
+              "ApprovedPlatformSideTemplates",
+              "authenticCarapace", "authenticBridge",
+              "registerVisual(platform, piece)",
+          ):
+              assert required in platform_script
+          assert "PremiumPlatformSideAssets.start" in Path(
+              "src/server/init.server.lua").read_text()
+          assert "ArenaPlatformIdentityLocal" in census
           hardware = Path("src/client/PremiumFloorHardwareMeshKit.lua").read_text()
           floor_src = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
           relief_client = Path("src/client/arena-surface-relief.client.lua").read_text()
