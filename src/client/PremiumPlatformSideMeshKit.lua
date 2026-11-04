@@ -171,9 +171,13 @@ function Kit.bridgeGirders(parent, platform, tier, index)
     local scale = math.min(1.1, width*.24, length*.32/sourceLength)
     if scale < .75 then return nil end
 
+    -- Roblox may import a long-X glTF as a long-Z Model. All bridge
+    -- placements must follow the *imported source long axis*, not assume
+    -- it is always X; otherwise truss modules can appear across the
+    -- walkway or past its physical ends on some uploaded orientations.
+    local sourceLongZ = original.Z > original.X
     local along = platform.CFrame * CFrame.Angles(
-        0, (sz > sx) ~= (original.Z > original.X)
-            and math.pi*.5 or 0, 0)
+        0, (sz > sx) ~= sourceLongZ and math.pi*.5 or 0, 0)
     local perSide = tier == "High" and 2 or 1
     local all = {}
     -- All clones are staged before any original local rails are removed.
@@ -195,10 +199,13 @@ function Kit.bridgeGirders(parent, platform, tier, index)
                 for _, p in ipairs(all) do p:Destroy() end
                 return nil
             end
+            local edgeOffset = side * (
+                width*.5 - math.min(.20,math.min(bounds.X,bounds.Z)*.25))
+            local longOffset = length * fraction
             local target = along * CFrame.new(
-                length * fraction,
+                sourceLongZ and edgeOffset or longOffset,
                 sy*.5 - .20 - bounds.Y*.5,
-                side*(width*.5 - math.min(.20,bounds.Z*.25)))
+                sourceLongZ and longOffset or edgeOffset)
             local parts = preparedParts(copy, frame, target, platform, "Bridge")
             if not parts then
                 copy:Destroy()
