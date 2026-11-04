@@ -81,6 +81,12 @@ on:
           - deck_carapace_orbital
           - deck_carapace_harbor
           - bridge_side_girder
+          - column_classic
+          - column_towers
+          - column_crossroads
+          - column_orbital
+          - column_harbor
+          - long_route_cradle
       creator_kind:
         description: Asset ownership (used only when upload is enabled)
         type: choice
@@ -135,7 +141,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel|service_camera|service_maintenance|service_wayfinder|service_orbital|service_mooring|ambient_drone|ambient_lift|ambient_transit|ambient_satellite|ambient_cargo|relief_essential|relief_classic|relief_towers|relief_crossroads|relief_orbital|relief_harbor|floor_corner_guard|floor_anchor_bolt|floor_anchor_bolt_large|floor_harbor_tie|deck_carapace_classic|deck_carapace_towers|deck_carapace_crossroads|deck_carapace_orbital|deck_carapace_harbor|bridge_side_girder) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel|service_camera|service_maintenance|service_wayfinder|service_orbital|service_mooring|ambient_drone|ambient_lift|ambient_transit|ambient_satellite|ambient_cargo|relief_essential|relief_classic|relief_towers|relief_crossroads|relief_orbital|relief_harbor|floor_corner_guard|floor_anchor_bolt|floor_anchor_bolt_large|floor_harbor_tie|deck_carapace_classic|deck_carapace_towers|deck_carapace_crossroads|deck_carapace_orbital|deck_carapace_harbor|bridge_side_girder|column_classic|column_towers|column_crossroads|column_orbital|column_harbor|long_route_cradle) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -162,7 +168,7 @@ jobs:
           # Exporting it against the industrial palette fails material checks.
           if [ "$CHOICE" = "perimeter_gate" ]; then
             echo "CHAOS_MTL=assets/source/chaos_perimeter_gate.mtl" >> "$GITHUB_ENV"
-          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ] || [ "$CHOICE" = "underdeck_chassis" ] || [ "$CHOICE" = "lobby_gate" ] || [ "$CHOICE" = "sky_spine_crown" ] || [ "$CHOICE" = "arena_keel" ] || [[ "$CHOICE" == service_* && "$CHOICE" != "service_crane" ]] || [[ "$CHOICE" == ambient_* ]] || [[ "$CHOICE" == relief_* ]] || [[ "$CHOICE" == floor_* ]] || [[ "$CHOICE" == deck_carapace_* ]] || [ "$CHOICE" = "bridge_side_girder" ]; then
+          elif [ "$CHOICE" = "premium_jump_deck" ] || [ "$CHOICE" = "premium_skybridge_module" ] || [ "$CHOICE" = "premium_ground_tile" ] || [[ "$CHOICE" == district_* ]] || [ "$CHOICE" = "skyfleet_carrier" ] || [ "$CHOICE" = "underdeck_chassis" ] || [ "$CHOICE" = "lobby_gate" ] || [ "$CHOICE" = "sky_spine_crown" ] || [ "$CHOICE" = "arena_keel" ] || [[ "$CHOICE" == service_* && "$CHOICE" != "service_crane" ]] || [[ "$CHOICE" == ambient_* ]] || [[ "$CHOICE" == relief_* ]] || [[ "$CHOICE" == floor_* ]] || [[ "$CHOICE" == deck_carapace_* ]] || [ "$CHOICE" = "bridge_side_girder" ] || [[ "$CHOICE" == column_* ]] || [ "$CHOICE" = "long_route_cradle" ]; then
             echo "CHAOS_MTL=assets/source/chaos_route_kit.mtl" >> "$GITHUB_ENV"
           else
             echo "CHAOS_MTL=assets/source/chaos_industrial_materials.mtl" >> "$GITHUB_ENV"
@@ -184,6 +190,9 @@ jobs:
             # Authored open-frame 3D sub-deck sculpture, never a gameplay Part.
             python3 tools/generate_original_underdeck_chassis.py \
               --output assets/source/chaos_underdeck_chassis.obj
+          elif [[ "$CHOICE" == column_* ]] || [ "$CHOICE" = "long_route_cradle" ]; then
+            python3 tools/generate_original_large_supports.py \
+              --model "$CHOICE" --output "assets/source/chaos_${CHOICE}.obj"
           elif [[ "$CHOICE" == deck_carapace_* ]] || [ "$CHOICE" = "bridge_side_girder" ]; then
             python3 tools/generate_original_platform_carapaces.py \
               --model "$CHOICE" --output "assets/source/chaos_${CHOICE}.obj"
@@ -303,7 +312,13 @@ jobs:
                    "deck_carapace_crossroads": "Chaos Original Crossroads Deck Carapace",
                    "deck_carapace_orbital": "Chaos Original Orbital Load Carapace",
                    "deck_carapace_harbor": "Chaos Original Harbor Load Carapace",
-                   "bridge_side_girder": "Chaos Original Skybridge Truss Girder"}
+                   "bridge_side_girder": "Chaos Original Skybridge Truss Girder",
+                   "column_classic": "Chaos Original Classic Forged Load Column",
+                   "column_towers": "Chaos Original Towers Hydraulic Column",
+                   "column_crossroads": "Chaos Original Crossroads Road Pylon",
+                   "column_orbital": "Chaos Original Orbital Flux Column",
+                   "column_harbor": "Chaos Original Harbor Timber Steel Pile",
+                   "long_route_cradle": "Chaos Original Long Skyway Undercarriage"}
           display_name = names[os.environ["CHOICE"]]
           # Roblox returned INVALID_ARGUMENT "Asset name length is invalid"
           # on 3 Nov 2026 for the previous 54-character Sky Spine name.
