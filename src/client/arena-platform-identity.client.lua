@@ -706,6 +706,49 @@ roundEvent.OnClientEvent:Connect(function(packet)
     end
 end)
 
+-- Original service hatches are loaded in a late server asset lane.
+-- Rebuild the existing platform visual owner once the current arena's
+-- approved model becomes available; otherwise first-join players would
+-- retain native three-Part hatches until the next map transition.
+-- Only model arrivals/removals matter; no polling or extra render loop.
+local platformReliefTemplateConnections = {}
+local currentPlatformReliefTemplates = nil
+local function watchPlatformReliefTemplates(holder)
+    if currentPlatformReliefTemplates == holder then return end
+    for _, connection in ipairs(platformReliefTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(platformReliefTemplateConnections)
+    currentPlatformReliefTemplates = holder
+    if holder and holder:IsA("Folder") then
+        local function changed(child)
+            local generated = workspace:FindFirstChild("GeneratedMap")
+            local arena = generated and generated:FindFirstChild("Arena")
+            local variant = arena and tostring(
+                arena:GetAttribute("VariantId") or "Classic")
+            if variant == child.Name then scheduleRebuild() end
+        end
+        platformReliefTemplateConnections[#platformReliefTemplateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        platformReliefTemplateConnections[#platformReliefTemplateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+        scheduleRebuild()
+    end
+end
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "ApprovedFloorReliefTemplates" then
+        watchPlatformReliefTemplates(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == currentPlatformReliefTemplates then
+        watchPlatformReliefTemplates(nil)
+        scheduleRebuild()
+    end
+end)
+watchPlatformReliefTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates"))
+
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;
 -- never rebuild the whole arena just to freeze/restart the moving heads.
