@@ -291,6 +291,16 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         or not PbrDistrictRules.visible(part) then
         return false
     end
+    -- A source-verified original MeshPart floor now covers this
+    -- builder-authored native 0.035-stud underlay. Don't spend another
+    -- approved 2K MaterialVariant on the OCCLUDED native Part. Once the
+    -- imported tile shrinks, streams out or leaves camera residency,
+    -- PremiumGroundMeshKit clears its local marker and the normal PBR
+    -- selector can reuse its existing global 32/72 Android budget.
+    if part.Name:match("^PremiumGroundModule%d+$")
+        and part:GetAttribute("LocalApproved3DGroundResident") == true then
+        return false
+    end
     -- The candidate's owner must be bound BEFORE the premium provenance
     -- check. The previous global 'owner' was nil, disabling this restriction
     -- and permitting unrelated thin decorative metal to enter the PBR pool.
