@@ -92,7 +92,11 @@ jobs:
           assert "OriginalMeshScenery.sanitize(raw)" in server
           assert "ApprovedTowerCoolingSpireTemplates" in server and "ApprovedTowerCoolingSpireTemplates" in client
           assert "RealCoolingSpire" in server and "RealCoolingSpire" in client
-          assert "n~=7" in server and "n~=7" in client
+          # The server intentionally names the seven-geometry counter
+          # `count`; the client names it `n`. Check real semantics,
+          # not a stale source-variable spelling from an earlier refactor.
+          assert ("count~=7" in server or "n~=7" in server)
+          assert "n~=7" in client
           assert "Original3DTriangleCount" in server and "6380" in client
           assert "SourceArchitecturalBodyHeight" in server
           assert "PremiumTowerCoolingSpireAssets.start" in init
