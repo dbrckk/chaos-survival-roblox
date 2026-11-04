@@ -187,6 +187,21 @@ end
 
 local function safeAfterMount(entry, base)
     local ground = entry.ground
+    -- An imported approved Model can partially disappear during
+    -- streaming or failed asset replication even when its native 49-stud
+    -- source Part is unchanged. NEVER leave masked native seams or 2K
+    -- PBR painted on a missing genuine MeshPart.
+    if not entry.model or not entry.model.Parent
+        or not entry.pieces or #entry.pieces < 1
+        or #entry.pieces > 24 then
+        return false
+    end
+    for _, piece in ipairs(entry.pieces) do
+        if not piece:IsA("MeshPart")
+            or not piece:IsDescendantOf(entry.model) then
+            return false
+        end
+    end
     if not originalSurface(ground, entry.decor, base)
         or (ground.Size - entry.initialSize).Magnitude >= 0.07
         or (ground.CFrame.Position - entry.initialCFrame.Position).Magnitude >= 0.07
@@ -287,6 +302,15 @@ local function mount(ground, decor, base, template)
     end
     entry.connections[#entry.connections + 1] =
         ground.AncestryChanged:Connect(onGroundChanged)
+    -- Immediate fallback if a source 3D MeshPart is removed unexpectedly.
+    -- Ignore PBR template detaches: those are SurfaceAppearance objects,
+    -- never critical original geometry. One event per bounded resident tile.
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantRemoving:Connect(function(descendant)
+            if descendant:IsA("MeshPart") then
+                hide(entry)
+            end
+        end)
     onGroundChanged()
     return entry
 end
