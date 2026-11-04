@@ -11,14 +11,35 @@ local PremiumGroundMeshKit = {}
 local APPROVED_GROUND_ID = 72507987666671
 local TEMPLATE_NAME = "PremiumGroundTile"
 -- One approved tile is 2,976 source triangles / at most seven MeshParts.
--- Each tier is an EXPLICIT camera-resident source-mesh budget, not an
--- unrestricted clone-per-tile. Low keeps 5,952 triangles maximum; Medium
--- 23,808; High 71,424. The real 36-piece base and hazards stay unchanged.
+-- The arena has 36 legitimate, author-marked 49-stud floor modules.
+-- On healthy High clients, cover ALL 36 with the owner's real Approved
+-- UV/tangent 3D tile instead of leaving a 12-tile sea of flat Roblox
+-- native geometry. Medium covers 12 of 36; Low remains at 2.
+-- An existing local frame/instance-pressure signal can rapidly reclaim
+-- the expensive optional copies without a new polling loop or profiler.
+-- Imported mesh ceilings (2,976 tris per tile): Low 5,952, Medium
+-- 35,712, High 107,136. The server-authoritative Base never changes.
 local BUDGET = {
     Low = {count = 2, distance = 125, retention = 18},
-    Medium = {count = 8, distance = 195, retention = 24},
-    High = {count = 24, distance = 260, retention = 28},
+    Medium = {count = 12, distance = 195, retention = 24},
+    High = {count = 36, distance = 260, retention = 28},
 }
+local PRESSURE_COUNTS = {
+    Low = {2, 2, 1},
+    Medium = {12, 8, 4},
+    High = {36, 24, 16},
+}
+
+-- OptionalVfxPressure is 0/1/2 from the existing hysteresis-filtered
+-- Android frame pacing + Parts budget owner. Missing data is neutral.
+-- Never expand a resident budget beyond the explicit per-device cap.
+function PremiumGroundMeshKit.residencyCount(tier, pressure)
+    local counts = PRESSURE_COUNTS[tier] or PRESSURE_COUNTS.Low
+    local p = tonumber(pressure)
+    if p == nil or p ~= p then p = 0 end
+    p = math.clamp(math.floor(p), 0, 2)
+    return counts[p + 1]
+end
 
 local folder = Instance.new("Folder")
 folder.Name = "OriginalPremiumGroundMeshesLocal"
@@ -249,12 +270,13 @@ local function mount(ground, decor, base, template)
 end
 
 -- Exclusively called by the EXISTING arena/scenery LOD sampling owner.
-function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
+function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local budget = BUDGET[tier] or BUDGET.Low
+    local residentLimit = PremiumGroundMeshKit.residencyCount(tier, pressure)
     if not arena or not cameraReady or typeof(cameraPoint) ~= "Vector3" then
         clearMounted()
         return
@@ -327,7 +349,7 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, camera
     local template = validTemplate()
     local wanted = {}
     if template then
-        for i = 1, math.min(budget.count, #candidates) do
+        for i = 1, math.min(budget.count, residentLimit, #candidates) do
             wanted[candidates[i].part] = true
         end
     end
