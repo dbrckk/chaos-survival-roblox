@@ -1,3 +1,5 @@
+**Complément — 4 novembre 2026 :** les modèles 3D validés/UV du sol reçoivent désormais les quatre vrais canaux des textures PBR 2K approuvées, par clonage de SurfaceAppearance sérialisés en Rojo. Les cinq arènes ont des matériaux dominants distincts ou des combinaisons de familles originales ; budgets Android adaptatifs High 6/3/1, Medium 2/1/0, Low 0. Contrôle de source/périphérique toujours requis. [Dossier détaillé](ORIGINAL_GROUND_2K_UV_PBR_FIVE_ARENAS_2026-11-04.md).
+
 # Visuel AAA : vraie dalle industrielle 3D (source, avant import Roblox)
 
 **Date** : 3 novembre 2026. **Priorités** : VIS-008 (grandes surfaces de sol), VIS-032 (géométrie UV industrielle originale). **Ce jalon est la création du vrai modèle 3D, pas encore son utilisation certifiée dans le jeu.**
