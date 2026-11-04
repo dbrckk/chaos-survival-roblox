@@ -2,6 +2,7 @@
 -- Decorative welds follow the authoritative platform without collisions.
 -- No custom asset IDs, dynamic emitters, scripted physics or animation loops.
 local PlatformFinishKit = {}
+local PremiumPlatformSideMeshKit = require(script.Parent.PremiumPlatformSideMeshKit)
 
 local NAMES = {
     Classic = {"ClassicCalibrationPlate", "ClassicDatumTick", "ClassicArmoredLip"},
@@ -188,12 +189,19 @@ function PlatformFinishKit.sideRailCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant)
+function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not NAMES[variant] then
         return {}
     end
     local count = PlatformFinishKit.sideRailCount(tier)
+    if count > 0 and platform:GetAttribute("ChaosSkybridge") == true then
+        -- Real 7-material creator-owned truss modules occupy the same
+        -- existing visual budget and shrink/collapse owner as native bars.
+        local original = PremiumPlatformSideMeshKit.bridgeGirders(
+            parent, platform, tier, index)
+        if original then return original end
+    end
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
     if count == 0 or math.min(sx, sz) < 4 then return {} end
 
@@ -665,6 +673,13 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
     if math.min(sx, sz) < 7 or math.max(sx, sz) > 36 then
         return {}
     end
+
+    -- Source-authenticated sculpted full underside/side facings replace
+    -- seven crude WedgePart/Part modules on sparse High/Medium decks.
+    -- The native art below is only built when the genuine mesh is absent.
+    local original = PremiumPlatformSideMeshKit.carapace(
+        parent, platform, variant, tier, index)
+    if original then return original end
 
     local p = CARAPACE_PROFILES[variant]
     local shellColor = theme.Structure:Lerp(theme.Detail, p.tint)
