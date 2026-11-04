@@ -94,7 +94,12 @@ local function stage(parent, platform, source, name, scale, target)
         return nil
     end
     local sourceFrame, dimensions = copy:GetBoundingBox()
-    local pieces = preparedParts(copy, sourceFrame, target(dimensions), platform, name)
+    local safe, frame = pcall(target, dimensions)
+    if not safe or typeof(frame) ~= "CFrame" then
+        copy:Destroy()
+        return nil
+    end
+    local pieces = preparedParts(copy, sourceFrame, frame, platform, name)
     if not pieces then
         copy:Destroy()
         return nil
