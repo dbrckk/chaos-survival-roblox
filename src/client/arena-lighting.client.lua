@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ArenaLightingReadabilityRules = require(ReplicatedStorage.Shared.ArenaLightingReadabilityRules)
 local CloudLayer = require(script.Parent.CloudLayer)
 local ArenaPostProcessLayer = require(script.Parent.ArenaPostProcessLayer)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
@@ -213,11 +214,14 @@ local function applyMood(duration)
     local depthMotionScale = reducedMotion and 0.45 or 1
     local farIntensity = 0.12 * depthQualityScale * depthPhaseScale * depthMotionScale
     local nearIntensity = 0.035 * depthQualityScale * depthPhaseScale * depthMotionScale
-    local renderScale = quality.Name == "Low" and 0.65
-        or (quality.Name == "Medium" and 0.86 or 1)
+    -- Keep genuine material surface relief readable on Low/Medium as
+    -- well as High. The disaster owner takes over during ready/round,
+    -- so these scales affect only lobby, results and ambient daylight.
+    local renderScale, exposureScale =
+        ArenaLightingReadabilityRules.identityScale(quality.Name)
     local environmentDiffuse = (mood.EnvironmentDiffuse or 0.30) * renderScale
     local environmentSpecular = (mood.EnvironmentSpecular or 0.70) * renderScale
-    local exposure = (mood.Exposure or 0) * (quality.Name == "Low" and 0.65 or 1)
+    local exposure = (mood.Exposure or 0) * exposureScale
     local sunRayIntensity = (mood.SunRays or 0.025)
         * (phase == "round" and 0 or (phase == "ready" and 0.35 or 1))
         * (quality.Name == "Low" and 0 or 1)

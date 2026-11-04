@@ -1,3 +1,17 @@
+LOT 4 NOVEMBRE 2026 — CORRECTION GLOBAL DU RENDU TROP SOMBRE EN MANCHE
+[QA]     Identification réelle : juice imposait EnvironmentDiffuseScale
+         = 0.34 à toutes les arènes pendant la manche, annulant le
+         remplissage lumineux amélioré des cinq profils PBR/sunlight.
+         Nouveau ArenaLightingReadabilityRules partagé entre owner
+         identité et owner catastrophe. Diffuse 0.53/0.51/0.49 en round
+         Low/Medium/High et 0.56/0.54/0.52 en READY ; 0.26/0.25/0.24
+         si Darkness (y compris catastrophe secondaire) pour conserver
+         son obscurité, ColorCorrection négatif inchangé. Retour de
+         détail sur les vraies faces de métal/céramique et sol, sans
+         source de lumière, script de rendu ou asset supplémentaire.
+         Build + sept suites Roblox Cloud du nouveau SHA requis.
+         docs/ARENA_ROUND_LIGHTING_READABILITY_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — SIX STATIONS ORBITALES SCULPTÉES
 [QA]     OrbitalStationMass1..6 possède un remplacement 3D authentique
          alternant satellites solaires et modules de confinement énergie.

@@ -10,6 +10,7 @@ local Stats = game:GetService("Stats")
 
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local ArenaLightingReadabilityRules = require(ReplicatedStorage.Shared.ArenaLightingReadabilityRules)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local PerformancePulseRules = require(ReplicatedStorage.Shared.PerformancePulseRules)
 local FramePacingRules = require(ReplicatedStorage.Shared.FramePacingRules)
@@ -503,14 +504,31 @@ local function setMood(state)
         end
     end
 
-    if phase == "round" then
-        Lighting.ExposureCompensation = doubleChaos and -0.04 or 0.02
-        Lighting.EnvironmentDiffuseScale = 0.34
-        Lighting.EnvironmentSpecularScale = 0.76
-    elseif phase == "ready" then
-        Lighting.ExposureCompensation = 0.04
-        Lighting.EnvironmentDiffuseScale = 0.38
-        Lighting.EnvironmentSpecularScale = 0.72
+    -- The disaster controller OWNS exposure/diffuse/specular during
+    -- active rounds. Use tier-aware neutral material bounce instead of
+    -- crushing genuine 3D floor and skyline geometry at 0.34 diffuse.
+    -- Darkness (even as a secondary disaster) stays genuinely dark;
+    -- its negative hazard ColorCorrection brightness is NOT modified.
+    local exposure, diffuse, specular, darkness =
+        ArenaLightingReadabilityRules.disasterLighting(
+            phase, vfxTier.Name, doubleChaos, ids)
+    if exposure then
+        if Lighting.ExposureCompensation ~= exposure then
+            Lighting.ExposureCompensation = exposure
+        end
+        if Lighting.EnvironmentDiffuseScale ~= diffuse then
+            Lighting.EnvironmentDiffuseScale = diffuse
+        end
+        if Lighting.EnvironmentSpecularScale ~= specular then
+            Lighting.EnvironmentSpecularScale = specular
+        end
+        -- Values describe the authored target, not a screenshot/measurement.
+        if player:GetAttribute("LocalRoundDiffuseTarget") ~= diffuse then
+            player:SetAttribute("LocalRoundDiffuseTarget", diffuse)
+        end
+        if player:GetAttribute("LocalDarknessLightGuard") ~= darkness then
+            player:SetAttribute("LocalDarknessLightGuard", darkness)
+        end
     end
 
     if phase == "round" or phase == "ready" then
