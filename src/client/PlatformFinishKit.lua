@@ -514,7 +514,12 @@ function PlatformFinishKit.captureRouteFootprint(platform, pieces)
         entries = {},
     }
     for _, piece in ipairs(pieces or {}) do
-        if piece and piece:IsA("BasePart") and piece.Parent then
+        if piece and piece:IsA("BasePart") and piece.Parent
+            and piece:GetAttribute("SkipRouteFootprint") ~= true then
+            -- True 3D support columns are welded to the real anchored
+            -- PlatformSupport, whose server CFrame and Size already follow
+            -- the arena shrink. A second deck-relative shrink would apply
+            -- contraction twice and could leave a floating fake pillar.
             snapshot.entries[#snapshot.entries + 1] = {
                 part = piece,
                 size = piece.Size,
