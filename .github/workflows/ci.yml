@@ -376,6 +376,7 @@ jobs:
               "harbor_gantry_container", "harbor_gantry_drum",
               "harbor_gantry_kinetic_container", "harbor_gantry_kinetic_drum",
               "harbor_hero_station", "harbor_midground_barge",
+              "harbor_sea_apron",
           }
           large_support_names = {
               "column_classic", "column_towers", "column_crossroads",
@@ -418,7 +419,8 @@ jobs:
                       "harbor_gantry_container", "harbor_gantry_drum",
                       "harbor_gantry_kinetic_container",
                       "harbor_gantry_kinetic_drum",
-                      "harbor_hero_station", "harbor_midground_barge"):
+                      "harbor_hero_station", "harbor_midground_barge",
+                      "harbor_sea_apron"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
@@ -466,6 +468,7 @@ jobs:
                           "harbor_gantry_kinetic_drum": "tools/generate_original_harbor_gantry.py",
                           "harbor_hero_station": "tools/generate_original_harbor_hero_station.py",
                           "harbor_midground_barge": "tools/generate_original_harbor_barge.py",
+                          "harbor_sea_apron": "tools/generate_original_harbor_sea.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -593,7 +596,7 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 59
+          assert len(models) == 60
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
@@ -960,7 +963,7 @@ jobs:
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
-          print("Verified 59 creator-owned Approved Model assets including true Harbor midground barges and animated maritime station, strict Android/hazard safety and provenance.")
+          print("Verified 60 creator-owned Approved Model assets including sculpted water and genuine Harbor freighters and cranes, strict Android/hazard safety and provenance.")
           PY
 
       - name: Install Rojo 7.7.0
