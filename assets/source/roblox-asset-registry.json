@@ -418,6 +418,30 @@
       "source": "tools/generate_original_large_supports.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41808940118
+    },
+    {
+      "name": "harbor_promenade_portal",
+      "asset_id": "134157110756659",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_promenade_portal.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41837415151
+    },
+    {
+      "name": "harbor_dock_caisson",
+      "asset_id": "101457508594609",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_dock_caisson.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41844409855
+    },
+    {
+      "name": "harbor_freighter",
+      "asset_id": "128820723471019",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_freighter.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41851214739
     }
   ]
 }
