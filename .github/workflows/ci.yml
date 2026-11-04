@@ -1214,6 +1214,89 @@ jobs:
           print("PBR 0/32/72 material tiers, 0/2/3 spotlight tiers and disaster Lighting ownership intact.")
           PY
 
+      - name: Verify 16 approved original 2K UV PBR image IDs and native underlay arbitration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          project = json.loads(Path("default.project.json").read_text())
+          evidence = json.loads(Path(
+              "assets/source/roblox-pbr-approval-evidence.json").read_text())
+          assert evidence["total_unique_image_ids"] == 16
+          assert evidence["all_approved_at_audit"] is True
+          assert evidence["creator_user_id"] == "9774173158"
+          root = project["tree"]
+          library = root["ReplicatedStorage"]["OriginalGroundPbrTemplates"]
+          assert library["$className"] == "Folder"
+          pairs = {
+              "BrushedTitanium": ("brushed_titanium","ChaosBrushedTitanium"),
+              "OxidizedSteel": ("oxidized_steel","ChaosOxidizedSteel"),
+              "DiamondArmor": ("armored_diamondplate","ChaosDiamondArmor"),
+              "ReactorCeramic": ("reactor_ceramic","ChaosReactorCeramic"),
+          }
+          assert set(library) == {"$className", *pairs}
+          fields = {"color":"ColorMap","normal":"NormalMap",
+                    "roughness":"RoughnessMap","metallic":"MetalnessMap"}
+          approved = set()
+          for title,(source,variant) in pairs.items():
+              entry = library[title]
+              native = root["MaterialService"][variant]
+              assert entry["$className"] == "SurfaceAppearance"
+              assert native["$className"] == "MaterialVariant"
+              assert set(entry["$properties"]) == set(fields.values())
+              for channel,field in fields.items():
+                  data = evidence["materials"][source][channel]
+                  assert data["current_moderation_at_audit"] == "APPROVED"
+                  assert data["ownership_at_audit"] == "9774173158"
+                  uri = "rbxassetid://" + data["id"]
+                  assert entry["$properties"][field] == uri
+                  assert native["$properties"][field] == uri
+                  approved.add(data["id"])
+          assert len(approved) == 16
+          kit = Path("src/client/PremiumGroundPbrKit.lua").read_text()
+          ground = Path("src/client/PremiumGroundMeshKit.lua").read_text()
+          lod = Path("src/client/scenery-lod.client.lua").read_text()
+          rules = Path("src/shared/PbrDistrictRules.lua").read_text()
+          specs = Path("tests/engine/visual-budget-rules.spec.luau").read_text()
+          for token in (
+              'local HOLDER = "OriginalGroundPbrTemplates"',
+              "function Kit.tileBudget(tier, pressure, touch, disabled)",
+              "function Kit.attach(entry, variant)",
+              "function Kit.detach(entry)",
+              'entry.model:GetAttribute("OriginalGroundMeshId") ~= SOURCE_ID',
+              "clone = ref:Clone()",
+              "OriginalApprovedGroundPbr2K",
+              "BrushedTitanium", "OxidizedSteel",
+              "DiamondArmor", "ReactorCeramic",
+          ):
+              assert token in kit, token
+          for token in (
+              "PremiumGroundPbrKit.tileBudget(",
+              "PremiumGroundPbrKit.attach(entry, variant)",
+              "PremiumGroundPbrKit.detach(entry)",
+              "LocalApproved3DGroundResident",
+              "function PremiumGroundMeshKit.pbrCount()",
+          ):
+              assert token in ground, token
+          for token in (
+              'player:GetAttribute("PbrMaterialsDisabled") == true',
+              'player:GetAttribute("OptionalVfxPressure")',
+              'LocalGroundPbr2KAppearanceCount', 'LocalGroundPbr2KTileCount',
+          ):
+              assert token in lod, token
+          assert 'LocalApproved3DGroundResident' in rules
+          assert 'kit.tileBudget' in specs
+          assert 'kit.family("Harbor")' in specs
+          for bad in (".ColorMap =", ".NormalMap =",
+                      ".RoughnessMap =", ".MetalnessMap =",
+                      "Instance.new(\"SurfaceAppearance\")"):
+              assert bad not in kit, ("illegal runtime map edit", bad)
+          print("Four serialized SurfaceAppearance families: 16 audit-approved 2K images, exact MaterialService sources.")
+          print("No unauthorized PBR map writes; UV import, mobile caps and server-floor fallbacks preserved.")
+          PY
+
       - name: Enforce Lighting property ownership
         shell: bash
         run: |
