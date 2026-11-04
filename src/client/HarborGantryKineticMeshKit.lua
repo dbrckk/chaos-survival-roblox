@@ -169,8 +169,6 @@ local function followNativeMotion(e)
                     piece.part.Size=Vector3.new(
                         piece.size.X,piece.size.Y*cableScale,piece.size.Z)
                 end
-            else
-                piece.part.CFrame=piece.rest
             end
         end
     end
