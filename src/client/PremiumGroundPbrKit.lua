@@ -103,7 +103,14 @@ function Kit.detach(entry)
         local part, appearance = source.part, source.appearance
         if appearance and part and entry.model
             and part:IsDescendantOf(entry.model) then
-            appearance.Parent = part
+            -- Never replace a third-party SurfaceAppearance that appeared
+            -- after our clone was installed. Keep our original source
+            -- underneath its own Model (inactive but not destroyed).
+            if part:FindFirstChildOfClass("SurfaceAppearance") then
+                appearance.Parent = entry.model
+            else
+                appearance.Parent = part
+            end
         elseif appearance then
             appearance:Destroy()
         end
