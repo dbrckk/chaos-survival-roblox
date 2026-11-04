@@ -71,7 +71,7 @@ local function trueHarbor(arena)
     local base=arena:FindFirstChild("Base")
     if not base or not base:IsA("BasePart")
         or not base.Anchored
-        or base.Size.X<110 or base.Size.Z<110 then
+        or base.Size.X<=0 or base.Size.Z<=0 then
         return nil
     end
     -- This is the one original arena that already supports real survival
@@ -85,7 +85,7 @@ local function alive(e)
         or e.source.Parent==nil
         or e.source:GetAttribute("Original3DAssetId")~=ASSET_ID
         or e.source:GetAttribute("OriginalHarborSea3D")~=true
-        or e.base.Size.X<110 or e.base.Size.Z<110 then return false end
+        or e.base.Size.X<=0 or e.base.Size.Z<=0 then return false end
     local n=0
     for _,part in ipairs(e.pieces) do
         if not part or part.Parent~=e.model then return false end
