@@ -1,0 +1,91 @@
+# One creator-owned original Harbor sky-promenade 3D cargo gantry asset.
+# Does NOT publish or change the playable Roblox place. Only a new
+# moderated owner Model may be created after geometric provenance QA.
+name: One-time Original Harbor Cargo Promenade 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-harbor-sky-promenade-3d-20261104.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: chaos-harbor-cargo-promenade-original-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate triangulated authentic industrial portal and glTF UV/tangents
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_harbor_promenade_portal.py \
+            --output "$RUNNER_TEMP/chaos_harbor_promenade_portal.obj" \
+            > "$RUNNER_TEMP/source.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/chaos_harbor_promenade_portal.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/chaos_harbor_promenade_portal.gltf" \
+            > "$RUNNER_TEMP/export.json"
+          python3 - "$RUNNER_TEMP/source.json" \
+            "$RUNNER_TEMP/chaos_harbor_promenade_portal.gltf" \
+            "$RUNNER_TEMP/chaos_harbor_promenade_portal.obj" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          art=json.loads(Path(sys.argv[1]).read_text())
+          gltf=json.loads(Path(sys.argv[2]).read_text())
+          obj=Path(sys.argv[3]).read_text()
+          assert art["asset"]=="harbor_promenade_portal"
+          assert 35<=art["groups"]<=155 and 950<=art["triangles"]<=5200
+          x,y,z=art["dimensions"]
+          assert 11<=x<=15 and 18.7<=y<=21.3 and 18.5<=z<=21
+          assert art["open_playable_width"]==12
+          assert "TenSidedTaperedFreightPier" in obj
+          assert "SuspendedCargoArmoredCase" in obj
+          assert "UnderslungTransverseRail" in obj
+          assert "HangingIBeam" in obj
+          required={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert set(art["materials"])==required
+          assert set(m["name"] for m in gltf["materials"])==required
+          assert gltf["asset"]["version"]=="2.0"
+          meshes=gltf["meshes"][0]["primitives"]
+          assert len(meshes)==7
+          assert all({"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(
+              p["attributes"]) for p in meshes)
+          count=sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"]//3
+              for p in meshes)
+          assert count==art["triangles"],(count,art["triangles"])
+          binary=base64.b64decode(gltf["buffers"][0]["uri"].split(",",1)[1],
+                                  validate=True)
+          assert len(binary)==gltf["buffers"][0]["byteLength"]
+          print("Verified original Harbor open cargo gantry:",count,
+                "triangles, seven UV+tangent material groups; NO GAME PUBLISH")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-harbor-promenade-3d-source
+          path: |
+            ${{ runner.temp }}/chaos_harbor_promenade_portal.obj
+            ${{ runner.temp }}/chaos_harbor_promenade_portal.gltf
+            ${{ runner.temp }}/source.json
+            ${{ runner.temp }}/export.json
+          retention-days: 14
+
+  import-owner-model:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: harbor_promenade_portal
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
