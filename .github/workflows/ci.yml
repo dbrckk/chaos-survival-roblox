@@ -580,7 +580,7 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 50
+          assert len(models) == 53
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
@@ -947,7 +947,7 @@ jobs:
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
-          print("Verified 37 creator-owned Approved Model assets including three authentic corner/bolt/Harbor machine sculptures, strict Android/hazard safety and provenance.")
+          print("Verified 53 creator-owned Approved Model assets including three authentic original Harbor promenade/dock/freighter sculptures, strict Android/hazard safety and provenance.")
           PY
 
       - name: Install Rojo 7.7.0
