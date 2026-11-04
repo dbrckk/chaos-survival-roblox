@@ -61,6 +61,65 @@ describe("visual budget rules", function()
         fakeModel:Destroy()
     end)
 
+    it("preserves engine-imported original SurfaceAppearance while applying source-verified UV PBR", function()
+        local replicated = game:GetService("ReplicatedStorage")
+        local existing = replicated:FindFirstChild("OriginalGroundPbrTemplates")
+        local library = existing
+        local createdLibrary = false
+        if not library then
+            library = Instance.new("Folder")
+            library.Name = "OriginalGroundPbrTemplates"
+            library.Parent = replicated
+            createdLibrary = true
+        end
+        local template = library:FindFirstChild("DiamondArmor")
+        local createdTemplate = false
+        if not template then
+            template = Instance.new("SurfaceAppearance")
+            template.Name = "DiamondArmor"
+            template.Parent = library
+            createdTemplate = true
+        end
+
+        -- No source mock: these are real Roblox MeshPart and
+        -- SurfaceAppearance Instances, verifying engine parent/clone
+        -- behavior, not invented success data or simulated image URLs.
+        local model = Instance.new("Model")
+        model.Name = "OriginalUploadedGroundInstance"
+        model:SetAttribute("CosmeticOnly", true)
+        model:SetAttribute("OriginalGroundMeshId", 72507987666671)
+        model.Parent = workspace
+        local piece = Instance.new("MeshPart")
+        piece.Name = "ARMOR"
+        piece.Parent = model
+        local original = Instance.new("SurfaceAppearance")
+        original.Name = "SourceImportedMaterialFactors"
+        original.Parent = piece
+        local ground = Instance.new("Part")
+        ground:SetAttribute("OriginalGroundFinish", true)
+        ground.Parent = workspace
+
+        local entry = {model = model, ground = ground, pieces = {piece}}
+        expect(PremiumGroundPbrKit.attach(entry, "Classic")).toBe(1)
+        expect(original.Parent).toBe(nil)
+        local overlay = piece:FindFirstChild("OriginalApprovedGroundPbr2K")
+        expect(overlay ~= nil and overlay:IsA("SurfaceAppearance")).toBe(true)
+        -- LOD reconciliation must not allocate a duplicate 2K atlas.
+        expect(PremiumGroundPbrKit.attach(entry, "Classic")).toBe(1)
+        expect(piece:FindFirstChild("OriginalApprovedGroundPbr2K")).toBe(overlay)
+        PremiumGroundPbrKit.detach(entry)
+        expect(original.Parent).toBe(piece)
+        expect(piece:FindFirstChild("OriginalApprovedGroundPbr2K")).toBe(nil)
+        expect(PremiumGroundPbrKit.attach(entry, "Classic")).toBe(1)
+        PremiumGroundPbrKit.detach(entry)
+        expect(original.Parent).toBe(piece)
+
+        ground:Destroy()
+        model:Destroy()
+        if createdTemplate then template:Destroy() end
+        if createdLibrary then library:Destroy() end
+    end)
+
     it("fills all 36 source-verified ground bays only on healthy High devices", function()
         local count = PremiumGroundMeshKit.residencyCount
         expect(count("High", 0)).toBe(36)
