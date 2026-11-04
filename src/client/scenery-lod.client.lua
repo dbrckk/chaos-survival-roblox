@@ -463,12 +463,15 @@ task.spawn(function()
         -- animated collapse, shrink and stream changes hide cosmetics.
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook)
-        -- Five-arena original 2,976-triangle industrial floor: share the
-        -- existing 0.65/0.90s camera cadence instead of another loop.
-        -- Low = 2, Medium = 8, High = 24 original approved local tiles;
-        -- base/shrink changes hide art immediately via instance events.
+        -- Five-arena original 2,976-triangle sculpted floor: healthy
+        -- High can now replace all 36 genuine 49-stud native floor bays,
+        -- Medium 12 and Low 2. The EXISTING GPU/instance backpressure
+        -- automatically demotes to 24/16 High or 8/4 Medium if Android
+        -- frame pacing suffers. No new loop; danger decals stay on top.
+        -- Shrink/streaming already restore native geometry immediately.
         PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,
-            cameraReady, cameraLook)
+            cameraReady, cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
         local floorMeshes = PremiumGroundMeshKit.count()
         if player:GetAttribute("LocalOriginalGroundMeshCount") ~= floorMeshes then
             player:SetAttribute("LocalOriginalGroundMeshCount", floorMeshes)
