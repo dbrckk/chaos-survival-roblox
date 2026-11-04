@@ -11,11 +11,57 @@ folder.Name = "OriginalLobbyGate3DLocal"
 folder.Parent = workspace
 
 local mounted = nil
+local hiddenLegacy = {}
 local watched = {}
 local listeners = {}
 local reconcile
 
+local function restoreLegacy()
+    for item, alpha in pairs(hiddenLegacy) do
+        if item.Parent then item.LocalTransparencyModifier = alpha end
+        hiddenLegacy[item] = nil
+    end
+end
+
+-- The server also builds a five-piece WedgePart/Part gate jacket. Once
+-- a WHOLE creator-approved mesh arch is mounted, drawing that jacket
+-- over the real 3D model recreates the primitive look. Only those five
+-- nonphysical cladding Parts can be locally hidden. Never hide the
+-- gate's authoritative collidable Left/Right/Top or its status SurfaceGui.
+local function maskLegacy(decor)
+    if not decor or not decor:IsA("Folder") then return end
+    local architecture = decor:FindFirstChild("OriginalLobbyArchitecture")
+    local legacy = architecture and architecture:FindFirstChild(
+        "MachinedArenaEntrance")
+    if not legacy or not legacy:IsA("Model") then return end
+    local names = {
+        OuterGateCrosshead = true,
+        ["AngledGateSupport-1"] = true,
+        AngledGateSupport1 = true,
+        ["GateStrut-1"] = true,
+        GateStrut1 = true,
+    }
+    local pieces = {}
+    for _, item in ipairs(legacy:GetDescendants()) do
+        if item:IsA("BasePart") then
+            if not names[item.Name] or not item.Anchored
+                or item.CanCollide or item.CanTouch or item.CanQuery then
+                return
+            end
+            pieces[#pieces + 1] = item
+        elseif item:IsA("LuaSourceContainer") then return end
+    end
+    if #pieces ~= 5 then return end
+    for _, part in ipairs(pieces) do
+        if hiddenLegacy[part] == nil then
+            hiddenLegacy[part] = part.LocalTransparencyModifier
+        end
+        part.LocalTransparencyModifier = 1
+    end
+end
+
 local function clear()
+    restoreLegacy()
     if mounted then
         mounted.model:Destroy()
         mounted = nil
@@ -156,6 +202,12 @@ reconcile = function()
         return child.Name == "ArenaGateTop"
             or child.Name == "ArenaGateLeft"
             or child.Name == "ArenaGateRight"
+            or child.Name == "OriginalLobbyArchitecture"
+    end)
+    local architecture = decor and decor:FindFirstChild(
+        "OriginalLobbyArchitecture")
+    watch("architecture", architecture, function(child)
+        return child.Name == "MachinedArenaEntrance"
     end)
     local templates = ReplicatedStorage:FindFirstChild("PremiumLobbyGateMeshTemplates")
     watch("templates", templates, function(child)
@@ -171,10 +223,12 @@ reconcile = function()
     if mounted and mounted.model.Parent == folder
         and mounted.source == source and mounted.top == top
         and top.CFrame == mounted.topFrame then
+        maskLegacy(decor)
         return
     end
     clear()
     mounted = mount(source, top)
+    if mounted then maskLegacy(decor) end
     if mounted and player:GetAttribute("LocalOriginalLobbyGateMeshCount")
         ~= mounted.pieces then
         player:SetAttribute("LocalOriginalLobbyGateMeshCount", mounted.pieces)
