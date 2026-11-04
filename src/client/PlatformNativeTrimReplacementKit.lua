@@ -10,6 +10,7 @@ local watchers = {}
 local decorWatcher = nil
 local activeDecor = nil
 local active = {}
+local verifiedSupports = {}
 local notify = nil
 local count = 0
 
@@ -37,6 +38,7 @@ function Kit.reset()
     activeDecor = nil
     restore()
     table.clear(active)
+    table.clear(verifiedSupports)
     notify = nil
 end
 
@@ -47,6 +49,12 @@ local function eligible(part)
         return false
     end
     local name = part.Name
+    if verifiedSupports[part] == true then
+        -- The replacement mounted all real MeshPart segments on THIS
+        -- exact server-authored nonphysical support. Never mask another
+        -- deck's support, or a Part not explicitly verified/mounted.
+        return name:match("^PlatformSupport%d+_%d+$") ~= nil
+    end
     local id = name:match("^PlatformBevel(%d+)_%d+$")
     if id and active[id] == "carapace" then
         -- Sloped WedgePart server edge, now replaced by a real sculpted
@@ -55,7 +63,7 @@ local function eligible(part)
             and part:GetAttribute("OriginalStructuralBevel") == true
     end
     id = name:match("^PlatformUnderFrame(%d+)$")
-    if id and active[id] == "carapace" then
+    if id and (active[id] == "carapace" or active[id] == "cradle") then
         return part:GetAttribute("PremiumArchitecturalSurface") == true
     end
     id = name:match("^SkybridgeRib(%d+)_")
@@ -101,7 +109,7 @@ local function attachDecor(folder)
     watchers[#watchers + 1] = decorWatcher
 end
 
-function Kit.bind(arena, replacements, onChange)
+function Kit.bind(arena, replacements, onChange, supports)
     Kit.reset()
     if not arena or not arena:IsA("Folder")
         or type(replacements) ~= "table" then return end
@@ -109,8 +117,20 @@ function Kit.bind(arena, replacements, onChange)
     for id, kind in pairs(replacements) do
         if type(id) == "string"
             and id:match("^%d+$") and (#id < 6)
-            and (kind == "carapace" or kind == "bridge") then
+            and (kind == "carapace" or kind == "bridge"
+                or kind == "cradle") then
             active[id] = kind
+        end
+    end
+    if type(supports) == "table" then
+        for _, part in ipairs(supports) do
+            if part and part:IsA("BasePart")
+                and part.Parent == arena:FindFirstChild("Decor")
+                and part.Anchored and not part.CanCollide
+                and not part.CanTouch and not part.CanQuery
+                and part.Name:match("^PlatformSupport%d+_%d+$") then
+                verifiedSupports[part] = true
+            end
         end
     end
     attachDecor(arena:FindFirstChild("Decor"))
