@@ -8,6 +8,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
+local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
 local PlatformNativeTrimReplacementKit = require(
     script.Parent.PlatformNativeTrimReplacementKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
@@ -490,8 +491,14 @@ local function rebuild()
             -- that previously occupied the SAME physical deck silhouette.
             -- Native fallback is still built in full if a real mesh is
             -- unavailable, unsuitable for this deck, or fails to load.
-            local carapacePieces = PlatformFinishKit.buildCarapace(
-                folder, platform, variant, tier.Name, theme, visualIndex)
+            -- The authored 18x18 central hub needs its own full-size
+            -- original hull, not a tiny 10-stud carapace scaled up as a
+            -- decorative sticker. Fallback remains the established kit.
+            local largeHullPieces = PremiumLargeDeckHullMeshKit.install(
+                folder, platform, tier.Name, visualIndex)
+            local carapacePieces = largeHullPieces
+                or PlatformFinishKit.buildCarapace(
+                    folder, platform, variant, tier.Name, theme, visualIndex)
             local authenticCarapace = carapacePieces[1] ~= nil
                 and carapacePieces[1]:GetAttribute(
                     "Original3DStructuralSide") == true
@@ -823,11 +830,36 @@ local function watchSideTemplates(holder)
     end
 end
 
+-- Late, optional owner-validated hero hull source. Only the model
+-- itself triggers an existing visual rebuild, never a new frame loop.
+local hullTemplateConnections = {}
+local watchedHullTemplates = nil
+local function watchHullTemplates(holder)
+    if watchedHullTemplates == holder then return end
+    for _, connection in ipairs(hullTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(hullTemplateConnections)
+    watchedHullTemplates = holder
+    if holder and holder:IsA("Folder") then
+        local function onHullChanged(child)
+            if child.Name == "LargeDeckHull" then scheduleRebuild() end
+        end
+        hullTemplateConnections[#hullTemplateConnections+1] =
+            holder.ChildAdded:Connect(onHullChanged)
+        hullTemplateConnections[#hullTemplateConnections+1] =
+            holder.ChildRemoved:Connect(onHullChanged)
+        scheduleRebuild()
+    end
+end
+
 ReplicatedStorage.ChildAdded:Connect(function(child)
     if child.Name == "ApprovedFloorReliefTemplates" then
         watchPlatformReliefTemplates(child)
     elseif child.Name == "ApprovedPlatformSideTemplates" then
         watchSideTemplates(child)
+    elseif child.Name == "ApprovedLargeDeckHullTemplates" then
+        watchHullTemplates(child)
     end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
@@ -837,12 +869,17 @@ ReplicatedStorage.ChildRemoved:Connect(function(child)
     elseif child == watchedSideTemplates then
         watchSideTemplates(nil)
         scheduleRebuild()
+    elseif child == watchedHullTemplates then
+        watchHullTemplates(nil)
+        scheduleRebuild()
     end
 end)
 watchPlatformReliefTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates"))
 watchSideTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedPlatformSideTemplates"))
+watchHullTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedLargeDeckHullTemplates"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;
