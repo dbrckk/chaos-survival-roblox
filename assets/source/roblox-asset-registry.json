@@ -442,6 +442,38 @@
       "source": "tools/generate_original_harbor_freighter.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41851214739
+    },
+    {
+      "name": "harbor_gantry_container",
+      "asset_id": "86657004812104",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_gantry.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41854747878
+    },
+    {
+      "name": "harbor_gantry_drum",
+      "asset_id": "82714598831399",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_gantry.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41854747878
+    },
+    {
+      "name": "harbor_gantry_kinetic_container",
+      "asset_id": "75684193304551",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_gantry.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41856104459
+    },
+    {
+      "name": "harbor_gantry_kinetic_drum",
+      "asset_id": "98809955094422",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_gantry.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41856104459
     }
   ]
 }
