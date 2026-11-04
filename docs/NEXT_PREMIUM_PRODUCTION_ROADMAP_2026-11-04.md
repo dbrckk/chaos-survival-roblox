@@ -6,6 +6,8 @@
 
 **Lot 1 — avancement source (4 novembre 2026) :** nouvelle sélection de carapaces réelles selon la proximité de la zone jouée plutôt que des numéros modulo 6/12 ; plafonds 16 High et 8 Medium, aucun modèle Low, fallback natif strict. Le sampler existant adapte désormais les MeshParts de route et underdecks à la pression graphique. [Dossier technique](NEAR_CAMERA_APPROVED_PLATFORM_CARAPACE_2026-11-04.md). **Montage en jeu et certification Android non encore prouvés.**
 
+**Lot 1 — jonctions réelles des grandes passerelles (4 novembre 2026) :** les carapaces compactes ne peuvent plus masquer un sous-châssis long qu'elles ne couvrent pas. De vrais `LongCradle` sur les plus proches promenades et Sky Spine (max 4 High / 2 Medium), et des colonnes originales proches caméra dans le même budget module 16/8 ; anciens truss natifs masqués seulement si le véritable treillis est monté. [Contrat technique et QA](PREMIUM_APPROVED_SKYBRIDGE_UNDERCARRIAGE_2026-11-04.md). **Source intégrée, rendu Android et publication non attestés.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

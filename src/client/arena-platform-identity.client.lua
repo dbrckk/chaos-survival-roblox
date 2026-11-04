@@ -110,6 +110,12 @@ local function clear()
     if player:GetAttribute("LocalNativeStructuralPartsReplaced") ~= 0 then
         player:SetAttribute("LocalNativeStructuralPartsReplaced", 0)
     end
+    if player:GetAttribute("LocalOriginalNearBridgeCradleCount") ~= 0 then
+        player:SetAttribute("LocalOriginalNearBridgeCradleCount", 0)
+    end
+    if player:GetAttribute("LocalOriginalNearSupportColumnCount") ~= 0 then
+        player:SetAttribute("LocalOriginalNearSupportColumnCount", 0)
+    end
     if player:GetAttribute("LocalOriginalNearRouteCarapaceCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearRouteCarapaceCount", 0)
     end
@@ -472,8 +478,8 @@ local function rebuild()
     -- prevent a single 40-stud pillar silently spending the whole budget.
     local supportBudget = tier.Name == "High" and 16
         or (tier.Name == "Medium" and 8 or 0)
-    local longCradleBudget = tier.Name == "High" and 2
-        or (tier.Name == "Medium" and 1 or 0)
+    local longCradleBudget = tier.Name == "High" and 4
+        or (tier.Name == "Medium" and 2 or 0)
     local originalLargeCount = 0
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
@@ -482,6 +488,12 @@ local function rebuild()
         ordered, variant, tier.Name, base,
         camera and camera.CFrame.Position or nil)
     local mountedCameraCarapaces = 0
+    local nearCradles,nearSupports =
+        PremiumLargeStructureMeshKit.selectNearRouteStructures(
+            ordered,decor,variant,tier.Name,base,
+            camera and camera.CFrame.Position or nil)
+    local mountedRouteCradles = 0
+    local mountedCloseSupports = 0
 
     for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
@@ -588,9 +600,10 @@ local function rebuild()
             -- 1/2 compatible decks to the real sculpted 22-stud lattice,
             -- only after exact owner provenance and dimensions are checked.
             -- It follows RouteTier shrink via the existing welded snapshot.
-            if longCradleBudget > 0 and not authenticCarapace then
+            if longCradleBudget > 0 and not authenticCarapace
+                and nearCradles[platform] == true then
                 local cradle = PremiumLargeStructureMeshKit.longCradle(
-                    folder, platform, tier.Name, visualIndex)
+                    folder, platform, tier.Name, visualIndex, true)
                 if cradle then
                     replacements[tostring(visualIndex)] = "cradle"
                     -- Shared cosmetic-only arbitration prevents the old
@@ -600,6 +613,7 @@ local function rebuild()
                     platform:SetAttribute("LocalOriginalLongCradleMounted", true)
                     mountedLongCradles[platform] = true
                     longCradleBudget -= 1
+                    mountedRouteCradles += 1
                     for _, piece in ipairs(cradle) do
                         registerVisual(platform, piece)
                         originalLargeCount += 1
@@ -611,12 +625,14 @@ local function rebuild()
             -- One sparse support family per map/tier, at most 8/16
             -- source-model segments (7 MeshParts each). The existing
             -- CollapsePhase visual registrar hides them on warning/gone.
-            if supportBudget > 0 and decor then
+            if supportBudget > 0 and decor
+                and nearSupports[platform] == true then
                 local columns = PremiumLargeStructureMeshKit.supports(
                     folder, decor, platform, variant, tier.Name,
-                    visualIndex, supportBudget)
+                    visualIndex, supportBudget, true)
                 if columns then
                     supportBudget -= columns.modules
+                    mountedCloseSupports += #columns.covered
                     for _, support in ipairs(columns.covered) do
                         actualSupportParts[#actualSupportParts+1] = support
                     end
@@ -742,6 +758,18 @@ local function rebuild()
     -- This preserves all gameplay lights, warning rails, platforms and
     -- the original fallback in the server. Streams are handled by its
     -- Folder.ChildAdded observer with exact name/index provenance.
+    -- Genuine mounted 22-stud bridge interchanges and real columns,
+    -- counted only after the complete MeshPart source is committed.
+    if player:GetAttribute("LocalOriginalNearBridgeCradleCount")
+        ~= mountedRouteCradles then
+        player:SetAttribute("LocalOriginalNearBridgeCradleCount",
+            mountedRouteCradles)
+    end
+    if player:GetAttribute("LocalOriginalNearSupportColumnCount")
+        ~= mountedCloseSupports then
+        player:SetAttribute("LocalOriginalNearSupportColumnCount",
+            mountedCloseSupports)
+    end
     -- Actual successful true-3D structural shell count, not the number
     -- of requested candidates; persisted only as client diagnostics.
     if player:GetAttribute("LocalOriginalNearRouteCarapaceCount")

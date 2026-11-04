@@ -1,3 +1,18 @@
+LOT 4 NOVEMBRE 2026 — JONCTIONS ET PASSERELLES : VRAIS 3D LATTICE
+[QA]     Fix majeur : carapace compacte 10–12 studs interdite sur un
+         support 20–26 studs si elle ne couvre pas >=78% du grand axe.
+         Ne plus masquer un PlatformUnderFrame entier avec demi-coque.
+         Priorité aux 4 High / 2 Medium 22-stud LongCradle APPROVED
+         proches du joueur, zones Sky Spine et promenade physiquement
+         réelles. Modules piliers 3D mêmes plafonds 16 High / 8 Medium,
+         préférence supports proches et non indices modulo arbitraires.
+         Vrais restes natifs SkySpine Undercarriage/CrossStiffener et
+         Promenade UnderdeckTruss masqués uniquement sous véritable
+         LongCradle monté et propriétaire; repli/stream/shrink conservés.
+         Aucun nouveau collider, asset inventé, lumière ni ticker.
+         Source + build/moteur exact SHA et images Android requis.
+         docs/PREMIUM_APPROVED_SKYBRIDGE_UNDERCARRIAGE_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — PRIORITÉ STRUCTURES SCULPTÉES PRÈS CAMÉRA
 [QA]     Index modulo 6/12 remplacés par sélection réelle des decks
          physiques sûrs les plus proches de la caméra (si arène chargée)

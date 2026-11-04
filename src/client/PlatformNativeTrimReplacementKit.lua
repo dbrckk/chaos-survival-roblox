@@ -66,6 +66,21 @@ local function eligible(part)
     if id and (active[id] == "carapace" or active[id] == "cradle") then
         return part:GetAttribute("PremiumArchitecturalSurface") == true
     end
+    -- The 22-stud provenance-checked LongCradle genuinely covers the
+    -- structural underside of a physical Sky Spine / promenade deck.
+    -- Retire ONLY the old nonphysical rectangular trusses. Lit edges,
+    -- arrow chevrons, pylons, consoles and warning glyphs remain visible.
+    id = name:match("^SkySpine(%d+)_Undercarriage%-?1$")
+        or name:match("^SkySpine(%d+)_CrossStiffener$")
+    if id and active[id] == "cradle" then
+        return part:GetAttribute("SkySpineDecor") == true
+            and part:GetAttribute("PerimeterPlatformIndex") == tonumber(id)
+    end
+    id = name:match("^Promenade(%d+)_UnderdeckTruss$")
+    if id and active[id] == "cradle" then
+        return part:GetAttribute("PromenadeVisualOnly") == true
+            and part:GetAttribute("PerimeterPlatformIndex") == tonumber(id)
+    end
     id = name:match("^SkybridgeRib(%d+)_")
     if id and active[id] == "bridge" then
         -- Keep SkybridgeRailN_±1 luminous wayfinding plus ALL shutter

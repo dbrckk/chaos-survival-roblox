@@ -114,12 +114,103 @@ local function validNativeSupport(part,index)
         and part.Size.Y >= 5 and part.Size.Y <= 47
 end
 
+-- Prioritize verified genuine supports + full-length undercarriages on
+-- physically safe, nearby bridge decks instead of arbitrary PlatformN %
+-- sampling or the first two PlatformN in a large streamed arena.
+-- One snapshot per EXISTING map/tier/asset arrival rebuild. No camera loop,
+-- network calls or server-authoritative gameplay changes.
+function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint)
+    local cradleSet,supportSet={},{}
+    if tier == "Low" or type(platforms) ~= "table" or not decor
+        or not decor:IsA("Folder") or not base
+        or not base:IsA("BasePart") then
+        return cradleSet,supportSet
+    end
+    local cradleSource=verified("LongCradle")
+    local supportSource=verified(variant)
+    if not cradleSource and not supportSource then
+        return cradleSet,supportSet
+    end
+    -- Bind by actual named server support ownership; an unstreamed
+    -- or absent support must never consume an authentic mesh slot.
+    local supportsAvailable={}
+    if supportSource then
+        for _,part in ipairs(decor:GetChildren()) do
+            local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
+            local id=tonumber(suffix)
+            if id and validNativeSupport(part,id) then
+                supportsAvailable[id]=true
+            end
+        end
+    end
+    local focus=base.Position
+    if typeof(cameraPoint) == "Vector3" then
+        local point=base.CFrame:PointToObjectSpace(cameraPoint)
+        if math.abs(point.X)<=base.Size.X*.5+16
+            and math.abs(point.Z)<=base.Size.Z*.5+16
+            and math.abs(point.Y)<=130 then
+            focus=cameraPoint
+        end
+    end
+    local cradles,supports={},{}
+
+    for _,platform in ipairs(platforms) do
+        local id=platform.Name:match("^Platform(%d+)$")
+        id=id and tonumber(id) or nil
+        if id and platform:IsA("BasePart") and platform.Parent
+            and platform.Anchored and platform.CanCollide
+            and platform.Transparency < .75
+            and platform:GetAttribute("ChaosSkybridge")~=true
+            and (platform:GetAttribute("CollapsePhase")==nil
+                or platform:GetAttribute("CollapsePhase")=="Normal"
+                or platform:GetAttribute("CollapsePhase")=="Safe") then
+            local size=platform.Size
+            local long,short=math.max(size.X,size.Z),math.min(size.X,size.Z)
+            local delta=platform.Position-focus
+            local score=Vector3.new(delta.X,delta.Y*.65,delta.Z).Magnitude
+            if platform:GetAttribute("ChaosPermanentRoute")==true then
+                score-=8
+            end
+            local spine=tonumber(platform:GetAttribute("SkySpineStep"))
+            local promenade=tonumber(platform:GetAttribute("PromenadeStep"))
+            if spine==5 or spine==6 then score-=14 end
+            if cradleSource and (spine or promenade)
+                and long>=19.5 and long<=34
+                and short>=9 and short<=18 then
+                cradles[#cradles+1]={platform=platform,score=score}
+            end
+            if supportSource and supportsAvailable[id]
+                and long>=7 and long<=36 and short>=7 then
+                supports[#supports+1]={platform=platform,score=score}
+            end
+        end
+    end
+    local function byFocus(a,b)
+        if a.score~=b.score then return a.score<b.score end
+        return a.platform.Name<b.platform.Name
+    end
+    table.sort(cradles,byFocus)
+    table.sort(supports,byFocus)
+    -- The old owner used 2/1 arbitrary first eligible route underframes.
+    -- Four High / two Medium 22-stud genuine trusses now frame the real
+    -- major sky connections, at no new loops and with hard mesh budgets.
+    local cradleLimit=tier=="High" and 4 or 2
+    local supportLimit=tier=="High" and 8 or 4
+    for i=1,math.min(#cradles,cradleLimit) do
+        cradleSet[cradles[i].platform]=true
+    end
+    for i=1,math.min(#supports,supportLimit) do
+        supportSet[supports[i].platform]=true
+    end
+    return cradleSet,supportSet
+end
+
 -- Returns {parts,covered,disconnects,modules} or nil. A support is masked
 -- only after every segment of the source Model has been mounted correctly.
 -- Each named native server support remains anchored and drives its Welds.
 -- Shrink changes the ORIGINAL Part.Size; the only connection is event-based,
 -- and scales the imported art X/Z while preserving its full vertical length.
-function Kit.supports(parent,decor,platform,variant,tier,index,available)
+function Kit.supports(parent,decor,platform,variant,tier,index,available,selected)
     if tier == "Low" or available <= 0 or not parent
         or not decor or not decor:IsA("Folder") or not platform
         or platform:GetAttribute("ChaosSkybridge") == true then return nil end
@@ -132,7 +223,8 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available)
     -- 16/8-module allowance idle, with the old bare rectangular posts
     -- still dominating the scene. Never increase the module ceiling.
     local choice = tier == "High" and 4 or 8
-    if index % choice ~= 0 then return nil end
+    if selected == false or (selected ~= true
+        and index % choice ~= 0) then return nil end
 
     local natives = {}
     for _,child in ipairs(decor:GetChildren()) do
@@ -219,7 +311,8 @@ end
 -- and Sky Spine routes, not an invented extra walkable bridge. The source
 -- must cover at least 87% of length and 76% of width BEFORE replacing the
 -- older low-slung rectangular underframe in the LOCAL renderer.
-function Kit.longCradle(parent,platform,tier,index)
+function Kit.longCradle(parent,platform,tier,index,selected)
+    if selected == false then return nil end
     if tier == "Low" or not parent or not platform
         or not platform:IsA("BasePart") or not platform.Parent
         or platform:GetAttribute("ChaosSkybridge") == true then return nil end

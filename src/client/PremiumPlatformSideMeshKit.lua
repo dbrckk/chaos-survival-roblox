@@ -124,7 +124,10 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint)
     -- Do not reserve slots until the actual seven-material model has
     -- replicated and passed the same OwnerVerified/provenance/size gate
     -- that the mount itself requires.
-    if not verified(variant) then return chosen end
+    local approved, bounds = verified(variant)
+    if not approved then return chosen end
+    local sourceLong = math.max(bounds.X,bounds.Z)
+    local sourceShort = math.min(bounds.X,bounds.Z)
     local focus = base.Position
     if typeof(cameraPoint) == "Vector3" then
         local localCamera = base.CFrame:PointToObjectSpace(cameraPoint)
@@ -144,9 +147,17 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint)
             local phase = platform:GetAttribute("CollapsePhase")
             local x,z = platform.Size.X,platform.Size.Z
             local long,short = math.max(x,z),math.min(x,z)
+            local scale = math.min(1.1,
+                long*.92/sourceLong,short*.91/sourceShort)
+            -- The approved 11-stud compact shell must cover the REAL
+            -- native deck footprint before its full-width underframe may
+            -- be hidden. Long 26-stud promenades require the different
+            -- certified 22-stud LongCradle, not half a carapace.
             if (phase == nil or phase == "Normal" or phase == "Safe")
                 and short >= 7.1 and long <= 36
-                and long / short <= 2.6 then
+                and long / short <= 2.6 and scale >= .62
+                and sourceLong*scale >= long*.78
+                and sourceShort*scale >= short*.72 then
                 local delta=platform.Position-focus
                 -- Upper decks remain attractive but distant unused edge
                 -- platforms must not consume the scarce true-mesh budget.
@@ -196,7 +207,11 @@ function Kit.carapace(parent, platform, variant, tier, index, selected)
     local sourceLong = math.max(original.X, original.Z)
     local sourceShort = math.min(original.X, original.Z)
     local scale = math.min(1.1, long*.92/sourceLong, short*.91/sourceShort)
-    if scale < .62 then return nil end
+    -- Prevent a 12-stud real imported shell from hiding the entire 26-
+    -- stud native underside. Small square jump decks are eligible;
+    -- long promenade/interchange underframes need true LongCradle art.
+    if scale < .62 or sourceLong*scale < long*.78
+        or sourceShort*scale < short*.72 then return nil end
     local yaw = (sz > sx) ~= (original.Z > original.X)
         and math.pi * .5 or 0
     local parts = stage(parent, platform, source, variant, scale,
