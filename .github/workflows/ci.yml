@@ -28,6 +28,35 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/mesh-previews
+          # Approved and source-gated full-size original 18x18 hub hull.
+          python3 tools/generate_original_large_deck_support.py \
+            --model large_deck_hull --output assets/source/chaos_large_deck_hull.obj \
+            > build/mesh-previews/chaos_large_deck_hull-source.json
+          python3 tools/obj_to_gltf.py \
+            --source assets/source/chaos_large_deck_hull.obj \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output build/mesh-previews/chaos_large_deck_hull.gltf
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("build/mesh-previews")
+          source=json.loads((root/"chaos_large_deck_hull-source.json").read_text())
+          gltf=json.loads((root/"chaos_large_deck_hull.gltf").read_text())
+          assert source["asset"]=="large_deck_hull"
+          assert 350<=source["triangles"]<=6200
+          assert 20<=source["groups"]<=160
+          x,y,z=source["dimensions"]
+          assert 16.6<=x<=18 and 2.4<=y<=4 and 16.6<=z<=18
+          assert len(gltf["meshes"][0]["primitives"])==7
+          assert {m["name"] for m in gltf["materials"]}=={
+              "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          total=0
+          for prim in gltf["meshes"][0]["primitives"]:
+              attrs=prim["attributes"]
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+              total+=gltf["accessors"][attrs["POSITION"]]["count"]//3
+          assert total==source["triangles"]
+          PY
           # Six new moderated original platform/skybridge models. Rebuild
           # their actual OBJ and embedded glTF at every release milestone;
           # a registry ID alone does not prove real UV/tangent geometry.
@@ -258,12 +287,13 @@ jobs:
               "deck_carapace_crossroads", "deck_carapace_orbital",
               "deck_carapace_harbor", "bridge_side_girder",
           }
+          large_hull_names = {"large_deck_hull"}
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
               | ambient_names | relief_names | floor_hardware_names
-              | platform_side_names)
+              | platform_side_names | large_hull_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -285,7 +315,8 @@ jobs:
                       "floor_harbor_tie",
                       "deck_carapace_classic", "deck_carapace_towers",
                       "deck_carapace_crossroads", "deck_carapace_orbital",
-                      "deck_carapace_harbor", "bridge_side_girder"):
+                      "deck_carapace_harbor", "bridge_side_girder",
+                      "large_deck_hull"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
@@ -317,6 +348,7 @@ jobs:
                           "deck_carapace_orbital": "tools/generate_original_platform_carapaces.py",
                           "deck_carapace_harbor": "tools/generate_original_platform_carapaces.py",
                           "bridge_side_girder": "tools/generate_original_platform_carapaces.py",
+                          "large_deck_hull": "tools/generate_original_large_deck_support.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -444,7 +476,28 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 43
+          assert len(models) == 44
+          large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
+          large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
+          large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
+          assert "125929150866282" in large_server and "125929150866282" in large_client
+          assert next(m["workflow_run_id"] for m in models
+                      if m["name"]=="large_deck_hull")==41809088464
+          for check in ("OriginalMeshScenery.sanitize(raw)",
+                        "AssetService.LoadAssetAsync",
+                        "ApprovedLargeDeckHullTemplates",
+                        "OriginalLargeDeckHull3D"):
+              assert check in large_server, check
+          for check in ("function Kit.install(", "CanCollide=false",
+                        "CanQuery=false", "CanTouch=false", "Massless=true",
+                        "ChaosPlatformTrimWeld", "Original3DStructuralSide"):
+              assert check in large_client, check
+          for check in ("PremiumLargeDeckHullMeshKit.install(",
+                        "ApprovedLargeDeckHullTemplates",
+                        "watchHullTemplates("):
+              assert check in large_script, check
+          assert "PremiumLargeDeckHullAssets.start" in Path(
+              "src/server/init.server.lua").read_text()
           platform_server = Path("src/server/PremiumPlatformSideAssets.lua").read_text()
           platform_mesh = Path("src/client/PremiumPlatformSideMeshKit.lua").read_text()
           platform_finish = Path("src/client/PlatformFinishKit.lua").read_text()
