@@ -365,6 +365,12 @@ schedule()
 local function staleSelection(position, selectedTier)
     for part, variant in pairs(applied) do
         if not part.Parent
+            -- Without this check, a stationary Android camera could keep
+            -- paying for a hidden native 2K underlay indefinitely after
+            -- genuine UV MeshParts stream in. The existing slow sampler
+            -- now reclaims the duplicate within one normal pass.
+            or (part.Name:match("^PremiumGroundModule%d+$")
+                and part:GetAttribute("LocalApproved3DGroundResident") == true)
             or not PbrDistrictRules.visible(part)
             or not PbrDistrictRules.withinDistance(
                 part, position, selectedTier, isTouch)
