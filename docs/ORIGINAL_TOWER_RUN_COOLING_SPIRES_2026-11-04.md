@@ -37,7 +37,7 @@ Les deux modèles réutilisent les **cinq positions et hauteurs préexistantes**
 
 | Tier Android | Pression 0 | Pression 1 | Pression 2 | Distance max |
 |---|---:|---:|---:|---:|
-| Low | **0** (tours natives) | 0 | 0 | — |
+| Low | **1 tour** / 7 MeshParts (seulement pression 0) | 0 | 0 | 250 + 24 studs d'hystérésis |
 | Medium | **2 tours** / 14 MeshParts | 1 / 7 | 0 | 285 + 32 studs d'hystérésis |
 | High | **5 tours** / 35 MeshParts | 3 / 21 | 0 | 405 + 45 studs d'hystérésis |
 
