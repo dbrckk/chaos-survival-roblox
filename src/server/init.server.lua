@@ -56,6 +56,7 @@ local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
 local PremiumLargeDeckHullAssets = require(script.PremiumLargeDeckHullAssets)
 local PremiumLargeStructureAssets = require(script.PremiumLargeStructureAssets)
 local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
+local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -197,6 +198,9 @@ if not isStudioE2E then
     task.defer(PremiumLargeDeckHullAssets.start)
     task.defer(PremiumLargeStructureAssets.start)
     task.defer(PremiumLobbyGateMeshAssets.start)
+    -- Owner-approved, closed 3D shells for the four physical lobby pylons.
+    -- Async and cosmetic only; native collision must never wait on art.
+    task.defer(PremiumLobbyPylonShellAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
