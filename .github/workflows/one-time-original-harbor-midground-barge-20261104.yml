@@ -1,0 +1,94 @@
+# Original sculpted shallow-draft craft: source/provenance gate + moderated
+# creator-only Model import. This workflow NEVER publishes the live game.
+name: One-time Original Harbor Midground Freight Barge 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-harbor-midground-barge-20261104.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-harbor-midground-barge-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove original chined vessel geometry and seven real PBR material groups
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_harbor_barge.py \
+            --output "$RUNNER_TEMP/harbor_midground_barge.obj" \
+            > "$RUNNER_TEMP/harbor_midground_barge.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/harbor_midground_barge.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/harbor_midground_barge.gltf" \
+            > "$RUNNER_TEMP/harbor_midground_barge.export.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import json,base64,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          meta=json.loads((root/"harbor_midground_barge.json").read_text())
+          obj=(root/"harbor_midground_barge.obj").read_text()
+          model=json.loads((root/"harbor_midground_barge.gltf").read_text())
+          assert meta["asset"]=="harbor_midground_barge"
+          assert 110<=meta["groups"]<=230
+          assert 2700<=meta["triangles"]<=7500
+          x,y,z=meta["size"]
+          assert 28.1<=x<=29.4 and 10.4<=y<=11.6 and 12.8<=z<=13.9
+          required={
+              "ThirteenStationChinedShallowDraftHull",
+              "RubberQuayContactFender",
+              "OriginalISOContainerShell",
+              "ForgedISOStiffener",
+              "DoubleGlazedHarborWheelhouse",
+              "HarborBargeRadarMast",
+              "MooringHawseSpoke",
+          }
+          assert all(name in obj for name in required)
+          palette={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert set(meta["materials"])==palette
+          assert model["asset"]["version"]=="2.0"
+          assert set(m["name"] for m in model["materials"])==palette
+          prim=model["meshes"][0]["primitives"]
+          assert len(prim)==7
+          tri=0
+          for p in prim:
+              attrs=p["attributes"]
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+              tri+=model["accessors"][attrs["POSITION"]]["count"]//3
+          assert tri==meta["triangles"]
+          buf=base64.b64decode(model["buffers"][0]["uri"].split(",",1)[1],validate=True)
+          assert len(buf)==model["buffers"][0]["byteLength"]
+          print("Verified true sculpted original Harbor nearshore freight barge:",
+                tri,"triangles, seven UV/tangent meshes; NO PLACE PUBLISH")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-harbor-midground-barge-source
+          path: |
+            ${{ runner.temp }}/harbor_midground_barge.obj
+            ${{ runner.temp }}/harbor_midground_barge.gltf
+            ${{ runner.temp }}/harbor_midground_barge.json
+            ${{ runner.temp }}/harbor_midground_barge.export.json
+          retention-days: 14
+
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: harbor_midground_barge
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
