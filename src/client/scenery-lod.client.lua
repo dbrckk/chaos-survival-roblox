@@ -19,6 +19,7 @@ local HarborDockCaissonMeshKit = require(script.Parent.HarborDockCaissonMeshKit)
 local HarborFreighterMeshKit = require(script.Parent.HarborFreighterMeshKit)
 local HarborGantryKineticMeshKit = require(script.Parent.HarborGantryKineticMeshKit)
 local HarborHeroStationMeshKit = require(script.Parent.HarborHeroStationMeshKit)
+local HarborMidgroundBargeMeshKit = require(script.Parent.HarborMidgroundBargeMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -565,6 +566,19 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalHarborHeroStationCount")
             ~= heroStation then
             player:SetAttribute("LocalOriginalHarborHeroStationCount",heroStation)
+        end
+        -- Four actual non-walkable nearshore craft: replace their stamped
+        -- native container/block geometry with authentic chined ships,
+        -- never mask adjacent cargo or an arena hazard. Reuse THIS
+        -- existing camera/Android pressure sampler, no new polling.
+        HarborMidgroundBargeMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local originalBarges=HarborMidgroundBargeMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborBargeCount")
+            ~= originalBarges then
+            player:SetAttribute("LocalOriginalHarborBargeCount",
+                originalBarges)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
