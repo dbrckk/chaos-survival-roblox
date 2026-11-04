@@ -1,3 +1,14 @@
+LOT 4 NOVEMBRE 2026 — SIX STATIONS ORBITALES SCULPTÉES
+[QA]     OrbitalStationMass1..6 possède un remplacement 3D authentique
+         alternant satellites solaires et modules de confinement énergie.
+         2 vrais Models Roblox Approved existants (7 MeshParts/source),
+         aucune nouvelle permission/ressource/texture factice. Garde
+         stricte de position hors du carré physique, orientation différenciée,
+         budget mobile Low 1 / Medium 3 / High 6, repli natif indexé,
+         absence de nouvelle boucle, lumière ou collision. Vérification
+         de la géométrie et du rendu réel Android encore requise.
+         docs/ORIGINAL_ORBITAL_STATIONS_COMPACT_3D_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — VRAIES ARCHITECTURES MIDGROUND CLASSIC & CROSSROADS
 [QA]     Les quatre masses broadcast Classic et quatre blocs transit
          Crossroads possèdent désormais des substitutions authentiques 3D

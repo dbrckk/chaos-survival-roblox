@@ -23,6 +23,7 @@ local HarborMidgroundBargeMeshKit = require(script.Parent.HarborMidgroundBargeMe
 local HarborSeaMeshKit = require(script.Parent.HarborSeaMeshKit)
 local TowerCoolingSpireMeshKit = require(script.Parent.TowerCoolingSpireMeshKit)
 local ApprovedMidgroundSkylineMeshKit = require(script.Parent.ApprovedMidgroundSkylineMeshKit)
+local OriginalOrbitalStationsMeshKit = require(script.Parent.OriginalOrbitalStationsMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -623,6 +624,21 @@ task.spawn(function()
             ~=replaced then
             player:SetAttribute("LocalOriginalMidgroundNativeReplaced",
                 replaced)
+        end
+        -- Authentic compact Orbital satellite/containment stations, not
+        -- primitive sphere blocks. Reuse same camera/pressure sampler.
+        OriginalOrbitalStationsMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local orbitalModels=OriginalOrbitalStationsMeshKit.count()
+        if player:GetAttribute("LocalOriginalOrbitalStationCount")
+            ~=orbitalModels then
+            player:SetAttribute("LocalOriginalOrbitalStationCount",orbitalModels)
+        end
+        local orbitalNative=OriginalOrbitalStationsMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalOrbitalNativeReplaced")
+            ~=orbitalNative then
+            player:SetAttribute("LocalOriginalOrbitalNativeReplaced",orbitalNative)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.

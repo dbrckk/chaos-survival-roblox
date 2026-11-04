@@ -210,6 +210,7 @@ local function buildOrbital(base, theme, tier)
     local count = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 4 or 6)
 
     for i = 1, count do
+        local before = snapshotMidgroundParts()
         local angle = ((i - 1) / count) * math.pi * 2 + math.rad(18)
         local radial = radius + (i % 2) * 7
         local x = math.cos(angle) * radial
@@ -243,6 +244,15 @@ local function buildOrbital(base, theme, tier)
                 Enum.Material.DiamondPlate,
                 glowing and 0.22 or 0.12
             )
+        end
+        -- Exact native sphere + original tier-specific solar arms by index.
+        for _, part in ipairs(folder:GetChildren()) do
+            if not before[part] and part:IsA("BasePart")
+                and part.Anchored and not part.CanCollide
+                and not part.CanTouch and not part.CanQuery then
+                part:SetAttribute("OriginalOrbitalStationIndex", i)
+                part:SetAttribute("CosmeticOnly", true)
+            end
         end
     end
 end

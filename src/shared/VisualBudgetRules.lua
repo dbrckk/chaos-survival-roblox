@@ -8,6 +8,9 @@ VisualBudgetRules.LocalFolders = {
     -- Authentic four-way outboard Classic/Crossroads skyline replacements.
     -- Same 440/680/900 mobile Parts census; genuine mesh caps 1/2/4.
     "OriginalMidgroundSkylineLocal",
+    -- Six authentic compact Orbital stations share the Android Parts census.
+    -- Seven MeshParts per visible station, pressure-adaptive tier caps 1/3/6.
+    "OriginalOrbitalStationsLocal",
     -- Four near-playable sector scenes are purely local and tier-capped.
     "DistrictSectorSetpiecesLocal",
     "ArenaUnderstructureLocal",
