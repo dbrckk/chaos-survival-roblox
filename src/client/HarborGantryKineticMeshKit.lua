@@ -19,6 +19,10 @@ local CRANES = {
     "HarborGantryEastNorth", "HarborGantryEastSouth",
     "HarborGantryWestNorth", "HarborGantryWestSouth",
 }
+local EXPECTED_SECTOR = {
+    HarborGantryEastNorth="North", HarborGantryEastSouth="South",
+    HarborGantryWestNorth="North", HarborGantryWestSouth="South",
+}
 local folder = Instance.new("Folder")
 folder.Name = "OriginalHarborKineticGantryLocal"
 folder:SetAttribute("CosmeticOnly",true)
@@ -77,9 +81,7 @@ local function genuine(crane,arena,base)
     if not fleet or crane.Parent~=fleet then return false end
     local sector=crane:GetAttribute("GantrySector")
     if (sector~="North" and sector~="South")
-        or crane.Name~=("HarborGantry" ..
-            (crane.Name:match("HarborGantry(EastNorth|EastSouth|WestNorth|WestSouth)")
-                or "")) then
+        or EXPECTED_SECTOR[crane.Name]~=sector then
         return false
     end
     local girder=crane:FindFirstChild("MainCrossgirder")
@@ -106,13 +108,23 @@ local function genuine(crane,arena,base)
 end
 
 local function valid(e)
+    -- This runs on native CFrame animation events (up to 4 cranes).
+    -- Never re-inspect seven template MeshParts, call GetBoundingBox or
+    -- rescan the whole native gantry on every movement frame. The shared
+    -- 0.90s scenery LOD sampler performs full source/genuine checks.
     if not e or not e.model or e.model.Parent~=folder
         or e.arena~=activeArena or e.crane.Parent~=e.fleet
-        or e.source~=sourceFor(e.sector) then return false end
-    local ok,girder,trolley,cable,load=genuine(
-        e.crane,e.arena,e.base)
-    if not ok or girder~=e.girder or trolley~=e.trolley
-        or cable~=e.cable or load~=e.load then return false end
+        or e.base.Size.X<318 or e.base.Size.Z<318
+        or not e.source.Parent
+        or e.source:GetAttribute("OriginalHarborKineticGantry3D")~=true
+        or e.source:GetAttribute("Original3DAssetId")~=(
+            e.sector=="North" and APPROVED.North.id or APPROVED.South.id)
+        or e.crane:GetAttribute("GantrySector")~=e.sector
+        or e.girder.Parent~=e.crane or e.trolley.Parent~=e.crane
+        or e.cable.Parent~=e.crane or e.load.Parent~=e.crane
+        or not e.girder.Anchored or e.girder.CanCollide then
+        return false
+    end
     local n=0
     for _,piece in ipairs(e.pieces) do
         if not piece.part or piece.part.Parent~=e.model then return false end
