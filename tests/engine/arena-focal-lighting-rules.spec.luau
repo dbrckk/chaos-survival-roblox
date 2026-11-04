@@ -3,8 +3,86 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaFocalLightingRules = require("../../src/shared/ArenaFocalLightingRules")
+local ArenaLightingReadabilityRules = require("../../src/shared/ArenaLightingReadabilityRules")
 local ArenaFocalFixtureKit = require("../../src/client/ArenaFocalFixtureKit")
 local VisualTheme = require("../../src/shared/VisualTheme")
+
+describe("Five-arena physically readable environment lighting", function()
+    it("improves low and medium indirect environment visibility without extra instances", function()
+        local low, lowExposure = ArenaLightingReadabilityRules.identityScale("Low")
+        local medium, mediumExposure = ArenaLightingReadabilityRules.identityScale("Medium")
+        local high, highExposure = ArenaLightingReadabilityRules.identityScale("High")
+        expect(low).toBe(0.84)
+        expect(medium).toBe(0.94)
+        expect(high).toBe(1)
+        expect(lowExposure).toBe(0.80)
+        expect(mediumExposure).toBe(1)
+        expect(highExposure).toBe(1)
+    end)
+
+    it("keeps readable material bounce and toned-down specular during READY and rounds", function()
+        local expected = {
+            Low = {ready=0.56, round=0.53, specular=0.54},
+            Medium = {ready=0.54, round=0.51, specular=0.63},
+            High = {ready=0.52, round=0.49, specular=0.70},
+        }
+        for tier, values in pairs(expected) do
+            local readyExposure, readyDiffuse, _, readyDark =
+                ArenaLightingReadabilityRules.disasterLighting(
+                    "ready", tier, false, {"RisingLava"})
+            local roundExposure, roundDiffuse, roundSpecular, roundDark =
+                ArenaLightingReadabilityRules.disasterLighting(
+                    "round", tier, false, {"RisingLava"})
+            expect(readyExposure).toBe(0.04)
+            expect(roundExposure).toBe(0.02)
+            expect(readyDiffuse).toBe(values.ready)
+            expect(roundDiffuse).toBe(values.round)
+            expect(roundSpecular).toBe(values.specular)
+            expect(readyDark).toBe(false)
+            expect(roundDark).toBe(false)
+            expect(roundDiffuse > 0.34).toBe(true)
+        end
+    end)
+
+    it("preserves Darkness even when it is secondary in Double Chaos", function()
+        local expected = {Low=0.26, Medium=0.25, High=0.24}
+        for tier, limit in pairs(expected) do
+            local exposure, diffuse, specular, dark =
+                ArenaLightingReadabilityRules.disasterLighting(
+                    "round", tier, true, {"RisingLava", "Darkness"})
+            expect(exposure).toBe(-0.04)
+            expect(diffuse).toBe(limit)
+            expect(diffuse < 0.34).toBe(true)
+            expect(specular < 0.50).toBe(true)
+            expect(dark).toBe(true)
+            local primaryExposure, primaryDiffuse, _, primaryDark =
+                ArenaLightingReadabilityRules.disasterLighting(
+                    "round", tier, false, {"Darkness"})
+            expect(primaryExposure).toBe(0.02)
+            expect(primaryDiffuse).toBe(limit)
+            expect(primaryDark).toBe(true)
+        end
+        expect(ArenaLightingReadabilityRules.hasDarkness({"Darkness"})).toBe(true)
+        expect(ArenaLightingReadabilityRules.hasDarkness({"Tornado", "Darkness"})).toBe(true)
+        expect(ArenaLightingReadabilityRules.hasDarkness({"Tornado"})).toBe(false)
+        expect(ArenaLightingReadabilityRules.hasDarkness(nil)).toBe(false)
+    end)
+
+    it("preserves the correct source owner outside disaster rounds", function()
+        expect(ArenaLightingReadabilityRules.disasterLighting("result", "Low"))
+            .toBe(nil)
+        expect(ArenaLightingReadabilityRules.disasterLighting("waiting", "High"))
+            .toBe(nil)
+        local _, standardDiffuse =
+            ArenaLightingReadabilityRules.disasterLighting(
+                "round", "Medium", false, {"Meteors"})
+        local _, doubleDiffuse =
+            ArenaLightingReadabilityRules.disasterLighting(
+                "round", "Medium", true, {"Meteors", "Tornado"})
+        expect(doubleDiffuse < standardDiffuse).toBe(true)
+        expect(doubleDiffuse >= 0.45).toBe(true)
+    end)
+end)
 
 describe("Arena focal lighting rules", function()
     it("keeps focal lights disabled on low quality", function()
