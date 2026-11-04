@@ -48,6 +48,20 @@ LOT 4 NOVEMBRE 2026 — DERNIÈRES MICRO-MACHINES DE SOL EN VRAIE 3D
          Android du SHA de ce lot nécessaires avant de publier.
          docs/ORIGINAL_FINAL_FLOOR_HARDWARE_3D_2026-11-04.md
 
+LOT 4 NOVEMBRE 2026 — SIX MODÈLES ORIGINAUX DE STRUCTURES PLATEFORMES
+[QA]     Cinq nouveaux dessous de plateformes spécifiques aux arènes
+         (Classic, Towers, Crossroads, Orbital, Harbor), plus un vrai
+         treillis 3D de côté de passerelle : 6 Models Roblox approuvés
+         #41798024000, OBJ triangulés, UV/tangents, 7 familles matière.
+         Runtime: allowlist/sanitizer, weld existant, shrink/danger,
+         streaming tardif, pas de nouveau RenderStepped/physique.
+         Les vieux WedgeParts/rails/étançons sont évités si et seulement
+         si le nouveau modèle source authentique remplace leur famille.
+         Android limité aux plateformes compatibles et sous-ensembles.
+         Reste : larges decks et autres grandes structures natives;
+         nouvelles PBR raster, rendu sur Android et publication à confirmer.
+         docs/ORIGINAL_PLATFORM_CARAPACES_BRIDGE_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — SIX SCULPTURES ORIGINALES DE RELIEFS DE SOL
 [QA]     VIS-026 : Low Essential plate 3D + cinq familles de sols propres aux
          arènes (Classic, Towers, Crossroads, Orbital, Harbor).
