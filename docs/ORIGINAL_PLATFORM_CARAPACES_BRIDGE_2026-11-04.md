@@ -50,3 +50,24 @@ Le premier candidat exact-SHA `bc449cf934` a réussi le Build Validation mais la
 **Correction source `71259d19` :** import du kit 3D uniquement si le ModuleScript possède réellement `script.Parent` ; en contexte pur sans `script`, les fonctions traditionnelles sont disponibles avec la finition native. Sur le vrai client Roblox, le kit premium est chargé et la fonctionnalité reste active. Le jalon exact-SHA doit être relancé avant publication.
 
 La suite Roblox Cloud corrigée [#41799738841](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41799738841) a finalement réussi sur SHA `17c301be` avec sept suites. Un audit supplémentaire a ensuite isolé un possible décalage latéral des treillis si Roblox inverse les axes importés X/Z : le code `PremiumPlatformSideMeshKit.bridgeGirders` adapte maintenant **les offsets de longueur et de flanc** à l'axe réel mesuré du Model, pas seulement sa rotation (`6b8d86a9`). Ce **dernier** commit doit donc recevoir sa propre validation exact-SHA avant publication ; le test réussi sur `17c301be` n'est pas transférable au SHA suivant.
+
+## Extension — suppression effective des primitives structurelles déjà remplacées
+
+**Constat du 4 novembre (avant modification) :** les carapaces/sculptures étaient bien montées sur certaines vraies plateformes, mais le serveur conservait **simultanément visibles** ses quatre bordures `PlatformBevelN_1..4` en `WedgePart`, le gros caisson `PlatformUnderFrameN` et les trois travées `SkybridgeRibN_-1/0/1`. Une vraie sculpture superposée à un vieux cube ne remplit pas l'objectif visuel.
+
+La nouvelle couche client `src/client/PlatformNativeTrimReplacementKit.lua` résout **ce cas précis** :
+
+- Ne modifie jamais les instances serveur ; marque uniquement `LocalTransparencyModifier=1` sur les éléments structurels **non physiques** correspondant à un **véritable** `MeshPart` dont la provenance a déjà été vérifiée.
+- Reconnaît exactement les indices/noms du `MapBuilder` : bordures avec attribut `OriginalStructuralBevel`, sous-frame avec `PremiumArchitecturalSurface`, et traverses inférieures de la même passerelle. Refuse toute Part qui peut entrer en collision, être touchée ou interrogée.
+- Ne masque **jamais** `PlatformPanel`, `PlatformGlow`, `PlatformCoreGlow`, `SkybridgeRail` (rails lumineux servant à la lecture du trajet), shutter warnings, surfaces jouables, supports de chute, ni les signaux d'alerte de catastrophe.
+- Restaure la transparence initiale lors du changement de carte, du tier, d'un import défaillant ou de la déconnexion des watchers. Reprend automatiquement les éléments `Decor` répliqués en retard.
+- Expose le compteur factuel `LocalNativeStructuralPartsReplaced` dans l'interface client à côté de `LocalOriginalPlatformSideMeshPartCount`. **Zéro** signifie qu'aucune substitution source-validée n'est actuellement visible ; un ID `Approved` seul ne suffit pas.
+- Ne crée aucune `Part`, aucun `RemoteEvent`, ni aucun `RenderStepped` supplémentaire.
+
+**Correction de shrink :** les vrais treillis de passerelle doivent aussi rétrécir sur leur **axe local X ou Z importé**, et pas uniquement sur l'axe du colliseur serveur. `PremiumPlatformSideMeshKit` attribue maintenant `OriginalBridgeLongAxis` à chaque `MeshPart` du modèle. `PlatformFinishKit.applySkybridgeFootprint` réduit cet axe, et garde les positions des pièces liées au colliseur réel. Le code existant suit déjà les déplacements et les phases `Warning/Gone`.
+
+### Périmètre réellement couvert
+
+Cette optimisation **ne remplace pas tout le décor Roblox de base**. Elle retire du rendu client les bordures/frames/traverses **uniquement sur les plateformes où une vraie sculpture a réussi à être montée** : sélection déterministe Android, dimensions compatibles, modèle existant et validé. Les autres structures (dont les gros supports verticaux, le grand sol et les rails de signalisation) restent visibles et devront recevoir un asset dédié avant suppression.
+
+**Validation :** Build et sept suites Roblox Cloud au SHA final de cette extension à confirmer ; source branch `main` ne vaut pas publication Roblox. Le précédent jalon `306a4e9d` avait bien réussi [build #41800472413](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41800472413) et [sept suites #41800485331](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41800485331).
