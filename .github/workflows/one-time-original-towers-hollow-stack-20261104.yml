@@ -1,0 +1,101 @@
+# One original complementary Tower Run hollow industrial cooling stack,
+# distinct from the taller turbine spire variant. No public game publication.
+name: One-time Original Towers Hollow Cooling Stack 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-towers-hollow-stack-20261104.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: original-towers-hollow-cooling-stack-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate truly hollow hyperboloid with 7 UV/tangent materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_towers_cooling_stack.py \
+            --output "$RUNNER_TEMP/towers_cooling_stack.obj" \
+            > "$RUNNER_TEMP/towers_cooling_stack.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/towers_cooling_stack.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/towers_cooling_stack.gltf" \
+            > "$RUNNER_TEMP/towers_cooling_stack.export.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          meta=json.loads((root/"towers_cooling_stack.json").read_text())
+          gltf=json.loads((root/"towers_cooling_stack.gltf").read_text())
+          obj=(root/"towers_cooling_stack.obj").read_text()
+          assert meta["asset"]=="towers_cooling_stack"
+          assert meta["source_scale"]==.46
+          assert meta["reference_height"]==44
+          assert 185<=meta["groups"]<=410
+          assert 3700<=meta["triangles"]<=12500
+          x,y,z=meta["size"]
+          assert 5.4<=x<=6.5 and 20.5<=y<=21.5 and 5<=z<=6.5
+          assert all(key in obj for key in (
+              "SixteenFacetedDoubleWalledCoolingChimney",
+              "TrueCircularStructuralBand",
+              "OutsideVerticalLoadRib",
+              "HighCrownLatticeLeg",
+              "MachinedTurbineIntakeGrille",
+              "BracedTopExhaustRing",
+              "GalvanizedHighServiceLadderRail",
+              "ActualGlycolPressurePipe",
+              "VentThroatSealedAirSampler"))
+          palette={"ARMOR","BRUSHED","CARBON","GRIP",
+                   "ALLOY","CERAMIC","SIGNAL"}
+          assert set(meta["materials"])==palette
+          assert gltf["asset"]["version"]=="2.0"
+          assert set(m["name"] for m in gltf["materials"])==palette
+          p=gltf["meshes"][0]["primitives"]
+          assert len(p)==7
+          total=0
+          for item in p:
+              attrs=item["attributes"]
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+              total+=gltf["accessors"][attrs["POSITION"]]["count"]//3
+          assert total==meta["triangles"]
+          buf=base64.b64decode(gltf["buffers"][0]["uri"].split(",",1)[1],
+                              validate=True)
+          assert len(buf)==gltf["buffers"][0]["byteLength"]
+          print("Verified original 3D Tower Run HOLLOW cooling stack:",
+                meta["groups"],"sculpted pieces",total,
+                "triangles, seven UV/tangent MeshParts, "
+                "no physical arena or public game publication")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-towers-hollow-cooling-stack-source
+          path: |
+            ${{ runner.temp }}/towers_cooling_stack.obj
+            ${{ runner.temp }}/towers_cooling_stack.gltf
+            ${{ runner.temp }}/towers_cooling_stack.json
+          retention-days: 14
+
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: towers_cooling_stack
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
