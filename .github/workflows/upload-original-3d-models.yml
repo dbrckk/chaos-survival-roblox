@@ -297,7 +297,13 @@ jobs:
                    "floor_corner_guard": "Chaos Sculpted 3D Perimeter Corner Guard",
                    "floor_anchor_bolt": "Chaos 3D Captive Industrial Anchor Bolt",
                    "floor_anchor_bolt_large": "Chaos Original Large Authored 3D Bolt",
-                   "floor_harbor_tie": "Chaos 3D Harbor Forged Tie Down Eye"}
+                   "floor_harbor_tie": "Chaos 3D Harbor Forged Tie Down Eye",
+                   "deck_carapace_classic": "Chaos Original Classic Load Carapace",
+                   "deck_carapace_towers": "Chaos Original Towers Load Carapace",
+                   "deck_carapace_crossroads": "Chaos Original Crossroads Deck Carapace",
+                   "deck_carapace_orbital": "Chaos Original Orbital Load Carapace",
+                   "deck_carapace_harbor": "Chaos Original Harbor Load Carapace",
+                   "bridge_side_girder": "Chaos Original Skybridge Truss Girder"}
           display_name = names[os.environ["CHOICE"]]
           # Roblox returned INVALID_ARGUMENT "Asset name length is invalid"
           # on 3 Nov 2026 for the previous 54-character Sky Spine name.
