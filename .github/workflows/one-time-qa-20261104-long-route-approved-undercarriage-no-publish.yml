@@ -1,0 +1,181 @@
+# Approved long skybridge lattice, true near-camera supports and exact-index native fallback.
+# One-time main-SHA milestone. Never publish.
+name: One-time QA 2026-11-04 Genuine Skybridge Underframes No Publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261104-long-route-approved-undercarriage-no-publish.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-authentic-skybridge-underframes-qa-20261104
+  cancel-in-progress: false
+
+jobs:
+  validate-exact-sha:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate true long-route geometry coverage, nearby approved supports and native restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          shell=Path("src/client/PremiumPlatformSideMeshKit.lua").read_text()
+          large=Path("src/client/PremiumLargeStructureMeshKit.lua").read_text()
+          owner=Path("src/client/arena-platform-identity.client.lua").read_text()
+          trim=Path("src/client/PlatformNativeTrimReplacementKit.lua").read_text()
+          spine=Path("src/server/SkySpineArchitecture.lua").read_text()
+          promenade=Path("src/server/PromenadeArchitecture.lua").read_text()
+          server=Path("src/server/PremiumLargeStructureAssets.lua").read_text()
+          guide=Path("docs/PREMIUM_APPROVED_SKYBRIDGE_UNDERCARRIAGE_2026-11-04.md").read_text()
+          registry=json.loads(Path("assets/source/roblox-asset-registry.json").read_text())
+          approved={int(x["asset_id"]) for x in registry["models"]
+              if x["moderation"]=="Approved"}
+          assert len(approved)==len(registry["models"])==62
+          sources={
+              "Classic":91626128452597,
+              "Towers":107521411452905,
+              "Crossroads":93993697329658,
+              "Orbital":119010829781313,
+              "Harbor":76194593490199,
+              "LongCradle":128914328933863,
+          }
+          for name,asset in sources.items():
+              assert asset in approved,(name,asset)
+              assert str(asset) in large and str(asset) in server,(name,asset)
+          for token in (
+              "sourceLong*scale >= long*.78",
+              "sourceShort*scale >= short*.72",
+              "sourceLong*scale < long*.78",
+              "sourceShort*scale < short*.72",
+          ):
+              assert token in shell, token
+          assert "function Kit.selectNearRouteStructures" in large
+          assert 'cradleSource=verified("LongCradle")' in large
+          assert "local cradleLimit=tier==\"High\" and 4 or 2" in large
+          assert "local supportLimit=tier==\"High\" and 8 or 4" in large
+          assert "long>=19.5 and long<=34" in large
+          assert "short>=9 and short<=18" in large
+          assert "platform.Anchored and platform.CanCollide" in large
+          assert "validNativeSupport(part,id)" in large
+          assert "function Kit.supports(parent,decor,platform,variant,tier,index,available,selected)" in large
+          assert "function Kit.longCradle(parent,platform,tier,index,selected)" in large
+          assert "srcLong*scale<long*.87" in large
+          assert "srcShort*scale<short*.76" in large
+          assert "local longCradleBudget = tier.Name == \"High\" and 4" in owner
+          assert "nearCradles[platform] == true" in owner
+          assert "nearSupports[platform] == true" in owner
+          assert 'LocalOriginalNearBridgeCradleCount' in owner
+          assert 'LocalOriginalNearSupportColumnCount' in owner
+          assert 'PlatformNativeTrimReplacementKit.bind(' in owner
+          assert 'SkySpineDecor' in spine
+          assert 'Undercarriage' in spine and 'CrossStiffener' in spine
+          assert 'PromenadeVisualOnly' in promenade
+          assert 'UnderdeckTruss' in promenade
+          assert 'name:match("^SkySpine(%d+)_Undercarriage%-?1$")' in trim
+          assert 'name:match("^SkySpine(%d+)_CrossStiffener$")' in trim
+          assert 'name:match("^Promenade(%d+)_UnderdeckTruss$")' in trim
+          assert 'part:GetAttribute("PerimeterPlatformIndex") == tonumber(id)' in trim
+          assert 'part:GetAttribute("SkySpineDecor") == true' in trim
+          assert 'part:GetAttribute("PromenadeVisualOnly") == true' in trim
+          assert "Kit.reset()" in trim and "restore()" in trim
+          assert "part.LocalTransparencyModifier = original" in trim
+          assert "RunService" not in large and "LoadAssetAsync" not in large
+          assert "task.spawn(" not in large and "RenderStepped" not in large
+          assert "non encore certifiés" in guide or "non encore certifiées" in guide
+          print("Verified genuine APPROVED long 3D mesh IDs; compact coverage "
+                "guard; near-camera 4/2 cradles and 16/8 module caps; "
+                "same-deck native trim restoration; NO PUBLICATION.",flush=True)
+          PY
+      - name: Source-only milestone validation (NEVER publish)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          repo=os.environ["REPO"]
+          candidate=os.environ["CANDIDATE_SHA"]
+          base="https://api.github.com/repos/"+repo
+          headers={
+              "Authorization":"Bearer "+os.environ["GH_TOKEN"],
+              "Accept":"application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28",
+              "User-Agent":"chaos-authentic-skybridge-underframes-no-publish",
+          }
+
+          def api(path,payload=None):
+              body=json.dumps(payload).encode() if payload is not None else None
+              request=urllib.request.Request(base+path,data=body,
+                  method="POST" if body is not None else "GET",
+                  headers={**headers,"Content-Type":"application/json"})
+              for attempt in range(6):
+                  try:
+                      with urllib.request.urlopen(request,timeout=40) as r:
+                          if payload is not None:
+                              if r.status!=204:
+                                  raise RuntimeError("Invalid dispatch response")
+                              return {}
+                          return json.load(r)
+                  except (urllib.error.URLError,TimeoutError):
+                      if attempt==5: raise
+                      time.sleep(3*(attempt+1))
+
+          def verify_head():
+              actual=api("/git/ref/heads/main")["object"]["sha"]
+              if actual!=candidate:
+                  raise SystemExit("main moved; abandon stale SHA QA")
+
+          verify_head()
+          print("VALIDATION ONLY, NO PUBLICATION",candidate,flush=True)
+          names={"Build Validation":"ci.yml",
+                 "Roblox Open Cloud Engine Tests":"roblox-cloud-test.yml"}
+          for name,path in names.items():
+              verify_head()
+              api("/actions/workflows/"+path+"/dispatches",{"ref":"main"})
+              print("Dispatched",name,flush=True)
+              time.sleep(4)
+
+          for attempt in range(400):
+              verify_head()
+              runs=api("/actions/runs?head_sha="+candidate+"&per_page=100")
+              states={}
+              for run in runs.get("workflow_runs",[]):
+                  if run.get("head_sha")!=candidate or run.get("event")!="workflow_dispatch":
+                      continue
+                  name=run.get("name")
+                  if name in names and (name not in states or
+                      run.get("created_at","") > states[name].get("created_at","")):
+                      states[name]=run
+              if attempt%6==0:
+                  print("Milestone:",{name:
+                      (states.get(name) or {}).get("status","pending")+"/"+
+                      str((states.get(name) or {}).get("conclusion"))
+                      for name in names},flush=True)
+              if any(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")!="success" for n in names):
+                  raise SystemExit("Exact-SHA source milestone FAILED; no publish")
+              if all(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")=="success" for n in names):
+                  verify_head()
+                  print("Exact-SHA Build + Cloud passed. NO PUBLISH.",candidate,flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Exact-SHA QA timed out; no publish")
+          PY
