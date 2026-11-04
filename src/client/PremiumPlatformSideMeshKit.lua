@@ -109,13 +109,19 @@ end
 
 -- Sparse real 3D whole-underside skins instead of seven native wedges,
 -- bars and fake keel blocks on a selected subset of existing platforms.
--- High 1/12, Medium 1/20, Low 0 (no additional 3D on low-memory phones).
+-- High 1/6, Medium 1/12, Low 0. Original assets replace native
+-- wedge/rail/brace clusters instead of simply stacking extra primitives.
+-- Candidate only: real Android GPU and silhouette QA still required.
 function Kit.carapace(parent, platform, variant, tier, index)
     if tier == "Low" or platform:GetAttribute("ChaosSkybridge") == true then
         return nil
     end
     local id = tonumber(index)
-    local step = tier == "High" and 12 or 20
+    -- High: one authentic shell per 6 eligible indices; Medium: per 12.
+    -- Both are multiples of PlatformFinishKit.carapaceCount's 3/4 cadence,
+    -- so every chosen platform is actually eligible for genuine replacement.
+    -- No new Models are created on Low and all geometry gates remain intact.
+    local step = tier == "High" and 6 or 12
     if not id or id < 1 or id % step ~= 1 then return nil end
     local source, original = verified(variant)
     if not source or not parent or not platform or not platform:IsA("BasePart")

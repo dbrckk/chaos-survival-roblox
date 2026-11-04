@@ -27,7 +27,7 @@ Source : `tools/generate_original_platform_carapaces.py`, sortie reproductible `
 
 ## Budget et repli
 
-Les nouvelles carapaces complètes ne concernent qu'un sous-ensemble déterministe de plateformes disposant de dimensions compatibles, en **Medium 1/20**, **High 1/12**, **Low 0**. Une carapace contient au plus 12 parties, réellement 7 groupes de matériaux. Les gros decks incompatibles conservent les anciens habillages jusqu'à une géométrie originale dédiée.
+Les nouvelles carapaces complètes ne concernent qu'un sous-ensemble déterministe de plateformes disposant de dimensions compatibles, en **Medium 1/12**, **High 1/6**, **Low 0** (extension source du 4 novembre 2026). Une carapace contient au plus 12 parties, réellement 7 groupes de matériaux. Les gros decks incompatibles conservent les anciens habillages jusqu'à une géométrie originale dédiée.
 
 Les treillis de passerelle sont installés sur **Medium 1/6** ou **High 1/3** des passerelles éligibles, avec respectivement 2 ou 4 modèles par passerelle. Pas de nouveau polling ; les reconstructions se font sur les événements existants (streaming, tier, modèles approuvés, changement de carte), et le propriétaire actuel suit le rétrécissement.
 
@@ -71,3 +71,9 @@ La nouvelle couche client `src/client/PlatformNativeTrimReplacementKit.lua` rés
 Cette optimisation **ne remplace pas tout le décor Roblox de base**. Elle retire du rendu client les bordures/frames/traverses **uniquement sur les plateformes où une vraie sculpture a réussi à être montée** : sélection déterministe Android, dimensions compatibles, modèle existant et validé. Les autres structures (dont les gros supports verticaux, le grand sol et les rails de signalisation) restent visibles et devront recevoir un asset dédié avant suppression.
 
 **Validation :** Build et sept suites Roblox Cloud au SHA final de cette extension à confirmer ; source branch `main` ne vaut pas publication Roblox. Le précédent jalon `306a4e9d` avait bien réussi [build #41800472413](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41800472413) et [sept suites #41800485331](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41800485331).
+
+## Extension source — davantage de plateformes réellement sculptées (4 novembre 2026)
+
+La sélection des carapaces approuvées et réellement triangulées passe de **High 1/12 à High 1/6** et de **Medium 1/20 à Medium 1/12**, toujours seulement pour les plateformes éligibles de 7,1–36 studs et sous les conditions de validité d'AssetService. Ces indices sont synchronisés avec la cadence existante de `PlatformFinishKit.carapaceCount` (High une plateforme sur trois ; Medium une sur quatre), pour remplacer effectivement les anciens `WedgePart`, armor, braces et side rails au lieu de rajouter un nouveau calque de décoration.
+
+La substitution enlève jusqu'à une grappe de dizaines d'objets natifs par véritable coque 3D ; cela **ne prouve pas une baisse du temps GPU** (les sept groupes de matériaux ont un coût de dessin). Même source propriétaire et mêmes soudures et protections de streaming, de rétrécissement, de danger et de collisions. **Low reste sans nouveaux meshes.** L'import, l'approbation et la disponibilité de chaque source sont requis en jeu avant substitution ; les plateformes non couvertes conservent leur décor natif. L'augmentation nécessite build, suites moteur et captures Android High/Medium avec mesures FPS avant publication ; aucun nouveau lot public n'est revendiqué.
