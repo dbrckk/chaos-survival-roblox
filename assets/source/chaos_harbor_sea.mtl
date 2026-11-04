@@ -1,0 +1,24 @@
+# Creator-authored deep Storm Harbor water palette.
+# Seven original real glTF material groups - not a stock texture or decal.
+# rgba/metallic/roughness are exported in tools/obj_to_gltf.py.
+newmtl ARMOR
+Kd 0.053 0.232 0.306
+Ke 0 0 0
+newmtl BRUSHED
+Kd 0.122 0.352 0.401
+Ke 0 0 0
+newmtl CARBON
+Kd 0.025 0.113 0.174
+Ke 0 0 0
+newmtl GRIP
+Kd 0.128 0.408 0.456
+Ke 0 0 0
+newmtl ALLOY
+Kd 0.223 0.515 0.553
+Ke 0 0 0
+newmtl CERAMIC
+Kd 0.490 0.737 0.728
+Ke 0 0 0
+newmtl SIGNAL
+Kd 0.692 0.864 0.831
+Ke 0.003 0.007 0.006
