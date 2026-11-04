@@ -76,6 +76,14 @@ def read_obj(path: Path, materials: dict):
 
 def export_obj(source: Path, palette: Path, destination: Path) -> dict:
     materials = read_materials(palette)
+    is_water = palette.name == "chaos_harbor_sea.mtl"
+    if is_water:
+        # This special case changes ONLY the original water palette.
+        # Industrial armor/route MeshParts keep their proven PBR factors.
+        assert source.name == "chaos_harbor_sea_apron.obj"
+        assert set(materials) == {
+            "ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL",
+        }
     vertices, groups, group_count = read_obj(source, materials)
     blob = bytearray()
     buffer_views = []
@@ -179,8 +187,16 @@ def export_obj(source: Path, palette: Path, destination: Path) -> dict:
             "name": name,
             "pbrMetallicRoughness": {
                 "baseColorFactor": kd + [1],
-                "metallicFactor": 0.15 if name in ("TEAL", "AMBER", "CYAN") else 0.62,
-                "roughnessFactor": 0.48 if name != "CARBON" else 0.72,
+                "metallicFactor": (
+                    0.055 if is_water else
+                    (0.15 if name in ("TEAL", "AMBER", "CYAN") else 0.62)
+                ),
+                "roughnessFactor": (
+                    (0.22 if name in ("ARMOR","BRUSHED","CARBON")
+                     else (0.31 if name in ("GRIP","ALLOY") else 0.57))
+                    if is_water else
+                    (0.48 if name != "CARBON" else 0.72)
+                ),
             },
             "emissiveFactor": ke,
             "doubleSided": False,
