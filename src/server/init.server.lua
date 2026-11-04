@@ -60,6 +60,7 @@ local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets
 local PremiumHarborPromenadePortalAssets = require(script.PremiumHarborPromenadePortalAssets)
 local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAssets)
 local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets)
+local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -213,6 +214,9 @@ if not isStudioE2E then
     -- Approved original static Harbor freighter replaces distant primitive
     -- silhouette locally; optional 66-second deferred cosmetic load.
     task.defer(PremiumHarborFreighterAssets.start)
+    -- Four original distant industrial gantries: cargo and cable variants
+    -- have independently animated genuine mesh components. Optional.
+    task.defer(PremiumHarborGantryAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
