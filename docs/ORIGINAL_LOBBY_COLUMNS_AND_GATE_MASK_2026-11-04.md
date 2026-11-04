@@ -10,7 +10,7 @@
 
 `lobby-pylon-original-3d.client.lua` réutilise le **Model créateur Roblox Approved `91626128452597`**, sculpture industrielle déjà importée et nettoyée côté serveur par `PremiumLargeStructureAssets` sous `ApprovedLargeStructureTemplates.Classic`. Le même modèle original est réemployé dans les arènes pour les supports : **aucun nouvel upload ni chargement à la demande du client**.
 
-Le kit vérifie l'identifiant, le dossier certifié `OwnerVerified`, les attributs `CosmeticOnly` et `OriginalLargeStructure3D`, un contenu entièrement en `MeshPart` (1 à 12) sans code Lua et des dimensions de source de ~14 studs. Chaque clone est réduit à la hauteur réelle des 10 studs et ajusté horizontalement pour englober la collision native de 2,2 studs ; celle-ci n'est jamais supprimée, modifiée ou désactivée. **L'affichage des blocs natifs et des quatre pièces de carénage par colonne n'est masqué localement qu'une fois les vrais meshes montés.**
+Le kit vérifie l'identifiant, le dossier certifié `OwnerVerified`, les attributs `CosmeticOnly` et `OriginalLargeStructure3D`, un contenu entièrement en `MeshPart` (1 à 12) sans code Lua et des dimensions de source de ~14 studs. Chaque clone est réduit à la hauteur réelle des 10 studs et ajusté horizontalement pour englober la collision native de 2,2 studs ; celle-ci n'est jamais supprimée, modifiée ou désactivée. **Les quatre pièces de carénage obsolètes par colonne sont masquées une fois les vrais meshes montés. Le bloc physique reste volontairement semi-visible (50 % de transparence locale), car la colonne triangulée possède un cœur évasé/aminci et son volume englobant ne garantit pas que toutes les faces de collision soient visibles.** Aucun obstacle invisible n'est autorisé.
 
 Le kit prépare la totalité du groupe sélectionné hors du monde, puis effectue la substitution en une fois. Si l'une des colonnes ne convient pas ou qu'un modèle approuvé manque, **tous les anciens pylônes demeurent visibles**. L'arrivée tardive des assets, le remplacement d'une carte, la perte inattendue d'un MeshPart ou les changements de niveau graphique rétablissent la substitution ou le retour natif de manière événementielle, sans RenderStepped.
 
@@ -31,7 +31,7 @@ La télémétrie locale `LocalOriginalLobbyPylon3DCount` et `LocalOriginalLobbyP
 ## Éléments encore à certifier
 
 - Build et sept suites Roblox Cloud sur le commit final du lot.
-- En jeu, capturer les quatre angles, les deux pylônes avant près du spawn et la perspective du portique : vérifier que les nouveaux meshes couvrent **réellement la silhouette des colliders**, qu'aucune collerette primitive ne dépasse et que le signal de phase de la porte reste parfaitement lisible.
+- En jeu, capturer les quatre angles, les deux pylônes avant près du spawn et la perspective du portique : vérifier que les nouveaux meshes couvrent **réellement la silhouette des colliders**, qu'aucune collerette primitive ne dépasse et que le noyau physique semi-visible indique effectivement les obstacles et que le signal de phase de la porte reste parfaitement lisible.
 - Android Low/Medium/High : compter les modèles, observer le déchargement sous pression, mesurer FPS, mémoire et chargement tardif des assets.
 - Lors d'un retrait d'asset, d'un changement de qualité ou d'un nouveau lobby, vérifier que les collisions et les pylônes natifs reviennent correctement.
 - Restent distincts : création de modules **originaux spécifiques au lobby** (une colonne réutilisée quatre fois est déjà authentique mais non unique), bornes et autres grandes pièces encore natives.
