@@ -19,7 +19,31 @@ from pathlib import Path
 
 from generate_original_skyfleet_carrier import MATERIALS, Sculpture
 
-PROFILES = ("harbor_gantry_container", "harbor_gantry_drum")
+PROFILES = (
+    "harbor_gantry_container", "harbor_gantry_drum",
+    "harbor_gantry_kinetic_container", "harbor_gantry_kinetic_drum",
+)
+# The kinetic version uses ONE distinctive material per moving assembly
+# and FOUR for the static bridge, so Roblox imports exactly seven genuine
+# MeshParts. Each moving component has its own closed triangles/UV/tangents.
+KINETIC_MATERIAL_ROLES = {
+    "ALLOY": "Cable", "CARBON": "Trolley", "GRIP": "Load",
+    "ARMOR": "Static", "BRUSHED": "Static",
+    "CERAMIC": "Static", "SIGNAL": "Static",
+}
+MOVING_TROLLEY = (
+    "TravelingTrolleyForge", "TrolleyPowerCabinet",
+    "PanoramicHoistWindow", "CablePulleyHousing",
+)
+MOVING_CABLE = ("StainlessHoistCable",)
+MOVING_LOAD = (
+    "LoadSpreaderCasting", "SafeSpreaderSling",
+    "TwentyFootSuspendedISOBody", "RecessedFreightDoor",
+    "ContainerUpperChine", "ISOVerticalPressing",
+    "ContainerCornerCasting", "CargoOwnerMark",
+    "SpoolCoreCylinder", "SixteenSidedSpoolEndplate",
+    "ReelEndLock", "TrueRopeWinding", "ReelSafetyOwnerBadge",
+)
 CENTERING_Y = 18.0
 
 
@@ -29,6 +53,29 @@ def create(profile: str) -> Sculpture:
     art = Sculpture()
     art.lines[0] = "# Original Chaos Survival Harbor 3D shore container crane"
     art.lines[2] = "o OriginalHarborGantry_" + profile
+    if "_kinetic_" in profile:
+        # The importer groups primitives by MATERIAL. Deliberately give
+        # trolley/cables/load three exclusive original material groups:
+        # these may then follow the already-running native crane animation
+        # without moving the real structural columns or starting a new loop.
+        original_add = art.add
+
+        def add_by_role(name, material, vertices, faces):
+            if name.startswith(MOVING_TROLLEY):
+                chosen = "CARBON"
+            elif name.startswith(MOVING_CABLE):
+                chosen = "ALLOY"
+            elif name.startswith(MOVING_LOAD):
+                chosen = "GRIP"
+            else:
+                # Four authentic static materials, never reused by movers.
+                chosen = {
+                    "ALLOY": "BRUSHED", "CARBON": "ARMOR",
+                    "GRIP": "CERAMIC",
+                }.get(material, material)
+            return original_add(name, chosen, vertices, faces)
+
+        art.add = add_by_role
 
     def block(name,material,x,y,z,sx,sy,sz,bevel=.18):
         art.beveled_block(name,material,x,y-CENTERING_Y,z,
@@ -225,6 +272,8 @@ def export(profile: str,output: Path):
             "dimensions":dims,"bounds_center":center,
             "bounds_min":art.minimum,"bounds_max":art.maximum,
             "source_y_shift":CENTERING_Y,
+            "kinetic_material_roles": (
+                KINETIC_MATERIAL_ROLES if "_kinetic_" in profile else {}),
             "sha256":hashlib.sha256(text.encode()).hexdigest()}
 
 
