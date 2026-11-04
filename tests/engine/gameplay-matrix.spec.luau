@@ -81,30 +81,47 @@ describe("Automated gameplay matrix", function()
         end
     end)
 
-    it("runs every allowed Double Chaos pair without leaking state", function()
-        local originalGravity = workspace.Gravity
-        local testedPairs = 0
-
-        for i = 1, #entries do
-            for j = i + 1, #entries do
-                local a = entries[i]
-                local b = entries[j]
-
-                if DisasterBalance.compatible(a.Id, b.Id) then
-                    executeSet({a.Module, b.Module}, "Classic")
-                    expect(workspace.Gravity).toBe(originalGravity)
-                    testedPairs += 1
+    -- Roblox Cloud/Lest imposes an independent ~20-second deadline per
+    -- test. Previously all compatible Double Chaos combinations ran under
+    -- ONE it(), after 55 disaster/arena cases: its 20s test deadline
+    -- expired despite the first matrix assertion succeeding. Preserve
+    -- every existing pair; split only the deadline scope, two first
+    -- disaster indices per it, without adding remote execution tasks.
+    it("retains at least 40 unique compatible Double Chaos pairs", function()
+        local count=0
+        for i=1,#entries do
+            for j=i+1,#entries do
+                if DisasterBalance.compatible(entries[i].Id,entries[j].Id) then
+                    count+=1
                 end
             end
         end
-
-        expect(testedPairs >= 40).toBe(true)
-
-        local root = workspace:FindFirstChild("GeneratedMap")
-        if root then
-            root:Destroy()
-        end
+        expect(count>=40).toBe(true)
     end)
+
+    for first=1,#entries-1,2 do
+        local from=first
+        local last=math.min(first+1,#entries-1)
+        it("runs Double Chaos pairs without leaking state, sources "
+                ..tostring(from).."-"..tostring(last),function()
+            local originalGravity=workspace.Gravity
+            local testedPairs=0
+            for i=from,last do
+                for j=i+1,#entries do
+                    local a=entries[i]
+                    local b=entries[j]
+                    if DisasterBalance.compatible(a.Id,b.Id) then
+                        executeSet({a.Module,b.Module},"Classic")
+                        expect(workspace.Gravity).toBe(originalGravity)
+                        testedPairs+=1
+                    end
+                end
+            end
+            expect(testedPairs>0).toBe(true)
+            local root=workspace:FindFirstChild("GeneratedMap")
+            if root then root:Destroy() end
+        end)
+    end
 end)
 
 return nil
