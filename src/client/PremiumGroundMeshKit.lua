@@ -3,6 +3,12 @@
 -- glyphs and collision remain authoritative; these are camera-near cosmetics.
 -- Reuse the existing scenery LOD sampler: no new RenderStepped/polling loop.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Roblox's published Rojo siblings and Lest's source-only require both
+-- use the same audited template clone helper. No extra render owner.
+local PremiumGroundPbrKit = if script and script.Parent
+    and script.Parent:FindFirstChild("PremiumGroundPbrKit")
+    then require(script.Parent.PremiumGroundPbrKit)
+    else require("./PremiumGroundPbrKit")
 
 local PremiumGroundMeshKit = {}
 
@@ -86,12 +92,25 @@ local function suppressOverlays(entry)
     end
 end
 
+local function markResident(entry, present)
+    local ground = entry.ground
+    if ground and ground.Parent
+        and ground:GetAttribute("LocalApproved3DGroundResident") ~= present then
+        -- Local-only advisory for 2K MaterialVariant owner: when a real
+        -- UV MeshPart overlaps this 0.035-stud native panel, don't waste
+        -- another 2K material sampler on the hidden UNDERLAY.
+        ground:SetAttribute("LocalApproved3DGroundResident", present)
+    end
+end
+
 local function restore(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    PremiumGroundPbrKit.detach(entry)
+    markResident(entry, nil)
     restoreOverlays(entry)
-    entry.model:Destroy()
+    if entry.model then entry.model:Destroy() end
 end
 
 local function clearMounted()
@@ -156,6 +175,8 @@ end
 local function hide(entry)
     -- Shrink, stream unload or a changed source surface: the real game
     -- returns to native art immediately, without a phantom 3D overlay.
+    PremiumGroundPbrKit.detach(entry)
+    markResident(entry, nil)
     restoreOverlays(entry)
     for _, piece in ipairs(entry.pieces) do
         if piece.Parent and piece.LocalTransparencyModifier ~= 1 then
@@ -257,6 +278,7 @@ local function mount(ground, decor, base, template)
         for _, piece in ipairs(entry.pieces) do
             if piece.Parent then piece.LocalTransparencyModifier = 0 end
         end
+        markResident(entry, true)
         suppressOverlays(entry)
     end
     for _, prop in ipairs({"Size", "CFrame", "Transparency"}) do
@@ -270,7 +292,8 @@ local function mount(ground, decor, base, template)
 end
 
 -- Exclusively called by the EXISTING arena/scenery LOD sampling owner.
-function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure)
+function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady,
+    cameraLook, pressure, touch, pbrDisabled)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -355,14 +378,38 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, camera
     end
 
     for ground, entry in pairs(mounted) do
-        if not wanted[ground] or not safeAfterMount(entry, base) then
-            restore(entry)
+        if not entry or not wanted[ground]
+            or not safeAfterMount(entry, base) then
+            if entry then restore(entry) end
             mounted[ground] = nil
         end
     end
     for ground in pairs(wanted) do
         if not mounted[ground] then
             mounted[ground] = mount(ground, decor, base, template)
+        end
+    end
+    -- One CAMERA-RANKED set of authentic 2K SurfaceAppearance templates
+    -- on ACTUAL UV/tangent MeshParts, not on primitive native surfaces.
+    -- Four approved family atlases already exist; new PBR texture files,
+    -- dynamic plugin-secured property writes and extra loops are forbidden.
+    -- Pressure 0/1/2 consumes at most 6/3/1 High Android floor tiles,
+    -- 2/1/0 Medium, none on Low. No increase to mesh residency ceiling.
+    local pbrBudget = PremiumGroundPbrKit.tileBudget(
+        tier, pressure, touch, pbrDisabled)
+    local remaining = pbrBudget
+    local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    for _, candidate in ipairs(candidates) do
+        local entry = mounted[candidate.part]
+        if entry then
+            if remaining > 0 and safeAfterMount(entry, base) then
+                local count = PremiumGroundPbrKit.attach(entry, variant)
+                if count > 0 then
+                    remaining -= 1
+                end
+            else
+                PremiumGroundPbrKit.detach(entry)
+            end
         end
     end
     -- Decor may stream in after its 3D floor Module. Reconcile a maximum
@@ -373,6 +420,19 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady, camera
             suppressOverlays(entry)
         end
     end
+end
+
+function PremiumGroundMeshKit.pbrCount()
+    local tiles, appearances = 0, 0
+    for _, entry in pairs(mounted) do
+        if entry and entry.model and entry.model.Parent
+            and type(entry.originalPbr) == "table"
+            and #entry.originalPbr > 0 then
+            tiles += 1
+            appearances += #entry.originalPbr
+        end
+    end
+    return tiles, appearances
 end
 
 function PremiumGroundMeshKit.count()
