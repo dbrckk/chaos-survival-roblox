@@ -64,6 +64,7 @@ local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
 local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAssets)
 local PremiumHarborMidgroundBargeAssets = require(script.PremiumHarborMidgroundBargeAssets)
 local PremiumHarborSeaAssets = require(script.PremiumHarborSeaAssets)
+local PremiumTowerCoolingSpireAssets = require(script.PremiumTowerCoolingSpireAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -229,6 +230,9 @@ if not isStudioE2E then
     -- Massive true ocean model: one original noncolliding coastal annulus,
     -- zero triangles inside Harbor's authoritative survival floor.
     task.defer(PremiumHarborSeaAssets.start)
+    -- Five original source-modeled 3D Tower Run cooling installations;
+    -- strictly nonphysical, optional, deferred after first-screen assets.
+    task.defer(PremiumTowerCoolingSpireAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
