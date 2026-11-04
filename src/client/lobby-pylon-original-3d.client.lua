@@ -25,6 +25,7 @@ local active = nil
 local watched = {}
 local listeners = {}
 local scheduled = false
+local restoringOwn = false
 local reconcile
 
 local function budget()
@@ -106,6 +107,7 @@ local function validTargets(count)
 end
 
 local function restore()
+    restoringOwn = true
     if active then
         for item, alpha in pairs(active.hidden) do
             if item.Parent then item.LocalTransparencyModifier = alpha end
@@ -113,6 +115,7 @@ local function restore()
         active = nil
     end
     folder:ClearAllChildren()
+    restoringOwn = false
     if player:GetAttribute("LocalOriginalLobbyPylon3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLobbyPylon3DCount", 0)
     end
@@ -232,6 +235,14 @@ reconcile = function()
                 unchanged = false
                 break
             end
+            local actualMeshes = 0
+            for _, part in ipairs(active.models[i]:GetDescendants()) do
+                if part:IsA("MeshPart") then actualMeshes += 1 end
+            end
+            if actualMeshes ~= partCount then
+                unchanged = false
+                break
+            end
         end
         if unchanged then return end
     end
@@ -276,6 +287,13 @@ reconcile = function()
     player:SetAttribute("LocalOriginalLobbyPylonMeshPartCount",
         count * partCount)
 end
+
+folder.DescendantRemoving:Connect(function(item)
+    if not restoringOwn and item:IsA("MeshPart")
+        and item:GetAttribute("OriginalLobbyPylon3D") == true then
+        schedule()
+    end
+end)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then schedule() end
