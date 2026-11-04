@@ -1,6 +1,6 @@
-# Tower Run — remplacement de cinq énormes tours primitives par une architecture 3D industrielle originale
+# Tower Run — cinq installations originales 3D avec deux silhouettes de refroidissement complémentaires
 
-**4 novembre 2026.** Source et runtime de Tower Run intégrés à `main`. Asset Roblox Model de créateur **`95543769387033`**, **Approved** : [workflow source-gated et modération réels #41904066937](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41904066937). Ce dossier ne représente PAS un déploiement du jeu public ni une preuve de rendu sur un véritable Android.
+**4 novembre 2026.** Source et runtime de Tower Run intégrés à `main`. Deux authentiques Roblox Models créateur **Approved** : turbine `95543769387033` ([import #41904066937](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41904066937)) et véritable tour de refroidissement creuse `97498534364335` ([import #41904135484](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41904135484)). Ce dossier ne représente PAS un déploiement du jeu public ni une preuve de rendu sur un véritable Android.
 
 ## Défaut d'origine constaté
 
@@ -22,13 +22,17 @@ Le générateur `tools/generate_original_towers_cooling_spire.py` crée une vrai
 | Source authentifiée | SHA256 `460a96042dc55962de0347a2e4e50ebf9d1e386c80e700b5eb40b10fee5d01cc` |
 | Justificatif import et modération | [#41904066937](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41904066937) |
 
-Le même modèle réutilise les **vraies cinq positions et hauteurs préexistantes** : chaque spire est redimensionnée uniformément par `body.Size.Y / (40 * 0.42)`, positionnée à partir de sa vraie boîte `GetBoundingBox()` pour aligner le bas de l'œuvre sur celui de l'ancien bâtiment. Contrairement à une substitution `Part`, elle est réellement tridimensionnelle et ses renforts dépassent du contour, tout en demeurant strictement hors des parcours.
+### Deuxième géométrie premium réelle
+
+La source complémentaire `tools/generate_original_towers_cooling_stack.py` apporte une vraie **coque hyperboloïde évidée à double paroi**, galerie d'extraction ouverte, 330 groupes sculptés, conduites, anneaux industriels et échelle de service. Son Model `97498534364335` est Approved : **9 980 triangles, sept matériaux** et dimensions source **6.256 × 21.1646 × 5.52 studs** (échelle auteur 0.46). La source reste totalement non physique. [Architecture détaillée des deux profils](ORIGINAL_TOWERS_COOLING_VARIANTS_2026-11-04.md).
+
+Les deux modèles réutilisent les **cinq positions et hauteurs préexistantes** en alternant **la tour creuse sur 1, 3, 5** et **la turbine sur 2, 4**. Chaque sculpture est redimensionnée uniformément selon sa propre référence de hauteur (`40 × 0.42` ou `44 × 0.46`) et sa vraie boîte `GetBoundingBox()` pour placer correctement sa base. Contrairement à une substitution `Part`, elle est réellement tridimensionnelle et ses renforts dépassent du contour, tout en demeurant strictement hors des parcours.
 
 ## Sécurité / réversibilité / performances
 
-- **Serveur** : `PremiumTowerCoolingSpireAssets.lua` charge seulement le vrai ID approuvé, après gameplay essentiel, passe obligatoirement par `OriginalMeshScenery.sanitize`, exige exactement sept `MeshPart` non physiques, vérifie le **profil de dimensions** du modèle d'origine (rotation X/Z tolérée), puis expose `ApprovedTowerCoolingSpireTemplates.RealCoolingSpire` avec provenance/compteur.
+- **Serveur** : `PremiumTowerCoolingSpireAssets.lua` et `PremiumTowersHollowStackAssets.lua` chargent uniquement leurs deux vrais IDs approuvés, après gameplay essentiel, passe obligatoirement par `OriginalMeshScenery.sanitize`, exige exactement sept `MeshPart` non physiques, vérifie le **profil de dimensions** du modèle d'origine (rotation X/Z tolérée), puis expose `ApprovedTowerCoolingSpireTemplates.RealCoolingSpire` avec provenance/compteur.
 - **Natif** : `arena-midground-mass.client.lua` indexe exactement les anciens fragments de chaque tour par `OriginalTowerCoolingSpireIndex=1..5`. Aucun morceau du sol, chemin, podium, joueur ou avertissement n'est indexé.
-- **Client** : `TowerCoolingSpireMeshKit.lua` exige `VariantId=Towers`, `GeneratedMap.Arena.Base`, le vrai dossier `ArenaMidgroundMassLocal`, les cinq noms/dimensions originaux et la source approuvée. Aucun chargement externe par ID sur le client. Uniquement après montage **complet de sept MeshParts non physiques** les éléments natifs de la tour correspondante sont masqués par la transparence *locale*. Ils restent en place comme fallback, puis redeviennent visibles après retrait, changement de qualité, disparition de source, streaming ou réduction de l'arène.
+- **Client** : `TowerCoolingSpireMeshKit.lua` sélectionne par index l'une des deux sources approuvées et exige `VariantId=Towers`, `GeneratedMap.Arena.Base`, le vrai dossier `ArenaMidgroundMassLocal`, les cinq noms/dimensions originaux et la source approuvée. Aucun chargement externe par ID sur le client. Uniquement après montage **complet de sept MeshParts non physiques** les éléments natifs de la tour correspondante sont masqués par la transparence *locale*. Ils restent en place comme fallback, puis redeviennent visibles après retrait, changement de qualité, disparition de source, streaming ou réduction de l'arène.
 - **Budget** : aucune nouvelle boucle/timer/`RunService`, aucune lumière, aucune collision, aucun `RemoteEvent`. La synchronisation utilise **le même sampler de qualité caméra** dans `scenery-lod.client.lua`. Dossier local `OriginalTowerCoolingSpireLocal` inscrit au compteur global de `VisualBudgetRules.LocalFolders`, dont le budget 440/680/900 reste effectif.
 
 | Tier Android | Pression 0 | Pression 1 | Pression 2 | Distance max |
@@ -41,7 +45,7 @@ Le même modèle réutilise les **vraies cinq positions et hauteurs préexistant
 
 ## Conditions avant diffusion publique
 
-1. Build Rojo complet, contrôle strict des **61 Models propriétaires approuvés** et de la source Tower Run, puis **7 suites moteur Roblox Cloud sur le dernier SHA** (pas seulement une compilation).
+1. Build Rojo complet, contrôle strict des **62 Models propriétaires approuvés** et de la source Tower Run, puis **7 suites moteur Roblox Cloud sur le dernier SHA** (pas seulement une compilation).
 2. Photographies Android Low / Medium / High sur plusieurs points d'observation : vrais renforts/anneaux/cuves visibles, pas de vieux blocs ressortant à travers les détails, base et sommet correctement alignés.
 3. Tester réduction de l'arène, rejointe, streaming, changement de carte, pression VFX 0/1/2 : les tours natives doivent immédiatement remplacer les 3D quand leur contrat n'est plus vérifié.
 4. 30 minutes Android : mémoire, FPS/p95, surface de rendu et absence de « pop » gênant pendant le déplacement. Aucun résultat imaginé.
