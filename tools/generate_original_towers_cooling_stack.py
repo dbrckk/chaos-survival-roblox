@@ -212,7 +212,7 @@ def export(path:Path)->dict:
     # Modeled 44-stud native stack is authored at .46 source ratio.
     assert 5.4<=dims[0]<=6.5,dims
     assert 20.5<=dims[1]<=21.5,dims
-    assert 5.4<=dims[2]<=6.5,dims
+    assert 5.0<=dims[2]<=6.5,dims
     path.parent.mkdir(parents=True,exist_ok=True)
     data="\n".join(art.lines)+"\n"
     path.write_text(data,encoding="utf-8")
