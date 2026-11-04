@@ -39,10 +39,12 @@ jobs:
           assert "not native.CanCollide" in pylons
           assert "OriginalLobbyPylons3DLocal" in ledger
           assert "CanCollide = false" in pylons and "LocalTransparencyModifier = 1" in pylons
+          assert "target.native.LocalTransparencyModifier = 0.50" in pylons
+          assert "target.native.LocalTransparencyModifier = 1" not in pylons
           assert "OriginalLobbyPylonMeshPartCount" in pylons
           assert "MachinedArenaEntrance" in gate and "maskLegacy(decor)" in gate
           assert "ArenaGateTop" in gate and "restoreLegacy()" in gate
-          print("Verified approved 3D pylon + gate arbitration, native physics intact; no publish")
+          print("Verified approved 3D pylon + gate; collider remains visibly disclosed; no publish")
           PY
       - name: Source-only milestone validation (NEVER publish)
         shell: bash
