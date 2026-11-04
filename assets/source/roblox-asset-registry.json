@@ -474,6 +474,14 @@
       "source": "tools/generate_original_harbor_gantry.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41856104459
+    },
+    {
+      "name": "harbor_hero_station",
+      "asset_id": "73237902371094",
+      "moderation": "Approved",
+      "source": "tools/generate_original_harbor_hero_station.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41859877575
     }
   ]
 }
