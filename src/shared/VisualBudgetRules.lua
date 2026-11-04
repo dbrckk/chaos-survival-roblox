@@ -94,6 +94,11 @@ VisualBudgetRules.LocalFolders = {
     -- MeshParts, always an integral world landmark on Android tiers.
     -- Never part of player physics or an untracked giant hidden slab.
     "OriginalHarborSculptedSeaLocal",
+    -- Five real seven-MeshPart industrial cooling megaspires outside
+    -- Tower Run playable floor. Reversible native fallback, 0/2/5
+    -- Android tier caps. Count all local source MeshParts in normal
+    -- 440/680/900 visual census (no hidden separate draw-call budget).
+    "OriginalTowerCoolingSpireLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
