@@ -9,6 +9,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit={}
+-- EXACT Model ID returned by Roblox import with Approved moderation.
+-- Verify against the server template holder and the Model itself.
+local APPROVED_ID=132891280963772
 local folder=Instance.new("Folder")
 folder.Name="OriginalHarborMidgroundBargesLocal"
 folder:SetAttribute("CosmeticOnly",true)
@@ -20,21 +23,20 @@ local BUDGET={
     Medium={models=2,distance=270,retention=27},
     High={models=4,distance=380,retention=45},
 }
-local EXPECTED_DIMENSIONS=Vector3.new(28.35,11.28,13.3)
--- This is the actual geometric-center displacement relative to the
--- authored original vessel's 28-stud hull center (0,0,0). Original
--- modeling source emits the same bounds under every approved upload.
-local ORIGINAL_CENTER=Vector3.new(-.025,3.61,0)
+-- Imported generator's verified exact source bounds:
+-- min=(-14.2,-2.03,-6.65), max=(14.15,9.15,6.65).
+-- This is the real geometric center, not an assumed import Model pivot.
+local ORIGINAL_CENTER=Vector3.new(-.025,3.56,0)
 
 local function source()
     local holder=ReplicatedStorage:FindFirstChild("ApprovedHarborBargeTemplates")
     if not holder or not holder:IsA("Folder")
         or holder:GetAttribute("OwnerVerified")~=true then return nil end
-    local id=holder:GetAttribute("Original3DAssetId")
-    if type(id)~="number" or id<=10000000000 then return nil end
+    if holder:GetAttribute("Original3DAssetId")~=APPROVED_ID
+        then return nil end
     local model=holder:FindFirstChild("CoastalFreightBarge")
     if not model or not model:IsA("Model") or model.Parent~=holder
-        or model:GetAttribute("Original3DAssetId")~=id
+        or model:GetAttribute("Original3DAssetId")~=APPROVED_ID
         or model:GetAttribute("OwnerVerified")~=true
         or model:GetAttribute("CosmeticOnly")~=true
         or model:GetAttribute("OriginalHarborBarge3D")~=true then return nil end
@@ -47,10 +49,10 @@ local function source()
     end
     if n~=7 then return nil end
     local _,b=model:GetBoundingBox()
-    if math.max(b.X,b.Z)<27.8 or math.max(b.X,b.Z)>29.7
-        or math.min(b.X,b.Z)<12.5 or math.min(b.X,b.Z)>14.2
-        or b.Y<10.2 or b.Y>11.9 then return nil end
-    return model,id
+    if math.max(b.X,b.Z)<28.05 or math.max(b.X,b.Z)>28.65
+        or math.min(b.X,b.Z)<13.0 or math.min(b.X,b.Z)>13.65
+        or b.Y<10.93 or b.Y>11.45 then return nil end
+    return model,APPROVED_ID
 end
 
 local function authentic(hull,arena,midground,base)
@@ -115,8 +117,10 @@ local function mount(arena,base,midground,hull,index,approved,id)
     local clone=approved:Clone()
     local frame,b=clone:GetBoundingBox()
     local long,short=math.max(b.X,b.Z),math.min(b.X,b.Z)
-    if long<27.8 or long>29.7 or short<12.5 or short>14.2
-        or b.Y<10.2 or b.Y>11.9 then clone:Destroy();return nil end
+    if long<28.05 or long>28.65 or short<13.0 or short>13.65
+        or b.Y<10.93 or b.Y>11.45 then
+        clone:Destroy();return nil
+    end
     -- Roblox glTF orientation may swap authored X/Z; always match the
     -- actual native 28x13 barge's long axis, with its own berth yaw.
     local yaw=b.X<b.Z and math.pi*.5 or 0
