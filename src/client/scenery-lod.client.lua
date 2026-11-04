@@ -541,6 +541,17 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalHarborDockMeshPartCount",
                 dockPieces)
         end
+        -- Real approved 3D cargo freighter replaces the large distant
+        -- Roblox-native ship ONLY when model and safe native fallback exist.
+        -- Zero additional loops, server physics, lights or fake routes.
+        HarborFreighterMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local freighter=HarborFreighterMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborFreighterCount")
+            ~= freighter then
+            player:SetAttribute("LocalOriginalHarborFreighterCount",freighter)
+        end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
         -- Dismount immediately on shrink to prevent phantom 3D decking.
