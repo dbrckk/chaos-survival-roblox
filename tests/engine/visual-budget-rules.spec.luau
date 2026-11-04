@@ -14,8 +14,37 @@ local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 local HarborGantryMotionRules = require("../../src/shared/HarborGantryMotionRules")
 local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
+local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 
 describe("visual budget rules", function()
+    it("fills all 36 source-verified ground bays only on healthy High devices", function()
+        local count = PremiumGroundMeshKit.residencyCount
+        expect(count("High", 0)).toBe(36)
+        expect(count("Medium", 0)).toBe(12)
+        expect(count("Low", 0)).toBe(2)
+        -- The existing hysteresis-filtered FPS/Parts pressure must
+        -- reclaim genuine 7-MeshPart tiles without new render loops.
+        expect(count("High", 1)).toBe(24)
+        expect(count("High", 2)).toBe(16)
+        expect(count("Medium", 1)).toBe(8)
+        expect(count("Medium", 2)).toBe(4)
+        expect(count("Low", 1)).toBe(2)
+        expect(count("Low", 2)).toBe(1)
+        -- Invalid or absent local pressure never creates unbounded clones.
+        expect(count("High", nil)).toBe(36)
+        expect(count("High", 300)).toBe(16)
+        expect(count("Low", -10)).toBe(2)
+        expect(count("High", 0/0)).toBe(36)
+        expect(count("Unknown", 0)).toBe(2)
+        local registered = false
+        for _, owner in ipairs(VisualBudgetRules.LocalFolders) do
+            if owner == "OriginalPremiumGroundMeshesLocal" then
+                registered = true
+            end
+        end
+        expect(registered).toBe(true)
+    end)
+
     it("counts all approved route MeshParts in the existing Android budget ledger", function()
         local registered = false
         for _, name in ipairs(VisualBudgetRules.LocalFolders) do
