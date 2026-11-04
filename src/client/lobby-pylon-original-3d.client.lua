@@ -258,9 +258,11 @@ reconcile = function()
         staged[#staged + 1] = model
     end
 
-    -- Hide ONLY the four exact obsolete wedges/collars and the original
-    -- matching rectangular collision pylon once its authentic full-height
-    -- shell is ready. The server obstacle itself stays collidable.
+    -- Hide ONLY the four obsolete nonphysical wedges/collars. The
+    -- genuine authored mesh has a narrow hourglass core: its bounding box
+    -- does NOT prove it encloses the rectangular physical obstacle.
+    -- Keep the original collidable pylon visibly translucent to disclose
+    -- its complete footprint; never produce an invisible player blocker.
     local hidden = {}
     for i, model in ipairs(staged) do
         model.Parent = folder
@@ -270,7 +272,7 @@ reconcile = function()
             item.LocalTransparencyModifier = 1
         end
         hidden[target.native] = target.native.LocalTransparencyModifier
-        target.native.LocalTransparencyModifier = 1
+        target.native.LocalTransparencyModifier = 0.50
     end
     local records = {}
     for i, target in ipairs(targets) do
