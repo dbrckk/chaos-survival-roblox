@@ -288,12 +288,16 @@ jobs:
               "deck_carapace_harbor", "bridge_side_girder",
           }
           large_hull_names = {"large_deck_hull"}
+          large_support_names = {
+              "column_classic", "column_towers", "column_crossroads",
+              "column_orbital", "column_harbor", "long_route_cradle",
+          }
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
               | ambient_names | relief_names | floor_hardware_names
-              | platform_side_names | large_hull_names)
+              | platform_side_names | large_hull_names | large_support_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -316,7 +320,9 @@ jobs:
                       "deck_carapace_classic", "deck_carapace_towers",
                       "deck_carapace_crossroads", "deck_carapace_orbital",
                       "deck_carapace_harbor", "bridge_side_girder",
-                      "large_deck_hull"):
+                      "large_deck_hull",
+                      "column_classic", "column_towers", "column_crossroads",
+                      "column_orbital", "column_harbor", "long_route_cradle"):
                       # Reproducible 3D authoring scripts generate the real
                       # approved OBJ before the verified Roblox owner upload.
                       origin = {
@@ -349,6 +355,12 @@ jobs:
                           "deck_carapace_harbor": "tools/generate_original_platform_carapaces.py",
                           "bridge_side_girder": "tools/generate_original_platform_carapaces.py",
                           "large_deck_hull": "tools/generate_original_large_deck_support.py",
+                          "column_classic": "tools/generate_original_large_supports.py",
+                          "column_towers": "tools/generate_original_large_supports.py",
+                          "column_crossroads": "tools/generate_original_large_supports.py",
+                          "column_orbital": "tools/generate_original_large_supports.py",
+                          "column_harbor": "tools/generate_original_large_supports.py",
+                          "long_route_cradle": "tools/generate_original_large_supports.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
                   else:
@@ -476,7 +488,7 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 44
+          assert len(models) == 50
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
@@ -550,6 +562,45 @@ jobs:
           assert "PremiumPlatformSideAssets.start" in Path(
               "src/server/init.server.lua").read_text()
           assert "ArenaPlatformIdentityLocal" in census
+          support_server = Path("src/server/PremiumLargeStructureAssets.lua").read_text()
+          support_mesh = Path("src/client/PremiumLargeStructureMeshKit.lua").read_text()
+          for variant, source in (
+              ("Classic","column_classic"),("Towers","column_towers"),
+              ("Crossroads","column_crossroads"),("Orbital","column_orbital"),
+              ("Harbor","column_harbor"),("LongCradle","long_route_cradle"),
+          ):
+              assert (variant+" = "+approved[source]) in support_server
+              assert (variant+" = "+approved[source]) in support_mesh
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"]==source)==41808940118
+          for required in (
+              "AssetService.LoadAssetAsync",
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedLargeStructureTemplates", "geometryAllowed(safe,name)",
+          ):
+              assert required in support_server, required
+          for required in (
+              "Kit.supports(", "Kit.longCradle(", "OriginalSupportColumn3D",
+              "OriginalLongCradle3D", "CanCollide = false", "CanTouch = false",
+              "CanQuery = false", "CastShadow = false", "SkipRouteFootprint",
+              "OriginalSupportVisualWeld", "support:GetPropertyChangedSignal",
+              "Original3DAssetId",
+          ):
+              assert required in support_mesh, required
+          assert "RunService" not in support_mesh
+          assert "PremiumLargeStructureAssets.start" in Path(
+              "src/server/init.server.lua").read_text()
+          for required in (
+              "PremiumLargeStructureMeshKit.supports(",
+              "PremiumLargeStructureMeshKit.longCradle(",
+              "LocalOriginalLargeStructure3DCount",
+              "ApprovedLargeStructureTemplates",
+              "actualSupportParts",
+          ):
+              assert required in platform_script, required
+          assert "SkipRouteFootprint" in platform_finish
+          assert "verifiedSupports[part]" in native_trim
+          assert 'kind == "cradle"' in native_trim
           # Genuine source mesh mount must precede masking these server-
           # authored NONPHYSICAL fallback shapes, never gameplay/warnings.
           native_trim = Path("src/client/PlatformNativeTrimReplacementKit.lua").read_text()
