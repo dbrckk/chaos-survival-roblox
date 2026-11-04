@@ -1,0 +1,112 @@
+# One fully source-authored noncolliding control-tower/hoist station.
+# Imports a moderated creator Model; does not publish a Roblox Place.
+name: One-time Original Harbor Hero Signal Station 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-harbor-hero-station-20261104.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-harbor-hero-station-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify seven real UV/tangent material meshes and three isolated motions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_harbor_hero_station.py \
+            --output "$RUNNER_TEMP/harbor_hero_station.obj" \
+            > "$RUNNER_TEMP/harbor_hero_station.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/harbor_hero_station.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/harbor_hero_station.gltf" \
+            > "$RUNNER_TEMP/harbor_hero_station.export.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          from pathlib import Path
+          import base64,json,sys
+          root=Path(sys.argv[1])
+          info=json.loads((root/"harbor_hero_station.json").read_text())
+          doc=json.loads((root/"harbor_hero_station.gltf").read_text())
+          obj=(root/"harbor_hero_station.obj").read_text()
+          assert info["asset"]=="harbor_hero_station"
+          assert info["source_scale"]==.74
+          assert info["source_y_shift"]==20
+          assert 55<=info["groups"]<=190
+          assert 1400<=info["triangles"]<=5800
+          x,y,z=info["size"]
+          assert 27<=x<=29.4 and 27.5<=y<=29.5 and 7<=z<=8
+          for name in (
+              "ShapedBreakwaterControlFoundation",
+              "MaritimeTenFacetedLoadPier",
+              "ClosedLoadDistributionCrosshead",
+              "DoubleGlazedBeaconOutlookFront",
+              "RadarArm_ClosedOctagonalRoot",
+              "Cable_TrueSwagedHoistCore",
+              "Weight_OriginalSuspendedMarineCase",
+          ):
+              assert name in obj,name
+          mats={"ARMOR","BRUSHED","CERAMIC","SIGNAL",
+                "CARBON","ALLOY","GRIP"}
+          assert set(info["materials"])==mats
+          assert doc["asset"]["version"]=="2.0"
+          assert set(m["name"] for m in doc["materials"])==mats
+          prim=doc["meshes"][0]["primitives"]
+          assert len(prim)==7
+          roleBounds={}
+          total=0
+          for p in prim:
+              role=doc["materials"][p["material"]]["name"]
+              attrs=p["attributes"]
+              assert {"POSITION","NORMAL","TANGENT","TEXCOORD_0"}<=set(attrs)
+              a=doc["accessors"][attrs["POSITION"]]
+              roleBounds[role]=[a["min"],a["max"]]
+              total+=a["count"]//3
+          assert total==info["triangles"]
+          def dimensions(role):
+              lo,hi=roleBounds[role]
+              return [hi[i]-lo[i] for i in range(3)]
+          rx,ry,rz=dimensions("CARBON")
+          assert 8<rx<10 and ry<1.4 and rz<1.2,dimensions("CARBON")
+          cx,cy,cz=dimensions("ALLOY")
+          assert cx<.7 and 7.5<cy<9.3 and cz<.7,dimensions("ALLOY")
+          wx,wy,wz=dimensions("GRIP")
+          assert 2.3<wx<3.1 and 1.4<wy<2.2 and 2.3<wz<3.2
+          raw=base64.b64decode(doc["buffers"][0]["uri"].split(",",1)[1],
+                                validate=True)
+          assert len(raw)==doc["buffers"][0]["byteLength"]
+          print("Verified true Harbor signal station:",total,
+                "triangles, seven original meshes, three distinct native-animated roles;",
+                "NO PUBLIC ROBLOX PLACE PUBLISH")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-original-harbor-hero-station-3d
+          path: |
+            ${{ runner.temp }}/harbor_hero_station.obj
+            ${{ runner.temp }}/harbor_hero_station.gltf
+            ${{ runner.temp }}/harbor_hero_station.json
+            ${{ runner.temp }}/harbor_hero_station.export.json
+          retention-days: 14
+
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: harbor_hero_station
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
