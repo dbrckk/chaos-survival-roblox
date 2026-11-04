@@ -33,6 +33,7 @@ local routeTargetConnections = {}
 local routeCueStates = {}
 local footprintDisconnects = {}
 local originalColumnDisconnects = {}
+local mountedLongCradles = {}
 local outpostMotions = {}
 local currentOutpostPosture = "normal"
 
@@ -95,6 +96,12 @@ local function clear()
         connection:Disconnect()
     end
     table.clear(originalColumnDisconnects)
+    for platform in pairs(mountedLongCradles) do
+        if platform.Parent then
+            platform:SetAttribute("LocalOriginalLongCradleMounted", nil)
+        end
+        mountedLongCradles[platform] = nil
+    end
     -- Restore any server-authored visual fallback before destroying our
     -- verified owner-replacement meshes. Colliders are never touched.
     PlatformNativeTrimReplacementKit.reset()
@@ -571,6 +578,12 @@ local function rebuild()
                     folder, platform, tier.Name, visualIndex)
                 if cradle then
                     replacements[tostring(visualIndex)] = "cradle"
+                    -- Shared cosmetic-only arbitration prevents the old
+                    -- 3K-triangle underdeck chassis from being mounted
+                    -- behind this newer genuine open-frame undercradle.
+                    -- Client-local attribute NEVER grants a gameplay route.
+                    platform:SetAttribute("LocalOriginalLongCradleMounted", true)
+                    mountedLongCradles[platform] = true
                     longCradleBudget -= 1
                     for _, piece in ipairs(cradle) do
                         registerVisual(platform, piece)
