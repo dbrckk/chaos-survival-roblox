@@ -16,6 +16,53 @@ local SkySpineSwitchyard = require("../../src/server/SkySpineSwitchyard")
 local SkyRouteMonuments = require("../../src/server/SkyRouteMonuments")
 local ArenaPresentation = require("../../src/shared/ArenaPresentation")
 local VisualTheme = require("../../src/shared/VisualTheme")
+local PlatformNativeTrimReplacementKit = require("../../src/client/PlatformNativeTrimReplacementKit")
+
+describe("native structure masking only while physical route remains truly safe", function()
+    it("restores when a genuine collider warns, shrinks, vanishes or has a shutter", function()
+        local folder = Instance.new("Folder")
+        folder.Name = "Platforms"
+        local deck = Instance.new("Part")
+        deck.Name = "Platform12"
+        deck.Size = Vector3.new(24, 2, 11)
+        deck.Anchored = true
+        deck.CanCollide = true
+        deck.Transparency = 0
+        deck.Parent = folder
+        local nativeSize = deck.Size
+        local allowed = PlatformNativeTrimReplacementKit.authorizesMask
+        expect(allowed(deck, nativeSize, folder)).toBe(true)
+        deck:SetAttribute("CollapsePhase", "Warning")
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck:SetAttribute("CollapsePhase", "Gone")
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck:SetAttribute("CollapsePhase", "Normal")
+        expect(allowed(deck, nativeSize, folder)).toBe(true)
+        deck:SetAttribute("BridgeShutterPhase", "Warning")
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck:SetAttribute("BridgeShutterPhase", "Idle")
+        expect(allowed(deck, nativeSize, folder)).toBe(true)
+        deck.Size = nativeSize - Vector3.new(0.15, 0, 0)
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck.Size = nativeSize
+        expect(allowed(deck, nativeSize, folder)).toBe(true)
+        deck.CanCollide = false
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck.CanCollide = true
+        deck.Transparency = 0.82
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck.Transparency = 0
+        deck.Anchored = false
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck.Anchored = true
+        expect(allowed(deck, nativeSize, folder)).toBe(true)
+        expect(allowed(deck, nil, folder)).toBe(false)
+        deck.Parent = nil
+        expect(allowed(deck, nativeSize, folder)).toBe(false)
+        deck:Destroy()
+        folder:Destroy()
+    end)
+end)
 
 describe("Chaos Survival engine", function()
     it("gives all five physical parkour maps distinct deck materials", function()

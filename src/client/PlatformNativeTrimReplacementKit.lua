@@ -121,12 +121,15 @@ local function physicalOwner(native)
     return activePlatforms:FindFirstChild("Platform"..id)
 end
 
-local function physicalSafe(native)
-    local owner = physicalOwner(native)
-    if not owner or not owner:IsA("BasePart")
-        or owner.Parent ~= activePlatforms
+-- A pure condition on REAL Roblox Parts, also checked in the
+-- important engine milestone. This does not alter collision itself.
+function Kit.authorizesMask(owner, original, platforms)
+    if not platforms or not platforms:IsA("Folder")
+        or not owner or not owner:IsA("BasePart")
+        or owner.Parent ~= platforms
         or not owner.Anchored or not owner.CanCollide
-        or owner.Transparency >= 0.75 then
+        or owner.Transparency >= 0.75
+        or typeof(original) ~= "Vector3" then
         return false
     end
     local phase = owner:GetAttribute("CollapsePhase")
@@ -137,16 +140,16 @@ local function physicalSafe(native)
     if shutter ~= nil and shutter ~= "Idle" then
         return false
     end
-    -- An initial full-footprint art installation may no longer cover
-    -- a dynamically shrinking deck. Prefer showing its honest native
-    -- geometry instead of leaving an invisible, seemingly safe ledge.
-    local original = ownerBaselines[owner]
-    if not original then return false end
-    if math.abs(owner.Size.X-original.X) >= 0.09
-        or math.abs(owner.Size.Z-original.Z) >= 0.09 then
-        return false
-    end
-    return true
+    -- Only mask while the source-authored imported 3D still matches
+    -- the native Part's initial physical footprint.
+    return math.abs(owner.Size.X-original.X) < 0.09
+        and math.abs(owner.Size.Z-original.Z) < 0.09
+end
+
+local function physicalSafe(native)
+    local owner = physicalOwner(native)
+    return Kit.authorizesMask(owner, owner and ownerBaselines[owner],
+        activePlatforms)
 end
 
 local function tryMask(part)
