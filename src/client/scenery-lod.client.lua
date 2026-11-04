@@ -18,6 +18,7 @@ local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortal
 local HarborDockCaissonMeshKit = require(script.Parent.HarborDockCaissonMeshKit)
 local HarborFreighterMeshKit = require(script.Parent.HarborFreighterMeshKit)
 local HarborGantryKineticMeshKit = require(script.Parent.HarborGantryKineticMeshKit)
+local HarborHeroStationMeshKit = require(script.Parent.HarborHeroStationMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -552,6 +553,18 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalHarborFreighterCount")
             ~= freighter then
             player:SetAttribute("LocalOriginalHarborFreighterCount",freighter)
+        end
+        -- Replace the outboard Harbor hero's primitive pier, glazed
+        -- signal house, radar mast and crane with a real source-certified
+        -- 3D model. Native radar, storm lens, hoist and weight still drive
+        -- the three kinetic MeshParts, through their OWN existing owners.
+        -- One camera LOD sampler; absolutely no additional render loop.
+        HarborHeroStationMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,player:GetAttribute("OptionalVfxPressure"))
+        local heroStation=HarborHeroStationMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborHeroStationCount")
+            ~= heroStation then
+            player:SetAttribute("LocalOriginalHarborHeroStationCount",heroStation)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
