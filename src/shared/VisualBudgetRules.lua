@@ -78,6 +78,10 @@ VisualBudgetRules.LocalFolders = {
     -- One 7-MeshPart 4,918-triangle authentic Harbor container freighter,
     -- instead of the many distant native Part/WedgePart cargo shapes.
     "OriginalHarborFreighterLocal",
+    -- Four 7-MeshPart authentic Harbor container-port cranes with real
+    -- Trolley/Cable/Load animation. Strict source/Android LOD caps 0/2/4.
+    -- Count *all* imported parts in the SAME 440/680/900 visual ledger.
+    "OriginalHarborKineticGantryLocal",
     -- Seven authentic material MeshParts per approved hanging keel MODEL;
     -- 1/3/5 tiered residents included in existing 440/680/900 budget.
     "OriginalArenaKeelLocal",
