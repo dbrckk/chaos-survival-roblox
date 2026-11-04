@@ -343,7 +343,7 @@ jobs:
                    "lobby_pylon_shell": "Chaos Original Enclosing Lobby 3D Column",
                    "harbor_promenade_portal": "Chaos Harbor Skywalk Cargo Gantry 3D",
                    "harbor_dock_caisson": "Chaos Original Harbor Dock Cargo Caisson 3D",
-                   "harbor_freighter": "Chaos Original Storm Harbor Container Freighter 3D"}
+                   "harbor_freighter": "Chaos Harbor Container Freighter 3D"}
           display_name = names[os.environ["CHOICE"]]
           # Roblox returned INVALID_ARGUMENT "Asset name length is invalid"
           # on 3 Nov 2026 for the previous 54-character Sky Spine name.
