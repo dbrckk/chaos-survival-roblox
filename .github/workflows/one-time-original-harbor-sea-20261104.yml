@@ -1,0 +1,104 @@
+# A true 960-stud marine world-coastline mesh, outside gameplay only.
+# Uploads a moderated creator-owned 3D water Model, NEVER the public Place.
+name: One-time Original Storm Harbor Sculpted Sea 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-harbor-sea-20261104.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-harbor-sea-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Author and verify true sculpted nonphysical sea ring with dry 320-stud playable center
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_harbor_sea.py \
+            --output "$RUNNER_TEMP/chaos_harbor_sea_apron.obj" \
+            > "$RUNNER_TEMP/sea-source.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/chaos_harbor_sea_apron.obj" \
+            --materials assets/source/chaos_harbor_sea.mtl \
+            --output "$RUNNER_TEMP/chaos_harbor_sea_apron.gltf" \
+            > "$RUNNER_TEMP/sea-export.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          sys.path.insert(0,"tools")
+          from obj_to_gltf import read_obj, read_materials
+          root=Path(sys.argv[1])
+          info=json.loads((root/"sea-source.json").read_text())
+          doc=json.loads((root/"chaos_harbor_sea_apron.gltf").read_text())
+          source=root/"chaos_harbor_sea_apron.obj"
+          assert info["asset"]=="harbor_sea_apron"
+          assert info["source_units_to_studs"]==20
+          assert info["inner_dry_halfwidth_studs"]>=164.7
+          assert info["outer_halfwidth_studs"]==480
+          assert info["palette"]=="chaos_harbor_sea.mtl"
+          assert 45<=info["groups"]<=220
+          assert 2000<=info["triangles"]<=8500
+          x,y,z=info["dimensions"]
+          assert 47.95<=x<=48 and 47.95<=z<=48 and .03<=y<=.18
+          assert doc["asset"]["version"]=="2.0"
+          palette={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert set(info["materials"])==palette
+          assert {m["name"] for m in doc["materials"]}==palette
+          assert len(doc["meshes"][0]["primitives"])==7
+          assert all(m["pbrMetallicRoughness"]["metallicFactor"]<.1
+              for m in doc["materials"]), "authored sea must be nonmetallic"
+          count=0
+          for p in doc["meshes"][0]["primitives"]:
+              attrs=p["attributes"]
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+              count+=doc["accessors"][attrs["POSITION"]]["count"]//3
+          assert count==info["triangles"]
+          binary=base64.b64decode(
+              doc["buffers"][0]["uri"].split(",",1)[1],validate=True)
+          assert len(binary)==doc["buffers"][0]["byteLength"]
+          verts,triangles,groups=read_obj(
+              source,read_materials(Path("assets/source/chaos_harbor_sea.mtl")))
+          # Hard geometric void safety: every single triangle must stay
+          # outside the 320x320 actual arena; there are no fake surfaces.
+          for faces in triangles.values():
+              for a,b,c in faces:
+                  for index in (a,b,c):
+                      px,py,pz=verts[index]
+                      assert max(abs(px),abs(pz))>=8.20, (
+                          "water triangle entered playable center", index,px,pz)
+          print("Verified real original marine Ocean:",count,
+                "triangles, seven physically plausible UV+tangent materials;",
+                "dry in-bounds map and NO PUBLIC GAME PUBLISH")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-maritime-ocean-3d-source
+          path: |
+            ${{ runner.temp }}/chaos_harbor_sea_apron.obj
+            ${{ runner.temp }}/chaos_harbor_sea_apron.gltf
+            ${{ runner.temp }}/sea-source.json
+            ${{ runner.temp }}/sea-export.json
+          retention-days: 14
+
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: harbor_sea_apron
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
