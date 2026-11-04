@@ -8,6 +8,12 @@ local Kit={}
 local ID=95543769387033
 local SOURCE_SCALE=.42
 local ORIGINAL_BODY_HEIGHT=40
+-- A second equally authentic original: OPEN hyperboloid, double-wall
+-- throat, actual perimeter ladder, 330 machined components. Its very
+-- different profile prevents five identical cloned factory spires.
+local HOLLOW_ID=97498534364335
+local HOLLOW_SOURCE_SCALE=.46
+local HOLLOW_BODY_HEIGHT=44
 local BUDGET={
     Low={models=0,distance=0,retention=0},
     Medium={models=2,distance=285,retention=32},
@@ -52,6 +58,46 @@ local function source()
     if long<6.35 or long>6.98 or short<4.70 or short>5.20
         or bounds.Y<28.8 or bounds.Y>29.5 then return nil end
     return model
+end
+
+local function hollowSource()
+    local holder=ReplicatedStorage:FindFirstChild(
+        "ApprovedTowersHollowStackTemplates")
+    if not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified")~=true
+        or holder:GetAttribute("Original3DAssetId")~=HOLLOW_ID then return nil end
+    local model=holder:FindFirstChild("HollowCoolingStack")
+    if not model or not model:IsA("Model") or model.Parent~=holder
+        or model:GetAttribute("OwnerVerified")~=true
+        or model:GetAttribute("CosmeticOnly")~=true
+        or model:GetAttribute("Original3DAssetId")~=HOLLOW_ID
+        or model:GetAttribute("OriginalTowersHollowStack3D")~=true
+        or model:GetAttribute("Original3DTriangleCount")~=9980
+        or model:GetAttribute("ReferenceNativeStackHeight")~=44
+        then return nil end
+    local n=0
+    for _,p in ipairs(model:GetDescendants()) do
+        if p:IsA("BasePart") then
+            if not p:IsA("MeshPart") or p.CanCollide or p.CanTouch
+                or p.CanQuery then return nil end
+            n+=1
+        elseif p:IsA("LuaSourceContainer") then return nil end
+    end
+    if n~=7 then return nil end
+    local _,b=model:GetBoundingBox()
+    local wide=math.max(b.X,b.Z)
+    local narrow=math.min(b.X,b.Z)
+    if wide<6.0 or wide>6.48 or narrow<5.3 or narrow>5.76
+        or b.Y<20.95 or b.Y>21.4 then return nil end
+    return model
+end
+
+local function sourceForIndex(index)
+    -- The taller turbine tower and the open-throat/ladder cooling
+    -- stack are deliberately distinct and individually moderated.
+    -- If one source cannot load, KEEP THAT native tower as fallback.
+    if index%2==1 then return hollowSource() end
+    return source()
 end
 
 local function arenaForTowers(arena)
@@ -131,21 +177,31 @@ end
 
 local function mount(arena,base,mid,body,index,approved)
     if not nativeTower(body,mid,base,index) then return nil end
+    local hollow=index%2==1
     local clone=approved:Clone()
-    local scale=body.Size.Y/(ORIGINAL_BODY_HEIGHT*SOURCE_SCALE)
+    local scale=body.Size.Y/
+        (hollow and (HOLLOW_BODY_HEIGHT*HOLLOW_SOURCE_SCALE)
+            or (ORIGINAL_BODY_HEIGHT*SOURCE_SCALE))
     if not pcall(function() clone:ScaleTo(scale) end) then
         clone:Destroy();return nil
     end
     local frame,bounds=clone:GetBoundingBox()
-    -- The sculpted spire is ~69 source world studs high, adapted to
-    -- the 27..44-stud legacy shaft without flattening details.
-    if bounds.Y<body.Size.Y*1.59 or bounds.Y>body.Size.Y*1.88
-        then clone:Destroy();return nil end
+    -- Real oversized turbine spires retain their prominent 69-stud
+    -- original silhouette; the open hollow station scales to ~46-stud
+    -- reference geometry. Each receives its own strict size contract.
     local long,short=math.max(bounds.X,bounds.Z),
         math.min(bounds.X,bounds.Z)
-    if long<body.Size.Y*.34 or long>body.Size.Y*.49
-        or short<body.Size.Y*.26 or short>body.Size.Y*.36 then
-        clone:Destroy();return nil
+    if hollow then
+        if bounds.Y<body.Size.Y*1.028
+            or bounds.Y>body.Size.Y*1.070
+            or long<body.Size.Y*.298 or long>body.Size.Y*.325
+            or short<body.Size.Y*.262 or short>body.Size.Y*.290
+            then clone:Destroy();return nil end
+    else
+        if bounds.Y<body.Size.Y*1.59 or bounds.Y>body.Size.Y*1.88
+            or long<body.Size.Y*.34 or long>body.Size.Y*.49
+            or short<body.Size.Y*.26 or short>body.Size.Y*.36
+            then clone:Destroy();return nil end
     end
     local yaw=bounds.X<bounds.Z and math.pi*.5 or 0
     -- Place the authenticated model's TRUE lowest sculpted vertex on
@@ -167,8 +223,11 @@ local function mount(arena,base,mid,body,index,approved)
             part.CanQuery=false
             part.Massless=true
             part.CastShadow=false
-            part:SetAttribute("OriginalTowerCoolingSpire3D",true)
-            part:SetAttribute("Original3DAssetId",ID)
+            part:SetAttribute(
+                hollow and "OriginalTowersHollowStack3D"
+                    or "OriginalTowerCoolingSpire3D",true)
+            part:SetAttribute("Original3DAssetId",
+                hollow and HOLLOW_ID or ID)
             pieces[#pieces+1]=part
         end
     end
@@ -195,9 +254,10 @@ local function mount(arena,base,mid,body,index,approved)
         source=approved,model=clone,pieces=pieces,native=native,
         originalSize=body.Size,connections={},disposing=false,
     }
-    clone.Name="ApprovedOriginalTowerRunCoolingSpire"..index
+    clone.Name=(hollow and "ApprovedOriginalHollowTowerRunStack"
+        or "ApprovedOriginalTowerRunCoolingSpire")..index
     clone:SetAttribute("CosmeticOnly",true)
-    clone:SetAttribute("Original3DAssetId",ID)
+    clone:SetAttribute("Original3DAssetId",hollow and HOLLOW_ID or ID)
     clone.Parent=folder
     local function changed()
         if not alive(e) then visibility(e) end
@@ -237,14 +297,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
         clear();return
     end
     local base,mid=arenaForTowers(arena)
-    local approved=source()
-    if not base or not mid or not approved then
+    if not base or not mid then
         clear();return
     end
     local candidates={}
     for index=1,5 do
         local body=mid:FindFirstChild("TowerCoolingMass"..index)
-        if body and nativeTower(body,mid,base,index) then
+        local approved=sourceForIndex(index)
+        if body and approved and nativeTower(body,mid,base,index) then
             local distance=(body.Position-cameraPoint).Magnitude
             local previous=active[body]~=nil
             if distance<=limits.distance+(previous
@@ -258,7 +318,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
                         *dir:Dot(cameraLook.Unit)
                 end
                 candidates[#candidates+1]={
-                    body=body,index=index,score=score}
+                    body=body,index=index,score=score,approved=approved}
             end
         end
     end
@@ -271,7 +331,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
         wanted[candidates[i].body]=candidates[i]
     end
     for body,e in pairs(active) do
-        if not wanted[body] or e.source~=approved or not alive(e) then
+        if not wanted[body] or e.source~=wanted[body].approved
+            or not alive(e) then
             dismount(e)
             active[body]=nil
         else
@@ -280,7 +341,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     end
     for body,choice in pairs(wanted) do
         if not active[body] then
-            local e=mount(arena,base,mid,body,choice.index,approved)
+            local e=mount(arena,base,mid,body,choice.index,
+                choice.approved)
             if e then active[body]=e end
         end
     end
