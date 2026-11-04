@@ -232,6 +232,13 @@ local function buildHarbor(base, theme, tier)
     local deckY = base.Size.Y * 0.5
 
     for i = 1, count do
+        -- Every BARge child, including ArenaDetailKit's dock braces, must
+        -- be reversibly grouped with its own ORIGINAL physical-free hull.
+        -- This is a build-time census (four boats), not a render loop.
+        local before = {}
+        for _, child in ipairs(folder:GetDescendants()) do
+            before[child] = true
+        end
         local berth = berths[i]
         local origin = frame(
             base, berth[1], deckY + 0.45, berth[2], berth[3]
@@ -306,6 +313,15 @@ local function buildHarbor(base, theme, tier)
                 container.CFrame * CFrame.new(0, 3.77, 0),
                 ribColor, Enum.Material.DiamondPlate, 0.12
             )
+        end
+        -- Source owner can safely mask ALL native details for exactly
+        -- this barge only after seven genuine MeshParts have mounted.
+        -- Do not hide a neighboring ship, playable route or hazard cue.
+        for _, child in ipairs(folder:GetDescendants()) do
+            if not before[child] and child:IsA("BasePart") then
+                child:SetAttribute("OriginalHarborMidgroundBargeIndex", i)
+                child:SetAttribute("CosmeticOnly", true)
+            end
         end
     end
 end
