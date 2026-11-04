@@ -334,6 +334,98 @@ end
 -- actual collidable decks. Existing collapse/shrink owners register these
 -- three nonblocking meshes. Tight budget: 1 out of 3 physical platforms,
 -- Medium/High only; zero extra lights, textures or update loops.
+-- Use already approved five-arena floor sculptures for genuine welded
+-- service-hatch detail on actual moving decks. The native three-layer hatch
+-- below remains a fallback until the approved source has replicated.
+-- No new asset upload, physics, render loop or server-side platform change.
+local function originalServiceHatch(parent, platform, variant, tier, width, depth, upper)
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates")
+    local source = holder and holder:FindFirstChild(variant)
+    local ids = {
+        Classic = 102746904688141,
+        Towers = 74708751016233,
+        Crossroads = 84038993323581,
+        Orbital = 123089585720736,
+        Harbor = 94830155055482,
+    }
+    if not source or not source:IsA("Model")
+        or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true
+        or source:GetAttribute("Original3DAssetId") ~= ids[variant]
+        or source:GetAttribute("OwnerVerified") ~= true
+        or source:GetAttribute("CosmeticOnly") ~= true
+        or source:GetAttribute("OriginalFloorRelief3D") ~= true then
+        return nil
+    end
+    -- A real imported mesh family has seven material MeshParts. Guard
+    -- against loading arbitrary scripts/parts through an altered template.
+    local pieces = {}
+    for _, part in ipairs(source:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not part:IsA("MeshPart") then return nil end
+            pieces[#pieces + 1] = part
+        elseif part:IsA("LuaSourceContainer") then
+            return nil
+        end
+    end
+    if #pieces < 1 or #pieces > 12 then return nil end
+    local copy = source:Clone()
+    local _, original = copy:GetBoundingBox()
+    local long = math.max(original.X, original.Z)
+    local short = math.min(original.X, original.Z)
+    if long < 2.7 or short < .45 or original.Y > .75 then
+        copy:Destroy()
+        return nil
+    end
+    -- Preserve the entire original relief, no non-uniform mesh distortion.
+    local scale = math.min(1, width * .96 / long, depth * .90 / short)
+    if scale < .45 or not pcall(function() copy:ScaleTo(scale) end) then
+        copy:Destroy()
+        return nil
+    end
+    local sourceFrame, bounds = copy:GetBoundingBox()
+    local yaw = original.X < original.Z and math.pi * .5 or 0
+    local target = platform.CFrame
+        * CFrame.new(0, upper + .05, -platform.Size.Z * .19)
+        * CFrame.Angles(0, yaw, 0)
+    local made = {}
+    for _, part in ipairs(copy:GetDescendants()) do
+        if part:IsA("MeshPart") then
+            part.CFrame = target * sourceFrame:ToObjectSpace(part.CFrame)
+            part.Anchored = false
+            part.Massless = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = false
+            part:SetAttribute("ChaosBaseTransparency", part.Transparency)
+            part:SetAttribute("ChaosPlatformTrim", true)
+            part:SetAttribute("OriginalServiceHatch3D", true)
+            part:SetAttribute("Original3DAssetId", ids[variant])
+            made[#made + 1] = part
+        end
+    end
+    if #made ~= #pieces then copy:Destroy(); return nil end
+    local adjustable = platform:GetAttribute("ChaosSkybridge") == true
+        or tonumber(platform:GetAttribute("RouteTier")) ~= nil
+    for i, part in ipairs(made) do
+        part.Name = variant .. "OriginalServiceHatch3D_" .. tostring(i)
+        part.Parent = parent
+        local weld = Instance.new(adjustable and "Weld" or "WeldConstraint")
+        weld.Name = "ChaosPlatformTrimWeld"
+        weld.Part0 = part
+        weld.Part1 = platform
+        if adjustable then
+            weld.C0 = CFrame.identity
+            weld.C1 = platform.CFrame:ToObjectSpace(part.CFrame)
+        end
+        weld.Parent = part
+    end
+    copy:Destroy()
+    return made
+end
+
 function PlatformFinishKit.buildServiceHatch(parent, platform, variant, tier, theme, index)
     if not parent or not platform or not platform:IsA("BasePart")
         or tier == "Low" or not NAMES[variant] or not theme
@@ -345,6 +437,9 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant, tier, th
     local upper = PlatformFinishKit.surfacePaintOffset(platform, 0.065)
     local hatchWidth = math.min(sx * 0.55, 6.2)
     local hatchDepth = math.min(sz * 0.42, 4.2)
+    local original = originalServiceHatch(
+        parent, platform, variant, tier, hatchWidth, hatchDepth, upper)
+    if original then return original end
     local materials = {
         Classic = Enum.Material.DiamondPlate,
         Towers = Enum.Material.CorrodedMetal,
