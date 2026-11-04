@@ -229,7 +229,13 @@ local function buildHarbor(base, theme, tier)
         Color3.fromRGB(111, 97, 82), 0.36
     )
     local ribColor = theme.Detail:Lerp(hullColor, 0.52)
-    local deckY = base.Size.Y * 0.5
+    -- The original barges hovered 1.35 studs above their new actual
+    -- sea waterline. Keep their horizontal berths, nonphysical nature,
+    -- authored cargo and 3D asset attachments unchanged; lower the
+    -- COMPLETE ship assembly toward the source-authored wave surface.
+    -- Water is about base-center - 2 studs; barge chined hull has
+    -- a genuine -2.03-stud keel relative to its origin.
+    local deckY = base.Size.Y * 0.5 - 1.35
 
     for i = 1, count do
         -- Every BARge child, including ArenaDetailKit's dock braces, must
