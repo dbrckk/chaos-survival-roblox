@@ -338,7 +338,12 @@ end
 -- service-hatch detail on actual moving decks. The native three-layer hatch
 -- below remains a fallback until the approved source has replicated.
 -- No new asset upload, physics, render loop or server-side platform change.
-local function originalServiceHatch(parent, platform, variant, tier, width, depth, upper)
+local function originalServiceHatch(parent, platform, variant, tier, width, depth, upper, index)
+    -- Large original mesh imports are reserved for a sparse selection of
+    -- real jump decks, not all 100+ platforms. Remaining hatches keep the
+    -- existing three-piece cheap fallback. High 1/9, Medium 1/18.
+    local step = tier == "High" and 9 or 18
+    if math.floor(tonumber(index) or 0) % step ~= 1 then return nil end
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local holder = ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates")
     local source = holder and holder:FindFirstChild(variant)
@@ -438,7 +443,7 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant, tier, th
     local hatchWidth = math.min(sx * 0.55, 6.2)
     local hatchDepth = math.min(sz * 0.42, 4.2)
     local original = originalServiceHatch(
-        parent, platform, variant, tier, hatchWidth, hatchDepth, upper)
+        parent, platform, variant, tier, hatchWidth, hatchDepth, upper, index)
     if original then return original end
     local materials = {
         Classic = Enum.Material.DiamondPlate,
