@@ -516,7 +516,12 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady, came
             if underdeckSlots <= 0 then break end
             local size = item.platform.Size
             if math.max(size.X, size.Z) >= 17
-                and math.min(size.X, size.Z) >= 9.5 then
+                and math.min(size.X, size.Z) >= 9.5
+                and item.platform:GetAttribute(
+                    "LocalOriginalLongCradleMounted") ~= true then
+                -- One approved open-frame model already provides this
+                -- nonphysical undercarriage. Avoid stacking a second
+                -- 3K-triangle approved chassis underneath the same deck.
                 wanted[item.platform].underdeck = underdeckTemplate
                 underdeckSlots -= 1
             end
