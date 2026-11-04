@@ -1,3 +1,14 @@
+LOT 5 NOVEMBRE 2026 — MASQUES 3D SÛRS PENDANT COLLAPSE/SHRINK
+[QA]     Le masque natif sous les vraies passerelles ne suivait pas
+         CollapsePhase/BridgeShutterPhase ou changement de Size. Le
+         nouveau propriétaire vérifie chaque collider physique exact et
+         rétablit ses sous-structures natives si warning, disparition,
+         shutter actif ou shrink >= 0,09 stud. Pas de nouveau modèle,
+         collider, RenderStepped ni événement réseau, une seule
+         réconciliation événementielle sous le même kit. Aucun rendu
+         Android mesuré ni mise à jour publique.
+         docs/ROUTE_NATIVE_3D_FALLBACK_HAZARD_LIFECYCLE_2026-11-05.md
+
 LOT 4 NOVEMBRE 2026 — JONCTIONS ET PASSERELLES : VRAIS 3D LATTICE
 [QA]     Fix majeur : carapace compacte 10–12 studs interdite sur un
          support 20–26 studs si elle ne couvre pas >=78% du grand axe.

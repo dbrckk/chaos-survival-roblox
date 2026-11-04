@@ -8,6 +8,8 @@
 
 **Lot 1 — jonctions réelles des grandes passerelles (4 novembre 2026) :** les carapaces compactes ne peuvent plus masquer un sous-châssis long qu'elles ne couvrent pas. De vrais `LongCradle` sur les plus proches promenades et Sky Spine (max 4 High / 2 Medium), et des colonnes originales proches caméra dans le même budget module 16/8 ; anciens truss natifs masqués seulement si le véritable treillis est monté. [Contrat technique et QA](PREMIUM_APPROVED_SKYBRIDGE_UNDERCARRIAGE_2026-11-04.md). **Source intégrée, rendu Android et publication non attestés.**
 
+**Lot 1 — fiabilité des grandes jonctions (5 novembre 2026) :** le masquage des anciens sous-châssis et poutres n'est désormais autorisé que tant que le vrai Part serveur est sûr, visible, non rétréci et sans shutter actif. Restauration réactive et sélective pendant `CollapsePhase`, `ShrinkingArena` et streaming. [Contrat et QA](ROUTE_NATIVE_3D_FALLBACK_HAZARD_LIFECYCLE_2026-11-05.md). **Validation moteur et réelle à confirmer.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

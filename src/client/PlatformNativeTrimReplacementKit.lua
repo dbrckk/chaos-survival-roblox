@@ -13,6 +13,13 @@ local active = {}
 local verifiedSupports = {}
 local notify = nil
 local count = 0
+-- Only physical PlatformN/SkybridgeN colliders can authorize masking
+-- their own server-produced cosmetic underside. This is deliberately
+-- tracked per current streamed map, never as a global visual preference.
+local activePlatforms = nil
+local ownerBaselines = {}
+local watchedOwners = {}
+local verifiedSupportIndices = {}
 
 local function report()
     if notify then notify(count) end
@@ -39,6 +46,10 @@ function Kit.reset()
     restore()
     table.clear(active)
     table.clear(verifiedSupports)
+    table.clear(verifiedSupportIndices)
+    table.clear(ownerBaselines)
+    table.clear(watchedOwners)
+    activePlatforms = nil
     notify = nil
 end
 
@@ -91,11 +102,122 @@ local function eligible(part)
     return false
 end
 
+-- A cosmetic WedgePart / support is NOT permission to hide its
+-- native fallback. Resolve the real server-authored playable owner by
+-- exact index and name, independently of the visual model's name.
+local function physicalOwner(native)
+    if not activePlatforms or not native then return nil end
+    local name = native.Name
+    local bridge = name:match("^SkybridgeRib(%d+)_")
+    if bridge then
+        return activePlatforms:FindFirstChild("Skybridge"..bridge)
+    end
+    local id = name:match("^PlatformBevel(%d+)_")
+        or name:match("^PlatformUnderFrame(%d+)$")
+        or name:match("^PlatformSupport(%d+)_")
+        or name:match("^SkySpine(%d+)_")
+        or name:match("^Promenade(%d+)_")
+    if not id then return nil end
+    return activePlatforms:FindFirstChild("Platform"..id)
+end
+
+local function physicalSafe(native)
+    local owner = physicalOwner(native)
+    if not owner or not owner:IsA("BasePart")
+        or owner.Parent ~= activePlatforms
+        or not owner.Anchored or not owner.CanCollide
+        or owner.Transparency >= 0.75 then
+        return false
+    end
+    local phase = owner:GetAttribute("CollapsePhase")
+    if phase ~= nil and phase ~= "Normal" and phase ~= "Safe" then
+        return false
+    end
+    local shutter = owner:GetAttribute("BridgeShutterPhase")
+    if shutter ~= nil and shutter ~= "Idle" then
+        return false
+    end
+    -- An initial full-footprint art installation may no longer cover
+    -- a dynamically shrinking deck. Prefer showing its honest native
+    -- geometry instead of leaving an invisible, seemingly safe ledge.
+    local original = ownerBaselines[owner]
+    if not original then return false end
+    if math.abs(owner.Size.X-original.X) >= 0.09
+        or math.abs(owner.Size.Z-original.Z) >= 0.09 then
+        return false
+    end
+    return true
+end
+
 local function tryMask(part)
-    if not eligible(part) or saved[part] ~= nil then return end
+    if not eligible(part) or saved[part] ~= nil
+        or not physicalSafe(part) then return end
     saved[part] = part.LocalTransparencyModifier
     part.LocalTransparencyModifier = 1
     count += 1
+end
+
+-- Event-based reconciliation; does not poll a frame or create Parts.
+-- A server collapse warning or shutter must restore the native fallback
+-- even if the approved 3D clone itself is merely faded, not destroyed.
+local function reconcile()
+    local before = count
+    for part, original in pairs(saved) do
+        if part.Parent ~= activeDecor or not eligible(part)
+            or not physicalSafe(part) then
+            if part.Parent then part.LocalTransparencyModifier = original end
+            saved[part] = nil
+            count -= 1
+        end
+    end
+    if activeDecor then
+        for _, part in ipairs(activeDecor:GetChildren()) do
+            if part:IsA("BasePart") then tryMask(part) end
+        end
+    end
+    if count ~= before then report() end
+end
+
+local function watchOwner(part)
+    if not part or not part:IsA("BasePart")
+        or watchedOwners[part] then return end
+    local platformId = part.Name:match("^Platform(%d+)$")
+    local bridgeId = part.Name:match("^Skybridge(%d+)$")
+    local id = platformId or bridgeId
+    if not id then return end
+    local kind = active[id]
+    if platformId and not (kind == "carapace" or kind == "cradle"
+        or verifiedSupportIndices[id] == true) then return end
+    if bridgeId and kind ~= "bridge" then return end
+    watchedOwners[part] = true
+    ownerBaselines[part] = part.Size
+    for _, property in ipairs({"CanCollide","Transparency","Size"}) do
+        watchers[#watchers+1] =
+            part:GetPropertyChangedSignal(property):Connect(reconcile)
+    end
+    for _, attribute in ipairs({"CollapsePhase","BridgeShutterPhase"}) do
+        watchers[#watchers+1] =
+            part:GetAttributeChangedSignal(attribute):Connect(reconcile)
+    end
+end
+
+local function attachPlatforms(folder)
+    if folder == activePlatforms then return end
+    activePlatforms = nil
+    -- Each old platform's event handlers are still in the map's bounded
+    -- watchers list, but cannot reauthorize masks after its folder swaps.
+    if not folder or not folder:IsA("Folder") then
+        reconcile()
+        return
+    end
+    activePlatforms = folder
+    for _, part in ipairs(folder:GetChildren()) do watchOwner(part) end
+    watchers[#watchers+1] = folder.ChildAdded:Connect(function(part)
+        watchOwner(part)
+        reconcile()
+    end)
+    watchers[#watchers+1] = folder.ChildRemoved:Connect(reconcile)
+    reconcile()
 end
 
 local function attachDecor(folder)
@@ -145,9 +267,14 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                 and not part.CanTouch and not part.CanQuery
                 and part.Name:match("^PlatformSupport%d+_%d+$") then
                 verifiedSupports[part] = true
+                local id = part.Name:match("^PlatformSupport(%d+)_")
+                if id then verifiedSupportIndices[id] = true end
             end
         end
     end
+    -- Watch the REAL physical PlatformN/SkybridgeN owners before masking
+    -- their native cosmetic underframes. Streaming in late also reconciles.
+    attachPlatforms(arena:FindFirstChild("Platforms"))
     attachDecor(arena:FindFirstChild("Decor"))
     -- Fail CLOSED if any genuine replacement mesh disappears unexpectedly
     -- (streaming, asset deletion or local teardown). Restore the complete
@@ -170,11 +297,15 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     watchers[#watchers + 1] = arena.ChildAdded:Connect(function(child)
         if child.Name == "Decor" and child:IsA("Folder") then
             attachDecor(child)
+        elseif child.Name == "Platforms" and child:IsA("Folder") then
+            attachPlatforms(child)
         end
     end)
     watchers[#watchers + 1] = arena.ChildRemoved:Connect(function(child)
         if child == activeDecor then
             attachDecor(nil)
+        elseif child == activePlatforms then
+            attachPlatforms(nil)
         end
     end)
     report()
