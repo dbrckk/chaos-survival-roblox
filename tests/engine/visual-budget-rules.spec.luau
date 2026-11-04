@@ -15,8 +15,52 @@ local HarborGantryMotionRules = require("../../src/shared/HarborGantryMotionRule
 local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
+local PremiumGroundPbrKit = require("../../src/client/PremiumGroundPbrKit")
 
 describe("visual budget rules", function()
+    it("uses five specific approved UV-ground PBR finishes without increasing mobile texture residency", function()
+        local kit = PremiumGroundPbrKit
+        expect(kit.family("Classic")).toBe("DiamondArmor")
+        expect(kit.family("Towers")).toBe("BrushedTitanium")
+        expect(kit.family("Crossroads")).toBe("OxidizedSteel")
+        expect(kit.family("Orbital")).toBe("ReactorCeramic")
+        expect(kit.family("Harbor")).toBe("OxidizedSteel")
+        expect(kit.family("Unknown")).toBe("DiamondArmor")
+
+        local limit = kit.tileBudget
+        expect(limit("Low", 0, true, false)).toBe(0)
+        expect(limit("Medium", 0, true, false)).toBe(2)
+        expect(limit("Medium", 1, true, false)).toBe(1)
+        expect(limit("Medium", 2, true, false)).toBe(0)
+        expect(limit("High", 0, true, false)).toBe(6)
+        expect(limit("High", 1, true, false)).toBe(3)
+        expect(limit("High", 2, true, false)).toBe(1)
+        expect(limit("High", 0, false, false)).toBe(12)
+        expect(limit("Medium", 0, false, false)).toBe(4)
+        expect(limit("High", 1, false, false)).toBe(6)
+        expect(limit("High", 0, true, true)).toBe(0)
+        expect(limit("Medium", 0, false, true)).toBe(0)
+        expect(limit("High", -100, true, false)).toBe(6)
+        expect(limit("High", 1000, true, false)).toBe(1)
+        expect(limit("High", 0/0, true, false)).toBe(6)
+        expect(limit("Bogus", 0, false, false)).toBe(0)
+
+        -- Cloning 2K channel maps is only allowed for a genuine owner-ID
+        -- source-backed model. An arbitrary Model cannot hijack approved
+        -- texture templates or become a phantom floor.
+        local fakeModel = Instance.new("Model")
+        fakeModel:SetAttribute("CosmeticOnly", true)
+        fakeModel:SetAttribute("OriginalGroundMeshId", 1)
+        local fakeGround = Instance.new("Part")
+        fakeGround:SetAttribute("OriginalGroundFinish", true)
+        local bogus = {model = fakeModel, ground = fakeGround, pieces = {}}
+        expect(kit.attach(bogus, "Classic")).toBe(0)
+        kit.detach(bogus)
+        expect(#fakeModel:GetDescendants()).toBe(0)
+        fakeGround:Destroy()
+        fakeModel:Destroy()
+    end)
+
     it("fills all 36 source-verified ground bays only on healthy High devices", function()
         local count = PremiumGroundMeshKit.residencyCount
         expect(count("High", 0)).toBe(36)
