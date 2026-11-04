@@ -21,6 +21,7 @@ local HarborGantryKineticMeshKit = require(script.Parent.HarborGantryKineticMesh
 local HarborHeroStationMeshKit = require(script.Parent.HarborHeroStationMeshKit)
 local HarborMidgroundBargeMeshKit = require(script.Parent.HarborMidgroundBargeMeshKit)
 local HarborSeaMeshKit = require(script.Parent.HarborSeaMeshKit)
+local TowerCoolingSpireMeshKit = require(script.Parent.TowerCoolingSpireMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -590,6 +591,19 @@ task.spawn(function()
         local ocean=HarborSeaMeshKit.count()
         if player:GetAttribute("LocalOriginalHarborSeaCount")~=ocean then
             player:SetAttribute("LocalOriginalHarborSeaCount",ocean)
+        end
+        -- Outside the Harbor-specific branch, five genuine Tower Run
+        -- cooling megastructures now replace square nonphysical native
+        -- midground Parts, including their old roof details. Same LOD
+        -- sampler, reversible safety/Android fallback, no extra tick.
+        TowerCoolingSpireMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local trueCoolingSpires=TowerCoolingSpireMeshKit.count()
+        if player:GetAttribute("LocalOriginalTowerCoolingSpireCount")
+            ~=trueCoolingSpires then
+            player:SetAttribute("LocalOriginalTowerCoolingSpireCount",
+                trueCoolingSpires)
         end
         -- One more genuinely imported, source-gated 3D silhouette under
         -- the arena, 1/3/5 MODEL copies on Low/Medium/High. No new loop.
