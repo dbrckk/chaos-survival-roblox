@@ -688,7 +688,7 @@ jobs:
           assert "verifiedSupports[part]" in native_trim
           assert 'kind == "cradle"' in native_trim
           for required in (
-              "function Kit.bind(arena, replacements, onChange)",
+              "function Kit.bind(arena, replacements, onChange, supports)",
               "function Kit.reset()", "function Kit.count()",
               "part.LocalTransparencyModifier = 1",
               "part.LocalTransparencyModifier = original",
