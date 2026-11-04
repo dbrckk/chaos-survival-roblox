@@ -127,7 +127,7 @@ def export(path: Path) -> dict:
     size = [round(art.maximum[i]-art.minimum[i],5) for i in range(3)]
     # Original art profile must fit all six original physical promenade
     # colliders, without intersecting the 12-stud walkway at feet height.
-    assert 15.0 <= size[0] <= 20.6, size
+    assert 11.0 <= size[0] <= 15.0, size
     assert 18.7 <= size[1] <= 21.3, size
     assert 18.5 <= size[2] <= 21.0, size
     assert art.minimum[1] <= -1.9 and art.maximum[1] >= 17.3
