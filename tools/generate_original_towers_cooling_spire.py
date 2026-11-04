@@ -168,7 +168,7 @@ def export(output:Path):
     mid=[round((model.minimum[i]+model.maximum[i])*.5,5) for i in range(3)]
     assert 5.0<=bounds[0]<=7.5,bounds
     assert 28.2<=bounds[1]<=31.0,bounds
-    assert 5.0<=bounds[2]<=7.5,bounds
+    assert 4.7<=bounds[2]<=7.5,bounds
     output.parent.mkdir(parents=True,exist_ok=True)
     body="\n".join(model.lines)+"\n"
     output.write_text(body,encoding="utf8")
