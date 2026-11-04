@@ -207,6 +207,16 @@ function Kit.bridgeGirders(parent, platform, tier, index)
                 sy*.5 - .20 - bounds.Y*.5,
                 sourceLongZ and longOffset or edgeOffset)
             local parts = preparedParts(copy, frame, target, platform, "Bridge")
+            if parts then
+                -- Imported glTF long axis can be X or Z. The existing
+                -- platform shrink follower needs the MESH-LOCAL long
+                -- axis to resize actual 3D girders with the real span,
+                -- even when their world orientation was yaw-rotated.
+                for _, part in ipairs(parts) do
+                    part:SetAttribute("OriginalBridgeLongAxis",
+                        sourceLongZ and "Z" or "X")
+                end
+            end
             if not parts then
                 copy:Destroy()
                 for _, p in ipairs(all) do p:Destroy() end
