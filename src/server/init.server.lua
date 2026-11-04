@@ -52,6 +52,7 @@ local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
+local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
 local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
@@ -190,6 +191,7 @@ if not isStudioE2E then
     -- Six original, owner-approved shallow floor relief assets are cosmetic.
     -- Late serialized loading must not block hazard timers, bots or joining.
     task.defer(PremiumFloorReliefAssets.start)
+    task.defer(PremiumPlatformSideAssets.start)
     task.defer(PremiumLobbyGateMeshAssets.start)
 end
 LobbySpawnSafety.start()
