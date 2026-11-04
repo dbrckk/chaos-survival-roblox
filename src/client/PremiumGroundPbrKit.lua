@@ -103,7 +103,7 @@ local function intact(entry)
     for _, appearance in ipairs(entry.originalPbr) do
         if not appearance or not appearance.Parent
             or not appearance.Parent:IsA("MeshPart")
-            or appearance.Parent.Parent ~= entry.model then
+            or not appearance.Parent:IsDescendantOf(entry.model) then
             return false
         end
     end
@@ -133,7 +133,8 @@ function Kit.attach(entry, variant)
     Kit.detach(entry)
     local work = {}
     for _, piece in ipairs(entry.pieces) do
-        if not piece:IsA("MeshPart") or piece.Parent ~= entry.model then
+        if not piece:IsA("MeshPart")
+            or not piece:IsDescendantOf(entry.model) then
             for _, appearance in ipairs(work) do appearance:Destroy() end
             return 0
         end
