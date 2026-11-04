@@ -15,7 +15,8 @@
     "floor_relief_models_inserted_in_game": false,
     "floor_hardware_models_inserted_in_game": false,
     "platform_side_models_inserted_in_game": false,
-    "central_hull_models_inserted_in_game": false
+    "central_hull_models_inserted_in_game": false,
+    "large_support_models_inserted_in_game": false
   },
   "models": [
     {
@@ -369,6 +370,54 @@
       "source": "tools/generate_original_large_deck_support.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41809088464
+    },
+    {
+      "name": "column_classic",
+      "asset_id": "91626128452597",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41808940118
+    },
+    {
+      "name": "column_towers",
+      "asset_id": "107521411452905",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41808940118
+    },
+    {
+      "name": "column_crossroads",
+      "asset_id": "93993697329658",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41808940118
+    },
+    {
+      "name": "column_orbital",
+      "asset_id": "119010829781313",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41808940118
+    },
+    {
+      "name": "column_harbor",
+      "asset_id": "76194593490199",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41808940118
+    },
+    {
+      "name": "long_route_cradle",
+      "asset_id": "128914328933863",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41808940118
     }
   ]
 }
