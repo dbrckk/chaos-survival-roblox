@@ -1,3 +1,16 @@
+LOT 4 NOVEMBRE 2026 — TOUR DE REFROIDISSEMENT AUTHENTIQUE EN ANDROID LOW
+[QA]     Tower Run Low substitue maintenant UNE tour rectangulaire native
+         par sept vrais MeshParts Approved (tour creuse ou turbine selon
+         l'index), camera-distance 250 studs, hysteresis 24 ; aucun autre
+         model ajouté sous pression GPU/FPS 1 ou 2. Le constructeur Low
+         n'a que deux pièces natives par tour : garde de complétude ajustée
+         sans relâcher le contrat Medium/High (3+). Retrait du template
+         ou streaming du midground déclenche repli immédiat ; pas de
+         lumière, collision, boucle ou RemoteEvent supplémentaire.
+         Build et sept suites moteur du nouveau SHA à revérifier au jalon,
+         puis captures/FPS sur Android réel avant publication.
+         docs/ORIGINAL_TOWERS_COOLING_VARIANTS_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — PILIERS ORIGINAUX ET NOUVELLES GRANDES SOUS-FACES
 [QA]     5 modèles de colonne spécifiques à chaque carte + 1 coque ajourée
          longue de 22 studs, tous Roblox Approved / source-gated

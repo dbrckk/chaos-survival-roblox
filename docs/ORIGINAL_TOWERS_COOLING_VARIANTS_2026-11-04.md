@@ -28,11 +28,12 @@ Le registre `assets/source/roblox-asset-registry.json` contient **62 modèles pr
 - `TowerCoolingSpireMeshKit.lua` sait reconnaître les cinq vrais `TowerCoolingMass[1..5]` de l'arène **Towers** et les objets affiliés déjà marqués `OriginalTowerCoolingSpireIndex` par le constructeur d'origine. Le même kit répartit **la silhouette creuse sur 1, 3 et 5**, et **la turbine sur 2 et 4**, évitant cinq clones identiques.
 - Chaque sous-modèle est ancré, non collisionnant et aligné sur la base physique **du décor original**. L'échelle du grand mât préserve sa hauteur supplémentaire sans déplacer le parcours ; celle du refroidissement creux garde une silhouette plus trapue autour de la hauteur de référence.
 - Le client ne masque **que les Parts natifs de la même installation** lorsque le clone approuvé possède bien ses sept vrais MeshParts. Tous les anciens détails et corps restent présents pour se rétablir à un changement de carte, un streaming incomplet, un échec source ou une baisse de qualité.
-- Une seule boucle caméra, celle déjà prévue dans `scenery-lod.client.lua`, active et sélectionne les modèles selon la distance et la pression FPS ; aucune nouvelle animation, simulation physique, lumière ou RemoteEvent. Le dossier `OriginalTowerCoolingSpireLocal` compte déjà dans le budget Android commun de `VisualBudgetRules`.
+- Une seule boucle caméra, celle déjà prévue dans `scenery-lod.client.lua`, active et sélectionne les modèles selon la distance et la pression FPS ; aucune nouvelle animation, simulation physique, lumière ou RemoteEvent.
+- **Passe Android Low (4 novembre, postérieure à l'import) :** un modèle authentique de sept MeshParts au maximum est choisi par la caméra dans un rayon de 250 studs (+24 pour le résident), seulement en pression FPS 0. Sous pression 1/2, les deux structures Low retournent immédiatement à leur géométrie native. Le garde de complétude Low accepte le corps + son unique motif, sans exiger les ornements Medium/High. Un retrait de source approuvée déclenche aussi la restauration immédiatement. Cela ne constitue pas une preuve de FPS ou de rendu sur Android. Le dossier `OriginalTowerCoolingSpireLocal` compte déjà dans le budget Android commun de `VisualBudgetRules`.
 
 | Qualité | Pression 0 | Pression 1 | Pression 2 |
 |---|---:|---:|---:|
-| Low | 0 | 0 | 0 |
+| Low | **1 modèle / 7 MeshParts** | 0 (repli natif) | 0 (repli natif) |
 | Medium | 2 modèles max / 14 MeshParts | 1 / 7 | 0 |
 | High | 5 modèles max / 35 MeshParts | 3 / 21 | 0 |
 
@@ -41,7 +42,7 @@ Le registre `assets/source/roblox-asset-registry.json` contient **62 modèles pr
 ## Critères de publication encore nécessaires
 
 1. Validation exacte du registre 62 Approved, export source, Rojo build et sept suites moteur Roblox Cloud sur **un même SHA**. Vérifier notamment le timeout du shard matrix : son précédent échec du 4 novembre avait déjà été résolu par le jalon mer `42b09df` (tous tests verts).
-2. Contrôle d'images **réelles sur Android**, Tower Run High puis Medium : vérifier les cinq modèles, le vrai creux supérieur et la cheminée à turbine ; confirmer une bonne orientation des armatures et aucun reste de `Part` à travers les MeshParts.
+2. Contrôle d'images **réelles sur Android**, Tower Run High, Medium puis Low (Low stable et sous pression) : vérifier les cinq modèles, le vrai creux supérieur et la cheminée à turbine ; confirmer une bonne orientation des armatures et aucun reste de `Part` à travers les MeshParts.
 3. Vérifier 30 minutes de FPS/mémoire, qualité Low/Medium/High, pression maximale, changement de carte, rétrécissement du sol, déconnexion et reconnexion. Aucun nouveau collider ni plateforme flottante.
 4. **Aucune publication publique annoncée avant contrôle des validations et vérification visuelle du jeu.** Les workflows d'import n'ont pas publié de Place.
 

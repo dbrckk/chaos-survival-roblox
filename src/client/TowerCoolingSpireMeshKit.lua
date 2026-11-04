@@ -15,7 +15,9 @@ local HOLLOW_ID=97498534364335
 local HOLLOW_SOURCE_SCALE=.46
 local HOLLOW_BODY_HEIGHT=44
 local BUDGET={
-    Low={models=0,distance=0,retention=0},
+    -- One genuine spire instead of a distant box on healthy Low Android.
+    -- GPU pressure immediately restores native geometry without a gap.
+    Low={models=1,distance=250,retention=24},
     Medium={models=2,distance=285,retention=32},
     High={models=5,distance=405,retention=45},
 }
@@ -175,7 +177,7 @@ local function clear()
     end
 end
 
-local function mount(arena,base,mid,body,index,approved)
+local function mount(arena,base,mid,body,index,approved,tier)
     if not nativeTower(body,mid,base,index) then return nil end
     local hollow=index%2==1
     local clone=approved:Clone()
@@ -248,7 +250,11 @@ local function mount(arena,base,mid,body,index,approved)
             originalCount+=1
         end
     end
-    if originalCount<3 then clone:Destroy();return nil end
+    -- Low builds only body + one ArenaDetailKit motif. Do not reject
+    -- its authentic replacement for lacking Medium/High-only details.
+    if originalCount<(tier=="Low" and 2 or 3) then
+        clone:Destroy();return nil
+    end
     local e={
         arena=arena,base=base,mid=mid,body=body,index=index,
         source=approved,model=clone,pieces=pieces,native=native,
@@ -263,6 +269,10 @@ local function mount(arena,base,mid,body,index,approved)
         if not alive(e) then visibility(e) end
     end
     e.connections[#e.connections+1]=body.AncestryChanged:Connect(changed)
+    -- If an approved source streams out between LOD samples, uncover
+    -- the native silhouette immediately instead of leaving an empty tower.
+    e.connections[#e.connections+1]=approved.AncestryChanged:Connect(changed)
+    e.connections[#e.connections+1]=mid.AncestryChanged:Connect(changed)
     e.connections[#e.connections+1]=
         body:GetPropertyChangedSignal("Size"):Connect(changed)
     e.connections[#e.connections+1]=
@@ -287,7 +297,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     local limits=BUDGET[tier] or BUDGET.Low
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     local cap=limits.models
-    if tier=="Medium" then
+    if tier=="Low" then
+        cap=stress==0 and 1 or 0
+    elseif tier=="Medium" then
         cap=stress==0 and 2 or (stress==1 and 1 or 0)
     elseif tier=="High" then
         cap=stress==0 and 5 or (stress==1 and 3 or 0)
@@ -342,7 +354,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     for body,choice in pairs(wanted) do
         if not active[body] then
             local e=mount(arena,base,mid,body,choice.index,
-                choice.approved)
+                choice.approved,tier)
             if e then active[body]=e end
         end
     end
