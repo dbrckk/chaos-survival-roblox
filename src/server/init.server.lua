@@ -59,6 +59,7 @@ local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
 local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets)
 local PremiumHarborPromenadePortalAssets = require(script.PremiumHarborPromenadePortalAssets)
 local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAssets)
+local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -209,6 +210,9 @@ if not isStudioE2E then
     -- Approved seven-material caissons skin Harbor's real jump decks.
     -- Late-load; native walkable platforms and all danger cues stay intact.
     task.defer(PremiumHarborDockCaissonAssets.start)
+    -- Approved original static Harbor freighter replaces distant primitive
+    -- silhouette locally; optional 66-second deferred cosmetic load.
+    task.defer(PremiumHarborFreighterAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
