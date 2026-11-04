@@ -1,5 +1,8 @@
 # Chaos Survival — quatre vraies colonnes du lobby et portique sans primitives superposées
 
+> **Nouvelle coque fermée approuvée (4 novembre).** La colonne originale décrite ci-dessous est désormais le **fallback**. Le nouveau Model Roblox Approved `75945454705246` possède un corps octogonal continu qui recouvre le collider de 2,2 × 10 × 2,2 studs. Son import et l'intégration runtime sont décrits dans [le dossier de la coque finale](ORIGINAL_ENCLOSED_LOBBY_PYLON_SHELL_2026-11-04.md). Le bloc serveur est masqué à 100 % visuellement **seulement lorsque ce nouveau modèle est réellement présent**. Sinon, l'ancien modèle garde le collider visible à 50 %.
+
+
 **4 novembre 2026 — intégration source, aucune publication publique.**
 
 ## Problème constaté dans le dépôt
