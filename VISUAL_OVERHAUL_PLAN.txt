@@ -1,3 +1,19 @@
+LOT 4 NOVEMBRE 2026 — PILIERS ORIGINAUX ET NOUVELLES GRANDES SOUS-FACES
+[QA]     5 modèles de colonne spécifiques à chaque carte + 1 coque ajourée
+         longue de 22 studs, tous Roblox Approved / source-gated
+         #41808940118. La géométrie source 7 matières+UV+tangentes.
+         La colonne est attachée au vrai PlatformSupport serveur, pas à
+         un nouveau collider; 1/2/3 modules verticaux selon la hauteur,
+         adapter l'axe X/Z via Size event source, SKIP du double shrink.
+         Montage complet => masquer le support natif avec restauration
+         locale automatique. Large promenade / SkySpine => vrai treillis,
+         fallback natif conservé; pas de double chassis 3K triangles.
+         Android Low 0 / Medium 8 colonnes-modules + 1 cradle /
+         High 16 modules + 2 cradle, module = 7 MeshParts.
+         Le nouveau hub carré de 18 studs reste également préservé.
+         Tests exact-SHA et captures Android encore à confirmer.
+         docs/ORIGINAL_LARGE_SUPPORTS_AND_LONG_ROUTE_CRADLE_2026-11-04.md
+
 LOT 4 NOVEMBRE 2026 — SUBSTITUTION RÉELLE DES PRIMITIVES DES DECKS
 [QA]     Nouvel owner visuel client: masque de manière locale/réversible
          les WedgeParts PlatformBevel, PlatformUnderFrame et SkybridgeRib
