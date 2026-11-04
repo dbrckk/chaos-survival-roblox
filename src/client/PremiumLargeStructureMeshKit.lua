@@ -127,7 +127,11 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available)
     if not source or not platform.Parent
         or not platform:IsA("BasePart") then return nil end
     if type(index) ~= "number" or index < 1 then return nil end
-    local choice = tier == "High" and 7 or 13
+    -- Sample enough real supports to use the EXISTING hard module budget.
+    -- The former 1/7 High, 1/13 Medium sampling could leave most of the
+    -- 16/8-module allowance idle, with the old bare rectangular posts
+    -- still dominating the scene. Never increase the module ceiling.
+    local choice = tier == "High" and 4 or 8
     if index % choice ~= 0 then return nil end
 
     local natives = {}
