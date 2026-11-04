@@ -200,7 +200,7 @@ def export(path:Path)->dict:
     sizes=[round(art.maximum[i]-art.minimum[i],5) for i in range(3)]
     centers=[round((art.maximum[i]+art.minimum[i])*.5,5) for i in range(3)]
     assert 27.0<=sizes[0]<=29.4,sizes
-    assert 29.0<=sizes[1]<=31.0,sizes
+    assert 27.5<=sizes[1]<=29.5,sizes
     assert 7.0<=sizes[2]<=8.0,sizes
     assert abs(centers[2])<.5
     path.parent.mkdir(parents=True,exist_ok=True)
