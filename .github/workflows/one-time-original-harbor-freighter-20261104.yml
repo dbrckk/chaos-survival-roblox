@@ -1,5 +1,6 @@
 # Source-authored seven-material 3D ocean freighter, not a Roblox Parts barge.
 # Creates a creator-owned moderated Model only. NEVER publishes the place.
+# Retry 2: owner asset display name shortened to meet Roblox 49-char limit.
 name: One-time Original Harbor Freighter 3D 2026-11-04
 on:
   push:
