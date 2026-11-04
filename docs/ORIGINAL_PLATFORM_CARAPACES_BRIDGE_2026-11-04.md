@@ -42,3 +42,9 @@ Les treillis de passerelle sont installés sur **Medium 1/6** ou **High 1/3** de
 5. Reste à remplacer à terme : bordures non éligibles, larges plates-formes dont le rapport longueur/largeur est incompatible, éléments natifs structurels de MapBuilder, modules déco lointains, textures PBR et finitions lumineuses. Les vieux modèles simples n'ont **pas tous** été supprimés.
 
 L'enregistrement `publication.platform_side_models_inserted_in_game=false` signifie qu'aucune preuve de publication au SHA exact n'a encore été obtenue.
+
+## Correction révélée par les contrôles moteur
+
+Le premier candidat exact-SHA `bc449cf934` a réussi le Build Validation mais la suite Roblox Cloud `gameplay_world` a révélé que `PlatformFinishKit` est aussi requis en contexte de test pur **sans variable globale `script`**. Le nouvel import immédiat `require(script.Parent.PremiumPlatformSideMeshKit)` provoquait `attempt to index nil with 'Parent'` (log Cloud [#41799410064](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/41799410064)). Cette erreur ne doit pas être ignorée même si les 100 autres assertions du shard passaient.
+
+**Correction source `71259d19` :** import du kit 3D uniquement si le ModuleScript possède réellement `script.Parent` ; en contexte pur sans `script`, les fonctions traditionnelles sont disponibles avec la finition native. Sur le vrai client Roblox, le kit premium est chargé et la fonctionnalité reste active. Le jalon exact-SHA doit être relancé avant publication.
