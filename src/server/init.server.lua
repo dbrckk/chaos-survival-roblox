@@ -65,6 +65,7 @@ local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAs
 local PremiumHarborMidgroundBargeAssets = require(script.PremiumHarborMidgroundBargeAssets)
 local PremiumHarborSeaAssets = require(script.PremiumHarborSeaAssets)
 local PremiumTowerCoolingSpireAssets = require(script.PremiumTowerCoolingSpireAssets)
+local PremiumTowersHollowStackAssets = require(script.PremiumTowersHollowStackAssets)
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -233,6 +234,9 @@ if not isStudioE2E then
     -- Five original source-modeled 3D Tower Run cooling installations;
     -- strictly nonphysical, optional, deferred after first-screen assets.
     task.defer(PremiumTowerCoolingSpireAssets.start)
+    -- Second genuine Tower Run cooling sculpture. Its source/Moderation
+    -- is checked separately; no gameplay delay or extra physical Parts.
+    task.defer(PremiumTowersHollowStackAssets.start)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
