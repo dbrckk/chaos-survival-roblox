@@ -17,6 +17,7 @@ local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
 local HarborDockCaissonMeshKit = require(script.Parent.HarborDockCaissonMeshKit)
 local HarborFreighterMeshKit = require(script.Parent.HarborFreighterMeshKit)
+local HarborGantryKineticMeshKit = require(script.Parent.HarborGantryKineticMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
@@ -617,6 +618,24 @@ task.spawn(function()
         for _, scenery in ipairs(SceneryLodRules.harborGantryOwners(arena)) do
             applyFolder(scenery, HARBOR_GANTRY_LOD,
                 profile, scenery:GetPivot().Position, cameraPoint)
+        end
+        -- Replace four source-authored native crane silhouettes with true
+        -- kinetic MeshParts that follow the ALREADY-RUNNING native
+        -- trolley/hoist motion. Same distance/quality LOD sample.
+        -- Low=0; Medium=2/1/0, High=4/2/0 under mobile pressure.
+        HarborGantryKineticMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
+        local craneModels,cranePieces=HarborGantryKineticMeshKit.count()
+        if player:GetAttribute("LocalOriginalHarborKineticGantryCount")
+            ~= craneModels then
+            player:SetAttribute("LocalOriginalHarborKineticGantryCount",
+                craneModels)
+        end
+        if player:GetAttribute("LocalOriginalHarborKineticMeshPartCount")
+            ~= cranePieces then
+            player:SetAttribute("LocalOriginalHarborKineticMeshPartCount",
+                cranePieces)
         end
         local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
         -- The 16 original native facades now gain a bounded set of TRUE,
