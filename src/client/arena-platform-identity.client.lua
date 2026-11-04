@@ -11,6 +11,8 @@ local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
 local PlatformNativeTrimReplacementKit = require(
     script.Parent.PlatformNativeTrimReplacementKit)
+local PremiumLargeStructureMeshKit = require(
+    script.Parent.PremiumLargeStructureMeshKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
 
 local player = Players.LocalPlayer
@@ -30,6 +32,7 @@ local outpostAttributeConnections = {}
 local routeTargetConnections = {}
 local routeCueStates = {}
 local footprintDisconnects = {}
+local originalColumnDisconnects = {}
 local outpostMotions = {}
 local currentOutpostPosture = "normal"
 
@@ -88,11 +91,18 @@ local function refreshOutpostMotion(platform)
 end
 
 local function clear()
+    for _, connection in ipairs(originalColumnDisconnects) do
+        connection:Disconnect()
+    end
+    table.clear(originalColumnDisconnects)
     -- Restore any server-authored visual fallback before destroying our
     -- verified owner-replacement meshes. Colliders are never touched.
     PlatformNativeTrimReplacementKit.reset()
     if player:GetAttribute("LocalNativeStructuralPartsReplaced") ~= 0 then
         player:SetAttribute("LocalNativeStructuralPartsReplaced", 0)
+    end
+    if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
     end
     for platform, state in pairs(outpostMotions) do
         stopOutpostMotion(state)
@@ -444,6 +454,16 @@ local function rebuild()
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local index = 0
     local replacements = {}
+    local actualSupportParts = {}
+    -- Original large structures use the same existing owner/census:
+    -- limit source-authenticated modules, not "platform" count, to
+    -- prevent a single 40-stud pillar silently spending the whole budget.
+    local supportBudget = tier.Name == "High" and 16
+        or (tier.Name == "Medium" and 8 or 0)
+    local longCradleBudget = tier.Name == "High" and 2
+        or (tier.Name == "Medium" and 1 or 0)
+    local originalLargeCount = 0
+    local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
 
     for _, platform in ipairs(ordered) do
@@ -541,6 +561,47 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
 
+            -- Long elevated promenades and the Sky Spine previously
+            -- rested on a solid, square server underframe. Swap up to
+            -- 1/2 compatible decks to the real sculpted 22-stud lattice,
+            -- only after exact owner provenance and dimensions are checked.
+            -- It follows RouteTier shrink via the existing welded snapshot.
+            if longCradleBudget > 0 and not authenticCarapace then
+                local cradle = PremiumLargeStructureMeshKit.longCradle(
+                    folder, platform, tier.Name, visualIndex)
+                if cradle then
+                    replacements[tostring(visualIndex)] = "cradle"
+                    longCradleBudget -= 1
+                    for _, piece in ipairs(cradle) do
+                        registerVisual(platform, piece)
+                        originalLargeCount += 1
+                    end
+                end
+            end
+            -- Actual server-authored PlatformSupport instances, NOT new
+            -- phantom load-bearing routes, own authentic tall columns.
+            -- One sparse support family per map/tier, at most 8/16
+            -- source-model segments (7 MeshParts each). The existing
+            -- CollapsePhase visual registrar hides them on warning/gone.
+            if supportBudget > 0 and decor then
+                local columns = PremiumLargeStructureMeshKit.supports(
+                    folder, decor, platform, variant, tier.Name,
+                    visualIndex, supportBudget)
+                if columns then
+                    supportBudget -= columns.modules
+                    for _, support in ipairs(columns.covered) do
+                        actualSupportParts[#actualSupportParts+1] = support
+                    end
+                    for _, connection in ipairs(columns.disconnects) do
+                        originalColumnDisconnects[#originalColumnDisconnects+1] =
+                            connection
+                    end
+                    for _, piece in ipairs(columns.parts) do
+                        registerVisual(platform, piece)
+                        originalLargeCount += 1
+                    end
+                end
+            end
             -- New authentic MeshParts and native carapace fallback both
             -- enter the EXISTING collapse/shrink snapshot and visibility owner.
             for _, piece in ipairs(carapacePieces) do
@@ -660,7 +721,12 @@ local function rebuild()
                 player:SetAttribute("LocalNativeStructuralPartsReplaced",
                     nativeCount)
             end
-        end)
+        end, actualSupportParts)
+    if player:GetAttribute("LocalOriginalLargeStructure3DCount")
+        ~= originalLargeCount then
+        player:SetAttribute("LocalOriginalLargeStructure3DCount",
+            originalLargeCount)
+    end
     -- Count genuine moderated structural MeshParts on this one active map.
     -- Attribute is diagnostic only, never used to control physics or tier.
     local genuineCount = 0
