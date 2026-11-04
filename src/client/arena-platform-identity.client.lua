@@ -919,6 +919,35 @@ local function watchHullTemplates(holder)
     end
 end
 
+-- Late-arriving approved tall columns and long-route open lattice.
+-- This shares the same already present client rebuild owner; no ticker.
+local largeStructureTemplateConnections = {}
+local watchedLargeStructureTemplates = nil
+local function watchLargeStructureTemplates(holder)
+    if watchedLargeStructureTemplates == holder then return end
+    for _, connection in ipairs(largeStructureTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(largeStructureTemplateConnections)
+    watchedLargeStructureTemplates = holder
+    if holder and holder:IsA("Folder") then
+        local function changed(child)
+            local generated = workspace:FindFirstChild("GeneratedMap")
+            local arena = generated and generated:FindFirstChild("Arena")
+            local variant = arena and tostring(
+                arena:GetAttribute("VariantId") or "Classic")
+            if child.Name == variant or child.Name == "LongCradle" then
+                scheduleRebuild()
+            end
+        end
+        largeStructureTemplateConnections[#largeStructureTemplateConnections+1] =
+            holder.ChildAdded:Connect(changed)
+        largeStructureTemplateConnections[#largeStructureTemplateConnections+1] =
+            holder.ChildRemoved:Connect(changed)
+        scheduleRebuild()
+    end
+end
+
 ReplicatedStorage.ChildAdded:Connect(function(child)
     if child.Name == "ApprovedFloorReliefTemplates" then
         watchPlatformReliefTemplates(child)
@@ -926,6 +955,8 @@ ReplicatedStorage.ChildAdded:Connect(function(child)
         watchSideTemplates(child)
     elseif child.Name == "ApprovedLargeDeckHullTemplates" then
         watchHullTemplates(child)
+    elseif child.Name == "ApprovedLargeStructureTemplates" then
+        watchLargeStructureTemplates(child)
     end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
@@ -938,6 +969,9 @@ ReplicatedStorage.ChildRemoved:Connect(function(child)
     elseif child == watchedHullTemplates then
         watchHullTemplates(nil)
         scheduleRebuild()
+    elseif child == watchedLargeStructureTemplates then
+        watchLargeStructureTemplates(nil)
+        scheduleRebuild()
     end
 end)
 watchPlatformReliefTemplates(
@@ -946,6 +980,8 @@ watchSideTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedPlatformSideTemplates"))
 watchHullTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedLargeDeckHullTemplates"))
+watchLargeStructureTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;
