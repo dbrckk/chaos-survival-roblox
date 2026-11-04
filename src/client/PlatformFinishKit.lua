@@ -2,7 +2,11 @@
 -- Decorative welds follow the authoritative platform without collisions.
 -- No custom asset IDs, dynamic emitters, scripted physics or animation loops.
 local PlatformFinishKit = {}
-local PremiumPlatformSideMeshKit = require(script.Parent.PremiumPlatformSideMeshKit)
+-- This module is also loaded as a pure helper by Roblox Cloud engine suites:
+-- their ModuleScript sandbox has no global 'script'. Runtime Roblox clients
+-- always have script.Parent; pure helpers retain the native art fallback.
+local PremiumPlatformSideMeshKit = script and script.Parent
+    and require(script.Parent.PremiumPlatformSideMeshKit) or nil
 
 local NAMES = {
     Classic = {"ClassicCalibrationPlate", "ClassicDatumTick", "ClassicArmoredLip"},
@@ -195,7 +199,8 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
         return {}
     end
     local count = PlatformFinishKit.sideRailCount(tier)
-    if count > 0 and platform:GetAttribute("ChaosSkybridge") == true then
+    if count > 0 and PremiumPlatformSideMeshKit
+        and platform:GetAttribute("ChaosSkybridge") == true then
         -- Real 7-material creator-owned truss modules occupy the same
         -- existing visual budget and shrink/collapse owner as native bars.
         local original = PremiumPlatformSideMeshKit.bridgeGirders(
@@ -677,9 +682,11 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
     -- Source-authenticated sculpted full underside/side facings replace
     -- seven crude WedgePart/Part modules on sparse High/Medium decks.
     -- The native art below is only built when the genuine mesh is absent.
-    local original = PremiumPlatformSideMeshKit.carapace(
-        parent, platform, variant, tier, index)
-    if original then return original end
+    if PremiumPlatformSideMeshKit then
+        local original = PremiumPlatformSideMeshKit.carapace(
+            parent, platform, variant, tier, index)
+        if original then return original end
+    end
 
     local p = CARAPACE_PROFILES[variant]
     local shellColor = theme.Structure:Lerp(theme.Detail, p.tint)
