@@ -13,7 +13,8 @@
     "service_models_inserted_in_game": false,
     "ambient_models_inserted_in_game": false,
     "floor_relief_models_inserted_in_game": false,
-    "floor_hardware_models_inserted_in_game": false
+    "floor_hardware_models_inserted_in_game": false,
+    "platform_side_models_inserted_in_game": false
   },
   "models": [
     {
@@ -311,6 +312,54 @@
       "source": "tools/generate_original_floor_hardware.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41740585965
+    },
+    {
+      "name": "deck_carapace_classic",
+      "asset_id": "92590025262416",
+      "moderation": "Approved",
+      "source": "tools/generate_original_platform_carapaces.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41798024000
+    },
+    {
+      "name": "deck_carapace_towers",
+      "asset_id": "85204303404953",
+      "moderation": "Approved",
+      "source": "tools/generate_original_platform_carapaces.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41798024000
+    },
+    {
+      "name": "deck_carapace_crossroads",
+      "asset_id": "116452624086023",
+      "moderation": "Approved",
+      "source": "tools/generate_original_platform_carapaces.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41798024000
+    },
+    {
+      "name": "deck_carapace_orbital",
+      "asset_id": "118444100674717",
+      "moderation": "Approved",
+      "source": "tools/generate_original_platform_carapaces.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41798024000
+    },
+    {
+      "name": "deck_carapace_harbor",
+      "asset_id": "124136394128432",
+      "moderation": "Approved",
+      "source": "tools/generate_original_platform_carapaces.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41798024000
+    },
+    {
+      "name": "bridge_side_girder",
+      "asset_id": "122766792774607",
+      "moderation": "Approved",
+      "source": "tools/generate_original_platform_carapaces.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41798024000
     }
   ]
 }
