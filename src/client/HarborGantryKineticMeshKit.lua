@@ -355,9 +355,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
                         and budget.retention*.60 or 0)
                     if typeof(cameraLook)=="Vector3"
                         and cameraLook.Magnitude>.5 and distance>40 then
+                        local towardCrane=(girder.Position-cameraPoint).Unit
                         score-=math.min(42,distance*.16)
-                            *(girder.Position-cameraPoint).Unit
-                                :Dot(cameraLook.Unit)
+                            *towardCrane:Dot(cameraLook.Unit)
                     end
                     ranked[#ranked+1]={crane=crane,source=source,
                         score=score,sector=sector}
