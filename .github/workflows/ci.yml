@@ -497,6 +497,2647 @@ jobs:
           assert "PremiumPlatformSideAssets.start" in Path(
               "src/server/init.server.lua").read_text()
           assert "ArenaPlatformIdentityLocal" in census
+          # REAL native trim substitution requires the approved original
+          # visual in memory; never blindly delete server-authored fallback
+          # or hide SkybridgeRail safety wayfinding / moving colliders.
+          trim = Path("src/client/PlatformNativeTrimReplacementKit.lua").read_text()
+          for check in (
+              "function Kit.bind(arena, replacements, onChange)",
+              "function Kit.reset()", "Kit.count()",
+              'part.LocalTransparencyModifier = 1',
+              'part.LocalTransparencyModifier = original',
+              '^PlatformBevel(%d+)_%d+
+          hardware = Path("src/client/PremiumFloorHardwareMeshKit.lua").read_text()
+          floor_src = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          relief_client = Path("src/client/arena-surface-relief.client.lua").read_text()
+          for name, client_name, receipt in (
+              ("floor_corner_guard", "CornerGuard", 41740585965),
+              ("floor_anchor_bolt_large", "AnchorBolt", 41740889677),
+              ("floor_harbor_tie", "HarborTie", 41740585965),
+          ):
+              assert (client_name+" = "+approved[name]) in floor_src
+              assert ("id = "+approved[name]) in hardware
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == name) == receipt
+          for check in (
+              "PremiumFloorHardwareMeshKit.install(",
+              "LocalOriginalFloorHardware3DCount",
+              "ArenaFloorFollowerKit.bind(base, folder)",
+              'child.Name == "AnchorBolt"',
+              'child.Name == "CornerGuard"',
+              'child.Name == "HarborTie"',
+          ):
+              assert check in relief_client, check
+          for check in (
+              'part.CanCollide = false', 'part.CanTouch = false',
+              'part.CanQuery = false', 'part.CastShadow = false',
+              'source:GetAttribute("OwnerVerified") ~= true',
+              'kind == "CornerGuard"',
+              'kind == "HarborTie"',
+              'kind == "AnchorBolt"',
+              'tier == "Medium" and 6 or 12',
+              'obj.Transparency = 1',
+          ):
+              # The old fallback renderer remains untouched and self-restores
+              # on a map/tier rebuild; the new module never modifies colliders.
+              if check == 'obj.Transparency = 1':
+                  assert 'anchor.Transparency = 1' in hardware
+              else:
+                  assert check in hardware, check
+          assert "RunService" not in hardware
+          assert "ApprovedFloorReliefTemplates" in hardware
+          assert "ArenaSurfaceReliefLocal" in census
+          relief_server = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          relief_client = Path("src/client/PremiumFloorReliefMeshKit.lua").read_text()
+          relief_script = Path("src/client/arena-surface-relief.client.lua").read_text()
+          for variant, source_kind in (
+              ("Essential", "relief_essential"), ("Classic", "relief_classic"),
+              ("Towers", "relief_towers"), ("Crossroads", "relief_crossroads"),
+              ("Orbital", "relief_orbital"), ("Harbor", "relief_harbor"),
+          ):
+              assert (variant + " = " + approved[source_kind]) in relief_server
+              assert ("id = " + approved[source_kind]) in relief_client
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == source_kind) == 41736767816
+          for required in (
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedFloorReliefTemplates",
+              "AssetService.LoadAssetAsync",
+          ):
+              assert required in relief_server
+          for required in (
+              "PremiumFloorReliefMeshKit.install(",
+              "LocalOriginalFloorRelief3DCount",
+              "ArenaFloorFollowerKit.bind(base, folder)",
+          ):
+              assert required in relief_script
+          for required in (
+              "Low = 6, Medium = 16, High = 28",
+              "obj.CanCollide = false",
+              "obj.CanTouch = false",
+              "obj.CanQuery = false",
+              "obj.CastShadow = false",
+              "source:GetAttribute(\"OwnerVerified\") ~= true",
+          ):
+              assert required in relief_client, required
+          assert "RunService" not in relief_client
+          assert "ApprovedFloorReliefTemplates" in relief_script
+          assert "ArenaSurfaceReliefLocal" in census
+          assert "PremiumFloorReliefAssets.start" in Path(
+              "src/server/init.server.lua").read_text()
+          ambient_source = Path("src/server/PremiumAmbientMotionAssets.lua").read_text()
+          ambient_mesh = Path("src/client/PremiumAmbientMotionMeshKit.lua").read_text()
+          ambient_script = Path("src/client/arena-ambient-props.client.lua").read_text()
+          for variant, source_kind in (
+              ("Classic", "ambient_drone"), ("Towers", "ambient_lift"),
+              ("Crossroads", "ambient_transit"),
+              ("Orbital", "ambient_satellite"), ("Harbor", "ambient_cargo"),
+          ):
+              assert (variant + " = " + approved[source_kind]) in ambient_source
+              assert ("id = " + approved[source_kind]) in ambient_mesh
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == source_kind) == 41733818047
+          for required in (
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedAmbientMotionTemplates",
+              "AssetService.LoadAssetAsync",
+          ):
+              assert required in ambient_source
+          for required in (
+              "PremiumAmbientMotionMeshKit.install(",
+              "PremiumAmbientMotionMeshKit.move(item)",
+              "PremiumAmbientMotionMeshKit.phase(",
+              "LocalOriginalAmbientMotion3DCount",
+          ):
+              assert required in ambient_script
+          for required in (
+              "Low = 2, Medium = 4, High = 6",
+              "part.CanCollide = false",
+              "part.CanTouch = false",
+              "part.CanQuery = false",
+              "part.CastShadow = false",
+              'source:GetAttribute("OwnerVerified") ~= true',
+          ):
+              assert required in ambient_mesh, required
+          assert "RunService" not in ambient_mesh
+          assert "ApprovedAmbientMotionTemplates" in ambient_script
+          service_source = Path("src/server/PremiumServiceEquipmentAssets.lua").read_text()
+          service_client = Path("src/client/PremiumServiceEquipmentMeshKit.lua").read_text()
+          service_script = Path("src/client/arena-service-props.client.lua").read_text()
+          for arena, model in (
+              ("Classic", "service_camera"), ("Towers", "service_maintenance"),
+              ("Crossroads", "service_wayfinder"), ("Orbital", "service_orbital"),
+              ("Harbor", "service_mooring"),
+          ):
+              assert (arena + " = " + approved[model]) in service_source
+              assert ("id = " + approved[model]) in service_client
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == model) == 41729439190
+          assert "OriginalMeshScenery.sanitize(raw)" in service_source
+          assert "PremiumServiceEquipmentMeshKit.replace(" in service_script
+          assert "LocalOriginalServiceEquipment3DCount" in service_script
+          for safe in ("part.CanCollide = false", "part.CanTouch = false",
+                       "part.CanQuery = false", "part.CastShadow = false",
+                       'source:GetAttribute("OwnerVerified") ~= true',
+                       "Low = 1, Medium = 2, High = 4"):
+              assert safe in service_client, safe
+          assert approved["arena_keel"] == "121436301473005"
+          assert next(m["workflow_run_id"] for m in models
+                      if m["name"] == "arena_keel") == 41669929967
+          keel = Path("src/client/ArenaKeelMeshKit.lua").read_text()
+          assert "OriginalArenaKeel = 121436301473005" in route_source
+          assert 'PremiumArenaKeel3D' in route_source
+          assert "local ASSET_ID = 121436301473005" in keel
+          assert 'OriginalArenaKeelLocal' in census
+          assert "ArenaKeelMeshKit.sync(arena, cameraPoint" in scenery
+          assert "LocalOriginalArenaKeelCount" in scenery
+          assert "Low = {count = 1" in keel
+          assert "Medium = {count = 3" in keel
+          assert "High = {count = 5" in keel
+          for safety in ("part.CanCollide = false", "part.CanTouch = false",
+                         "part.CanQuery = false", "part.CastShadow = false",
+                         "base:GetPropertyChangedSignal(\"Size\")",
+                         'source:GetAttribute("OwnerVerified") ~= true',
+                         "Original3DAssetId"):
+              assert safety in keel, safety
+          keel_art = json.loads(Path(
+              "build/mesh-previews/chaos_arena_keel.gltf").read_text())
+          keel_source = json.loads(Path(
+              "build/mesh-previews/arena-keel-source.json").read_text())
+          keel_parts = keel_art["meshes"][0]["primitives"]
+          assert keel_source["asset"] == "arena_keel"
+          assert keel_source["triangles"] == 3332
+          assert len(keel_parts) == 7
+          assert sum(keel_art["accessors"][p["attributes"]["POSITION"]]["count"]//3
+                     for p in keel_parts) == 3332
+          assert "ArenaKeelMeshKit" in Path(
+              "tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          # Exact real approved import 84582262145054 is REUSED for
+          # replaceable understructure bays; no external marketplace mesh.
+          beams = Path("src/client/UnderstructureBeamMeshKit.lua").read_text()
+          understructure = Path("src/client/arena-understructure.client.lua").read_text()
+          engine = Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          assert approved["underdeck_chassis"] == "84582262145054"
+          assert "local ASSET_ID = 84582262145054" in beams
+          assert 'OriginalUnderstructureBeamsLocal' in census
+          assert 'LocalOriginalUnderstructureBeamCount' in scenery
+          assert 'UnderstructureBeamMeshKit.sync(arena, cameraPoint' in scenery
+          assert 'UnderstructureBeamMeshKit.reset()' in understructure
+          assert 'OriginalUnderstructureBeam' in understructure
+          assert 'UnderClassicBeam' in understructure
+          assert 'UnderCrossroadsBeam' in understructure
+          assert 'UnderClassicChassisX' not in understructure
+          assert 'UnderCrossroadsTrunk' not in understructure
+          assert 'UnderstructureBeamMeshKit' in engine
+          assert 'Low = {count = 1' in beams
+          assert 'Medium = {count = 4' in beams
+          assert 'High = {count = 12' in beams
+          for required in ('source:GetAttribute("OwnerVerified") ~= true',
+                           'source:GetAttribute("Original3DAssetId") ~= ASSET_ID',
+                           'base:GetPropertyChangedSignal("Size")',
+                           'piece.CanCollide = false',
+                           'piece.CanTouch = false',
+                           'piece.CanQuery = false',
+                           'native.Transparency = 1',
+                           'entry.native.Transparency = entry.originalTransparency'):
+              assert required in beams, required
+          assert 'RunService' not in beams and 'task.spawn' not in beams
+          print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
+          print("Verified 37 creator-owned Approved Model assets including three authentic corner/bolt/Harbor machine sculptures, strict Android/hazard safety and provenance.")
+          PY
+
+      - name: Install Rojo 7.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 4 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 15 --max-time 90 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            -o /tmp/rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -tq /tmp/rojo.zip >/dev/null || {
+            echo "::error::Pinned Rojo archive is truncated or invalid."
+            exit 1
+          }
+          mkdir -p /tmp/rojo
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          echo "/tmp/rojo" >> "$GITHUB_PATH"
+          /tmp/rojo/rojo --version
+
+      - name: Guard Android first-frame VFX budgets
+        shell: bash
+        run: python tools/validate_mobile_vfx_first_frame.py
+
+      - name: Validate Luau syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 4 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 15 --max-time 90 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            -o /tmp/luau.zip \
+            https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          unzip -tq /tmp/luau.zip >/dev/null || {
+            echo "::error::Pinned Luau compiler archive is truncated or invalid."
+            exit 1
+          }
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
+            xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+
+      - name: Self-test real-engine Cloud task batching
+        shell: bash
+        run: python tools/prepare_cloud_batches.py --self-test
+
+      - name: Enforce persistent purchase session guards
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          cosmetic = Path("src/server/CosmeticService.lua").read_text()
+          monetization = Path("src/server/MonetizationService.lua").read_text()
+
+          def between(source, start, end=None):
+              a = source.find(start)
+              if a < 0:
+                  raise SystemExit(f"Missing guarded section: {start}")
+              b = source.find(end, a + len(start)) if end else len(source)
+              if end and b < 0:
+                  raise SystemExit(f"Missing section terminator: {end}")
+              return source[a:b]
+
+          guarded = [
+              (
+                  "Cosmetic equip",
+                  between(
+                      cosmetic,
+                      "local function equipCosmetic",
+                      "local function buyCosmetic",
+                  ),
+              ),
+              (
+                  "Cosmetic coin purchase",
+                  between(
+                      cosmetic,
+                      "local function buyCosmetic",
+                      "function CosmeticService.grant",
+                  ),
+              ),
+              (
+                  "Cosmetic premium grant",
+                  between(
+                      cosmetic,
+                      "function CosmeticService.grant",
+                      "function CosmeticService.sync",
+                  ),
+              ),
+              (
+                  "Premium purchase prompt",
+                  between(
+                      monetization,
+                      'if action ~= "buy_pass"',
+                      "MarketplaceService.PromptGamePassPurchaseFinished",
+                  ),
+              ),
+              (
+                  "Premium purchase completion",
+                  between(
+                      monetization,
+                      "MarketplaceService.PromptGamePassPurchaseFinished",
+                      "Players.PlayerAdded",
+                  ),
+              ),
+          ]
+
+          failures = []
+          for label, section in guarded:
+              if "PlayerData.canMutate(player)" not in section:
+                  failures.append(label)
+
+          if failures:
+              print("Persistent mutation path missing active-session guard:")
+              for label in failures:
+                  print(" -", label)
+              raise SystemExit(1)
+
+          print("Persistent purchase/grant session guards verified.")
+          PY
+
+      - name: Enforce fair-play monetization boundary
+        shell: bash
+        run: |
+          test -f src/server/MonetizationService.lua
+          grep -q 'CosmeticOnly:true' src/server/MonetizationService.lua
+          if grep -Eq 'WalkSpeed|JumpPower|MaxHealth|WinCoins|WinXP|PlayerData\.add|ParticipationCoins|ParticipationXP' src/server/MonetizationService.lua; then
+            echo "Paid monetization must never modify gameplay power or progression rewards."
+            exit 1
+          fi
+
+      - name: Enforce client protocol contracts
+        shell: bash
+        run: |
+          if grep -RFn --include='*.lua' --include='*.luau' 'phase == "results"' src; then
+            echo 'Round phase contract is "result", not "results".'
+            exit 1
+          fi
+          if grep -RFn --include='*.lua' --include='*.luau' 'feedback.survivalStreak' src/client; then
+            echo 'Round feedback streak key is "streak".'
+            exit 1
+          fi
+
+      - name: Guard post-win settlement and replay contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          server = Path("src/server/init.server.lua").read_text()
+          journey = Path("src/shared/RoundJourneyRules.lua").read_text()
+          required = {
+              "return the played round challenge from the disaster runner":
+                  "}, roundChallenge\nend\n\nwhile true do" in server,
+              "receive the challenge in round settlement":
+                  "balanceMetrics, roundChallenge =\n        runDisasterSet(" in server,
+              "validate challenge before paying rewards":
+                  'assert(type(roundChallenge) == "table"' in server,
+              "stamp the winner receipt with the round number":
+                  "roundNumber = roundNumber,\n                coins =" in server,
+              "stamp the READY countdown with the upcoming round number":
+                  'phase = "ready",\n            roundNumber = upcomingRoundNumber,' in server,
+              "restore human health at accepted READY spawn":
+                  "SurvivalFeedback.restoreForNextRound(humanoid)" in server,
+              "verify actual RESULT to next READY rather than decorative result":
+                  "function RoundJourneyRules.replayStarted(" in journey,
+          }
+
+          missing = [name for name, present in required.items() if not present]
+          if missing:
+              raise SystemExit("Post-win protocol regression: " + ", ".join(missing))
+          print("Server settlement, reward receipt and replay continuity contracts intact.")
+          PY
+
+      - name: Guard real 3D permanent sky-route residency and repaired material contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          route = Path("src/client/PremiumRouteMeshKit.lua").read_text()
+          lod = Path("src/client/scenery-lod.client.lua").read_text()
+          map_builder = Path("src/server/MapBuilder.lua").read_text()
+          truth = Path("tests/engine/mapbuilder.spec.luau").read_text()
+          engine = Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          must_have = (
+              "PremiumJumpDeck = 98478693994864",
+              "PremiumSkybridgeModule = 94023662427980",
+              "ChaosPermanentRoute",
+              "PromenadeLane",
+              "PromenadeStep",
+              "SkySpineStep",
+              "SkySpineInterchange",
+              "BridgeShutterPhase",
+              "CollapsePhase",
+              "isPermanentConnector(platform)",
+              "if not safePlatform(platform) then return nil end",
+              "base.Size.X < 318 or base.Size.Z < 318",
+              "CanCollide = false",
+              "CanTouch = false",
+              "CanQuery = false",
+              "cameraLook",
+          )
+          assert all(text in route for text in must_have)
+          assert "decks = 2, bridges = 1, segments = 1" in route
+          assert "decks = 8, bridges = 2, segments = 3" in route
+          assert "decks = 12, bridges = 3, segments = 4" in route
+          assert "PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name," in lod
+          assert "cameraReady, cameraLook)" in lod
+          assert 'platform:SetAttribute("ChaosPermanentRoute", true)' in map_builder
+          assert 'platform:SetAttribute("SkySpineInterchange", true)' in map_builder
+          assert "Towers = Enum.Material.Metal" in truth
+          assert "Towers = Enum.Material.Foil" not in truth
+          assert 'crossing:SetAttribute("PromenadeLane", 1)' in engine
+          assert 'crossing:SetAttribute("SkySpineInterchange", true)' in engine
+          assert 'crossing:SetAttribute("ChaosPermanentRoute", false)' in engine
+          print("Authentic approved 3D permanent crossings, Android MeshPart caps, safe hazard ownership and Towers Cloud contract verified.")
+          PY
+
+      - name: Guard authentic five-arena sun and native-PBR art budget
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          script = Path("src/client/arena-lighting.client.lua").read_text()
+          theme = Path("src/shared/VisualTheme.lua").read_text()
+          focals = Path("src/shared/ArenaFocalLightingRules.lua").read_text()
+          focal_source = Path("src/client/arena-focal-lighting.client.lua").read_text()
+          pbr = Path("src/shared/PbrDistrictRules.lua").read_text()
+          worlds = ("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+          art = {}
+          for index, world in enumerate(worlds):
+              start = script.index("    " + world + " = {", script.index("local MOODS = {"))
+              end = script.find("\n    },", start)
+              assert end > start
+              body = script[start:end]
+              def number(field):
+                  match = re.search(r"^        " + field + r" = ([0-9.]+),", body, re.M)
+                  assert match, (world,field)
+                  return float(match.group(1))
+              time = number("ClockTime")
+              latitude = number("Latitude")
+              density = number("Density")
+              diffuse = number("EnvironmentDiffuse")
+              specular = number("EnvironmentSpecular")
+              assert 10 <= time < 17 and 20 <= latitude <= 80
+              assert 0.10 <= density <= 0.20
+              assert 0.35 <= diffuse <= 0.55
+              assert 0.6 <= specular <= 0.80
+              art[world] = (time,latitude)
+          assert len(set(art.values())) == 5
+          assert "GeographicLatitude = mood.Latitude or 36" in script
+          assert "if nextPhase == phase then return end" in script
+          assert "disasterOwnsEnvironment = phase == \"round\" or phase == \"ready\"" in script
+          assert "disasterOwnsPostProcess = disasterOwnsEnvironment" in script
+          assert "PbrDistrictRules" in pbr
+          assert "return touch and 32 or 48" in pbr
+          assert "return touch and 72 or 144" in pbr
+          assert "return 0" in pbr
+          assert "if tierName == \"Low\" then" in focals
+          assert "return 3" in focals
+          assert "local neutral = Color3.fromRGB(" in focal_source
+          for world in worlds:
+              block = theme.split("    " + world + " = {", 1)[1].split("\n    },", 1)[0]
+              surface = re.search(r"Surface = Color3.fromRGB\((\d+), (\d+), (\d+)\)", block)
+              assert surface and min(map(int,surface.groups())) >= 40
+          print("Five unique solar directions and safe readable Android material fallbacks verified.",art)
+          print("PBR 0/32/72 material tiers, 0/2/3 spotlight tiers and disaster Lighting ownership intact.")
+          PY
+
+      - name: Enforce Lighting property ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          arena = Path("src/client/arena-lighting.client.lua")
+          juice = Path("src/client/juice.client.lua")
+
+          arena_only = {
+              "GlobalShadows",
+              "LightingStyle",
+              "PrioritizeLightingQuality",
+              "Ambient",
+              "OutdoorAmbient",
+              "ColorShift_Top",
+              "ColorShift_Bottom",
+              "ShadowSoftness",
+              "ClockTime",
+              "GeographicLatitude",
+          }
+          shared_active = {
+              "ExposureCompensation",
+              "EnvironmentDiffuseScale",
+              "EnvironmentSpecularScale",
+          }
+
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  source = path.read_text()
+
+                  for prop in arena_only:
+                      if re.search(rf"Lighting\.{prop}\s*=", source) and path != arena:
+                          offenders.append(f"{path}: Lighting.{prop}")
+
+                  for prop in shared_active:
+                      if re.search(rf"Lighting\.{prop}\s*=", source) and path not in {arena, juice}:
+                          offenders.append(f"{path}: Lighting.{prop}")
+
+          if offenders:
+              print("Client Lighting ownership violations:")
+              for item in sorted(offenders):
+                  print(" -", item)
+              raise SystemExit(1)
+
+          print(
+              "Lighting ownership verified:",
+              "arena baseline; juice active exposure/diffuse/specular only.",
+          )
+          PY
+
+      - name: Enforce single round FOV owner
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = Path("src/client/juice.client.lua")
+          offenders = []
+
+          for path in Path("src/client").rglob("*.lua"):
+              if path == allowed:
+                  continue
+              source = path.read_text()
+              if __import__("re").search(r"FieldOfView\s*=", source):
+                  offenders.append(str(path))
+
+          for path in Path("src/client").rglob("*.luau"):
+              if path == allowed:
+                  continue
+              source = path.read_text()
+              if __import__("re").search(r"FieldOfView\s*=", source):
+                  offenders.append(str(path))
+
+          if offenders:
+              print("Round FOV ownership must remain centralized in juice.client.lua:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Single round FOV owner verified.")
+          PY
+
+      - name: Audit client map lifecycle listeners
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              if "GeneratedMap" not in source or ".ChildAdded:Connect" not in source:
+                  continue
+
+              receivers = sorted(set(re.findall(
+                  r'([A-Za-z_][A-Za-z0-9_]*)\.ChildAdded:Connect',
+                  source
+              )))
+              non_workspace = [
+                  receiver for receiver in receivers
+                  if receiver not in {"workspace"}
+              ]
+              if non_workspace and ":Disconnect()" not in source:
+                  candidates.append((str(path), non_workspace))
+
+          if candidates:
+              print("Unowned map-lifecycle ChildAdded listeners detected:")
+              for path, receivers in candidates:
+                  print(" -", path, "receivers=" + ",".join(receivers))
+              raise SystemExit(1)
+
+          print("Client map lifecycle listener ownership verified.")
+          PY
+
+      - name: Audit AI survivor folder lifecycle listeners
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          offenders = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              if "AISurvivors" not in source or ".ChildAdded:Connect" not in source:
+                  continue
+              if "ChildRemoved:Connect" not in source or ":Disconnect()" not in source:
+                  offenders.append(str(path))
+
+          if offenders:
+              print("AISurvivors listeners must explicitly disconnect/rebind:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("AI survivor folder lifecycle listeners verified.")
+          PY
+
+      - name: Enforce Animator-safe Motor6D polish
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  source = path.read_text()
+                  if "Motor6D" not in source:
+                      continue
+                  if re.search(r"\.[Tt]ransform\s*=", source):
+                      offenders.append(str(path))
+
+          if offenders:
+              print("Client Motor6D.Transform writes can fight the Animator:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Animator-safe Motor6D client polish verified.")
+          PY
+
+      - name: Enforce high-frequency client loop allowlist
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          patterns = {
+              "RenderStepped": re.compile(r"RunService\.RenderStepped:Connect|\.RenderStepped:Connect"),
+              "Heartbeat": re.compile(r"RunService\.Heartbeat:Connect|\.Heartbeat:Connect"),
+              "BindToRenderStep": re.compile(r"BindToRenderStep"),
+          }
+
+          allowed = {
+              "src/client/body-feel.client.lua",
+              "src/client/juice.client.lua",
+              "src/client/movement-feel.client.lua",
+          }
+
+          # A Studio-only AI visual QA camera must use RenderStep to
+          # follow real NPC movement. Verify BOTH production and test-suite
+          # early exits before granting this explicit narrow exception.
+          studio_only = {"src/client/visual-ai-review.client.lua"}
+          for studio_path in studio_only:
+              source = Path(studio_path).read_text()
+              if ('if not RunService:IsStudio() then return end' not in source
+                      or 'ReplicatedStorage:GetAttribute("ChaosVisualAISuite")' not in source):
+                  raise SystemExit(
+                      "Studio visual camera must be guarded against public execution."
+                  )
+
+          found = {}
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              kinds = [name for name, pattern in patterns.items() if pattern.search(source)]
+              if kinds:
+                  found[str(path)] = kinds
+
+          offenders = sorted(set(found) - allowed - studio_only)
+          stale = sorted(allowed - set(found))
+          stale_studio = sorted(studio_only - set(found))
+          if stale_studio:
+              raise SystemExit(
+                  "Studio-only render loop exemption went stale: "
+                  + ", ".join(stale_studio)
+              )
+
+          if offenders:
+              print("Unapproved high-frequency client loops:")
+              for path in offenders:
+                  print(" -", path, "[" + ",".join(found[path]) + "]")
+              raise SystemExit(1)
+
+          if stale:
+              print("Stale high-frequency allowlist entries:")
+              for path in stale:
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("High-frequency client loop allowlist verified:")
+          for path in sorted(found):
+              print(" -", path, "[" + ",".join(found[path]) + "]")
+          PY
+
+      - name: Enforce scenery LOD registry consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          lod_source = Path("src/client/scenery-lod.client.lua").read_text()
+          visual_source = Path("src/shared/VisualBudgetRules.lua").read_text()
+
+          table_start = lod_source.find("local FOLDERS = {")
+          table_end = lod_source.find("\n}\n\nlocal function cameraPosition", table_start)
+          if table_start < 0 or table_end < 0:
+              raise SystemExit("Unable to locate scenery LOD folder registry.")
+
+          lod_block = lod_source[table_start:table_end]
+          lod_folders = set(re.findall(
+              r'^\s{4}([A-Za-z0-9_]+Local)\s*=\s*\{',
+              lod_block,
+              re.MULTILINE,
+          ))
+          registered = set(re.findall(
+              r'"([A-Za-z0-9_]+Local)"',
+              visual_source,
+          ))
+
+          missing = sorted(lod_folders - registered)
+          if missing:
+              print("Scenery LOD folders missing from VisualBudgetRules:")
+              for name in missing:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          weak_cache_markers = [
+              'folderCaches = setmetatable({}, {__mode = "k"})',
+          ]
+          absent = [marker for marker in weak_cache_markers if marker not in lod_source]
+          if absent:
+              raise SystemExit(
+                  "Scenery LOD cache must remain weak-keyed to avoid retaining destroyed map folders."
+              )
+
+          print(
+              "Scenery LOD registry verified:",
+              len(lod_folders),
+              "LOD folders covered by",
+              len(registered),
+              "visual budget folders.",
+          )
+          PY
+
+      - name: Audit persistent local visual folders
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          registered_source = Path("src/shared/VisualBudgetRules.lua").read_text()
+          registered = set(re.findall(r'"([A-Za-z0-9_]+Local)"', registered_source))
+
+          discovered = set()
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              lines = source.splitlines()
+              for index, line in enumerate(lines):
+                  if 'Instance.new("Folder")' not in line:
+                      continue
+                  window = "\n".join(lines[index:index + 8])
+                  match = re.search(r'\.Name\s*=\s*"([A-Za-z0-9_]+Local)"', window)
+                  if match:
+                      discovered.add(match.group(1))
+
+          ignored_non_visual = {
+              "ArenaSpatialAudioLocal",
+          }
+          missing = sorted(discovered - registered - ignored_non_visual)
+          print("Registered visual budget folders:", len(registered))
+          print("Persistent Local folders discovered:", len(discovered))
+          print("Explicit non-visual Local folders:", len(ignored_non_visual))
+
+          if missing:
+              print("Persistent visual Local folders not covered by VisualBudgetRules:")
+              for name in missing:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          unexpected_ignored = sorted(ignored_non_visual - discovered)
+          if unexpected_ignored:
+              print("Stale non-visual Local-folder allowlist entries:")
+              for name in unexpected_ignored:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          print("Persistent visual Local-folder coverage verified.")
+          PY
+
+      - name: Enforce client post-process ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          shared = Path("src/client/ArenaPostProcessLayer.lua")
+          shared_source = shared.read_text()
+
+          required_shared_classes = {
+              "ColorCorrectionEffect",
+              "Atmosphere",
+              "BloomEffect",
+              "DepthOfFieldEffect",
+              "SunRaysEffect",
+          }
+          for class_name in required_shared_classes:
+              if f'"{class_name}"' not in shared_source:
+                  raise SystemExit(
+                      f"ArenaPostProcessLayer missing shared class {class_name}."
+                  )
+
+          if "Instance.new(className)" not in shared_source:
+              raise SystemExit(
+                  "ArenaPostProcessLayer must remain the dynamic owner of persistent post-process creation."
+              )
+
+          allowed_literal = {
+              "src/client/disaster-aftermath.client.lua": {
+                  "ColorCorrectionEffect",
+                  "BlurEffect",
+              },
+              "src/client/freeze-status.client.lua": {
+                  "ColorCorrectionEffect",
+              },
+          }
+
+          classes = required_shared_classes | {"BlurEffect"}
+          found = {}
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              created = {
+                  class_name
+                  for class_name in classes
+                  if f'Instance.new("{class_name}")' in source
+              }
+              if created:
+                  found[str(path)] = created
+
+          if found != allowed_literal:
+              print("Unexpected literal client post-process creators:")
+              print("Expected:", allowed_literal)
+              print("Actual:", found)
+              raise SystemExit(1)
+
+          legacy_names = {
+              "ChaosColor",
+              "ChaosAtmosphere",
+              "ChaosBloom",
+              "ChaosRays",
+          }
+          legacy_reference_allowed = {
+              shared,
+              Path("src/client/studio-e2e.client.lua"),
+          }
+
+          for path in Path("src/client").rglob("*.lua"):
+              if path in legacy_reference_allowed:
+                  continue
+              source = path.read_text()
+              bad = sorted(name for name in legacy_names if name in source)
+              if bad:
+                  raise SystemExit(
+                      f"{path}: legacy duplicate post-process names remain: {bad}"
+                  )
+
+          print(
+              "Client post-process ownership verified:",
+              "ArenaPostProcessLayer persistent + aftermath/freeze temporary overlays.",
+          )
+          PY
+
+      - name: Validate visual plan milestone numbering
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("VISUAL_OVERHAUL_PLAN.txt")
+          labels = []
+          for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+              match = re.match(r"^\[(?:TODO|EN COURS|FAIT|QA)\]\s+(\S+)", line)
+              if not match:
+                  continue
+
+              label = match.group(1)
+              if re.fullmatch(r"\d+[A-Z]?(?:\.\d+[A-Z]?)+", label):
+                  labels.append((label, line_number))
+
+          seen = {}
+          duplicates = []
+          for label, line_number in labels:
+              if label in seen:
+                  duplicates.append((label, seen[label], line_number))
+              else:
+                  seen[label] = line_number
+
+          if duplicates:
+              print("Duplicate visual plan milestone labels:")
+              for label, first, second in duplicates:
+                  print(f" - {label}: lines {first} and {second}")
+              raise SystemExit(1)
+
+          print(f"Visual plan milestone numbering verified: {len(labels)} unique labels.")
+          PY
+
+      - name: Enforce single client cloud owner
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = Path("src/client/CloudLayer.lua")
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  if path == allowed:
+                      continue
+                  source = path.read_text()
+                  if 'Instance.new("Clouds")' in source:
+                      offenders.append(str(path))
+
+          if offenders:
+              print("Client Clouds creation must remain centralized in CloudLayer.lua:")
+              for path in sorted(set(offenders)):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Single client Clouds owner verified.")
+          PY
+
+      - name: Enforce performance telemetry isolation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("src/server/init.server.lua").read_text()
+          marker = 'performancePulseEvent.OnServerEvent:Connect'
+          start = source.find(marker)
+          if start < 0:
+              raise SystemExit("PerformancePulse handler is missing.")
+
+          end = source.find("\nend)\n", start)
+          if end < 0:
+              raise SystemExit("PerformancePulse handler is malformed.")
+
+          handler = source[start:end]
+          forbidden = [
+              "PlayerData.add",
+              "WalkSpeed",
+              "JumpPower",
+              "MaxHealth",
+              "Humanoid.Health",
+              "Coins",
+              "XP",
+              "Wins",
+          ]
+
+          found = [token for token in forbidden if token in handler]
+          if found:
+              print("Performance telemetry must remain analytics-only:", ", ".join(found))
+              raise SystemExit(1)
+
+          if "GameAnalytics.custom" not in handler:
+              raise SystemExit("PerformancePulse must terminate in analytics only.")
+
+          print("Performance telemetry isolation verified.")
+          PY
+
+      - name: Enforce README source-count consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          readme = Path("README.md").read_text()
+          arena_source = Path("src/server/ArenaVariants.lua").read_text()
+          cosmetics_source = Path("src/server/CosmeticsCatalog.lua").read_text()
+
+          disaster_count = len(list(Path("src/server/Disasters").glob("*.lua")))
+          spec_count = len(list(Path("tests/engine").glob("*.spec.luau")))
+
+          order_match = re.search(r"ArenaVariants\.Order\s*=\s*\{([^}]*)\}", arena_source, re.S)
+          if not order_match:
+              raise SystemExit("ArenaVariants.Order not found.")
+          arena_count = len(re.findall(r'"[^"]+"', order_match.group(1)))
+
+          definitions = cosmetics_source.split("Cosmetics.Order", 1)[0]
+          cosmetic_count = len(re.findall(r'\bId\s*=\s*"[^"]+"', definitions))
+
+          expected = {
+              "disasters": (
+                  disaster_count,
+                  re.search(r"- (\d+) modular disasters", readme),
+              ),
+              "arenas": (
+                  arena_count,
+                  re.search(r"- (\d+) rotating arena layouts", readme),
+              ),
+              "cosmetics": (
+                  cosmetic_count,
+                  re.search(r"- (\d+)-item cosmetic catalogue", readme),
+              ),
+              "engine specs": (
+                  spec_count,
+                  re.search(r"- (\d+) engine specs assigned exactly once", readme),
+              ),
+          }
+
+          failures = []
+          for label, (actual, match) in expected.items():
+              documented = int(match.group(1)) if match else None
+              if documented != actual:
+                  failures.append(
+                      f"{label}: README={documented!r}, source={actual}"
+                  )
+
+          disaster_section = readme.split("## Current disasters", 1)
+          if len(disaster_section) != 2:
+              failures.append("README Current disasters section missing")
+          else:
+              body = disaster_section[1].split("\n## ", 1)[0]
+              listed = len(re.findall(r"^\d+\.\s+", body, re.M))
+              if listed != disaster_count:
+                  failures.append(
+                      f"Current disasters list has {listed}, source has {disaster_count}"
+                  )
+
+          if failures:
+              print("README/source metadata mismatch:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          print(
+              "README metadata verified:",
+              f"{disaster_count} disasters,",
+              f"{arena_count} arenas,",
+              f"{cosmetic_count} cosmetics,",
+              f"{spec_count} engine specs",
+          )
+          PY
+
+      - name: Enforce accessibility setting consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          schema = Path("src/server/DataSchema.lua").read_text()
+          server = Path("src/server/init.server.lua").read_text()
+          client = Path("src/client/accessibility.client.lua").read_text()
+          haptics = Path("src/client/haptics.client.lua").read_text()
+          localization = Path("src/shared/CoreLocalization.lua").read_text()
+
+          settings = {
+              "ReduceMotion": ("MOTION_REDUCED", "MOTION_FULL"),
+              "AudioMuted": ("SOUND_OFF", "SOUND_ON"),
+              "HapticsDisabled": ("HAPTICS_OFF", "HAPTICS_ON"),
+          }
+
+          failures = []
+          for key, copy_keys in settings.items():
+              if f"{key} = false" not in schema:
+                  failures.append(f"{key}: missing persisted schema default")
+              if f'setting ~= "{key}"' not in server:
+                  failures.append(f"{key}: missing server allow-list entry")
+              if f'FireServer("{key}", nextValue)' not in client:
+                  failures.append(f"{key}: missing client persistence event")
+              for copy_key in copy_keys:
+                  if localization.count(copy_key) < 2:
+                      failures.append(f"{key}: localization key {copy_key} missing EN/FR")
+
+          if 'GetAttribute("HapticsDisabled") == true' not in haptics:
+              failures.append("HapticsDisabled: haptics runtime guard missing")
+
+          if failures:
+              print("Accessibility setting contract mismatch:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          print("Accessibility setting persistence/runtime contract verified.")
+          PY
+
+      - name: Enforce trusted release inputs and publish evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          publish = Path(".github/workflows/publish-roblox.yml").read_text()
+          gate = Path(".github/workflows/release-candidate-gate.yml").read_text()
+          failures = []
+
+          # Keep operator-typed expressions out of Bash source. Build
+          # the expression delimiter from separate strings so Actions
+          # itself cannot interpret the audit's Python source.
+          open_expr = "$" + "{{"
+          close_expr = "}}"
+          for name, text in (("publish", publish), ("candidate", gate)):
+              if 'test "' + open_expr + " inputs." in text:
+                  failures.append(f"{name}: shell-evaluated dispatch input")
+
+          if "\n  push:" in publish:
+              failures.append("publish: unattended branch-push trigger")
+          if ("PUBLISH_CONFIRM: " + open_expr + " inputs.confirm " + close_expr
+                  not in publish):
+              failures.append("publish: safe confirmation env missing")
+          if 'test "$PUBLISH_CONFIRM" = "PUBLISH"' not in publish:
+              failures.append("publish: exact typed confirmation not enforced")
+
+          fields = (
+              "confirm", "android", "desktop", "persistence",
+              "gameplay_fairness", "accessibility", "public_alpha", "store_assets",
+          )
+          for key in fields:
+              env = "RC_" + key.upper()
+              env_declaration = (env + ": " + open_expr + " inputs."
+                  + key + " " + close_expr)
+              if env_declaration not in gate:
+                  failures.append(f"candidate: {key} safe env missing")
+              expected = "CERTIFY" if key == "confirm" else "PASS"
+              required_test = 'test "$' + env + '" = "' + expected + '"'
+              if required_test not in gate:
+                  failures.append(f"candidate: {key} exact attestation missing")
+
+          if 'cat "$response_file"' in publish or "roblox_response=" in publish:
+              failures.append("publish: untrusted Roblox response leaked to logs/artifacts")
+          if 'published_version=$version' not in publish:
+              failures.append("publish: minimal version-only metadata missing")
+          if 'EXPECTED_PUBLIC_UNIVERSE: "10771083668"' not in publish:
+              failures.append("publish: known public Universe guard missing")
+          if 'EXPECTED_PUBLIC_PLACE: "95351659174730"' not in publish:
+              failures.append("publish: known public Place guard missing")
+
+          if failures:
+              for item in failures:
+                  print("ERROR:", item)
+              raise SystemExit(1)
+          print("Release confirmation, destination and response redaction verified.")
+          PY
+
+      - name: Enforce production release hygiene
+        shell: bash
+        run: |
+          if grep -RniE --include='*.lua' --include='*.luau' '\b(TODO|FIXME|HACK)\b' src; then
+            echo "Production source contains unresolved TODO/FIXME/HACK markers."
+            exit 1
+          fi
+
+          if grep -RniE --include='*.lua' --include='*.luau' '(123456|000000|PLACEHOLDER_ID|FAKE_ID|DUMMY_ID)' src; then
+            echo "Production source contains an obvious placeholder/fake identifier."
+            exit 1
+          fi
+
+          echo "Production release hygiene verified."
+
+      - name: Enforce server service export contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          init = Path("src/server/init.server.lua").read_text()
+          modules = {
+              "AchievementService": Path("src/server/AchievementService.lua"),
+              "CosmeticService": Path("src/server/CosmeticService.lua"),
+              "MonetizationService": Path("src/server/MonetizationService.lua"),
+              "GameAnalytics": Path("src/server/GameAnalytics.lua"),
+              "PlayerData": Path("src/server/PlayerData.lua"),
+          }
+
+          missing = []
+          for module, path in modules.items():
+              source = path.read_text()
+              exports = set(re.findall(rf"function\s+{module}\.([A-Za-z_][A-Za-z0-9_]*)", source))
+              calls = set(re.findall(rf"\b{module}\.([A-Za-z_][A-Za-z0-9_]*)", init))
+              for method in sorted(calls - exports):
+                  missing.append(f"{module}.{method}")
+
+          if missing:
+              print("Server module contract mismatch:")
+              for method in missing:
+                  print(" -", method)
+              raise SystemExit(1)
+
+          print("Server service contracts verified.")
+          PY
+
+      - name: Build Roblox place
+        run: |
+          set -euo pipefail
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" build/ChaosSurvival.rbxlx || {
+            echo "::error::Exact Git source identity missing from candidate place."
+            exit 1
+          }
+
+      - name: Verify packaged place integrity and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -s build/ChaosSurvival.rbxlx
+          python3 - <<'PY'
+          from collections import Counter
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          file = Path("build/ChaosSurvival.rbxlx")
+          root = ET.parse(file).getroot()
+          if root.tag != "roblox":
+              raise SystemExit("Rojo output is not a Roblox XML place.")
+          classes = Counter(item.get("class") for item in root.iter("Item"))
+          services = {
+              item.get("class") for item in root.findall("Item")
+          }
+          for service in ("ReplicatedStorage", "ServerScriptService", "StarterPlayer"):
+              if service not in services:
+                  raise SystemExit(f"Missing core Roblox service: {service}")
+          # Detect a truncated Rojo project that still produces a nonempty XML.
+          minima = {"ModuleScript": 120, "LocalScript": 70, "Script": 3}
+          for name, minimum in minima.items():
+              if classes[name] < minimum:
+                  raise SystemExit(f"Incomplete Roblox place: {name} count {classes[name]} < {minimum}")
+          for item in root.iter("Item"):
+              title = item.find('./Properties/string[@name="Name"]')
+              if title is not None and title.text == "VisualStagingStamp":
+                  raise SystemExit("Staging-only identity marker entered release place.")
+          print("Built place hierarchy verified:", dict(classes))
+          PY
+          test ! -e src/shared/VisualStagingStamp.lua || {
+            echo "::error::Staging-only watermark must not enter an ordinary release build."
+            exit 1
+          }
+          (
+            cd build
+            sha256sum ChaosSurvival.rbxlx > ChaosSurvival.rbxlx.sha256
+            sha256sum --check ChaosSurvival.rbxlx.sha256
+          )
+          {
+            printf 'source_sha=%s\n' "$GITHUB_SHA"
+            printf 'source_ref=%s\n' "$GITHUB_REF"
+            printf 'workflow_run=%s\n' "$GITHUB_RUN_ID"
+            printf 'built_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf 'package=ChaosSurvival.rbxlx\n'
+            printf 'publication=NOT_PUBLISHED\n'
+            printf 'studio_device_certification=NOT_VERIFIED\n'
+            printf 'release_gate=NOT_CERTIFIED\n'
+          } > build/candidate-provenance.txt
+          grep -Fxq "source_sha=$GITHUB_SHA" build/candidate-provenance.txt
+          grep -Fxq 'publication=NOT_PUBLISHED' build/candidate-provenance.txt
+          echo "Build archive includes SHA-256 checksum and explicit non-certified provenance."
+
+      - name: Upload built place
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-place
+          path: |
+            build/ChaosSurvival.rbxlx
+            build/ChaosSurvival.rbxlx.sha256
+            build/candidate-provenance.txt
+          if-no-files-found: error
+
+      # Source-art preview only. Generates free downloadable files on main,
+      # never calls Roblox, and never depends on asset API credentials.
+      - name: Archive original glTF previews for Android
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-3d-previews
+          path: |
+            build/mesh-previews/chaos_reactor_spire.gltf
+            build/mesh-previews/chaos_service_crane.gltf
+            build/mesh-previews/chaos_perimeter_gate.gltf
+            build/mesh-previews/chaos_arena_keel.gltf
+            build/mesh-previews/arena-keel-source.json
+            build/mesh-previews/manifest.json
+          if-no-files-found: error
+          retention-days: 30
+,
+              '^PlatformUnderFrame(%d+)
+          hardware = Path("src/client/PremiumFloorHardwareMeshKit.lua").read_text()
+          floor_src = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          relief_client = Path("src/client/arena-surface-relief.client.lua").read_text()
+          for name, client_name, receipt in (
+              ("floor_corner_guard", "CornerGuard", 41740585965),
+              ("floor_anchor_bolt_large", "AnchorBolt", 41740889677),
+              ("floor_harbor_tie", "HarborTie", 41740585965),
+          ):
+              assert (client_name+" = "+approved[name]) in floor_src
+              assert ("id = "+approved[name]) in hardware
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == name) == receipt
+          for check in (
+              "PremiumFloorHardwareMeshKit.install(",
+              "LocalOriginalFloorHardware3DCount",
+              "ArenaFloorFollowerKit.bind(base, folder)",
+              'child.Name == "AnchorBolt"',
+              'child.Name == "CornerGuard"',
+              'child.Name == "HarborTie"',
+          ):
+              assert check in relief_client, check
+          for check in (
+              'part.CanCollide = false', 'part.CanTouch = false',
+              'part.CanQuery = false', 'part.CastShadow = false',
+              'source:GetAttribute("OwnerVerified") ~= true',
+              'kind == "CornerGuard"',
+              'kind == "HarborTie"',
+              'kind == "AnchorBolt"',
+              'tier == "Medium" and 6 or 12',
+              'obj.Transparency = 1',
+          ):
+              # The old fallback renderer remains untouched and self-restores
+              # on a map/tier rebuild; the new module never modifies colliders.
+              if check == 'obj.Transparency = 1':
+                  assert 'anchor.Transparency = 1' in hardware
+              else:
+                  assert check in hardware, check
+          assert "RunService" not in hardware
+          assert "ApprovedFloorReliefTemplates" in hardware
+          assert "ArenaSurfaceReliefLocal" in census
+          relief_server = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          relief_client = Path("src/client/PremiumFloorReliefMeshKit.lua").read_text()
+          relief_script = Path("src/client/arena-surface-relief.client.lua").read_text()
+          for variant, source_kind in (
+              ("Essential", "relief_essential"), ("Classic", "relief_classic"),
+              ("Towers", "relief_towers"), ("Crossroads", "relief_crossroads"),
+              ("Orbital", "relief_orbital"), ("Harbor", "relief_harbor"),
+          ):
+              assert (variant + " = " + approved[source_kind]) in relief_server
+              assert ("id = " + approved[source_kind]) in relief_client
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == source_kind) == 41736767816
+          for required in (
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedFloorReliefTemplates",
+              "AssetService.LoadAssetAsync",
+          ):
+              assert required in relief_server
+          for required in (
+              "PremiumFloorReliefMeshKit.install(",
+              "LocalOriginalFloorRelief3DCount",
+              "ArenaFloorFollowerKit.bind(base, folder)",
+          ):
+              assert required in relief_script
+          for required in (
+              "Low = 6, Medium = 16, High = 28",
+              "obj.CanCollide = false",
+              "obj.CanTouch = false",
+              "obj.CanQuery = false",
+              "obj.CastShadow = false",
+              "source:GetAttribute(\"OwnerVerified\") ~= true",
+          ):
+              assert required in relief_client, required
+          assert "RunService" not in relief_client
+          assert "ApprovedFloorReliefTemplates" in relief_script
+          assert "ArenaSurfaceReliefLocal" in census
+          assert "PremiumFloorReliefAssets.start" in Path(
+              "src/server/init.server.lua").read_text()
+          ambient_source = Path("src/server/PremiumAmbientMotionAssets.lua").read_text()
+          ambient_mesh = Path("src/client/PremiumAmbientMotionMeshKit.lua").read_text()
+          ambient_script = Path("src/client/arena-ambient-props.client.lua").read_text()
+          for variant, source_kind in (
+              ("Classic", "ambient_drone"), ("Towers", "ambient_lift"),
+              ("Crossroads", "ambient_transit"),
+              ("Orbital", "ambient_satellite"), ("Harbor", "ambient_cargo"),
+          ):
+              assert (variant + " = " + approved[source_kind]) in ambient_source
+              assert ("id = " + approved[source_kind]) in ambient_mesh
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == source_kind) == 41733818047
+          for required in (
+              "OriginalMeshScenery.sanitize(raw)",
+              "ApprovedAmbientMotionTemplates",
+              "AssetService.LoadAssetAsync",
+          ):
+              assert required in ambient_source
+          for required in (
+              "PremiumAmbientMotionMeshKit.install(",
+              "PremiumAmbientMotionMeshKit.move(item)",
+              "PremiumAmbientMotionMeshKit.phase(",
+              "LocalOriginalAmbientMotion3DCount",
+          ):
+              assert required in ambient_script
+          for required in (
+              "Low = 2, Medium = 4, High = 6",
+              "part.CanCollide = false",
+              "part.CanTouch = false",
+              "part.CanQuery = false",
+              "part.CastShadow = false",
+              'source:GetAttribute("OwnerVerified") ~= true',
+          ):
+              assert required in ambient_mesh, required
+          assert "RunService" not in ambient_mesh
+          assert "ApprovedAmbientMotionTemplates" in ambient_script
+          service_source = Path("src/server/PremiumServiceEquipmentAssets.lua").read_text()
+          service_client = Path("src/client/PremiumServiceEquipmentMeshKit.lua").read_text()
+          service_script = Path("src/client/arena-service-props.client.lua").read_text()
+          for arena, model in (
+              ("Classic", "service_camera"), ("Towers", "service_maintenance"),
+              ("Crossroads", "service_wayfinder"), ("Orbital", "service_orbital"),
+              ("Harbor", "service_mooring"),
+          ):
+              assert (arena + " = " + approved[model]) in service_source
+              assert ("id = " + approved[model]) in service_client
+              assert next(m["workflow_run_id"] for m in models
+                          if m["name"] == model) == 41729439190
+          assert "OriginalMeshScenery.sanitize(raw)" in service_source
+          assert "PremiumServiceEquipmentMeshKit.replace(" in service_script
+          assert "LocalOriginalServiceEquipment3DCount" in service_script
+          for safe in ("part.CanCollide = false", "part.CanTouch = false",
+                       "part.CanQuery = false", "part.CastShadow = false",
+                       'source:GetAttribute("OwnerVerified") ~= true',
+                       "Low = 1, Medium = 2, High = 4"):
+              assert safe in service_client, safe
+          assert approved["arena_keel"] == "121436301473005"
+          assert next(m["workflow_run_id"] for m in models
+                      if m["name"] == "arena_keel") == 41669929967
+          keel = Path("src/client/ArenaKeelMeshKit.lua").read_text()
+          assert "OriginalArenaKeel = 121436301473005" in route_source
+          assert 'PremiumArenaKeel3D' in route_source
+          assert "local ASSET_ID = 121436301473005" in keel
+          assert 'OriginalArenaKeelLocal' in census
+          assert "ArenaKeelMeshKit.sync(arena, cameraPoint" in scenery
+          assert "LocalOriginalArenaKeelCount" in scenery
+          assert "Low = {count = 1" in keel
+          assert "Medium = {count = 3" in keel
+          assert "High = {count = 5" in keel
+          for safety in ("part.CanCollide = false", "part.CanTouch = false",
+                         "part.CanQuery = false", "part.CastShadow = false",
+                         "base:GetPropertyChangedSignal(\"Size\")",
+                         'source:GetAttribute("OwnerVerified") ~= true',
+                         "Original3DAssetId"):
+              assert safety in keel, safety
+          keel_art = json.loads(Path(
+              "build/mesh-previews/chaos_arena_keel.gltf").read_text())
+          keel_source = json.loads(Path(
+              "build/mesh-previews/arena-keel-source.json").read_text())
+          keel_parts = keel_art["meshes"][0]["primitives"]
+          assert keel_source["asset"] == "arena_keel"
+          assert keel_source["triangles"] == 3332
+          assert len(keel_parts) == 7
+          assert sum(keel_art["accessors"][p["attributes"]["POSITION"]]["count"]//3
+                     for p in keel_parts) == 3332
+          assert "ArenaKeelMeshKit" in Path(
+              "tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          # Exact real approved import 84582262145054 is REUSED for
+          # replaceable understructure bays; no external marketplace mesh.
+          beams = Path("src/client/UnderstructureBeamMeshKit.lua").read_text()
+          understructure = Path("src/client/arena-understructure.client.lua").read_text()
+          engine = Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          assert approved["underdeck_chassis"] == "84582262145054"
+          assert "local ASSET_ID = 84582262145054" in beams
+          assert 'OriginalUnderstructureBeamsLocal' in census
+          assert 'LocalOriginalUnderstructureBeamCount' in scenery
+          assert 'UnderstructureBeamMeshKit.sync(arena, cameraPoint' in scenery
+          assert 'UnderstructureBeamMeshKit.reset()' in understructure
+          assert 'OriginalUnderstructureBeam' in understructure
+          assert 'UnderClassicBeam' in understructure
+          assert 'UnderCrossroadsBeam' in understructure
+          assert 'UnderClassicChassisX' not in understructure
+          assert 'UnderCrossroadsTrunk' not in understructure
+          assert 'UnderstructureBeamMeshKit' in engine
+          assert 'Low = {count = 1' in beams
+          assert 'Medium = {count = 4' in beams
+          assert 'High = {count = 12' in beams
+          for required in ('source:GetAttribute("OwnerVerified") ~= true',
+                           'source:GetAttribute("Original3DAssetId") ~= ASSET_ID',
+                           'base:GetPropertyChangedSignal("Size")',
+                           'piece.CanCollide = false',
+                           'piece.CanTouch = false',
+                           'piece.CanQuery = false',
+                           'native.Transparency = 1',
+                           'entry.native.Transparency = entry.originalTransparency'):
+              assert required in beams, required
+          assert 'RunService' not in beams and 'task.spawn' not in beams
+          print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
+          print("Verified 37 creator-owned Approved Model assets including three authentic corner/bolt/Harbor machine sculptures, strict Android/hazard safety and provenance.")
+          PY
+
+      - name: Install Rojo 7.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 4 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 15 --max-time 90 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            -o /tmp/rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          unzip -tq /tmp/rojo.zip >/dev/null || {
+            echo "::error::Pinned Rojo archive is truncated or invalid."
+            exit 1
+          }
+          mkdir -p /tmp/rojo
+          unzip -q /tmp/rojo.zip -d /tmp/rojo
+          chmod +x /tmp/rojo/rojo
+          echo "/tmp/rojo" >> "$GITHUB_PATH"
+          /tmp/rojo/rojo --version
+
+      - name: Guard Android first-frame VFX budgets
+        shell: bash
+        run: python tools/validate_mobile_vfx_first_frame.py
+
+      - name: Validate Luau syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --retry 4 --retry-all-errors --retry-delay 3 \
+            --connect-timeout 15 --max-time 90 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            -o /tmp/luau.zip \
+            https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
+          unzip -tq /tmp/luau.zip >/dev/null || {
+            echo "::error::Pinned Luau compiler archive is truncated or invalid."
+            exit 1
+          }
+          mkdir -p /tmp/luau
+          unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau-compile
+          find src tests studio -type f \( -name '*.lua' -o -name '*.luau' \) -print0 |
+            xargs -0 -n1 /tmp/luau/luau-compile >/dev/null
+
+      - name: Self-test real-engine Cloud task batching
+        shell: bash
+        run: python tools/prepare_cloud_batches.py --self-test
+
+      - name: Enforce persistent purchase session guards
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          cosmetic = Path("src/server/CosmeticService.lua").read_text()
+          monetization = Path("src/server/MonetizationService.lua").read_text()
+
+          def between(source, start, end=None):
+              a = source.find(start)
+              if a < 0:
+                  raise SystemExit(f"Missing guarded section: {start}")
+              b = source.find(end, a + len(start)) if end else len(source)
+              if end and b < 0:
+                  raise SystemExit(f"Missing section terminator: {end}")
+              return source[a:b]
+
+          guarded = [
+              (
+                  "Cosmetic equip",
+                  between(
+                      cosmetic,
+                      "local function equipCosmetic",
+                      "local function buyCosmetic",
+                  ),
+              ),
+              (
+                  "Cosmetic coin purchase",
+                  between(
+                      cosmetic,
+                      "local function buyCosmetic",
+                      "function CosmeticService.grant",
+                  ),
+              ),
+              (
+                  "Cosmetic premium grant",
+                  between(
+                      cosmetic,
+                      "function CosmeticService.grant",
+                      "function CosmeticService.sync",
+                  ),
+              ),
+              (
+                  "Premium purchase prompt",
+                  between(
+                      monetization,
+                      'if action ~= "buy_pass"',
+                      "MarketplaceService.PromptGamePassPurchaseFinished",
+                  ),
+              ),
+              (
+                  "Premium purchase completion",
+                  between(
+                      monetization,
+                      "MarketplaceService.PromptGamePassPurchaseFinished",
+                      "Players.PlayerAdded",
+                  ),
+              ),
+          ]
+
+          failures = []
+          for label, section in guarded:
+              if "PlayerData.canMutate(player)" not in section:
+                  failures.append(label)
+
+          if failures:
+              print("Persistent mutation path missing active-session guard:")
+              for label in failures:
+                  print(" -", label)
+              raise SystemExit(1)
+
+          print("Persistent purchase/grant session guards verified.")
+          PY
+
+      - name: Enforce fair-play monetization boundary
+        shell: bash
+        run: |
+          test -f src/server/MonetizationService.lua
+          grep -q 'CosmeticOnly:true' src/server/MonetizationService.lua
+          if grep -Eq 'WalkSpeed|JumpPower|MaxHealth|WinCoins|WinXP|PlayerData\.add|ParticipationCoins|ParticipationXP' src/server/MonetizationService.lua; then
+            echo "Paid monetization must never modify gameplay power or progression rewards."
+            exit 1
+          fi
+
+      - name: Enforce client protocol contracts
+        shell: bash
+        run: |
+          if grep -RFn --include='*.lua' --include='*.luau' 'phase == "results"' src; then
+            echo 'Round phase contract is "result", not "results".'
+            exit 1
+          fi
+          if grep -RFn --include='*.lua' --include='*.luau' 'feedback.survivalStreak' src/client; then
+            echo 'Round feedback streak key is "streak".'
+            exit 1
+          fi
+
+      - name: Guard post-win settlement and replay contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          server = Path("src/server/init.server.lua").read_text()
+          journey = Path("src/shared/RoundJourneyRules.lua").read_text()
+          required = {
+              "return the played round challenge from the disaster runner":
+                  "}, roundChallenge\nend\n\nwhile true do" in server,
+              "receive the challenge in round settlement":
+                  "balanceMetrics, roundChallenge =\n        runDisasterSet(" in server,
+              "validate challenge before paying rewards":
+                  'assert(type(roundChallenge) == "table"' in server,
+              "stamp the winner receipt with the round number":
+                  "roundNumber = roundNumber,\n                coins =" in server,
+              "stamp the READY countdown with the upcoming round number":
+                  'phase = "ready",\n            roundNumber = upcomingRoundNumber,' in server,
+              "restore human health at accepted READY spawn":
+                  "SurvivalFeedback.restoreForNextRound(humanoid)" in server,
+              "verify actual RESULT to next READY rather than decorative result":
+                  "function RoundJourneyRules.replayStarted(" in journey,
+          }
+
+          missing = [name for name, present in required.items() if not present]
+          if missing:
+              raise SystemExit("Post-win protocol regression: " + ", ".join(missing))
+          print("Server settlement, reward receipt and replay continuity contracts intact.")
+          PY
+
+      - name: Guard real 3D permanent sky-route residency and repaired material contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          route = Path("src/client/PremiumRouteMeshKit.lua").read_text()
+          lod = Path("src/client/scenery-lod.client.lua").read_text()
+          map_builder = Path("src/server/MapBuilder.lua").read_text()
+          truth = Path("tests/engine/mapbuilder.spec.luau").read_text()
+          engine = Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          must_have = (
+              "PremiumJumpDeck = 98478693994864",
+              "PremiumSkybridgeModule = 94023662427980",
+              "ChaosPermanentRoute",
+              "PromenadeLane",
+              "PromenadeStep",
+              "SkySpineStep",
+              "SkySpineInterchange",
+              "BridgeShutterPhase",
+              "CollapsePhase",
+              "isPermanentConnector(platform)",
+              "if not safePlatform(platform) then return nil end",
+              "base.Size.X < 318 or base.Size.Z < 318",
+              "CanCollide = false",
+              "CanTouch = false",
+              "CanQuery = false",
+              "cameraLook",
+          )
+          assert all(text in route for text in must_have)
+          assert "decks = 2, bridges = 1, segments = 1" in route
+          assert "decks = 8, bridges = 2, segments = 3" in route
+          assert "decks = 12, bridges = 3, segments = 4" in route
+          assert "PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name," in lod
+          assert "cameraReady, cameraLook)" in lod
+          assert 'platform:SetAttribute("ChaosPermanentRoute", true)' in map_builder
+          assert 'platform:SetAttribute("SkySpineInterchange", true)' in map_builder
+          assert "Towers = Enum.Material.Metal" in truth
+          assert "Towers = Enum.Material.Foil" not in truth
+          assert 'crossing:SetAttribute("PromenadeLane", 1)' in engine
+          assert 'crossing:SetAttribute("SkySpineInterchange", true)' in engine
+          assert 'crossing:SetAttribute("ChaosPermanentRoute", false)' in engine
+          print("Authentic approved 3D permanent crossings, Android MeshPart caps, safe hazard ownership and Towers Cloud contract verified.")
+          PY
+
+      - name: Guard authentic five-arena sun and native-PBR art budget
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          script = Path("src/client/arena-lighting.client.lua").read_text()
+          theme = Path("src/shared/VisualTheme.lua").read_text()
+          focals = Path("src/shared/ArenaFocalLightingRules.lua").read_text()
+          focal_source = Path("src/client/arena-focal-lighting.client.lua").read_text()
+          pbr = Path("src/shared/PbrDistrictRules.lua").read_text()
+          worlds = ("Classic", "Towers", "Crossroads", "Orbital", "Harbor")
+          art = {}
+          for index, world in enumerate(worlds):
+              start = script.index("    " + world + " = {", script.index("local MOODS = {"))
+              end = script.find("\n    },", start)
+              assert end > start
+              body = script[start:end]
+              def number(field):
+                  match = re.search(r"^        " + field + r" = ([0-9.]+),", body, re.M)
+                  assert match, (world,field)
+                  return float(match.group(1))
+              time = number("ClockTime")
+              latitude = number("Latitude")
+              density = number("Density")
+              diffuse = number("EnvironmentDiffuse")
+              specular = number("EnvironmentSpecular")
+              assert 10 <= time < 17 and 20 <= latitude <= 80
+              assert 0.10 <= density <= 0.20
+              assert 0.35 <= diffuse <= 0.55
+              assert 0.6 <= specular <= 0.80
+              art[world] = (time,latitude)
+          assert len(set(art.values())) == 5
+          assert "GeographicLatitude = mood.Latitude or 36" in script
+          assert "if nextPhase == phase then return end" in script
+          assert "disasterOwnsEnvironment = phase == \"round\" or phase == \"ready\"" in script
+          assert "disasterOwnsPostProcess = disasterOwnsEnvironment" in script
+          assert "PbrDistrictRules" in pbr
+          assert "return touch and 32 or 48" in pbr
+          assert "return touch and 72 or 144" in pbr
+          assert "return 0" in pbr
+          assert "if tierName == \"Low\" then" in focals
+          assert "return 3" in focals
+          assert "local neutral = Color3.fromRGB(" in focal_source
+          for world in worlds:
+              block = theme.split("    " + world + " = {", 1)[1].split("\n    },", 1)[0]
+              surface = re.search(r"Surface = Color3.fromRGB\((\d+), (\d+), (\d+)\)", block)
+              assert surface and min(map(int,surface.groups())) >= 40
+          print("Five unique solar directions and safe readable Android material fallbacks verified.",art)
+          print("PBR 0/32/72 material tiers, 0/2/3 spotlight tiers and disaster Lighting ownership intact.")
+          PY
+
+      - name: Enforce Lighting property ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          arena = Path("src/client/arena-lighting.client.lua")
+          juice = Path("src/client/juice.client.lua")
+
+          arena_only = {
+              "GlobalShadows",
+              "LightingStyle",
+              "PrioritizeLightingQuality",
+              "Ambient",
+              "OutdoorAmbient",
+              "ColorShift_Top",
+              "ColorShift_Bottom",
+              "ShadowSoftness",
+              "ClockTime",
+              "GeographicLatitude",
+          }
+          shared_active = {
+              "ExposureCompensation",
+              "EnvironmentDiffuseScale",
+              "EnvironmentSpecularScale",
+          }
+
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  source = path.read_text()
+
+                  for prop in arena_only:
+                      if re.search(rf"Lighting\.{prop}\s*=", source) and path != arena:
+                          offenders.append(f"{path}: Lighting.{prop}")
+
+                  for prop in shared_active:
+                      if re.search(rf"Lighting\.{prop}\s*=", source) and path not in {arena, juice}:
+                          offenders.append(f"{path}: Lighting.{prop}")
+
+          if offenders:
+              print("Client Lighting ownership violations:")
+              for item in sorted(offenders):
+                  print(" -", item)
+              raise SystemExit(1)
+
+          print(
+              "Lighting ownership verified:",
+              "arena baseline; juice active exposure/diffuse/specular only.",
+          )
+          PY
+
+      - name: Enforce single round FOV owner
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = Path("src/client/juice.client.lua")
+          offenders = []
+
+          for path in Path("src/client").rglob("*.lua"):
+              if path == allowed:
+                  continue
+              source = path.read_text()
+              if __import__("re").search(r"FieldOfView\s*=", source):
+                  offenders.append(str(path))
+
+          for path in Path("src/client").rglob("*.luau"):
+              if path == allowed:
+                  continue
+              source = path.read_text()
+              if __import__("re").search(r"FieldOfView\s*=", source):
+                  offenders.append(str(path))
+
+          if offenders:
+              print("Round FOV ownership must remain centralized in juice.client.lua:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Single round FOV owner verified.")
+          PY
+
+      - name: Audit client map lifecycle listeners
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              if "GeneratedMap" not in source or ".ChildAdded:Connect" not in source:
+                  continue
+
+              receivers = sorted(set(re.findall(
+                  r'([A-Za-z_][A-Za-z0-9_]*)\.ChildAdded:Connect',
+                  source
+              )))
+              non_workspace = [
+                  receiver for receiver in receivers
+                  if receiver not in {"workspace"}
+              ]
+              if non_workspace and ":Disconnect()" not in source:
+                  candidates.append((str(path), non_workspace))
+
+          if candidates:
+              print("Unowned map-lifecycle ChildAdded listeners detected:")
+              for path, receivers in candidates:
+                  print(" -", path, "receivers=" + ",".join(receivers))
+              raise SystemExit(1)
+
+          print("Client map lifecycle listener ownership verified.")
+          PY
+
+      - name: Audit AI survivor folder lifecycle listeners
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          offenders = []
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              if "AISurvivors" not in source or ".ChildAdded:Connect" not in source:
+                  continue
+              if "ChildRemoved:Connect" not in source or ":Disconnect()" not in source:
+                  offenders.append(str(path))
+
+          if offenders:
+              print("AISurvivors listeners must explicitly disconnect/rebind:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("AI survivor folder lifecycle listeners verified.")
+          PY
+
+      - name: Enforce Animator-safe Motor6D polish
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  source = path.read_text()
+                  if "Motor6D" not in source:
+                      continue
+                  if re.search(r"\.[Tt]ransform\s*=", source):
+                      offenders.append(str(path))
+
+          if offenders:
+              print("Client Motor6D.Transform writes can fight the Animator:")
+              for path in sorted(offenders):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Animator-safe Motor6D client polish verified.")
+          PY
+
+      - name: Enforce high-frequency client loop allowlist
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          patterns = {
+              "RenderStepped": re.compile(r"RunService\.RenderStepped:Connect|\.RenderStepped:Connect"),
+              "Heartbeat": re.compile(r"RunService\.Heartbeat:Connect|\.Heartbeat:Connect"),
+              "BindToRenderStep": re.compile(r"BindToRenderStep"),
+          }
+
+          allowed = {
+              "src/client/body-feel.client.lua",
+              "src/client/juice.client.lua",
+              "src/client/movement-feel.client.lua",
+          }
+
+          # A Studio-only AI visual QA camera must use RenderStep to
+          # follow real NPC movement. Verify BOTH production and test-suite
+          # early exits before granting this explicit narrow exception.
+          studio_only = {"src/client/visual-ai-review.client.lua"}
+          for studio_path in studio_only:
+              source = Path(studio_path).read_text()
+              if ('if not RunService:IsStudio() then return end' not in source
+                      or 'ReplicatedStorage:GetAttribute("ChaosVisualAISuite")' not in source):
+                  raise SystemExit(
+                      "Studio visual camera must be guarded against public execution."
+                  )
+
+          found = {}
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              kinds = [name for name, pattern in patterns.items() if pattern.search(source)]
+              if kinds:
+                  found[str(path)] = kinds
+
+          offenders = sorted(set(found) - allowed - studio_only)
+          stale = sorted(allowed - set(found))
+          stale_studio = sorted(studio_only - set(found))
+          if stale_studio:
+              raise SystemExit(
+                  "Studio-only render loop exemption went stale: "
+                  + ", ".join(stale_studio)
+              )
+
+          if offenders:
+              print("Unapproved high-frequency client loops:")
+              for path in offenders:
+                  print(" -", path, "[" + ",".join(found[path]) + "]")
+              raise SystemExit(1)
+
+          if stale:
+              print("Stale high-frequency allowlist entries:")
+              for path in stale:
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("High-frequency client loop allowlist verified:")
+          for path in sorted(found):
+              print(" -", path, "[" + ",".join(found[path]) + "]")
+          PY
+
+      - name: Enforce scenery LOD registry consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          lod_source = Path("src/client/scenery-lod.client.lua").read_text()
+          visual_source = Path("src/shared/VisualBudgetRules.lua").read_text()
+
+          table_start = lod_source.find("local FOLDERS = {")
+          table_end = lod_source.find("\n}\n\nlocal function cameraPosition", table_start)
+          if table_start < 0 or table_end < 0:
+              raise SystemExit("Unable to locate scenery LOD folder registry.")
+
+          lod_block = lod_source[table_start:table_end]
+          lod_folders = set(re.findall(
+              r'^\s{4}([A-Za-z0-9_]+Local)\s*=\s*\{',
+              lod_block,
+              re.MULTILINE,
+          ))
+          registered = set(re.findall(
+              r'"([A-Za-z0-9_]+Local)"',
+              visual_source,
+          ))
+
+          missing = sorted(lod_folders - registered)
+          if missing:
+              print("Scenery LOD folders missing from VisualBudgetRules:")
+              for name in missing:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          weak_cache_markers = [
+              'folderCaches = setmetatable({}, {__mode = "k"})',
+          ]
+          absent = [marker for marker in weak_cache_markers if marker not in lod_source]
+          if absent:
+              raise SystemExit(
+                  "Scenery LOD cache must remain weak-keyed to avoid retaining destroyed map folders."
+              )
+
+          print(
+              "Scenery LOD registry verified:",
+              len(lod_folders),
+              "LOD folders covered by",
+              len(registered),
+              "visual budget folders.",
+          )
+          PY
+
+      - name: Audit persistent local visual folders
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          registered_source = Path("src/shared/VisualBudgetRules.lua").read_text()
+          registered = set(re.findall(r'"([A-Za-z0-9_]+Local)"', registered_source))
+
+          discovered = set()
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              lines = source.splitlines()
+              for index, line in enumerate(lines):
+                  if 'Instance.new("Folder")' not in line:
+                      continue
+                  window = "\n".join(lines[index:index + 8])
+                  match = re.search(r'\.Name\s*=\s*"([A-Za-z0-9_]+Local)"', window)
+                  if match:
+                      discovered.add(match.group(1))
+
+          ignored_non_visual = {
+              "ArenaSpatialAudioLocal",
+          }
+          missing = sorted(discovered - registered - ignored_non_visual)
+          print("Registered visual budget folders:", len(registered))
+          print("Persistent Local folders discovered:", len(discovered))
+          print("Explicit non-visual Local folders:", len(ignored_non_visual))
+
+          if missing:
+              print("Persistent visual Local folders not covered by VisualBudgetRules:")
+              for name in missing:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          unexpected_ignored = sorted(ignored_non_visual - discovered)
+          if unexpected_ignored:
+              print("Stale non-visual Local-folder allowlist entries:")
+              for name in unexpected_ignored:
+                  print(" -", name)
+              raise SystemExit(1)
+
+          print("Persistent visual Local-folder coverage verified.")
+          PY
+
+      - name: Enforce client post-process ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          shared = Path("src/client/ArenaPostProcessLayer.lua")
+          shared_source = shared.read_text()
+
+          required_shared_classes = {
+              "ColorCorrectionEffect",
+              "Atmosphere",
+              "BloomEffect",
+              "DepthOfFieldEffect",
+              "SunRaysEffect",
+          }
+          for class_name in required_shared_classes:
+              if f'"{class_name}"' not in shared_source:
+                  raise SystemExit(
+                      f"ArenaPostProcessLayer missing shared class {class_name}."
+                  )
+
+          if "Instance.new(className)" not in shared_source:
+              raise SystemExit(
+                  "ArenaPostProcessLayer must remain the dynamic owner of persistent post-process creation."
+              )
+
+          allowed_literal = {
+              "src/client/disaster-aftermath.client.lua": {
+                  "ColorCorrectionEffect",
+                  "BlurEffect",
+              },
+              "src/client/freeze-status.client.lua": {
+                  "ColorCorrectionEffect",
+              },
+          }
+
+          classes = required_shared_classes | {"BlurEffect"}
+          found = {}
+          for path in Path("src/client").rglob("*.lua"):
+              source = path.read_text()
+              created = {
+                  class_name
+                  for class_name in classes
+                  if f'Instance.new("{class_name}")' in source
+              }
+              if created:
+                  found[str(path)] = created
+
+          if found != allowed_literal:
+              print("Unexpected literal client post-process creators:")
+              print("Expected:", allowed_literal)
+              print("Actual:", found)
+              raise SystemExit(1)
+
+          legacy_names = {
+              "ChaosColor",
+              "ChaosAtmosphere",
+              "ChaosBloom",
+              "ChaosRays",
+          }
+          legacy_reference_allowed = {
+              shared,
+              Path("src/client/studio-e2e.client.lua"),
+          }
+
+          for path in Path("src/client").rglob("*.lua"):
+              if path in legacy_reference_allowed:
+                  continue
+              source = path.read_text()
+              bad = sorted(name for name in legacy_names if name in source)
+              if bad:
+                  raise SystemExit(
+                      f"{path}: legacy duplicate post-process names remain: {bad}"
+                  )
+
+          print(
+              "Client post-process ownership verified:",
+              "ArenaPostProcessLayer persistent + aftermath/freeze temporary overlays.",
+          )
+          PY
+
+      - name: Validate visual plan milestone numbering
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("VISUAL_OVERHAUL_PLAN.txt")
+          labels = []
+          for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+              match = re.match(r"^\[(?:TODO|EN COURS|FAIT|QA)\]\s+(\S+)", line)
+              if not match:
+                  continue
+
+              label = match.group(1)
+              if re.fullmatch(r"\d+[A-Z]?(?:\.\d+[A-Z]?)+", label):
+                  labels.append((label, line_number))
+
+          seen = {}
+          duplicates = []
+          for label, line_number in labels:
+              if label in seen:
+                  duplicates.append((label, seen[label], line_number))
+              else:
+                  seen[label] = line_number
+
+          if duplicates:
+              print("Duplicate visual plan milestone labels:")
+              for label, first, second in duplicates:
+                  print(f" - {label}: lines {first} and {second}")
+              raise SystemExit(1)
+
+          print(f"Visual plan milestone numbering verified: {len(labels)} unique labels.")
+          PY
+
+      - name: Enforce single client cloud owner
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed = Path("src/client/CloudLayer.lua")
+          offenders = []
+
+          for pattern in ("*.lua", "*.luau"):
+              for path in Path("src/client").rglob(pattern):
+                  if path == allowed:
+                      continue
+                  source = path.read_text()
+                  if 'Instance.new("Clouds")' in source:
+                      offenders.append(str(path))
+
+          if offenders:
+              print("Client Clouds creation must remain centralized in CloudLayer.lua:")
+              for path in sorted(set(offenders)):
+                  print(" -", path)
+              raise SystemExit(1)
+
+          print("Single client Clouds owner verified.")
+          PY
+
+      - name: Enforce performance telemetry isolation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("src/server/init.server.lua").read_text()
+          marker = 'performancePulseEvent.OnServerEvent:Connect'
+          start = source.find(marker)
+          if start < 0:
+              raise SystemExit("PerformancePulse handler is missing.")
+
+          end = source.find("\nend)\n", start)
+          if end < 0:
+              raise SystemExit("PerformancePulse handler is malformed.")
+
+          handler = source[start:end]
+          forbidden = [
+              "PlayerData.add",
+              "WalkSpeed",
+              "JumpPower",
+              "MaxHealth",
+              "Humanoid.Health",
+              "Coins",
+              "XP",
+              "Wins",
+          ]
+
+          found = [token for token in forbidden if token in handler]
+          if found:
+              print("Performance telemetry must remain analytics-only:", ", ".join(found))
+              raise SystemExit(1)
+
+          if "GameAnalytics.custom" not in handler:
+              raise SystemExit("PerformancePulse must terminate in analytics only.")
+
+          print("Performance telemetry isolation verified.")
+          PY
+
+      - name: Enforce README source-count consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          readme = Path("README.md").read_text()
+          arena_source = Path("src/server/ArenaVariants.lua").read_text()
+          cosmetics_source = Path("src/server/CosmeticsCatalog.lua").read_text()
+
+          disaster_count = len(list(Path("src/server/Disasters").glob("*.lua")))
+          spec_count = len(list(Path("tests/engine").glob("*.spec.luau")))
+
+          order_match = re.search(r"ArenaVariants\.Order\s*=\s*\{([^}]*)\}", arena_source, re.S)
+          if not order_match:
+              raise SystemExit("ArenaVariants.Order not found.")
+          arena_count = len(re.findall(r'"[^"]+"', order_match.group(1)))
+
+          definitions = cosmetics_source.split("Cosmetics.Order", 1)[0]
+          cosmetic_count = len(re.findall(r'\bId\s*=\s*"[^"]+"', definitions))
+
+          expected = {
+              "disasters": (
+                  disaster_count,
+                  re.search(r"- (\d+) modular disasters", readme),
+              ),
+              "arenas": (
+                  arena_count,
+                  re.search(r"- (\d+) rotating arena layouts", readme),
+              ),
+              "cosmetics": (
+                  cosmetic_count,
+                  re.search(r"- (\d+)-item cosmetic catalogue", readme),
+              ),
+              "engine specs": (
+                  spec_count,
+                  re.search(r"- (\d+) engine specs assigned exactly once", readme),
+              ),
+          }
+
+          failures = []
+          for label, (actual, match) in expected.items():
+              documented = int(match.group(1)) if match else None
+              if documented != actual:
+                  failures.append(
+                      f"{label}: README={documented!r}, source={actual}"
+                  )
+
+          disaster_section = readme.split("## Current disasters", 1)
+          if len(disaster_section) != 2:
+              failures.append("README Current disasters section missing")
+          else:
+              body = disaster_section[1].split("\n## ", 1)[0]
+              listed = len(re.findall(r"^\d+\.\s+", body, re.M))
+              if listed != disaster_count:
+                  failures.append(
+                      f"Current disasters list has {listed}, source has {disaster_count}"
+                  )
+
+          if failures:
+              print("README/source metadata mismatch:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          print(
+              "README metadata verified:",
+              f"{disaster_count} disasters,",
+              f"{arena_count} arenas,",
+              f"{cosmetic_count} cosmetics,",
+              f"{spec_count} engine specs",
+          )
+          PY
+
+      - name: Enforce accessibility setting consistency
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          schema = Path("src/server/DataSchema.lua").read_text()
+          server = Path("src/server/init.server.lua").read_text()
+          client = Path("src/client/accessibility.client.lua").read_text()
+          haptics = Path("src/client/haptics.client.lua").read_text()
+          localization = Path("src/shared/CoreLocalization.lua").read_text()
+
+          settings = {
+              "ReduceMotion": ("MOTION_REDUCED", "MOTION_FULL"),
+              "AudioMuted": ("SOUND_OFF", "SOUND_ON"),
+              "HapticsDisabled": ("HAPTICS_OFF", "HAPTICS_ON"),
+          }
+
+          failures = []
+          for key, copy_keys in settings.items():
+              if f"{key} = false" not in schema:
+                  failures.append(f"{key}: missing persisted schema default")
+              if f'setting ~= "{key}"' not in server:
+                  failures.append(f"{key}: missing server allow-list entry")
+              if f'FireServer("{key}", nextValue)' not in client:
+                  failures.append(f"{key}: missing client persistence event")
+              for copy_key in copy_keys:
+                  if localization.count(copy_key) < 2:
+                      failures.append(f"{key}: localization key {copy_key} missing EN/FR")
+
+          if 'GetAttribute("HapticsDisabled") == true' not in haptics:
+              failures.append("HapticsDisabled: haptics runtime guard missing")
+
+          if failures:
+              print("Accessibility setting contract mismatch:")
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+
+          print("Accessibility setting persistence/runtime contract verified.")
+          PY
+
+      - name: Enforce trusted release inputs and publish evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          publish = Path(".github/workflows/publish-roblox.yml").read_text()
+          gate = Path(".github/workflows/release-candidate-gate.yml").read_text()
+          failures = []
+
+          # Keep operator-typed expressions out of Bash source. Build
+          # the expression delimiter from separate strings so Actions
+          # itself cannot interpret the audit's Python source.
+          open_expr = "$" + "{{"
+          close_expr = "}}"
+          for name, text in (("publish", publish), ("candidate", gate)):
+              if 'test "' + open_expr + " inputs." in text:
+                  failures.append(f"{name}: shell-evaluated dispatch input")
+
+          if "\n  push:" in publish:
+              failures.append("publish: unattended branch-push trigger")
+          if ("PUBLISH_CONFIRM: " + open_expr + " inputs.confirm " + close_expr
+                  not in publish):
+              failures.append("publish: safe confirmation env missing")
+          if 'test "$PUBLISH_CONFIRM" = "PUBLISH"' not in publish:
+              failures.append("publish: exact typed confirmation not enforced")
+
+          fields = (
+              "confirm", "android", "desktop", "persistence",
+              "gameplay_fairness", "accessibility", "public_alpha", "store_assets",
+          )
+          for key in fields:
+              env = "RC_" + key.upper()
+              env_declaration = (env + ": " + open_expr + " inputs."
+                  + key + " " + close_expr)
+              if env_declaration not in gate:
+                  failures.append(f"candidate: {key} safe env missing")
+              expected = "CERTIFY" if key == "confirm" else "PASS"
+              required_test = 'test "$' + env + '" = "' + expected + '"'
+              if required_test not in gate:
+                  failures.append(f"candidate: {key} exact attestation missing")
+
+          if 'cat "$response_file"' in publish or "roblox_response=" in publish:
+              failures.append("publish: untrusted Roblox response leaked to logs/artifacts")
+          if 'published_version=$version' not in publish:
+              failures.append("publish: minimal version-only metadata missing")
+          if 'EXPECTED_PUBLIC_UNIVERSE: "10771083668"' not in publish:
+              failures.append("publish: known public Universe guard missing")
+          if 'EXPECTED_PUBLIC_PLACE: "95351659174730"' not in publish:
+              failures.append("publish: known public Place guard missing")
+
+          if failures:
+              for item in failures:
+                  print("ERROR:", item)
+              raise SystemExit(1)
+          print("Release confirmation, destination and response redaction verified.")
+          PY
+
+      - name: Enforce production release hygiene
+        shell: bash
+        run: |
+          if grep -RniE --include='*.lua' --include='*.luau' '\b(TODO|FIXME|HACK)\b' src; then
+            echo "Production source contains unresolved TODO/FIXME/HACK markers."
+            exit 1
+          fi
+
+          if grep -RniE --include='*.lua' --include='*.luau' '(123456|000000|PLACEHOLDER_ID|FAKE_ID|DUMMY_ID)' src; then
+            echo "Production source contains an obvious placeholder/fake identifier."
+            exit 1
+          fi
+
+          echo "Production release hygiene verified."
+
+      - name: Enforce server service export contracts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          init = Path("src/server/init.server.lua").read_text()
+          modules = {
+              "AchievementService": Path("src/server/AchievementService.lua"),
+              "CosmeticService": Path("src/server/CosmeticService.lua"),
+              "MonetizationService": Path("src/server/MonetizationService.lua"),
+              "GameAnalytics": Path("src/server/GameAnalytics.lua"),
+              "PlayerData": Path("src/server/PlayerData.lua"),
+          }
+
+          missing = []
+          for module, path in modules.items():
+              source = path.read_text()
+              exports = set(re.findall(rf"function\s+{module}\.([A-Za-z_][A-Za-z0-9_]*)", source))
+              calls = set(re.findall(rf"\b{module}\.([A-Za-z_][A-Za-z0-9_]*)", init))
+              for method in sorted(calls - exports):
+                  missing.append(f"{module}.{method}")
+
+          if missing:
+              print("Server module contract mismatch:")
+              for method in missing:
+                  print(" -", method)
+              raise SystemExit(1)
+
+          print("Server service contracts verified.")
+          PY
+
+      - name: Build Roblox place
+        run: |
+          set -euo pipefail
+          python3 tools/stamp_build_identity.py --sha "$GITHUB_SHA" --channel CANDIDATE
+          mkdir -p build
+          rojo build default.project.json -o build/ChaosSurvival.rbxlx
+          test -s build/ChaosSurvival.rbxlx
+          grep -Fq "$GITHUB_SHA" build/ChaosSurvival.rbxlx || {
+            echo "::error::Exact Git source identity missing from candidate place."
+            exit 1
+          }
+
+      - name: Verify packaged place integrity and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -s build/ChaosSurvival.rbxlx
+          python3 - <<'PY'
+          from collections import Counter
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          file = Path("build/ChaosSurvival.rbxlx")
+          root = ET.parse(file).getroot()
+          if root.tag != "roblox":
+              raise SystemExit("Rojo output is not a Roblox XML place.")
+          classes = Counter(item.get("class") for item in root.iter("Item"))
+          services = {
+              item.get("class") for item in root.findall("Item")
+          }
+          for service in ("ReplicatedStorage", "ServerScriptService", "StarterPlayer"):
+              if service not in services:
+                  raise SystemExit(f"Missing core Roblox service: {service}")
+          # Detect a truncated Rojo project that still produces a nonempty XML.
+          minima = {"ModuleScript": 120, "LocalScript": 70, "Script": 3}
+          for name, minimum in minima.items():
+              if classes[name] < minimum:
+                  raise SystemExit(f"Incomplete Roblox place: {name} count {classes[name]} < {minimum}")
+          for item in root.iter("Item"):
+              title = item.find('./Properties/string[@name="Name"]')
+              if title is not None and title.text == "VisualStagingStamp":
+                  raise SystemExit("Staging-only identity marker entered release place.")
+          print("Built place hierarchy verified:", dict(classes))
+          PY
+          test ! -e src/shared/VisualStagingStamp.lua || {
+            echo "::error::Staging-only watermark must not enter an ordinary release build."
+            exit 1
+          }
+          (
+            cd build
+            sha256sum ChaosSurvival.rbxlx > ChaosSurvival.rbxlx.sha256
+            sha256sum --check ChaosSurvival.rbxlx.sha256
+          )
+          {
+            printf 'source_sha=%s\n' "$GITHUB_SHA"
+            printf 'source_ref=%s\n' "$GITHUB_REF"
+            printf 'workflow_run=%s\n' "$GITHUB_RUN_ID"
+            printf 'built_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf 'package=ChaosSurvival.rbxlx\n'
+            printf 'publication=NOT_PUBLISHED\n'
+            printf 'studio_device_certification=NOT_VERIFIED\n'
+            printf 'release_gate=NOT_CERTIFIED\n'
+          } > build/candidate-provenance.txt
+          grep -Fxq "source_sha=$GITHUB_SHA" build/candidate-provenance.txt
+          grep -Fxq 'publication=NOT_PUBLISHED' build/candidate-provenance.txt
+          echo "Build archive includes SHA-256 checksum and explicit non-certified provenance."
+
+      - name: Upload built place
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-place
+          path: |
+            build/ChaosSurvival.rbxlx
+            build/ChaosSurvival.rbxlx.sha256
+            build/candidate-provenance.txt
+          if-no-files-found: error
+
+      # Source-art preview only. Generates free downloadable files on main,
+      # never calls Roblox, and never depends on asset API credentials.
+      - name: Archive original glTF previews for Android
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-survival-3d-previews
+          path: |
+            build/mesh-previews/chaos_reactor_spire.gltf
+            build/mesh-previews/chaos_service_crane.gltf
+            build/mesh-previews/chaos_perimeter_gate.gltf
+            build/mesh-previews/chaos_arena_keel.gltf
+            build/mesh-previews/arena-keel-source.json
+            build/mesh-previews/manifest.json
+          if-no-files-found: error
+          retention-days: 30
+,
+              '^SkybridgeRib(%d+)_',
+              'part.CanCollide or part.CanTouch or part.CanQuery',
+              'part:GetAttribute("OriginalStructuralBevel") == true',
+              'part:GetAttribute("PremiumArchitecturalSurface") == true',
+          ):
+              assert check in trim, check
+          assert "SkybridgeRail" not in trim or "Keep SkybridgeRail" in trim
+          assert "Destroy()" not in trim and "RunService" not in trim
+          for check in (
+              "PlatformNativeTrimReplacementKit.reset()",
+              "PlatformNativeTrimReplacementKit.bind(",
+              'LocalNativeStructuralPartsReplaced',
+              'replacements[tostring(visualIndex)] = "carapace"',
+              'replacements[tostring(visualIndex)] = "bridge"',
+          ):
+              assert check in platform_script, check
+          # The visual owner must also scale authentic MeshPart geometry
+          # along the actual imported long axis; platform long-axis alone
+          # can leave ghost girders after a Tower ShrinkingArena event.
+          assert 'part:SetAttribute("OriginalBridgeLongAxis"' in platform_mesh
+          for check in (
+              'piece:GetAttribute("OriginalBridgeLongAxis")',
+              'importedAxis == "X"', 'importedAxis == "Z"',
+              'size.X * ratio', 'size.Z * ratio',
+          ):
+              assert check in platform_finish, check
           hardware = Path("src/client/PremiumFloorHardwareMeshKit.lua").read_text()
           floor_src = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
           relief_client = Path("src/client/arena-surface-relief.client.lua").read_text()
