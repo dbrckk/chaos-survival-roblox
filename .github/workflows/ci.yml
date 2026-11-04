@@ -688,7 +688,7 @@ jobs:
           assert "verifiedSupports[part]" in native_trim
           assert 'kind == "cradle"' in native_trim
           for required in (
-              "function Kit.bind(arena, replacements, onChange, supports)",
+              "function Kit.bind(arena, replacements, onChange, supports, meshFolder)",
               "function Kit.reset()", "function Kit.count()",
               "part.LocalTransparencyModifier = 1",
               "part.LocalTransparencyModifier = original",
@@ -699,6 +699,13 @@ jobs:
               assert required in native_trim, required
           assert "RunService" not in native_trim
           assert "Destroy()" not in native_trim
+          assert 'meshFolder.ChildRemoved:Connect(' in native_trim
+          assert 'table.clear(active)' in native_trim
+          assert 'table.clear(verifiedSupports)' in native_trim
+          assert 'restore()' in native_trim
+          assert 'end, actualSupportParts, folder)' in platform_script
+          assert 'local choice = tier == "High" and 4 or 8' in Path(
+              "src/client/PremiumLargeStructureMeshKit.lua").read_text()
           for required in (
               "PlatformNativeTrimReplacementKit.bind(",
               "PlatformNativeTrimReplacementKit.reset()",
