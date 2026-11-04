@@ -109,7 +109,7 @@ local function attachDecor(folder)
     watchers[#watchers + 1] = decorWatcher
 end
 
-function Kit.bind(arena, replacements, onChange, supports)
+function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     Kit.reset()
     if not arena or not arena:IsA("Folder")
         or type(replacements) ~= "table" then return end
@@ -134,6 +134,24 @@ function Kit.bind(arena, replacements, onChange, supports)
         end
     end
     attachDecor(arena:FindFirstChild("Decor"))
+    -- Fail CLOSED if any genuine replacement mesh disappears unexpectedly
+    -- (streaming, asset deletion or local teardown). Restore the complete
+    -- server-authored native fallback immediately instead of leaving a
+    -- visually hollow deck. The next normal owner rebuild can re-mask.
+    -- One ChildRemoved signal per active map, not one per MeshPart.
+    if meshFolder and meshFolder:IsA("Folder") then
+        watchers[#watchers + 1] = meshFolder.ChildRemoved:Connect(
+            function(child)
+                if child:IsA("MeshPart")
+                    and (child:GetAttribute("Original3DStructuralSide") == true
+                        or child:GetAttribute("OriginalLargeStructure3D") == true
+                        or child:GetAttribute("OriginalLargeDeckHull") == true) then
+                    table.clear(active)
+                    table.clear(verifiedSupports)
+                    restore()
+                end
+            end)
+    end
     watchers[#watchers + 1] = arena.ChildAdded:Connect(function(child)
         if child.Name == "Decor" and child:IsA("Folder") then
             attachDecor(child)
