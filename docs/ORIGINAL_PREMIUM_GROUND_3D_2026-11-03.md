@@ -45,3 +45,19 @@ Le workflow Roblox `41622860616` a confirmé l'**approbation de modération** de
 - les contrôles exacts du code original, du build, des cinq suites moteur, de la provenance des IDs et de l'absence de collision doivent encore réussir avant publication. **Pas de validation AAA sur écran Android sans captures réelles.**
 
 **Différence essentielle :** la topologie et les UV sont vraiment ceux du modèle importé, mais l'effet de brillance PBR vient des facteurs metallic/roughness du glTF et des matériaux 2K natifs sous-jacents. Une normal map 2K directement posée sur chaque nouveau MeshPart serait un autre travail à tester et budgéter, pas une caractéristique livrée ici.
+
+## 4 novembre 2026 — couverture maximale réelle du grand sol par les MeshParts existants
+
+**Changement produit :** le kit qui montait déjà de véritables dalles 3D approuvées ne profitait pas de tout le damier physique de 36 cases en qualité High. L'ancien maximum de 24 laissait **12 cases sur 36** en finition native, sans même tenir compte de la distance caméra. Le nouveau plafond High est **36/36**, Medium **12/36** au lieu de 8 et Low **2/36** inchangé. Les 36 plaques utilisent le **même véritable asset original approuvé**, pas des primitives inventées, et la sélection reste spatiale : les dalles hors portée ou non répliquées ne créent pas de MeshPart.
+
+**Adaptation immédiate aux vrais appareils Android :** le recensement et l'échantillonnage FPS/frametime déjà présents produisent `OptionalVfxPressure=0/1/2` avec hystérésis. Sur le même cycle LOD existant, le maximum de modèles devient :
+
+| Qualité | Normal | Pression modérée | Pression forte |
+| --- | ---: | ---: | ---: |
+| Low | 2 | 2 | 1 |
+| Medium | 12 | 8 | 4 |
+| High | 36 | 24 | 16 |
+
+Chaque dalle représente **2 976 triangles** et au plus sept `MeshPart` par modèle ; budget géométrique maximal en situation normale : High **107 136 triangles**, Medium **35 712**, Low **5 952**. Cela s'ajoute aux autres assets présents et ne garantit pas un FPS donné : la pression observée rétablit automatiquement une couverture plus légère. Aucun nouveau timer, `RenderStepped`, chargement réseau, collider ou surface fictive. Le clone continue à être retiré et le décor natif restauré lors d'un changement de carte, du rétrécissement ou d'une sortie de champ LOD. Toutes les alertes restent devant la vraie surface jouable.
+
+**Contrôle à accomplir :** la validation moteur du commit final et des captures réelles sur Android (Low/Medium/High, caméra devant/derrière, catastrophe Shrinking Arena et stress FPS). Le registre de 50 vrais assets reste inchangé : c'est une amélioration de **couverture réelle** des assets déjà disponibles, pas une nouvelle importation. Ce travail ne certifie pas à lui seul la qualité AAA finale ni la mise à jour publique.
