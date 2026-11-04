@@ -14,7 +14,8 @@
     "ambient_models_inserted_in_game": false,
     "floor_relief_models_inserted_in_game": false,
     "floor_hardware_models_inserted_in_game": false,
-    "platform_side_models_inserted_in_game": false
+    "platform_side_models_inserted_in_game": false,
+    "central_hull_models_inserted_in_game": false
   },
   "models": [
     {
@@ -360,6 +361,14 @@
       "source": "tools/generate_original_platform_carapaces.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41798024000
+    },
+    {
+      "name": "large_deck_hull",
+      "asset_id": "125929150866282",
+      "moderation": "Approved",
+      "source": "tools/generate_original_large_deck_support.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 41809088464
     }
   ]
 }
