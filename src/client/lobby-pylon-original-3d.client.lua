@@ -9,7 +9,9 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
-local SOURCE_ID = 91626128452597
+local SOURCE_ID = 91626128452597 -- older genuine open-detail fallback
+local ENCLOSED_ID = 75945454705246 -- Approved source #41825253849
+
 local PYLON_OFFSETS = {
     Vector3.new(-31, 5, -31),
     Vector3.new(31, 5, -31),
@@ -39,6 +41,40 @@ local function budget()
         return p == 0 and 4 or (p == 1 and 2 or 0)
     end
     return p < 2 and 4 or 2
+end
+
+-- The new original source has a fully CLOSED 2.84 x 10.36 x 2.84
+-- chamfered octagonal body, with a .16 bevel. Its smallest inner square
+-- still encloses the ENTIRE 2.2x10x2.2 native rectangular collision box.
+-- Exact creator-approved Model ID, safe server-sanitized template, bounding
+-- and MeshPart checks are all REQUIRED before hiding native collision art.
+local function approvedShell()
+    local holder = ReplicatedStorage:FindFirstChild(
+        "ApprovedLobbyPylonShellTemplates")
+    if not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild("LobbyPylonShell")
+    if not model or not model:IsA("Model") or model.Parent ~= holder
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalLobbyPylonShell3D") ~= true
+        or model:GetAttribute("EnclosesCollider") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= ENCLOSED_ID then
+        return nil
+    end
+    local count = 0
+    for _, item in ipairs(model:GetDescendants()) do
+        if item:IsA("BasePart") then
+            if not item:IsA("MeshPart") then return nil end
+            count += 1
+        elseif item:IsA("LuaSourceContainer") then return nil end
+    end
+    if count < 1 or count > 12 then return nil end
+    local _, size = model:GetBoundingBox()
+    if size.Y < 10.25 or size.Y > 10.75
+        or math.min(size.X, size.Z) < 3.40
+        or math.max(size.X, size.Z) > 4.05 then return nil end
+    return model, count, size
 end
 
 local function approved()
@@ -122,35 +158,62 @@ local function restore()
     if player:GetAttribute("LocalOriginalLobbyPylonMeshPartCount") ~= 0 then
         player:SetAttribute("LocalOriginalLobbyPylonMeshPartCount", 0)
     end
+    if player:GetAttribute("LocalOriginalLobbyPylonFullShellCount") ~= 0 then
+        player:SetAttribute("LocalOriginalLobbyPylonFullShellCount", 0)
+    end
 end
 
-local function stageColumn(template, sourceSize, partCount, target, index)
+local function stageColumn(template, sourceSize, partCount,
+    target, index, enclosed)
     local clone = template:Clone()
-    if not pcall(function()
-        clone:ScaleTo(target.native.Size.Y * 1.012 / sourceSize.Y)
-    end) then clone:Destroy(); return nil end
-    local frame, bounds = clone:GetBoundingBox()
-    -- A 14-stud original column is fitted to the original 10-stud
-    -- collision pylon. Expand the horizontal sculpture ONLY enough to
-    -- enclose the still-authoritative 2.2-stud obstacle.
-    local stretchX = math.max(1, (target.native.Size.X + 0.32) / bounds.X)
-    local stretchZ = math.max(1, (target.native.Size.Z + 0.32) / bounds.Z)
-    if stretchX > 2.65 or stretchZ > 2.65
-        or bounds.Y < 10 or bounds.Y > 10.5 then
-        clone:Destroy()
-        return nil
+    local frame, bounds
+    local stretchX, stretchZ = 1, 1
+    local aim = target.native.CFrame
+    if enclosed then
+        -- Original imported shell already has exact final proportions:
+        -- scaling X/Z again would INVALIDATE its guaranteed enclosure.
+        frame, bounds = clone:GetBoundingBox()
+        if bounds.Y < 10.25 or bounds.Y > 10.75
+            or math.min(bounds.X, bounds.Z) < 3.40
+            or math.max(bounds.X, bounds.Z) > 4.05 then
+            clone:Destroy()
+            return nil
+        end
+        -- Four facade faces look inward toward the central lobby.
+        -- Keep the rectangular enclosing core present at EVERY angle.
+        local offset = PYLON_OFFSETS[index]
+        aim = aim * CFrame.Angles(
+            0, math.atan2(offset.X, offset.Z), 0)
+    else
+        -- Reversible older original column during late moderation/CDN.
+        -- It has an open hourglass core; the native obstacle stays visible.
+        if not pcall(function()
+            clone:ScaleTo(target.native.Size.Y * 1.012 / sourceSize.Y)
+        end) then clone:Destroy(); return nil end
+        frame, bounds = clone:GetBoundingBox()
+        stretchX = math.max(1, (target.native.Size.X + 0.32) / bounds.X)
+        stretchZ = math.max(1, (target.native.Size.Z + 0.32) / bounds.Z)
+        if stretchX > 2.65 or stretchZ > 2.65
+            or bounds.Y < 10 or bounds.Y > 10.5 then
+            clone:Destroy()
+            return nil
+        end
     end
     local pieces = 0
     for _, mesh in ipairs(clone:GetDescendants()) do
         if mesh:IsA("MeshPart") then
             local relative = frame:ToObjectSpace(mesh.CFrame)
-            local rot = relative - relative.Position
-            mesh.Size = Vector3.new(
-                mesh.Size.X * stretchX, mesh.Size.Y, mesh.Size.Z * stretchZ)
-            local pos = relative.Position
-            mesh.CFrame = target.native.CFrame
-                * CFrame.new(pos.X * stretchX, pos.Y, pos.Z * stretchZ)
-                * rot
+            if enclosed then
+                mesh.CFrame = aim * relative
+            else
+                local rot = relative - relative.Position
+                mesh.Size = Vector3.new(
+                    mesh.Size.X * stretchX, mesh.Size.Y, mesh.Size.Z * stretchZ)
+                local pos = relative.Position
+                mesh.CFrame = aim
+                    * CFrame.new(pos.X * stretchX, pos.Y, pos.Z * stretchZ)
+                    * rot
+            end
             mesh.Anchored = true
             mesh.Massless = true
             mesh.CanCollide = false
@@ -158,14 +221,19 @@ local function stageColumn(template, sourceSize, partCount, target, index)
             mesh.CanQuery = false
             mesh.CastShadow = false
             mesh:SetAttribute("OriginalLobbyPylon3D", true)
-            mesh:SetAttribute("Original3DAssetId", SOURCE_ID)
+            mesh:SetAttribute("Original3DAssetId",
+                enclosed and ENCLOSED_ID or SOURCE_ID)
+            mesh:SetAttribute("OriginalEnclosingLobbyPylon3D", enclosed)
             pieces += 1
         end
     end
     if pieces ~= partCount then clone:Destroy(); return nil end
-    clone.Name = "ApprovedOriginalMachinedLobbyColumn_" .. tostring(index)
+    clone.Name = (enclosed and "ApprovedOriginalEnclosedLobbyPylon3D_"
+        or "ApprovedOriginalMachinedLobbyColumn_") .. tostring(index)
     clone:SetAttribute("CosmeticOnly", true)
-    clone:SetAttribute("Original3DAssetId", SOURCE_ID)
+    clone:SetAttribute("EnclosesCollider", enclosed)
+    clone:SetAttribute("Original3DAssetId",
+        enclosed and ENCLOSED_ID or SOURCE_ID)
     return clone
 end
 
@@ -213,9 +281,18 @@ reconcile = function()
     local holder = ReplicatedStorage:FindFirstChild(
         "ApprovedLargeStructureTemplates")
     watch("templates", holder, function(name) return name == "Classic" end)
+    local shellHolder = ReplicatedStorage:FindFirstChild(
+        "ApprovedLobbyPylonShellTemplates")
+    watch("shellTemplates", shellHolder, function(name)
+        return name == "LobbyPylonShell"
+    end)
 
     local count = budget()
-    local template, partCount, sourceSize = approved()
+    local template, partCount, sourceSize = approvedShell()
+    local enclosed = template ~= nil
+    if not template then
+        template, partCount, sourceSize = approved()
+    end
     local targets = count > 0 and validTargets(count) or nil
     if count == 0 or not template or not targets then
         restore()
@@ -224,7 +301,8 @@ reconcile = function()
 
     -- No repeated cloning merely because the server sends an unrelated
     -- decor child. A real tier/source/target change does replace the art.
-    if active and active.source == template and active.count == count then
+    if active and active.source == template and active.count == count
+        and active.enclosed == enclosed then
         local unchanged = true
         for i = 1, count do
             local entry = active.targets[i]
@@ -250,7 +328,8 @@ reconcile = function()
     restore()
     local staged = {}
     for i = 1, count do
-        local model = stageColumn(template, sourceSize, partCount, targets[i], i)
+        local model = stageColumn(template, sourceSize, partCount,
+            targets[i], i, enclosed)
         if not model then
             for _, other in ipairs(staged) do other:Destroy() end
             return
@@ -258,11 +337,11 @@ reconcile = function()
         staged[#staged + 1] = model
     end
 
-    -- Hide ONLY the four obsolete nonphysical wedges/collars. The
-    -- genuine authored mesh has a narrow hourglass core: its bounding box
-    -- does NOT prove it encloses the rectangular physical obstacle.
-    -- Keep the original collidable pylon visibly translucent to disclose
-    -- its complete footprint; never produce an invisible player blocker.
+    -- Hide obsolete nonphysical native trims once REAL art is ready.
+    -- The approved CLOSED source contains the entire physical obstacle
+    -- (including four extreme rectangular corners), so its native core
+    -- may finally be fully hidden client-side. Older open-column fallback
+    -- keeps the core 50% visible: never create an invisible player blocker.
     local hidden = {}
     for i, model in ipairs(staged) do
         model.Parent = folder
@@ -272,7 +351,7 @@ reconcile = function()
             item.LocalTransparencyModifier = 1
         end
         hidden[target.native] = target.native.LocalTransparencyModifier
-        target.native.LocalTransparencyModifier = 0.50
+        target.native.LocalTransparencyModifier = enclosed and 1 or 0.50
     end
     local records = {}
     for i, target in ipairs(targets) do
@@ -283,11 +362,13 @@ reconcile = function()
     end
     active = {
         source = template, targets = records, models = staged,
-        hidden = hidden, count = count,
+        hidden = hidden, count = count, enclosed = enclosed,
     }
     player:SetAttribute("LocalOriginalLobbyPylon3DCount", count)
     player:SetAttribute("LocalOriginalLobbyPylonMeshPartCount",
         count * partCount)
+    player:SetAttribute("LocalOriginalLobbyPylonFullShellCount",
+        enclosed and count or 0)
 end
 
 folder.DescendantRemoving:Connect(function(item)
@@ -304,10 +385,16 @@ workspace.ChildRemoved:Connect(function(child)
     if child.Name == "GeneratedMap" then schedule() end
 end)
 ReplicatedStorage.ChildAdded:Connect(function(child)
-    if child.Name == "ApprovedLargeStructureTemplates" then schedule() end
+    if child.Name == "ApprovedLargeStructureTemplates"
+        or child.Name == "ApprovedLobbyPylonShellTemplates" then
+        schedule()
+    end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
-    if child.Name == "ApprovedLargeStructureTemplates" then schedule() end
+    if child.Name == "ApprovedLargeStructureTemplates"
+        or child.Name == "ApprovedLobbyPylonShellTemplates" then
+        schedule()
+    end
 end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(schedule)
 player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(schedule)
