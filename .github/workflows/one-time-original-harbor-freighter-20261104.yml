@@ -1,0 +1,90 @@
+# Source-authored seven-material 3D ocean freighter, not a Roblox Parts barge.
+# Creates a creator-owned moderated Model only. NEVER publishes the place.
+name: One-time Original Harbor Freighter 3D 2026-11-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-harbor-freighter-20261104.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-harbor-freighter-20261104
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify authentic ship hull, 20 containers and UV/tangent glTF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_harbor_freighter.py \
+            --output "$RUNNER_TEMP/chaos_harbor_freighter.obj" \
+            > "$RUNNER_TEMP/source.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/chaos_harbor_freighter.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/chaos_harbor_freighter.gltf" \
+            > "$RUNNER_TEMP/export.json"
+          python3 - "$RUNNER_TEMP/source.json" \
+            "$RUNNER_TEMP/chaos_harbor_freighter.gltf" \
+            "$RUNNER_TEMP/chaos_harbor_freighter.obj" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          art=json.loads(Path(sys.argv[1]).read_text())
+          gltf=json.loads(Path(sys.argv[2]).read_text())
+          obj=Path(sys.argv[3]).read_text()
+          assert art["asset"]=="harbor_freighter"
+          assert 115<=art["groups"]<=220 and 3700<=art["triangles"]<=8500
+          assert art["runtime_scale"]==3.5
+          x,y,z=art["dimensions"]
+          assert 28.8<=x<=29.4 and 9.3<=y<=10.4 and 6.1<=z<=6.6
+          assert "NineStationChinedDisplacementHull" in obj
+          assert "CommandBridgeGlazing" in obj
+          assert "ISOContainerBody" in obj
+          assert "RadarMast" in obj
+          required={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert set(art["materials"])==required
+          assert set(m["name"] for m in gltf["materials"])==required
+          assert gltf["asset"]["version"]=="2.0"
+          meshes=gltf["meshes"][0]["primitives"]
+          assert len(meshes)==7
+          assert all({"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(
+              p["attributes"]) for p in meshes)
+          triangles=sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"]//3
+              for p in meshes)
+          assert triangles==art["triangles"]
+          binary=base64.b64decode(gltf["buffers"][0]["uri"].split(",",1)[1],
+                                  validate=True)
+          assert len(binary)==gltf["buffers"][0]["byteLength"]
+          print("Verified original Harbor ship:",triangles,
+                "triangles, seven UV+tangent materials; NO GAME PUBLISH")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: original-harbor-freighter-3d-source
+          path: |
+            ${{ runner.temp }}/chaos_harbor_freighter.obj
+            ${{ runner.temp }}/chaos_harbor_freighter.gltf
+            ${{ runner.temp }}/source.json
+            ${{ runner.temp }}/export.json
+          retention-days: 14
+
+  import-owner-model:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: harbor_freighter
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
