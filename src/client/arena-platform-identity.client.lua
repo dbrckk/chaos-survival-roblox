@@ -1164,6 +1164,11 @@ watchLargeStructureTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+-- The EXISTING scenery-LOD camera sampler requests a bounded retarget
+-- only after traversing 88 studs and a 12-second cooldown. No camera loop
+-- or premium source/model quota is added to this owner.
+player:GetAttributeChangedSignal("LocalPremiumNearFieldEpoch")
+    :Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;
 -- never rebuild the whole arena just to freeze/restart the moving heads.
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
