@@ -9,6 +9,8 @@ local LocalizationService = game:GetService("LocalizationService")
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local SignalNavigationRules = require(
+    ReplicatedStorage.Shared.DistrictSignalNavigationRules)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -495,7 +497,8 @@ local function chooseTransitWaypoint(arena, route, root, destination)
         or toHub > 160 then
         return nil
     end
-    return header.Position, copy("DISTRICT_FAST_TRAVEL", route)
+    return header.Position, copy("DISTRICT_FAST_TRAVEL", route),
+        toHub, after, prompt.HoldDuration
 end
 
 local function currentArena()
@@ -584,6 +587,29 @@ local function update()
         end
     end
 
+    -- A live optional objective must not tell a mobile survivor to
+    -- pursue a station that has already become physically unreachable.
+    -- Compare the real server countdown against the MOST optimistic
+    -- walk / true enabled transit route, including both hold actions.
+    -- Preview signals remain useful before opening: they have a future
+    -- activation window. If the active signal is already too late,
+    -- fall back to real nearby permanent caches instead of displaying
+    -- "2s · 123st" as if it were achievable.
+    local gate, gateLabel, gateDistance, afterGateDistance, gateHold
+    if signalPosition and signalRoute then
+        gate, gateLabel, gateDistance, afterGateDistance, gateHold =
+            chooseTransitWaypoint(arena, signalRoute, root, signalPosition)
+        if not upcoming and signalSeconds ~= nil
+            and not SignalNavigationRules.liveCueReachable(
+                signalSeconds, (signalPosition - root.Position).Magnitude,
+                gateDistance, afterGateDistance, gateHold) then
+            signalPosition = nil
+            signalRoute = nil
+            signalReward = nil
+            signalSeconds = nil
+        end
+    end
+
     local nearest, targetPosition, targetDistance = nil, signalPosition, math.huge
     if signalPosition then
         targetDistance = (signalPosition - root.Position).Magnitude
@@ -628,12 +654,8 @@ local function update()
     local landingDeck, landingStep, landingTotal = nil, nil, nil
 
     if signalPosition then
-        if route and route >= 1 and route <= 4 then
-            local gate, gateLabel = chooseTransitWaypoint(
-                arena, route, root, targetPosition)
-            if gate then
-                waypoint, taskLabel = gate, gateLabel
-            end
+        if gate then
+            waypoint, taskLabel = gate, gateLabel
         end
         if not taskLabel then
             if upcoming then
@@ -692,7 +714,11 @@ local function update()
             and (tostring(signalSeconds) .. "s")
             or copy(upcoming and "DISTRICT_SIGNAL_SOON"
                 or "DISTRICT_SIGNAL_NOW")
-        text.Text = taskLabel .. "\n" .. shortTime
+        -- Name the phase: "OUVRE 6s" vs "FIN 6s" instead of an
+        -- ambiguous bare timer. No fake ETA to an unreachable target.
+        local shortPhase = copy(upcoming and "DISTRICT_SIGNAL_OPENS_SHORT"
+            or "DISTRICT_SIGNAL_ENDS_SHORT", shortTime)
+        text.Text = taskLabel .. "\n" .. shortPhase
             .. " • " .. tostring(waypointDistance) .. "st"
     else
         text.Text = taskLabel .. "\n" .. cue
