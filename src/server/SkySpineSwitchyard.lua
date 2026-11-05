@@ -370,11 +370,14 @@ function SkySpineSwitchyard.start(ctx)
         -- never leave a floating collision strip behind, even if an
         -- unexpected disaster is activated after this round was built.
         for _, pair in ipairs(gapPairs) do
-            local center, size = if pair.spine
-                then SkySpineSwitchyard.gapBetween(
+            local center, size
+            if pair.spine then
+                center, size = SkySpineSwitchyard.gapBetween(
                     pair.first, pair.second)
-                else SkySpineSwitchyard.promenadeGapBetween(
+            else
+                center, size = SkySpineSwitchyard.promenadeGapBetween(
                     pair.first, pair.second)
+            end
             if not center or not size
                 or (center - pair.center).Magnitude > 0.05
                 or (size - pair.size).Magnitude > 0.05 then
