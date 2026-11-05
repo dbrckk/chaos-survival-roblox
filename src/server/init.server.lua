@@ -400,6 +400,23 @@ performancePulseEvent.OnServerEvent:Connect(function(player, payload)
             .. "/" .. tostring(pbrBudget)
             .. "/" .. tostring(pbrCandidates)
     )
+
+    -- One existing rate-limited, client-reported 45s pulse now reveals
+    -- whether the five arena owners really mounted original 3D sources,
+    -- rather than only being eligible to clone a Model. It does not
+    -- affect server-owned physics, participants, payouts, or decisions.
+    -- Limit Analytics dimensions to six arena values, six tier/device
+    -- combinations and 64 yes/no residency/owner-health flags.
+    local originalCount, arenaTag, deviceTierTag, presenceFlags =
+        PerformancePulseRules.original3DAnalytics(sample)
+    GameAnalytics.custom(
+        player,
+        "ClientOriginal3DResidencyPulse",
+        originalCount,
+        arenaTag,
+        deviceTierTag,
+        presenceFlags
+    )
 end)
 
 

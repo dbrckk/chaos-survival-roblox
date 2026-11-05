@@ -267,6 +267,9 @@ local qualityCandidate = nil
 local qualityCandidateSamples = 0
 local visualUpdateClock = 0
 local performancePulseClock = 0
+-- The public session's first 12 active seconds reveal first-join
+-- original 3D replication; later pulses keep the old 45s interval.
+local firstPerformanceWindow = true
 local performanceFrameCount = 0
 -- Keep 45-second PBR comparisons statistically honest. Any AUTO/OFF
 -- change within a measurement window marks that window MIXED even if
@@ -839,7 +842,7 @@ feedbackEvent.OnClientEvent:Connect(function(feedback)
     end
 end)
 
--- The 45-second diagnostics used to enumerate thousands of visual
+-- The first 12s / then 45s diagnostics used to enumerate thousands of visual
 -- Instances *inside RenderStepped*, creating the very hitch we want to
 -- measure. Snapshot numeric pacing there; count objects in a yielding task.
 -- Do not add a second frame/render owner or change gameplay VFX priorities.
@@ -882,6 +885,24 @@ local function queuePerformancePulse(snapshot)
                 pbrActive = player:GetAttribute("PbrActiveSurfaceCount"),
                 pbrBudget = player:GetAttribute("PbrActiveSurfaceBudget"),
                 pbrCandidates = player:GetAttribute("PbrVisibleCandidateCount"),
+                -- Observe REAL already-mounted source models, never the
+                -- theoretical 55 horizons / 20 traffic / 14 halo slots.
+                -- This uses only numeric local counters emitted by their
+                -- approved visual owner on the existing 0.65/0.90s tick.
+                -- Snapshot once per 45s pulse, never in RenderStepped.
+                originalGround = player:GetAttribute("LocalOriginalGroundMeshCount"),
+                originalRoutes = player:GetAttribute("LocalOriginalRouteMeshCount"),
+                originalHorizon = player:GetAttribute("LocalOriginalCinematicHorizon3DCount"),
+                originalTraffic = player:GetAttribute("LocalOriginalCinematicTraffic3DCount"),
+                originalHalo = player:GetAttribute("LocalOriginalOrbitalHalo3DCount"),
+                originalHorizonMasked = player:GetAttribute("LocalNativeCinematicHorizonPartsReplaced"),
+                originalHaloMasked = player:GetAttribute("LocalOriginalOrbitalHaloNativeReplaced"),
+                optionalPressure = player:GetAttribute("OptionalVfxPressure"),
+                arenaVariant = (function()
+                    local generated = workspace:FindFirstChild("GeneratedMap")
+                    local arena = generated and generated:FindFirstChild("Arena")
+                    return arena and arena:GetAttribute("VariantId")
+                end)(),
                 totalMemoryMb = optionalStat(function()
                     return Stats:GetTotalMemoryUsageMb()
                 end),
@@ -963,7 +984,8 @@ RunService.RenderStepped:Connect(function(dt)
         performancePulseClock += activeDt
         performanceFrameCount += 1
 
-        if performancePulseClock >= 45 and performanceFrameCount > 0 then
+        if performancePulseClock >= PerformancePulseRules.pulseInterval(
+            firstPerformanceWindow) and performanceFrameCount > 0 then
             local averageFps = math.clamp(
                 performanceFrameCount / performancePulseClock,
                 0,
@@ -985,6 +1007,7 @@ RunService.RenderStepped:Connect(function(dt)
                 pbrMode = pbrWindowMixed and "MIXED" or pbrWindowMode,
             })
 
+            firstPerformanceWindow = false
             performancePulseClock = 0
             performanceFrameCount = 0
             FramePacingRules.reset(performancePacing)

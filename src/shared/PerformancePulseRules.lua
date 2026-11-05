@@ -20,6 +20,17 @@ local LIMITS = {
     pbrActive = {144, true},
     pbrBudget = {144, true},
     pbrCandidates = {10000, true},
+    -- Genuine mounted creator-owned MeshPart Models, read from the
+    -- established scenery owner's local counters every 45 seconds.
+    -- These counts are advisory and never grant gameplay/rewards.
+    originalGround = {36, true},
+    originalRoutes = {40, true},
+    originalHorizon = {11, true},
+    originalTraffic = {4, true},
+    originalHalo = {5, true},
+    originalHorizonMasked = {33, true},
+    originalHaloMasked = {5, true},
+    optionalPressure = {2, true},
     totalMemoryMb = {65536, false},
     instanceCount = {250000, true},
     frameTimeMs = {1000, false},
@@ -39,6 +50,13 @@ end
 
 -- Modes are session-local, diagnostic only. Never use a client-reported
 -- graphics mode to grant rewards or make gameplay decisions.
+-- Sample the first actual Android session soon enough to observe
+-- streaming and onboarding exits; then retain the 45-second, existing
+-- server RateLimiter cadence. No second sampler or RenderStepped.
+function PerformancePulseRules.pulseInterval(first)
+    return first == true and 12 or 45
+end
+
 function PerformancePulseRules.currentPbrMode(isTouch, disabled)
     return isTouch == true and disabled == true and "OFF" or "AUTO"
 end
@@ -63,7 +81,40 @@ function PerformancePulseRules.sanitize(raw)
     local device = source.deviceClass
     result.deviceClass = (device == "Touch" or device == "Desktop")
         and device or "Unknown"
+    local VALID_ARENA = {
+        Classic = true, Towers = true, Crossroads = true,
+        Orbital = true, Harbor = true,
+    }
+    result.arenaVariant = VALID_ARENA[source.arenaVariant]
+        and source.arenaVariant or "Unknown"
     return result
+end
+
+-- Roblox AnalyticsService accepts only 3 custom dimensions and caps their
+-- combined unique values. Presence flags (not raw counts) keep cardinality
+-- small: <=6 arenas x 12 device/tier classes x 32 bit combinations.
+-- A numeric total retains actual sampled residency in event aggregation.
+-- A model is considered RESIDENT by the source owner; this does NOT prove
+-- it was visible in a photographed frame on an Android device.
+local function presence(count)
+    return count > 0 and "1" or "0"
+end
+
+function PerformancePulseRules.original3DAnalytics(sample)
+    local s = PerformancePulseRules.sanitize(sample)
+    local total = s.originalGround + s.originalRoutes
+        + s.originalHorizon + s.originalTraffic + s.originalHalo
+    local fallbackMismatch = s.originalHorizon > 0
+        and s.originalHorizonMasked == 0
+        or s.originalHalo > 0 and s.originalHaloMasked == 0
+    local flags = "P" .. presence(s.originalGround + s.originalRoutes)
+        .. "C" .. presence(s.originalHorizon)
+        .. "T" .. presence(s.originalTraffic)
+        .. "H" .. presence(s.originalHalo)
+        .. "F" .. (fallbackMismatch and "1" or "0")
+    return total, "Arena:" .. s.arenaVariant,
+        "Device:" .. s.deviceClass .. "|VFX:" .. s.vfxTier,
+        flags
 end
 
 return PerformancePulseRules

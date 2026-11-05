@@ -24,7 +24,9 @@
 | Performance | LOD Low/Medium/High, quotas PBR/MeshParts/effets, pulses FPS et mémoire côté client | p95 frame time réel, stabilité 30 min, chauffe et mémoire selon catégorie de terminal |
 | Engagement | `GameAnalytics`, résultat, quêtes/succès, maîtrise et récompenses déjà en code | Taux d'entrée en manche, compréhension initiale, fin de manche motivante et métriques D1/D7 sur échantillon réel |
 
-## Lot 0 — contrôler la version publique et éliminer les vrais défauts bloquants (P0, à commencer)
+## Lot 0 — contrôler la version publique et éliminer les vrais défauts bloquants (P0, en cours)
+
+**Avancement source du 5 novembre :** le canal réel `PerformancePulse` existant échantillonne désormais à 12 secondes actives après le premier join, puis toutes les 45 secondes. Il enregistrera via Analytics les **modèles 3D créateur réellement montés** dans les cinq arènes et les incohérences de restauration de leurs fallback natifs, avec des dimensions limitées et une validation serveur. Aucun nouveau RemoteEvent, sampler image ni boucle. [Implémentation, preuve de publication précédente et limites](LOT0_PUBLIC_REAL_3D_RESIDENCY_OBSERVABILITY_2026-11-05.md). **À qualifier par exact-SHA Build/Cloud ; aucune nouvelle donnée publique Android ou mise à jour Roblox revendiquée.**
 
 **But :** arrêter les changements à l'aveugle et établir la référence *réelle* du nouveau build publié.
 
