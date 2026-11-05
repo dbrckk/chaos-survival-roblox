@@ -50,7 +50,7 @@ jobs:
           assert 'High={4,2,0}' in rules
           assert 'MOBILE_HIGH={3,1,0}' in rules
           for tag in ('OriginalCinematicTrafficIndex','OriginalCinematicTrafficVariant'):
-              assert tag in kit and tag in builder,tag
+              assert tag in rules and tag in builder,tag
           assert '{CFrame = CinematicTrafficMeshRules.goal(from, to)}' in builder
           assert '{Position = to}' not in builder
           for fragment in (
