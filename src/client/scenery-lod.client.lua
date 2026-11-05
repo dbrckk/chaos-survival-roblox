@@ -608,6 +608,56 @@ local function currentOrigins()
     return arenaOrigin, lobbyOrigin
 end
 
+-- The main ArenaPlatformIdentity owner currently samples real carapaces,
+-- bridge girders, long cradles and columns ONLY on map/stream/template
+-- rebuild. After crossing the 320-stud arena, the old 8/16 approved-mesh
+-- slots stay concentrated near the spawn even while the camera moves.
+-- Retarget that existing bounded owner when the camera crosses a genuine
+-- large distance, reusing THIS 0.65/0.90s LOD pass. Never rebuild for
+-- camera rotation, low-end devices, off-map views or every frame.
+-- The hard 12-second cooldown avoids cloning hundreds of cosmetic welds
+-- during fast avatar motion or noisy StreamingEnabled replication.
+local nearFieldArena = nil
+local nearFieldTier = nil
+local nearFieldFocus = nil
+local nearFieldLastChange = 0
+local function retargetOriginalNearField(arena, cameraPoint, cameraReady,
+        tier, pressure)
+    if arena ~= nearFieldArena or tier ~= nearFieldTier then
+        nearFieldArena = arena
+        nearFieldTier = tier
+        nearFieldFocus = nil
+        nearFieldLastChange = 0
+    end
+    if not cameraReady or tier == "Low"
+        or (tonumber(pressure) or 0) >= 2
+        or not arena or not arena:IsA("Folder") then return end
+    local base = arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart")
+        or base.Size.X < 318 or base.Size.Z < 318 then return end
+    local relative = base.CFrame:PointToObjectSpace(cameraPoint)
+    if math.abs(relative.X) > base.Size.X * 0.5 + 16
+        or math.abs(relative.Z) > base.Size.Z * 0.5 + 16
+        or math.abs(relative.Y) > 130 then return end
+    local now = os.clock()
+    if not nearFieldFocus then
+        nearFieldFocus = cameraPoint
+        nearFieldLastChange = now
+        return
+    end
+    local dx = cameraPoint.X - nearFieldFocus.X
+    local dz = cameraPoint.Z - nearFieldFocus.Z
+    if dx * dx + dz * dz < 88 * 88
+        or now - nearFieldLastChange < 12 then return end
+    nearFieldFocus = cameraPoint
+    nearFieldLastChange = now
+    -- Client-local epoch only: no remote traffic or gameplay authority.
+    -- One subscribed visual owner rebuilds using its CURRENT camera.
+    local previous = tonumber(player:GetAttribute(
+        "LocalPremiumNearFieldEpoch")) or 0
+    player:SetAttribute("LocalPremiumNearFieldEpoch", previous + 1)
+end
+
 -- Don't wait for the LOD tick when primary/secondary Darkness
 -- arrives: the existing disaster controller publishes this attribute.
 player:GetAttributeChangedSignal("LocalDarknessLightGuard"):Connect(function()
@@ -706,6 +756,11 @@ task.spawn(function()
         local generated = workspace:FindFirstChild("GeneratedMap")
         local arena = generated and generated:FindFirstChild("Arena")
         local decor = arena and arena:FindFirstChild("Decor")
+        -- Refresh actual carapace/column selection only after a major
+        -- camera translation; the dynamic route mesh kit below continues
+        -- using its own per-sample selection without any extra work loop.
+        retargetOriginalNearField(arena, cameraPoint, cameraReady,
+            profile.Name, player:GetAttribute("OptionalVfxPressure"))
         -- Premium real imported 3D on PHYSICAL jump decks and bridges:
         -- the SAME existing camera-tier loop owns all local MeshPart
         -- creation/cleanup. Original colliders and hazard cues stay live;
