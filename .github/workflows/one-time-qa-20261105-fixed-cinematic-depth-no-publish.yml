@@ -40,6 +40,7 @@ jobs:
           assert 'CinematicDepthLayoutRules.indices("Traffic", tier.Name)' in client
           assert '"OrbitalHalo", tier.Name' in client
           assert '"tests/engine/cinematic-depth-layout.spec.luau"' in cloud
+          assert '78 engine specs assigned exactly once' in Path("README.md").read_text()
           assert 'immutable cinematic skyline ring layouts' in test
           assert 'expect(#low).toBe(budget[1])' in test
           assert 'RenderStepped:Connect(' not in rules
