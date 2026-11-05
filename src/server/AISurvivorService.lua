@@ -3713,6 +3713,8 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.assistHoldAt = nil
         record.nextAssistAt = now + 4
     end
+    -- A stalled bot must not lock the shared sky switch while recovering.
+    SkySpineSwitchyard.releaseBot(record.model)
     record.spineControl = nil
     record.spineHoldAt = nil
     record.nextSpineAt = now + 7
