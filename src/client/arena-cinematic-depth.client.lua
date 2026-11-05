@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local ArenaSceneryFrames = require(ReplicatedStorage.Shared.ArenaSceneryFrames)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local CinematicHorizonMeshRules = require(ReplicatedStorage.Shared.CinematicHorizonMeshRules)
 local CinematicDepthLayoutRules = require(ReplicatedStorage.Shared.CinematicDepthLayoutRules)
 
 local player = Players.LocalPlayer
@@ -40,6 +41,7 @@ local function makePart(name, size, cframe, color, material, transparency, castS
     part.Material = material or Enum.Material.Metal
     part.Color = color
     part.Transparency = transparency or 0
+    part:SetAttribute("CosmeticOnly", true)
     part.Parent = folder
     return part
 end
@@ -67,37 +69,24 @@ local function phaseTransparency(baseTransparency)
     return baseTransparency
 end
 
+-- All 2-3 original nonphysical primitives of a numbered skyline station
+-- share an exact source identity for genuine imported 3D replacement.
+local function tagHorizon(part, index, variant)
+    part:SetAttribute("OriginalCinematicHorizonIndex", index)
+    part:SetAttribute("OriginalCinematicHorizonVariant", variant)
+end
+
 local function addHorizonArchitecture(base, variant, theme, tier)
-    local radius = variant == "Orbital" and 148 or (variant == "Towers" and 142 or 136)
     -- Low/Medium occupy fixed sectors of the same High-quality ring.
     for _, i in ipairs(CinematicDepthLayoutRules.indices("Horizon", tier.Name)) do
         local angle = CinematicDepthLayoutRules.angle("Horizon", i)
-        local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
         local tangent = angle + math.pi * 0.5
-
-        local width
-        local height
-        local depth
-
-        if variant == "Towers" then
-            width = 7 + ((i * 3) % 6)
-            height = 44 + ((i * 17) % 42)
-            depth = width
-        elseif variant == "Crossroads" then
-            width = 18 + ((i * 5) % 12)
-            height = 18 + ((i * 7) % 18)
-            depth = 7 + ((i * 3) % 5)
-        elseif variant == "Orbital" then
-            width = 11 + ((i * 2) % 5)
-            height = 12 + ((i * 5) % 15)
-            depth = width
-        else
-            width = 10 + ((i * 4) % 8)
-            height = 28 + ((i * 13) % 32)
-            depth = 8 + ((i * 3) % 6)
-        end
-
-        local localPosition = radial * radius + Vector3.new(0, (height * 0.5) - 8, 0)
+        -- Keep original dimensions/positions byte-for-byte equivalent
+        -- while sharing real native identity with the genuine 3D mesh kit.
+        local authored = CinematicHorizonMeshRules.bodySize(variant, i)
+        local width, height, depth = authored.X, authored.Y, authored.Z
+        local localPosition = CinematicHorizonMeshRules.offset(
+            base.Size, variant, i)
         local structure = makePart(
             "CinemaHorizonStructure" .. i,
             Vector3.new(width, height, depth),
@@ -107,6 +96,8 @@ local function addHorizonArchitecture(base, variant, theme, tier)
             phaseTransparency(tier.Name == "Low" and 0.34 or 0.20),
             tier.Name == "High"
         )
+
+        tagHorizon(structure, i, variant)
 
         if variant == "Orbital" then
             structure.Shape = Enum.PartType.Cylinder
@@ -133,6 +124,7 @@ local function addHorizonArchitecture(base, variant, theme, tier)
             ),
             false
         )
+        tagHorizon(crown, i, variant)
         crown:SetAttribute("BaseAccentIndex", i)
 
         if tier.Name == "High" and i % 4 == 1 then
@@ -145,6 +137,7 @@ local function addHorizonArchitecture(base, variant, theme, tier)
                 phaseTransparency(0.58),
                 false
             )
+            tagHorizon(slit, i, variant)
             slit:SetAttribute("BaseAccentIndex", i + 1)
         end
     end

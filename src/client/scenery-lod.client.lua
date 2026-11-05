@@ -25,6 +25,7 @@ local HarborMidgroundBargeMeshKit = require(script.Parent.HarborMidgroundBargeMe
 local HarborSeaMeshKit = require(script.Parent.HarborSeaMeshKit)
 local TowerCoolingSpireMeshKit = require(script.Parent.TowerCoolingSpireMeshKit)
 local ApprovedMidgroundSkylineMeshKit = require(script.Parent.ApprovedMidgroundSkylineMeshKit)
+local ApprovedCinematicHorizonMeshKit = require(script.Parent.ApprovedCinematicHorizonMeshKit)
 local OriginalOrbitalStationsMeshKit = require(script.Parent.OriginalOrbitalStationsMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
@@ -180,9 +181,14 @@ local FOLDERS = {
         MediumDistance = 145,
         Origin = "Lobby",
     },
+    -- The existing 5/8/11 nonphysical skyline sites span a 320-stud
+    -- world. Never hide an adjacent authentic/native skyline entirely
+    -- because the camera crossed the center-distance tier cutoff.
+    -- Original Part counts stay fixed; new approved MeshParts have their
+    -- own much stricter camera/pressure quotas and source-safe fallbacks.
     ArenaCinematicDepthLocal = {
-        LowDistance = 165,
-        MediumDistance = 245,
+        LowDistance = 240,
+        MediumDistance = 315,
     },
     -- The original surface owner spans an actual 320-stud arena.
     -- Center-based 105/160 cutoffs hid approved relief and source plates
@@ -925,6 +931,27 @@ task.spawn(function()
             ~=replaced then
             player:SetAttribute("LocalOriginalMidgroundNativeReplaced",
                 replaced)
+        end
+        -- A single source-authenticated cinematic horizon mesh owner
+        -- replaces body, crown and optional slit at the real, stable
+        -- eleven-sector locations of ALL five arena themes. The new
+        -- models remain strictly visual, bound to the existing LOD tick
+        -- and Android pressure levels; native art restores before unmount.
+        ApprovedCinematicHorizonMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local trueCinema=ApprovedCinematicHorizonMeshKit.count()
+        if player:GetAttribute("LocalOriginalCinematicHorizon3DCount")
+            ~=trueCinema then
+            player:SetAttribute("LocalOriginalCinematicHorizon3DCount",
+                trueCinema)
+        end
+        local replacedCinema=
+            ApprovedCinematicHorizonMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalNativeCinematicHorizonPartsReplaced")
+            ~=replacedCinema then
+            player:SetAttribute("LocalNativeCinematicHorizonPartsReplaced",
+                replacedCinema)
         end
         -- Authentic compact Orbital satellite/containment stations, not
         -- primitive sphere blocks. Reuse same camera/pressure sampler.

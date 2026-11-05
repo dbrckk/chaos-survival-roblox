@@ -2,6 +2,11 @@ local VisualBudgetRules = {}
 
 VisualBudgetRules.LocalFolders = {
     "ArenaCinematicDepthLocal",
+    -- Eleven maximum genuinely creator-approved skyline MeshPart Models
+    -- at High desktop, pressure-adaptive 2/5/7 on Android Low/Medium/High.
+    -- Count every imported local MeshPart inside the SAME 440/680/900
+    -- local Part census, never bypass adaptive GPU quality decisions.
+    "OriginalCinematicHorizonMeshesLocal",
     "ArenaSurfaceReliefLocal",
     "ArenaSilhouetteBreakupLocal",
     "ArenaMidgroundMassLocal",
