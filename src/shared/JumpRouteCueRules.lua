@@ -522,7 +522,9 @@ end
 -- Strictly pair server-authored route metadata AND genuine current physics.
 -- A connection where footprints overlap is a *walk*, not a fake jump.
 function JumpRouteCueRules.skyNetworkLink(from, target)
-    if not JumpRouteCueRules.safeLandingTarget(from)
+    -- A player already standing on an amber Warning deck must be guided
+    -- OUT before it disappears; only the destination must be hazard-safe.
+    if not walkable(from)
         or not JumpRouteCueRules.safeLandingTarget(target)
         or from == target or from.Parent ~= target.Parent
         or from:GetAttribute("ChaosPermanentRoute") ~= true
@@ -546,7 +548,7 @@ end
 -- consecutive promenade/spine steps. No position-only sky bridge guesses.
 function JumpRouteCueRules.skyNetworkOptions(from, orderedPlatforms,
         travelDirection)
-    if not JumpRouteCueRules.safeLandingTarget(from)
+    if not walkable(from)
         or type(orderedPlatforms) ~= "table" then return nil, nil end
     local lane = from:GetAttribute("PromenadeLane")
     local step = from:GetAttribute("PromenadeStep")
