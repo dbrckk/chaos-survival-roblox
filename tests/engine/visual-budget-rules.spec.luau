@@ -246,6 +246,73 @@ describe("visual budget rules", function()
         if createdLibrary then library:Destroy() end
     end)
 
+    it("applies source-authenticated 2K Harbor gantry armor without painting danger or grip", function()
+        local rs = game:GetService("ReplicatedStorage")
+        local lib = rs:FindFirstChild("OriginalGroundPbrTemplates")
+        local newLib = false
+        if not lib then
+            lib = Instance.new("Folder")
+            lib.Name = "OriginalGroundPbrTemplates"
+            lib.Parent = rs
+            newLib = true
+        end
+        local created = {}
+        for _, name in ipairs({"OxidizedSteel","BrushedTitanium","ReactorCeramic"}) do
+            if not lib:FindFirstChild(name) then
+                local template = Instance.new("SurfaceAppearance")
+                template.Name = name
+                template.Parent = lib
+                created[#created+1] = template
+            end
+        end
+        local model = Instance.new("Model")
+        model.Name = "ApprovedHarborSuspendedCargoGantry3D"
+        model:SetAttribute("CosmeticOnly",true)
+        model:SetAttribute("Original3DAssetId",134157110756659)
+        model:SetAttribute("OriginalHarborPromenadePortal3D",true)
+        model.Parent = workspace
+        local function mesh(group)
+            local part = Instance.new("MeshPart")
+            part.Name = "Original_"..group
+            part.Parent = model
+            return part
+        end
+        local armor = mesh("ARMOR")
+        local alloy = mesh("ALLOY")
+        local ceramic = mesh("CERAMIC")
+        local grip = mesh("GRIP")
+        local signal = mesh("SIGNAL")
+        local carbon = mesh("CARBON")
+        local import = Instance.new("SurfaceAppearance")
+        import.Name = "ImportSourceFactors"
+        import.Parent = armor
+        local entry = {model=model}
+        expect(PremiumRoutePbrKit.apply(entry,"gantry","Harbor",true)).toBe(3)
+        expect(armor:FindFirstChild("OriginalApprovedBridgePbr2K")~=nil).toBe(true)
+        expect(alloy:FindFirstChild("OriginalApprovedBridgePbr2K")~=nil).toBe(true)
+        expect(ceramic:FindFirstChild("OriginalApprovedBridgePbr2K")~=nil).toBe(true)
+        expect(signal:FindFirstChildWhichIsA("SurfaceAppearance")).toBe(nil)
+        expect(grip:FindFirstChildWhichIsA("SurfaceAppearance")).toBe(nil)
+        expect(carbon:FindFirstChildWhichIsA("SurfaceAppearance")).toBe(nil)
+        expect(import.Parent).toBe(nil)
+        local late = mesh("BRUSHED")
+        expect(PremiumRoutePbrKit.apply(entry,"gantry","Harbor",true)).toBe(4)
+        expect(late:FindFirstChild("OriginalApprovedBridgePbr2K")~=nil).toBe(true)
+        PremiumRoutePbrKit.detach(entry)
+        expect(import.Parent).toBe(armor)
+        local n,m = PremiumRoutePbrKit.count(entry)
+        expect(n).toBe(0)
+        expect(m).toBe(0)
+        model:SetAttribute("OriginalHarborPromenadePortal3D",false)
+        expect(PremiumRoutePbrKit.apply(entry,"gantry","Harbor",true)).toBe(0)
+        model:SetAttribute("OriginalHarborPromenadePortal3D",true)
+        model:SetAttribute("Original3DAssetId",1)
+        expect(PremiumRoutePbrKit.apply(entry,"gantry","Harbor",true)).toBe(0)
+        model:Destroy()
+        for _, createdTemplate in ipairs(created) do createdTemplate:Destroy() end
+        if newLib then lib:Destroy() end
+    end)
+
     it("fills all 36 source-verified ground bays only on healthy High devices", function()
         local count = PremiumGroundMeshKit.residencyCount
         expect(count("High", 0)).toBe(36)

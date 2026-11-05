@@ -26,6 +26,8 @@
 
 **Lot VIS-010 / VIS-027 — raccords 3D réels (5 novembre 2026) :** les quotas existants de 3/5 passerelles Medium/High sont désormais alloués avec priorité aux vraies plateformes successives et aux deux jonctions du H Sky Spine/proménades, avec validation du collider, gap et altitude. Les copies isolées perdent la priorité, les faux ponts restent impossibles. [Dossier](APPROVED_CONTIGUOUS_3D_SKY_ROUTE_JUNCTIONS_2026-11-05.md). **Tests moteur et visuels Android requis ; aucune publication par ce lot.**
 
+**Lot VIS-027 / VIS-PBR — portiques Harbor 2K (5 novembre 2026) :** 2K sur le véritable cargo gantry approuvé le plus visible en Medium/High sans pression, six portiques physiques conservés, matériaux SIGNAL/GRIP/CARBON protégés, retour natif immédiat si le Model disparaît. [Détails](APPROVED_HARBOR_SKYWALK_GANTRY_2K_PBR_AND_NATIVE_FALLBACK_2026-11-05.md). **Validation moteur et appareil à obtenir, pas de publication.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

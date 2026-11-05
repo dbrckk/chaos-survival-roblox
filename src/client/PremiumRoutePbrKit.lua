@@ -14,6 +14,7 @@ local Kit = {}
 local APPROVED = {
     route = 94023662427980,
     crown = 71492051540032,
+    gantry = 134157110756659, -- owner-approved seven-material Harbor gateway
 }
 local FAMILIES = {
     Classic = true, Towers = true, Crossroads = true,
@@ -73,8 +74,14 @@ local function validModel(model, kind)
         return model:GetAttribute("OriginalPremiumRouteAssetId")
             == APPROVED.route and model.Name == "OriginalPremiumRouteMesh"
     end
-    return model:GetAttribute("Original3DAssetId") == APPROVED.crown
-        and model.Name == "OriginalApprovedSkySpineCrown3D"
+    if kind == "crown" then
+        return model:GetAttribute("Original3DAssetId") == APPROVED.crown
+            and model.Name == "OriginalApprovedSkySpineCrown3D"
+    end
+    return kind == "gantry"
+        and model:GetAttribute("Original3DAssetId") == APPROVED.gantry
+        and model:GetAttribute("OriginalHarborPromenadePortal3D") == true
+        and model.Name == "ApprovedHarborSuspendedCargoGantry3D"
 end
 
 local function sourceTemplate(name)
@@ -176,7 +183,8 @@ function Kit.apply(entry, kind, variant, allowed)
         end
     end
     if #models < 1 or #models > 4
-        or (kind == "crown" and #models ~= 1) then
+        or ((kind == "crown" or kind == "gantry")
+            and #models ~= 1) then
         Kit.detach(entry)
         return 0
     end

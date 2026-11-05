@@ -3,6 +3,10 @@
 -- preserve all server collision, warning state, bots, jumps and shrink.
 -- Uses scenery-lod's existing low-frequency camera/quality tick.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PremiumRoutePbrKit = if script and script.Parent
+    and script.Parent:FindFirstChild("PremiumRoutePbrKit")
+    then require(script.Parent.PremiumRoutePbrKit)
+    else require("./PremiumRoutePbrKit")
 
 local Kit = {}
 local ID = 134157110756659
@@ -63,7 +67,8 @@ local function authentic(deck, arena, base)
         or deck.Parent ~= arena:FindFirstChild("Platforms")
         or not deck.Name:match("^Platform%d+$")
         or deck:GetAttribute("ChaosPermanentRoute") ~= true
-        or not deck.CanCollide or deck.Transparency >= .75
+        or not deck.Anchored or not deck.CanCollide
+        or deck.Transparency >= .75
         or deck.Size.X < 18 or deck.Size.X > 32
         or math.abs(deck.Size.Y - 2) > .12
         or math.abs(deck.Size.Z - 12) > .15
@@ -112,6 +117,9 @@ end
 
 local function refresh(entry)
     local visible = isAlive(entry)
+    -- Server hazard/shrink priority: restore original UV and safety cues
+    -- during the same physical attribute event, not the next LOD pass.
+    if not visible then PremiumRoutePbrKit.detach(entry) end
     for _, part in ipairs(entry.pieces) do
         if part.Parent then
             part.LocalTransparencyModifier = visible and 0 or 1
@@ -126,7 +134,9 @@ local function refresh(entry)
 end
 
 local function dismantle(entry)
+    if entry.disposing then return end
     entry.disposing = true
+    PremiumRoutePbrKit.detach(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -139,6 +149,18 @@ local function dismantle(entry)
     entry.model:Destroy()
     suppressOwnRemoval = false
 end
+
+-- A missing authentic imported gantry must reveal the exact nine server
+-- native structures immediately. Voluntary teardown is non-reentrant.
+folder.ChildRemoved:Connect(function(child)
+    if suppressOwnRemoval or not child:IsA("Model") then return end
+    for deck, entry in pairs(entries) do
+        if not entry.disposing and entry.model == child then
+            dismantle(entry)
+            entries[deck] = nil
+        end
+    end
+end)
 
 local function clearModels()
     for deck, entry in pairs(entries) do
@@ -218,6 +240,9 @@ local function mount(arena,base,decor,deck,template,expected)
     copy.Name="ApprovedHarborSuspendedCargoGantry3D"
     copy:SetAttribute("Original3DAssetId",ID)
     copy:SetAttribute("CosmeticOnly",true)
+    copy:SetAttribute("OriginalHarborPromenadePortal3D",true)
+    copy:SetAttribute("OriginalHarborPromenadeStep",
+        deck:GetAttribute("PromenadeStep"))
     copy.Parent=folder
     for _, piece in ipairs(pieces) do
         local joint=Instance.new("WeldConstraint")
@@ -256,7 +281,8 @@ end
 
 -- The existing scenery-lod.client.lua sampler calls this one function.
 -- No extra RenderStepped, Heartbeat, independent polling or remote fetch.
-function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
+function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,
+    pressure,touch,pbrDisabled)
     if arena ~= activeArena then
         clear()
         activeArena=arena
@@ -340,6 +366,36 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
             end
         end
     end
+    -- One complete near-camera source UV model only; no new textures.
+    -- Android Low, disabled PBR or any frame pressure: zero allocations.
+    local slots = math.min(1, PremiumRoutePbrKit.entryBudget(
+        tier, pressure, touch, pbrDisabled))
+    if stress > 0 then slots = 0 end
+    local selected = {}
+    for _, choice in ipairs(ranked) do
+        if slots <= 0 then break end
+        local entry = entries[choice.deck]
+        if entry and isAlive(entry) then
+            selected[choice.deck] = true
+            slots -= 1
+        end
+    end
+    for deck, entry in pairs(entries) do
+        PremiumRoutePbrKit.apply(entry, "gantry", "Harbor",
+            selected[deck] == true and isAlive(entry))
+    end
+end
+
+function Kit.pbrCount()
+    local models, appearances = 0, 0
+    for _, entry in pairs(entries) do
+        if isAlive(entry) then
+            local n, m = PremiumRoutePbrKit.count(entry)
+            models += n
+            appearances += m
+        end
+    end
+    return models, appearances
 end
 
 function Kit.count()

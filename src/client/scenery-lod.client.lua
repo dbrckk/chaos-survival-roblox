@@ -588,11 +588,24 @@ task.spawn(function()
         -- detail but NEVER hides an actual platform or danger cue.
         HarborPromenadePortalMeshKit.sync(arena,cameraPoint,profile.Name,
             cameraReady,cameraLook,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"), isTouch,
+            player:GetAttribute("PbrMaterialsDisabled") == true)
         local gantries = HarborPromenadePortalMeshKit.count()
         if player:GetAttribute("LocalOriginalHarborPromenadeCount")
             ~= gantries then
             player:SetAttribute("LocalOriginalHarborPromenadeCount",gantries)
+        end
+        local gantryPbrModels, gantryPbrOverlays =
+            HarborPromenadePortalMeshKit.pbrCount()
+        if player:GetAttribute("LocalOriginalHarborGantryPbr2KModelCount")
+            ~= gantryPbrModels then
+            player:SetAttribute("LocalOriginalHarborGantryPbr2KModelCount",
+                gantryPbrModels)
+        end
+        if player:GetAttribute("LocalOriginalHarborGantryPbr2KAppearanceCount")
+            ~= gantryPbrOverlays then
+            player:SetAttribute("LocalOriginalHarborGantryPbr2KAppearanceCount",
+                gantryPbrOverlays)
         end
         -- Up to twelve real ORIGINAL 3D forged Harbor cargo skins on
         -- actual HarborRoute/HarborSpokeRoute jump landing parts, not new
