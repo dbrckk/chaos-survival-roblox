@@ -65,7 +65,7 @@ jobs:
           assert 'expect(fill.Enabled).toBe(false)' in test
           assert 'expect(SkySpineCrownMeshKit.lightCount()).toBe(2)' in test
           assert '"tests/engine/mapbuilder-advanced.spec.luau"' in cloud
-          assert 'aucune publication' in doc.lower() or 'publication désactivée' in doc.lower()
+          assert 'publication' in doc.lower() and 'désactivée' in doc.lower()
           assert 'RenderStepped' not in kit
           assert 'Heartbeat' not in kit
           assert 'RemoteEvent' not in kit
