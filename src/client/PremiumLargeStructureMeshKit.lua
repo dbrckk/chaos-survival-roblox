@@ -119,7 +119,7 @@ end
 -- sampling or the first two PlatformN in a large streamed arena.
 -- One snapshot per EXISTING map/tier/asset arrival rebuild. No camera loop,
 -- network calls or server-authoritative gameplay changes.
-function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint)
+function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint,cameraLook)
     local cradleSet,supportSet={},{}
     -- The REAL Platforms folder can stream before Arena.Decor. The
     -- full-length 3D LongCradle needs only verified walkable decks and
@@ -156,6 +156,19 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             focus=cameraPoint
         end
     end
+    -- Favor genuine creator-owned columns / long cradles in the live
+    -- third-person view without changing High/Medium source quotas or
+    -- requiring a costly rebuild on every camera move.
+    local function cameraFacingBias(delta)
+        if focus ~= cameraPoint or typeof(cameraLook) ~= "Vector3" then
+            return 0
+        end
+        local route=Vector3.new(delta.X,0,delta.Z)
+        local look=Vector3.new(cameraLook.X,0,cameraLook.Z)
+        if route.Magnitude<30 or look.Magnitude<0.5 then return 0 end
+        return -route.Unit:Dot(look.Unit)
+            *math.min(36,route.Magnitude*.18)
+    end
     local cradles,supports={},{}
 
     for _,platform in ipairs(platforms) do
@@ -172,6 +185,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local long,short=math.max(size.X,size.Z),math.min(size.X,size.Z)
             local delta=platform.Position-focus
             local score=Vector3.new(delta.X,delta.Y*.65,delta.Z).Magnitude
+                +cameraFacingBias(delta)
             if platform:GetAttribute("ChaosPermanentRoute")==true then
                 score-=8
             end
