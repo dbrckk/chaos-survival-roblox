@@ -945,12 +945,6 @@ local function sendToLobby(record)
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
     SkySpineSwitchyard.releaseBot(record.model)
-    SkySpineSwitchyard.releaseBot(record.model)
-    SkySpineSwitchyard.releaseBot(record.model)
-    SkySpineSwitchyard.releaseBot(record.model)
-    SkySpineSwitchyard.releaseBot(record.model)
-    SkySpineSwitchyard.releaseBot(record.model)
-    SkySpineSwitchyard.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = 0
@@ -959,12 +953,6 @@ local function sendToLobby(record)
     record.nextShieldAt = 0
     record.spineControl = nil
     record.spineHoldAt = nil
-    record.nextSpineAt = 0
-    record.nextSpineAt = 0
-    record.nextSpineAt = 0
-    record.nextSpineAt = 0
-    record.nextSpineAt = 0
-    record.nextSpineAt = 0
     record.nextSpineAt = 0
     pivotRecord(record, getLobbyPosition(record))
 end
@@ -1033,6 +1021,7 @@ local function sendToArena(record)
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = os.clock() + 1.6 + record.slot * 0.25
@@ -1041,6 +1030,7 @@ local function sendToArena(record)
     record.nextShieldAt = os.clock() + 0.75 + record.slot * 0.16
     record.spineControl = nil
     record.spineHoldAt = nil
+    record.nextSpineAt = os.clock() + 2 + record.slot * 0.20
     pivotRecord(record, spawn)
 end
 
@@ -1048,6 +1038,7 @@ local function destroyRecord(record)
     cancelGroundNavigation(record)
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
     destroyTracks(record)
     if record.model and record.model.Parent then
         record.model:Destroy()
@@ -3722,7 +3713,6 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.assistHoldAt = nil
         record.nextAssistAt = now + 4
     end
-    SkySpineSwitchyard.releaseBot(record.model)
     record.spineControl = nil
     record.spineHoldAt = nil
     record.nextSpineAt = now + 7
