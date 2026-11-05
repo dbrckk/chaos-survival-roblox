@@ -19,8 +19,61 @@ local PremiumGroundPbrKit = require("../../src/client/PremiumGroundPbrKit")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local PremiumRoutePbrKit = require("../../src/client/PremiumRoutePbrKit")
 local SpatialMidgroundSelectionRules = require("../../src/shared/SpatialMidgroundSelectionRules")
+local MidgroundOutboardLodRules = require("../../src/shared/MidgroundOutboardLodRules")
 
 describe("visual budget rules", function()
+    it("keeps actual tagged original 3D skyline native fallbacks visible near the rim with unchanged distance cutoffs", function()
+        local rules = MidgroundOutboardLodRules
+        local floorCenter = Vector3.zero
+        local camera = Vector3.new(221, 0, 0)
+        local nearTower = Vector3.new(245, 14, 0)
+        local farTower = Vector3.new(-240, 14, 0)
+        local nearDistance = rules.distance(camera, floorCenter, nearTower)
+        local farDistance = rules.distance(camera, floorCenter, farTower)
+        local visible = SceneryLodRules.visible
+        expect(nearDistance < 145).toBe(true)
+        expect(visible("Low", nearDistance, 145, 215, nil)).toBe(true)
+        expect(visible("Medium", nearDistance, 145, 215, nil)).toBe(true)
+        expect(visible("Medium", farDistance, 145, 215, nil)).toBe(false)
+        expect(visible("Low", farDistance, 145, 215, nil)).toBe(false)
+        -- Near the map CENTER, keep the legacy visible skyline exactly:
+        -- the current patch never converts it into an empty horizon.
+        expect(rules.distance(Vector3.zero, floorCenter, nearTower)).toBe(0)
+
+        local folder = Instance.new("Folder")
+        local names = {
+            Classic = {"ClassicBroadcastMass2", "OriginalMidgroundSkylineIndex"},
+            Towers = {"TowerCoolingMass2", "OriginalTowerCoolingSpireIndex"},
+            Crossroads = {"CrossroadsTransitMass2", "OriginalMidgroundSkylineIndex"},
+            Orbital = {"OrbitalStationMass2", "OriginalOrbitalStationIndex"},
+            Harbor = {"HarborFreightBargeHull2", "OriginalHarborMidgroundBargeIndex"},
+        }
+        for variant, tokens in pairs(names) do
+            local part = Instance.new("Part")
+            part.Name = tokens[1]
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part:SetAttribute("CosmeticOnly", true)
+            part:SetAttribute(tokens[2], 2)
+            if variant == "Classic" or variant == "Crossroads" then
+                part:SetAttribute("OriginalMidgroundSkylineVariant", variant)
+            end
+            part.Parent = folder
+            expect(rules.index(part, variant)).toBe(2)
+            expect(rules.anchors(folder, variant)[2]).toBe(part)
+            part.CanCollide = true
+            expect(rules.index(part, variant)).toBe(nil)
+            part.CanCollide = false
+            part:SetAttribute("CosmeticOnly", false)
+            expect(rules.index(part, variant)).toBe(nil)
+            part:Destroy()
+        end
+        folder:Destroy()
+        expect(rules.distance(nil, floorCenter, nearTower)).toBe(math.huge)
+    end)
+
     it("spreads approved midground geometry over separate real-world sectors without raising tier caps", function()
         local selector = SpatialMidgroundSelectionRules.choose
         -- Four authored nonphysical outboard sites, deliberately with two

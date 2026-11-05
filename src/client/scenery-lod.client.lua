@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
+local MidgroundOutboardLodRules = require(ReplicatedStorage.Shared.MidgroundOutboardLodRules)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
@@ -150,6 +151,9 @@ local FOLDERS = {
     -- AerialSurveyLocal intentionally omitted: AerialSurveyKit owns its
     -- own part masking, Light/Trail gating and camera-distance hysteresis.
     -- A second LOD writer could reveal distant drones at the cutoff.
+    -- The real 3D source replacements are per-silhouette, but native
+    -- fallbacks used to be culled as ONE group from Arena.Base center.
+    -- Sector-aware handling below keeps the same exact numeric thresholds.
     ArenaMidgroundMassLocal = {
         LowDistance = 145,
         MediumDistance = 215,
@@ -379,6 +383,103 @@ local function applyFolder(folder, limits, profile, origin, cameraPoint)
     return visible
 end
 
+-- Client-only native sky masses are spread OUTSIDE the 320-stud floor.
+-- A center-distance blanket mask falsely hides the one nearby landmark
+-- when an Android player approaches the real rim. Apply the established
+-- same-quality LOD masks to the exact builder-tagged four-to-six
+-- noncolliding structures and their own ornaments, one physical owner at
+-- a time. Existing imported MeshPart owners still decide fallback masking.
+local function applyMidgroundOutboard(folder, profile, arenaOrigin, cameraPoint)
+    local cache = ensureCache(folder)
+    if cache.dirty then
+        SceneryLodCache.refresh(folder, cache, classifyDescendant)
+    end
+
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local variant = arena and arena:GetAttribute("VariantId")
+    local anchors = MidgroundOutboardLodRules.anchors(folder, variant)
+    local previous = cache.midgroundSectorVisible or {}
+    local sectorVisible = {}
+    local limits = FOLDERS.ArenaMidgroundMassLocal
+    local centralDistance = (cameraPoint - arenaOrigin).Magnitude
+    local centralVisible = SceneryLodRules.visible(profile.Name,
+        centralDistance, limits.LowDistance, limits.MediumDistance,
+        cache.midgroundCentralVisible)
+    cache.midgroundCentralVisible = centralVisible
+
+    for index, anchor in pairs(anchors) do
+        local distance = MidgroundOutboardLodRules.distance(
+            cameraPoint, arenaOrigin, anchor.Position)
+        sectorVisible[index] = SceneryLodRules.visible(profile.Name,
+            distance, limits.LowDistance, limits.MediumDistance,
+            previous[index])
+    end
+    cache.midgroundSectorVisible = sectorVisible
+
+    -- Most of these source-authored native silhouettes are plain Parts.
+    -- Keep the SAME LOD transparency cache as applyFolder, so approved
+    -- replacements can own their native Transparency independently and
+    -- fall back safely without stale LocalTransparencyModifier=1 masks.
+    for _, descendant in ipairs(cache.entries) do
+        if not descendant.Parent then
+            cache.dirty = true
+            continue
+        end
+        local ownerPart = descendant
+        if not descendant:IsA("BasePart") then
+            local ancestor = descendant.Parent
+            while ancestor and ancestor ~= folder do
+                if ancestor:IsA("BasePart") then
+                    ownerPart = ancestor
+                    break
+                end
+                ancestor = ancestor.Parent
+            end
+        end
+        local index = MidgroundOutboardLodRules.index(ownerPart, variant)
+        local visible = if index then sectorVisible[index] == true
+            else centralVisible
+        local minimumTier = descendant:GetAttribute("SceneryMinimumTier")
+        if minimumTier == "Medium" and profile.Name == "Low"
+            or minimumTier == "High" and profile.Name ~= "High" then
+            visible = false
+        end
+        local lodHidden = descendant:GetAttribute("SceneryLodHidden") == true
+        if descendant:IsA("BasePart") then
+            if visible then
+                if lodHidden then
+                    descendant.LocalTransparencyModifier = tonumber(
+                        descendant:GetAttribute("SceneryLodBaseTransparency")) or 0
+                    descendant:SetAttribute("SceneryLodHidden", false)
+                end
+            elseif not lodHidden then
+                descendant:SetAttribute("SceneryLodBaseTransparency",
+                    descendant.LocalTransparencyModifier)
+                descendant:SetAttribute("SceneryLodHidden", true)
+                descendant.LocalTransparencyModifier = 1
+            elseif descendant.LocalTransparencyModifier ~= 1 then
+                descendant.LocalTransparencyModifier = 1
+            end
+        elseif VisualBudgetRules.isEffect(descendant)
+            or VisualBudgetRules.isLight(descendant)
+            or descendant:IsA("SurfaceGui") then
+            if visible and lodHidden then
+                descendant.Enabled =
+                    descendant:GetAttribute("SceneryLodBaseEnabled") ~= false
+                descendant:SetAttribute("SceneryLodHidden", false)
+            elseif not visible and not lodHidden then
+                descendant:SetAttribute("SceneryLodBaseEnabled",
+                    descendant.Enabled)
+                descendant:SetAttribute("SceneryLodHidden", true)
+                descendant.Enabled = false
+            elseif not visible and descendant.Enabled then
+                descendant.Enabled = false
+            end
+        end
+    end
+end
+
 local function currentOrigins()
     local generated = workspace:FindFirstChild("GeneratedMap")
 
@@ -411,7 +512,8 @@ task.spawn(function()
         local arenaOrigin, lobbyOrigin = currentOrigins()
         local cameraPoint, cameraReady, cameraLook = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
-            if folderName ~= "PracticePadPolishLocal" then
+            if folderName ~= "PracticePadPolishLocal"
+                and folderName ~= "ArenaMidgroundMassLocal" then
                 local folder = workspace:FindFirstChild(folderName)
                 if folder then
                     local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
@@ -427,6 +529,16 @@ task.spawn(function()
                     applyFolder(folder, limits, profile, origin, cameraPoint)
                 end
             end
+        end
+
+        -- Exact local outboard fallback silhouettes: the old all-or-none
+        -- center-only LOD hid nearby Native blocks at an arena rim when
+        -- no approved 3D replacement was resident. Each builder-tagged
+        -- group now retains the original Low/Medium threshold near its
+        -- own real native anchor; no new visual/update loop.
+        local midground = workspace:FindFirstChild("ArenaMidgroundMassLocal")
+        if midground and midground:IsA("Folder") then
+            applyMidgroundOutboard(midground, profile, arenaOrigin, cameraPoint)
         end
 
         -- Each playable-sector original 3D monument is its own client
