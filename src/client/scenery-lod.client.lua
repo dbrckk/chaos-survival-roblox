@@ -507,6 +507,15 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalRouteMeshCount") ~= routeMeshes then
             player:SetAttribute("LocalOriginalRouteMeshCount", routeMeshes)
         end
+        -- Exact live number of panels hidden behind a sufficiently covering
+        -- source-authentic 3D top, not number of desired routes or inferred
+        -- render quality. Incomplete/faded meshes keep native landing paint.
+        local coveredPanels = PremiumRouteMeshKit.coveredPanelCount()
+        if player:GetAttribute("LocalOriginalRoutePanelsCoveredCount")
+            ~= coveredPanels then
+            player:SetAttribute("LocalOriginalRoutePanelsCoveredCount",
+                coveredPanels)
+        end
         -- An actual approved, sculpted high interchange on the TWO
         -- real Sky Spine center decks, never on a painted phantom bridge.
         -- Same camera sampler, strict Android Low 1 / Medium 1 / High 2.

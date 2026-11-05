@@ -1,3 +1,15 @@
+LOT 5 NOVEMBRE 2026 — VRAIES PASSERELLES 3D CONTIGUËS
+[VIS-009/010] Modules PremiumSkybridge Approved sur 3 ponts Medium /
+             5 ponts High proches caméra (vs 2/3), ratio X/Z et
+             orientation source réellement importée vérifiés. Compter
+             les sections selon source, éviter anciens trous de 12%.
+             Jamais masquer panneau natif si mesh incomplet (<95% span
+             ou <82% largeur sur pont, <85% deux axes sur palier).
+             Stream tardif vérifié par position/taille du vrai collider.
+             Stress GPU et Low restent bornés, aucune nouvelle physique.
+             LocalOriginalRoutePanelsCoveredCount = rendu local constaté.
+             docs/PREMIUM_NEAR_CAMERA_COMPLETE_ROUTE_SHELLS_2026-11-05.md
+
 LOT 5 NOVEMBRE 2026 — VRAIS CHEMINS IA RÉÉVALUÉS EN MARCHE
 [QA]     Les points Pathfinding étaient contrôlés seulement au calcul,
          puis suivis jusqu'à 11 s malgré un mur/sol modifié. Le prochain

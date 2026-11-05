@@ -16,6 +16,8 @@
 
 **Lot IA — validité des routes au sol (5 novembre 2026) :** un parcours calculé par `PathfindingService` ne reste plus fiable par défaut pendant 11 secondes. Validation physique bornée du segment courant au maximum tous les 0,72–0,96 s par bot engagé, rejet immédiat si le vrai plancher ou un mur bloque, abandon contrôlé avec métrique, et angle droit rapproché à 2,25 studs avant franchissement. [Contrat](BOT_LIVE_GROUND_PATH_CORRIDOR_AND_CORNERS_2026-11-05.md). **Validation moteur et Android non attestées sur ce nouveau SHA.**
 
+**Lot visuel prioritaire VIS-009/VIS-010 — 5 novembre 2026 :** remplacement premium des paliers et passerelles réelles recentré sur la couverture géométrique certifiée par les modèles approuvés (source X/Z, nombre minimal de sections, panneaux natifs conservés si couverture insuffisante ou streaming). Quotas 3 Medium / 5 High, sans augmentation de la densité Low ni nouvelle boucle, comptage client de surfaces réellement remplacées. [Dossier](PREMIUM_NEAR_CAMERA_COMPLETE_ROUTE_SHELLS_2026-11-05.md). **Validation moteur sur ce SHA et captures Android encore nécessaires.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

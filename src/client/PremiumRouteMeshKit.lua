@@ -17,16 +17,17 @@ local ASSETS = {
 -- camera moves across a threshold. A new route must be within distance;
 -- an already mounted safe route gets a small exit margin, never more slots.
 -- Stable residency avoids repeated MeshPart clone/weld churn on Android.
--- More visible real platforms, but NEVER unlimited cloning: the worst
--- High residency is twelve jump decks plus three four-segment bridges,
--- with at most four optional chassis models under supported routes.
+-- Extend genuine near-camera bridge coverage while preserving hard caps:
+-- High at most twelve jump decks + five four-segment bridges and four
+-- optional underdeck chassis; Android global Part ledger still owns all of
+-- them and existing VFX pressure reduces or disables expensive meshes.
 -- No additional source assets, work loops or new physical platforms.
 local BUDGET = {
     Low = {decks = 2, bridges = 1, segments = 1, underdecks = 0,
         distance = 100, retention = 18},
-    Medium = {decks = 8, bridges = 2, segments = 3, underdecks = 2,
+    Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,
         distance = 195, retention = 22},
-    High = {decks = 12, bridges = 3, segments = 4, underdecks = 4,
+    High = {decks = 12, bridges = 5, segments = 4, underdecks = 4,
         distance = 260, retention = 28},
 }
 
@@ -108,6 +109,89 @@ local function getTemplate(name)
         return nil
     end
     return model
+end
+
+-- Imported models can have their long axis along X *or* Z depending
+-- on the approved asset's Roblox import. Rotate genuine mesh copies into
+-- the matching REAL physical deck axis, not a guessed rectangular tile.
+-- Returns conservative actual bounding-box coverage, never a visual claim
+-- that the mesh surface itself is opaque (engine/device QA is still needed).
+local function fitSourceToDeck(platform, bounds, segments, isBridge)
+    if not platform or not platform:IsA("BasePart")
+        or typeof(bounds) ~= "Vector3"
+        or bounds.X <= 0 or bounds.Z <= 0
+        or bounds.Y <= 0 or segments < 1 then return nil end
+    local size = platform.Size
+    local longZ = size.Z > size.X
+    local longAxis = math.max(size.X, size.Z)
+    local narrowAxis = math.min(size.X, size.Z)
+    if longAxis <= 0 or narrowAxis <= 0 then return nil end
+    if isBridge then
+        local sourceLongZ = bounds.Z > bounds.X
+        local sourceLength = math.max(bounds.X, bounds.Z)
+        local sourceWidth = math.min(bounds.X, bounds.Z)
+        local segmentLength = longAxis / segments
+        local scale = math.min(
+            narrowAxis * 0.94 / sourceWidth,
+            segmentLength * 0.985 / sourceLength, 1.16)
+        if scale < 0.46 then return nil end
+        local longCoverage = sourceLength * scale / segmentLength
+        local widthCoverage = sourceWidth * scale / narrowAxis
+        return {
+            scale = scale,
+            yaw = longZ == sourceLongZ and 0 or math.pi * 0.5,
+            longCoverage = longCoverage,
+            widthCoverage = widthCoverage,
+            panelCovered = longCoverage >= 0.95
+                and widthCoverage >= 0.82,
+        }
+    end
+    -- Square and unequal jump decks may meet an owner model whose
+    -- imported X/Z axes are swapped. Choose whichever places more
+    -- creator-original geometry on the physical landing.
+    local best = nil
+    for _, yaw in ipairs({0, math.pi * 0.5}) do
+        local sourceX = yaw == 0 and bounds.X or bounds.Z
+        local sourceZ = yaw == 0 and bounds.Z or bounds.X
+        local scale = math.min(
+            size.X * 0.93 / sourceX,
+            size.Z * 0.93 / sourceZ, 1.28)
+        if scale >= 0.46 then
+            local xCoverage = sourceX * scale / size.X
+            local zCoverage = sourceZ * scale / size.Z
+            local fit = {
+                scale = scale,
+                yaw = yaw,
+                panelCovered = xCoverage >= 0.85
+                    and zCoverage >= 0.85,
+                score = math.min(1, xCoverage) * math.min(1, zCoverage),
+            }
+            if not best or fit.score > best.score then best = fit end
+        end
+    end
+    return best
+end
+
+-- Select the MINIMUM genuine module count that can cover an authentic
+-- long 3D corridor instead of blindly subdividing by 9.5 studs. The
+-- fallback chooses the best real source coverage within Android quota.
+local function chooseBridgeSegments(platform, bounds, maxSegments)
+    local limit = math.max(1, math.floor(maxSegments or 1))
+    local bestCount = 1
+    local bestScore = -math.huge
+    for n = 1, limit do
+        local fit = fitSourceToDeck(platform, bounds, n, true)
+        if fit then
+            if fit.panelCovered then return n end
+            local score = math.min(1, fit.longCoverage) * 0.8
+                + math.min(1, fit.widthCoverage) * 0.2 - n * 0.007
+            if score > bestScore then
+                bestScore = score
+                bestCount = n
+            end
+        end
+    end
+    return bestCount
 end
 
 local function addModel(entry, platform, template, offset, scale, yaw)
@@ -259,7 +343,8 @@ local function syncVisibility(entry, platform)
         end
     end
     if entry.panel and entry.panel.Parent then
-        local desired = safe and 1 or entry.originalPanelAlpha
+        local desired = (safe and entry.panelCovered)
+            and 1 or entry.originalPanelAlpha
         if entry.panel.LocalTransparencyModifier ~= desired then
             entry.panel.LocalTransparencyModifier = desired
         end
@@ -272,16 +357,12 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         return nil
     end
     local isBridge = bridgeCandidate == true
-    local width = math.min(platform.Size.X, platform.Size.Z)
     local length = math.max(platform.Size.X, platform.Size.Z)
     local countToMount = isBridge and count or 1
     local segment = length / countToMount
-    local scale = if isBridge then math.min(
-        width * 0.91 / bounds.Z, segment * 0.88 / bounds.X, 1.10)
-        else math.min(
-            platform.Size.X * 0.93 / bounds.X,
-            platform.Size.Z * 0.93 / bounds.Z, 1.28)
-    if scale < 0.46 then return nil end
+    local fit = fitSourceToDeck(platform, bounds, countToMount, isBridge)
+    if not fit then return nil end
+    local scale = fit.scale
     local entry = {
         models = {},
         connections = {},
@@ -290,9 +371,11 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         panel = nil,
         originalPanelAlpha = 0,
         underdeck = underdeckTemplate ~= nil,
+        -- The native landing paint is masked ONLY when the owner-approved
+        -- model's actual bounding box covers both walkable axes.
+        panelCovered = fit.panelCovered,
     }
-    local yaw = isBridge and (platform.Size.Z > platform.Size.X
-        and math.pi * 0.5 or 0) or 0
+    local yaw = fit.yaw
 
     for i = 1, countToMount do
         local offset = isBridge
@@ -321,10 +404,46 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         or platform.Name:match("^Skybridge(%d+)$"))
     local arena = platform.Parent and platform.Parent.Parent
     local decor = arena and arena:FindFirstChild("Decor")
-    local panel = decor and index and decor:FindFirstChild("PlatformPanel" .. index)
-    if panel and panel:IsA("BasePart") then
+    local panelName = index and "PlatformPanel" .. index or nil
+    -- A streamed, misindexed or old map panel is NOT ours to hide. Check
+    -- its authentic server-authored position and physical deck footprint.
+    local function ownedPanel(panel)
+        if not panelName or not panel or not panel:IsA("BasePart")
+            or panel.Name ~= panelName or panel.Parent ~= decor
+            or panel.CanCollide or panel.CanTouch or panel.CanQuery then
+            return false
+        end
+        local intended = platform.Position
+            + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)
+        return (panel.Position - intended).Magnitude <= 0.75
+            and math.abs(panel.Size.X - (platform.Size.X - 0.8)) < 1.25
+            and math.abs(panel.Size.Z - (platform.Size.Z - 0.8)) < 1.25
+    end
+    local function attachNativePanel(panel)
+        if not ownedPanel(panel) or entry.panel == panel then return end
+        if entry.panel and entry.panel.Parent then
+            entry.panel.LocalTransparencyModifier = entry.originalPanelAlpha
+        end
         entry.panel = panel
         entry.originalPanelAlpha = panel.LocalTransparencyModifier
+        syncVisibility(entry, platform)
+    end
+    if decor and panelName then
+        attachNativePanel(decor:FindFirstChild(panelName))
+        -- The real server panel can stream AFTER the approved 3D mesh:
+        -- do not leave overlapping flat native paint for the whole round.
+        entry.connections[#entry.connections + 1] =
+            decor.ChildAdded:Connect(function(child)
+                if child.Name == panelName then
+                    attachNativePanel(child)
+                end
+            end)
+        entry.connections[#entry.connections + 1] =
+            decor.ChildRemoved:Connect(function(child)
+                if child == entry.panel then
+                    entry.panel = nil
+                end
+            end)
     end
     local function refresh()
         if platform.Parent then
@@ -502,10 +621,9 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     end
     if bridgeTemplate then
         for i = 1, math.min(#bridges, bridgeCap) do
-            local span = math.max(bridges[i].platform.Size.X,
-                bridges[i].platform.Size.Z)
-            local count = math.min(budget.segments,
-                math.max(1, math.floor(span / 9.5)))
+            local _, sourceBox = bridgeTemplate:GetBoundingBox()
+            local count = chooseBridgeSegments(
+                bridges[i].platform, sourceBox, budget.segments)
             wanted[bridges[i].platform] = {
                 template = bridgeTemplate, count = count, bridge = true,
             }
@@ -570,6 +688,21 @@ end
 
 -- Diagnostics count REAL imported additional Model instances (not a
 -- pretended on-device screenshot or guessed complete texture residency).
+-- Counts actually installed owner-verified top-cover replacements, not
+-- surfaces we merely WANTED to replace. Diagnostic only, never collision.
+function PremiumRouteMeshKit.coveredPanelCount()
+    local count = 0
+    for platform, entry in pairs(mounted) do
+        if entry.panel and entry.panel.Parent
+            and entry.panelCovered
+            and safePlatform(platform, entry.initialSize)
+            and entry.panel.LocalTransparencyModifier == 1 then
+            count += 1
+        end
+    end
+    return count
+end
+
 function PremiumRouteMeshKit.underdeckCount()
     local n = 0
     for _, entry in pairs(mounted) do

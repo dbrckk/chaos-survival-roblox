@@ -1,0 +1,22 @@
+# VIS-009 / VIS-010 — continuité des vrais modules 3D sur routes physiques
+
+**5 novembre 2026.** Source `dbrckk/chaos-survival-roblox`, base validée `72f2cedfb33b1653df8d0c1e12955b52614819c3`. Aucun nouvel asset, aucune publication ni mesure visuelle artificielle.
+
+## Diagnostic source
+
+La carte comprend 16 paliers de promenade + 10 segments Sky Spine et les véritables Skybridges de Towers. Le sampler `PremiumRouteMeshKit` n'en montait que **3 en High / 2 en Medium** et découpait chaque longueur d'après `span / 9,5`, sans utiliser l'orientation et la longueur réelle de l'asset approuvé `PremiumSkybridgeModule`. Le scale limitait systématiquement à **88 % de chaque segment** au mieux ; les panneaux natifs `PlatformPanelN` étaient néanmoins occultés sur toute la largeur. À réception tardive d'un panneau via streaming, le kit ne le rattachait pas à la vraie destination.
+
+## Amélioration intégrée
+
+- Réemploi du modèle 3D propriétaire **Approved `94023662427980`**, et pour les paliers **Approved `98478693994864`** ; provenance `ReplicatedStorage.PremiumRouteMeshTemplates` et vérification `Original3DAssetId` inchangées.
+- Couverture de vraies passerelles proche caméra étendue de **3 à 5 en High et de 2 à 3 en Medium**, au même nombre maximal de modules par passerelle (High 4, Medium 3, Low 1). Les quotas de grands châssis restent 4/2/0. Les dégradations existantes dues à `OptionalVfxPressure` continuent d'évacuer en premier ces cosmétiques : stress 1 ne conserve que 70 % des ponts, stress 2 zéro. High : au plus 12 paliers, 20 modules de passerelle, 4 châssis ; aucune génération illimitée.
+- L'ajustement utilise les **vraies tailles X/Z** du modèle modéré et du collider serveur : si le source long est Z, rotation en conséquence ; priorité au nombre minimal de sections qui couvre géométriquement une passerelle. Interstice autorisé dans la mise à l'échelle : ≤1,5 % lorsque la largeur et le modèle le permettent, plutôt que 12 % garantis par le facteur précédent. Le source n'est jamais étiré irrégulièrement et les soudures restent cosmétiques.
+- **Repli honnête** : la surface native ne devient masquée que lorsque le bounding box réellement monté couvre au moins **95 % de chaque segment sur le grand axe et 82 % sur la largeur du pont**, ou **85 % de chaque axe sur un palier**. Ce contrôle garantit uniquement la couverture *géométrique du volume* ; un mesh ajouré ne se transforme pas en dalle opaque. Les routes plus étroites (p. ex. Towers) conservent leurs vrais panneaux de sol quand le mesh ne suffit pas. Le collider physique, les chevrons, les rails et les alertes ne sont jamais masqués par cette règle.
+- Vérification supplémentaire de la **position et des dimensions exactes** de `Decor.PlatformPanelN` sous la vraie plateforme `Platforms.PlatformN` ou `SkybridgeN`. Écoute `Decor.ChildAdded/ChildRemoved` tant que le modèle est actif pour les panneaux qui arrivent après le mesh ; restauration à la disparition, shrink, warning, shutter, LOD et changement d'arène par les mêmes événements existants. Aucune boucle supplémentaire.
+- `LocalOriginalRoutePanelsCoveredCount` compte les vraies substitutions présentes et visibles sur le client. `LocalOriginalRouteMeshCount` et `LocalOriginalUnderdeckMeshCount` demeurent des métriques distinctes. **Pas de FPS prétendument mesurés, ni fausse capture Android.**
+
+## Conditions de sortie du lot
+
+Avant de valider le rendu visuel : au moins une capture réelle par angle d'approche des cinq arènes en Medium/High ; tester en particulier une promenade de 26 studs, la Sky Spine, les Skybridges étroits de Towers, `Warning`/`Gone`, shutter actif, `ShrinkingArena`, streaming tardif d'un `PlatformPanel`, caméra qui tourne, Low et pression VFX. Rechercher trous visibles, coutures, z-fighting, surcoût GPU/instances et disparition abusive de la signalétique.
+
+Déclencher une seule paire `Build Validation` + sept `Roblox Cloud Engine Tests` sur le commit final, sans publier. L'objectif global ≥90 % des grandes structures cosmétiques en vrai mesh en High reste **un objectif à mesurer**, non un résultat annoncé.
