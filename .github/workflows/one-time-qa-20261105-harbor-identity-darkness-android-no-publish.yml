@@ -1,4 +1,6 @@
 # Important visual milestone, source and real Roblox engine only. NEVER publish.
+# Revalidated after correcting ci.yml's obsolete phase-only lighting guard.
+# Refuse a phase-only short circuit: Darkness can arrive in slot 2 midround.
 name: One-time QA 2026-11-05 Harbor Identity Darkness Android No Publish
 on:
   push:

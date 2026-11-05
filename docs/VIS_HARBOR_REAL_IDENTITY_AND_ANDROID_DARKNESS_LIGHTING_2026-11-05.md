@@ -23,3 +23,7 @@ The server authoritative physics, catastrophe exposure grading / negative ColorC
 ## Remaining gates
 
 Exact-SHA Lua/Roblox Build Validation and seven Roblox Open Cloud suites at the next important milestone; actual Android Low/Medium/High screenshot comparison in normal round, Darkness alone and Double Chaos with Darkness as secondary, plus Harbor against Classic. A passing build is not screenshot or FPS certification, and no publication occurs here.
+
+## CI correction during exact-SHA milestone
+
+Build Validation initially failed because `.github/workflows/ci.yml` still required the obsolete literal `if nextPhase == phase then return end`. That assertion contradicted the fixed hazard-aware guard. The CI source contract now asserts both the unchanged-phase Darkness transition and normal Android fill exclusion, instead of accepting the former known-bug behavior. A fresh exact-SHA milestone is dispatched by the workflow edit; the previous build failure is not treated as a green result.

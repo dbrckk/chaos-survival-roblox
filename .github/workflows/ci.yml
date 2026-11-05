@@ -1238,7 +1238,14 @@ jobs:
               art[world] = (time,latitude)
           assert len(set(art.values())) == 5
           assert "GeographicLatitude = mood.Latitude or 36" in script
-          assert "if nextPhase == phase then return end" in script
+          # Original phase-only short circuit rejected real Darkness
+          # transitions (including disaster slot 2) within an active
+          # round. It is now a double-key guard: no spurious 1s timer
+          # tweens, but immediate optical correction when hazards change.
+          assert "if nextPhase == phase and nextDarkness == darknessActive then return end" in script
+          assert "ArenaLightingReadabilityRules.hasDarkness(state.disasterIds)" in script
+          assert "elseif UserInputService.TouchEnabled and not darknessActive then" in script
+          assert "LocalIdentityDarknessFillSuppressed = darknessActive" in script
           assert "disasterOwnsEnvironment = phase == \"round\" or phase == \"ready\"" in script
           assert "disasterOwnsPostProcess = disasterOwnsEnvironment" in script
           assert "PbrDistrictRules" in pbr
