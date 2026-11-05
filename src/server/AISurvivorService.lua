@@ -944,6 +944,7 @@ local function sendToLobby(record)
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = 0
@@ -952,6 +953,7 @@ local function sendToLobby(record)
     record.nextShieldAt = 0
     record.spineControl = nil
     record.spineHoldAt = nil
+    record.nextSpineAt = 0
     pivotRecord(record, getLobbyPosition(record))
 end
 
@@ -994,6 +996,10 @@ local function sendToArena(record)
     record.model:SetAttribute("DistrictSignalWitnessed", 0)
     record.model:SetAttribute("DistrictRouteCompleted", false)
     record.model:SetAttribute("DistrictRouteStep", 0)
+    -- A new physical round must not inherit the previous round's
+    -- successful team bridge activation diagnostics.
+    record.model:SetAttribute("BotSkySpineConnected", false)
+    record.model:SetAttribute("BotSkyNetworkConnected", false)
     record.nextSkyrailAt = 0
     record.lastProgressPosition = nil
     record.lastProgressTarget = nil
@@ -1019,6 +1025,7 @@ local function sendToArena(record)
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = os.clock() + 1.6 + record.slot * 0.25
@@ -1027,6 +1034,7 @@ local function sendToArena(record)
     record.nextShieldAt = os.clock() + 0.75 + record.slot * 0.16
     record.spineControl = nil
     record.spineHoldAt = nil
+    record.nextSpineAt = os.clock() + 2 + record.slot * 0.20
     pivotRecord(record, spawn)
 end
 
@@ -1034,6 +1042,7 @@ local function destroyRecord(record)
     cancelGroundNavigation(record)
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
     destroyTracks(record)
     if record.model and record.model.Parent then
         record.model:Destroy()
@@ -1085,6 +1094,7 @@ local function newRecord(slot)
         nextShieldAt = 0,
         spineControl = nil,
         spineHoldAt = nil,
+        nextSpineAt = 0,
         nextJump = 0,
         nextPadAt = 0,
         target = nil,
@@ -2522,22 +2532,41 @@ local function districtTraverseTarget(record, root, now)
             return a.score < b.score
         end)
         local chosen = candidates[math.random(1, math.min(2, #candidates))]
+        -- Some physical branch expeditions have a concrete cooperative
+        -- destination: the live command on promenade step FOUR. Never
+        -- route a bot toward an already activated or missing switch.
+        local skyStation = arena:FindFirstChild("SkySpineSwitchyard")
+        local branch = record.profile.Id == "Bold"
+            or (record.profile.Id == "Balanced" and math.random() < 0.42)
+        local skyMission = branch and skyStation ~= nil
+            and skyStation:GetAttribute("SkyNetworkConnected") == false
+            and math.random() < (record.profile.Id == "Bold" and 0.55 or 0.37)
         expedition = {
             route = chosen.route,
             stage = 1,
-            deadline = now + 23,
-            -- Bold runners sometimes take the branch lookout rather
-            -- than continuing along the last three perimeter decks.
-            branch = record.profile.Id == "Bold"
-                or (record.profile.Id == "Balanced" and math.random() < 0.42),
+            deadline = now + (skyMission and 54 or 23),
+            branch = branch,
+            skyMission = skyMission,
         }
         record.districtTraverse = expedition
+    end
+
+    -- Abort an optional sky-command expedition if the cooperative goal
+    -- disappears or another contestant has already connected the network.
+    -- Ordinary on-deck survival/roaming continues with no invented stop.
+    if expedition.skyMission then
+        local command = arena:FindFirstChild("SkySpineSwitchyard")
+        if not command or command:GetAttribute("SkyNetworkConnected") ~= false then
+            record.districtTraverse = nil
+            record.nextDistrictTraverseAt = now + 7
+            return nil
+        end
     end
 
     -- Resolve the live server-created decks each decision. Structural
     -- catastrophes may remove them during the round; stale references
     -- must never become an invisible AI teleport destination.
-    local perimeter, branch = {}, {}
+    local perimeter, branch, sky = {}, {}, {}
     for _, part in ipairs(platforms:GetChildren()) do
         if part:IsA("BasePart") then
             if part:GetAttribute("PerimeterRoute") == expedition.route then
@@ -2550,6 +2579,13 @@ local function districtTraverseTarget(record, root, now)
                 local step = tonumber(part:GetAttribute("BranchStep"))
                 if step and step >= 1 and step <= 4 then
                     branch[step] = part
+                end
+            elseif expedition.skyMission
+                and part:GetAttribute("PromenadeLane")
+                    == (expedition.route <= 2 and 1 or 2) then
+                local step = tonumber(part:GetAttribute("PromenadeStep"))
+                if step and step >= 1 and step <= 8 then
+                    sky[step] = part
                 end
             end
         end
@@ -2570,6 +2606,50 @@ local function districtTraverseTarget(record, root, now)
                 return nil
             end
             stages[#stages + 1] = branch[step]
+        end
+    end
+    if expedition.skyMission then
+        -- Physically walk from BranchStep 4 onto its REAL, overlapping
+        -- promenade endpoint. Then jump each 2.4-stud horizontal gap
+        -- (1->4 west or 8->4 east) with the existing native Humanoid
+        -- and 0.20-second bounded raycast gap-jump controller. The
+        -- command deck is the FINAL stage; no direct airborne targets.
+        local direction = expedition.route % 2 == 1 and 1 or -1
+        local entry = direction == 1 and 1 or 8
+        local previous = stages[#stages]
+        for stage = entry, 4, direction do
+            local deck = sky[stage]
+            if not deck or not AISurvivorRules.platformAvailable(
+                deck.CanCollide, deck.Transparency,
+                deck:GetAttribute("CollapsePhase"),
+                deck:GetAttribute("BridgeShutterPhase")
+            ) or not AISurvivorRules.neighboringPhysicalDeck(
+                previous.CFrame, previous.Size, deck.CFrame, deck.Size
+            ) then
+                record.districtTraverse = nil
+                record.nextDistrictTraverseAt = now + 8
+                return nil
+            end
+            if previous:GetAttribute("PromenadeLane") ~= nil then
+                local first = direction == 1 and previous or deck
+                local second = direction == 1 and deck or previous
+                if not SkySpineSwitchyard.promenadeGapBetween(
+                    first, second) then
+                    record.districtTraverse = nil
+                    record.nextDistrictTraverseAt = now + 8
+                    return nil
+                end
+            else
+                -- Overlap with the genuine branch terminal is a WALK.
+                local top = previous.Position.Y + previous.Size.Y * 0.5
+                local landingTop = deck.Position.Y + deck.Size.Y * 0.5
+                if math.abs(top - landingTop) > 0.25 then
+                    record.districtTraverse = nil
+                    return nil
+                end
+            end
+            stages[#stages + 1] = deck
+            previous = deck
         end
     end
 
@@ -2773,6 +2853,31 @@ local function chooseArenaTarget(record, root, now)
             return helpPoint, 1.5
         end
         record.nextShieldAt = now + 2.9 + record.slot * 0.18
+    end
+
+    -- An elevated bot can now actively WALK toward the genuine console
+    -- on its own current solid deck instead of only activating by chance
+    -- when it happens to spawn within the old 7.5-stud prompt radius.
+    -- The station service verifies the exact supporting collision Part,
+    -- reserves one bot for a short time and never invents a cross-gap path.
+    if record.inRound and currentState.phase == "round"
+        and not record.assistShield and not record.assistRelay
+        and not record.districtTraverse
+        and now >= (record.nextSpineAt or 0)
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado") then
+        local approach, core = SkySpineSwitchyard.botApproach(
+            record.model, now)
+        if approach and core then
+            record.spineControl = core
+            record.spineHoldAt = nil
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextSpineAt = now + 8
+            return approach, 1.2
+        end
+        record.nextSpineAt = now + 2.8 + record.slot * 0.15
     end
 
     -- Once the bot has committed to helping a real teammate, don't
@@ -3682,8 +3787,11 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.assistHoldAt = nil
         record.nextAssistAt = now + 4
     end
+    -- A stalled bot must not lock the shared sky switch while recovering.
+    SkySpineSwitchyard.releaseBot(record.model)
     record.spineControl = nil
     record.spineHoldAt = nil
+    record.nextSpineAt = now + 7
     if record.districtTraverse then
         record.districtTraverse = nil
         record.nextDistrictTraverseAt = now + 9
@@ -3761,6 +3869,7 @@ local function anticipateGroundObstacle(
         and record.targetPart.Parent.Name == "Platforms"
     local committed = record.targetIsPad == true
         or record.targetIsSkyrail == true
+        or record.spineControl ~= nil
         or record.districtTraverse ~= nil
         or record.signalInterestRoute ~= nil
         or record.assistRelay ~= nil
@@ -3933,6 +4042,7 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
     -- not a blended previous turn that curves off a 12-stud walkway.
     -- Ordinary ground roaming keeps its humanlike steering inertia.
     local direct = urgent == true
+        or record.spineControl ~= nil
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
         or record.groundNavigation ~= nil
         or AISurvivorRules.committedWorldRoute(
@@ -4318,40 +4428,83 @@ local function stepRecord(record, now)
         end
     end
 
-    -- A bot physically reaching the high Sky Spine can perform the SAME
-    -- hold-to-connect action as a person. No pathfinding teleport, paid
-    -- boost or fake ProximityPrompt signal: the real server geometry is
-    -- rechecked before the nine interdeck gaps become safe platforms.
+    -- A planned team-network action is a REAL WALK on an existing
+    -- elevated platform, followed by the same 0.7-second physical hold
+    -- as a human. Only a raycast-verified supporting deck can renew the
+    -- exclusive claim. Hazards immediately cancel, never trump evasion.
     if record.inRound and currentState.phase == "round"
         and not urgentTarget and not record.assistShield
-        and not record.assistRelay then
-        local switchCore = SkySpineSwitchyard.botOpportunity(
-            record.model, now)
-        if switchCore then
-            if record.spineControl ~= switchCore then
-                record.spineControl = switchCore
-                record.spineHoldAt = now + SkySpineSwitchyard.HoldSeconds
+        and not record.assistRelay and not record.districtTraverse
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado") then
+        local approach, switchCore
+        if record.spineControl then
+            approach, switchCore = SkySpineSwitchyard.botApproach(
+                record.model, now, record.spineControl)
+        else
+            switchCore = SkySpineSwitchyard.botOpportunity(
+                record.model, now)
+            if switchCore then
+                approach = Vector3.new(
+                    switchCore.Position.X, root.Position.Y,
+                    switchCore.Position.Z)
             end
-            humanoid:Move(Vector3.zero)
-            if now < (record.spineHoldAt or 0) then return end
-            local connected = SkySpineSwitchyard.activateBot(
-                record.model, switchCore)
-            record.spineControl = nil
-            record.spineHoldAt = nil
-            if connected then
+        end
+        if switchCore then
+            record.spineControl = switchCore
+            record.target = approach
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.nextThink = now + 1.2
+            local close = SkySpineSwitchyard.botOpportunity(
+                record.model, now, switchCore) == switchCore
+            if close then
+                if not record.spineHoldAt then
+                    record.spineHoldAt =
+                        now + SkySpineSwitchyard.HoldSeconds
+                end
+                humanoid:Move(Vector3.zero)
+                if now < record.spineHoldAt then return end
+                local connected = SkySpineSwitchyard.activateBot(
+                    record.model, switchCore)
+                SkySpineSwitchyard.releaseBot(record.model)
+                record.spineControl = nil
+                record.spineHoldAt = nil
+                record.nextSpineAt = now + 12
                 record.target = nil
                 record.nextThink = 0
-                record.model:SetAttribute("BotSkySpineConnected", true)
-                record.model:SetAttribute("BotSkyNetworkConnected", true)
-                showBotSignal(record, "3 ROUTES OPEN!", now)
+                if connected then
+                    record.model:SetAttribute("BotSkySpineConnected", true)
+                    record.model:SetAttribute("BotSkyNetworkConnected", true)
+                    showBotSignal(record, "3 ROUTES OPEN!", now)
+                end
+            else
+                record.spineHoldAt = nil
+                -- No early return: ordinary MoveTo performs the approach
+                -- with normal speed and existing collision, while the
+                -- stuck-recovery path can still abandon a blocked goal.
             end
-        else
+        elseif record.spineControl then
+            SkySpineSwitchyard.releaseBot(record.model)
             record.spineControl = nil
             record.spineHoldAt = nil
+            record.nextSpineAt = now + 5
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
         end
-    else
+    elseif record.spineControl then
+        SkySpineSwitchyard.releaseBot(record.model)
         record.spineControl = nil
         record.spineHoldAt = nil
+        record.nextSpineAt = now + 5
+        if urgentTarget then
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
+        end
     end
 
     -- Physical cooperation never outranks a real impact/escape, and
@@ -4465,15 +4618,18 @@ local function stepRecord(record, now)
             return
         end
 
-        if maybeSocialGesture(record, humanoid, root, now) then
-            return
+        if not record.spineControl then
+            if maybeSocialGesture(record, humanoid, root, now) then
+                return
+            end
+
+            if maybeRoundGesture(record, humanoid, root, now) then
+                return
+            end
         end
 
-        if maybeRoundGesture(record, humanoid, root, now) then
-            return
-        end
-
-        if now < (record.idleUntil or 0) then
+        if now < (record.idleUntil or 0)
+            and not record.spineControl then
             humanoid:Move(Vector3.zero)
             return
         end
@@ -4499,6 +4655,7 @@ local function stepRecord(record, now)
     end
 
     if not urgentTarget and not record.districtTraverse
+        and not record.spineControl
         and now >= record.nextJump then
         local _, pressure = decisionTraits(record)
         local jumpChance = AISurvivorRules.freeJumpChance(
@@ -4784,6 +4941,7 @@ local function stepRecord(record, now)
             local destination = record.target
             if not urgentTarget
                 and not record.groundNavigation
+                and not record.spineControl
                 and AISurvivorRules.allowRouteStrafe(
                     record.targetIsPad,
                     record.targetIsSkyrail,

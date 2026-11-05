@@ -14,7 +14,10 @@ local SkySpineSwitchyard = {}
 
 SkySpineSwitchyard.HoldSeconds = 0.7
 SkySpineSwitchyard.PromptDistance = 10
-SkySpineSwitchyard.BotReach = 7.5
+-- NPCs must walk into the command bay before holding; the previous
+-- 7.5-stud reach let bots activate from the lip without approaching.
+SkySpineSwitchyard.BotReach = 4.5
+SkySpineSwitchyard.BotApproachRadius = 15
 SkySpineSwitchyard.MinRoundSeconds = 20
 local activeRound = nil
 
@@ -195,7 +198,8 @@ local function station(folder, deck, step, theme)
     local rounded = Instance.new("UICorner")
     rounded.CornerRadius = UDim.new(0, 8)
     rounded.Parent = label
-    return {model = model, prompt = prompt, core = core, label = label}
+    return {model = model, prompt = prompt, core = core,
+        label = label, support = deck, claim = nil, claimUntil = 0}
 end
 
 function SkySpineSwitchyard.start(ctx)
@@ -433,19 +437,36 @@ function SkySpineSwitchyard.start(ctx)
     return 9
 end
 
--- Bots already on a physically reached sky deck may operate a REAL
--- 0.7s cooperative switch, without pathfinding privilege or teleport.
--- These stable API methods exist before and after any round starts.
-function SkySpineSwitchyard.botOpportunity(model, now)
-    local round = activeRound
-    if not round or not round.active or round.joined
-        or not round.folder.Parent or not round.ctx.Active()
-        or type(now) ~= "number"
-        or typeof(model) ~= "Instance" or not model:IsA("Model") then
-        return nil
-    end
+-- A bot may request a command only while physically standing on
+-- the EXACT existing deck supporting that command. This conservative
+-- predicate is also exercised against real MapBuilder geometry by engine
+-- specs. A nearby roof with the same height is not a walkable route.
+function SkySpineSwitchyard.sameDeckApproach(position, deck)
+    if typeof(position) ~= "Vector3"
+        or typeof(deck) ~= "Instance" or not deck:IsA("BasePart")
+        or not deck.Parent or deck.Parent.Name ~= "Platforms"
+        or not deck.Name:match("^Platform%d+$")
+        or not deck.Anchored or not deck.CanCollide
+        or deck.Transparency >= 0.75
+        or deck:GetAttribute("ChaosPermanentRoute") ~= true
+        or (deck:GetAttribute("CollapsePhase") ~= nil
+            and deck:GetAttribute("CollapsePhase") ~= "Normal"
+            and deck:GetAttribute("CollapsePhase") ~= "Safe")
+    then return nil end
+    local localPos = deck.CFrame:PointToObjectSpace(position)
+    local topY = deck.Position.Y + deck.Size.Y * 0.5
+    local clearance = position.Y - topY
+    if clearance < 1.2 or clearance > 5.4
+        or math.abs(localPos.X) > deck.Size.X * 0.5 - 0.7
+        or math.abs(localPos.Z) > deck.Size.Z * 0.5 - 0.7
+    then return nil end
+    return Vector3.new(deck.Position.X, position.Y, deck.Position.Z)
+end
+
+local function liveBot(model)
     local bots = workspace:FindFirstChild("AISurvivors")
-    if not bots or model.Parent ~= bots
+    if typeof(model) ~= "Instance" or not model:IsA("Model")
+        or not bots or model.Parent ~= bots
         or model:GetAttribute("AISurvivor") ~= true
         or model:GetAttribute("AISurvivorInRound") ~= true then
         return nil
@@ -455,17 +476,77 @@ function SkySpineSwitchyard.botOpportunity(model, now)
     if not root or not root:IsA("BasePart")
         or not root:IsDescendantOf(workspace)
         or not hum or hum.Health <= 0
+        or hum.SeatPart ~= nil
         or hum.FloorMaterial == Enum.Material.Air then return nil end
-    local best, distance = nil, SkySpineSwitchyard.BotReach
+    return root
+end
+
+-- One short-lived server claim per command prevents seven identical
+-- helpers gathering at the same console. No heartbeat, no teleports,
+-- no speculative path across gaps: raycast must hit the command's exact
+-- deck, and the bot simply walks on that solid deck toward its center.
+function SkySpineSwitchyard.botApproach(model, now, preferred)
+    local round = activeRound
+    if not round or not round.active or round.joined
+        or not round.folder.Parent or not round.ctx.Active()
+        or (round.ctx.FinalRush and round.ctx.FinalRush())
+        or (round.ctx.ActiveDisasters or {}).ShrinkingArena == true
+        or type(now) ~= "number" then return nil end
+    local root = liveBot(model)
+    if not root then return nil end
+    local chosen, nearest, destination = nil,
+        SkySpineSwitchyard.BotApproachRadius, nil
     for _, command in ipairs(round.commands) do
-        if command.prompt.Enabled then
-            local d = (root.Position - command.core.Position).Magnitude
-            if d <= distance then
-                best, distance = command, d
+        if command.prompt.Enabled
+            and (preferred == nil or preferred == command.core)
+            and command.support.Parent
+            and command.model.Parent == round.folder then
+            local goal = SkySpineSwitchyard.sameDeckApproach(
+                root.Position, command.support)
+            local reserved = command.claim ~= nil
+                and command.claim ~= model
+                and (command.claimUntil or 0) > now
+            local distance = (root.Position - command.core.Position).Magnitude
+            if goal and not reserved and distance < nearest then
+                local params = RaycastParams.new()
+                params.FilterType = Enum.RaycastFilterType.Exclude
+                params.FilterDescendantsInstances = {model}
+                params.RespectCanCollide = true
+                local floor = workspace:Raycast(
+                    root.Position + Vector3.new(0, 0.8, 0),
+                    Vector3.new(0, -7, 0), params)
+                if floor and floor.Instance == command.support
+                    and floor.Normal.Y >= 0.78 then
+                    chosen, nearest, destination = command, distance, goal
+                end
             end
         end
     end
-    return best and best.core or nil
+    if not chosen then return nil end
+    chosen.claim, chosen.claimUntil = model, now + 3.5
+    return destination, chosen.core
+end
+
+function SkySpineSwitchyard.releaseBot(model)
+    local round = activeRound
+    if not round then return end
+    for _, command in ipairs(round.commands) do
+        if command.claim == model then
+            command.claim = nil
+            command.claimUntil = 0
+        end
+    end
+end
+
+-- The same server security gate covers the end of the physically planned
+-- approach and any unplanned bot already inside the true control bay.
+-- Proximity ALONE does not grant a hold or turn on bridges.
+function SkySpineSwitchyard.botOpportunity(model, now, preferred)
+    local _, core = SkySpineSwitchyard.botApproach(model, now, preferred)
+    local root = core and model:FindFirstChild("HumanoidRootPart")
+    if not root or (root.Position - core.Position).Magnitude
+        > SkySpineSwitchyard.BotReach then return nil end
+    return core
 end
 
 function SkySpineSwitchyard.activateBot(model, core)
@@ -474,7 +555,7 @@ function SkySpineSwitchyard.activateBot(model, core)
         or not round.ctx.Active() or not round.folder.Parent then
         return false
     end
-    if SkySpineSwitchyard.botOpportunity(model, os.clock()) ~= core then
+    if SkySpineSwitchyard.botOpportunity(model, os.clock(), core) ~= core then
         return false
     end
     for _, command in ipairs(round.commands) do
