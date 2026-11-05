@@ -575,11 +575,11 @@ jobs:
           assert "Low = {count = 1, distance = 122" in crown
           assert "Medium = {count = 2" in crown
           assert "High = {count = 4" in crown
-           assert "step ~= 2 and step ~= 5 and step ~= 6 and step ~= 9" in crown
-           assert "limit = stress == 0 and 4 or (stress == 1 and 2 or 1)" in crown
-           assert "entry.restoring = true" in crown
-           assert 'folder.ChildRemoved:Connect(function(child)' in crown
-           assert 'LocalOriginalSkySpineOuterCrownCount' in scenery
+          assert "step ~= 2 and step ~= 5 and step ~= 6 and step ~= 9" in crown
+          assert "limit = stress == 0 and 4 or (stress == 1 and 2 or 1)" in crown
+          assert "entry.restoring = true" in crown
+          assert 'folder.ChildRemoved:Connect(function(child)' in crown
+          assert 'LocalOriginalSkySpineOuterCrownCount' in scenery
           for safety in ("piece.CanCollide = false", "piece.CanTouch = false",
                          "piece.CanQuery = false", "SkySpineCrownCosmeticWeld",
                          "CollapsePhase", "BridgeShutterPhase",

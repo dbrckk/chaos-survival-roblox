@@ -78,6 +78,9 @@ jobs:
           assert '"tests/engine/mapbuilder-advanced.spec.luau"' in cloud
           assert 'assert "Medium = {count = 2" in crown' in ci
           assert 'assert "High = {count = 4" in crown' in ci
+          # Catch accidental syntax/indentation failures in Python-based
+          # Build Validation before consuming live Roblox engine quota.
+          assert "          assert \"step ~= 2 and step ~= 5 and step ~= 6 and step ~= 9\" in crown" in ci
           assert 'non publié' in doc.lower()
           assert "RunService" not in client
           assert "RenderStepped" not in client
