@@ -515,6 +515,119 @@ function JumpRouteCueRules.nextSkyway(from, orderedPlatforms, travelDirection)
     return nil
 end
 
+-- The five 320-stud arenas already contain TWO real eight-step sky
+-- promenades and a ten-step transverse Sky Spine. Their horizontal
+-- 2.4-stud jumps were invisible to the coach: the ordinary jump predicate
+-- requires a rise and the original selector stops at RouteTier 4.
+-- Strictly pair server-authored route metadata AND genuine current physics.
+-- A connection where footprints overlap is a *walk*, not a fake jump.
+function JumpRouteCueRules.skyNetworkLink(from, target)
+    if not JumpRouteCueRules.safeLandingTarget(from)
+        or not JumpRouteCueRules.safeLandingTarget(target)
+        or from == target or from.Parent ~= target.Parent
+        or from:GetAttribute("ChaosPermanentRoute") ~= true
+        or target:GetAttribute("ChaosPermanentRoute") ~= true then
+        return false
+    end
+    local firstTop = from.Position.Y + from.Size.Y * 0.5
+    local secondTop = target.Position.Y + target.Size.Y * 0.5
+    if math.abs(secondTop - firstTop) > 0.25 then return false end
+    local dx = target.Position.X - from.Position.X
+    local dz = target.Position.Z - from.Position.Z
+    if dx * dx + dz * dz < 9 then return false end
+    local gap = JumpRouteCueRules.gap(from, target)
+    return gap ~= nil and gap <= JumpRouteCueRules.MaxGap
+end
+
+-- Return actual bidirectional upper-route progression AND the real H-shaped
+-- spine turn. Only these exact server-authored combinations are considered:
+-- branch lookout 4 <-> promenade endpoint, promenade N step 4 <->
+-- spine N step 1, promenade S step 4 <-> spine S step 10,
+-- consecutive promenade/spine steps. No position-only sky bridge guesses.
+function JumpRouteCueRules.skyNetworkOptions(from, orderedPlatforms,
+        travelDirection)
+    if not JumpRouteCueRules.safeLandingTarget(from)
+        or type(orderedPlatforms) ~= "table" then return nil, nil end
+    local lane = from:GetAttribute("PromenadeLane")
+    local step = from:GetAttribute("PromenadeStep")
+    local spine = from:GetAttribute("SkySpineStep")
+    local branchRoute = from:GetAttribute("BranchRoute")
+    local branchStep = from:GetAttribute("BranchStep")
+    local forwardLane, forwardStep, forwardBranch
+    local forwardSpine, alternateSpine, alternateLane
+    local direction = travelDirection == -1 and -1 or 1
+
+    if type(lane) == "number" and (lane == 1 or lane == 2)
+        and type(step) == "number" and step % 1 == 0
+        and step >= 1 and step <= 8 then
+        if travelDirection ~= 1 and travelDirection ~= -1 then
+            direction = step <= 4 and 1 or -1
+        end
+        forwardStep = step + direction
+        if forwardStep >= 1 and forwardStep <= 8 then
+            forwardLane = lane
+        else
+            forwardBranch = lane == 1
+                and (direction < 0 and 1 or 2)
+                or (direction < 0 and 3 or 4)
+            forwardStep = nil
+        end
+        if step == 4 then
+            alternateSpine = lane == 1 and 1 or 10
+        end
+    elseif type(spine) == "number" and spine % 1 == 0
+        and spine >= 1 and spine <= 10
+        and from:GetAttribute("SkySpineInterchange") == true then
+        if travelDirection ~= 1 and travelDirection ~= -1 then
+            direction = spine <= 5 and 1 or -1
+        end
+        forwardSpine = spine + direction
+        if forwardSpine < 1 or forwardSpine > 10 then
+            forwardSpine = nil
+        end
+        if spine == 1 or spine == 10 then
+            alternateLane = spine == 1 and 1 or 2
+        end
+    elseif type(branchRoute) == "number"
+        and branchRoute % 1 == 0 and branchRoute >= 1
+        and branchRoute <= 4 and branchStep == 4 then
+        forwardLane = branchRoute <= 2 and 1 or 2
+        forwardStep = branchRoute % 2 == 1 and 1 or 8
+    else
+        return nil, nil
+    end
+
+    local forward, interchange
+    for _, candidate in ipairs(orderedPlatforms) do
+        if candidate ~= from and candidate:IsA("BasePart")
+            and candidate.Parent == from.Parent
+            and JumpRouteCueRules.skyNetworkLink(from, candidate) then
+            if forwardLane and candidate:GetAttribute("PromenadeLane")
+                    == forwardLane
+                and candidate:GetAttribute("PromenadeStep") == forwardStep then
+                forward = candidate
+            elseif forwardBranch
+                and candidate:GetAttribute("BranchRoute") == forwardBranch
+                and candidate:GetAttribute("BranchStep") == 4 then
+                forward = candidate
+            elseif forwardSpine
+                and candidate:GetAttribute("SkySpineInterchange") == true
+                and candidate:GetAttribute("SkySpineStep") == forwardSpine then
+                forward = candidate
+            elseif alternateSpine
+                and candidate:GetAttribute("SkySpineInterchange") == true
+                and candidate:GetAttribute("SkySpineStep") == alternateSpine then
+                interchange = candidate
+            elseif alternateLane
+                and candidate:GetAttribute("PromenadeLane") == alternateLane
+                and candidate:GetAttribute("PromenadeStep") == 4 then
+                interchange = candidate
+            end
+        end
+    end
+    return forward, interchange
+end
+
 -- Original central routes use conservative spatial selection. Perimeter
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent
@@ -528,6 +641,18 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
         return JumpRouteCueRules.nextSkyway(
             from, orderedPlatforms, skywayDirection
         )
+    end
+
+    -- All five maps share a real H-shaped high-altitude platform network.
+    -- These certified level routes need different, bidirectional geometry
+    -- rules from the central ASCENDING jump selection below.
+    if from:GetAttribute("PromenadeLane") ~= nil
+        or from:GetAttribute("SkySpineStep") ~= nil
+        or (from:GetAttribute("BranchRoute") ~= nil
+            and from:GetAttribute("BranchStep") == 4) then
+        local forward, junction = JumpRouteCueRules.skyNetworkOptions(
+            from, orderedPlatforms, skywayDirection)
+        return forward or junction
     end
 
     -- Storm Harbor's newer cardinal dry-dock routes are also authored
