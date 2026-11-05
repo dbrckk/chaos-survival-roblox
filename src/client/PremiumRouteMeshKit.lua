@@ -550,6 +550,23 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             end)
     end
 
+    -- A panel may stream before its server dimensions/CFrame settle.
+    -- Retry its exact ownership check through the ALREADY EXISTING camera
+    -- LOD sample instead of leaving native paint in front of 3D forever.
+    -- This is also a bounded backstop for streaming folder replacement.
+    entry.refreshNativePanel = function()
+        if entry.restoring then return end
+        local currentDecor = arena and arena:FindFirstChild("Decor")
+        if currentDecor ~= decor then bindDecor(currentDecor) end
+        if entry.panel and not ownedPanel(entry.panel) then
+            releaseNativePanel()
+        end
+        if decor and not entry.panel then
+            attachNativePanel(decor:FindFirstChild(panelName))
+        end
+        syncVisibility(entry, platform)
+    end
+
     if arena and arena:IsA("Folder") and panelName then
         bindDecor(arena:FindFirstChild("Decor"))
         entry.connections[#entry.connections + 1] =
@@ -955,6 +972,11 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
             mounted[platform] = mount(platform, desired.template, desired.count,
                 desired.bridge, desired.underdeck)
         end
+    end
+    -- Late-streamed panel/geometry alignment is reconciled by this SAME
+    -- 0.65/0.90-second camera owner; no extra heartbeat or per-Part polling.
+    for platform, entry in pairs(mounted) do
+        if entry.refreshNativePanel then entry.refreshNativePanel() end
     end
     -- Give the nearest REAL contiguous bridge one coherent 2K PBR finish,
     -- not just its first segment. Healthy desktop can keep two; Android
