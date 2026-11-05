@@ -2,6 +2,9 @@
 # with V3 real sky-network / physical co-op AI route changes. One-shot on
 # merge; publication only after green Build + REAL Roblox engine checks.
 # Owner is informed that Android/Studio device QA is not yet certified.
+# Owner-approved retry 2: README 78->82 specs + real-engine float precision
+# fixture corrected after first exact-SHA checks failed closed; no publication
+# occurred on the previous SHA.
 name: One-time Public Update 2026-11-05 V3 Physical Sky Cooperation
 on:
   push:
