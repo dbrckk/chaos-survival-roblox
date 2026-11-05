@@ -3497,10 +3497,18 @@ local function liveGroundRouteCorridorSafe(record, root, waypoint, base)
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {record.model}
     params.RespectCanCollide = true
+    -- A human or one of the other six moving R15 bots may stand exactly
+    -- above the midpoint. Only the REAL floor counts as ground support:
+    -- filtering the downward sample to the server base prevents those
+    -- mobile rigs from causing spurious route invalidations.
+    local baseOnly = RaycastParams.new()
+    baseOnly.FilterType = Enum.RaycastFilterType.Include
+    baseOnly.FilterDescendantsInstances = {base}
+    baseOnly.RespectCanCollide = true
     local function realBaseUnder(position)
         local hit = workspace:Raycast(
             position + Vector3.new(0, 4, 0),
-            Vector3.new(0, -11, 0), params)
+            Vector3.new(0, -11, 0), baseOnly)
         return hit and hit.Instance == base and hit.Normal.Y >= 0.78
             and math.abs(hit.Position.Y - top) < 1.5
     end
