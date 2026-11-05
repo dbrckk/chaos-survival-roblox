@@ -1,3 +1,7 @@
+## Source-authentic Sky Spine gateway lighting — 5 November 2026
+
+The four real Sky Spine gateway Models now add restrained, physically motivated local `PointLight` only on verified `SIGNAL` MeshParts from our creator-approved sculpture. Lights are disabled on Low and immediately under either primary or secondary Darkness, warning/shutter or visual GPU pressure. Caps Medium 1, High touch 1, High desktop 2; all Lights enter the existing `VisualBudgetRules` census. No extra geometry, collision or render loop. [Engineering and Android acceptance](docs/SKY_SPINE_GENUINE_SIGNAL_LIGHTING_2026-11-05.md). **Unpublished source until full exact-SHA Cloud verification.**
+
 ## Approved 2K PBR material continuity for real 3D bridges and Sky Spine portals — 5 November 2026
 
 Genuine `PremiumSkybridgeModule` and `OriginalSkySpineCrown` UV/tangent imports now share the exact audited `OriginalGroundPbrTemplates` from the sculpted floors, instead of a flat material break between the real route and the main arch. Only identified ARMOR/ALLOY/BRUSHED/CERAMIC material groups are replaced; GRIP/CARBON/SIGNAL are preserved. Existing importer `SurfaceAppearance` instances are restored atomically when hazards trigger, PBR is disabled, pressure rises or geometry unloads. No new textures, unverified Roblox asset IDs, physics, timers or render loops. Mobile caps: one bridge + one gateway 2K on healthy Medium/High, zero on Low or when pressure rises. [Implementation and acceptance](docs/APPROVED_2K_PBR_BRIDGE_TO_SKY_SPINE_JOINTS_2026-11-05.md). Not publicly published.

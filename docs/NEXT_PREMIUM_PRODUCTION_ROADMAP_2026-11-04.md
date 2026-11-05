@@ -22,6 +22,8 @@
 
 **Lot VIS-010 / VIS-PBR — continuité métallurgie 2K passerelle/portique Sky Spine (5 novembre 2026) :** `PremiumRoutePbrKit` applique uniquement aux groupes ARMOR/ALLOY/BRUSHED/CERAMIC des vrais MeshParts approuvés les `SurfaceAppearance` 2K déjà certifiés, en protégeant SIGNAL/GRIP/CARBON, avec démantèlement atomique et budget mobile strict. [Dossier](APPROVED_2K_PBR_BRIDGE_TO_SKY_SPINE_JOINTS_2026-11-05.md). **Validation build/Cloud et contrôle Android encore attendus.**
 
+**Lot VIS-048 — vrai éclairage SIGNAL du Sky Spine (5 novembre 2026) :** jusqu'à deux `PointLight` sur les vrais MeshParts approuvés des portiques 3D, avec budget Low 0 / Medium 1 / High tactile 1 / High desktop 2 ; zéro sous pression et extinction immédiate Darkness/Warning, sans nouveaux colliders ni boucles. [Dossier](SKY_SPINE_GENUINE_SIGNAL_LIGHTING_2026-11-05.md). Validation moteur sur le nouveau SHA nécessaire, aucune publication par ce lot.
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |
