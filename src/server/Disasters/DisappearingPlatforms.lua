@@ -1,4 +1,7 @@
+local CollectionService = game:GetService("CollectionService")
 local D = {Name = "DISAPPEARING PLATFORMS", Hint = "YELLOW MEANS MOVE!"}
+-- Only real currently warning decks, not 200+ ordinary platform Parts.
+local WARNING_TAG = "ChaosDisappearingWarning"
 
 -- A 0.75s warning was too short for a mobile player or a normal-speed AI
 -- to notice a distant platform signal and walk off its edge. This delay
@@ -174,6 +177,9 @@ function D.start(ctx)
         end
 
         activeStates[part] = nil
+        -- Always clear the replicated visual warning before restoring
+        -- physical state, even if the deck has been streamed away.
+        if part then CollectionService:RemoveTag(part, WARNING_TAG) end
         if part and part.Parent then
             part.Transparency = state.transparency
             part.CanCollide = state.canCollide
@@ -231,6 +237,10 @@ function D.start(ctx)
                     -- Local animated warning edges use the same contract as
                     -- single-platform waves; only physical decks disappear.
                     p.Transparency = math.min(p.Transparency, 0.24)
+                    -- Tag only AFTER server phase and visibility are set.
+                    -- A client may then render its honest physical warning
+                    -- without walking every platform in the entire arena.
+                    CollectionService:AddTag(p, WARNING_TAG)
                 end
                 -- Mark the mechanic unlocked only AFTER both real warning
                 -- decks were staged. Some beats can later use a single deck
@@ -247,6 +257,7 @@ function D.start(ctx)
                     if ctx.Active() and state
                         and state.generation == token and p.Parent then
                         p:SetAttribute("CollapsePhase", "Gone")
+                        CollectionService:RemoveTag(p, WARNING_TAG)
                         p.Transparency = 1
                         p.CanCollide = false
                         D.setCosmeticsPhase(state.cosmetics, "Gone")

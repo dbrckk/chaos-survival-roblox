@@ -5,6 +5,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local CollectionService = game:GetService("CollectionService")
+local WARNING_TAG = "ChaosDisappearingWarning"
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
@@ -335,9 +337,14 @@ local function updatePlatformHighlights()
     local style = WarningRules.platformHighlightStyle(tier.Name)
     local seen = {}
 
-    for _, part in ipairs(platforms:GetChildren()) do
+    -- The server tags only the physical warning deck(s), usually one
+    -- or two. Never scan 200+ normal platforms at 8Hz on Android;
+    -- their Neon material alone was never proof of a collapse.
+    for _, part in ipairs(CollectionService:GetTagged(WARNING_TAG)) do
         if part:IsA("BasePart")
-            and part.Material == Enum.Material.Neon
+            and part.Parent == platforms
+            and part:GetAttribute("CollapsePhase") == "Warning"
+            and part.CanCollide
             and part.Transparency < 0.75
         then
             seen[part] = true
@@ -372,6 +379,15 @@ local function updatePlatformHighlights()
         end
     end
 end
+
+-- Existing single warning sampler stays for late streaming/quality, but
+-- tag changes also update instantly without a new loop or map scan.
+CollectionService:GetInstanceAddedSignal(WARNING_TAG):Connect(function()
+    if disappearingActive then updatePlatformHighlights() end
+end)
+CollectionService:GetInstanceRemovedSignal(WARNING_TAG):Connect(function(part)
+    removePlatformHighlight(part)
+end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
@@ -440,8 +456,11 @@ stateEvent.OnClientEvent:Connect(function(state)
         end
         table.clear(creationOrder)
     end
+    local wasActive = disappearingActive
     disappearingActive = active
-    if not active then updatePlatformHighlights() end
+    if not active or not wasActive or newRound then
+        updatePlatformHighlights()
+    end
 end)
 
 task.spawn(function()
