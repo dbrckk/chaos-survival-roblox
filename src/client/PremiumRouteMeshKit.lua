@@ -562,9 +562,11 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             releaseNativePanel()
         end
         if decor and not entry.panel then
+            -- attachNativePanel handles the only necessary visibility
+            -- transition. Avoid re-traversing every MeshPart on each LOD
+            -- sample when the native panel is already correctly owned.
             attachNativePanel(decor:FindFirstChild(panelName))
         end
-        syncVisibility(entry, platform)
     end
 
     if arena and arena:IsA("Folder") and panelName then
