@@ -996,6 +996,10 @@ local function sendToArena(record)
     record.model:SetAttribute("DistrictSignalWitnessed", 0)
     record.model:SetAttribute("DistrictRouteCompleted", false)
     record.model:SetAttribute("DistrictRouteStep", 0)
+    -- A new physical round must not inherit the previous round's
+    -- successful team bridge activation diagnostics.
+    record.model:SetAttribute("BotSkySpineConnected", false)
+    record.model:SetAttribute("BotSkyNetworkConnected", false)
     record.nextSkyrailAt = 0
     record.lastProgressPosition = nil
     record.lastProgressTarget = nil
