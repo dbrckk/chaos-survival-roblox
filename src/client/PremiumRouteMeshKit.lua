@@ -115,6 +115,23 @@ local function safePlatform(platform, initialSize)
     return true
 end
 
+-- Never mask a physical landing with an incomplete 3D shell.
+-- Cache exact approved MeshParts to detect partial streaming/deletion.
+local function modelsIntact(entry)
+    if entry.restoring or #entry.models == 0
+        or type(entry.modelParts) ~= "table" then return false end
+    for _, model in ipairs(entry.models) do
+        if model.Parent ~= folder then return false end
+        local parts = entry.modelParts[model]
+        if not parts or #parts == 0 then return false end
+        for _, piece in ipairs(parts) do
+            if not piece:IsA("MeshPart")
+                or not piece:IsDescendantOf(model) then return false end
+        end
+    end
+    return true
+end
+
 local function getTemplate(name)
     local templates = ReplicatedStorage:FindFirstChild("PremiumRouteMeshTemplates")
     if not templates or templates:GetAttribute("OwnerVerified") ~= true then
@@ -238,6 +255,11 @@ local function addModel(entry, platform, template, offset, scale, yaw)
     local parts = {}
     for _, descendant in ipairs(clone:GetDescendants()) do
         if descendant:IsA("BasePart") then
+            -- Reject native primitives disguised as creator-owned route art.
+            if not descendant:IsA("MeshPart") then
+                clone:Destroy()
+                return false
+            end
             descendant.CFrame = target * initialFrame:ToObjectSpace(descendant.CFrame)
             descendant.Anchored = false
             descendant.CanCollide = false
@@ -349,6 +371,7 @@ end
 
 local function syncVisibility(entry, platform)
     local safe = safePlatform(platform, entry.initialSize)
+        and modelsIntact(entry)
     -- An active collapse/shutter must release optional GPU-heavy 2K
     -- overlays on the SAME server-property event that restores the real
     -- native landing paint; never wait for another 0.65s camera pass.
@@ -422,6 +445,35 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         -- Source outside bounds or an unavailable owner Model is simply a
         -- safe optional fallback: never invalidate the real route art.
         addUnderdeckModel(entry, platform, underdeckTemplate)
+    end
+
+    -- A Model can remain resident while an internal MeshPart streams
+    -- away. Restore the native landing immediately on the first loss,
+    -- without allocating an independent frame sampler.
+    entry.modelParts = {}
+    for _, model in ipairs(entry.models) do
+        local parts = {}
+        for _, child in ipairs(model:GetDescendants()) do
+            if child:IsA("BasePart") then
+                if not child:IsA("MeshPart") then
+                    restore(entry)
+                    return nil
+                end
+                parts[#parts + 1] = child
+            end
+        end
+        if #parts == 0 then
+            restore(entry)
+            return nil
+        end
+        entry.modelParts[model] = parts
+        entry.connections[#entry.connections + 1] =
+            model.DescendantRemoving:Connect(function(child)
+                if not entry.restoring and child:IsA("BasePart") then
+                    restore(entry)
+                    mounted[platform] = nil
+                end
+            end)
     end
 
     local index = tonumber(platform.Name:match("^Platform(%d+)$")
@@ -823,7 +875,8 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     for platform, entry in pairs(mounted) do
         local desired = wanted[platform]
         if not desired or desired.count ~= entry.count
-            or (desired.underdeck ~= nil) ~= entry.underdeck then
+            or (desired.underdeck ~= nil) ~= entry.underdeck
+            or not modelsIntact(entry) then
             restore(entry)
             mounted[platform] = nil
         end
