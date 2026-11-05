@@ -19,7 +19,7 @@ The existing proper owner of FPS and mobile memory sampling was located in `src/
   3. Presence bits `P0/1C0/1T0/1H0/1F0/1` for Foreground (ground OR route), Cinematic horizon, Sky Traffic, Orbital Halo, and suspicious masking failure respectively. Ground and route remain separate bounded numeric counters in the payload and local client diagnostics.
 - A `F1` means a resident horizon or halo Model was reported while **none** of its corresponding original native fallback Parts were reported masked. This is an observation to investigate, not independent proof of a broken frame; a staged screenshot or real client capture is still needed to verify pixel-level visibility.
 - Analytics uses **at most 6 arena x 12 device/tier x 32 status combinations** (2,304 theoretical combinations) for this event; only up to three custom fields, preserving the Roblox 8,000-combination cap. This is an upper bound, not actual traffic. No per-player identifiers or arbitrary free-text client input enter new fields. Existing FPS/memory pulses remain unchanged.
-- The engine suite `tests/engine/vfx-quality.spec.luau` now checks first 12s / later 45s sample intervals, authentic counts, zero sources, fallback-mask discrepancy and hostile numeric/arena injection. No extra engine spec file or CI shard added.
+- The existing engine suite `tests/engine/game-analytics.spec.luau` now checks first 12s / later 45s sample intervals, authentic counts, zero sources, fallback-mask discrepancy and hostile numeric/arena injection. No extra engine spec file or CI shard added.
 
 ## Acceptance and what remains unverified
 

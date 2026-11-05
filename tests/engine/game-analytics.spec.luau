@@ -3,8 +3,89 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local GameAnalytics = require("../../src/server/GameAnalytics")
+local PerformancePulseRules = require("../../src/shared/PerformancePulseRules")
 
 describe("Game analytics helpers", function()
+    it("samples initial 3D availability after 12 active seconds, then every 45 seconds", function()
+        expect(PerformancePulseRules.pulseInterval(true)).toBe(12)
+        expect(PerformancePulseRules.pulseInterval(false)).toBe(45)
+        expect(PerformancePulseRules.pulseInterval(nil)).toBe(45)
+        expect(PerformancePulseRules.pulseInterval("true")).toBe(45)
+    end)
+
+    it("reports genuine live 3D residency without mistaking eligible assets for mounted visuals", function()
+        local rules = PerformancePulseRules
+        local sample = rules.sanitize({
+            arenaVariant = "Orbital", deviceClass = "Touch",
+            vfxTier = "Medium", originalGround = 12.9,
+            originalRoutes = 8.3, originalHorizon = 3.8,
+            originalTraffic = 0, originalHalo = 2,
+            originalHorizonMasked = 8, originalHaloMasked = 2,
+            optionalPressure = 1,
+        })
+        expect(sample.arenaVariant).toBe("Orbital")
+        expect(sample.originalGround).toBe(12)
+        expect(sample.originalRoutes).toBe(8)
+        expect(sample.originalHorizon).toBe(3)
+        expect(sample.originalTraffic).toBe(0)
+        expect(sample.originalHalo).toBe(2)
+        expect(sample.originalHorizonMasked).toBe(8)
+        expect(sample.originalHaloMasked).toBe(2)
+        expect(sample.optionalPressure).toBe(1)
+        local count, arena, tier, flags = rules.original3DAnalytics(sample)
+        expect(count).toBe(25)
+        expect(arena).toBe("Arena:Orbital")
+        expect(tier).toBe("Device:Touch|VFX:Medium")
+        expect(flags).toBe("P1C1T0H1F0")
+
+        -- Partial source replication or a stale fallback mask must be
+        -- visible in telemetry, never silently classified as healthy.
+        local _, _, _, broken = rules.original3DAnalytics({
+            arenaVariant = "Harbor", vfxTier = "High",
+            deviceClass = "Desktop", originalHorizon = 2,
+            originalTraffic = 2, originalHalo = 1,
+            originalHorizonMasked = 0, originalHaloMasked = 0,
+        })
+        expect(broken).toBe("P0C1T1H1F1")
+    end)
+
+    it("bounds untrusted visual residence samples and refuses injected analytics dimensions", function()
+        local rules = PerformancePulseRules
+        local dangerous = rules.sanitize({
+            originalGround = math.huge,
+            originalRoutes = -100,
+            originalHorizon = 1000.2,
+            originalTraffic = 12,
+            originalHalo = 0 / 0,
+            originalHorizonMasked = 99,
+            originalHaloMasked = math.huge,
+            optionalPressure = 70,
+            arenaVariant = "Orbital|Device:Other",
+            vfxTier = "Unverified", deviceClass = "??",
+        })
+        expect(dangerous.originalGround).toBe(0)
+        expect(dangerous.originalRoutes).toBe(0)
+        expect(dangerous.originalHorizon).toBe(11)
+        expect(dangerous.originalTraffic).toBe(4)
+        expect(dangerous.originalHalo).toBe(0)
+        expect(dangerous.originalHorizonMasked).toBe(33)
+        expect(dangerous.originalHaloMasked).toBe(0)
+        expect(dangerous.optionalPressure).toBe(2)
+        expect(dangerous.arenaVariant).toBe("Unknown")
+        local count, arena, device, flags = rules.original3DAnalytics(dangerous)
+        expect(count).toBe(15)
+        expect(arena).toBe("Arena:Unknown")
+        expect(device).toBe("Device:Unknown|VFX:Unknown")
+        expect(flags).toBe("P0C1T1H0F0")
+        local emptyCount, emptyArena, emptyDevice, emptyFlags =
+            rules.original3DAnalytics(nil)
+        expect(emptyCount).toBe(0)
+        expect(emptyArena).toBe("Arena:Unknown")
+        expect(emptyDevice).toBe("Device:Unknown|VFX:Unknown")
+        expect(emptyFlags).toBe("P0C0T0H0F0")
+    end)
+
+
     it("labels solo and multiplayer consistently", function()
         expect(GameAnalytics.modeLabel(true)).toBe("Solo")
         expect(GameAnalytics.modeLabel(false)).toBe("Multiplayer")

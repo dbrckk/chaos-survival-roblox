@@ -29,7 +29,7 @@ jobs:
           shared=Path('src/shared/PerformancePulseRules.lua').read_text()
           client=Path('src/client/juice.client.lua').read_text()
           server=Path('src/server/init.server.lua').read_text()
-          tests=Path('tests/engine/vfx-quality.spec.luau').read_text()
+          tests=Path('tests/engine/game-analytics.spec.luau').read_text()
           cloud=Path('.github/workflows/roblox-cloud-test.yml').read_text()
           docs=Path('docs/LOT0_PUBLIC_REAL_3D_RESIDENCY_OBSERVABILITY_2026-11-05.md').read_text()
           roadmap=Path('docs/ROADMAP_POST_PUBLIC_2026-11-05.md').read_text()
@@ -59,7 +59,7 @@ jobs:
           assert 'reports genuine live 3D residency' in tests
           assert 'bounds untrusted visual residence samples' in tests
           assert 'samples initial 3D availability after 12 active seconds' in tests
-          assert '"tests/engine/vfx-quality.spec.luau"' in cloud
+          assert '"tests/engine/game-analytics.spec.luau"' in cloud
           assert '9033d6799885ac32cf88222bbd07edace82e9266' in docs
           assert 'LOT 0' in docs and 'NO PUBLISH' not in docs
           assert 'LOT0_PUBLIC_REAL_3D_RESIDENCY_OBSERVABILITY_2026-11-05.md' in roadmap
