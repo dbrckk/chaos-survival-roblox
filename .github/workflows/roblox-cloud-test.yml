@@ -159,6 +159,10 @@ jobs:
             "tests/engine/mapbuilder.spec.luau",
             "tests/engine/mapbuilder-advanced.spec.luau",
             "tests/engine/parkour-flow.spec.luau",
+            "tests/engine/native-premium-fallback.spec.luau",
+            "tests/engine/sky-network-physical-wayfinding.spec.luau",
+            "tests/engine/sky-command-bot-approach.spec.luau",
+            "tests/engine/bot-sky-command-route.spec.luau",
           ]
           backend = "cloud"
           default = false
