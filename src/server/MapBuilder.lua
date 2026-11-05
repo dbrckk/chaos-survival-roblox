@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 
 local shared = ReplicatedStorage:FindFirstChild("Shared")
 local visualThemeModule = shared and shared:FindFirstChild("VisualTheme")
@@ -2802,6 +2803,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
             if definition.PerimeterStep == 1 then
+                -- Only FOUR real, collidable entry decks expose this
+                -- server-authored tag. StreamingEnabled may replicate
+                -- each Part before its attributes: clients discover the
+                -- real route through CollectionService instead of
+                -- guessing indices or watching hundreds of platforms.
+                CollectionService:AddTag(platform, "ChaosPerimeterEntry")
                 -- The first accessible step is the moment to teach the
                 -- objective without another full-screen mobile tutorial.
                 -- Distance-limited, attached to the REAL physical route,

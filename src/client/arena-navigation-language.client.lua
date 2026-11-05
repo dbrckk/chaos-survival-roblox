@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local CollectionService = game:GetService("CollectionService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
@@ -16,6 +17,7 @@ folder.Name = "ArenaNavigationLanguageLocal"
 folder.Parent = workspace
 
 local dynamicIndicators = {}
+local perimeterGuides = {}
 local stopCenterFollowing = nil
 local shrinkingActive = false
 local rootConnection = nil
@@ -29,6 +31,7 @@ local function clear()
     end
     folder:ClearAllChildren()
     table.clear(dynamicIndicators)
+    table.clear(perimeterGuides)
 end
 
 local function makePart(name, size, cframe, color, material, transparency)
@@ -225,6 +228,31 @@ end
 -- actual entry terraces. No fake directions, user-tracking raycasts or
 -- per-frame work. Names use Center* so the existing floor-follow system
 -- retracts them during Shrinking Arena (never floating beyond its edge).
+local function routeEntrySafe(target, platforms, routeId)
+    if not target or target.Parent ~= platforms
+        or not CollectionService:HasTag(target, "ChaosPerimeterEntry")
+        or target:GetAttribute("PerimeterStep") ~= 1
+        or tonumber(target:GetAttribute("PerimeterRoute")) ~= routeId
+        or not target:IsA("BasePart") or not target.Anchored
+        or not target.CanCollide or target.Transparency >= 0.75 then
+        return false
+    end
+    local collapse = target:GetAttribute("CollapsePhase")
+    return collapse == nil or collapse == "Normal" or collapse == "Safe"
+end
+
+local function refreshPerimeterGuides()
+    for routeId, entry in pairs(perimeterGuides) do
+        local safe = routeEntrySafe(entry.target, entry.platforms, routeId)
+        for _, part in ipairs(entry.parts) do
+            if part.Parent then
+                part.Transparency = safe
+                    and part:GetAttribute("NavBaseTransparency") or 1
+            end
+        end
+    end
+end
+
 local function addPerimeterRouteGuides(base, arena, theme, tier)
     local platforms = arena:FindFirstChild("Platforms")
     if not platforms then return end
@@ -232,6 +260,7 @@ local function addPerimeterRouteGuides(base, arena, theme, tier)
     local firstSteps = {}
     for _, platform in ipairs(platforms:GetChildren()) do
         if platform:IsA("BasePart")
+            and CollectionService:HasTag(platform, "ChaosPerimeterEntry")
             and platform:GetAttribute("PerimeterStep") == 1 then
             local routeId = tonumber(platform:GetAttribute("PerimeterRoute"))
             if routeId and routeId >= 1 and routeId <= 4 then
@@ -242,6 +271,8 @@ local function addPerimeterRouteGuides(base, arena, theme, tier)
     for routeId = 1, 4 do
         local target = firstSteps[routeId]
         if target then
+            local guide = {target = target, platforms = platforms, parts = {}}
+            perimeterGuides[routeId] = guide
             local toward = target.Position - base.Position
             local direction = flattenedUnit(toward)
             if direction.Magnitude > 0 then
@@ -257,9 +288,13 @@ local function addPerimeterRouteGuides(base, arena, theme, tier)
                     )
                     if left then
                         left.Name = "CenterPerimeterArrowL" .. routeId .. "_" .. step
+                        left:SetAttribute("NavBaseTransparency", left.Transparency)
+                        guide.parts[#guide.parts + 1] = left
                     end
                     if right then
                         right.Name = "CenterPerimeterArrowR" .. routeId .. "_" .. step
+                        right:SetAttribute("NavBaseTransparency", right.Transparency)
+                        guide.parts[#guide.parts + 1] = right
                     end
                 end
             end
@@ -285,6 +320,10 @@ local function rebuild()
 
     addCenterLandmark(base, theme, variant, tier)
     addPerimeterRouteGuides(base, arena, theme, tier)
+    -- No false blue arrows to streamed-out, collapsed or disabled entry
+    -- platforms. Round hazards only toggle these EXISTING six or fewer
+    -- short strokes per route, without reconstructing arena geometry.
+    refreshPerimeterGuides()
     -- Center paint is anchored to the floor, not to mobility pads.
     -- Scale it with the real shrinking collision deck, while pad beacons
     -- and route chevrons remain owned by their existing pad follower.
@@ -406,20 +445,93 @@ end)
 local watchedMap = nil
 local watchedArena = nil
 local disconnectBaseWatch = nil
+local disconnectPlatformsWatch = nil
 local disconnectPadAttributes = nil
 local rootRemovedConnection = nil
+local watchedPlatforms = nil
+local trackedEntrySignals = {}
+local platformAddedSignal = nil
+local platformRemovedSignal = nil
 local refreshPending = false
 
 local function scheduleRebuild()
     if refreshPending then return end
     refreshPending = true
-    task.defer(function()
+    -- One bounded first-join batch; a 320-stud streamed arena can
+    -- replicate its Base, Mechanics and tagged route entries in bursts.
+    task.delay(0.12, function()
         refreshPending = false
         -- Rebuild using the CURRENT map; queued callbacks never capture
         -- an old arena or a pad removed during a round transition.
         rebuild()
     end)
 end
+
+-- Server CollectionService exposes exactly four physical route-entry
+-- Parts. Watch ONLY these Parts (rather than subscribing to all 200+
+-- platforms) so late PerimeterStep/Route attributes and hazard transitions
+-- are handled without mobile connection or full-map rebuild storms.
+local function forgetEntry(part)
+    local signals = trackedEntrySignals[part]
+    if not signals then return end
+    trackedEntrySignals[part] = nil
+    for _, signal in ipairs(signals) do signal:Disconnect() end
+end
+
+local function watchEntry(part)
+    if not watchedPlatforms or part.Parent ~= watchedPlatforms
+        or not part:IsA("BasePart")
+        or not CollectionService:HasTag(part, "ChaosPerimeterEntry")
+        or trackedEntrySignals[part] then return end
+    local signals = {}
+    trackedEntrySignals[part] = signals
+    for _, attribute in ipairs({"PerimeterRoute", "PerimeterStep"}) do
+        signals[#signals + 1] =
+            part:GetAttributeChangedSignal(attribute):Connect(scheduleRebuild)
+    end
+    signals[#signals + 1] =
+        part:GetAttributeChangedSignal("CollapsePhase")
+            :Connect(refreshPerimeterGuides)
+    signals[#signals + 1] =
+        part:GetPropertyChangedSignal("CanCollide")
+            :Connect(refreshPerimeterGuides)
+    signals[#signals + 1] =
+        part:GetPropertyChangedSignal("Transparency")
+            :Connect(refreshPerimeterGuides)
+    scheduleRebuild()
+end
+
+local function bindPlatforms(platforms)
+    if watchedPlatforms == platforms then return end
+    if platformAddedSignal then platformAddedSignal:Disconnect() end
+    if platformRemovedSignal then platformRemovedSignal:Disconnect() end
+    platformAddedSignal, platformRemovedSignal = nil, nil
+    for part in pairs(trackedEntrySignals) do forgetEntry(part) end
+    watchedPlatforms = platforms
+    if platforms then
+        platformAddedSignal = platforms.ChildAdded:Connect(function(part)
+            watchEntry(part)
+        end)
+        platformRemovedSignal = platforms.ChildRemoved:Connect(function(part)
+            if trackedEntrySignals[part] then
+                forgetEntry(part)
+                scheduleRebuild()
+            end
+        end)
+        for _, part in ipairs(platforms:GetChildren()) do watchEntry(part) end
+    end
+    scheduleRebuild()
+end
+
+CollectionService:GetInstanceAddedSignal("ChaosPerimeterEntry")
+    :Connect(watchEntry)
+CollectionService:GetInstanceRemovedSignal("ChaosPerimeterEntry")
+    :Connect(function(part)
+        if trackedEntrySignals[part] then
+            forgetEntry(part)
+            scheduleRebuild()
+        end
+    end)
 
 local function bindMechanics(mechanics)
     if disconnectPadAttributes then
@@ -452,6 +564,7 @@ local function bindArena(arena)
     watchedArena = arena
 
     if not arena then
+        bindPlatforms(nil)
         bindMechanics(nil)
         return
     end
@@ -459,13 +572,18 @@ local function bindArena(arena)
     arenaAddedConnection = arena.ChildAdded:Connect(function(child)
         if child.Name == "Mechanics" then
             bindMechanics(child)
+        elseif child.Name == "Platforms" then
+            bindPlatforms(child)
         end
     end)
     arenaRemovedConnection = arena.ChildRemoved:Connect(function(child)
         if child.Name == "Mechanics" then
             bindMechanics(arena:FindFirstChild("Mechanics"))
+        elseif child == watchedPlatforms then
+            bindPlatforms(arena:FindFirstChild("Platforms"))
         end
     end)
+    bindPlatforms(arena:FindFirstChild("Platforms"))
     bindMechanics(arena:FindFirstChild("Mechanics"))
 end
 
@@ -482,6 +600,10 @@ local function bindGeneratedMap(root)
         disconnectBaseWatch()
         disconnectBaseWatch = nil
     end
+    if disconnectPlatformsWatch then
+        disconnectPlatformsWatch()
+        disconnectPlatformsWatch = nil
+    end
     bindArena(nil)
     watchedMap = root
 
@@ -490,6 +612,12 @@ local function bindGeneratedMap(root)
     -- Base and VariantId are needed for the four distinct center motifs.
     disconnectBaseWatch = MapVisualReadiness.watch(
         root, "Arena", "Base", scheduleRebuild
+    )
+    disconnectPlatformsWatch = MapVisualReadiness.watch(
+        root, "Arena", "Platforms", function()
+            local arena = root:FindFirstChild("Arena")
+            bindPlatforms(arena and arena:FindFirstChild("Platforms"))
+        end
     )
     rootConnection = root.ChildAdded:Connect(function(child)
         if child.Name == "Arena" then
