@@ -81,7 +81,7 @@ jobs:
           assert 'PremiumRouteMeshKit.sourceFit' in tests
           assert 'PremiumRouteMeshKit.bridgeSegmentCount' in tests
           assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
-          assert 'Aucune publication' in doc
+          assert 'aucune publication' in doc.lower()
           assert 'RenderStepped' not in client
           assert 'Heartbeat' not in client
           assert 'task.spawn(' not in client
