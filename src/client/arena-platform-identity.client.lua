@@ -494,15 +494,18 @@ local function rebuild()
     local camera = workspace.CurrentCamera
     local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
         ordered, variant, tier.Name, base,
-        camera and camera.CFrame.Position or nil)
+        camera and camera.CFrame.Position or nil,
+        camera and camera.CFrame.LookVector or nil)
     local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
-        ordered, tier.Name, base, camera and camera.CFrame.Position or nil)
+        ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
+        camera and camera.CFrame.LookVector or nil)
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
     local nearCradles,nearSupports =
         PremiumLargeStructureMeshKit.selectNearRouteStructures(
             ordered,decor,variant,tier.Name,base,
-            camera and camera.CFrame.Position or nil)
+            camera and camera.CFrame.Position or nil,
+            camera and camera.CFrame.LookVector or nil)
     local mountedRouteCradles = 0
     local mountedCloseSupports = 0
 
