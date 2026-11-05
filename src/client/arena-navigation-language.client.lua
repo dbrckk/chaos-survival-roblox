@@ -309,7 +309,12 @@ local function rebuild()
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
     local mechanics = arena and arena:FindFirstChild("Mechanics")
-    if not arena or not base or not base:IsA("BasePart") or not mechanics then
+    -- The four server-tagged entrance routes and the true floor exist
+    -- independently of optional mobility pads. On first-join streaming,
+    -- Arena.Mechanics can replicate seconds AFTER Arena.Base/Platforms.
+    -- Do not erase every route cue until a completely unrelated folder
+    -- arrives: render floor/navigation now, pad markers only when ready.
+    if not arena or not base or not base:IsA("BasePart") then
         return
     end
 
@@ -333,9 +338,12 @@ local function rebuild()
     )
 
     local pads = {}
-    for _, child in ipairs(mechanics:GetChildren()) do
-        if child:IsA("BasePart") and child:GetAttribute("ArenaMobilityPad") == true then
-            table.insert(pads, child)
+    if mechanics then
+        for _, child in ipairs(mechanics:GetChildren()) do
+            if child:IsA("BasePart")
+                and child:GetAttribute("ArenaMobilityPad") == true then
+                table.insert(pads, child)
+            end
         end
     end
     table.sort(pads, function(a, b)
@@ -545,10 +553,11 @@ local function bindMechanics(mechanics)
             {"ArenaMobilityPad", "ImpulseX", "ImpulseY", "ImpulseZ"},
             scheduleRebuild
         )
-    else
-        -- Do not retain stale floating arrows if mechanics stream out.
-        clear()
     end
+    -- The scheduled current-map rebuild discards stale PAD markers and
+    -- keeps all genuine floor arrows and center identity when only the
+    -- optional Mechanics folder streams out. Clear everything only when
+    -- the authoritative Arena/Base itself disappears.
     scheduleRebuild()
 end
 
