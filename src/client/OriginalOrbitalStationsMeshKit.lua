@@ -3,6 +3,10 @@
 -- Only existing server-replicated templates are used. No new asset,
 -- collider, light, RemoteEvent, physics simulation or update loop.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local spatial = shared and shared:FindFirstChild("SpatialMidgroundSelectionRules")
+local SpatialMidgroundSelectionRules = if spatial then require(spatial)
+    else require("../shared/SpatialMidgroundSelectionRules")
 local Kit = {}
 
 local PROFILES = {
@@ -289,10 +293,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
         if a.score==b.score then return a.index<b.index end
         return a.score<b.score
     end)
-    local wanted={}
-    for i=1,math.min(cap,#candidates) do
-        wanted[candidates[i].body]=candidates[i]
-    end
+    -- Closest authentic orbital sculpture remains foreground;
+    -- extra SAME-budget slots spread around the real station ring.
+    -- Never fabricate a new walkable structure or increase 1/3/6 caps.
+    local wanted=SpatialMidgroundSelectionRules.choose(candidates,cap)
     for body,e in pairs(mounted) do
         local want=wanted[body]
         if not want or want.source~=e.source or not isValid(e) then

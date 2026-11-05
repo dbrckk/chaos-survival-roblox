@@ -3,6 +3,10 @@
 -- "TowerCoolingMass" Parts remain FULLY intact as a reversible fallback.
 -- No server colliders, new lights, animation loop or RemoteEvents.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local shared=ReplicatedStorage:FindFirstChild("Shared")
+local spatial=shared and shared:FindFirstChild("SpatialMidgroundSelectionRules")
+local SpatialMidgroundSelectionRules=if spatial then require(spatial)
+    else require("../shared/SpatialMidgroundSelectionRules")
 
 local Kit={}
 local ID=95543769387033
@@ -344,10 +348,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
         if a.score==b.score then return a.index<b.index end
         return a.score<b.score
     end)
-    local wanted={}
-    for i=1,math.min(cap,#candidates) do
-        wanted[candidates[i].body]=candidates[i]
-    end
+    -- Closest genuine spire first, then separated outboard districts.
+    -- Source provenance, GPU pressure and 1/2/5 model caps stay intact.
+    local wanted=SpatialMidgroundSelectionRules.choose(candidates,cap)
     for body,e in pairs(active) do
         if not wanted[body] or e.source~=wanted[body].approved
             or not alive(e) then

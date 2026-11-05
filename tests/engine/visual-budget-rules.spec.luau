@@ -64,6 +64,53 @@ describe("visual budget rules", function()
         expect(next(selector({}, 4)) == nil).toBe(true)
     end)
 
+    it("covers both Towers and Orbital with separated true-model locations and unchanged mobile caps", function()
+        local select = SpatialMidgroundSelectionRules.choose
+        local positions = {
+            Vector3.new(240, 14, 0),
+            Vector3.new(235, 14, 7),
+            Vector3.new(-245, 14, 0),
+            Vector3.new(-240, 14, 8),
+            Vector3.new(0, 14, 245),
+            Vector3.new(0, 14, -246),
+        }
+        local candidates = {}
+        for index, position in ipairs(positions) do
+            candidates[index] = {
+                body = {Position = position},
+                index = index,
+                score = 8 + index * 2,
+            }
+        end
+        -- Tower Run Low/Medium/High: 1/2/5, same source-resident counts.
+        expect(select(candidates, 1)[candidates[1].body] ~= nil).toBe(true)
+        local medium = select(candidates, 2)
+        expect(medium[candidates[1].body] ~= nil).toBe(true)
+        expect(medium[candidates[3].body] ~= nil).toBe(true)
+        expect(medium[candidates[2].body] == nil).toBe(true)
+        local towerHigh = select(candidates, 5)
+        local total = 0
+        for _ in pairs(towerHigh) do total += 1 end
+        expect(total).toBe(5)
+        -- Orbital Low/Medium/High: 1/3/6. Three real stations occupy
+        -- opposite and perpendicular ring sectors, not adjacent blocks.
+        local orbit = select(candidates, 3)
+        expect(orbit[candidates[1].body] ~= nil).toBe(true)
+        expect(orbit[candidates[3].body] ~= nil).toBe(true)
+        expect(orbit[candidates[5].body] ~= nil).toBe(true)
+        expect(orbit[candidates[2].body] == nil).toBe(true)
+        local all = select(candidates, 6)
+        total = 0
+        for _ in pairs(all) do total += 1 end
+        expect(total).toBe(6)
+        -- No camera/native source candidate is fabricated to fill a cap.
+        local invalid = {
+            {body = {Position = Vector3.zero}, score = 0/0, index = 1},
+            {body = {Position = "bad"}, score = 1, index = 2},
+        }
+        expect(next(select(invalid, 6)) == nil).toBe(true)
+    end)
+
     it("uses five specific approved UV-ground PBR finishes without increasing mobile texture residency", function()
         local kit = PremiumGroundPbrKit
         expect(kit.family("Classic")).toBe("DiamondArmor")
