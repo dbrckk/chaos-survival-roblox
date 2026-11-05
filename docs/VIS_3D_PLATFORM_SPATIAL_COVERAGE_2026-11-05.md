@@ -16,3 +16,7 @@ The 16 High / 8 Medium authenticated platform carapaces went exclusively to the 
 ## Acceptance
 
 Exact-SHA build, seven real Roblox Open Cloud engine suites, genuine Studio captures/Android Low-Medium-High checks for all five worlds, and a full bridge-shutter/shrink safety pass are outstanding. Green CI is not visible-model completeness; no FPS, 90% premium coverage, or public deployment is claimed.
+
+## Late safety hardening: shutters
+
+The platform owner now subscribes to the authoritative BridgeShutterPhase on real SkybridgeN parts. Imported cosmetic MeshPart trusses disappear synchronously on Warning/Raising/Raised/Lowering even when CollapsePhase remains Normal; on Idle, the existing collapse visibility rules restore the original cosmetic appearance. Native gameplay collision, illuminated warning rails and the server shutter remain untouched. The one per-active-bridge connection is disconnected on map/tier rebuild.

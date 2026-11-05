@@ -29,6 +29,7 @@ folder.Parent = workspace
 -- it never rebuilds a whole arena or adds a per-frame loop.
 local visualsByPlatform = {}
 local collapseConnections = {}
+local bridgeShutterConnections = {}
 local routeAttributeConnections = {}
 local outpostAttributeConnections = {}
 local routeTargetConnections = {}
@@ -135,6 +136,10 @@ local function clear()
     for platform, connection in pairs(collapseConnections) do
         connection:Disconnect()
         collapseConnections[platform] = nil
+    end
+    for platform, connection in pairs(bridgeShutterConnections) do
+        connection:Disconnect()
+        bridgeShutterConnections[platform] = nil
     end
     for platform, disconnect in pairs(footprintDisconnects) do
         disconnect()
@@ -735,15 +740,36 @@ local function rebuild()
                 syncTakeoff(platform, base.Position, variant)
             end
             local function syncCollapse()
+                local pieces=visualsByPlatform[platform]
                 PlatformFinishKit.applyCollapseVisibility(
-                    visualsByPlatform[platform],
-                    platform:GetAttribute("CollapsePhase")
+                    pieces, platform:GetAttribute("CollapsePhase")
                 )
+                -- BridgeShutterPhase is independent from CollapsePhase.
+                -- The genuine sculpted girders are cosmetic and must
+                -- immediately leave the server's physical warning/
+                -- closing shutter visible, even without a collapse.
+                if platform:GetAttribute("ChaosSkybridge")==true then
+                    local shutter=platform:GetAttribute("BridgeShutterPhase")
+                    if shutter and shutter~="Idle" then
+                        for _,piece in ipairs(pieces or {}) do
+                            if piece.Parent and piece:IsA("MeshPart")
+                                and piece:GetAttribute(
+                                    "Original3DStructuralSide")==true then
+                                piece.Transparency=1
+                            end
+                        end
+                    end
+                end
                 syncRoute()
                 refreshOutpostMotion(platform)
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
+            if platform:GetAttribute("ChaosSkybridge")==true then
+                bridgeShutterConnections[platform] =
+                    platform:GetAttributeChangedSignal("BridgeShutterPhase")
+                        :Connect(syncCollapse)
+            end
             if target then
                 -- Size can shrink without any CollapsePhase change.
                 -- These events only refresh the two route strokes;
