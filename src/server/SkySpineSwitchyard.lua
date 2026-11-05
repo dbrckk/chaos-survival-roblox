@@ -90,6 +90,7 @@ function SkySpineSwitchyard.promenadeGapBetween(first, second)
         or not first.Name:match("^Platform%d+$")
         or not second.Name:match("^Platform%d+$")
         or first.Parent ~= second.Parent
+        or not first.Parent or first.Parent.Name ~= "Platforms"
         or not first.Anchored or not second.Anchored
         or not first.CanCollide or not second.CanCollide
         or first.Transparency >= 0.75 or second.Transparency >= 0.75
