@@ -63,7 +63,9 @@ end
 
 local function targetBrightness(light)
     local base = tonumber(light:GetAttribute("BaseBrightness")) or 0
-    return base * ArenaFocalLightingRules.phaseScale(phase, finalRush)
+    return base * ArenaFocalLightingRules.phaseScale(
+        phase, finalRush, activeDisasters
+    )
 end
 
 local function refresh(duration)

@@ -182,6 +182,19 @@ describe("Arena focal lighting rules", function()
 
         expect(round < ready).toBe(true)
         expect(rush < round).toBe(true)
+        expect(rush).toBe(0.24)
+        expect(ArenaFocalLightingRules.phaseScale(
+            "round", true, {"Meteors", "Darkness"}
+        )).toBe(0.08)
+        expect(ArenaFocalLightingRules.phaseScale(
+            "round", true, {"Darkness", "Meteors"}
+        )).toBe(0.08)
+        expect(ArenaFocalLightingRules.phaseScale(
+            "round", true, {"Meteors", "Bombs"}
+        )).toBe(rush)
+        expect(ArenaFocalLightingRules.phaseScale(
+            "round", false, {"Darkness"}
+        )).toBe(round)
         expect(ArenaFocalLightingRules.phaseScale("waiting", false)).toBe(0)
     end)
 end)

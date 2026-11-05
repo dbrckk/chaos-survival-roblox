@@ -103,16 +103,26 @@ function ArenaFocalLightingRules.fixtureParts(tierName)
     return 1
 end
 
-function ArenaFocalLightingRules.phaseScale(phase, finalRush)
+function ArenaFocalLightingRules.phaseScale(phase, finalRush, disasters)
     local state = tostring(phase or "waiting")
     if state == "ready" then
         -- The original two/three architectural beams act as a soft
         -- approach light over the safe route, not a white flood.
         return 0.78
     elseif state == "round" then
-        -- Keep real facades perceptible while retaining disaster-led
-        -- visibility, especially during final rush / blackout.
-        return finalRush == true and 0.08 or 0.40
+        -- Final rush is NOT itself a blackout. Preserve enough physical
+        -- route light to read a 3D bridge and its landing while moving.
+        -- Actual Darkness remains deliberately dim, including when it is
+        -- the secondary disaster in Double Chaos.
+        if finalRush == true then
+            if type(disasters) == "table" then
+                for _, id in ipairs(disasters) do
+                    if id == "Darkness" then return 0.08 end
+                end
+            end
+            return 0.24
+        end
+        return 0.40
     elseif state == "result" then
         return 0.42
     end
