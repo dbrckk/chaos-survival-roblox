@@ -1,0 +1,149 @@
+# Five-world source-authentic 3D skyline visibility milestone. No Roblox publish.
+name: One-time QA 2026-11-05 All Five Original 3D Panoramas No Publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261105-five-world-original-skyline-no-publish.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-five-world-original-3d-spatial-20261105
+  cancel-in-progress: false
+
+jobs:
+  validate-exact-sha:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate five-world source originals, unchanged GPU caps and actual spatial engine spec
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          repo=Path(".")
+          rules=(repo/"src/shared/SpatialMidgroundSelectionRules.lua").read_text()
+          sources={
+              "Classic,Crossroads":(repo/"src/client/ApprovedMidgroundSkylineMeshKit.lua").read_text(),
+              "Harbor":(repo/"src/client/HarborMidgroundBargeMeshKit.lua").read_text(),
+              "Towers":(repo/"src/client/TowerCoolingSpireMeshKit.lua").read_text(),
+              "Orbital":(repo/"src/client/OriginalOrbitalStationsMeshKit.lua").read_text(),
+          }
+          spec=(repo/"tests/engine/visual-budget-rules.spec.luau").read_text()
+          cloud=(repo/".github/workflows/roblox-cloud-test.yml").read_text()
+          assert 'function Rules.choose(candidates, budget)' in rules
+          assert 'math.min(90, separation * 0.24)' in rules
+          assert 'RenderStepped:Connect(' not in rules
+          assert 'Instance.new(' not in rules
+          assert 'SpatialMidgroundSelectionRules.choose(candidates, cap)' in sources["Classic,Crossroads"]
+          assert 'SpatialMidgroundSelectionRules.choose(choices,cap)' in sources["Harbor"]
+          assert 'SpatialMidgroundSelectionRules.choose(candidates,cap)' in sources["Towers"]
+          assert 'SpatialMidgroundSelectionRules.choose(candidates,cap)' in sources["Orbital"]
+          for path in sources:
+              assert 'cameraPoint' in sources[path]
+          for token in ('Low={models=1,distance=250,retention=24}',
+                        'Medium={models=2,distance=285,retention=32}',
+                        'High={models=5,distance=405,retention=45}'):
+              assert token in sources["Towers"],token
+          for token in ('Low = {count=1, distance=290, hysteresis=25}',
+                        'Medium = {count=3, distance=345, hysteresis=34}',
+                        'High = {count=6, distance=430, hysteresis=46}'):
+              assert token in sources["Orbital"],token
+          assert 'covers both Towers and Orbital with separated true-model locations' in spec
+          assert 'expect(total).toBe(5)' in spec
+          assert 'expect(total).toBe(6)' in spec
+          assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
+          assert 'Two source variants in each world' in (repo/"docs/VIS_FIVE_WORLD_DISTRIBUTED_ORIGINAL_OUTBOARD_3D_2026-11-05.md").read_text()
+          print("Five approved source-original worlds distribute true models"
+                " under unchanged Low/Medium/High hard budgets; run all"
+                " seven real engine suites. NO PUBLISH.",flush=True)
+          PY
+      - name: Source-only milestone validation (NEVER publish)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          repo=os.environ["REPO"]
+          candidate=os.environ["CANDIDATE_SHA"]
+          base="https://api.github.com/repos/"+repo
+          headers={
+              "Authorization":"Bearer "+os.environ["GH_TOKEN"],
+              "Accept":"application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28",
+              "User-Agent":"chaos-five-world-original-3d-spatial-no-publish",
+          }
+
+          def api(path,payload=None):
+              body=json.dumps(payload).encode() if payload is not None else None
+              request=urllib.request.Request(base+path,data=body,
+                  method="POST" if body is not None else "GET",
+                  headers={**headers,"Content-Type":"application/json"})
+              for attempt in range(6):
+                  try:
+                      with urllib.request.urlopen(request,timeout=40) as r:
+                          if payload is not None:
+                              if r.status!=204:
+                                  raise RuntimeError("Invalid dispatch response")
+                              return {}
+                          return json.load(r)
+                  except (urllib.error.URLError,TimeoutError):
+                      if attempt==5: raise
+                      time.sleep(3*(attempt+1))
+
+          def verify_head():
+              actual=api("/git/ref/heads/main")["object"]["sha"]
+              if actual!=candidate:
+                  raise SystemExit("main moved; abandon stale SHA QA")
+
+          verify_head()
+          print("VALIDATION ONLY, NO PUBLICATION",candidate,flush=True)
+          names={"Build Validation":"ci.yml",
+                 "Roblox Open Cloud Engine Tests":"roblox-cloud-test.yml"}
+          for name,path in names.items():
+              verify_head()
+              api("/actions/workflows/"+path+"/dispatches",{"ref":"main"})
+              print("Dispatched",name,flush=True)
+              time.sleep(4)
+
+          for attempt in range(400):
+              verify_head()
+              runs=api("/actions/runs?head_sha="+candidate+"&per_page=100")
+              states={}
+              for run in runs.get("workflow_runs",[]):
+                  if run.get("head_sha")!=candidate or run.get("event")!="workflow_dispatch":
+                      continue
+                  name=run.get("name")
+                  if name in names and (name not in states or
+                      run.get("created_at","") > states[name].get("created_at","")):
+                      states[name]=run
+              if attempt%6==0:
+                  print("Milestone:",{name:
+                      (states.get(name) or {}).get("status","pending")+"/"+
+                      str((states.get(name) or {}).get("conclusion"))
+                      for name in names},flush=True)
+              if any(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")!="success" for n in names):
+                  raise SystemExit("Exact-SHA source milestone FAILED; no publish")
+              if all(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")=="success" for n in names):
+                  verify_head()
+                  print("Exact-SHA Build + Cloud passed. NO PUBLISH.",candidate,flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Exact-SHA QA timed out; no publish")
+          PY
