@@ -51,6 +51,11 @@ local function restore(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    -- Decor is streamed separately from the physical Platforms folder.
+    -- These two bounded subscriptions must also be removed on map/LOD exit.
+    for _, connection in ipairs(entry.decorConnections or {}) do
+        connection:Disconnect()
+    end
     for _, model in ipairs(entry.models) do
         model:Destroy()
     end
@@ -412,6 +417,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     local entry = {
         models = {},
         connections = {},
+        decorConnections = {},
         initialSize = platform.Size,
         count = countToMount,
         bridge = isBridge,
@@ -479,10 +485,15 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     local index = tonumber(platform.Name:match("^Platform(%d+)$")
         or platform.Name:match("^Skybridge(%d+)$"))
     local arena = platform.Parent and platform.Parent.Parent
-    local decor = arena and arena:FindFirstChild("Decor")
+    local decor = nil
     local panelName = index and "PlatformPanel" .. index or nil
-    -- A streamed, misindexed or old map panel is NOT ours to hide. Check
-    -- its authentic server-authored position and physical deck footprint.
+
+    -- The server may stream a live Platforms folder BEFORE Decor. Previously
+    -- an approved route shell mounted in this window never acquired its
+    -- PlatformPanel owner until the camera happened to evict/reload the mesh.
+    -- That left a basic, flat native panel drawn OVER genuine approved art.
+    -- Bind the ONE existing panel for this physical route as its folder and
+    -- Part arrive, without another poll, model clone or update loop.
     local function ownedPanel(panel)
         if not panelName or not panel or not panel:IsA("BasePart")
             or panel.Name ~= panelName or panel.Parent ~= decor
@@ -495,30 +506,80 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             and math.abs(panel.Size.X - (platform.Size.X - 0.8)) < 1.25
             and math.abs(panel.Size.Z - (platform.Size.Z - 0.8)) < 1.25
     end
-    local function attachNativePanel(panel)
-        if not ownedPanel(panel) or entry.panel == panel then return end
+
+    local function releaseNativePanel()
         if entry.panel and entry.panel.Parent then
             entry.panel.LocalTransparencyModifier = entry.originalPanelAlpha
         end
+        entry.panel = nil
+        entry.originalPanelAlpha = 0
+    end
+
+    local function attachNativePanel(panel)
+        if not ownedPanel(panel) or entry.panel == panel then return end
+        releaseNativePanel()
         entry.panel = panel
         entry.originalPanelAlpha = panel.LocalTransparencyModifier
         syncVisibility(entry, platform)
     end
-    if decor and panelName then
+
+    local function bindDecor(nextDecor)
+        if decor == nextDecor then return end
+        -- A streamed folder can be replaced. Disconnect its exact two
+        -- subscriptions before acquiring a new folder; no stale masking.
+        for _, connection in ipairs(entry.decorConnections) do
+            connection:Disconnect()
+        end
+        table.clear(entry.decorConnections)
+        releaseNativePanel()
+        decor = nextDecor and nextDecor:IsA("Folder")
+            and nextDecor or nil
+        if not decor or not panelName then return end
         attachNativePanel(decor:FindFirstChild(panelName))
-        -- The real server panel can stream AFTER the approved 3D mesh:
-        -- do not leave overlapping flat native paint for the whole round.
-        entry.connections[#entry.connections + 1] =
+        entry.decorConnections[#entry.decorConnections + 1] =
             decor.ChildAdded:Connect(function(child)
                 if child.Name == panelName then
                     attachNativePanel(child)
                 end
             end)
-        entry.connections[#entry.connections + 1] =
+        entry.decorConnections[#entry.decorConnections + 1] =
             decor.ChildRemoved:Connect(function(child)
                 if child == entry.panel then
-                    entry.panel = nil
+                    releaseNativePanel()
                 end
+            end)
+    end
+
+    -- A panel may stream before its server dimensions/CFrame settle.
+    -- Retry its exact ownership check through the ALREADY EXISTING camera
+    -- LOD sample instead of leaving native paint in front of 3D forever.
+    -- This is also a bounded backstop for streaming folder replacement.
+    entry.refreshNativePanel = function()
+        if entry.restoring then return end
+        local currentDecor = arena and arena:FindFirstChild("Decor")
+        if currentDecor ~= decor then bindDecor(currentDecor) end
+        if entry.panel and not ownedPanel(entry.panel) then
+            releaseNativePanel()
+        end
+        if decor and not entry.panel then
+            -- attachNativePanel handles the only necessary visibility
+            -- transition. Avoid re-traversing every MeshPart on each LOD
+            -- sample when the native panel is already correctly owned.
+            attachNativePanel(decor:FindFirstChild(panelName))
+        end
+    end
+
+    if arena and arena:IsA("Folder") and panelName then
+        bindDecor(arena:FindFirstChild("Decor"))
+        entry.connections[#entry.connections + 1] =
+            arena.ChildAdded:Connect(function(child)
+                if child.Name == "Decor" and child:IsA("Folder") then
+                    bindDecor(child)
+                end
+            end)
+        entry.connections[#entry.connections + 1] =
+            arena.ChildRemoved:Connect(function(child)
+                if child == decor then bindDecor(nil) end
             end)
     end
     local function refresh()
@@ -784,8 +845,35 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     local deckTemplate = getTemplate("PremiumJumpDeck")
     local bridgeTemplate = getTemplate("PremiumSkybridgeModule")
     if deckTemplate then
-        for i = 1, math.min(#decks, deckCap) do
-            wanted[decks[i].platform] = {template = deckTemplate, count = 1,
+        -- Near-camera quota should buy COMPLETE authentic source coverage,
+        -- not reserve slots for early native rectangles whose footprint
+        -- cannot fit the approved sculpted jump-deck import. Preflight the
+        -- same exact imported bounds the mount uses; prefer covers that can
+        -- actually retire the original flat PlatformPanel. No extra models,
+        -- new assets, rendering loop or physical platform changes.
+        local _, deckBounds = deckTemplate:GetBoundingBox()
+        local fittedDecks = {}
+        for _, item in ipairs(decks) do
+            local fit = fitSourceToDeck(item.platform, deckBounds, 1, false)
+            if fit then
+                fittedDecks[#fittedDecks + 1] = {
+                    item = item,
+                    -- Local 3D shells with incomplete two-axis coverage
+                    -- remain eligible only AFTER comparably near full fits.
+                    score = item.priority + (fit.panelCovered and 0 or 48),
+                }
+            end
+        end
+        table.sort(fittedDecks, function(a, b)
+            if a.score ~= b.score then return a.score < b.score end
+            if a.item.distance ~= b.item.distance then
+                return a.item.distance < b.item.distance
+            end
+            return a.item.platform.Name < b.item.platform.Name
+        end)
+        for i = 1, math.min(#fittedDecks, deckCap) do
+            local platform = fittedDecks[i].item.platform
+            wanted[platform] = {template = deckTemplate, count = 1,
                 bridge = false}
         end
     end
@@ -886,6 +974,11 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
             mounted[platform] = mount(platform, desired.template, desired.count,
                 desired.bridge, desired.underdeck)
         end
+    end
+    -- Late-streamed panel/geometry alignment is reconciled by this SAME
+    -- 0.65/0.90-second camera owner; no extra heartbeat or per-Part polling.
+    for platform, entry in pairs(mounted) do
+        if entry.refreshNativePanel then entry.refreshNativePanel() end
     end
     -- Give the nearest REAL contiguous bridge one coherent 2K PBR finish,
     -- not just its first segment. Healthy desktop can keep two; Android

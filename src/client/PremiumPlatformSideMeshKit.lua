@@ -87,6 +87,19 @@ local function publishParts(parent, copy, pieces, label)
     return pieces
 end
 
+-- Snapshot ranking cannot follow every camera frame. At each existing
+-- map/tier/streaming rebuild, spend the SAME approved 16/8 source-model
+-- slots preferentially on the visible physical routes rather than behind
+-- the third-person camera. Foreground within 30 studs is never demoted.
+local function cameraFacingBias(delta, cameraLook)
+    if typeof(cameraLook) ~= "Vector3" then return 0 end
+    local route = Vector3.new(delta.X, 0, delta.Z)
+    local facing = Vector3.new(cameraLook.X, 0, cameraLook.Z)
+    if route.Magnitude < 30 or facing.Magnitude < 0.5 then return 0 end
+    return -route.Unit:Dot(facing.Unit)
+        * math.min(36, route.Magnitude * 0.18)
+end
+
 local function stage(parent, platform, source, name, scale, target)
     local copy = source:Clone()
     if not pcall(function() copy:ScaleTo(scale) end) then
@@ -114,7 +127,7 @@ end
 -- This is a snapshot (not live camera tracking); PremiumRouteMeshKit already
 -- owns continuous camera-LOD for upper deck paint and bridge covers.
 -- The server keeps all colliders, collapse cues and source fallbacks.
-function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint)
+function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, cameraLook)
     local chosen = {}
     local limit = tier == "High" and 16 or (tier == "Medium" and 8 or 0)
     if limit == 0 or type(platforms) ~= "table"
@@ -162,6 +175,9 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint)
                 -- Upper decks remain attractive but distant unused edge
                 -- platforms must not consume the scarce true-mesh budget.
                 local score=Vector3.new(delta.X,delta.Y*.60,delta.Z).Magnitude
+                if focus == cameraPoint then
+                    score+=cameraFacingBias(delta,cameraLook)
+                end
                 if platform:GetAttribute("ChaosPermanentRoute") == true then
                     score-=6
                 end
@@ -212,7 +228,7 @@ end
 -- The previous modulo 3/6 index gate could give no real truss to a
 -- nearby physically walkable Towers bridge. Choose ONE verified source
 -- mount in Medium/High instead (14/28 MeshParts maximum), zero in Low.
-function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint)
+function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint,cameraLook)
     local chosen={}
     if tier=="Low" or type(platforms)~="table"
         or not base or not base:IsA("BasePart") then return chosen end
@@ -245,6 +261,9 @@ function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint)
                 and scale>=.75 then
                 local delta=platform.Position-focus
                 local score=Vector3.new(delta.X,delta.Y*.6,delta.Z).Magnitude
+                if focus == cameraPoint then
+                    score+=cameraFacingBias(delta,cameraLook)
+                end
                 if score<bestScore or (score==bestScore and best
                     and platform.Name<best.Name) then
                     best=platform
