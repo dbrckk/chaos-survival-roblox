@@ -173,9 +173,87 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint)
         if a.score ~= b.score then return a.score < b.score end
         return a.part.Name < b.part.Name
     end)
-    for i=1,math.min(#candidates,limit) do
-        chosen[candidates[i].part]=true
+    -- Reserve a dense foreground, then spend the REMAINING SAME-budget
+    -- 16/8 approved 3D modules across distinct real playable locations.
+    -- This snapshot avoids expensive whole-map rebuilds on camera ticks.
+    local nearCount=math.min(#candidates,math.ceil(limit*.625))
+    local selected={}
+    for i=1,nearCount do
+        local platform=candidates[i].part
+        chosen[platform]=true
+        selected[#selected+1]=platform
     end
+    local spreadCap=math.max(base.Size.X,base.Size.Z)*.72
+    while #selected<math.min(#candidates,limit) do
+        local best,bestScore=nil,-math.huge
+        for _,item in ipairs(candidates) do
+            if not chosen[item.part] then
+                local nearest=spreadCap
+                for _,placed in ipairs(selected) do
+                    local delta=item.part.Position-placed.Position
+                    nearest=math.min(nearest,Vector3.new(
+                        delta.X,delta.Y*.6,delta.Z).Magnitude)
+                end
+                local score=nearest-item.score*.13
+                if score>bestScore or (score==bestScore and best
+                    and item.part.Name<best.Name) then
+                    best=item.part
+                    bestScore=score
+                end
+            end
+        end
+        if not best then break end
+        chosen[best]=true
+        selected[#selected+1]=best
+    end
+    return chosen
+end
+
+-- The previous modulo 3/6 index gate could give no real truss to a
+-- nearby physically walkable Towers bridge. Choose ONE verified source
+-- mount in Medium/High instead (14/28 MeshParts maximum), zero in Low.
+function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint)
+    local chosen={}
+    if tier=="Low" or type(platforms)~="table"
+        or not base or not base:IsA("BasePart") then return chosen end
+    local source,bounds=verified("Bridge")
+    if not source then return chosen end
+    local sourceLength=math.max(bounds.X,bounds.Z)
+    local focus=base.Position
+    if typeof(cameraPoint)=="Vector3" then
+        local localPoint=base.CFrame:PointToObjectSpace(cameraPoint)
+        if math.abs(localPoint.X)<=base.Size.X*.5+16
+            and math.abs(localPoint.Z)<=base.Size.Z*.5+16
+            and math.abs(localPoint.Y)<=130 then focus=cameraPoint end
+    end
+    local best,bestScore=nil,math.huge
+    for _,platform in ipairs(platforms) do
+        if platform:IsA("BasePart") and platform.Parent
+            and platform.Name:match("^Skybridge%d+$")
+            and platform:GetAttribute("ChaosSkybridge")==true
+            and platform.Anchored and platform.CanCollide
+            and platform.Transparency<.75 then
+            local collapse=platform:GetAttribute("CollapsePhase")
+            local shutter=platform:GetAttribute("BridgeShutterPhase")
+            local length=math.max(platform.Size.X,platform.Size.Z)
+            local width=math.min(platform.Size.X,platform.Size.Z)
+            local scale=math.min(1.1,width*.24,
+                length*.32/sourceLength)
+            if (collapse==nil or collapse=="Normal" or collapse=="Safe")
+                and (shutter==nil or shutter=="Idle")
+                and length>=14 and length<=125 and width>=4.0
+                and scale>=.75 then
+                local delta=platform.Position-focus
+                local score=Vector3.new(delta.X,delta.Y*.6,delta.Z).Magnitude
+                if score<bestScore or (score==bestScore and best
+                    and platform.Name<best.Name) then
+                    best=platform
+                    bestScore=score
+                end
+            end
+        end
+    end
+    if best then chosen[best]=true end
     return chosen
 end
 
@@ -241,12 +319,15 @@ end
 -- rectangular local side rails; server glow/danger rails remain untouched.
 -- Two pieces (Medium) or four pieces (High), on two real bridge flanks.
 -- Route shrink adjusts individual MeshPart Weld.C1/Size in existing owner.
-function Kit.bridgeGirders(parent, platform, tier, index)
-    if tier == "Low" or platform:GetAttribute("ChaosSkybridge") ~= true then
+function Kit.bridgeGirders(parent, platform, tier, index, selected)
+    if tier == "Low" or selected == false
+        or platform:GetAttribute("ChaosSkybridge") ~= true then
         return nil
     end
     local id = tonumber(index)
-    if not id or id < 1 or id % (tier == "High" and 3 or 6) ~= 0 then
+    if not id or id < 1
+        or (selected ~= true
+            and id % (tier == "High" and 3 or 6) ~= 0) then
         return nil
     end
     local source, original = verified("Bridge")

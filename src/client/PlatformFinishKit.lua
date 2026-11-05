@@ -193,7 +193,7 @@ function PlatformFinishKit.sideRailCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index)
+function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not NAMES[variant] then
         return {}
@@ -204,7 +204,7 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
         -- Real 7-material creator-owned truss modules occupy the same
         -- existing visual budget and shrink/collapse owner as native bars.
         local original = PremiumPlatformSideMeshKit.bridgeGirders(
-            parent, platform, tier, index)
+            parent, platform, tier, index, selectedBridge)
         if original then return original end
     end
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z

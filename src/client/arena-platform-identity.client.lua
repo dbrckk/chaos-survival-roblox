@@ -119,6 +119,9 @@ local function clear()
     if player:GetAttribute("LocalOriginalNearRouteCarapaceCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearRouteCarapaceCount", 0)
     end
+    if player:GetAttribute("LocalOriginalNearBridgeGirderCount") ~= 0 then
+        player:SetAttribute("LocalOriginalNearBridgeGirderCount", 0)
+    end
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
     end
@@ -487,6 +490,9 @@ local function rebuild()
     local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
         ordered, variant, tier.Name, base,
         camera and camera.CFrame.Position or nil)
+    local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
+        ordered, tier.Name, base, camera and camera.CFrame.Position or nil)
+    local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
     local nearCradles,nearSupports =
         PremiumLargeStructureMeshKit.selectNearRouteStructures(
@@ -559,7 +565,8 @@ local function rebuild()
             local sidePieces = {}
             if not authenticCarapace then
                 sidePieces = PlatformFinishKit.buildSideRails(
-                    folder, platform, tier.Name, theme, variant, visualIndex)
+                    folder, platform, tier.Name, theme, variant, visualIndex,
+                    nearBridgeGirders[platform] == true)
             end
             local authenticBridge = sidePieces[1] ~= nil
                 and sidePieces[1]:GetAttribute(
@@ -568,6 +575,7 @@ local function rebuild()
                 replacements[tostring(visualIndex)] = "carapace"
             elseif authenticBridge then
                 replacements[tostring(visualIndex)] = "bridge"
+                mountedBridgeGirders += 1
             end
             if not authenticCarapace and not authenticBridge then
                 for _, piece in ipairs(PlatformFinishKit.buildArmor(
@@ -776,6 +784,11 @@ local function rebuild()
         ~= mountedCameraCarapaces then
         player:SetAttribute("LocalOriginalNearRouteCarapaceCount",
             mountedCameraCarapaces)
+    end
+    if player:GetAttribute("LocalOriginalNearBridgeGirderCount")
+        ~= mountedBridgeGirders then
+        player:SetAttribute("LocalOriginalNearBridgeGirderCount",
+            mountedBridgeGirders)
     end
     PlatformNativeTrimReplacementKit.bind(
         arena, replacements, function(nativeCount)
