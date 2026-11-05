@@ -846,11 +846,17 @@ end
 
 local disconnectBaseWatch = nil
 local disconnectPlatformsWatch = nil
+local disconnectDecorWatch = nil
 local platformsConnection = nil
 local platformsRemoveConnection = nil
+local decorAddedConnection = nil
+local decorRemovedConnection = nil
 local watchedPlatforms = nil
+local watchedDecor = nil
 local watchedMap = nil
 local rebuildPending = false
+local decorRebuildPending = false
+local decorGeneration = 0
 
 local function scheduleRebuild()
     if rebuildPending then return end
@@ -859,6 +865,44 @@ local function scheduleRebuild()
         rebuildPending = false
         rebuild()
     end)
+end
+
+-- Support posts arrive as many independently streamed cosmetic Parts.
+-- Batch only relevant real PlatformSupportN_K changes into ONE owner
+-- rebuild, rather than re-creating the entire visual map for every
+-- streamed bolt, rail, warning or server detail.
+local function queueSupportRebuild()
+    if decorRebuildPending then return end
+    decorRebuildPending = true
+    local generation = decorGeneration
+    task.delay(0.18, function()
+        if generation ~= decorGeneration then return end
+        decorRebuildPending = false
+        scheduleRebuild()
+    end)
+end
+
+local function watchDecor(generated)
+    local arena = generated and generated:FindFirstChild("Arena")
+    local decor = arena and arena:FindFirstChild("Decor")
+    if decor == watchedDecor then return end
+    if decorAddedConnection then decorAddedConnection:Disconnect() end
+    if decorRemovedConnection then decorRemovedConnection:Disconnect() end
+    decorAddedConnection = nil
+    decorRemovedConnection = nil
+    watchedDecor = decor
+    decorGeneration += 1
+    decorRebuildPending = false
+    if decor and decor:IsA("Folder") then
+        local function supportChanged(part)
+            if part:IsA("BasePart")
+                and part.Name:match("^PlatformSupport%d+_%d+$") then
+                queueSupportRebuild()
+            end
+        end
+        decorAddedConnection = decor.ChildAdded:Connect(supportChanged)
+        decorRemovedConnection = decor.ChildRemoved:Connect(supportChanged)
+    end
 end
 
 local function watchPlatforms(generated)
@@ -884,9 +928,12 @@ local function bindGeneratedMap(generated)
     watchedMap = generated
     if disconnectBaseWatch then disconnectBaseWatch() end
     if disconnectPlatformsWatch then disconnectPlatformsWatch() end
+    if disconnectDecorWatch then disconnectDecorWatch() end
     disconnectBaseWatch = nil
     disconnectPlatformsWatch = nil
+    disconnectDecorWatch = nil
     watchPlatforms(nil)
+    watchDecor(nil)
     if generated then
         disconnectBaseWatch = MapVisualReadiness.watch(
             generated, "Arena", "Base", function()
@@ -899,6 +946,15 @@ local function bindGeneratedMap(generated)
         disconnectPlatformsWatch = MapVisualReadiness.watch(
             generated, "Arena", "Platforms", function()
                 watchPlatforms(generated)
+                scheduleRebuild()
+            end
+        )
+        -- Only the Decor folder's arrival/removal and actual physical
+        -- support-post replication can affect genuine tall mesh columns.
+        -- LongCradle underframes no longer wait for this folder at all.
+        disconnectDecorWatch = MapVisualReadiness.watch(
+            generated, "Arena", "Decor", function()
+                watchDecor(generated)
                 scheduleRebuild()
             end
         )

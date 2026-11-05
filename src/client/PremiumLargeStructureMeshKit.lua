@@ -121,13 +121,17 @@ end
 -- network calls or server-authoritative gameplay changes.
 function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint)
     local cradleSet,supportSet={},{}
-    if tier == "Low" or type(platforms) ~= "table" or not decor
-        or not decor:IsA("Folder") or not base
+    -- The REAL Platforms folder can stream before Arena.Decor. The
+    -- full-length 3D LongCradle needs only verified walkable decks and
+    -- a source Model: do not block all five worlds' major Sky Spine/
+    -- promenade understructures on unrelated late cosmetic replication.
+    if tier == "Low" or type(platforms) ~= "table" or not base
         or not base:IsA("BasePart") then
         return cradleSet,supportSet
     end
     local cradleSource=verified("LongCradle")
-    local supportSource=verified(variant)
+    local supportSource=decor and decor:IsA("Folder")
+        and verified(variant) or nil
     if not cradleSource and not supportSource then
         return cradleSet,supportSet
     end
