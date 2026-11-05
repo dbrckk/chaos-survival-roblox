@@ -1516,11 +1516,27 @@ describe("Chaos Survival engine", function()
                         from, pieces, Config.ArenaCenter, variantId
                     )).toBe(to)
                 end
+                -- The raised branch lookout is no longer an artificial
+                -- last step in rookie guidance. The two already-built
+                -- 200-stud physical promenades connect all four lookouts.
                 local lookout = platforms:FindFirstChild("Platform" .. (
                     perimeterEnd + route * 4))
+                local lane = route <= 2 and 1 or 2
+                local endpoint = route % 2 == 1 and 1 or 8
+                local continuation = nil
+                for _, candidate in ipairs(pieces) do
+                    if candidate:GetAttribute("PromenadeLane") == lane
+                        and candidate:GetAttribute("PromenadeStep") == endpoint then
+                        continuation = candidate
+                        break
+                    end
+                end
+                expect(continuation ~= nil).toBe(true)
+                expect(JumpRouteCueRules.skyNetworkLink(lookout, continuation))
+                    .toBe(true)
                 expect(JumpRouteCueRules.nextPhysical(
                     lookout, pieces, Config.ArenaCenter, variantId
-                )).toBe(nil)
+                )).toBe(continuation)
             end
 
             -- Before the first jump, all eight native spawn positions
