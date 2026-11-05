@@ -1,0 +1,175 @@
+# Creator-approved near-camera 3D route geometry and native surface coverage only; never publish.
+# One-time main-SHA milestone. Never publish.
+name: One-time QA 2026-11-05 Authenticated 3D Skybridge Coverage No Publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261105-authentic-near-camera-skybridge-mesh-coverage-no-publish.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-approved-skybridge-mesh-qa-20261105
+  cancel-in-progress: false
+
+jobs:
+  validate-exact-sha:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify approved skybridge source footprint, native panel safety and engine geometry cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          client=Path("src/client/PremiumRouteMeshKit.lua").read_text()
+          owner=Path("src/client/scenery-lod.client.lua").read_text()
+          server=Path("src/server/PremiumRouteMeshAssets.lua").read_text()
+          builder=Path("src/server/MapBuilder.lua").read_text()
+          budget=Path("src/shared/VisualBudgetRules.lua").read_text()
+          tests=Path("tests/engine/visual-budget-rules.spec.luau").read_text()
+          cloud=Path(".github/workflows/roblox-cloud-test.yml").read_text()
+          doc=Path("docs/PREMIUM_NEAR_CAMERA_COMPLETE_ROUTE_SHELLS_2026-11-05.md").read_text()
+          guards=(
+              'PremiumJumpDeck = 98478693994864',
+              'PremiumSkybridgeModule = 94023662427980',
+              'OriginalUnderdeckChassis = 84582262145054',
+              'Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,',
+              'High = {decks = 12, bridges = 5, segments = 4, underdecks = 4,',
+              'local function fitSourceToDeck(',
+              'local function chooseBridgeSegments(',
+              'longCoverage >= 0.95',
+              'widthCoverage >= 0.82',
+              'xCoverage >= 0.85',
+              'zCoverage >= 0.85',
+              'fit.longCoverage >= 0.68',
+              'fit.widthCoverage >= 0.65',
+              'sourceLength * scale / segmentLength',
+              'segmentLength * 0.985 / sourceLength',
+              'function PremiumRouteMeshKit.sourceFit(',
+              'function PremiumRouteMeshKit.bridgeSegmentCount(',
+              'function PremiumRouteMeshKit.coveredPanelCount(',
+              'local function ownedPanel(panel)',
+              'panel.CanCollide or panel.CanTouch or panel.CanQuery',
+              'decor.ChildAdded:Connect(function(child)',
+              'decor.ChildRemoved:Connect(function(child)',
+              'folder.ChildRemoved:Connect(function(child)',
+              'if entry.restoring then return end',
+              'safePlatform(platform, entry.initialSize)',
+              'part:GetAttribute("BridgeShutterPhase")',
+          )
+          for guard in guards:
+              if guard == 'part:GetAttribute("BridgeShutterPhase")':
+                  assert 'platform:GetAttribute("BridgeShutterPhase")' in client
+              else:
+                  assert guard in client,guard
+          for asset in ('98478693994864','94023662427980','84582262145054'):
+              assert asset in server and asset in client,asset
+          assert 'addPlatformFinish(decor, platform, i, theme)' in builder
+          assert '"PremiumRouteMeshLocal"' in budget
+          assert 'LocalOriginalRoutePanelsCoveredCount' in owner
+          assert 'PremiumRouteMeshKit.coveredPanelCount()' in owner
+          assert 'fits real owner-approved bridge geometry' in tests
+          assert 'PremiumRouteMeshKit.sourceFit' in tests
+          assert 'PremiumRouteMeshKit.bridgeSegmentCount' in tests
+          assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
+          assert 'Aucune publication' in doc
+          assert 'RenderStepped' not in client
+          assert 'Heartbeat' not in client
+          assert 'task.spawn(' not in client
+          assert 'AssetService:LoadAsset' not in client
+          print('Strict genuine 3D owner provenance, adaptive five High / '
+                'three Medium near-camera bridge fit, native surface '
+                'fallback, late streaming, recursive teardown safety '
+                'and real-engine geometry regressions verified. NO PUBLISH.',
+                flush=True)
+          PY
+      - name: Source-only milestone validation (NEVER publish)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          repo=os.environ["REPO"]
+          candidate=os.environ["CANDIDATE_SHA"]
+          base="https://api.github.com/repos/"+repo
+          headers={
+              "Authorization":"Bearer "+os.environ["GH_TOKEN"],
+              "Accept":"application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28",
+              "User-Agent":"chaos-approved-skybridge-mesh-no-publish",
+          }
+
+          def api(path,payload=None):
+              body=json.dumps(payload).encode() if payload is not None else None
+              request=urllib.request.Request(base+path,data=body,
+                  method="POST" if body is not None else "GET",
+                  headers={**headers,"Content-Type":"application/json"})
+              for attempt in range(6):
+                  try:
+                      with urllib.request.urlopen(request,timeout=40) as r:
+                          if payload is not None:
+                              if r.status!=204:
+                                  raise RuntimeError("Invalid dispatch response")
+                              return {}
+                          return json.load(r)
+                  except (urllib.error.URLError,TimeoutError):
+                      if attempt==5: raise
+                      time.sleep(3*(attempt+1))
+
+          def verify_head():
+              actual=api("/git/ref/heads/main")["object"]["sha"]
+              if actual!=candidate:
+                  raise SystemExit("main moved; abandon stale SHA QA")
+
+          verify_head()
+          print("VALIDATION ONLY, NO PUBLICATION",candidate,flush=True)
+          names={"Build Validation":"ci.yml",
+                 "Roblox Open Cloud Engine Tests":"roblox-cloud-test.yml"}
+          for name,path in names.items():
+              verify_head()
+              api("/actions/workflows/"+path+"/dispatches",{"ref":"main"})
+              print("Dispatched",name,flush=True)
+              time.sleep(4)
+
+          for attempt in range(400):
+              verify_head()
+              runs=api("/actions/runs?head_sha="+candidate+"&per_page=100")
+              states={}
+              for run in runs.get("workflow_runs",[]):
+                  if run.get("head_sha")!=candidate or run.get("event")!="workflow_dispatch":
+                      continue
+                  name=run.get("name")
+                  if name in names and (name not in states or
+                      run.get("created_at","") > states[name].get("created_at","")):
+                      states[name]=run
+              if attempt%6==0:
+                  print("Milestone:",{name:
+                      (states.get(name) or {}).get("status","pending")+"/"+
+                      str((states.get(name) or {}).get("conclusion"))
+                      for name in names},flush=True)
+              if any(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")!="success" for n in names):
+                  raise SystemExit("Exact-SHA source milestone FAILED; no publish")
+              if all(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")=="success" for n in names):
+                  verify_head()
+                  print("Exact-SHA Build + Cloud passed. NO PUBLISH.",candidate,flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Exact-SHA QA timed out; no publish")
+          PY
