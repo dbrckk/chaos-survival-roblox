@@ -1688,7 +1688,58 @@ describe("Chaos Survival engine", function()
             local station = arena:FindFirstChild("SkySpineSwitchyard")
             expect(station ~= nil).toBe(true)
             expect(station:GetAttribute("SkySpineGapCount")).toBe(9)
+            expect(station:GetAttribute("SkyPromenadeGapCount")).toBe(14)
+            expect(station:GetAttribute("SkyNetworkGapCount")).toBe(23)
             expect(station:GetAttribute("SkySpineConnected")).toBe(false)
+            expect(station:GetAttribute("SkyNetworkConnected")).toBe(false)
+            -- Both existing physical 8-deck promenades gain seven
+            -- fully verified 2.4-stud rescue gaps each, with NO solid
+            -- phantom bridges before an actual co-op interaction.
+            local promenadeStart = index - #variant.PromenadePlatforms
+            for lane = 1, 2 do
+                for step = 1, 7 do
+                    local id = tostring(lane) .. "_" .. tostring(step)
+                    local one = platforms:FindFirstChild("Platform"
+                        .. (promenadeStart + (lane - 1) * 8 + step))
+                    local two = platforms:FindFirstChild("Platform"
+                        .. (promenadeStart + (lane - 1) * 8 + step + 1))
+                    local center, size =
+                        SkySpineSwitchyard.promenadeGapBetween(one, two)
+                    expect(typeof(center)).toBe("Vector3")
+                    expect(typeof(size)).toBe("Vector3")
+                    expect(math.abs(size.X - 3.2) < 0.01).toBe(true)
+                    expect(size.Y).toBe(0.64)
+                    expect(math.abs(size.Z - 10.8) < 0.01).toBe(true)
+                    local bridge = station:FindFirstChild(
+                        "PromenadeGapBridge" .. id)
+                    expect(bridge ~= nil and bridge:IsA("BasePart"))
+                        .toBe(true)
+                    expect(bridge.Position).toBe(center)
+                    expect(bridge.Size).toBe(size)
+                    expect(bridge.CanCollide).toBe(false)
+                    expect(bridge.CanQuery).toBe(false)
+                    expect(bridge.CanTouch).toBe(false)
+                    expect(bridge.Transparency).toBe(1)
+                    expect(bridge:GetAttribute("ChaosPermanentRoute"))
+                        .toBe(true)
+                    expect(bridge:GetAttribute("SkyPromenadeRescueBridge"))
+                        .toBe(true)
+                    for _, side in ipairs({-1, 1}) do
+                        local rail = station:FindFirstChild(
+                            "PromenadeGapEdge" .. id .. "_" .. tostring(side))
+                        expect(rail ~= nil and rail:IsA("BasePart"))
+                            .toBe(true)
+                        expect(rail.CanCollide).toBe(false)
+                        expect(rail.Transparency).toBe(1)
+                    end
+                    two:SetAttribute("CollapsePhase", "Warning")
+                    expect(SkySpineSwitchyard.promenadeGapBetween(one, two))
+                        .toBe(nil)
+                    two:SetAttribute("CollapsePhase", nil)
+                    expect(SkySpineSwitchyard.promenadeGapBetween(one, two))
+                        .toBe(center)
+                end
+            end
             for gap = 1, 9 do
                 local bridge = station:FindFirstChild(
                     "SpineGapBridge" .. gap)
@@ -1700,7 +1751,10 @@ describe("Chaos Survival engine", function()
                 expect(bridge.Transparency).toBe(1)
                 expect(bridge:GetAttribute("ChaosPermanentRoute")).toBe(true)
             end
-            for _, step in ipairs({3, 8}) do
+            -- All four consoles interact with the SAME 23-gap rescue
+            -- network. The two new commands sit at real promenade
+            -- junctions so players and nearby bots can help together.
+            for _, step in ipairs({3, 8, "North", "South"}) do
                 local control = station:FindFirstChild(
                     "SkySpineCommand" .. step)
                 expect(control ~= nil).toBe(true)
