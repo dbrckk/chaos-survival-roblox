@@ -349,6 +349,10 @@ end
 
 local function syncVisibility(entry, platform)
     local safe = safePlatform(platform, entry.initialSize)
+    -- An active collapse/shutter must release optional GPU-heavy 2K
+    -- overlays on the SAME server-property event that restores the real
+    -- native landing paint; never wait for another 0.65s camera pass.
+    if not safe then PremiumRoutePbrKit.detach(entry) end
     -- Never hide the live platform itself or move the gameplay part.
     -- A warning immediately reveals the server-owned native surface.
     for _, model in ipairs(entry.models) do
