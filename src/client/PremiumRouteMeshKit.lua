@@ -41,6 +41,8 @@ local watchedBase = nil
 local baseChanged = nil
 
 local function restore(entry)
+    if entry.restoring then return end
+    entry.restoring = true
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -52,6 +54,18 @@ local function restore(entry)
         panel.LocalTransparencyModifier = entry.originalPanelAlpha
     end
 end
+
+-- Single local owner for unexpected approved-mesh deletion. The native
+-- panel must never remain hidden after its genuine model has vanished.
+folder.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for platform, entry in pairs(mounted) do
+        if not entry.restoring and table.find(entry.models, child) then
+            restore(entry)
+            mounted[platform] = nil
+        end
+    end
+end)
 
 local function clearMounted()
     for platform, entry in pairs(mounted) do
@@ -177,7 +191,7 @@ end
 -- fallback chooses the best real source coverage within Android quota.
 local function chooseBridgeSegments(platform, bounds, maxSegments)
     local limit = math.max(1, math.floor(maxSegments or 1))
-    local bestCount = 1
+    local bestCount = nil
     local bestScore = -math.huge
     for n = 1, limit do
         local fit = fitSourceToDeck(platform, bounds, n, true)
@@ -620,13 +634,24 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         end
     end
     if bridgeTemplate then
-        for i = 1, math.min(#bridges, bridgeCap) do
-            local _, sourceBox = bridgeTemplate:GetBoundingBox()
+        local _, sourceBox = bridgeTemplate:GetBoundingBox()
+        local bridgeSlots = bridgeCap
+        for _, item in ipairs(bridges) do
+            if bridgeSlots <= 0 then break end
             local count = chooseBridgeSegments(
-                bridges[i].platform, sourceBox, budget.segments)
-            wanted[bridges[i].platform] = {
-                template = bridgeTemplate, count = count, bridge = true,
-            }
+                item.platform, sourceBox, budget.segments)
+            local fit = count and fitSourceToDeck(
+                item.platform, sourceBox, count, true)
+            -- Do not waste scarce Android slots on a tiny, isolated
+            -- imported 3D scrap that could never represent the true span.
+            -- Keep the real native bridge intact instead.
+            if fit and fit.longCoverage >= 0.68
+                and fit.widthCoverage >= 0.65 then
+                wanted[item.platform] = {
+                    template = bridgeTemplate, count = count, bridge = true,
+                }
+                bridgeSlots -= 1
+            end
         end
     end
 
@@ -688,6 +713,16 @@ end
 
 -- Diagnostics count REAL imported additional Model instances (not a
 -- pretended on-device screenshot or guessed complete texture residency).
+-- Pure footprint contract, also exercised in real Roblox Engine on actual
+-- Part / Vector3 instances at the major graphical milestone.
+function PremiumRouteMeshKit.sourceFit(platform, sourceBounds, count, bridge)
+    return fitSourceToDeck(platform, sourceBounds, count, bridge)
+end
+
+function PremiumRouteMeshKit.bridgeSegmentCount(platform, sourceBounds, cap)
+    return chooseBridgeSegments(platform, sourceBounds, cap)
+end
+
 -- Counts actually installed owner-verified top-cover replacements, not
 -- surfaces we merely WANTED to replace. Diagnostic only, never collision.
 function PremiumRouteMeshKit.coveredPanelCount()

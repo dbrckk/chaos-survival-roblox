@@ -16,6 +16,7 @@ local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local PremiumGroundPbrKit = require("../../src/client/PremiumGroundPbrKit")
+local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 
 describe("visual budget rules", function()
     it("uses five specific approved UV-ground PBR finishes without increasing mobile texture residency", function()
@@ -146,6 +147,37 @@ describe("visual budget rules", function()
             end
         end
         expect(registered).toBe(true)
+    end)
+
+    it("fits real owner-approved bridge geometry without hiding incompletely covered physical decks", function()
+        local deck = Instance.new("Part")
+        deck.Size = Vector3.new(26, 2, 11)
+        local bounds = Vector3.new(12, 1, 9)
+        local fit = PremiumRouteMeshKit.sourceFit
+        local count = PremiumRouteMeshKit.bridgeSegmentCount
+        expect(count(deck, bounds, 4)).toBe(2)
+        local result = fit(deck, bounds, 2, true)
+        expect(result ~= nil and result.panelCovered == true).toBe(true)
+        expect(math.abs(result.yaw) < 0.001).toBe(true)
+        -- The approved import can swap X/Z; still face the real corridor.
+        local swapped = fit(deck, Vector3.new(9, 1, 12), 2, true)
+        expect(swapped ~= nil and swapped.panelCovered == true).toBe(true)
+        expect(math.abs(swapped.yaw - math.pi * 0.5) < 0.001).toBe(true)
+        deck.Size = Vector3.new(11, 2, 26)
+        local turned = fit(deck, bounds, 2, true)
+        expect(turned ~= nil and turned.panelCovered == true).toBe(true)
+        expect(math.abs(turned.yaw - math.pi * 0.5) < 0.001).toBe(true)
+        -- A huge, narrow bridge must retain its ORIGINAL readable floor
+        -- paint when an approved mesh cannot cover the physical footprint.
+        deck.Size = Vector3.new(49, 1, 4.5)
+        local incomplete = fit(deck, bounds, 4, true)
+        expect(incomplete ~= nil and incomplete.panelCovered == false).toBe(true)
+        expect(incomplete.longCoverage < 0.68).toBe(true)
+        deck.Size = Vector3.new(18, 2, 18)
+        local tile = fit(deck, Vector3.new(17, 2, 17), 1, false)
+        expect(tile ~= nil and tile.panelCovered == true).toBe(true)
+        expect(fit(nil, bounds, 1, true)).toBe(nil)
+        deck:Destroy()
     end)
 
     it("counts all approved route MeshParts in the existing Android budget ledger", function()
