@@ -4,8 +4,83 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Layout = require("../../src/shared/CinematicDepthLayoutRules")
 local MeshRules = require("../../src/shared/CinematicHorizonMeshRules")
 local TrafficRules = require("../../src/shared/CinematicTrafficMeshRules")
+local HaloRules = require("../../src/shared/CinematicOrbitalHaloMeshRules")
 
 describe("immutable cinematic skyline ring layouts", function()
+    it("replaces 14 genuinely sourced orbital halo bars using four bounded PBR lattice modules without new geometry requests", function()
+        expect(HaloRules.ASSET_ID).toBe(94023662427980)
+        expect(HaloRules.SOURCE_FOLDER).toBe("PremiumRouteMeshTemplates")
+        expect(HaloRules.SOURCE_NAME).toBe("PremiumSkybridgeModule")
+        expect(HaloRules.MODULES_PER_SITE).toBe(4)
+        expect(#Layout.indices("OrbitalHalo","Medium")).toBe(10)
+        expect(#Layout.indices("OrbitalHalo","High")).toBe(14)
+        expect(HaloRules.capacity("Low",0,true)).toBe(0)
+        expect(HaloRules.capacity("Medium",0,true)).toBe(2)
+        expect(HaloRules.capacity("Medium",1,true)).toBe(1)
+        expect(HaloRules.capacity("Medium",2,true)).toBe(0)
+        expect(HaloRules.capacity("High",0,true)).toBe(3)
+        expect(HaloRules.capacity("High",1,true)).toBe(1)
+        expect(HaloRules.capacity("High",2,true)).toBe(0)
+        expect(HaloRules.capacity("High",0,false)).toBe(5)
+        expect(HaloRules.capacity("High",1,false)).toBe(2)
+        expect(HaloRules.capacity("High",2,false)).toBe(0)
+        expect(HaloRules.capacity("Invalid",0,false)).toBe(0)
+
+        -- The existing 10 x 1.542 x 4.94 stud approved source can fit
+        -- four original MeshPart trusses in the native 34 x 1.5 x 3.6
+        -- footprint, preserving a real open and deep UV-detailed shape.
+        local scale,yaw=HaloRules.fit(Vector3.new(10,1.542,4.94))
+        expect(scale~=nil and scale>.60 and scale<.85).toBe(true)
+        expect(yaw).toBe(0)
+        expect(HaloRules.fit(Vector3.new(2,3,2))).toBe(nil)
+        local used={}
+        for moduleIndex=1,4 do
+            local offset=HaloRules.moduleOffset(moduleIndex)
+            used[#used+1]=offset
+            expect(math.abs(offset)+10*scale*.5 < 17).toBe(true)
+        end
+        expect(used[1]<used[2] and used[2]<used[3]
+            and used[3]<used[4]).toBe(true)
+        expect(HaloRules.moduleOffset(0)).toBe(nil)
+        expect(HaloRules.moduleOffset(5)).toBe(nil)
+
+        local base=Instance.new("Part")
+        base.Size=Vector3.new(320,12,320)
+        base.CFrame=CFrame.new(-12,6,29)
+            *CFrame.Angles(0,math.rad(17),0)
+        base.Anchored=true
+        local folder=Instance.new("Folder")
+        for _,index in ipairs(Layout.indices("OrbitalHalo","High")) do
+            local angle=Layout.angle("OrbitalHalo",index)
+            local radius=base.Size.X*.5+78
+            local offset=Vector3.new(math.cos(angle)*radius,
+                34+math.sin(angle*2)*5,math.sin(angle)*radius)
+            local native=Instance.new("Part")
+            native.Name="CinemaOrbitalHalo"..index
+            native.Size=Vector3.new(34,1.5,3.6)
+            native.CFrame=base.CFrame*CFrame.new(offset)
+                *CFrame.Angles(0,-angle-math.pi*.5,0)
+                *CFrame.Angles(0,0,math.rad(math.sin(angle)*7))
+            native.Anchored=true
+            native.CanCollide=false
+            native.CanTouch=false
+            native.CanQuery=false
+            native:SetAttribute("CosmeticOnly",true)
+            native:SetAttribute("OriginalCinematicHaloIndex",index)
+            native.Parent=folder
+            expect(HaloRules.isNative(native,folder,base,index)).toBe(true)
+            native.CanCollide=true
+            expect(HaloRules.isNative(native,folder,base,index)).toBe(false)
+            native.CanCollide=false
+            native:SetAttribute("OriginalCinematicHaloIndex",index+1)
+            expect(HaloRules.isNative(native,folder,base,index)).toBe(false)
+            native:Destroy()
+        end
+        base:Destroy()
+        folder:Destroy()
+    end)
+
+
     it("authenticates all five creator-owned moving original source IDs and strict mobile pressure caps", function()
         local ids={
             Classic=102850052145878,

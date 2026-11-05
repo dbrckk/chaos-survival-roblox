@@ -12,6 +12,12 @@ VisualBudgetRules.LocalFolders = {
     -- All welded imported pieces count against same 440/680/900 census.
     -- Medium 2/1/0, High 4/2/0, touch High 3/1/0, Low zero.
     "OriginalCinematicSkyTraffic3DLocal",
+    -- Four AUTHENTIC seven-piece, creator-owned open 3D bridge-truss
+    -- modules replace an Orbital halo rectangle. No new owner imports.
+    -- Medium at most two sectors, High three on Android / five desktop,
+    -- reducing to zero under serious GPU/telemetry pressure. EVERY
+    -- actual imported MeshPart counts in 440/680/900 Parts budget.
+    "OriginalOrbitalHaloTrussesLocal",
     "ArenaSurfaceReliefLocal",
     "ArenaSilhouetteBreakupLocal",
     "ArenaMidgroundMassLocal",

@@ -238,7 +238,7 @@ local function addHeroSilhouette(base, variant, theme, tier)
                 34 + math.sin(angle * 2) * 5,
                 math.sin(angle) * radius
             )
-            makePart(
+            local halo = makePart(
                 "CinemaOrbitalHalo" .. i,
                 Vector3.new(34, 1.5, 3.6),
                 ArenaSceneryFrames.frame(base, localPos, -tangent)
@@ -248,6 +248,10 @@ local function addHeroSilhouette(base, variant, theme, tier)
                 phaseTransparency(i % 4 == 0 and 0.56 or 0.22),
                 false
             )
+            -- Genuine, fixed ring sector identity; a source-verified
+            -- imported 3D truss may hide this primitive ONLY after all
+            -- four original MeshPart modules have mounted successfully.
+            halo:SetAttribute("OriginalCinematicHaloIndex", i)
         end
     end
 end

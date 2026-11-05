@@ -27,6 +27,7 @@ local TowerCoolingSpireMeshKit = require(script.Parent.TowerCoolingSpireMeshKit)
 local ApprovedMidgroundSkylineMeshKit = require(script.Parent.ApprovedMidgroundSkylineMeshKit)
 local ApprovedCinematicHorizonMeshKit = require(script.Parent.ApprovedCinematicHorizonMeshKit)
 local ApprovedCinematicSkyTrafficMeshKit = require(script.Parent.ApprovedCinematicSkyTrafficMeshKit)
+local ApprovedOrbitalHaloTrussMeshKit = require(script.Parent.ApprovedOrbitalHaloTrussMeshKit)
 local OriginalOrbitalStationsMeshKit = require(script.Parent.OriginalOrbitalStationsMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
@@ -967,6 +968,25 @@ task.spawn(function()
             ~=traffic3D then
             player:SetAttribute("LocalOriginalCinematicTraffic3DCount",
                 traffic3D)
+        end
+
+        -- Original approved 3D open modular trusses, not the thin
+        -- rectangle parts, replace nearby sectors of Orbital's entire
+        -- 14-sector static halo. Quality/GPU pressure caps and the
+        -- existing scenery sampler control all assembly and failback.
+        ApprovedOrbitalHaloTrussMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local realHalo=ApprovedOrbitalHaloTrussMeshKit.count()
+        if player:GetAttribute("LocalOriginalOrbitalHalo3DCount")
+            ~=realHalo then
+            player:SetAttribute("LocalOriginalOrbitalHalo3DCount",realHalo)
+        end
+        local nativeHalo=ApprovedOrbitalHaloTrussMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalOrbitalHaloNativeReplaced")
+            ~=nativeHalo then
+            player:SetAttribute("LocalOriginalOrbitalHaloNativeReplaced",
+                nativeHalo)
         end
 
         -- Authentic compact Orbital satellite/containment stations, not
