@@ -26,6 +26,7 @@ local HarborSeaMeshKit = require(script.Parent.HarborSeaMeshKit)
 local TowerCoolingSpireMeshKit = require(script.Parent.TowerCoolingSpireMeshKit)
 local ApprovedMidgroundSkylineMeshKit = require(script.Parent.ApprovedMidgroundSkylineMeshKit)
 local ApprovedCinematicHorizonMeshKit = require(script.Parent.ApprovedCinematicHorizonMeshKit)
+local ApprovedCinematicSkyTrafficMeshKit = require(script.Parent.ApprovedCinematicSkyTrafficMeshKit)
 local OriginalOrbitalStationsMeshKit = require(script.Parent.OriginalOrbitalStationsMeshKit)
 local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
@@ -953,6 +954,21 @@ task.spawn(function()
             player:SetAttribute("LocalNativeCinematicHorizonPartsReplaced",
                 replacedCinema)
         end
+        -- Five creator-approved moving 3D craft source models replace
+        -- the 2/4 neon sky-traffic native slivers. WeldConstraints follow
+        -- the ORIGINAL CFrame tween, not an extra per-frame animation.
+        -- Template arrival late in streaming is picked up by this SAME
+        -- quality-pressure, camera-ranked scenery sampler.
+        ApprovedCinematicSkyTrafficMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local traffic3D=ApprovedCinematicSkyTrafficMeshKit.count()
+        if player:GetAttribute("LocalOriginalCinematicTraffic3DCount")
+            ~=traffic3D then
+            player:SetAttribute("LocalOriginalCinematicTraffic3DCount",
+                traffic3D)
+        end
+
         -- Authentic compact Orbital satellite/containment stations, not
         -- primitive sphere blocks. Reuse same camera/pressure sampler.
         OriginalOrbitalStationsMeshKit.sync(arena,cameraPoint,profile.Name,

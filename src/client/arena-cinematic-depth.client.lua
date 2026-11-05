@@ -8,6 +8,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local ArenaSceneryFrames = require(ReplicatedStorage.Shared.ArenaSceneryFrames)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local CinematicHorizonMeshRules = require(ReplicatedStorage.Shared.CinematicHorizonMeshRules)
+local CinematicTrafficMeshRules = require(ReplicatedStorage.Shared.CinematicTrafficMeshRules)
 local CinematicDepthLayoutRules = require(ReplicatedStorage.Shared.CinematicDepthLayoutRules)
 
 local player = Players.LocalPlayer
@@ -314,6 +315,11 @@ local function addSkyTraffic(base, variant, theme, tier, token)
             false
         )
 
+        -- This thin, old native is now only the anchored motion driver.
+        -- The real approved vehicle welds to the CFrame-tweened anchor.
+        craft:SetAttribute("OriginalCinematicTrafficIndex", i)
+        craft:SetAttribute("OriginalCinematicTrafficVariant", variant)
+
         local duration = 7.0 + i * 1.25
         task.spawn(function()
             local from = startPos
@@ -324,7 +330,7 @@ local function addSkyTraffic(base, variant, theme, tier, token)
                 local tween = TweenService:Create(
                     craft,
                     TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-                    {Position = to}
+                    {CFrame = CinematicTrafficMeshRules.goal(from, to)}
                 )
                 tween:Play()
                 tween.Completed:Wait()

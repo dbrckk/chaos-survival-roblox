@@ -3,8 +3,91 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Layout = require("../../src/shared/CinematicDepthLayoutRules")
 local MeshRules = require("../../src/shared/CinematicHorizonMeshRules")
+local TrafficRules = require("../../src/shared/CinematicTrafficMeshRules")
 
 describe("immutable cinematic skyline ring layouts", function()
+    it("authenticates all five creator-owned moving original source IDs and strict mobile pressure caps", function()
+        local ids={
+            Classic=102850052145878,
+            Towers=72210530094580,
+            Crossroads=116186226477876,
+            Orbital=127850230318627,
+            Harbor=131294203899636,
+        }
+        for variant,id in pairs(ids) do
+            expect(TrafficRules.source(variant).id).toBe(id)
+        end
+        expect(TrafficRules.source("Unknown")).toBe(nil)
+        expect(TrafficRules.capacity("Low",0,true)).toBe(0)
+        expect(TrafficRules.capacity("Medium",0,true)).toBe(2)
+        expect(TrafficRules.capacity("Medium",1,true)).toBe(1)
+        expect(TrafficRules.capacity("Medium",2,true)).toBe(0)
+        expect(TrafficRules.capacity("High",0,false)).toBe(4)
+        expect(TrafficRules.capacity("High",1,false)).toBe(2)
+        expect(TrafficRules.capacity("High",2,false)).toBe(0)
+        expect(TrafficRules.capacity("High",0,true)).toBe(3)
+        expect(TrafficRules.capacity("High",1,true)).toBe(1)
+        expect(TrafficRules.capacity("High",2,true)).toBe(0)
+        expect(TrafficRules.capacity("Unknown",0,false)).toBe(0)
+
+        local folder=Instance.new("Folder")
+        local anchor=Instance.new("Part")
+        anchor.Name="CinemaTraffic3"
+        anchor.Size=Vector3.new(5.6,.26,.46)
+        anchor.Anchored=true
+        anchor.CanCollide=false
+        anchor.CanTouch=false
+        anchor.CanQuery=false
+        anchor:SetAttribute("CosmeticOnly",true)
+        anchor:SetAttribute("OriginalCinematicTrafficIndex",3)
+        anchor:SetAttribute("OriginalCinematicTrafficVariant","Orbital")
+        anchor.Parent=folder
+        expect(TrafficRules.isNative(anchor,folder,"Orbital",3)).toBe(true)
+        anchor.CanCollide=true
+        expect(TrafficRules.isNative(anchor,folder,"Orbital",3)).toBe(false)
+        anchor.CanCollide=false
+        anchor:SetAttribute("OriginalCinematicTrafficVariant","Harbor")
+        expect(TrafficRules.isNative(anchor,folder,"Orbital",3)).toBe(false)
+        anchor:Destroy()
+        folder:Destroy()
+    end)
+
+    it("tweens anchored welded original craft by CFrame instead of Position", function()
+        local start=Vector3.new(14,28,-12)
+        local destination=Vector3.new(42,30,8)
+        local goal=TrafficRules.goal(start,destination)
+        expect(goal~=nil).toBe(true)
+        expect((goal.Position-destination).Magnitude<.001).toBe(true)
+        expect(goal.LookVector:Dot((destination-start).Unit)>.999).toBe(true)
+        expect(TrafficRules.goal(start,start)).toBe(nil)
+
+        local root=Instance.new("Part")
+        root.Anchored=true
+        root.CanCollide=false
+        root.CFrame=CFrame.new(14,28,-12)
+        root.Parent=workspace
+        local piece=Instance.new("Part")
+        piece.Anchored=true
+        piece.CanCollide=false
+        piece.CanTouch=false
+        piece.CanQuery=false
+        piece.CFrame=root.CFrame*CFrame.new(0,2,-.5)
+        piece.Parent=workspace
+        local offset=root.CFrame:ToObjectSpace(piece.CFrame)
+        local weld=Instance.new("WeldConstraint")
+        weld.Name="CinematicTrafficOriginal3DWeld"
+        weld.Part0=root
+        weld.Part1=piece
+        weld.Parent=piece
+        piece.Anchored=false
+        root.CFrame=goal
+        task.wait(.06)
+        local expected=(goal*offset).Position
+        expect((piece.Position-expected).Magnitude<.25).toBe(true)
+        piece:Destroy()
+        root:Destroy()
+    end)
+
     it("authenticates all five authored skyline volumes for the maximum 55 original-mesh slots", function()
         local baseSize=Vector3.new(320,12,320)
         local variants={"Classic","Towers","Crossroads","Orbital","Harbor"}

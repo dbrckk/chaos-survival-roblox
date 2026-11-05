@@ -7,6 +7,11 @@ VisualBudgetRules.LocalFolders = {
     -- Count every imported local MeshPart inside the SAME 440/680/900
     -- local Part census, never bypass adaptive GPU quality decisions.
     "OriginalCinematicHorizonMeshesLocal",
+    -- Original moving cargo/satellite/drone MeshParts replace the old
+    -- two/four neon sky-traffic bars without a new animation owner.
+    -- All welded imported pieces count against same 440/680/900 census.
+    -- Medium 2/1/0, High 4/2/0, touch High 3/1/0, Low zero.
+    "OriginalCinematicSkyTraffic3DLocal",
     "ArenaSurfaceReliefLocal",
     "ArenaSilhouetteBreakupLocal",
     "ArenaMidgroundMassLocal",
