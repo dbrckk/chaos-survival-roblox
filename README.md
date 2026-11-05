@@ -1,3 +1,7 @@
+## Bot pathing respects real Towers skybridge shutter gates — 5 November 2026
+
+The existing NPC navigation could choose physically colliding Skybridges while the real gate was Warning, Raising, Raised or Lowering. The existing shared `AISurvivorRules.platformAvailable` now takes the actual optional shutter phase at **16 server decision sites** (ordinary targets, disaster escape, social following, local recovery and committed goal validity). Closed gates are not valid destinations; NPCs already on bridges retain their existing humanlike shutter retreat. No new models, raycasts, physics, navigation loops or unfair moves. [Technical notes](docs/BOT_TRUE_SKYBRIDGE_GATE_PATHING_2026-11-05.md). **Source-only; device and public deployment QA pending.**
+
 ## Safe native 3D route restoration during collapse and shrink — 5 November 2026
 
 Real imported 3D undercarriages and support columns now stop hiding the **original server-owned cosmetic girders** when the exact underlying physical platform enters collapse Warning/Gone, bridge shutters activate, the platform ceases being collidable or its true footprint shrinks. Event-based native mask reconciliation handles platform streaming without a new polling loop or physics change. [Failure mode and QA plan](docs/ROUTE_NATIVE_3D_FALLBACK_HAZARD_LIFECYCLE_2026-11-05.md). Source integrated; on-device validation and publication pending.

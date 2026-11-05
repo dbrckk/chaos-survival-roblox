@@ -1155,16 +1155,17 @@ function AISurvivorRules.skyrailCrossingTarget(root, bridgeFrame, size)
     return AISurvivorRules.skyrailExitTarget(bridgeFrame, size, sign), sign
 end
 
-function AISurvivorRules.platformAvailable(canCollide, transparency, collapsePhase)
-    if canCollide ~= true then
+-- Actual Skybridge shutter state is a route obstruction even though its
+-- underlying platform is collidable. This optional fourth argument keeps
+-- the original three-argument API working on normal decks.
+function AISurvivorRules.platformAvailable(
+    canCollide, transparency, collapsePhase, shutterPhase)
+    if canCollide ~= true then return false end
+    if (tonumber(transparency) or 0) >= 0.90 then return false end
+    if collapsePhase == "Warning" or collapsePhase == "Gone" then
         return false
     end
-
-    if (tonumber(transparency) or 0) >= 0.90 then
-        return false
-    end
-
-    return collapsePhase ~= "Warning" and collapsePhase ~= "Gone"
+    return shutterPhase == nil or shutterPhase == "Idle"
 end
 
 function AISurvivorRules.locomotionAnimation(speed, airborne, gaitScale)

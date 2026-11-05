@@ -1255,12 +1255,20 @@ describe("AI survivor rules", function()
         ).toBe(true)
     end)
 
-    it("rejects collapsing or non-solid platform targets", function()
-        expect(AISurvivorRules.platformAvailable(true, 0, nil)).toBe(true)
-        expect(AISurvivorRules.platformAvailable(true, 0.2, "Warning")).toBe(false)
-        expect(AISurvivorRules.platformAvailable(true, 1, "Gone")).toBe(false)
-        expect(AISurvivorRules.platformAvailable(false, 0, nil)).toBe(false)
-        expect(AISurvivorRules.platformAvailable(true, 0.95, nil)).toBe(false)
+    it("rejects real shuttered bridge destinations in every danger phase", function()
+        local allowed = AISurvivorRules.platformAvailable
+        expect(allowed(true, 0, nil)).toBe(true)
+        expect(allowed(true, 0, nil, nil)).toBe(true)
+        expect(allowed(true, 0, "Normal", "Idle")).toBe(true)
+        expect(allowed(true, 0.2, "Warning", "Idle")).toBe(false)
+        expect(allowed(true, 1, "Gone", "Idle")).toBe(false)
+        expect(allowed(false, 0, nil, "Idle")).toBe(false)
+        expect(allowed(true, 0.95, nil, "Idle")).toBe(false)
+        for _, shutter in ipairs({"Warning", "Raising", "Raised", "Lowering"}) do
+            expect(allowed(true, 0, nil, shutter)).toBe(false)
+            expect(allowed(true, 0, "Safe", shutter)).toBe(false)
+        end
+        expect(allowed(true, 0, nil, "Idle")).toBe(true)
     end)
 
     it("times bot Jump Shock reactions to the late rising-dodge window", function()

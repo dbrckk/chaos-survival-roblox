@@ -1,3 +1,13 @@
+LOT 5 NOVEMBRE 2026 — ROUTES BOTS ET BARRIÈRES
+[QA]     Erreur réelle : Skybridge restait collidable même avec volet
+         Warning/Raising/Raised/Lowering. Les bots l'utilisaient pour
+         des parcours normaux, le social et la fuite, puis se coinçaient.
+         16 sites runtime de plateformeAvailable transmettent maintenant
+         l'attribut BridgeShutterPhase, 4e argument optionnel.
+         Ancienne branche dédiée Skyrail supprimée; comportement
+         de fuite humanlike conservé. Tests moteur au jalon.
+         docs/BOT_TRUE_SKYBRIDGE_GATE_PATHING_2026-11-05.md
+
 LOT 5 NOVEMBRE 2026 — MASQUES 3D SÛRS PENDANT COLLAPSE/SHRINK
 [QA]     Le masque natif sous les vraies passerelles ne suivait pas
          CollapsePhase/BridgeShutterPhase ou changement de Size. Le

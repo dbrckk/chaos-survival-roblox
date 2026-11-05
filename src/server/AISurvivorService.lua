@@ -1388,7 +1388,8 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                 or part.Parent.Name == "HelixCircuit")
             and AISurvivorRules.platformAvailable(
                 part.CanCollide, part.Transparency,
-                part:GetAttribute("CollapsePhase")
+                part:GetAttribute("CollapsePhase"),
+                part:GetAttribute("BridgeShutterPhase")
             ) then
             standingDeck = part
         else
@@ -1435,7 +1436,8 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                 if part.Parent and part.Parent.Name == "Platforms"
                     and not AISurvivorRules.platformAvailable(
                         part.CanCollide, part.Transparency,
-                        part:GetAttribute("CollapsePhase")
+                        part:GetAttribute("CollapsePhase"),
+                        part:GetAttribute("BridgeShutterPhase")
                     )
                 then
                     score -= 110
@@ -1557,7 +1559,8 @@ local function disappearingPlatformEscape(record, root, now)
             if deck ~= part and deck:IsA("BasePart") then
                 local available = AISurvivorRules.platformAvailable(
                     deck.CanCollide, deck.Transparency,
-                    deck:GetAttribute("CollapsePhase")
+                    deck:GetAttribute("CollapsePhase"),
+                    deck:GetAttribute("BridgeShutterPhase")
                 )
                 if AISurvivorRules.safeCollapseNeighbor(
                     part.CFrame, part.Size,
@@ -1940,7 +1943,8 @@ local function arenaCandidates(root)
             and floorPart.Parent == platforms
             and AISurvivorRules.platformAvailable(
                 floorPart.CanCollide, floorPart.Transparency,
-                floorPart:GetAttribute("CollapsePhase")
+                floorPart:GetAttribute("CollapsePhase"),
+                floorPart:GetAttribute("BridgeShutterPhase")
             ) then
             standingDeck = floorPart
         end
@@ -1950,7 +1954,8 @@ local function arenaCandidates(root)
         if AISurvivorRules.platformAvailable(
             part.CanCollide,
             part.Transparency,
-            part:GetAttribute("CollapsePhase")
+            part:GetAttribute("CollapsePhase"),
+            part:GetAttribute("BridgeShutterPhase")
         ) and AISurvivorRules.reachableElevation(
             root and root.Position.Y or position.Y,
             position.Y,
@@ -2110,7 +2115,8 @@ local function scoreCandidate(record, root, candidate, traits)
         and not AISurvivorRules.platformAvailable(
             candidate.part.CanCollide,
             candidate.part.Transparency,
-            candidate.part:GetAttribute("CollapsePhase")
+            candidate.part:GetAttribute("CollapsePhase"),
+            candidate.part:GetAttribute("BridgeShutterPhase")
         )
     then
         score -= 120
@@ -2152,7 +2158,8 @@ local function socialArenaTarget(record, root, traits, now)
             or not floor.Instance or not floor.Instance.CanCollide
             or not AISurvivorRules.platformAvailable(
                 floor.Instance.CanCollide, floor.Instance.Transparency,
-                floor.Instance:GetAttribute("CollapsePhase")
+                floor.Instance:GetAttribute("CollapsePhase"),
+                floor.Instance:GetAttribute("BridgeShutterPhase")
             ) then return nil end
     end
     for _, player in ipairs(Players:GetPlayers()) do
@@ -2297,7 +2304,8 @@ local function socialArenaTarget(record, root, traits, now)
             or surface.Normal.Y < 0.78
             or not AISurvivorRules.platformAvailable(
                 part.CanCollide, part.Transparency,
-                part:GetAttribute("CollapsePhase")
+                part:GetAttribute("CollapsePhase"),
+                part:GetAttribute("BridgeShutterPhase")
             ) then return nil end
         -- A nearby teammate on a separate parallel sky route is NOT a
         -- safe social objective just because both roots have equal Y.
@@ -2309,6 +2317,10 @@ local function socialArenaTarget(record, root, traits, now)
         local ownDeck = ownSurface and ownSurface.Instance
         if not ownDeck or ownDeck.Parent ~= part.Parent
             or ownSurface.Normal.Y < 0.78
+            or not AISurvivorRules.platformAvailable(
+                ownDeck.CanCollide, ownDeck.Transparency,
+                ownDeck:GetAttribute("CollapsePhase"),
+                ownDeck:GetAttribute("BridgeShutterPhase"))
             or (ownDeck ~= part
                 and not AISurvivorRules.neighboringPhysicalDeck(
                     ownDeck.CFrame, ownDeck.Size, part.CFrame, part.Size
@@ -2476,7 +2488,8 @@ local function districtTraverseTarget(record, root, now)
                 and part:GetAttribute("PerimeterStep") == 1
                 and AISurvivorRules.platformAvailable(
                     part.CanCollide, part.Transparency,
-                    part:GetAttribute("CollapsePhase")
+                    part:GetAttribute("CollapsePhase"),
+                    part:GetAttribute("BridgeShutterPhase")
                 )
             then
                 local route = tonumber(part:GetAttribute("PerimeterRoute"))
@@ -2555,7 +2568,8 @@ local function districtTraverseTarget(record, root, now)
     local deck = stages[step]
     if not deck or not AISurvivorRules.platformAvailable(
         deck.CanCollide, deck.Transparency,
-        deck:GetAttribute("CollapsePhase")
+        deck:GetAttribute("CollapsePhase"),
+        deck:GetAttribute("BridgeShutterPhase")
     ) then
         record.districtTraverse = nil
         return nil
@@ -2592,7 +2606,8 @@ local function districtTraverseTarget(record, root, now)
 
     if not AISurvivorRules.platformAvailable(
         deck.CanCollide, deck.Transparency,
-        deck:GetAttribute("CollapsePhase")
+        deck:GetAttribute("CollapsePhase"),
+        deck:GetAttribute("BridgeShutterPhase")
     ) then
         record.districtTraverse = nil
         return nil
@@ -2877,7 +2892,8 @@ local function chooseArenaTarget(record, root, now)
                         or bridge:GetAttribute("BridgeShutterPhase") == "Idle")
                     and AISurvivorRules.platformAvailable(
                         bridge.CanCollide, bridge.Transparency,
-                        bridge:GetAttribute("CollapsePhase"))
+                        bridge:GetAttribute("CollapsePhase"),
+                        bridge:GetAttribute("BridgeShutterPhase"))
                 then
                     local finish, sign = AISurvivorRules.skyrailCrossingTarget(
                         root.Position, bridge.CFrame, bridge.Size)
@@ -3263,7 +3279,8 @@ local function nearbyRecoveryStep(record, root, failedDestination)
         if not AISurvivorRules.platformAvailable(
             ray.Instance.CanCollide,
             ray.Instance.Transparency,
-            ray.Instance:GetAttribute("CollapsePhase")
+            ray.Instance:GetAttribute("CollapsePhase"),
+            ray.Instance:GetAttribute("BridgeShutterPhase")
         ) then return nil end
         return ray.Position.Y
     end
@@ -3635,7 +3652,8 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
         or root.Position.Y < base.Position.Y + base.Size.Y * 0.5 + 7
         or not AISurvivorRules.platformAvailable(
             deck.CanCollide, deck.Transparency,
-            deck:GetAttribute("CollapsePhase")
+            deck:GetAttribute("CollapsePhase"),
+            deck:GetAttribute("BridgeShutterPhase")
         ) then return false end
 
     record.nextGapProbeAt = now + 0.20
@@ -3655,7 +3673,8 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
             and (AISurvivorRules.platformAvailable(
                 result.Instance.CanCollide,
                 result.Instance.Transparency,
-                result.Instance:GetAttribute("CollapsePhase")
+                result.Instance:GetAttribute("CollapsePhase"),
+                result.Instance:GetAttribute("BridgeShutterPhase")
             ) or (allowThreatenedOrigin == true
                 and emergencyDeck ~= nil
                 and result.Instance == record.platformThreat
@@ -4404,21 +4423,9 @@ local function stepRecord(record, now)
                 if not AISurvivorRules.platformAvailable(
                     record.targetPart.CanCollide,
                     record.targetPart.Transparency,
-                    record.targetPart:GetAttribute("CollapsePhase")
+                    record.targetPart:GetAttribute("CollapsePhase"),
+                    record.targetPart:GetAttribute("BridgeShutterPhase")
                 ) then
-                    record.target = nil
-                    record.targetPart = nil
-                    record.targetIsSkyrail = false
-                    record.nextThink = 0
-                elseif record.targetIsSkyrail
-                    and record.targetPart:GetAttribute("ChaosSkybridge") == true
-                    and record.targetPart:GetAttribute("BridgeShutterPhase") ~= nil
-                    and record.targetPart:GetAttribute("BridgeShutterPhase") ~= "Idle"
-                then
-                    -- This target was selected before the actual gate
-                    -- warned. Stop committing to an obstructed crossing;
-                    -- a bot ON the bridge has already received its
-                    -- humanlike delayed retreat in skybridgeShutterEscape.
                     record.target = nil
                     record.targetPart = nil
                     record.targetIsSkyrail = false
