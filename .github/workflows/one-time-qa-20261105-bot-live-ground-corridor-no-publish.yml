@@ -56,7 +56,7 @@ jobs:
           assert 'expect(radius(start, pivot, Vector3.new(10, 0, 0))).toBe(3.8)' in tests
           assert '"tests/engine/ai-survivor-rules.spec.luau"' in cloud
           assert 'BotLiveRouteInvalidationCount' in doc
-          assert 'Aucune publication' in doc
+          assert 'aucune publication' in doc.lower()
           # Real middleware/rig pathfinding remains server-owned,
           # and no new RenderStepped/Heartbeat/remote was introduced.
           snippet=server[server.index('local function liveGroundRouteCorridorSafe('):
