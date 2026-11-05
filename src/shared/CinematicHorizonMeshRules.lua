@@ -1,7 +1,9 @@
 -- Exact, nonphysical source identity and device caps for cinematic
 -- skyline structures. Positions and primitive dimensions are unchanged.
 -- The existing cinematic builder and real-mesh replacement use SAME rules.
-local Ring = require("./CinematicDepthLayoutRules")
+local Ring = if script and script.Parent
+    then require(script.Parent.CinematicDepthLayoutRules)
+    else require("./CinematicDepthLayoutRules")
 local Rules = {}
 
 local VALID = {
