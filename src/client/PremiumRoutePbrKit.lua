@@ -121,15 +121,32 @@ function Kit.detach(entry)
     entry.routePbrCount = nil
 end
 
-local function stillIntact(entry, models)
+local function stillIntact(entry, models, variant)
     if entry.routePbrStates == nil
         or #entry.routePbrStates ~= #models then return false end
     for i, state in ipairs(entry.routePbrStates) do
         if state.model ~= models[i] or not state.model.Parent
             or #state.created < 1 then return false end
+        local covered = {}
         for _, overlay in ipairs(state.created) do
-            if not overlay.Parent or not overlay.Parent:IsA("MeshPart")
-                or not overlay.Parent:IsDescendantOf(state.model) then
+            local part = overlay.Parent
+            if not overlay:IsA("SurfaceAppearance")
+                or not part or not part:IsA("MeshPart")
+                or not part:IsDescendantOf(state.model)
+                or overlay.Name ~= "OriginalApprovedBridgePbr2K"
+                or not materialFor(part, variant)
+                or covered[part] then
+                return false
+            end
+            covered[part] = true
+        end
+        -- Imported MeshParts may stream in after the initial PBR mount.
+        -- A late armor panel must not remain bare while the older parts
+        -- keep their 2K overlays indefinitely. Rebuild the COMPLETE
+        -- entry on the existing camera sample, never a partial patch.
+        for _, part in ipairs(state.model:GetDescendants()) do
+            if part:IsA("MeshPart") and materialFor(part, variant)
+                and not covered[part] then
                 return false
             end
         end
@@ -164,7 +181,7 @@ function Kit.apply(entry, kind, variant, allowed)
         return 0
     end
     if entry.routePbrVariant == variant and entry.routePbrKind == kind
-        and stillIntact(entry, models) then
+        and stillIntact(entry, models, variant) then
         return entry.routePbrCount
     end
     Kit.detach(entry)

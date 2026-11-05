@@ -194,6 +194,19 @@ describe("visual budget rules", function()
         local first = metal:FindFirstChild("OriginalApprovedBridgePbr2K")
         expect(kit.apply(entry, "route", "Classic", true)).toBe(3)
         expect(metal:FindFirstChild("OriginalApprovedBridgePbr2K")).toBe(first)
+        -- Streaming may reveal another approved armor MeshPart after the
+        -- initial PBR pass. Refresh the WHOLE bridge instead of leaving
+        -- the new panel untextured until a tier/variant change.
+        local late = part("Chaos_ARMOR_LateStreamed")
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(4)
+        expect(late:FindFirstChild("OriginalApprovedBridgePbr2K")
+            ~= nil).toBe(true)
+        -- A removed or renamed armor panel must not leave stale PBR
+        -- overlays or consume a slot that belongs to another segment.
+        late.Name = "Chaos_SIGNAL_LateStreamed"
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(3)
+        expect(late:FindFirstChild("OriginalApprovedBridgePbr2K")).toBe(nil)
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(3)
         local m, n = kit.count(entry)
         expect(m).toBe(1)
         expect(n).toBe(3)

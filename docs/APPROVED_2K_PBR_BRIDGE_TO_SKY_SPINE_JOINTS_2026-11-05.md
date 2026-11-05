@@ -22,3 +22,9 @@ Les véritables modèles UV/tangentes de passerelles `PremiumSkybridgeModule` (R
 Valider l'engine suite `visual-budget-rules.spec.luau` sur vrais `MeshPart` et `SurfaceAppearance` : copie/restitution de l'original, sources illégitimes rejetées, protection de GRIP/CARBON/SIGNAL, pression/tier/disable, idempotence de la passe, cas des deux modèles approuvés. Puis build Rojo et sept suites moteur sur le SHA final, une seule fois. Sur Android, vérifier la transition **sol–pont–portique**, les différences matières entre cinq arènes, le cas `PbrMaterialsDisabled` et la lisibilité des dangers en pleine catastrophe.
 
 **Reste à faire :** nouveau matériau rendu sur Android, photométrie des vrais portiques, interface de jonction géométrique et plans rapprochés dans les cinq arènes. Ce lot n'invente pas de captures ni d'approbation visuelle.
+
+## 5 novembre — reprise après mise à jour publique : continuité PBR sous streaming
+
+Le client peut recevoir tardivement une nouvelle pièce UV approuvée d'un pont ou d'un portique, ou voir un panneau renommé/reconfiguré pendant le streaming. Avant ce correctif, le cache PBR ne contrôlait que les anciens revêtements : la nouvelle pièce pouvait rester nue malgré le modèle toujours actif. Le contrôle d'intégrité vérifie désormais **toutes les pièces MeshPart éligibles**, leur revêtement original et l'absence de revêtement sur les panneaux de signalisation. En cas de changement, le propriétaire de la caméra reconstruit **la finition de l'entrée entière**, restaure les facteurs importés et respecte le même budget Android. Aucun nouvel asset, aucun render loop et aucune collision. Régression ajoutée aux tests moteur existants pour l'arrivée tardive d'un panneau et sa transformation en panneau SIGNAL.
+
+Ce lot n'est **pas publié** sur Roblox ; le dernier jeu public reste le SHA `968a49d` jusqu'à un prochain jalon explicitement autorisé.
