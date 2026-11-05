@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local ArenaSceneryFrames = require(ReplicatedStorage.Shared.ArenaSceneryFrames)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local CinematicDepthLayoutRules = require(ReplicatedStorage.Shared.CinematicDepthLayoutRules)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -67,11 +68,10 @@ local function phaseTransparency(baseTransparency)
 end
 
 local function addHorizonArchitecture(base, variant, theme, tier)
-    local count = tier.Name == "Low" and 5 or (tier.Name == "Medium" and 8 or 11)
     local radius = variant == "Orbital" and 148 or (variant == "Towers" and 142 or 136)
-
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2 + math.rad(11)
+    -- Low/Medium occupy fixed sectors of the same High-quality ring.
+    for _, i in ipairs(CinematicDepthLayoutRules.indices("Horizon", tier.Name)) do
+        local angle = CinematicDepthLayoutRules.angle("Horizon", i)
         local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
         local tangent = angle + math.pi * 0.5
 
@@ -233,10 +233,11 @@ local function addHeroSilhouette(base, variant, theme, tier)
             )
         end
     elseif variant == "Orbital" then
-        local segments = tier.Name == "High" and 14 or 10
         local radius = math.max(hx, hz) + 78
-        for i = 1, segments do
-            local angle = ((i - 1) / segments) * math.pi * 2
+        -- Preserve ten Medium halo sites when High adds four more.
+        for _, i in ipairs(CinematicDepthLayoutRules.indices(
+            "OrbitalHalo", tier.Name)) do
+            local angle = CinematicDepthLayoutRules.angle("OrbitalHalo", i)
             local tangent = angle + math.pi * 0.5
             local localPos = Vector3.new(
                 math.cos(angle) * radius,
@@ -262,10 +263,10 @@ local function addAtmosphericBeacons(base, variant, theme, tier)
         return
     end
 
-    local count = tier.Name == "High" and 5 or 3
     local radius = variant == "Orbital" and 100 or 94
-    for i = 1, count do
-        local angle = ((i - 1) / count) * math.pi * 2 + math.rad(22)
+    -- Signal/light locations keep the same authored identity across tiers.
+    for _, i in ipairs(CinematicDepthLayoutRules.indices("Beacon", tier.Name)) do
+        local angle = CinematicDepthLayoutRules.angle("Beacon", i)
         local localPos = Vector3.new(math.cos(angle) * radius, 24, math.sin(angle) * radius)
         local beam = makePart(
             "CinemaBeacon" .. i,
@@ -293,11 +294,10 @@ local function addSkyTraffic(base, variant, theme, tier, token)
         return
     end
 
-    local craftCount = tier.Name == "High" and 4 or 2
     local radius = variant == "Orbital" and 118 or 110
-
-    for i = 1, craftCount do
-        local startAngle = ((i - 1) / craftCount) * math.pi * 2
+    -- High adds two craft on new paths; existing Medium paths stay fixed.
+    for _, i in ipairs(CinematicDepthLayoutRules.indices("Traffic", tier.Name)) do
+        local startAngle = CinematicDepthLayoutRules.angle("Traffic", i)
         local y = 28 + ((i * 7) % 18)
         local startPos = ArenaSceneryFrames.point(base, Vector3.new(
             math.cos(startAngle) * radius,
