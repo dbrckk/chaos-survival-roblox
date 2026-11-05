@@ -530,6 +530,12 @@ task.spawn(function()
         -- Exact live number of panels hidden behind a sufficiently covering
         -- source-authentic 3D top, not number of desired routes or inferred
         -- render quality. Incomplete/faded meshes keep native landing paint.
+        local connectedPairs = PremiumRouteMeshKit.connectedPairsCount()
+        if player:GetAttribute("LocalOriginalConnectedRoute3DPairs")
+            ~= connectedPairs then
+            player:SetAttribute("LocalOriginalConnectedRoute3DPairs",
+                connectedPairs)
+        end
         local coveredPanels = PremiumRouteMeshKit.coveredPanelCount()
         if player:GetAttribute("LocalOriginalRoutePanelsCoveredCount")
             ~= coveredPanels then

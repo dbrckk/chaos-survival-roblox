@@ -24,6 +24,8 @@
 
 **Lot VIS-048 — vrai éclairage SIGNAL du Sky Spine (5 novembre 2026) :** jusqu'à deux `PointLight` sur les vrais MeshParts approuvés des portiques 3D, avec budget Low 0 / Medium 1 / High tactile 1 / High desktop 2 ; zéro sous pression et extinction immédiate Darkness/Warning, sans nouveaux colliders ni boucles. [Dossier](SKY_SPINE_GENUINE_SIGNAL_LIGHTING_2026-11-05.md). Validation moteur sur le nouveau SHA nécessaire, aucune publication par ce lot.
 
+**Lot VIS-010 / VIS-027 — raccords 3D réels (5 novembre 2026) :** les quotas existants de 3/5 passerelles Medium/High sont désormais alloués avec priorité aux vraies plateformes successives et aux deux jonctions du H Sky Spine/proménades, avec validation du collider, gap et altitude. Les copies isolées perdent la priorité, les faux ponts restent impossibles. [Dossier](APPROVED_CONTIGUOUS_3D_SKY_ROUTE_JUNCTIONS_2026-11-05.md). **Tests moteur et visuels Android requis ; aucune publication par ce lot.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

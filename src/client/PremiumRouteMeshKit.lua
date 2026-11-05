@@ -391,6 +391,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         connections = {},
         initialSize = platform.Size,
         count = countToMount,
+        bridge = isBridge,
         panel = nil,
         originalPanelAlpha = 0,
         underdeck = underdeckTemplate ~= nil,
@@ -510,6 +511,100 @@ local function isPermanentConnector(platform)
         and type(spine) == "number"
         and spine % 1 == 0 and spine >= 1 and spine <= 10
 end
+
+-- Only two VERIFIED permanent sky corridors may form a cosmetic joint:
+-- adjacent promenade steps in the same lane, adjacent Sky Spine steps,
+-- or the H-shaped junction where a physical Sky Spine endpoint actually
+-- overlaps the real promenade. NO visual Part ever extends a jump gap.
+-- In particular, matching names/indices ALONE cannot manufacture an
+-- apparent safe bridge when streaming or a catastrophe removes a deck.
+local function routeFamily(platform)
+    if platform:GetAttribute("ChaosPermanentRoute") ~= true
+        or not platform.Name:match("^Platform%d+$") then
+        return nil, nil
+    end
+    local step = platform:GetAttribute("SkySpineStep")
+    if platform:GetAttribute("SkySpineInterchange") == true
+        and type(step) == "number" and step % 1 == 0
+        and step >= 1 and step <= 10 then
+        return "spine", step
+    end
+    local lane = platform:GetAttribute("PromenadeLane")
+    step = platform:GetAttribute("PromenadeStep")
+    if type(lane) == "number" and lane % 1 == 0
+        and lane >= 1 and lane <= 2
+        and type(step) == "number" and step % 1 == 0
+        and step >= 1 and step <= 8 then
+        return "promenade" .. tostring(lane), step
+    end
+    return nil, nil
+end
+
+local function realRouteJunction(first, second)
+    if not first or not second or first == second
+        or not first:IsA("BasePart") or not second:IsA("BasePart")
+        or not first.Parent or first.Parent ~= second.Parent
+        or first.Parent.Name ~= "Platforms"
+        or not first.Anchored or not second.Anchored
+        or not safePlatform(first) or not safePlatform(second) then
+        return false
+    end
+    local familyA, stepA = routeFamily(first)
+    local familyB, stepB = routeFamily(second)
+    if not familyA or not familyB then return false end
+    local delta = first.CFrame:PointToObjectSpace(second.Position)
+    if math.abs(delta.Y) > 0.35 then return false end
+    local alongA = first.Size.X >= first.Size.Z
+        and first.CFrame.RightVector or first.CFrame.LookVector
+    local alongB = second.Size.X >= second.Size.Z
+        and second.CFrame.RightVector or second.CFrame.LookVector
+    if familyA == familyB then
+        if math.abs(stepA-stepB) ~= 1
+            or math.abs(alongA:Dot(alongB)) < 0.96 then
+            return false
+        end
+        local isX = first.Size.X >= first.Size.Z
+        local forward = math.abs(isX and delta.X or delta.Z)
+        local lateral = math.abs(isX and delta.Z or delta.X)
+        local lengthA = math.max(first.Size.X, first.Size.Z)
+        local lengthB = math.max(second.Size.X, second.Size.Z)
+        local gap = forward - (lengthA+lengthB)*0.5
+        return gap >= 0.35 and gap <= 4.5
+            and lateral <= math.min(
+                math.min(first.Size.X,first.Size.Z),
+                math.min(second.Size.X,second.Size.Z))*0.25
+    end
+    -- The only genuine transverse interchange joins the first/last
+    -- Sky Spine step to steps 4/5 on either of two sky promenades.
+    local spineStep = familyA == "spine" and stepA
+        or (familyB == "spine" and stepB or nil)
+    local promenadeStep = familyA:match("^promenade") and stepA
+        or (familyB:match("^promenade") and stepB or nil)
+    if not spineStep or not promenadeStep
+        or (spineStep ~= 1 and spineStep ~= 10)
+        or (promenadeStep ~= 4 and promenadeStep ~= 5)
+        or math.abs(alongA:Dot(alongB)) > 0.20 then
+        return false
+    end
+    -- Exact oriented physical rectangle overlap, not merely arbitrary
+    -- proximity or matching metadata on a disconnected high platform.
+    local right = first.CFrame.RightVector
+    local forward = first.CFrame.LookVector
+    local widthX = math.abs(right:Dot(second.CFrame.RightVector))
+            * second.Size.X*0.5
+        + math.abs(right:Dot(second.CFrame.LookVector))
+            * second.Size.Z*0.5
+    local widthZ = math.abs(forward:Dot(second.CFrame.RightVector))
+            * second.Size.X*0.5
+        + math.abs(forward:Dot(second.CFrame.LookVector))
+            * second.Size.Z*0.5
+    return math.abs(delta.X) <= first.Size.X*0.5 + widthX + 0.25
+        and math.abs(delta.Z) <= first.Size.Z*0.5 + widthZ + 0.25
+end
+
+-- Exposed for the real-engine geometry regression only. The helper never
+-- creates a pathfinding edge, collision, safe platform or client Part.
+PremiumRouteMeshKit.realRouteJunction = realRouteJunction
 
 local function eligible(platform, cameraPoint, maxDistance, retention, cameraLook)
     -- Read genuine safety before residency: NEVER keep cosmetic meshes on
@@ -644,23 +739,52 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     end
     if bridgeTemplate then
         local _, sourceBox = bridgeTemplate:GetBoundingBox()
-        local bridgeSlots = bridgeCap
+        local qualified = {}
         for _, item in ipairs(bridges) do
-            if bridgeSlots <= 0 then break end
             local count = chooseBridgeSegments(
                 item.platform, sourceBox, budget.segments)
             local fit = count and fitSourceToDeck(
                 item.platform, sourceBox, count, true)
-            -- Do not waste scarce Android slots on a tiny, isolated
-            -- imported 3D scrap that could never represent the true span.
-            -- Keep the real native bridge intact instead.
+            -- A tiny fragment on a narrow Towers gate never becomes a
+            -- bogus 3D bridge, even if it is near the camera.
             if fit and fit.longCoverage >= 0.68
                 and fit.widthCoverage >= 0.65 then
-                wanted[item.platform] = {
-                    template = bridgeTemplate, count = count, bridge = true,
-                }
-                bridgeSlots -= 1
+                qualified[#qualified + 1] = {item = item, count = count}
             end
+        end
+        local selected = {}
+        -- A per-deck nearest-only ranking can alternate expensive 3D
+        -- and native boxes along one HIGHLY visible H-shaped sky route.
+        -- Once the nearest real deck is chosen, prefer its physically
+        -- adjacent approved neighbours. Never sacrifice hard slot caps.
+        for _ = 1, math.min(bridgeCap, #qualified) do
+            local best, bestScore = nil, math.huge
+            for _, candidate in ipairs(qualified) do
+                if not candidate.selected then
+                    local score = candidate.item.priority
+                    for _, previous in ipairs(selected) do
+                        if realRouteJunction(
+                            candidate.item.platform, previous.item.platform) then
+                            score -= 38
+                            break
+                        end
+                    end
+                    if score < bestScore or (score == bestScore and best
+                        and candidate.item.platform.Name
+                            < best.item.platform.Name) then
+                        best = candidate
+                        bestScore = score
+                    end
+                end
+            end
+            if not best then break end
+            best.selected = true
+            selected[#selected + 1] = best
+            wanted[best.item.platform] = {
+                template = bridgeTemplate,
+                count = best.count,
+                bridge = true,
+            }
         end
     end
 
@@ -745,6 +869,29 @@ end
 
 -- Diagnostic only: count real attached 2K appearance instances on
 -- authenticated near-camera models, not loaded textures or FPS.
+-- Number of REAL physical adjacent route pairs where BOTH approved
+-- 3D skins actually exist and the authoritative collision remains safe.
+-- This measures visual continuity, not guaranteed crossing or jump AI.
+function PremiumRouteMeshKit.connectedPairsCount()
+    local platforms = {}
+    for platform, entry in pairs(mounted) do
+        if entry.bridge and entry.models[1]
+            and entry.models[1].Parent == folder
+            and safePlatform(platform, entry.initialSize) then
+            platforms[#platforms + 1] = platform
+        end
+    end
+    local pairsCount = 0
+    for i = 1, #platforms do
+        for j = i + 1, #platforms do
+            if realRouteJunction(platforms[i], platforms[j]) then
+                pairsCount += 1
+            end
+        end
+    end
+    return pairsCount
+end
+
 function PremiumRouteMeshKit.pbrCount()
     local models, appearances = 0, 0
     for _, entry in pairs(mounted) do

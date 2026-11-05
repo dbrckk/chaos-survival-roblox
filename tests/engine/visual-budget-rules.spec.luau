@@ -274,6 +274,70 @@ describe("visual budget rules", function()
         expect(registered).toBe(true)
     end)
 
+    it("keeps genuine nearby 3D Sky Spine and promenade skins together only across real jumpable joints", function()
+        local real = PremiumRouteMeshKit.realRouteJunction
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = workspace
+        local function deck(name, size, position, lane, step, spine)
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Size = size
+            part.CFrame = CFrame.new(position)
+            part.Anchored = true
+            part.CanCollide = true
+            part:SetAttribute("ChaosPermanentRoute", true)
+            if spine then
+                part:SetAttribute("SkySpineInterchange", true)
+                part:SetAttribute("SkySpineStep", step)
+            else
+                part:SetAttribute("PromenadeLane", lane)
+                part:SetAttribute("PromenadeStep", step)
+            end
+            part.Parent = platforms
+            return part
+        end
+        -- Authentic 26x12 promenade with a 2.4-stud honest jump gap.
+        local a = deck("Platform501",Vector3.new(26,2,12),
+            Vector3.new(-14.2,21,0),1,4,false)
+        local b = deck("Platform502",Vector3.new(26,2,12),
+            Vector3.new(14.2,21,0),1,5,false)
+        expect(real(a,b)).toBe(true)
+        expect(real(b,a)).toBe(true)
+        local falseLink = deck("Platform503",Vector3.new(26,2,12),
+            Vector3.new(42.6,21,0),1,8,false)
+        expect(real(b,falseLink)).toBe(false)
+        falseLink:SetAttribute("PromenadeStep",6)
+        falseLink.CFrame = CFrame.new(72,21,0)
+        expect(real(b,falseLink)).toBe(false)
+        -- Sky Spine is physically transverse; the central H joint
+        -- receives the same approved finish only if footprints touch.
+        local spine = deck("Platform504",Vector3.new(12,2,26),
+            Vector3.new(-14.2,21,18),nil,1,true)
+        expect(real(a,spine)).toBe(true)
+        expect(real(spine,a)).toBe(true)
+        spine.CFrame = CFrame.new(-14.2,21,60)
+        expect(real(a,spine)).toBe(false)
+        spine.CFrame = CFrame.new(-14.2,21,18)
+        spine:SetAttribute("CollapsePhase","Warning")
+        expect(real(a,spine)).toBe(false)
+        spine:SetAttribute("CollapsePhase","Normal")
+        expect(real(a,spine)).toBe(true)
+        a.CanCollide = false
+        expect(real(a,b)).toBe(false)
+        a.CanCollide = true
+        local decoy = Instance.new("Part")
+        decoy.Name = "Platform505"
+        decoy.Size = a.Size
+        decoy.Anchored = true
+        decoy.CanCollide = true
+        decoy.CFrame = CFrame.new(42.6,21,0)
+        decoy.Parent = platforms
+        expect(real(b,decoy)).toBe(false)
+        decoy:Destroy()
+        platforms:Destroy()
+    end)
+
     it("fits real owner-approved bridge geometry without hiding incompletely covered physical decks", function()
         local deck = Instance.new("Part")
         deck.Size = Vector3.new(26, 2, 11)
