@@ -1,8 +1,8 @@
--- Cooperative SKY SPINE SWITCHYARD: one physical player (or qualifying
--- nearby bot) permanently connects nine small gaps across a huge THIRD
--- elevated traversable 200+ stud sky route for the rest of its round.
--- The existing 10 solid decks always remain; no lethal bridge withdrawal.
--- One shared server-owned activation / no new remotes / no premium reward.
+-- Cooperative SKY NETWORK SWITCHYARD: one live player or nearby bot can
+-- bridge 9 gaps on the transverse Sky Spine AND 14 gaps on the two genuine
+-- promenades, making three huge elevated routes continuously walkable.
+-- All 26 original solid decks remain server-owned and collision-authoritative.
+-- One shared activation / no new remotes / no paid reward / no client trust.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local shared = ReplicatedStorage:FindFirstChild("Shared")
@@ -79,6 +79,57 @@ function SkySpineSwitchyard.gapBetween(first, second)
         0.64, gap + 0.8)
 end
 
+-- The two north/south promenade lanes are already real eight-deck
+-- horizontal server routes. Only bridge their ORIGINAL 2.4-stud gaps,
+-- never a fake jump from a disconnected wall, a streamed visual or a
+-- collapsing/moving platform. All bridge parts are visual-only until
+-- a verified survivor physically activates the shared switchyard.
+function SkySpineSwitchyard.promenadeGapBetween(first, second)
+    if typeof(first) ~= "Instance" or typeof(second) ~= "Instance"
+        or not first:IsA("BasePart") or not second:IsA("BasePart")
+        or not first.Name:match("^Platform%d+$")
+        or not second.Name:match("^Platform%d+$")
+        or first.Parent ~= second.Parent
+        or not first.Parent or first.Parent.Name ~= "Platforms"
+        or not first.Anchored or not second.Anchored
+        or not first.CanCollide or not second.CanCollide
+        or first.Transparency >= 0.75 or second.Transparency >= 0.75
+        or first:GetAttribute("ChaosPermanentRoute") ~= true
+        or second:GetAttribute("ChaosPermanentRoute") ~= true
+        or (first:GetAttribute("CollapsePhase") ~= nil
+            and first:GetAttribute("CollapsePhase") ~= "Normal"
+            and first:GetAttribute("CollapsePhase") ~= "Safe")
+        or (second:GetAttribute("CollapsePhase") ~= nil
+            and second:GetAttribute("CollapsePhase") ~= "Normal"
+            and second:GetAttribute("CollapsePhase") ~= "Safe")
+        or first:GetAttribute("PromenadeLane")
+            ~= second:GetAttribute("PromenadeLane")
+        or second:GetAttribute("PromenadeStep")
+            ~= (tonumber(first:GetAttribute("PromenadeStep")) or -100) + 1
+    then return nil end
+    local lane = first:GetAttribute("PromenadeLane")
+    local step = first:GetAttribute("PromenadeStep")
+    if (lane ~= 1 and lane ~= 2)
+        or type(step) ~= "number" or step % 1 ~= 0
+        or step < 1 or step > 7 then return nil end
+    local topA = first.Position.Y + first.Size.Y * 0.5
+    local topB = second.Position.Y + second.Size.Y * 0.5
+    local dx = math.abs(second.Position.X - first.Position.X)
+    local gap = dx - (first.Size.X + second.Size.X) * 0.5
+    if math.abs(first.Position.Z - second.Position.Z) > 0.01
+        or math.abs(topA - topB) > 0.01
+        or gap < 1.8 or gap > 3.0
+        or math.min(first.Size.Z, second.Size.Z) < 10.5
+        or math.abs(first.CFrame.RightVector:Dot(
+            second.CFrame.RightVector)) < 0.999 then return nil end
+    return Vector3.new(
+        (first.Position.X + second.Position.X) * 0.5,
+        topA - 0.32,
+        (first.Position.Z + second.Position.Z) * 0.5
+    ), Vector3.new(gap + 0.8, 0.64,
+        math.min(first.Size.Z, second.Size.Z) - 1.2)
+end
+
 local function station(folder, deck, step, theme)
     local center = deck.Position
         + Vector3.new(0, deck.Size.Y * 0.5, 0)
@@ -114,8 +165,8 @@ local function station(folder, deck, step, theme)
         theme.Structure, Enum.Material.Metal)
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "ConnectSkySpine"
-    prompt.ActionText = "CONNECT SKY BRIDGE"
-    prompt.ObjectText = "TEAM SKY SWITCHYARD"
+    prompt.ActionText = "CONNECT 3 SKY ROUTES"
+    prompt.ObjectText = "TEAM SKY NETWORK"
     prompt.HoldDuration = SkySpineSwitchyard.HoldSeconds
     prompt.MaxActivationDistance = SkySpineSwitchyard.PromptDistance
     prompt.RequiresLineOfSight = false
@@ -139,7 +190,7 @@ local function station(folder, deck, step, theme)
     label.TextWrapped = true
     label.Font = Enum.Font.GothamBold
     label.TextColor3 = theme.Accent
-    label.Text = "SKY SPINE OPEN\nHOLD TO CONNECT"
+    label.Text = "3 SKY ROUTES\nHOLD TO LINK"
     label.Parent = gui
     local rounded = Instance.new("UICorner")
     rounded.CornerRadius = UDim.new(0, 8)
@@ -153,30 +204,64 @@ function SkySpineSwitchyard.start(ctx)
     local arena = generated and generated:FindFirstChild("Arena")
     local platforms = arena and arena:FindFirstChild("Platforms")
     if not arena or not platforms then return 0 end
-    local decks = {}
+    local decks, promenade = {}, {{}, {}}
     for _, part in ipairs(platforms:GetChildren()) do
-        if part:IsA("BasePart") and part.CanCollide
-            and part:GetAttribute("SkySpineInterchange") == true then
-            local index = tonumber(part:GetAttribute("SkySpineStep"))
-            if index and index >= 1 and index <= 10
-                and index == math.floor(index) and not decks[index] then
-                decks[index] = part
+        if part:IsA("BasePart") and part.CanCollide then
+            if part:GetAttribute("SkySpineInterchange") == true then
+                local index = tonumber(part:GetAttribute("SkySpineStep"))
+                if index and index >= 1 and index <= 10
+                    and index == math.floor(index) and not decks[index] then
+                    decks[index] = part
+                end
+            end
+            local lane = tonumber(part:GetAttribute("PromenadeLane"))
+            local step = tonumber(part:GetAttribute("PromenadeStep"))
+            if lane and step and (lane == 1 or lane == 2)
+                and step >= 1 and step <= 8 and step == math.floor(step)
+                and not promenade[lane][step] then
+                promenade[lane][step] = part
             end
         end
     end
     for i = 1, 10 do if not decks[i] then return 0 end end
-    local gaps = {}
+    local gaps, gapPairs, promenadeGaps = {}, {}, {}
     for i = 1, 9 do
         local center, size = SkySpineSwitchyard.gapBetween(
             decks[i], decks[i + 1])
         if not center or not size then return 0 end
         gaps[#gaps + 1] = {center = center, size = size}
+        gapPairs[#gapPairs + 1] = {
+            first = decks[i], second = decks[i + 1], spine = true,
+            center = center, size = size,
+        }
+    end
+    for lane = 1, 2 do
+        for step = 1, 8 do
+            if not promenade[lane][step] then return 0 end
+        end
+        for step = 1, 7 do
+            local first, second =
+                promenade[lane][step], promenade[lane][step + 1]
+            local center, size =
+                SkySpineSwitchyard.promenadeGapBetween(first, second)
+            if not center or not size then return 0 end
+            promenadeGaps[#promenadeGaps + 1] = {
+                lane = lane, step = step, center = center, size = size,
+            }
+            gapPairs[#gapPairs + 1] = {
+                first = first, second = second, spine = false,
+                center = center, size = size,
+            }
+        end
     end
     local folder = Instance.new("Folder")
     folder.Name = "SkySpineSwitchyard"
     folder:SetAttribute("ServerAuthoritative", true)
     folder:SetAttribute("SkySpineConnected", false)
-    folder:SetAttribute("SkySpineGapCount", 9)
+    folder:SetAttribute("SkyNetworkConnected", false)
+    folder:SetAttribute("SkySpineGapCount", #gaps)
+    folder:SetAttribute("SkyPromenadeGapCount", #promenadeGaps)
+    folder:SetAttribute("SkyNetworkGapCount", #gapPairs)
     folder.Parent = arena
     table.insert(ctx.Cleanup, folder)
     local theme = VisualTheme.arena(
@@ -205,13 +290,41 @@ function SkySpineSwitchyard.start(ctx)
             lip:SetAttribute("SkySpineGapEdge", i)
         end
     end
+    -- Both other corridors get the same instant physical rescue.
+    -- No extra user action is needed after any one real switch is held.
+    for _, gap in ipairs(promenadeGaps) do
+        local id = tostring(gap.lane) .. "_" .. tostring(gap.step)
+        local bridge = visual(folder, "PromenadeGapBridge" .. id,
+            gap.size, CFrame.new(gap.center),
+            theme.Accent:Lerp(theme.Structure, 0.34),
+            theme.PanelMaterial or Enum.Material.Metal, 1)
+        bridge:SetAttribute("SkyPromenadeGapLane", gap.lane)
+        bridge:SetAttribute("SkyPromenadeGapStep", gap.step)
+        bridge:SetAttribute("SkyPromenadeRescueBridge", true)
+        bridge:SetAttribute("ChaosPermanentRoute", true)
+        bridges[#bridges + 1] = bridge
+        for side = -1, 1, 2 do
+            local lip = visual(folder,
+                "PromenadeGapEdge" .. id .. "_" .. tostring(side),
+                Vector3.new(gap.size.X, 0.15, 0.24),
+                CFrame.new(gap.center) * CFrame.new(
+                    0, gap.size.Y * 0.5 + 0.07,
+                    side * (gap.size.Z * 0.5 - 0.3)),
+                theme.Secondary, Enum.Material.Neon, 1)
+            lip:SetAttribute("SkyPromenadeGapEdge", true)
+        end
+    end
+    -- Two existing genuine high-route intersections now also have a
+    -- physical co-op command. A bot or human can help from any corridor.
     local commands = {
         station(folder, decks[3], 3, theme),
         station(folder, decks[8], 8, theme),
+        station(folder, promenade[1][4], "North", theme),
+        station(folder, promenade[2][4], "South", theme),
     }
     local round = {active = true, joined = false,
         folder = folder, ctx = ctx, commands = commands, decks = decks,
-        bridges = bridges}
+        gapPairs = gapPairs, bridges = bridges}
     activeRound = round
     local function current()
         return activeRound == round and round.active
@@ -253,8 +366,22 @@ function SkySpineSwitchyard.start(ctx)
         if not current() or not command.prompt.Enabled
             or not validActor(actor, fromBot, command)
             or ctx.FinalRush and ctx.FinalRush() then return false end
-        for _, support in ipairs(decks) do
-            if not support.Parent or not support.CanCollide then
+        -- Recheck every real 2.4-stud corridor gap immediately before
+        -- making ANY bridge solid. A shrinking/moved/collapsing deck can
+        -- never leave a floating collision strip behind, even if an
+        -- unexpected disaster is activated after this round was built.
+        for _, pair in ipairs(gapPairs) do
+            local center, size
+            if pair.spine then
+                center, size = SkySpineSwitchyard.gapBetween(
+                    pair.first, pair.second)
+            else
+                center, size = SkySpineSwitchyard.promenadeGapBetween(
+                    pair.first, pair.second)
+            end
+            if not center or not size
+                or (center - pair.center).Magnitude > 0.05
+                or (size - pair.size).Magnitude > 0.05 then
                 return false
             end
         end
@@ -263,6 +390,7 @@ function SkySpineSwitchyard.start(ctx)
         -- humans/bots cannot repeatedly activate or duplicate a reward.
         round.joined = true
         folder:SetAttribute("SkySpineConnected", true)
+        folder:SetAttribute("SkyNetworkConnected", true)
         folder:SetAttribute("SkySpineActivatedByBot", fromBot == true)
         folder:SetAttribute("SkySpineActivatedAt",
             workspace:GetServerTimeNow())
@@ -273,15 +401,16 @@ function SkySpineSwitchyard.start(ctx)
         end
         for _, item in ipairs(folder:GetChildren()) do
             if item:IsA("BasePart")
-                and item:GetAttribute("SkySpineGapEdge") then
+                and (item:GetAttribute("SkySpineGapEdge")
+                    or item:GetAttribute("SkyPromenadeGapEdge")) then
                 item.Transparency = 0.20
             end
         end
         for _, control in ipairs(commands) do
             control.prompt.Enabled = false
             control.label.Text = fromBot
-                and "ALLY CONNECTED\nTEAM SKY ROUTE"
-                or "BRIDGE CONNECTED\nTEAM SKY ROUTE"
+                and "ALLY LINKED\n3 SKY ROUTES"
+                or "NETWORK LINKED\n3 SKY ROUTES"
             control.label.TextColor3 = theme.Secondary
             control.model:SetAttribute("SkySpineLinked", true)
         end
