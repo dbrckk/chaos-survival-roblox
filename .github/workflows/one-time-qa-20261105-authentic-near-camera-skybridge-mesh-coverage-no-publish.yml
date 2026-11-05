@@ -80,6 +80,11 @@ jobs:
           assert 'fits real owner-approved bridge geometry' in tests
           assert 'PremiumRouteMeshKit.sourceFit' in tests
           assert 'PremiumRouteMeshKit.bridgeSegmentCount' in tests
+          # Ensure the primary Build Validation agrees on the new bounds.
+          ci=Path(".github/workflows/ci.yml").read_text()
+          assert '"decks = 8, bridges = 3, segments = 3" in route' in ci
+          assert '"decks = 12, bridges = 5, segments = 4" in route' in ci
+          assert 'LocalOriginalRoutePanelsCoveredCount' in ci
           assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
           assert 'aucune publication' in doc.lower()
           assert 'RenderStepped' not in client

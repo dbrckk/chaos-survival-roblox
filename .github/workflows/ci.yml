@@ -1175,8 +1175,17 @@ jobs:
           )
           assert all(text in route for text in must_have)
           assert "decks = 2, bridges = 1, segments = 1" in route
-          assert "decks = 8, bridges = 2, segments = 3" in route
-          assert "decks = 12, bridges = 3, segments = 4" in route
+          # Current authenticated near-camera skybridge counts: three
+          # Medium / five High, still finite and subject to VFX pressure.
+          assert "decks = 8, bridges = 3, segments = 3" in route
+          assert "decks = 12, bridges = 5, segments = 4" in route
+          assert "fit.longCoverage >= 0.68" in route
+          assert "fit.widthCoverage >= 0.65" in route
+          assert "longCoverage >= 0.95" in route
+          assert "widthCoverage >= 0.82" in route
+          assert "LocalOriginalRoutePanelsCoveredCount" in lod
+          assert "PremiumRouteMeshLocal" in Path(
+              "src/shared/VisualBudgetRules.lua").read_text()
           assert "PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name," in lod
           assert "cameraReady, cameraLook)" in lod
           assert 'platform:SetAttribute("ChaosPermanentRoute", true)' in map_builder
