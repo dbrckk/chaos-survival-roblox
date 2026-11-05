@@ -195,17 +195,55 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     end
     table.sort(cradles,byFocus)
     table.sort(supports,byFocus)
-    -- The old owner used 2/1 arbitrary first eligible route underframes.
-    -- Four High / two Medium 22-stud genuine trusses now frame the real
-    -- major sky connections, at no new loops and with hard mesh budgets.
+    -- A map-owner snapshot is rebuilt on real streaming and tier events,
+    -- NOT on every camera frame. Putting all approved source modules in the
+    -- first screenful left distant Sky Spine/promenade intersections and
+    -- their real supports as bare rectangular Roblox native Parts.
+    -- Keep nearby hero silhouettes, then spread unused SAME-budget slots
+    -- over real, separated, collidable platform owners on this 320x320 map.
+    -- No new 3D assets, Parts, Lua loops per frame, routes or GPU budgets.
+    local function distribute(candidates,limit,foreground)
+        local selected={}
+        local count=math.min(#candidates,limit)
+        local front=math.min(count,foreground)
+        for i=1,front do
+            local deck=candidates[i].platform
+            selected[deck]=true
+        end
+        local taken=front
+        local spacingCap=math.max(base.Size.X,base.Size.Z)*.68
+        while taken<count do
+            local winner,winnerScore=nil,-math.huge
+            for _,candidate in ipairs(candidates) do
+                if not selected[candidate.platform] then
+                    local nearest=spacingCap
+                    for deck in pairs(selected) do
+                        local offset=candidate.platform.Position-deck.Position
+                        nearest=math.min(nearest,Vector3.new(
+                            offset.X,offset.Y*.65,offset.Z).Magnitude)
+                    end
+                    -- Retain some preference for genuinely near, busy
+                    -- permanent route segments; spacing itself dominates.
+                    local score=nearest-candidate.score*.12
+                    if score>winnerScore or (score==winnerScore
+                        and winner and candidate.platform.Name<winner.Name) then
+                        winner=candidate.platform
+                        winnerScore=score
+                    end
+                end
+            end
+            if not winner then break end
+            selected[winner]=true
+            taken+=1
+        end
+        return selected
+    end
     local cradleLimit=tier=="High" and 4 or 2
     local supportLimit=tier=="High" and 8 or 4
-    for i=1,math.min(#cradles,cradleLimit) do
-        cradleSet[cradles[i].platform]=true
-    end
-    for i=1,math.min(#supports,supportLimit) do
-        supportSet[supports[i].platform]=true
-    end
+    cradleSet=distribute(cradles,cradleLimit,
+        tier=="High" and 2 or 1)
+    supportSet=distribute(supports,supportLimit,
+        tier=="High" and 5 or 2)
     return cradleSet,supportSet
 end
 
