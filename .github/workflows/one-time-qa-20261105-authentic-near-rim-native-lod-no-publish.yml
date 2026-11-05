@@ -1,0 +1,162 @@
+# One-time major native-fallback skyline and verified source-model isolation milestone. NEVER publish.
+name: One-time QA 2026-11-05 True Outboard Skyline Fallback No Publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261105-authentic-near-rim-native-lod-no-publish.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-authentic-near-rim-fallback-20261105
+  cancel-in-progress: false
+
+jobs:
+  validate-exact-sha:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce real outboard anchor identity, same mobile cutoffs and engine regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          rules=Path("src/shared/MidgroundOutboardLodRules.lua").read_text()
+          client=Path("src/client/scenery-lod.client.lua").read_text()
+          mid=Path("src/client/arena-midground-mass.client.lua").read_text()
+          spec=Path("tests/engine/visual-budget-rules.spec.luau").read_text()
+          doc=Path("docs/VIS_OUTBOARD_NATIVE_FALLBACK_RIM_LOD_2026-11-05.md").read_text()
+          cloud=Path(".github/workflows/roblox-cloud-test.yml").read_text()
+          for token in (
+              'function Rules.index(part, variant)',
+              'function Rules.anchors(folder, variant)',
+              'function Rules.distance(cameraPoint, arenaCenter, anchorPosition)',
+              'return math.min((cameraPoint - arenaCenter).Magnitude,',
+              'or part.CanTouch or part.CanQuery',
+              'part:GetAttribute("CosmeticOnly") ~= true',
+              'OriginalMidgroundSkylineVariant',
+              'OriginalTowerCoolingSpireIndex',
+              'OriginalOrbitalStationIndex',
+              'OriginalHarborMidgroundBargeIndex',
+          ):
+              assert token in rules, token
+          for token in (
+              'MidgroundOutboardLodRules.anchors(folder, variant)',
+              'MidgroundOutboardLodRules.index(ownerPart, variant)',
+              'MidgroundOutboardLodRules.distance(',
+              'cache.midgroundSectorVisible = sectorVisible',
+              'SceneryLodRules.visible(profile.Name,',
+              'applyMidgroundOutboard(midground, profile, arenaOrigin, cameraPoint)',
+              'and folderName ~= "ArenaMidgroundMassLocal"',
+              'LowDistance = 145,',
+              'MediumDistance = 215,',
+              'SceneryLodBaseTransparency',
+              'descendant.LocalTransparencyModifier = 1',
+          ):
+              assert token in client, token
+          for token in (
+              'OriginalTowerCoolingSpireIndex',
+              'OriginalOrbitalStationIndex',
+              'OriginalHarborMidgroundBargeIndex',
+              'OriginalMidgroundSkylineIndex',
+          ):
+              assert token in mid, token
+          assert 'keeps actual tagged original 3D skyline native fallbacks visible near the rim' in spec
+          assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
+          assert 'Low **145** / Medium **215**' in doc
+          assert 'RunService' not in rules
+          assert 'Instance.new(' not in rules
+          print("Outboard fallback uses exact locally tagged native"
+                " anchors and existing 145/215 cutoffs, never collision."
+                " All five worlds keep a nearby source-safe silhouette."
+                " NO PUBLISH.",flush=True)
+          PY
+      - name: Source-only milestone validation (NEVER publish)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          repo=os.environ["REPO"]
+          candidate=os.environ["CANDIDATE_SHA"]
+          base="https://api.github.com/repos/"+repo
+          headers={
+              "Authorization":"Bearer "+os.environ["GH_TOKEN"],
+              "Accept":"application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28",
+              "User-Agent":"chaos-authentic-near-rim-fallback-no-publish",
+          }
+
+          def api(path,payload=None):
+              body=json.dumps(payload).encode() if payload is not None else None
+              request=urllib.request.Request(base+path,data=body,
+                  method="POST" if body is not None else "GET",
+                  headers={**headers,"Content-Type":"application/json"})
+              for attempt in range(6):
+                  try:
+                      with urllib.request.urlopen(request,timeout=40) as r:
+                          if payload is not None:
+                              if r.status!=204:
+                                  raise RuntimeError("Invalid dispatch response")
+                              return {}
+                          return json.load(r)
+                  except (urllib.error.URLError,TimeoutError):
+                      if attempt==5: raise
+                      time.sleep(3*(attempt+1))
+
+          def verify_head():
+              actual=api("/git/ref/heads/main")["object"]["sha"]
+              if actual!=candidate:
+                  raise SystemExit("main moved; abandon stale SHA QA")
+
+          verify_head()
+          print("VALIDATION ONLY, NO PUBLICATION",candidate,flush=True)
+          names={"Build Validation":"ci.yml",
+                 "Roblox Open Cloud Engine Tests":"roblox-cloud-test.yml"}
+          for name,path in names.items():
+              verify_head()
+              api("/actions/workflows/"+path+"/dispatches",{"ref":"main"})
+              print("Dispatched",name,flush=True)
+              time.sleep(4)
+
+          for attempt in range(400):
+              verify_head()
+              runs=api("/actions/runs?head_sha="+candidate+"&per_page=100")
+              states={}
+              for run in runs.get("workflow_runs",[]):
+                  if run.get("head_sha")!=candidate or run.get("event")!="workflow_dispatch":
+                      continue
+                  name=run.get("name")
+                  if name in names and (name not in states or
+                      run.get("created_at","") > states[name].get("created_at","")):
+                      states[name]=run
+              if attempt%6==0:
+                  print("Milestone:",{name:
+                      (states.get(name) or {}).get("status","pending")+"/"+
+                      str((states.get(name) or {}).get("conclusion"))
+                      for name in names},flush=True)
+              if any(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")!="success" for n in names):
+                  raise SystemExit("Exact-SHA source milestone FAILED; no publish")
+              if all(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")=="success" for n in names):
+                  verify_head()
+                  print("Exact-SHA Build + Cloud passed. NO PUBLISH.",candidate,flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Exact-SHA QA timed out; no publish")
+          PY
