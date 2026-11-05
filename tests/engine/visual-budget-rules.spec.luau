@@ -313,6 +313,103 @@ describe("visual budget rules", function()
         if newLib then lib:Destroy() end
     end)
 
+    it("restores the exact nine-part Harbor native arch immediately if its approved 3D Model disappears", function()
+        local Kit = require("../../src/client/HarborPromenadePortalMeshKit")
+        Kit.sync(nil, Vector3.zero, "Low", false)
+        local rs = game:GetService("ReplicatedStorage")
+        local holder = rs:FindFirstChild("ApprovedHarborPromenadePortalTemplates")
+        local createdHolder = false
+        if not holder then
+            holder = Instance.new("Folder")
+            holder.Name = "ApprovedHarborPromenadePortalTemplates"
+            holder:SetAttribute("OwnerVerified", true)
+            holder.Parent = rs
+            createdHolder = true
+        end
+        local source = holder:FindFirstChild("CargoGantry")
+        local createdSource = false
+        if not source then
+            source = Instance.new("Model")
+            source.Name = "CargoGantry"
+            source:SetAttribute("OwnerVerified", true)
+            source:SetAttribute("CosmeticOnly", true)
+            source:SetAttribute("OriginalHarborPromenadePortal3D", true)
+            source:SetAttribute("Original3DAssetId", 134157110756659)
+            local sourceMesh = Instance.new("MeshPart")
+            sourceMesh.Name = "Approved_ARMOR"
+            sourceMesh.Size = Vector3.new(19.4,20.1,12.6)
+            sourceMesh.Parent = source
+            source.Parent = holder
+            createdSource = true
+        end
+        local arena = Instance.new("Folder")
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId","Harbor")
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320,2,320)
+        base.Anchored = true
+        base.Parent = arena
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        platforms.Parent = arena
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local deck = Instance.new("Part")
+        deck.Name = "Platform991"
+        deck.Size = Vector3.new(26,2,12)
+        deck.Position = Vector3.new(0,52,0)
+        deck.Anchored = true
+        deck.CanCollide = true
+        deck:SetAttribute("ChaosPermanentRoute",true)
+        deck:SetAttribute("PromenadeLane",1)
+        deck:SetAttribute("PromenadeStep",2)
+        deck.Parent = platforms
+        local native = Instance.new("Part")
+        native.Name = "Promenade991_LoadPylon-1"
+        native.Size = Vector3.new(1.6,13.25,1.8)
+        native.Anchored = true
+        native.CanCollide = false
+        native.CanTouch = false
+        native.CanQuery = false
+        native:SetAttribute("PromenadeVisualOnly",true)
+        native:SetAttribute("PerimeterPlatformIndex",991)
+        native.Parent = decor
+        local camera = Vector3.new(0,54,-18)
+        local look = Vector3.new(0,0,1)
+        Kit.sync(arena,camera,"High",true,look,0,false,false)
+        expect(Kit.count()).toBe(1)
+        expect(native.LocalTransparencyModifier).toBe(1)
+        expect(deck.CanCollide).toBe(true)
+        local bucket = workspace:FindFirstChild(
+            "OriginalHarborPromenadePortalsLocal")
+        expect(bucket ~= nil).toBe(true)
+        local clone = bucket:FindFirstChild("ApprovedHarborSuspendedCargoGantry3D")
+        expect(clone ~= nil and clone:IsA("Model")).toBe(true)
+        clone:Destroy()
+        expect(native.LocalTransparencyModifier).toBe(0)
+        expect(Kit.count()).toBe(0)
+        Kit.sync(arena,camera,"High",true,look,0,false,false)
+        expect(Kit.count()).toBe(1)
+        expect(native.LocalTransparencyModifier).toBe(1)
+        deck:SetAttribute("CollapsePhase","Warning")
+        expect(native.LocalTransparencyModifier).toBe(0)
+        Kit.sync(arena,camera,"High",true,look,0,false,false)
+        expect(Kit.count()).toBe(0)
+        deck:SetAttribute("CollapsePhase","Normal")
+        Kit.sync(arena,camera,"High",true,look,0,false,false)
+        expect(Kit.count()).toBe(1)
+        base.Size = Vector3.new(230,2,230)
+        expect(Kit.count()).toBe(0)
+        expect(native.LocalTransparencyModifier).toBe(0)
+        Kit.sync(nil,Vector3.zero,"Low",false)
+        arena:Destroy()
+        if createdSource then source:Destroy() end
+        if createdHolder then holder:Destroy() end
+    end)
+
     it("fills all 36 source-verified ground bays only on healthy High devices", function()
         local count = PremiumGroundMeshKit.residencyCount
         expect(count("High", 0)).toBe(36)
