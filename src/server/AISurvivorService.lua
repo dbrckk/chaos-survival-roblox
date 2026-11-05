@@ -4342,7 +4342,8 @@ local function stepRecord(record, now)
                 record.target = nil
                 record.nextThink = 0
                 record.model:SetAttribute("BotSkySpineConnected", true)
-                showBotSignal(record, "SKYWAY OPEN!", now)
+                record.model:SetAttribute("BotSkyNetworkConnected", true)
+                showBotSignal(record, "3 ROUTES OPEN!", now)
             end
         else
             record.spineControl = nil
