@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local ArenaDetailKit = require(script.Parent.ArenaDetailKit)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local OrbitalStationLayoutRules = require(ReplicatedStorage.Shared.OrbitalStationLayoutRules)
 
 local player = Players.LocalPlayer
 
@@ -206,15 +207,13 @@ local function buildCrossroads(base, theme, tier)
 end
 
 local function buildOrbital(base, theme, tier)
-    local radius = math.min(base.Size.X, base.Size.Z) * 0.76
-    local count = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 4 or 6)
-
-    for i = 1, count do
+    -- Tier changes must never TELEPORT an existing sky station around the
+    -- real ring. Quality budgets still author 3/4/6 native masses, with
+    -- six fixed, physically separated index identities for every tier.
+    for _, i in ipairs(OrbitalStationLayoutRules.indices(tier.Name)) do
         local before = snapshotMidgroundParts()
-        local angle = ((i - 1) / count) * math.pi * 2 + math.rad(18)
-        local radial = radius + (i % 2) * 7
-        local x = math.cos(angle) * radial
-        local z = math.sin(angle) * radial
+        local angle = OrbitalStationLayoutRules.angle(i)
+        local origin = OrbitalStationLayoutRules.offset(base.Size, i)
         local size = 8 + (i % 3) * 2
         -- A low-poly sphere remains recognizable as an orbital node,
         -- while its metallic finish resembles a manufactured hull.
@@ -223,7 +222,7 @@ local function buildOrbital(base, theme, tier)
         local body = makePart(
             "OrbitalStationMass" .. i,
             Vector3.new(size, size, size),
-            frame(base, x, 10 + (i % 2) * 4, z, 0),
+            frame(base, origin.X, origin.Y, origin.Z, 0),
             theme.Structure:Lerp(VisualTheme.World.Deep, 0.20),
             Enum.Material.Metal,
             tier.Name == "Low" and 0.34 or 0.16,

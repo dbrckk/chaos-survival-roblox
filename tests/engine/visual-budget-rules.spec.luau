@@ -21,8 +21,48 @@ local PremiumRoutePbrKit = require("../../src/client/PremiumRoutePbrKit")
 local SpatialMidgroundSelectionRules = require("../../src/shared/SpatialMidgroundSelectionRules")
 local MidgroundOutboardLodRules = require("../../src/shared/MidgroundOutboardLodRules")
 local PlatformIdentityLodRules = require("../../src/shared/PlatformIdentityLodRules")
+local OrbitalStationLayoutRules = require("../../src/shared/OrbitalStationLayoutRules")
 
 describe("visual budget rules", function()
+    it("keeps six orbital station source identities in fixed sectors across Android quality changes", function()
+        local layout = OrbitalStationLayoutRules
+        local native = Vector3.new(320, 12, 320)
+        local low = layout.indices("Low")
+        local medium = layout.indices("Medium")
+        local high = layout.indices("High")
+        expect(#low).toBe(3)
+        expect(#medium).toBe(4)
+        expect(#high).toBe(6)
+        local seen = {}
+        for _, index in ipairs(high) do
+            seen[index] = layout.offset(native, index)
+            expect(seen[index] ~= nil).toBe(true)
+        end
+        local mediumSet = {}
+        for _, index in ipairs(medium) do
+            expect(seen[index]).toBe(layout.offset(native, index))
+            mediumSet[index] = true
+        end
+        local odd, even = 0, 0
+        for _, index in ipairs(low) do
+            expect(mediumSet[index]).toBe(true)
+            expect(seen[index]).toBe(layout.offset(native, index))
+            if index % 2 == 1 then odd += 1 else even += 1 end
+        end
+        expect(odd > 0 and even > 0).toBe(true)
+        -- Distinct real ring sectors remain separated, with no phantom
+        -- stations or tier-induced rotation/physical gameplay routes.
+        for i = 1, 6 do
+            for j = i + 1, 6 do
+                expect((seen[i] - seen[j]).Magnitude > 230).toBe(true)
+            end
+        end
+        expect(layout.angle(1)).toBe(math.rad(18))
+        expect(layout.angle(7)).toBe(nil)
+        expect(layout.offset(native, 0)).toBe(nil)
+        expect(layout.offset(Vector3.zero, 2)).toBe(nil)
+    end)
+
     it("shows genuine near-rim source-welded platform 3D and ignores untrusted fake anchors", function()
         local rules = PlatformIdentityLodRules
         local center = Vector3.zero

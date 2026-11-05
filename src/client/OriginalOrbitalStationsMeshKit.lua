@@ -3,6 +3,7 @@
 -- Only existing server-replicated templates are used. No new asset,
 -- collider, light, RemoteEvent, physics simulation or update loop.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local OrbitalStationLayoutRules = require(ReplicatedStorage.Shared.OrbitalStationLayoutRules)
 local shared = ReplicatedStorage:FindFirstChild("Shared")
 local spatial = shared and shared:FindFirstChild("SpatialMidgroundSelectionRules")
 local SpatialMidgroundSelectionRules = if spatial then require(spatial)
@@ -99,7 +100,13 @@ local function station(body, base, mid, index)
     if math.abs(body.Size.X-expected) > .15
         or math.abs(body.Size.Y-expected) > .15
         or math.abs(body.Size.Z-expected) > .15 then return false end
+    -- Physical source identity must agree with the stable SIX-sector
+    -- authoring position. A stale stream/tier silhouette must not be
+    -- mistaken for the approved original at a different ring sector.
+    local expectedOffset = OrbitalStationLayoutRules.offset(base.Size, index)
+    if not expectedOffset then return false end
     local localPos = base.CFrame:PointToObjectSpace(body.Position)
+    if (localPos - expectedOffset).Magnitude > .35 then return false end
     local marginX = math.abs(localPos.X)-base.Size.X*.5
     local marginZ = math.abs(localPos.Z)-base.Size.Z*.5
     return math.max(marginX,marginZ) >= expected*1.15+4
