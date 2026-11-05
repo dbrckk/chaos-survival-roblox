@@ -194,6 +194,11 @@ describe("Chaos Survival engine", function()
         imported.Size = Vector3.new(18.8, 20.52, 3.86)
         imported.Anchored = true
         imported.Parent = source
+        local signal = Instance.new("MeshPart")
+        signal.Name = "SkySpine_SIGNAL_Lens"
+        signal.Size = Vector3.new(0.30, 0.48, 0.14)
+        signal.Anchored = true
+        signal.Parent = source
         source.Parent = holder
 
         local arena = Instance.new("Folder")
@@ -247,6 +252,14 @@ describe("Chaos Survival engine", function()
         local deck2, native2 = makeDeck(203, 2, -48)
         local deck9, native9 = makeDeck(204, 9, 72)
         local camera = Vector3.new(0, 20, 0)
+        local budget = SkySpineCrownMeshKit.lightBudget
+        expect(budget("Low", 0, true)).toBe(0)
+        expect(budget("Medium", 0, true)).toBe(1)
+        expect(budget("High", 0, true)).toBe(1)
+        expect(budget("High", 0, false)).toBe(2)
+        expect(budget("High", 1, false)).toBe(0)
+        expect(budget("Medium", 2, true)).toBe(0)
+        SkySpineCrownMeshKit.setDarknessGuard(false)
         -- Low Android now mounts one genuine near-camera crown, not a
         -- permanent primitive-only fallback. Physical deck remains solid.
         SkySpineCrownMeshKit.sync(arena, camera, "Low", true)
@@ -257,6 +270,7 @@ describe("Chaos Survival engine", function()
 
         SkySpineCrownMeshKit.sync(arena, camera, "Medium", true,
             Vector3.new(0, 0, 1))
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(1)
         expect(SkySpineCrownMeshKit.count()).toBe(2)
         expect(native5.LocalTransparencyModifier).toBe(1)
         expect(native6.LocalTransparencyModifier).toBe(1)
@@ -265,9 +279,29 @@ describe("Chaos Survival engine", function()
         expect(deck5.CanCollide).toBe(true)
         local localMeshes = workspace:FindFirstChild("OriginalSkySpineCrownLocal")
         expect(localMeshes ~= nil).toBe(true)
-        local crownModel = localMeshes:FindFirstChild("OriginalApprovedSkySpineCrown3D")
+        local crownModel = nil
+        for _, item in ipairs(localMeshes:GetChildren()) do
+            if item:IsA("Model") and item:GetAttribute(
+                "OriginalSkySpineStep") == 5 then
+                crownModel = item
+                break
+            end
+        end
         expect(crownModel ~= nil).toBe(true)
         expect(crownModel:GetAttribute("Original3DAssetId")).toBe(71492051540032)
+        local fill = crownModel:FindFirstChild("OriginalSkySpineSignalFill", true)
+        expect(fill ~= nil and fill:IsA("PointLight")).toBe(true)
+        expect(fill.Parent:IsA("MeshPart")).toBe(true)
+        expect(fill.Parent.Name:find("SIGNAL", 1, true) ~= nil).toBe(true)
+        expect(fill.Shadows).toBe(false)
+        expect(fill.Range <= 18).toBe(true)
+        expect(fill.Brightness <= 0.35).toBe(true)
+        SkySpineCrownMeshKit.setDarknessGuard(true)
+        expect(fill.Enabled).toBe(false)
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(0)
+        SkySpineCrownMeshKit.setDarknessGuard(false)
+        expect(fill.Enabled).toBe(true)
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(1)
         -- An authentic late-replicated server crown must be occluded too.
         -- StreamingEnabled can deliver these native Parts after the mesh.
         local streamedNative = Instance.new("Part")
@@ -291,6 +325,8 @@ describe("Chaos Survival engine", function()
         -- Must react immediately to the real hazard BEFORE the next LOD tick.
         expect(native5.LocalTransparencyModifier).toBe(0)
         expect(streamedNative.LocalTransparencyModifier).toBe(0)
+        expect(fill.Enabled).toBe(false)
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(0)
         local geom = crownModel:FindFirstChildWhichIsA("MeshPart", true)
         expect(geom.LocalTransparencyModifier).toBe(1)
         SkySpineCrownMeshKit.sync(arena, camera, "Medium", true)
@@ -300,6 +336,7 @@ describe("Chaos Survival engine", function()
         deck5:SetAttribute("CollapsePhase", "Normal")
         SkySpineCrownMeshKit.sync(arena, camera, "High", true)
         expect(SkySpineCrownMeshKit.count()).toBe(4)
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(2)
         expect(SkySpineCrownMeshKit.outerCount()).toBe(2)
         expect(native5.LocalTransparencyModifier).toBe(1)
         expect(native6.LocalTransparencyModifier).toBe(1)
@@ -326,6 +363,7 @@ describe("Chaos Survival engine", function()
 
         -- Mobile visual pressure must never alter real gameplay routes.
         SkySpineCrownMeshKit.sync(arena, camera, "High", true, nil, 1)
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(0)
         expect(SkySpineCrownMeshKit.count()).toBe(2)
         SkySpineCrownMeshKit.sync(arena, camera, "High", true, nil, 2)
         expect(SkySpineCrownMeshKit.count()).toBe(1)
@@ -348,6 +386,8 @@ describe("Chaos Survival engine", function()
         expect(native9.LocalTransparencyModifier).toBe(0)
         expect(SkySpineCrownMeshKit.count()).toBe(0)
         SkySpineCrownMeshKit.sync(nil, Vector3.zero, "Low", false)
+        expect(SkySpineCrownMeshKit.lightCount()).toBe(0)
+        SkySpineCrownMeshKit.setDarknessGuard(true)
         arena:Destroy()
         holder:Destroy()
     end)

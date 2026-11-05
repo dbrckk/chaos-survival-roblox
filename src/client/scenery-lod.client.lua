@@ -397,6 +397,13 @@ local function currentOrigins()
     return arenaOrigin, lobbyOrigin
 end
 
+-- Don't wait for the LOD tick when primary/secondary Darkness
+-- arrives: the existing disaster controller publishes this attribute.
+player:GetAttributeChangedSignal("LocalDarknessLightGuard"):Connect(function()
+    SkySpineCrownMeshKit.setDarknessGuard(
+        player:GetAttribute("LocalDarknessLightGuard") == true)
+end)
+
 task.spawn(function()
     while true do
         local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), isTouch)
@@ -532,6 +539,8 @@ task.spawn(function()
         -- Complete the four real gateways in all five maps with the
         -- same approved source (steps 2/5/6/9), on the EXISTING camera
         -- sampler and Android part budget. Pressure reduces optional 3D.
+        SkySpineCrownMeshKit.setDarknessGuard(
+            player:GetAttribute("LocalDarknessLightGuard") == true)
         SkySpineCrownMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch,
@@ -559,6 +568,12 @@ task.spawn(function()
             ~= crownPbrAppearances then
             player:SetAttribute("LocalOriginalSkySpinePbr2KAppearanceCount",
                 crownPbrAppearances)
+        end
+        local gatewayLights = SkySpineCrownMeshKit.lightCount()
+        if player:GetAttribute("LocalOriginalSkySpineSignalLightCount")
+            ~= gatewayLights then
+            player:SetAttribute("LocalOriginalSkySpineSignalLightCount",
+                gatewayLights)
         end
         -- True original 3D harbor freight gantries over the SIX existing
         -- two-lane promenade arch sockets. No additional scanning loop:

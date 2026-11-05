@@ -44,6 +44,19 @@ local activeArena = nil
 local watchedBase = nil
 local baseChanged = nil
 local mounted = {}
+-- Until the existing RoundState controller reports Darkness, optional
+-- decorative lights fail closed. No independent gameplay-state reader.
+local darknessGuard = true
+
+function Kit.lightBudget(tier, pressure, touch)
+    if tier ~= "High" and tier ~= "Medium" then return 0 end
+    local value = tonumber(pressure)
+    local stress = if value and value == value
+        then math.clamp(math.floor(value), 0, 2) else 0
+    if stress > 0 then return 0 end
+    if tier == "Medium" then return 1 end
+    return touch == true and 1 or 2
+end
 
 local function source()
     local templates = ReplicatedStorage:FindFirstChild("PremiumRouteMeshTemplates")
@@ -135,9 +148,60 @@ local function safeAfterMount(entry)
         and (deck.Size - entry.initialSize).Magnitude < 0.07
 end
 
+local function refreshLight(entry)
+    local light = entry.signalLight
+    if not light then return end
+    if not light.Parent or not light.Parent:IsA("MeshPart")
+        or not light.Parent:IsDescendantOf(entry.model) then
+        entry.signalLight = nil
+        return
+    end
+    light.Enabled = not darknessGuard and entry.signalLightRequested == true
+        and safeAfterMount(entry)
+end
+
+local function sourceSignal(entry)
+    for _, part in ipairs(entry.pieces) do
+        if part:IsA("MeshPart") and part:IsDescendantOf(entry.model)
+            and string.find(string.upper(part.Name), "SIGNAL", 1, true) then
+            return part
+        end
+    end
+    return nil
+end
+
+local function setSignalLight(entry, requested)
+    entry.signalLightRequested = requested == true
+    if not requested then
+        if entry.signalLight then entry.signalLight:Destroy() end
+        entry.signalLight = nil
+        return
+    end
+    if not entry.signalLight or not entry.signalLight.Parent then
+        local signal = sourceSignal(entry)
+        if not signal or not safeAfterMount(entry) then return end
+        local light = Instance.new("PointLight")
+        light.Name = "OriginalSkySpineSignalFill"
+        light.Color = Color3.fromRGB(212, 230, 238)
+        light.Brightness = 0.31
+        light.Range = 17
+        light.Shadows = false
+        light.Enabled = false
+        light.Parent = signal
+        entry.signalLight = light
+    end
+    refreshLight(entry)
+end
+
+function Kit.setDarknessGuard(active)
+    darknessGuard = active == true
+    for _, entry in pairs(mounted) do refreshLight(entry) end
+end
+
 local function updateVisibility(entry)
     local visible = safeAfterMount(entry)
     if not visible then PremiumRoutePbrKit.detach(entry) end
+    refreshLight(entry)
     for _, part in ipairs(entry.pieces) do
         if part.Parent then
             part.LocalTransparencyModifier = visible and 0 or 1
@@ -154,6 +218,7 @@ end
 local function restore(entry)
     if entry.restoring then return end
     entry.restoring = true
+    setSignalLight(entry, false)
     PremiumRoutePbrKit.detach(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
@@ -385,6 +450,34 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook,
         PremiumRoutePbrKit.apply(entry, "crown", variant,
             textured[deck] == true and safeAfterMount(entry))
     end
+
+    -- Only real, nearby model SIGNAL regions receive a local lamp.
+    -- Low or pressure >= 1 is free of added GPU lights.
+    local lightSlots = Kit.lightBudget(tier, pressure, touch)
+    local illuminated = {}
+    for _, choice in ipairs(choices) do
+        if lightSlots <= 0 then break end
+        local entry = mounted[choice.deck]
+        if entry and wanted[choice.deck] and sourceSignal(entry)
+            and safeAfterMount(entry) then
+            illuminated[choice.deck] = true
+            lightSlots -= 1
+        end
+    end
+    for deck, entry in pairs(mounted) do
+        setSignalLight(entry, illuminated[deck] == true)
+    end
+end
+
+function Kit.lightCount()
+    local n = 0
+    for _, entry in pairs(mounted) do
+        if entry.signalLight and entry.signalLight.Parent
+            and entry.signalLight.Enabled and safeAfterMount(entry) then
+            n += 1
+        end
+    end
+    return n
 end
 
 function Kit.pbrCount()
