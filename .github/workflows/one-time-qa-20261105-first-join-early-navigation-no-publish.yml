@@ -58,7 +58,7 @@ jobs:
           bind=client.split('local function bindMechanics(mechanics)',1)[1].split('local function bindArena',1)[0]
           assert 'clear()' not in bind
           assert 'CollectionService:AddTag(platform, "ChaosPerimeterEntry")' in server
-          assert 'when optional' in doc
+          assert 'optional mobility-pad machinery' in doc
           assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
           for callback in ('RenderStepped:Connect(', 'Heartbeat:Connect(', 'BindToRenderStep('):
               assert callback not in client,callback
