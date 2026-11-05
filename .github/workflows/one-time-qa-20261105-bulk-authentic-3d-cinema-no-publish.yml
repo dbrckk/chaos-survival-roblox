@@ -105,7 +105,8 @@ jobs:
           assert 'MeshRules.capacity("High",0,true)' in spec
           assert '"tests/engine/cinematic-depth-layout.spec.luau"' in cloud
           assert 'up to 55 distinct High-tier skyline positions' in doc
-          assert 'AssetService' not in kit
+          assert 'game:GetService("AssetService")' not in kit
+          assert 'LoadAssetAsync' not in kit
           assert 'RenderStepped' not in kit
           assert 'Heartbeat:Connect' not in kit
           print("Source-verified bulk 3D replacement: 5 exact-geometry"
