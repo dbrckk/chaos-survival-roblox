@@ -933,6 +933,7 @@ local function sendToLobby(record)
     record.lastRecoveryAt = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
+    record.nextObstaclePreviewAt = 0
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -1002,6 +1003,9 @@ local function sendToArena(record)
     record.lastRecoveryAt = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
+    record.nextObstaclePreviewAt = 0
+    record.model:SetAttribute("BotObstaclePreviewCount", 0)
+    record.model:SetAttribute("BotObstacleAvoidedCount", 0)
     record.model:SetAttribute("BotStallRecoveryCount", 0)
     record.model:SetAttribute("BotRecoveryRouteFound", nil)
     record.moveDirection = Vector3.zero
@@ -1113,6 +1117,7 @@ local function newRecord(slot)
         lastRecoveryAt = 0,
         failedTarget = nil,
         failedTargetUntil = 0,
+        nextObstaclePreviewAt = 0,
         lastProgressTarget = nil,
         nextEmoteAt = os.clock() + 3 + math.random() * 6,
         emoteUntil = 0,
@@ -1911,13 +1916,16 @@ local function arenaCandidates(root)
     local groundTopY = groundBase and groundBase:IsA("BasePart")
         and (groundBase.Position.Y + groundBase.Size.Y * 0.5)
         or config.ArenaCenter.Y + 1
-    -- On a raised bridge, spawn markers are far below the real landing
-    -- and cannot be reached by walking. They must obey the same vertical
-    -- safety filter as the actual physical platform candidates.
+    -- A spawn marker lives on the real ARENA FLOOR, not an upper route.
+    -- A downward difference of 8-10 studs used to pass reachableElevation
+    -- and convince a sky bot to walk into open air towards that marker.
+    local onGroundNetwork = not root
+        or AISurvivorRules.elevatedRouteHasSupport(
+            root.Position.Y, groundTopY, false)
     local spawns = arena:FindFirstChild("Spawns")
     for _, part in ipairs(sortedParts(spawns)) do
         local position = part.Position + Vector3.new(0, 2.5, 0)
-        if AISurvivorRules.reachableElevation(
+        if onGroundNetwork and AISurvivorRules.reachableElevation(
             root and root.Position.Y or position.Y, position.Y, variantId
         ) then
             table.insert(result, {part = part, position = position})
@@ -2009,7 +2017,7 @@ local function arenaCandidates(root)
     end
 
     local base = groundBase
-    if base and base:IsA("BasePart")
+    if onGroundNetwork and base and base:IsA("BasePart")
         and AISurvivorRules.reachableElevation(
             root and root.Position.Y or base.Position.Y,
             base.Position.Y + base.Size.Y * 0.5 + 2.6,
@@ -3630,6 +3638,98 @@ local function recoverIfStuck(record, humanoid, root, now)
     return true
 end
 
+-- Anticipate a real ANCHORED, colliding obstruction before the bot
+-- walks repeatedly into it. This runs only when committing a new normal
+-- ground roaming goal (at most once every ~2.4 s per bot); NOT per frame.
+-- Use native physics and the existing five-ground-sample detour solver.
+-- If no supported sidestep exists, request the existing asynchronous
+-- PathfindingService route; never invent a waypoint or teleport a rig.
+local function anticipateGroundObstacle(
+    record, humanoid, root, goal, now)
+    local base = arenaBase()
+    if not base or not base:IsA("BasePart")
+        or not base.CanCollide or typeof(goal) ~= "Vector3"
+        or record.groundNavigation or record.groundNavigationPending then
+        return nil
+    end
+    local floorY = base.Position.Y + base.Size.Y * 0.5
+    local travel = Vector3.new(
+        goal.X-root.Position.X, 0, goal.Z-root.Position.Z)
+    local targetIsPlatform = record.targetPart
+        and record.targetPart.Parent
+        and record.targetPart.Parent.Name == "Platforms"
+    local committed = record.targetIsPad == true
+        or record.targetIsSkyrail == true
+        or record.districtTraverse ~= nil
+        or record.signalInterestRoute ~= nil
+        or record.assistRelay ~= nil
+        or record.assistShield ~= nil
+        or targetIsPlatform == true
+    if not AISurvivorRules.groundObstaclePreviewAllowed(
+        now, record.nextObstaclePreviewAt or 0,
+        currentState.phase == "round" and record.inRound,
+        humanoid.FloorMaterial ~= Enum.Material.Air,
+        hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
+            or hasDisaster("DisappearingPlatforms")
+            or hasDisaster("Tornado") or #warningParts() > 0,
+        committed, root.Position.Y, floorY, goal.Y, travel.Magnitude
+    ) then return nil end
+    record.nextObstaclePreviewAt = now + 2.4
+        + ((record.slot or 1) % 3) * 0.12
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {record.model}
+    params.RespectCanCollide = true
+    local standing = workspace:Raycast(
+        root.Position + Vector3.new(0, 0.5, 0),
+        Vector3.new(0, -6.5, 0), params
+    )
+    -- This never tries to navigate an elevated walkway as if it were the
+    -- continuous ground floor, even when the vertical heights are close.
+    if not standing or standing.Instance ~= base
+        or standing.Normal.Y < 0.78 then return nil end
+
+    local probe = travel.Unit * math.min(10, travel.Magnitude)
+    local obstacle = nil
+    for _, height in ipairs({-1.3, 0.65}) do
+        local hit = workspace:Raycast(
+            root.Position + Vector3.new(0, height, 0),
+            probe, params
+        )
+        -- Other avatars are not permanent obstacles. Avoid seven bots
+        -- constantly detouring each other when everyone starts together.
+        if hit and hit.Instance and hit.Instance.CanCollide
+            and hit.Instance.Anchored and hit.Instance ~= base then
+            obstacle = hit.Instance
+            break
+        end
+    end
+    if not obstacle then return nil end
+
+    -- One real blocked segment, no generic wander goal and no rig warp.
+    local detour = nearbyRecoveryStep(record, root, goal)
+    record.failedTarget = goal
+    record.failedTargetUntil = now + 7.5
+    record.lastMoveTarget = nil
+    record.targetPart = nil
+    record.targetIsPad = false
+    record.targetIsSkyrail = false
+    record.skyrailDirection = nil
+    record.model:SetAttribute("BotObstaclePreviewCount",
+        (tonumber(record.model:GetAttribute(
+            "BotObstaclePreviewCount")) or 0) + 1)
+    if detour then
+        record.model:SetAttribute("BotObstacleAvoidedCount",
+            (tonumber(record.model:GetAttribute(
+                "BotObstacleAvoidedCount")) or 0) + 1)
+        return detour, 1.5
+    end
+    -- An unwalkable shortcut is not an invitation to run into the
+    -- barrier. Safe, grounded pathfinding is already asynchronous.
+    requestGroundNavigation(record, root, goal, now)
+    return root.Position, 0.65
+end
+
 -- Ordinary AI height-based jumps never fire across the eight flat
 -- promenade decks and ten flat Sky Spine decks. Probe at a bounded
 -- cadence ONLY while the bot is actually approaching a real elevated
@@ -4543,6 +4643,16 @@ local function stepRecord(record, now)
                     record.targetIsPad = false
                     record.targetIsSkyrail = false
                     record.skyrailDirection = nil
+                end
+            end
+            -- Before an ordinary ground wander, make a bounded physical
+            -- obstruction preview. Upper-deck jumps and urgent hazard
+            -- routes keep their existing dedicated movement controller.
+            if not urgentTarget then
+                local safeTarget, safeHold = anticipateGroundObstacle(
+                    record, humanoid, root, target, now)
+                if safeTarget then
+                    target, hold = safeTarget, safeHold
                 end
             end
             record.target = target

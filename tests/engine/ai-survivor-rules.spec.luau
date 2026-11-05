@@ -1129,6 +1129,32 @@ describe("AI survivor rules", function()
         expect(timedOut(true, nil, 112)).toBe(false)
         expect(timedOut(true, 100, nil)).toBe(false)
 
+        -- Ground spawn/base targets are valid only while actually on
+        -- the floor network, never 9 studs down from a sky walkway.
+        local preview = AISurvivorRules.groundObstaclePreviewAllowed
+        expect(preview(20, 10, true, true, false, false,
+            3.7, 1, 3.8, 35)).toBe(true)
+        expect(preview(9, 10, true, true, false, false,
+            3.7, 1, 3.8, 35)).toBe(false)
+        expect(preview(20, 10, true, true, true, false,
+            3.7, 1, 3.8, 35)).toBe(false)
+        expect(preview(20, 10, true, true, false, true,
+            3.7, 1, 3.8, 35)).toBe(false)
+        expect(preview(20, 10, true, false, false, false,
+            3.7, 1, 3.8, 35)).toBe(false)
+        expect(preview(20, 10, false, true, false, false,
+            3.7, 1, 3.8, 35)).toBe(false)
+        expect(preview(20, 10, true, true, false, false,
+            16, 1, 16, 35)).toBe(false)
+        expect(preview(20, 10, true, true, false, false,
+            3.7, 1, 16, 35)).toBe(false)
+        expect(preview(20, 10, true, true, false, false,
+            3.7, 1, 3.8, 8)).toBe(false)
+        expect(preview(20, 10, true, true, false, false,
+            3.7, 1, 3.8, 111)).toBe(false)
+        expect(preview(20, 10, true, true, false, false,
+            3.7, 1, 3.8, 0/0)).toBe(false)
+
         local hasSupport = AISurvivorRules.elevatedRouteHasSupport
         expect(hasSupport(5, 1, false)).toBe(true)
         expect(hasSupport(9, 1, false)).toBe(true)

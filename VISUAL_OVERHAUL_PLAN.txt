@@ -1,3 +1,15 @@
+LOT 5 NOVEMBRE 2026 — BOT PREDICTIVE REAL GROUND OBSTACLE AVOIDANCE
+[QA]     Ground Spawns et Base candidates interdits depuis vrais sky decks
+         non rattachés au sol. Nouveau preview du prochain obstacle ancré
+         uniquement à la sélection d'une cible de roaming sur vrai Base,
+         au plus 1 fois/2,4 s par bot, couloir 10 studs / 2 raycasts max.
+         Détour sur 7 directions réelles / cinq supports, quarantaine du
+         but infranchissable, pathfinding async existant seulement si besoin.
+         0 changement Humanoid WalkSpeed, JumpPower, fake path, rigs,
+         RunService/RemoteEvent. Priorité aux dangers, sauts et co-op.
+         Engine milestone QA requise, pas de publication automatique.
+         docs/BOT_OBSTACLE_PREVIEW_REAL_GROUND_ROUTE_2026-11-05.md
+
 LOT 5 NOVEMBRE 2026 — ROUTES BOTS ET BARRIÈRES
 [QA]     Erreur réelle : Skybridge restait collidable même avec volet
          Warning/Raising/Raised/Lowering. Les bots l'utilisaient pour

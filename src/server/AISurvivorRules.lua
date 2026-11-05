@@ -821,6 +821,28 @@ end
 -- ComputeAsync is a yielding external engine call. A stalled query
 -- must never monopolize the bot's navigation state indefinitely;
 -- the async callback is invalidated separately with its generation token.
+-- Ordinary grounded roaming can inspect ONE short physical corridor
+-- before committing to a distant target. No preview during hazards,
+-- jumps, elevated parkour, co-op station holds or real route challenges.
+-- The live caller additionally requires a raycast onto the actual Base.
+function AISurvivorRules.groundObstaclePreviewAllowed(
+    now, nextAt, inRound, grounded, urgent, committed,
+    rootY, baseTopY, goalY, horizontalDistance)
+    if inRound ~= true or grounded ~= true
+        or urgent == true or committed == true then return false end
+    for _, value in ipairs({now,nextAt,rootY,baseTopY,goalY,
+        horizontalDistance}) do
+        if type(value) ~= "number" or value ~= value
+            or math.abs(value) == math.huge then return false end
+    end
+    return now >= nextAt
+        and rootY >= baseTopY + 1.2
+        and rootY <= baseTopY + 6.5
+        and math.abs(goalY - rootY) <= 4.5
+        and horizontalDistance >= 9
+        and horizontalDistance <= 110
+end
+
 function AISurvivorRules.groundNavigationQueryTimedOut(
     pending, startedAt, now)
     return pending == true

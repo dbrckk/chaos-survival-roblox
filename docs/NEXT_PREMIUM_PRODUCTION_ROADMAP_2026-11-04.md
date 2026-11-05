@@ -12,6 +12,8 @@
 
 **Lot IA/parcours — source 5 novembre 2026 :** fermeture de l'accès de navigation à toute Skybridge dont le vrai volet n'est pas `Idle` ; 16 sites existants de décisions NPC maintenant synchronisés, plus le contrôle du propre appui physique du bot, y compris fuite et socialisation, sans augmenter le coût du cheminement. [Dossier](BOT_TRUE_SKYBRIDGE_GATE_PATHING_2026-11-05.md). Validation exacte du jalon moteur et essai Android encore nécessaires.
 
+**Lot 3 — prédiction des obstacles IA (5 novembre 2026) :** destinations au sol refusées depuis un skydeck sans liaison, pré-vérification physique bornée des objectifs ordinaires avant collision, priorité absolue aux catastrophes et sauts authentiques. Compteurs rig serveur des obstacles détectés/évités. [Détails et critères de QA](BOT_OBSTACLE_PREVIEW_REAL_GROUND_ROUTE_2026-11-05.md). **Source enregistrée, pas de validation Android revendiquée.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |
