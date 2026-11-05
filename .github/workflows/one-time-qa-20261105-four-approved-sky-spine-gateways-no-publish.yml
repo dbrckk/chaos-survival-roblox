@@ -1,0 +1,171 @@
+# Four real Sky Spine physical porticos with original approved 3D and native fallback; never publish.
+# One-time main-SHA milestone. Never publish.
+name: One-time QA 2026-11-05 Four Approved Sky Spine Gateways No Publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261105-four-approved-sky-spine-gateways-no-publish.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-four-sky-spine-gateways-qa-20261105
+  cancel-in-progress: false
+
+jobs:
+  validate-exact-sha:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify four authenticated Sky Spine gateway sockets, adaptive residency and real engine regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          client=Path("src/client/SkySpineCrownMeshKit.lua").read_text()
+          scenery=Path("src/client/scenery-lod.client.lua").read_text()
+          mapbuild=Path("src/server/SkySpineArchitecture.lua").read_text()
+          loader=Path("src/server/PremiumRouteMeshAssets.lua").read_text()
+          budget=Path("src/shared/VisualBudgetRules.lua").read_text()
+          spec=Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          cloud=Path(".github/workflows/roblox-cloud-test.yml").read_text()
+          ci=Path(".github/workflows/ci.yml").read_text()
+          doc=Path("docs/APPROVED_3D_FOUR_SKY_SPINE_GATEWAYS_2026-11-05.md").read_text()
+          required=(
+              'local ASSET_ID = 71492051540032',
+              'Low = {count = 1',
+              'Medium = {count = 2',
+              'High = {count = 4',
+              'step ~= 2 and step ~= 5 and step ~= 6 and step ~= 9',
+              'deck:GetAttribute("ChaosPermanentRoute") ~= true',
+              'deck:GetAttribute("SkySpineInterchange") ~= true',
+              'math.abs(deck.Size.X - 12) > 0.15',
+              'base.Size.X < 318 or base.Size.Z < 318',
+              'limit = stress == 0 and 4 or (stress == 1 and 2 or 1)',
+              'limit = stress == 0 and 2 or (stress == 1 and 1 or 0)',
+              'entry.restoring = true',
+              'folder.ChildRemoved:Connect(function(child)',
+              'entry.model:Destroy()',
+              'function Kit.outerCount()',
+              'OriginalSkySpineStep',
+              'piece.CanCollide = false',
+              'piece.CanTouch = false',
+              'piece.CanQuery = false',
+              'SkySpineCrownCosmeticWeld',
+              'CollapsePhase',
+              'BridgeShutterPhase',
+          )
+          for check in required:
+              assert check in client,check
+          for step in (2,5,6,9):
+              assert f'step == {step}' in mapbuild or f'step ~= {step}' in client
+          assert 'OriginalSkySpineCrown = 71492051540032' in loader
+          assert '"OriginalSkySpineCrownLocal"' in budget
+          assert 'LocalOriginalSkySpineOuterCrownCount' in scenery
+          assert 'player:GetAttribute("OptionalVfxPressure")' in scenery
+          assert 'for _, step in ipairs({2, 5, 6, 9}) do' in spec
+          assert 'expect(SkySpineCrownMeshKit.count()).toBe(4)' in spec
+          assert 'outerModel:Destroy()' in spec
+          assert 'expect(native2.LocalTransparencyModifier).toBe(0)' in spec
+          assert '"tests/engine/mapbuilder-advanced.spec.luau"' in cloud
+          assert 'assert "Medium = {count = 2" in crown' in ci
+          assert 'assert "High = {count = 4" in crown' in ci
+          assert 'non publié' in doc.lower()
+          assert "RunService" not in client
+          assert "RenderStepped" not in client
+          assert "Heartbeat" not in client
+          assert "AssetService" not in client
+          print("Four real physical, source-approved 3D Sky Spine gateways; "
+                "Android 1/2/4 and adaptive pressure; safe exact-native "
+                "fallback; five-map real engine regression. NEVER PUBLISH.",
+                flush=True)
+          PY
+      - name: Source-only milestone validation (NEVER publish)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.error
+
+          repo=os.environ["REPO"]
+          candidate=os.environ["CANDIDATE_SHA"]
+          base="https://api.github.com/repos/"+repo
+          headers={
+              "Authorization":"Bearer "+os.environ["GH_TOKEN"],
+              "Accept":"application/vnd.github+json",
+              "X-GitHub-Api-Version":"2022-11-28",
+              "User-Agent":"chaos-four-sky-spine-gateways-no-publish",
+          }
+
+          def api(path,payload=None):
+              body=json.dumps(payload).encode() if payload is not None else None
+              request=urllib.request.Request(base+path,data=body,
+                  method="POST" if body is not None else "GET",
+                  headers={**headers,"Content-Type":"application/json"})
+              for attempt in range(6):
+                  try:
+                      with urllib.request.urlopen(request,timeout=40) as r:
+                          if payload is not None:
+                              if r.status!=204:
+                                  raise RuntimeError("Invalid dispatch response")
+                              return {}
+                          return json.load(r)
+                  except (urllib.error.URLError,TimeoutError):
+                      if attempt==5: raise
+                      time.sleep(3*(attempt+1))
+
+          def verify_head():
+              actual=api("/git/ref/heads/main")["object"]["sha"]
+              if actual!=candidate:
+                  raise SystemExit("main moved; abandon stale SHA QA")
+
+          verify_head()
+          print("VALIDATION ONLY, NO PUBLICATION",candidate,flush=True)
+          names={"Build Validation":"ci.yml",
+                 "Roblox Open Cloud Engine Tests":"roblox-cloud-test.yml"}
+          for name,path in names.items():
+              verify_head()
+              api("/actions/workflows/"+path+"/dispatches",{"ref":"main"})
+              print("Dispatched",name,flush=True)
+              time.sleep(4)
+
+          for attempt in range(400):
+              verify_head()
+              runs=api("/actions/runs?head_sha="+candidate+"&per_page=100")
+              states={}
+              for run in runs.get("workflow_runs",[]):
+                  if run.get("head_sha")!=candidate or run.get("event")!="workflow_dispatch":
+                      continue
+                  name=run.get("name")
+                  if name in names and (name not in states or
+                      run.get("created_at","") > states[name].get("created_at","")):
+                      states[name]=run
+              if attempt%6==0:
+                  print("Milestone:",{name:
+                      (states.get(name) or {}).get("status","pending")+"/"+
+                      str((states.get(name) or {}).get("conclusion"))
+                      for name in names},flush=True)
+              if any(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")!="success" for n in names):
+                  raise SystemExit("Exact-SHA source milestone FAILED; no publish")
+              if all(states.get(n,{}).get("status")=="completed"
+                     and states[n].get("conclusion")=="success" for n in names):
+                  verify_head()
+                  print("Exact-SHA Build + Cloud passed. NO PUBLISH.",candidate,flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit("Exact-SHA QA timed out; no publish")
+          PY
