@@ -516,16 +516,23 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalRoutePanelsCoveredCount",
                 coveredPanels)
         end
-        -- An actual approved, sculpted high interchange on the TWO
-        -- real Sky Spine center decks, never on a painted phantom bridge.
-        -- Same camera sampler, strict Android Low 1 / Medium 1 / High 2.
+        -- Complete the four real gateways in all five maps with the
+        -- same approved source (steps 2/5/6/9), on the EXISTING camera
+        -- sampler and Android part budget. Pressure reduces optional 3D.
         SkySpineCrownMeshKit.sync(arena, cameraPoint, profile.Name,
-            cameraReady, cameraLook)
+            cameraReady, cameraLook,
+            player:GetAttribute("OptionalVfxPressure"))
         local crownMeshes = SkySpineCrownMeshKit.count()
         if player:GetAttribute("LocalOriginalSkySpineCrownCount")
             ~= crownMeshes then
             player:SetAttribute("LocalOriginalSkySpineCrownCount",
                 crownMeshes)
+        end
+        local outerCrowns = SkySpineCrownMeshKit.outerCount()
+        if player:GetAttribute("LocalOriginalSkySpineOuterCrownCount")
+            ~= outerCrowns then
+            player:SetAttribute("LocalOriginalSkySpineOuterCrownCount",
+                outerCrowns)
         end
         -- True original 3D harbor freight gantries over the SIX existing
         -- two-lane promenade arch sockets. No additional scanning loop:

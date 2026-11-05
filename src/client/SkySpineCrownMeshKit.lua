@@ -1,6 +1,6 @@
 -- Original, creator-owned UV/tangent sky interchange sculpture, Roblox
--- Approved Model #71492051540032. Exactly two authentic physical Sky Spine
--- center decks per arena qualify; never manufactures a walkway or collision.
+-- Approved Model #71492051540032. All four real Sky Spine gateway decks
+-- (steps 2, 5, 6 and 9) qualify; never creates a walkway or collision.
 -- Reuses the existing scenery-lod.client.lua camera/quality owner and budget.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,8 +10,8 @@ local BUDGET = {
     -- Low Android now shows one approved crown at 122 studs.
     -- The authentic near-camera sculpture shares the main visual census.
     Low = {count = 1, distance = 122, retention = 14},
-    Medium = {count = 1, distance = 175, retention = 22},
-    High = {count = 2, distance = 245, retention = 28},
+    Medium = {count = 2, distance = 175, retention = 22},
+    High = {count = 4, distance = 245, retention = 28},
 }
 local ORIGINAL_NATIVE = {
     ["MonumentalPylon-1"] = true,
@@ -89,7 +89,9 @@ local function authentic(deck, arena, base)
         return false
     end
     local step = deck:GetAttribute("SkySpineStep")
-    if step ~= 5 and step ~= 6 then return false end
+    if step ~= 2 and step ~= 5 and step ~= 6 and step ~= 9 then
+        return false
+    end
     local collapse = deck:GetAttribute("CollapsePhase")
     if collapse ~= nil and collapse ~= "Normal" and collapse ~= "Safe" then
         return false
@@ -145,6 +147,8 @@ local function updateVisibility(entry)
 end
 
 local function restore(entry)
+    if entry.restoring then return end
+    entry.restoring = true
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -155,6 +159,19 @@ local function restore(entry)
     end
     entry.model:Destroy()
 end
+
+-- A genuine imported Model that streams out between camera samples must
+-- reveal its server-authored portico instantly. One folder observer; no
+-- new per-frame owner, networking, fake collider or render polling.
+folder.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for deck, entry in pairs(mounted) do
+        if not entry.restoring and child == entry.model then
+            restore(entry)
+            mounted[deck] = nil
+        end
+    end
+end)
 
 local function clearModels()
     for deck, entry in pairs(mounted) do
@@ -226,6 +243,8 @@ local function mount(deck, arena, base, decor, template)
     clone.Name = "OriginalApprovedSkySpineCrown3D"
     clone:SetAttribute("CosmeticOnly", true)
     clone:SetAttribute("Original3DAssetId", ASSET_ID)
+    clone:SetAttribute("OriginalSkySpineStep", deck:GetAttribute("SkySpineStep"))
+    clone:SetAttribute("OriginalSkySpinePlatform", deck.Name)
     clone.Parent = folder
     for _, piece in ipairs(pieces) do
         local joint = Instance.new("WeldConstraint")
@@ -260,13 +279,24 @@ local function mount(deck, arena, base, decor, template)
 end
 
 -- The ONLY invocation is the shared camera/quality sampler, not a new loop.
-function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
+function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local budget = BUDGET[tier] or BUDGET.Low
-    if not arena or not cameraReady or budget.count == 0
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
+    local limit = budget.count
+    -- Optional approved 3D yields to actual Android pressure BEFORE any
+    -- native gameplay platform, hazard line or collision is affected.
+    if tier == "High" then
+        limit = stress == 0 and 4 or (stress == 1 and 2 or 1)
+    elseif tier == "Medium" then
+        limit = stress == 0 and 2 or (stress == 1 and 1 or 0)
+    elseif tier == "Low" and stress >= 2 then
+        limit = 0
+    end
+    if not arena or not cameraReady or limit == 0
         or typeof(cameraPoint) ~= "Vector3" then
         clearModels()
         return
@@ -317,7 +347,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
         return a.score < b.score
     end)
     local wanted = {}
-    for i = 1, math.min(#choices, budget.count) do
+    for i = 1, math.min(#choices, limit) do
         wanted[choices[i].deck] = true
     end
     for deck, entry in pairs(mounted) do
@@ -339,6 +369,20 @@ function Kit.count()
     local count = 0
     for _, entry in pairs(mounted) do
         if entry.model.Parent then count += 1 end
+    end
+    return count
+end
+
+-- Count the TWO formerly rectangular outer porticos only if their
+-- authentic MeshParts are still in the active camera owner and safe.
+function Kit.outerCount()
+    local count = 0
+    for deck, entry in pairs(mounted) do
+        local step = deck:GetAttribute("SkySpineStep")
+        if entry.model.Parent == folder and safeAfterMount(entry)
+            and (step == 2 or step == 9) then
+            count += 1
+        end
     end
     return count
 end

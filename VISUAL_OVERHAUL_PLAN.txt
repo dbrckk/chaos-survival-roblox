@@ -1,3 +1,12 @@
+LOT VIS-010 / VIS-027 — QUATRE PORTIQUES SKY SPINE EN VRAIE 3D
+[VIS]  Le portique 3D source Approved 71492051540032 (1 696 triangles)
+       remplace les pylônes supérieurs natifs des quatre vraies
+       SkySpineStep 2/5/6/9, sur les cinq mondes. Pas de fake collider.
+       Plafond Low 1, Medium 2, High 4, pression 2/1/0 et 4/2/1 ;
+       silhouette native rétablie immédiatement si Model disparu.
+       LocalOriginalSkySpineOuterCrownCount = deux arches 2/9 réelles.
+       docs/APPROVED_3D_FOUR_SKY_SPINE_GATEWAYS_2026-11-05.md
+
 LOT 5 NOVEMBRE 2026 — VRAIES PASSERELLES 3D CONTIGUËS
 [VIS-009/010] Modules PremiumSkybridge Approved sur 3 ponts Medium /
              5 ponts High proches caméra (vs 2/3), ratio X/Z et

@@ -18,6 +18,8 @@
 
 **Lot visuel prioritaire VIS-009/VIS-010 — 5 novembre 2026 :** remplacement premium des paliers et passerelles réelles recentré sur la couverture géométrique certifiée par les modèles approuvés (source X/Z, nombre minimal de sections, panneaux natifs conservés si couverture insuffisante ou streaming). Quotas 3 Medium / 5 High, sans augmentation de la densité Low ni nouvelle boucle, comptage client de surfaces réellement remplacées. [Dossier](PREMIUM_NEAR_CAMERA_COMPLETE_ROUTE_SHELLS_2026-11-05.md). **Validation moteur sur ce SHA et captures Android encore nécessaires.**
 
+**Lot VIS-010 / VIS-027 — quatre vrais portiques Sky Spine 3D (5 novembre 2026) :** étapes 2/5/6/9 des cinq mondes éligibles au véritable Model Roblox Approved 71492051540032 ; plafonds 1/2/4 Low/Medium/High dégradés sous pression, repli natif immédiat si modèle supprimé, compteur distinct pour les deux nouveaux portiques externes. [Dossier](APPROVED_3D_FOUR_SKY_SPINE_GATEWAYS_2026-11-05.md). **Validation moteur et appareil à obtenir.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

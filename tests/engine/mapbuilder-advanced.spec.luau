@@ -235,7 +235,7 @@ describe("Chaos Survival engine", function()
         -- not just the synthetic 20-stud smoke fixture in this scene.
         for _, variantId in ipairs(ArenaVariants.Order) do
             local real = ArenaVariants.get(variantId)
-            for step = 5, 6 do
+            for _, step in ipairs({2, 5, 6, 9}) do
                 local size = real.SkySpinePlatforms[step].size
                 expect(size.X).toBe(12)
                 expect(size.Y).toBe(2)
@@ -244,19 +244,24 @@ describe("Chaos Survival engine", function()
         end
         local deck5, native5 = makeDeck(201, 5, 0)
         local deck6, native6 = makeDeck(202, 6, 24)
+        local deck2, native2 = makeDeck(203, 2, -48)
+        local deck9, native9 = makeDeck(204, 9, 72)
         local camera = Vector3.new(0, 20, 0)
         -- Low Android now mounts one genuine near-camera crown, not a
         -- permanent primitive-only fallback. Physical deck remains solid.
         SkySpineCrownMeshKit.sync(arena, camera, "Low", true)
         expect(SkySpineCrownMeshKit.count()).toBe(1)
         expect(native5.LocalTransparencyModifier).toBe(1)
+        expect(native2.LocalTransparencyModifier).toBe(0)
         expect(deck5.CanCollide).toBe(true)
 
         SkySpineCrownMeshKit.sync(arena, camera, "Medium", true,
             Vector3.new(0, 0, 1))
-        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(SkySpineCrownMeshKit.count()).toBe(2)
         expect(native5.LocalTransparencyModifier).toBe(1)
-        expect(native6.LocalTransparencyModifier).toBe(0)
+        expect(native6.LocalTransparencyModifier).toBe(1)
+        expect(native2.LocalTransparencyModifier).toBe(0)
+        expect(SkySpineCrownMeshKit.outerCount()).toBe(0)
         expect(deck5.CanCollide).toBe(true)
         local localMeshes = workspace:FindFirstChild("OriginalSkySpineCrownLocal")
         expect(localMeshes ~= nil).toBe(true)
@@ -289,22 +294,58 @@ describe("Chaos Survival engine", function()
         local geom = crownModel:FindFirstChildWhichIsA("MeshPart", true)
         expect(geom.LocalTransparencyModifier).toBe(1)
         SkySpineCrownMeshKit.sync(arena, camera, "Medium", true)
-        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(SkySpineCrownMeshKit.count()).toBe(2)
         expect(native6.LocalTransparencyModifier).toBe(1)
+        expect(native2.LocalTransparencyModifier).toBe(1)
         deck5:SetAttribute("CollapsePhase", "Normal")
         SkySpineCrownMeshKit.sync(arena, camera, "High", true)
-        expect(SkySpineCrownMeshKit.count()).toBe(2)
+        expect(SkySpineCrownMeshKit.count()).toBe(4)
+        expect(SkySpineCrownMeshKit.outerCount()).toBe(2)
         expect(native5.LocalTransparencyModifier).toBe(1)
         expect(native6.LocalTransparencyModifier).toBe(1)
+        expect(native2.LocalTransparencyModifier).toBe(1)
+        expect(native9.LocalTransparencyModifier).toBe(1)
+
+        -- Even if the approved model disappears before the next camera
+        -- sample, its exact native portico immediately reappears.
+        local outerModel = nil
+        for _, model in ipairs(localMeshes:GetChildren()) do
+            if model:IsA("Model") and model:GetAttribute(
+                "OriginalSkySpineStep") == 2 then
+                outerModel = model
+                break
+            end
+        end
+        expect(outerModel ~= nil).toBe(true)
+        outerModel:Destroy()
+        expect(native2.LocalTransparencyModifier).toBe(0)
+        expect(SkySpineCrownMeshKit.count()).toBe(3)
+        SkySpineCrownMeshKit.sync(arena, camera, "High", true)
+        expect(SkySpineCrownMeshKit.count()).toBe(4)
+        expect(native2.LocalTransparencyModifier).toBe(1)
+
+        -- Mobile visual pressure must never alter real gameplay routes.
+        SkySpineCrownMeshKit.sync(arena, camera, "High", true, nil, 1)
+        expect(SkySpineCrownMeshKit.count()).toBe(2)
+        SkySpineCrownMeshKit.sync(arena, camera, "High", true, nil, 2)
+        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        SkySpineCrownMeshKit.sync(arena, camera, "Medium", true, nil, 2)
+        expect(SkySpineCrownMeshKit.count()).toBe(0)
+        expect(native5.LocalTransparencyModifier).toBe(0)
+        SkySpineCrownMeshKit.sync(arena, camera, "High", true)
+        expect(SkySpineCrownMeshKit.count()).toBe(4)
 
         -- A false physical platform cannot gain a cosmetic fake arch.
         deck5:SetAttribute("ChaosPermanentRoute", false)
         expect(native5.LocalTransparencyModifier).toBe(0)
         SkySpineCrownMeshKit.sync(arena, camera, "High", true)
-        expect(SkySpineCrownMeshKit.count()).toBe(1)
+        expect(SkySpineCrownMeshKit.count()).toBe(3)
         expect(deck5.CanCollide).toBe(true)
+        expect(deck2.CanCollide).toBe(true)
+        expect(deck9.CanCollide).toBe(true)
         base.Size = Vector3.new(230, 2, 230)
         expect(native6.LocalTransparencyModifier).toBe(0)
+        expect(native9.LocalTransparencyModifier).toBe(0)
         expect(SkySpineCrownMeshKit.count()).toBe(0)
         SkySpineCrownMeshKit.sync(nil, Vector3.zero, "Low", false)
         arena:Destroy()
