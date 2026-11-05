@@ -18,8 +18,52 @@ local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local PremiumGroundPbrKit = require("../../src/client/PremiumGroundPbrKit")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local PremiumRoutePbrKit = require("../../src/client/PremiumRoutePbrKit")
+local SpatialMidgroundSelectionRules = require("../../src/shared/SpatialMidgroundSelectionRules")
 
 describe("visual budget rules", function()
+    it("spreads approved midground geometry over separate real-world sectors without raising tier caps", function()
+        local selector = SpatialMidgroundSelectionRules.choose
+        -- Four authored nonphysical outboard sites, deliberately with two
+        -- pairs near one another. Already-approved sources are unchanged.
+        local nearA = {Position = Vector3.new(-210, 7, -90)}
+        local nearB = {Position = Vector3.new(-199, 7, -84)}
+        local farA = {Position = Vector3.new(210, 7, 90)}
+        local farB = {Position = Vector3.new(201, 7, 102)}
+        local candidates = {
+            {body = nearA, index = 1, score = 10},
+            {body = nearB, index = 2, score = 12},
+            {body = farA, index = 3, score = 24},
+            {body = farB, index = 4, score = 26},
+        }
+        local low = selector(candidates, 1)
+        expect(low[nearA] ~= nil).toBe(true)
+        expect(low[nearB] == nil).toBe(true)
+        expect(low[farA] == nil).toBe(true)
+
+        local medium = selector(candidates, 2)
+        expect(medium[nearA] ~= nil).toBe(true)
+        expect(medium[farA] ~= nil).toBe(true)
+        expect(medium[nearB] == nil).toBe(true)
+        expect(medium[farB] == nil).toBe(true)
+
+        -- Harbor uses the same authorized strategy but a different
+        -- genuine native key; no client-only route or world mesh is made.
+        local boats = {
+            {hull = nearA, index = 1, score = 10},
+            {hull = nearB, index = 2, score = 12},
+            {hull = farA, index = 3, score = 24},
+        }
+        local harbor = selector(boats, 2)
+        expect(harbor[nearA] ~= nil).toBe(true)
+        expect(harbor[farA] ~= nil).toBe(true)
+        expect(harbor[nearB] == nil).toBe(true)
+        local high = selector(candidates, 4)
+        expect(high[nearA] ~= nil and high[nearB] ~= nil
+            and high[farA] ~= nil and high[farB] ~= nil).toBe(true)
+        expect(next(selector(candidates, 0)) == nil).toBe(true)
+        expect(next(selector({}, 4)) == nil).toBe(true)
+    end)
+
     it("uses five specific approved UV-ground PBR finishes without increasing mobile texture residency", function()
         local kit = PremiumGroundPbrKit
         expect(kit.family("Classic")).toBe("DiamondArmor")

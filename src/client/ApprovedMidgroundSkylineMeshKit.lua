@@ -3,6 +3,12 @@
 -- Never invent a Roblox asset, collider, playable route or client network load.
 -- The EXISTING scenery-lod sampler owns all residency / mobile pressure.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SpatialMidgroundSelectionRules = if script and script.Parent
+    and script.Parent.Parent and script.Parent.Parent.Parent
+    and ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("SpatialMidgroundSelectionRules")
+    then require(ReplicatedStorage.Shared.SpatialMidgroundSelectionRules)
+    else require("../shared/SpatialMidgroundSelectionRules")
 
 local Kit = {}
 local SOURCE_IDS = {
@@ -339,10 +345,10 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure)
         if a.score == b.score then return a.index < b.index end
         return a.score < b.score
     end)
-    local wanted = {}
-    for i = 1, math.min(cap, #candidates) do
-        wanted[candidates[i].body] = candidates[i]
-    end
+    -- Closest actual source-authenticated hero first; remaining
+    -- same-budget slots go to genuinely separated outboard districts.
+    -- Avoid concentrating two premium models beside one camera corner.
+    local wanted = SpatialMidgroundSelectionRules.choose(candidates, cap)
     for body, entry in pairs(mounted) do
         local choice = wanted[body]
         if not choice or entry.source ~= choice.source

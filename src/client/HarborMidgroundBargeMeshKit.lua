@@ -7,6 +7,12 @@
 -- allowlist; only its seven source-authenticated MeshParts are replicated.
 -- One existing scenery-lod 0.90s camera sampler owns all mounting.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SpatialMidgroundSelectionRules = if script and script.Parent
+    and script.Parent.Parent and script.Parent.Parent.Parent
+    and ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("SpatialMidgroundSelectionRules")
+    then require(ReplicatedStorage.Shared.SpatialMidgroundSelectionRules)
+    else require("../shared/SpatialMidgroundSelectionRules")
 
 local Kit={}
 -- EXACT Model ID returned by Roblox import with Approved moderation.
@@ -237,10 +243,11 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
         if a.score==b.score then return a.index<b.index end
         return a.score<b.score
     end)
-    local wanted={}
-    for i=1,math.min(cap,#choices) do
-        wanted[choices[i].hull]=choices[i]
-    end
+    -- First verified 3D barge stays nearest to the player; when
+    -- Medium/high pressure permits a second, distribute it along
+    -- the coast instead of using a second nearby native block.
+    -- Exact 0/1/2/4 pre-existing tier caps are never exceeded.
+    local wanted=SpatialMidgroundSelectionRules.choose(choices,cap)
     for hull,e in pairs(active) do
         if not wanted[hull] or not alive(e) or e.source~=approved then
             remove(e)
