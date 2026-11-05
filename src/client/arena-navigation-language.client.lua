@@ -177,6 +177,27 @@ local function addCenterLandmark(base, theme, variant, tier)
                 i == 1 and 0.64 or 0.24
             )
         end
+    elseif variant == "Harbor" then
+        -- Harbor had silently inherited Classic's crossed calibration
+        -- grid. Two separated short dock-berth index marks communicate
+        -- port infrastructure without implying a glowing walkable path.
+        -- Same two-part allocation as Classic, within the true Base
+        -- footprint; ArenaFloorFollowerKit keeps both attached during
+        -- Shrinking Arena and no new path or collider is created.
+        for side = -1, 1, 2 do
+            makePart(
+                side == -1 and "CenterHarborPortBerth"
+                    or "CenterHarborStarboardBerth",
+                Vector3.new(0.24, 0.05, span * 0.14),
+                base.CFrame * CFrame.new(
+                    side * span * 0.092,
+                    ArenaPresentation.deckArtOffset(base, 0.05),
+                    0),
+                side == -1 and theme.Detail or theme.Secondary,
+                Enum.Material.CorrodedMetal,
+                side == -1 and 0.24 or 0.30
+            )
+        end
     else
         local half = span * 0.11
         makePart(

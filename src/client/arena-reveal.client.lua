@@ -336,6 +336,34 @@ local function spawnOrbitalSignature(center, base, theme, tier)
     end
 end
 
+-- An original maritime berth reveal, rather than Classic's calibration
+-- grid flash. Short staggered side-light bars mark existing port floor
+-- sectors without suggesting any new traversable bridge or safe step.
+-- Four High / two Medium temporary, noncollidable effects, zero Low.
+local function spawnHarborSignature(center, base, theme, tier)
+    local count = tier.Name == "High" and 4 or 2
+    for i = 1, count do
+        local side = i % 2 == 0 and 1 or -1
+        local row = math.floor((i - 1) * 0.5)
+        local frame = base.CFrame * CFrame.new(
+            side * base.Size.X * 0.30,
+            base.Size.Y * 0.5 + 0.13,
+            (row == 0 and -1 or 1) * base.Size.Z * 0.18
+        )
+        local bar = makeNeonPart(
+            "LocalArenaRevealHarborBerth",
+            Vector3.new(0.22, 0.045, 2.4),
+            frame,
+            side == -1 and theme.Accent or theme.Secondary,
+            0.54
+        )
+        tweenAndCleanup(bar, 0.54, {
+            Size = Vector3.new(0.16, 0.045, 8.6),
+            Transparency = 1,
+        })
+    end
+end
+
 local function spawnVariantSignature(variant, center, base, theme, tier, reducedMotion)
     if reducedMotion or tier.Name == "Low" then
         return
@@ -347,6 +375,8 @@ local function spawnVariantSignature(variant, center, base, theme, tier, reduced
         spawnCrossroadsSignature(center, base, theme, tier)
     elseif variant == "Orbital" then
         spawnOrbitalSignature(center, base, theme, tier)
+    elseif variant == "Harbor" then
+        spawnHarborSignature(center, base, theme, tier)
     else
         spawnClassicSignature(center, base, theme, tier)
     end

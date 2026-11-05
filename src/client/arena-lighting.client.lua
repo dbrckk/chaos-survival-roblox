@@ -175,6 +175,7 @@ local MOODS = {
 }
 
 local phase = "waiting"
+local darknessActive = false
 local currentVariant = "Classic"
 local disconnectMapWatch = nil
 local refreshPending = false
@@ -242,6 +243,9 @@ local function applyMood(duration)
         LocalLightingSolarClock = mood.ClockTime or 15,
         LocalLightingLatitude = mood.Latitude or 36,
         LocalLightingQualityTier = quality.Name,
+        -- Desired profile, NOT a measured pixel/lighting screenshot.
+        LocalIdentityDarknessFillSuppressed = darknessActive
+            and disasterOwnsEnvironment,
     }
     for name, value in pairs(diagnostic) do
         if player:GetAttribute(name) ~= value then
@@ -289,7 +293,10 @@ local function applyMood(duration)
         lightingGoal.ExposureCompensation = exposure
         lightingGoal.EnvironmentDiffuseScale = environmentDiffuse
         lightingGoal.EnvironmentSpecularScale = environmentSpecular
-    elseif UserInputService.TouchEnabled then
+    elseif UserInputService.TouchEnabled and not darknessActive then
+        -- Darkness (primary OR secondary) is a deliberate low-visibility
+        -- catastrophe. Do not reintroduce bright neutral mobile fill
+        -- after the disaster owner has enabled its blackout materials.
         -- Actual Android screenshots: during live RisingLava/JumpShock,
         -- the HUD/neon were legible but the real floor and bot silhouettes
         -- were near black. Preserve disaster-owned color grading and fog;
@@ -422,11 +429,19 @@ end)
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     local nextPhase = tostring(state.phase or "waiting")
-    -- RoundState countdown packets may arrive every second; the timer
-    -- does NOT change the five authored sun/sky profiles. Avoid spawning
-    -- overlapping atmosphere and Lighting tweens for identical phases.
-    if nextPhase == phase then return end
+    -- The disaster pairing can change inside the SAME phase (including
+    -- Darkness in slot 2). Do not ignore that authoritative difference
+    -- just because another RoundState countdown second arrived.
+    -- With a partial packet, preserve the previous guard until the
+    -- disaster list is explicitly supplied or the round ends.
+    local hasIds = type(state.disasterIds) == "table"
+    local nextDarkness = nextPhase == "round" or nextPhase == "ready"
+    nextDarkness = nextDarkness and (hasIds
+        and ArenaLightingReadabilityRules.hasDarkness(state.disasterIds)
+        or (not hasIds and nextPhase == phase and darknessActive))
+    if nextPhase == phase and nextDarkness == darknessActive then return end
     phase = nextPhase
+    darknessActive = nextDarkness
     applyMood(phase == "round" and 0.35 or 0.65)
 end)
 
