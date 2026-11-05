@@ -2528,22 +2528,41 @@ local function districtTraverseTarget(record, root, now)
             return a.score < b.score
         end)
         local chosen = candidates[math.random(1, math.min(2, #candidates))]
+        -- Some physical branch expeditions have a concrete cooperative
+        -- destination: the live command on promenade step FOUR. Never
+        -- route a bot toward an already activated or missing switch.
+        local skyStation = arena:FindFirstChild("SkySpineSwitchyard")
+        local branch = record.profile.Id == "Bold"
+            or (record.profile.Id == "Balanced" and math.random() < 0.42)
+        local skyMission = branch and skyStation ~= nil
+            and skyStation:GetAttribute("SkyNetworkConnected") == false
+            and math.random() < (record.profile.Id == "Bold" and 0.55 or 0.37)
         expedition = {
             route = chosen.route,
             stage = 1,
-            deadline = now + 23,
-            -- Bold runners sometimes take the branch lookout rather
-            -- than continuing along the last three perimeter decks.
-            branch = record.profile.Id == "Bold"
-                or (record.profile.Id == "Balanced" and math.random() < 0.42),
+            deadline = now + (skyMission and 54 or 23),
+            branch = branch,
+            skyMission = skyMission,
         }
         record.districtTraverse = expedition
+    end
+
+    -- Abort an optional sky-command expedition if the cooperative goal
+    -- disappears or another contestant has already connected the network.
+    -- Ordinary on-deck survival/roaming continues with no invented stop.
+    if expedition.skyMission then
+        local command = arena:FindFirstChild("SkySpineSwitchyard")
+        if not command or command:GetAttribute("SkyNetworkConnected") ~= false then
+            record.districtTraverse = nil
+            record.nextDistrictTraverseAt = now + 7
+            return nil
+        end
     end
 
     -- Resolve the live server-created decks each decision. Structural
     -- catastrophes may remove them during the round; stale references
     -- must never become an invisible AI teleport destination.
-    local perimeter, branch = {}, {}
+    local perimeter, branch, sky = {}, {}, {}
     for _, part in ipairs(platforms:GetChildren()) do
         if part:IsA("BasePart") then
             if part:GetAttribute("PerimeterRoute") == expedition.route then
@@ -2556,6 +2575,13 @@ local function districtTraverseTarget(record, root, now)
                 local step = tonumber(part:GetAttribute("BranchStep"))
                 if step and step >= 1 and step <= 4 then
                     branch[step] = part
+                end
+            elseif expedition.skyMission
+                and part:GetAttribute("PromenadeLane")
+                    == (expedition.route <= 2 and 1 or 2) then
+                local step = tonumber(part:GetAttribute("PromenadeStep"))
+                if step and step >= 1 and step <= 8 then
+                    sky[step] = part
                 end
             end
         end
@@ -2576,6 +2602,50 @@ local function districtTraverseTarget(record, root, now)
                 return nil
             end
             stages[#stages + 1] = branch[step]
+        end
+    end
+    if expedition.skyMission then
+        -- Physically walk from BranchStep 4 onto its REAL, overlapping
+        -- promenade endpoint. Then jump each 2.4-stud horizontal gap
+        -- (1->4 west or 8->4 east) with the existing native Humanoid
+        -- and 0.20-second bounded raycast gap-jump controller. The
+        -- command deck is the FINAL stage; no direct airborne targets.
+        local direction = expedition.route % 2 == 1 and 1 or -1
+        local entry = direction == 1 and 1 or 8
+        local previous = stages[#stages]
+        for stage = entry, 4, direction do
+            local deck = sky[stage]
+            if not deck or not AISurvivorRules.platformAvailable(
+                deck.CanCollide, deck.Transparency,
+                deck:GetAttribute("CollapsePhase"),
+                deck:GetAttribute("BridgeShutterPhase")
+            ) or not AISurvivorRules.neighboringPhysicalDeck(
+                previous.CFrame, previous.Size, deck.CFrame, deck.Size
+            ) then
+                record.districtTraverse = nil
+                record.nextDistrictTraverseAt = now + 8
+                return nil
+            end
+            if previous:GetAttribute("PromenadeLane") ~= nil then
+                local first = direction == 1 and previous or deck
+                local second = direction == 1 and deck or previous
+                if not SkySpineSwitchyard.promenadeGapBetween(
+                    first, second) then
+                    record.districtTraverse = nil
+                    record.nextDistrictTraverseAt = now + 8
+                    return nil
+                end
+            else
+                -- Overlap with the genuine branch terminal is a WALK.
+                local top = previous.Position.Y + previous.Size.Y * 0.5
+                local landingTop = deck.Position.Y + deck.Size.Y * 0.5
+                if math.abs(top - landingTop) > 0.25 then
+                    record.districtTraverse = nil
+                    return nil
+                end
+            end
+            stages[#stages + 1] = deck
+            previous = deck
         end
     end
 
