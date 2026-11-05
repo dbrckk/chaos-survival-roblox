@@ -60,7 +60,7 @@ jobs:
               assert depth==0
               calls.append(service[idx:i])
               start=i
-          assert len(calls)==16, len(calls)
+          assert len(calls)==17, len(calls)
           for call in calls:
               assert 'GetAttribute("CollapsePhase")' in call
               assert 'GetAttribute("BridgeShutterPhase")' in call,call
@@ -72,7 +72,7 @@ jobs:
           assert '"tests/engine/ai-survivor-rules.spec.luau"' in cloud
           assert "16 appels" in doc
           assert 'PivotTo(' not in rules
-          print("Approved real shutter source gates all 16 bot decisions; "
+          print("Approved real shutter source gates all 17 bot safety decisions; "
                 "engine AI regression includes all four blocking phases, "
                 "original physical pathfinding preserved. NEVER PUBLISH.",flush=True)
           PY

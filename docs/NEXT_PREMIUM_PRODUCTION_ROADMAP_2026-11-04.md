@@ -10,7 +10,7 @@
 
 **Lot 1 — fiabilité des grandes jonctions (5 novembre 2026) :** le masquage des anciens sous-châssis et poutres n'est désormais autorisé que tant que le vrai Part serveur est sûr, visible, non rétréci et sans shutter actif. Restauration réactive et sélective pendant `CollapsePhase`, `ShrinkingArena` et streaming. [Contrat et QA](ROUTE_NATIVE_3D_FALLBACK_HAZARD_LIFECYCLE_2026-11-05.md). **Validation moteur et réelle à confirmer.**
 
-**Lot IA/parcours — source 5 novembre 2026 :** fermeture de l'accès de navigation à toute Skybridge dont le vrai volet n'est pas `Idle` ; 16 sites existants de décisions NPC maintenant synchronisés, y compris fuite et socialisation, sans augmenter le coût du cheminement. [Dossier](BOT_TRUE_SKYBRIDGE_GATE_PATHING_2026-11-05.md). Validation exacte du jalon moteur et essai Android encore nécessaires.
+**Lot IA/parcours — source 5 novembre 2026 :** fermeture de l'accès de navigation à toute Skybridge dont le vrai volet n'est pas `Idle` ; 16 sites existants de décisions NPC maintenant synchronisés, plus le contrôle du propre appui physique du bot, y compris fuite et socialisation, sans augmenter le coût du cheminement. [Dossier](BOT_TRUE_SKYBRIDGE_GATE_PATHING_2026-11-05.md). Validation exacte du jalon moteur et essai Android encore nécessaires.
 
 ## 1. État réellement vérifié du produit
 

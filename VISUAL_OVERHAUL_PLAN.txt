@@ -2,7 +2,7 @@ LOT 5 NOVEMBRE 2026 — ROUTES BOTS ET BARRIÈRES
 [QA]     Erreur réelle : Skybridge restait collidable même avec volet
          Warning/Raising/Raised/Lowering. Les bots l'utilisaient pour
          des parcours normaux, le social et la fuite, puis se coinçaient.
-         16 sites runtime de plateformeAvailable transmettent maintenant
+         16 appels existants et 1 contrôle supplémentaire de plateformeAvailable transmettent maintenant
          l'attribut BridgeShutterPhase, 4e argument optionnel.
          Ancienne branche dédiée Skyrail supprimée; comportement
          de fuite humanlike conservé. Tests moteur au jalon.
