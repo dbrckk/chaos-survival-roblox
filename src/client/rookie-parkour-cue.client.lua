@@ -28,8 +28,23 @@ local recoveryCharacter = nil
 local lastSkywayDeck = nil
 local skywayDirection = nil
 local skywayArrival = nil
+-- Also follow the genuinely walkable five-map H-shaped upper network.
+-- Its direction is inferred from already-landed physical platforms, not
+-- the direction the player's camera happens to face.
+local lastSkyNetworkDeck = nil
+local skyNetworkDirection = nil
 local function resetSkyway()
     lastSkywayDeck, skywayDirection, skywayArrival = nil, nil, nil
+    lastSkyNetworkDeck, skyNetworkDirection = nil, nil
+end
+local function skyRouteDirection(from)
+    if from:GetAttribute("PromenadeLane") ~= nil
+        or from:GetAttribute("SkySpineStep") ~= nil
+        or (from:GetAttribute("BranchRoute") ~= nil
+            and from:GetAttribute("BranchStep") == 4) then
+        return skyNetworkDirection
+    end
+    return skywayDirection
 end
 local function resetRecovery()
     recoveryDeck, recoveryAnchor, recoverySince = nil, nil, 0
@@ -432,6 +447,44 @@ local function update()
         lastSkywayDeck = from
     end
 
+    -- On first arrival at a promenade end, point inward. Once a player
+    -- actually lands on its next deck, preserve that real travel direction
+    -- even when retreating during a disaster. The Sky Spine's north/south
+    -- ends similarly preserve the player's actual sequence of landings.
+    if from ~= lastSkyNetworkDeck then
+        local previous = lastSkyNetworkDeck
+        local lane = from:GetAttribute("PromenadeLane")
+        local promenadeStep = from:GetAttribute("PromenadeStep")
+        local spineStep = from:GetAttribute("SkySpineStep")
+        if (lane == 1 or lane == 2)
+            and type(promenadeStep) == "number" then
+            if previous and previous:GetAttribute("PromenadeLane") == lane
+                and type(previous:GetAttribute("PromenadeStep")) == "number"
+                and previous:GetAttribute("PromenadeStep") ~= promenadeStep then
+                skyNetworkDirection = promenadeStep
+                    > previous:GetAttribute("PromenadeStep") and 1 or -1
+            elseif previous and previous:GetAttribute("BranchStep") == 4 then
+                skyNetworkDirection = previous.Position.X < base.Position.X
+                    and 1 or -1
+            else
+                skyNetworkDirection = promenadeStep <= 4 and 1 or -1
+            end
+        elseif type(spineStep) == "number"
+            and from:GetAttribute("SkySpineInterchange") == true then
+            if previous and type(previous:GetAttribute("SkySpineStep"))
+                    == "number"
+                and previous:GetAttribute("SkySpineStep") ~= spineStep then
+                skyNetworkDirection = spineStep
+                    > previous:GetAttribute("SkySpineStep") and 1 or -1
+            else
+                skyNetworkDirection = spineStep <= 5 and 1 or -1
+            end
+        else
+            skyNetworkDirection = nil
+        end
+        lastSkyNetworkDeck = from
+    end
+
     local now = os.clock()
     -- Walking several studs or reaching another real deck immediately
     -- removes the optional recovery sign; no HUD spam for skilled runs.
@@ -470,7 +523,7 @@ local function update()
             ) then
             target = JumpRouteCueRules.nextPhysical(
                 from, pieces, base.Position, arena:GetAttribute("VariantId"),
-                skywayDirection
+                skyRouteDirection(from)
             )
             if target then
                 hint = french and "REPRENDS LE PARCOURS  ↑"
@@ -493,8 +546,30 @@ local function update()
     elseif from.Parent == platforms then
         target = JumpRouteCueRules.nextPhysical(
             from, pieces, base.Position, arena:GetAttribute("VariantId"),
-            skywayDirection
+            skyRouteDirection(from)
         )
+        if from:GetAttribute("PromenadeLane") ~= nil
+            or from:GetAttribute("SkySpineStep") ~= nil
+            or (from:GetAttribute("BranchRoute") ~= nil
+                and from:GetAttribute("BranchStep") == 4) then
+            local isJunction = from:GetAttribute("PromenadeStep") == 4
+                or from:GetAttribute("SkySpineStep") == 1
+                or from:GetAttribute("SkySpineStep") == 10
+            if isJunction then
+                local forward, crossing = JumpRouteCueRules.skyNetworkOptions(
+                    from, pieces, skyRouteDirection(from))
+                if forward and crossing then
+                    hint = french and "2 CHEMINS EN HAUTEUR"
+                        or "2 SKY ROUTES"
+                end
+            end
+            if target and JumpRouteCueRules.gap(from, target) <= 0.15
+                and hint == (french and "SAUT SUIVANT  ↑"
+                    or "NEXT JUMP  ↑") then
+                hint = french and "PASSAGE EN HAUTEUR  ↑"
+                    or "SKY CROSSING  ↑"
+            end
+        end
         if from:GetAttribute("PerimeterStep") == 5 then
             local forward, flank = JumpRouteCueRules.forkOptions(
                 from, pieces
@@ -555,6 +630,12 @@ local function update()
                 alternative = target == forward and flank or forward
             elseif from:GetAttribute("PerimeterStep") == 6 then
                 local forward, crossing = JumpRouteCueRules.crosslinkOptions(from, pieces)
+                alternative = target == forward and crossing or forward
+            elseif from:GetAttribute("PromenadeStep") == 4
+                or from:GetAttribute("SkySpineStep") == 1
+                or from:GetAttribute("SkySpineStep") == 10 then
+                local forward, crossing = JumpRouteCueRules.skyNetworkOptions(
+                    from, pieces, skyRouteDirection(from))
                 alternative = target == forward and crossing or forward
             end
         end
