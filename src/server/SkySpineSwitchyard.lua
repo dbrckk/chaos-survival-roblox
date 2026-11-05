@@ -489,6 +489,8 @@ function SkySpineSwitchyard.botApproach(model, now, preferred)
     local round = activeRound
     if not round or not round.active or round.joined
         or not round.folder.Parent or not round.ctx.Active()
+        or (round.ctx.FinalRush and round.ctx.FinalRush())
+        or (round.ctx.ActiveDisasters or {}).ShrinkingArena == true
         or type(now) ~= "number" then return nil end
     local root = liveBot(model)
     if not root then return nil end
