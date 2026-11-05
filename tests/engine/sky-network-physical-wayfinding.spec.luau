@@ -79,6 +79,11 @@ describe("H-shaped five-world physical sky route wayfinding", function()
                 other:SetAttribute("CollapsePhase", nil)
                 spine:SetAttribute("CollapsePhase", nil)
                 expect(nextFrom(center, 1)).toBe(other)
+                -- A Warning *source* must still be escapable while its
+                -- server collision exists; only dangerous LANDINGS fail.
+                center:SetAttribute("CollapsePhase", "Warning")
+                expect(nextFrom(center, 1)).toBe(other)
+                center:SetAttribute("CollapsePhase", nil)
 
                 -- A streamed-out link is NOT replaced by an invented
                 -- physical platform with only a plausible coordinate.
