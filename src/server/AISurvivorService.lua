@@ -944,6 +944,13 @@ local function sendToLobby(record)
     record.socialPartnerUntil = 0
     TeamDashRelay.releaseBot(record.model)
     ArenaSkyShieldNetwork.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
+    SkySpineSwitchyard.releaseBot(record.model)
     record.assistRelay = nil
     record.assistHoldAt = nil
     record.nextAssistAt = 0
@@ -952,6 +959,13 @@ local function sendToLobby(record)
     record.nextShieldAt = 0
     record.spineControl = nil
     record.spineHoldAt = nil
+    record.nextSpineAt = 0
+    record.nextSpineAt = 0
+    record.nextSpineAt = 0
+    record.nextSpineAt = 0
+    record.nextSpineAt = 0
+    record.nextSpineAt = 0
+    record.nextSpineAt = 0
     pivotRecord(record, getLobbyPosition(record))
 end
 
@@ -1085,6 +1099,7 @@ local function newRecord(slot)
         nextShieldAt = 0,
         spineControl = nil,
         spineHoldAt = nil,
+        nextSpineAt = 0,
         nextJump = 0,
         nextPadAt = 0,
         target = nil,
@@ -2775,6 +2790,31 @@ local function chooseArenaTarget(record, root, now)
         record.nextShieldAt = now + 2.9 + record.slot * 0.18
     end
 
+    -- An elevated bot can now actively WALK toward the genuine console
+    -- on its own current solid deck instead of only activating by chance
+    -- when it happens to spawn within the old 7.5-stud prompt radius.
+    -- The station service verifies the exact supporting collision Part,
+    -- reserves one bot for a short time and never invents a cross-gap path.
+    if record.inRound and currentState.phase == "round"
+        and not record.assistShield and not record.assistRelay
+        and not record.districtTraverse
+        and now >= (record.nextSpineAt or 0)
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado") then
+        local approach, core = SkySpineSwitchyard.botApproach(
+            record.model, now)
+        if approach and core then
+            record.spineControl = core
+            record.spineHoldAt = nil
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.nextSpineAt = now + 8
+            return approach, 1.2
+        end
+        record.nextSpineAt = now + 2.8 + record.slot * 0.15
+    end
+
     -- Once the bot has committed to helping a real teammate, don't
     -- start a competing multistep parkour route before it finishes
     -- the actual console approach/hold. Urgent hazards still override
@@ -3682,8 +3722,10 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.assistHoldAt = nil
         record.nextAssistAt = now + 4
     end
+    SkySpineSwitchyard.releaseBot(record.model)
     record.spineControl = nil
     record.spineHoldAt = nil
+    record.nextSpineAt = now + 7
     if record.districtTraverse then
         record.districtTraverse = nil
         record.nextDistrictTraverseAt = now + 9
@@ -4318,40 +4360,83 @@ local function stepRecord(record, now)
         end
     end
 
-    -- A bot physically reaching the high Sky Spine can perform the SAME
-    -- hold-to-connect action as a person. No pathfinding teleport, paid
-    -- boost or fake ProximityPrompt signal: the real server geometry is
-    -- rechecked before the nine interdeck gaps become safe platforms.
+    -- A planned team-network action is a REAL WALK on an existing
+    -- elevated platform, followed by the same 0.7-second physical hold
+    -- as a human. Only a raycast-verified supporting deck can renew the
+    -- exclusive claim. Hazards immediately cancel, never trump evasion.
     if record.inRound and currentState.phase == "round"
         and not urgentTarget and not record.assistShield
-        and not record.assistRelay then
-        local switchCore = SkySpineSwitchyard.botOpportunity(
-            record.model, now)
-        if switchCore then
-            if record.spineControl ~= switchCore then
-                record.spineControl = switchCore
-                record.spineHoldAt = now + SkySpineSwitchyard.HoldSeconds
+        and not record.assistRelay and not record.districtTraverse
+        and not hasDisaster("ShrinkingArena")
+        and not hasDisaster("RisingLava")
+        and not hasDisaster("Tornado") then
+        local approach, switchCore
+        if record.spineControl then
+            approach, switchCore = SkySpineSwitchyard.botApproach(
+                record.model, now, record.spineControl)
+        else
+            switchCore = SkySpineSwitchyard.botOpportunity(
+                record.model, now)
+            if switchCore then
+                approach = Vector3.new(
+                    switchCore.Position.X, root.Position.Y,
+                    switchCore.Position.Z)
             end
-            humanoid:Move(Vector3.zero)
-            if now < (record.spineHoldAt or 0) then return end
-            local connected = SkySpineSwitchyard.activateBot(
-                record.model, switchCore)
-            record.spineControl = nil
-            record.spineHoldAt = nil
-            if connected then
+        end
+        if switchCore then
+            record.spineControl = switchCore
+            record.target = approach
+            record.targetPart = nil
+            record.targetIsPad = false
+            record.targetIsSkyrail = false
+            record.nextThink = now + 1.2
+            local close = SkySpineSwitchyard.botOpportunity(
+                record.model, now, switchCore) == switchCore
+            if close then
+                if not record.spineHoldAt then
+                    record.spineHoldAt =
+                        now + SkySpineSwitchyard.HoldSeconds
+                end
+                humanoid:Move(Vector3.zero)
+                if now < record.spineHoldAt then return end
+                local connected = SkySpineSwitchyard.activateBot(
+                    record.model, switchCore)
+                SkySpineSwitchyard.releaseBot(record.model)
+                record.spineControl = nil
+                record.spineHoldAt = nil
+                record.nextSpineAt = now + 12
                 record.target = nil
                 record.nextThink = 0
-                record.model:SetAttribute("BotSkySpineConnected", true)
-                record.model:SetAttribute("BotSkyNetworkConnected", true)
-                showBotSignal(record, "3 ROUTES OPEN!", now)
+                if connected then
+                    record.model:SetAttribute("BotSkySpineConnected", true)
+                    record.model:SetAttribute("BotSkyNetworkConnected", true)
+                    showBotSignal(record, "3 ROUTES OPEN!", now)
+                end
+            else
+                record.spineHoldAt = nil
+                -- No early return: ordinary MoveTo performs the approach
+                -- with normal speed and existing collision, while the
+                -- stuck-recovery path can still abandon a blocked goal.
             end
-        else
+        elseif record.spineControl then
+            SkySpineSwitchyard.releaseBot(record.model)
             record.spineControl = nil
             record.spineHoldAt = nil
+            record.nextSpineAt = now + 5
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
         end
-    else
+    elseif record.spineControl then
+        SkySpineSwitchyard.releaseBot(record.model)
         record.spineControl = nil
         record.spineHoldAt = nil
+        record.nextSpineAt = now + 5
+        if urgentTarget then
+            record.target = nil
+            record.targetPart = nil
+            record.nextThink = 0
+        end
     end
 
     -- Physical cooperation never outranks a real impact/escape, and
