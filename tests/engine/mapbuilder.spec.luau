@@ -1708,7 +1708,7 @@ describe("Chaos Survival engine", function()
                     expect(typeof(center)).toBe("Vector3")
                     expect(typeof(size)).toBe("Vector3")
                     expect(math.abs(size.X - 3.2) < 0.01).toBe(true)
-                    expect(size.Y).toBe(0.64)
+                    expect(math.abs(size.Y - 0.64) < 0.001).toBe(true)
                     expect(math.abs(size.Z - 10.8) < 0.01).toBe(true)
                     local bridge = station:FindFirstChild(
                         "PromenadeGapBridge" .. id)
