@@ -7,6 +7,7 @@ local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local MidgroundOutboardLodRules = require(ReplicatedStorage.Shared.MidgroundOutboardLodRules)
+local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
@@ -168,6 +169,8 @@ local FOLDERS = {
         LowDistance = 135,
         MediumDistance = 195,
     },
+    -- Source-welded cosmetic decks use the SAME cutoffs but individual
+    -- real physical platform positions, not an all-or-none center cull.
     ArenaPlatformIdentityLocal = {
         LowDistance = 105,
         MediumDistance = 165,
@@ -480,6 +483,105 @@ local function applyMidgroundOutboard(folder, profile, arenaOrigin, cameraPoint)
     end
 end
 
+-- The original floor finish renderer mounts its real MeshParts and
+-- bevels under ONE Folder, yet each visible Part already has a weld to
+-- an exact server-owned platform (or certified nonphysical support post).
+-- Do NOT blanket-cull every route from the 320-stud arena CENTER on
+-- Android. Apply the EXISTING 105/165-stud LOD to the nearest of center
+-- and that actual platform; never modify the physical Part itself.
+local function applyPlatformIdentityNearPlayer(folder, profile,
+        arenaOrigin, cameraPoint)
+    local cache = ensureCache(folder)
+    if cache.dirty then
+        SceneryLodCache.refresh(folder, cache, classifyDescendant)
+    end
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local platforms = arena and arena:FindFirstChild("Platforms")
+    local decor = arena and arena:FindFirstChild("Decor")
+    local limits = FOLDERS.ArenaPlatformIdentityLocal
+    local centerDistance = (cameraPoint - arenaOrigin).Magnitude
+    local centerVisible = SceneryLodRules.visible(profile.Name,
+        centerDistance, limits.LowDistance, limits.MediumDistance,
+        cache.platformIdentityCenterVisible)
+    cache.platformIdentityCenterVisible = centerVisible
+
+    local previous = cache.platformIdentityOwners or {}
+    local owners = {}
+    for _, descendant in ipairs(cache.entries) do
+        if not descendant.Parent then
+            cache.dirty = true
+            continue
+        end
+        local part = descendant
+        if not part:IsA("BasePart") then
+            local ancestor = part.Parent
+            while ancestor and ancestor ~= folder do
+                if ancestor:IsA("BasePart") then
+                    part = ancestor
+                    break
+                end
+                ancestor = ancestor.Parent
+            end
+        end
+        local native = PlatformIdentityLodRules.owner(part, platforms, decor)
+        local visible = centerVisible
+        if native then
+            local known = owners[native]
+            if known == nil then
+                local distance = PlatformIdentityLodRules.distance(
+                    cameraPoint, arenaOrigin, native.Position)
+                known = SceneryLodRules.visible(profile.Name,
+                    distance, limits.LowDistance, limits.MediumDistance,
+                    previous[native])
+                owners[native] = known
+            end
+            visible = known
+        end
+
+        local minimumTier = descendant:GetAttribute("SceneryMinimumTier")
+        if minimumTier == "Medium" and profile.Name == "Low"
+            or minimumTier == "High" and profile.Name ~= "High" then
+            visible = false
+        end
+        local lodHidden = descendant:GetAttribute("SceneryLodHidden") == true
+        if descendant:IsA("BasePart") then
+            if visible then
+                if lodHidden then
+                    descendant.LocalTransparencyModifier = tonumber(
+                        descendant:GetAttribute("SceneryLodBaseTransparency")) or 0
+                    descendant:SetAttribute("SceneryLodHidden", false)
+                end
+            elseif not lodHidden then
+                descendant:SetAttribute("SceneryLodBaseTransparency",
+                    descendant.LocalTransparencyModifier)
+                descendant:SetAttribute("SceneryLodHidden", true)
+                descendant.LocalTransparencyModifier = 1
+            elseif descendant.LocalTransparencyModifier ~= 1 then
+                descendant.LocalTransparencyModifier = 1
+            end
+        elseif VisualBudgetRules.isEffect(descendant)
+            or VisualBudgetRules.isLight(descendant)
+            or descendant:IsA("SurfaceGui") then
+            if visible and lodHidden then
+                descendant.Enabled =
+                    descendant:GetAttribute("SceneryLodBaseEnabled") ~= false
+                descendant:SetAttribute("SceneryLodHidden", false)
+            elseif not visible and not lodHidden then
+                descendant:SetAttribute("SceneryLodBaseEnabled",
+                    descendant.Enabled)
+                descendant:SetAttribute("SceneryLodHidden", true)
+                descendant.Enabled = false
+            elseif not visible and descendant.Enabled then
+                descendant.Enabled = false
+            end
+        end
+    end
+    -- Keep only currently replicated server owner Instances. No stale
+    -- refs accumulate after streaming/round replacement on Android.
+    cache.platformIdentityOwners = owners
+end
+
 local function currentOrigins()
     local generated = workspace:FindFirstChild("GeneratedMap")
 
@@ -513,7 +615,8 @@ task.spawn(function()
         local cameraPoint, cameraReady, cameraLook = cameraPosition()
         for folderName, limits in pairs(FOLDERS) do
             if folderName ~= "PracticePadPolishLocal"
-                and folderName ~= "ArenaMidgroundMassLocal" then
+                and folderName ~= "ArenaMidgroundMassLocal"
+                and folderName ~= "ArenaPlatformIdentityLocal" then
                 local folder = workspace:FindFirstChild(folderName)
                 if folder then
                     local origin = limits.Origin == "Lobby" and lobbyOrigin or arenaOrigin
@@ -539,6 +642,15 @@ task.spawn(function()
         local midground = workspace:FindFirstChild("ArenaMidgroundMassLocal")
         if midground and midground:IsA("Folder") then
             applyMidgroundOutboard(midground, profile, arenaOrigin, cameraPoint)
+        end
+
+        -- Use REAL server platform welds for nearby original 3D decks
+        -- and their trim; preserve the original quality cutoffs and all
+        -- server disaster/collision authority. One existing LOD tick.
+        local identity = workspace:FindFirstChild("ArenaPlatformIdentityLocal")
+        if identity and identity:IsA("Folder") then
+            applyPlatformIdentityNearPlayer(
+                identity, profile, arenaOrigin, cameraPoint)
         end
 
         -- Each playable-sector original 3D monument is its own client

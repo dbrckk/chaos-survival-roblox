@@ -20,8 +20,69 @@ local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local PremiumRoutePbrKit = require("../../src/client/PremiumRoutePbrKit")
 local SpatialMidgroundSelectionRules = require("../../src/shared/SpatialMidgroundSelectionRules")
 local MidgroundOutboardLodRules = require("../../src/shared/MidgroundOutboardLodRules")
+local PlatformIdentityLodRules = require("../../src/shared/PlatformIdentityLodRules")
 
 describe("visual budget rules", function()
+    it("shows genuine near-rim source-welded platform 3D and ignores untrusted fake anchors", function()
+        local rules = PlatformIdentityLodRules
+        local center = Vector3.zero
+        local camera = Vector3.new(215, 8, 0)
+        local deckAtRim = Vector3.new(224, 8, 0)
+        local distantDeck = Vector3.new(-214, 8, 0)
+        local near = rules.distance(camera, center, deckAtRim)
+        local far = rules.distance(camera, center, distantDeck)
+        expect(near < 105).toBe(true)
+        expect(SceneryLodRules.visible("Low", near, 105, 165, nil)).toBe(true)
+        expect(SceneryLodRules.visible("Medium", near, 105, 165, nil)).toBe(true)
+        expect(SceneryLodRules.visible("Medium", far, 105, 165, nil)).toBe(false)
+        expect(rules.distance(Vector3.zero, center, distantDeck)).toBe(0)
+
+        local platforms = Instance.new("Folder")
+        platforms.Name = "Platforms"
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        local physics = Instance.new("Part")
+        physics.Name = "Platform53"
+        physics.Parent = platforms
+        local visual = Instance.new("Part")
+        local weld = Instance.new("Weld")
+        weld.Name = "ChaosPlatformTrimWeld"
+        weld.Part0 = visual
+        weld.Part1 = physics
+        weld.Parent = visual
+        expect(rules.owner(visual, platforms, decor)).toBe(physics)
+        weld.Part1 = nil
+        expect(rules.owner(visual, platforms, decor)).toBe(nil)
+        weld.Part1 = physics
+        physics.Parent = nil
+        expect(rules.owner(visual, platforms, decor)).toBe(nil)
+        physics.Parent = platforms
+
+        -- Existing true support art is allowed ONLY with its correct
+        -- nonphysical, named server support inside this Arena.Decor.
+        local support = Instance.new("Part")
+        support.Name = "PlatformSupport53_1"
+        support.Anchored = true
+        support.CanCollide = false
+        support.CanTouch = false
+        support.CanQuery = false
+        support.Parent = decor
+        weld.Name = "OriginalSupportVisualWeld"
+        weld.Part1 = support
+        expect(rules.owner(visual, platforms, decor)).toBe(support)
+        support.CanCollide = true
+        expect(rules.owner(visual, platforms, decor)).toBe(nil)
+        support.CanCollide = false
+        support.Name = "UnknownObject"
+        expect(rules.owner(visual, platforms, decor)).toBe(nil)
+        visual:Destroy()
+        support:Destroy()
+        physics:Destroy()
+        platforms:Destroy()
+        decor:Destroy()
+        expect(rules.distance(nil, center, deckAtRim)).toBe(math.huge)
+    end)
+
     it("keeps actual tagged original 3D skyline native fallbacks visible near the rim with unchanged distance cutoffs", function()
         local rules = MidgroundOutboardLodRules
         local floorCenter = Vector3.zero
