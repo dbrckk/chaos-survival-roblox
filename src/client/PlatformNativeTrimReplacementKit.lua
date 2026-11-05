@@ -8,6 +8,7 @@ local Kit = {}
 local saved = {}
 local watchers = {}
 local decorWatcher = nil
+local decorRemovedWatcher = nil
 local activeDecor = nil
 local active = {}
 local verifiedSupports = {}
@@ -42,6 +43,7 @@ function Kit.reset()
     end
     table.clear(watchers)
     decorWatcher = nil
+    decorRemovedWatcher = nil
     activeDecor = nil
     restore()
     table.clear(active)
@@ -229,6 +231,10 @@ local function attachDecor(folder)
         decorWatcher:Disconnect()
         decorWatcher = nil
     end
+    if decorRemovedWatcher then
+        decorRemovedWatcher:Disconnect()
+        decorRemovedWatcher = nil
+    end
     -- A streamed Decor folder might disappear while the map is live.
     -- Restore masks on old Instances before reattaching a new folder.
     restore()
@@ -247,6 +253,20 @@ local function attachDecor(folder)
         end
     end)
     watchers[#watchers + 1] = decorWatcher
+    -- Streaming can remove an already-masked native part without changing
+    -- the Platforms or Decor FOLDER. Drop that exact stale baseline/count
+    -- immediately; never retain a phantom replacement in diagnostics.
+    decorRemovedWatcher = folder.ChildRemoved:Connect(function(part)
+        local original = saved[part]
+        if original == nil then return end
+        if part.Parent then
+            part.LocalTransparencyModifier = original
+        end
+        saved[part] = nil
+        count -= 1
+        report()
+    end)
+    watchers[#watchers + 1] = decorRemovedWatcher
 end
 
 function Kit.bind(arena, replacements, onChange, supports, meshFolder)
@@ -279,22 +299,65 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     -- their native cosmetic underframes. Streaming in late also reconciles.
     attachPlatforms(arena:FindFirstChild("Platforms"))
     attachDecor(arena:FindFirstChild("Decor"))
-    -- Fail CLOSED if any genuine replacement mesh disappears unexpectedly
-    -- (streaming, asset deletion or local teardown). Restore the complete
-    -- server-authored native fallback immediately instead of leaving a
-    -- visually hollow deck. The next normal owner rebuild can re-mask.
-    -- One ChildRemoved signal per active map, not one per MeshPart.
+    -- A previous all-or-nothing guard restored EVERY native platform when
+    -- ONE original MeshPart vanished. This emptied the premium silhouettes
+    -- of four perfectly healthy route districts until an unrelated rebuild.
+    -- Resolve each mounted source piece to its EXACT existing physical
+    -- PlatformN/SkybridgeN or verified noncolliding PlatformSupportN_K.
+    -- Losing one piece revokes only THAT owner's native masking; all other
+    -- genuine 3D shells stay visible. Never infer ownership from mesh name.
+    -- Local clone assembly completes before bind(); one bounded snapshot,
+    -- one ChildRemoved subscription and no per-part render/heartbeat loop.
     if meshFolder and meshFolder:IsA("Folder") then
+        local sourceOwnerByPiece = {}
+        local function registerSourcePiece(piece)
+            if not piece:IsA("MeshPart")
+                or not (piece:GetAttribute("Original3DStructuralSide") == true
+                    or piece:GetAttribute("OriginalLargeStructure3D") == true
+                    or piece:GetAttribute("OriginalLargeDeckHull") == true) then
+                return
+            end
+            local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+                or piece:FindFirstChild("OriginalSupportVisualWeld")
+            if not joint or (not joint:IsA("Weld")
+                and not joint:IsA("WeldConstraint")) then return end
+            local owner = joint.Part1
+            if not owner or not owner:IsA("BasePart") then return end
+
+            if verifiedSupports[owner] == true then
+                -- One verified support, not every support in the district.
+                sourceOwnerByPiece[piece] = owner
+                return
+            end
+            if owner.Parent ~= activePlatforms then return end
+            local platformId = owner.Name:match("^Platform(%d+)$")
+            local bridgeId = owner.Name:match("^Skybridge(%d+)$")
+            local id = platformId or bridgeId
+            if id and ((platformId
+                    and (active[id] == "carapace" or active[id] == "cradle"))
+                or (bridgeId and active[id] == "bridge")) then
+                sourceOwnerByPiece[piece] = id
+            end
+        end
+        for _, piece in ipairs(meshFolder:GetChildren()) do
+            registerSourcePiece(piece)
+        end
         watchers[#watchers + 1] = meshFolder.ChildRemoved:Connect(
-            function(child)
-                if child:IsA("MeshPart")
-                    and (child:GetAttribute("Original3DStructuralSide") == true
-                        or child:GetAttribute("OriginalLargeStructure3D") == true
-                        or child:GetAttribute("OriginalLargeDeckHull") == true) then
-                    table.clear(active)
-                    table.clear(verifiedSupports)
-                    restore()
+            function(piece)
+                local owner = sourceOwnerByPiece[piece]
+                sourceOwnerByPiece[piece] = nil
+                -- An unrelated decorative MeshPart never invalidates
+                -- premium replacements; only a tracked, source-authored
+                -- mesh bound to an actual server native owner can do so.
+                if owner == nil then return end
+                if type(owner) == "string" then
+                    active[owner] = nil
+                else
+                    verifiedSupports[owner] = nil
                 end
+                -- Reconcile native masks immediately for this one owner.
+                -- Do not clear the other maps' source authorizations.
+                reconcile()
             end)
     end
     watchers[#watchers + 1] = arena.ChildAdded:Connect(function(child)
