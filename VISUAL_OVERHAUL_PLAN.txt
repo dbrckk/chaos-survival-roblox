@@ -1,3 +1,16 @@
+LOT 5 NOVEMBRE 2026 — CONTINUITE MATERIAUX 2K PASSERELLE-PORTIQUE
+[VIS-010/PBR] Source 3D route 94023662427980 et couronne
+               71492051540032 ; la meme palette de 16 images
+               2K deja approuvees qu'au sol recouvre les familles
+               ARMOR/ALLOY/BRUSHED/CERAMIC de la passerelle entiere
+               et du portique adjacent ; GRIP/CARBON/SIGNAL conserves.
+               Priorite camera, High mobile 1 route + 1 portique,
+               Medium 1+1, Low0, pression/disable0, sources natives
+               restaurees lors du danger, streaming, shrink, LOD.
+               Mesures reelles : LocalOriginalRoutePbr2KAppearanceCount
+               et LocalOriginalSkySpinePbr2KAppearanceCount.
+               docs/APPROVED_2K_PBR_BRIDGE_TO_SKY_SPINE_JOINTS_2026-11-05.md
+
 LOT VIS-010 / VIS-027 — QUATRE PORTIQUES SKY SPINE EN VRAIE 3D
 [VIS]  Le portique 3D source Approved 71492051540032 (1 696 triangles)
        remplace les pylônes supérieurs natifs des quatre vraies

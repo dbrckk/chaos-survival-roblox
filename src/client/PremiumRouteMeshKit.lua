@@ -4,6 +4,10 @@
 -- Reuse scenery-lod.client.lua's existing 0.65/0.90s camera/quality sampler;
 -- no additional render loop, remote, client asset fetch or studio dependency.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PremiumRoutePbrKit = if script and script.Parent
+    and script.Parent:FindFirstChild("PremiumRoutePbrKit")
+    then require(script.Parent.PremiumRoutePbrKit)
+    else require("./PremiumRoutePbrKit")
 
 local PremiumRouteMeshKit = {}
 
@@ -43,6 +47,7 @@ local baseChanged = nil
 local function restore(entry)
     if entry.restoring then return end
     entry.restoring = true
+    PremiumRoutePbrKit.detach(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -553,7 +558,7 @@ end
 
 -- Called BY the existing LOD scheduler, not a new time-based loop.
 function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
-    cameraLook, pressure)
+    cameraLook, pressure, touch, pbrDisabled)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -701,6 +706,29 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
                 desired.bridge, desired.underdeck)
         end
     end
+    -- Give the nearest REAL contiguous bridge one coherent 2K PBR finish,
+    -- not just its first segment. Healthy desktop can keep two; Android
+    -- gets at most one and releases it first under pressure. Source
+    -- imported GRIP/CARBON/SIGNAL parts are deliberately left intact.
+    local pbrSlots = PremiumRoutePbrKit.entryBudget(
+        quality, pressure, touch, pbrDisabled)
+    local pbrSelected = {}
+    for _, item in ipairs(bridges) do
+        if pbrSlots <= 0 then break end
+        local entry = mounted[item.platform]
+        if entry and entry.panelCovered
+            and wanted[item.platform]
+            and wanted[item.platform].template == bridgeTemplate then
+            pbrSelected[item.platform] = true
+            pbrSlots -= 1
+        end
+    end
+    local variant = arena:GetAttribute("VariantId")
+    for platform, entry in pairs(mounted) do
+        PremiumRoutePbrKit.apply(entry, "route", variant,
+            pbrSelected[platform] == true and safePlatform(
+                platform, entry.initialSize))
+    end
 end
 
 function PremiumRouteMeshKit.count()
@@ -709,6 +737,18 @@ function PremiumRouteMeshKit.count()
         n += #entry.models
     end
     return n
+end
+
+-- Diagnostic only: count real attached 2K appearance instances on
+-- authenticated near-camera models, not loaded textures or FPS.
+function PremiumRouteMeshKit.pbrCount()
+    local models, appearances = 0, 0
+    for _, entry in pairs(mounted) do
+        local n, m = PremiumRoutePbrKit.count(entry)
+        models += n
+        appearances += m
+    end
+    return models, appearances
 end
 
 -- Diagnostics count REAL imported additional Model instances (not a

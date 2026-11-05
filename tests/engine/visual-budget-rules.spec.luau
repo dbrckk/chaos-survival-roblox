@@ -17,6 +17,7 @@ local VisualTheme = require("../../src/shared/VisualTheme")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local PremiumGroundPbrKit = require("../../src/client/PremiumGroundPbrKit")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
+local PremiumRoutePbrKit = require("../../src/client/PremiumRoutePbrKit")
 
 describe("visual budget rules", function()
     it("uses five specific approved UV-ground PBR finishes without increasing mobile texture residency", function()
@@ -118,6 +119,117 @@ describe("visual budget rules", function()
         ground:Destroy()
         model:Destroy()
         if createdTemplate then template:Destroy() end
+        if createdLibrary then library:Destroy() end
+    end)
+
+    it("finishes authenticated bridge joints and Sky Spine crowns with existing 2K maps without touching safety channels", function()
+        local kit = PremiumRoutePbrKit
+        local budget = kit.entryBudget
+        expect(budget("Low", 0, true, false)).toBe(0)
+        expect(budget("Medium", 0, true, false)).toBe(1)
+        expect(budget("Medium", 1, true, false)).toBe(0)
+        expect(budget("Medium", 1, false, false)).toBe(1)
+        expect(budget("High", 0, true, false)).toBe(1)
+        expect(budget("High", 0, false, false)).toBe(2)
+        expect(budget("High", 1, true, false)).toBe(0)
+        expect(budget("High", 1, false, false)).toBe(1)
+        expect(budget("High", 2, false, false)).toBe(0)
+        expect(budget("High", 0/0, true, false)).toBe(1)
+        expect(budget("High", 0, true, true)).toBe(0)
+        expect(budget("Unknown", 0, false, false)).toBe(0)
+
+        local rs = game:GetService("ReplicatedStorage")
+        local library = rs:FindFirstChild("OriginalGroundPbrTemplates")
+        local createdLibrary = false
+        if not library then
+            library = Instance.new("Folder")
+            library.Name = "OriginalGroundPbrTemplates"
+            library.Parent = rs
+            createdLibrary = true
+        end
+        local created = {}
+        for _, name in ipairs({"BrushedTitanium", "DiamondArmor",
+            "ReactorCeramic", "OxidizedSteel"}) do
+            if not library:FindFirstChild(name) then
+                local template = Instance.new("SurfaceAppearance")
+                template.Name = name
+                template.Parent = library
+                created[#created + 1] = template
+            end
+        end
+        -- REAL MeshPart/SufaceAppearance Roblox engine objects. The IDs
+        -- are authenticated source IDs, not invented in-game texture URLs.
+        local model = Instance.new("Model")
+        model.Name = "OriginalPremiumRouteMesh"
+        model:SetAttribute("CosmeticOnly", true)
+        model:SetAttribute("OriginalPremiumRouteAssetId", 94023662427980)
+        model.Parent = workspace
+        local function part(name)
+            local item = Instance.new("MeshPart")
+            item.Name = name
+            item.Parent = model
+            return item
+        end
+        local metal = part("Chaos_ARMOR")
+        local alloy = part("Chaos_ALLOY")
+        local ceramic = part("Chaos_CERAMIC")
+        local grip = part("Chaos_GRIP")
+        local signal = part("Chaos_SIGNAL")
+        local carbon = part("Chaos_CARBON")
+        local original = Instance.new("SurfaceAppearance")
+        original.Name = "ImportedSourceFactors"
+        original.Parent = metal
+        local entry = {models = {model}}
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(3)
+        expect(original.Parent).toBe(nil)
+        expect(metal:FindFirstChild("OriginalApprovedBridgePbr2K")
+            ~= nil).toBe(true)
+        expect(alloy:FindFirstChild("OriginalApprovedBridgePbr2K")
+            ~= nil).toBe(true)
+        expect(ceramic:FindFirstChild("OriginalApprovedBridgePbr2K")
+            ~= nil).toBe(true)
+        expect(grip:FindFirstChildWhichIsA("SurfaceAppearance")).toBe(nil)
+        expect(signal:FindFirstChildWhichIsA("SurfaceAppearance")).toBe(nil)
+        expect(carbon:FindFirstChildWhichIsA("SurfaceAppearance")).toBe(nil)
+        local first = metal:FindFirstChild("OriginalApprovedBridgePbr2K")
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(3)
+        expect(metal:FindFirstChild("OriginalApprovedBridgePbr2K")).toBe(first)
+        local m, n = kit.count(entry)
+        expect(m).toBe(1)
+        expect(n).toBe(3)
+        -- When the real bridge warns or Android reduces detail, do NOT
+        -- destroy the engine-imported source material factor appearance.
+        expect(kit.apply(entry, "route", "Classic", false)).toBe(0)
+        expect(original.Parent).toBe(metal)
+        expect(metal:FindFirstChild("OriginalApprovedBridgePbr2K")).toBe(nil)
+        expect(kit.apply(entry, "route", "Harbor", true)).toBe(3)
+        expect(kit.apply(entry, "route", "Bogus", true)).toBe(0)
+        -- A lookalike unsafe marketplace Model never gets the 2K maps.
+        model:SetAttribute("OriginalPremiumRouteAssetId", 1)
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(0)
+        model:SetAttribute("OriginalPremiumRouteAssetId", 94023662427980)
+        expect(kit.apply(entry, "route", "Classic", true)).toBe(3)
+        kit.detach(entry)
+        expect(original.Parent).toBe(metal)
+        model:Destroy()
+
+        local crown = Instance.new("Model")
+        crown.Name = "OriginalApprovedSkySpineCrown3D"
+        crown:SetAttribute("CosmeticOnly", true)
+        crown:SetAttribute("Original3DAssetId", 71492051540032)
+        crown.Parent = workspace
+        local crownPart = Instance.new("MeshPart")
+        crownPart.Name = "Chaos_BRUSHED"
+        crownPart.Parent = crown
+        local portico = {model = crown}
+        expect(kit.apply(portico, "crown", "Towers", true)).toBe(1)
+        expect(kit.apply(portico, "route", "Towers", true)).toBe(0)
+        expect(kit.apply(portico, "crown", "Towers", true)).toBe(1)
+        kit.detach(portico)
+        expect(crownPart:FindFirstChild("OriginalApprovedBridgePbr2K"))
+            .toBe(nil)
+        crown:Destroy()
+        for _, template in ipairs(created) do template:Destroy() end
         if createdLibrary then library:Destroy() end
     end)
 

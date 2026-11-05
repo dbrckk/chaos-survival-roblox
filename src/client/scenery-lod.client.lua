@@ -473,7 +473,8 @@ task.spawn(function()
         -- animated collapse, shrink and stream changes hide cosmetics.
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"), isTouch,
+            player:GetAttribute("PbrMaterialsDisabled") == true)
         -- Five-arena original 2,976-triangle sculpted floor: healthy
         -- High can now replace all 36 genuine 49-stud native floor bays,
         -- Medium 12 and Low 2. The EXISTING GPU/instance backpressure
@@ -507,6 +508,18 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalRouteMeshCount") ~= routeMeshes then
             player:SetAttribute("LocalOriginalRouteMeshCount", routeMeshes)
         end
+        local routePbrModels, routePbrAppearances =
+            PremiumRouteMeshKit.pbrCount()
+        if player:GetAttribute("LocalOriginalRoutePbr2KModelCount")
+            ~= routePbrModels then
+            player:SetAttribute("LocalOriginalRoutePbr2KModelCount",
+                routePbrModels)
+        end
+        if player:GetAttribute("LocalOriginalRoutePbr2KAppearanceCount")
+            ~= routePbrAppearances then
+            player:SetAttribute("LocalOriginalRoutePbr2KAppearanceCount",
+                routePbrAppearances)
+        end
         -- Exact live number of panels hidden behind a sufficiently covering
         -- source-authentic 3D top, not number of desired routes or inferred
         -- render quality. Incomplete/faded meshes keep native landing paint.
@@ -521,7 +534,8 @@ task.spawn(function()
         -- sampler and Android part budget. Pressure reduces optional 3D.
         SkySpineCrownMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"), isTouch,
+            player:GetAttribute("PbrMaterialsDisabled") == true)
         local crownMeshes = SkySpineCrownMeshKit.count()
         if player:GetAttribute("LocalOriginalSkySpineCrownCount")
             ~= crownMeshes then
@@ -533,6 +547,18 @@ task.spawn(function()
             ~= outerCrowns then
             player:SetAttribute("LocalOriginalSkySpineOuterCrownCount",
                 outerCrowns)
+        end
+        local crownPbrModels, crownPbrAppearances =
+            SkySpineCrownMeshKit.pbrCount()
+        if player:GetAttribute("LocalOriginalSkySpinePbr2KModelCount")
+            ~= crownPbrModels then
+            player:SetAttribute("LocalOriginalSkySpinePbr2KModelCount",
+                crownPbrModels)
+        end
+        if player:GetAttribute("LocalOriginalSkySpinePbr2KAppearanceCount")
+            ~= crownPbrAppearances then
+            player:SetAttribute("LocalOriginalSkySpinePbr2KAppearanceCount",
+                crownPbrAppearances)
         end
         -- True original 3D harbor freight gantries over the SIX existing
         -- two-lane promenade arch sockets. No additional scanning loop:

@@ -20,6 +20,8 @@
 
 **Lot VIS-010 / VIS-027 — quatre vrais portiques Sky Spine 3D (5 novembre 2026) :** étapes 2/5/6/9 des cinq mondes éligibles au véritable Model Roblox Approved 71492051540032 ; plafonds 1/2/4 Low/Medium/High dégradés sous pression, repli natif immédiat si modèle supprimé, compteur distinct pour les deux nouveaux portiques externes. [Dossier](APPROVED_3D_FOUR_SKY_SPINE_GATEWAYS_2026-11-05.md). **Validation moteur et appareil à obtenir.**
 
+**Lot VIS-010 / VIS-PBR — continuité métallurgie 2K passerelle/portique Sky Spine (5 novembre 2026) :** `PremiumRoutePbrKit` applique uniquement aux groupes ARMOR/ALLOY/BRUSHED/CERAMIC des vrais MeshParts approuvés les `SurfaceAppearance` 2K déjà certifiés, en protégeant SIGNAL/GRIP/CARBON, avec démantèlement atomique et budget mobile strict. [Dossier](APPROVED_2K_PBR_BRIDGE_TO_SKY_SPINE_JOINTS_2026-11-05.md). **Validation build/Cloud et contrôle Android encore attendus.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

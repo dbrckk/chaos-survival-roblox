@@ -3,6 +3,10 @@
 -- (steps 2, 5, 6 and 9) qualify; never creates a walkway or collision.
 -- Reuses the existing scenery-lod.client.lua camera/quality owner and budget.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PremiumRoutePbrKit = if script and script.Parent
+    and script.Parent:FindFirstChild("PremiumRoutePbrKit")
+    then require(script.Parent.PremiumRoutePbrKit)
+    else require("./PremiumRoutePbrKit")
 
 local Kit = {}
 local ASSET_ID = 71492051540032
@@ -133,6 +137,7 @@ end
 
 local function updateVisibility(entry)
     local visible = safeAfterMount(entry)
+    if not visible then PremiumRoutePbrKit.detach(entry) end
     for _, part in ipairs(entry.pieces) do
         if part.Parent then
             part.LocalTransparencyModifier = visible and 0 or 1
@@ -149,6 +154,7 @@ end
 local function restore(entry)
     if entry.restoring then return end
     entry.restoring = true
+    PremiumRoutePbrKit.detach(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -279,7 +285,8 @@ local function mount(deck, arena, base, decor, template)
 end
 
 -- The ONLY invocation is the shared camera/quality sampler, not a new loop.
-function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure)
+function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook,
+    pressure, touch, pbrDisabled)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -363,6 +370,31 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure)
             mounted[deck] = mount(deck, arena, base, decor, template)
         end
     end
+    local slots = PremiumRoutePbrKit.entryBudget(
+        tier, pressure, touch, pbrDisabled)
+    local textured = {}
+    for _, choice in ipairs(choices) do
+        if slots <= 0 then break end
+        if mounted[choice.deck] and wanted[choice.deck] then
+            textured[choice.deck] = true
+            slots -= 1
+        end
+    end
+    local variant = arena:GetAttribute("VariantId")
+    for deck, entry in pairs(mounted) do
+        PremiumRoutePbrKit.apply(entry, "crown", variant,
+            textured[deck] == true and safeAfterMount(entry))
+    end
+end
+
+function Kit.pbrCount()
+    local models, appearances = 0, 0
+    for _, entry in pairs(mounted) do
+        local n, m = PremiumRoutePbrKit.count(entry)
+        models += n
+        appearances += m
+    end
+    return models, appearances
 end
 
 function Kit.count()
