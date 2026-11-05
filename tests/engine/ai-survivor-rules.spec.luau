@@ -1129,6 +1129,19 @@ describe("AI survivor rules", function()
         expect(timedOut(true, nil, 112)).toBe(false)
         expect(timedOut(true, 100, nil)).toBe(false)
 
+
+    it("does not cut sharp verified navmesh turns on the way to real objectives", function()
+        local radius = AISurvivorRules.groundNavigationArrivalRadius
+        local start = Vector3.new(0, 0, 0)
+        local pivot = Vector3.new(5, 0, 0)
+        expect(radius(start, pivot, Vector3.new(10, 0, 0))).toBe(3.8)
+        expect(radius(start, pivot, Vector3.new(5, 0, 5))).toBe(2.25)
+        expect(radius(start, pivot, Vector3.new(0, 0, 0))).toBe(2.25)
+        expect(radius(start, pivot, Vector3.new(10, 9, 0))).toBe(3.8)
+        expect(radius(nil, pivot, Vector3.new(5, 0, 5))).toBe(3.8)
+        expect(radius(start, pivot, nil)).toBe(3.8)
+    end)
+
         -- Ground spawn/base targets are valid only while actually on
         -- the floor network, never 9 studs down from a sky walkway.
         local preview = AISurvivorRules.groundObstaclePreviewAllowed

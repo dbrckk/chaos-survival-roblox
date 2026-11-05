@@ -1,3 +1,15 @@
+LOT 5 NOVEMBRE 2026 — VRAIS CHEMINS IA RÉÉVALUÉS EN MARCHE
+[QA]     Les points Pathfinding étaient contrôlés seulement au calcul,
+         puis suivis jusqu'à 11 s malgré un mur/sol modifié. Le prochain
+         segment est désormais revalidé physiquement toutes les
+         0.72/0.84/0.96 s si route au sol active : base réelle sous
+         milieu et destination, 2 courts rayons ancrés/collidables,
+         abandon si nouvelle obstruction et quarantaine du but.
+         Les virages serrés passent de 3.8 à 2.25 studs de rayon
+         d'arrivée, sans couper les coins ; lignes droites inchangées.
+         BotLiveRouteInvalidationCount; moteur, Android encore à valider.
+         docs/BOT_LIVE_GROUND_PATH_CORRIDOR_AND_CORNERS_2026-11-05.md
+
 LOT 5 NOVEMBRE 2026 — BOT PREDICTIVE REAL GROUND OBSTACLE AVOIDANCE
 [QA]     Ground Spawns et Base candidates interdits depuis vrais sky decks
          non rattachés au sol. Nouveau preview du prochain obstacle ancré

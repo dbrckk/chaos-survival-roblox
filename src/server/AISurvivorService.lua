@@ -1008,6 +1008,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotObstacleAvoidedCount", 0)
     record.model:SetAttribute("BotStallRecoveryCount", 0)
     record.model:SetAttribute("BotRecoveryRouteFound", nil)
+    record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
     record.turnPauseUntil = 0
@@ -3449,7 +3450,11 @@ local function requestGroundNavigation(record, root, goal, now)
         end
         record.groundNavigation = {
             points = points,
+            origin = start,
+            goal = goal,
+            base = base,
             index = 1,
+            nextLiveCheckAt = 0,
             expires = os.clock() + 11,
         }
         record.target = points[1]
@@ -3463,6 +3468,62 @@ local function requestGroundNavigation(record, root, goal, now)
         rig:SetAttribute("BotGroundNavigationCount",
             (tonumber(rig:GetAttribute("BotGroundNavigationCount")) or 0) + 1)
     end)
+end
+
+-- Live ground-route safety checks are EVENTUAL, not physics frame polling.
+-- An engine NavMesh path can become stale after a physical obstacle enters
+-- the next lane. Recheck ONLY the immediate segment every ~0.8s per bot.
+-- Never claim a sky deck, dynamic avatar or invisible bridge as base floor.
+local function liveGroundRouteCorridorSafe(record, root, waypoint, base)
+    if not root or not root.Parent or not base or not base.Parent
+        or not base:IsA("BasePart")
+        or not base.Anchored or not base.CanCollide
+        or base.Transparency >= 0.90
+        or typeof(waypoint) ~= "Vector3" then
+        return false
+    end
+    local top = base.Position.Y + base.Size.Y * 0.5
+    local origin = base.CFrame:PointToObjectSpace(root.Position)
+    if math.abs(origin.X) > base.Size.X * 0.5 - 1.5
+        or math.abs(origin.Z) > base.Size.Z * 0.5 - 1.5
+        or root.Position.Y < top + 1.2
+        or root.Position.Y > top + 6.5 then
+        return false
+    end
+    local travel = Vector3.new(waypoint.X - root.Position.X, 0,
+        waypoint.Z - root.Position.Z)
+    if travel.Magnitude > 14.5 then return false end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {record.model}
+    params.RespectCanCollide = true
+    local function realBaseUnder(position)
+        local hit = workspace:Raycast(
+            position + Vector3.new(0, 4, 0),
+            Vector3.new(0, -11, 0), params)
+        return hit and hit.Instance == base and hit.Normal.Y >= 0.78
+            and math.abs(hit.Position.Y - top) < 1.5
+    end
+    if not realBaseUnder(root.Position:Lerp(waypoint, 0.5))
+        or not realBaseUnder(waypoint) then
+        return false
+    end
+    -- Two body heights, not a single shoulder ray. Other non-anchored
+    -- characters are not permanent walls and must not cause reroutes.
+    if travel.Magnitude > 0.5 then
+        local direction = travel.Unit * math.min(8, travel.Magnitude)
+        for _, offset in ipairs({-1.15, 0.75}) do
+            local hit = workspace:Raycast(
+                root.Position + Vector3.new(0, offset, 0),
+                direction, params)
+            if hit and hit.Instance and hit.Instance.Anchored
+                and hit.Instance.CanCollide
+                and hit.Instance ~= base then
+                return false
+            end
+        end
+    end
+    return true
 end
 
 local function advanceGroundNavigation(record, root, now)
@@ -3492,9 +3553,15 @@ local function advanceGroundNavigation(record, root, now)
         return
     end
     local target = route.points[route.index]
-    while target and (Vector3.new(
-        target.X - root.Position.X, 0, target.Z - root.Position.Z
-    )).Magnitude <= 3.8 do
+    while target do
+        local dx = target.X - root.Position.X
+        local dz = target.Z - root.Position.Z
+        local previous = route.points[route.index - 1] or route.origin
+        local upcoming = route.points[route.index + 1]
+        if dx*dx + dz*dz > AISurvivorRules.groundNavigationArrivalRadius(
+            previous, target, upcoming)^2 then
+            break
+        end
         route.index += 1
         target = route.points[route.index]
     end
@@ -3503,6 +3570,32 @@ local function advanceGroundNavigation(record, root, now)
         record.target = nil
         record.nextThink = 0
         return
+    end
+    if now >= (route.nextLiveCheckAt or 0) then
+        route.nextLiveCheckAt = now + 0.72
+            + ((record.slot or 1) % 3) * 0.12
+        if arenaBase() ~= route.base
+            or not liveGroundRouteCorridorSafe(
+                record, root, target, route.base) then
+            -- Never proceed into a newly blocked physical segment.
+            -- Quarantine its original unreachable GOAL, not the nearby
+            -- turn point, and invalidate any stale ComputeAsync token.
+            local badGoal = route.goal or target
+            cancelGroundNavigation(record)
+            record.failedTarget = badGoal
+            record.failedTargetUntil = now + 7.5
+            record.target = nil
+            record.targetPart = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+            if record.model then
+                record.model:SetAttribute("BotLiveRouteInvalidationCount",
+                    (tonumber(record.model:GetAttribute(
+                        "BotLiveRouteInvalidationCount")) or 0) + 1)
+            end
+            return
+        end
     end
     if record.target ~= target then
         record.lastMoveTarget = nil

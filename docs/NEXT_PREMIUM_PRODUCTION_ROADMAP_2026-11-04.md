@@ -14,6 +14,8 @@
 
 **Lot 3 — prédiction des obstacles IA (5 novembre 2026) :** destinations au sol refusées depuis un skydeck sans liaison, pré-vérification physique bornée des objectifs ordinaires avant collision, priorité absolue aux catastrophes et sauts authentiques. Compteurs rig serveur des obstacles détectés/évités. [Détails et critères de QA](BOT_OBSTACLE_PREVIEW_REAL_GROUND_ROUTE_2026-11-05.md). **Source enregistrée, pas de validation Android revendiquée.**
 
+**Lot IA — validité des routes au sol (5 novembre 2026) :** un parcours calculé par `PathfindingService` ne reste plus fiable par défaut pendant 11 secondes. Validation physique bornée du segment courant au maximum tous les 0,72–0,96 s par bot engagé, rejet immédiat si le vrai plancher ou un mur bloque, abandon contrôlé avec métrique, et angle droit rapproché à 2,25 studs avant franchissement. [Contrat](BOT_LIVE_GROUND_PATH_CORRIDOR_AND_CORNERS_2026-11-05.md). **Validation moteur et Android non attestées sur ce nouveau SHA.**
+
 ## 1. État réellement vérifié du produit
 
 | Domaine | Acquis confirmé dans le dépôt | Réserve / manque de preuve |

@@ -843,6 +843,26 @@ function AISurvivorRules.groundObstaclePreviewAllowed(
         and horizontalDistance <= 110
 end
 
+-- Pathfinding's regular 3.8-stud arrival window is too permissive at a
+-- right-angle turn: an NPC can skip a corner and steer through its wall.
+-- Use the normal tolerance on straight lanes and actually reach a sharp
+-- turn before switching to the following verified navmesh waypoint.
+function AISurvivorRules.groundNavigationArrivalRadius(previous, current, upcoming)
+    if typeof(previous) ~= "Vector3"
+        or typeof(current) ~= "Vector3"
+        or typeof(upcoming) ~= "Vector3" then
+        return 3.8
+    end
+    local before = Vector3.new(current.X - previous.X, 0,
+        current.Z - previous.Z)
+    local after = Vector3.new(upcoming.X - current.X, 0,
+        upcoming.Z - current.Z)
+    if before.Magnitude < 0.25 or after.Magnitude < 0.25 then
+        return 3.8
+    end
+    return before.Unit:Dot(after.Unit) < 0.76 and 2.25 or 3.8
+end
+
 function AISurvivorRules.groundNavigationQueryTimedOut(
     pending, startedAt, now)
     return pending == true
