@@ -41,10 +41,13 @@ describe("visual budget rules", function()
         platforms.Name = "Platforms"
         local decor = Instance.new("Folder")
         decor.Name = "Decor"
+        local visualOwner = Instance.new("Folder")
+        visualOwner.Name = "ArenaPlatformIdentityLocal"
         local physics = Instance.new("Part")
         physics.Name = "Platform53"
         physics.Parent = platforms
         local visual = Instance.new("Part")
+        visual.Parent = visualOwner
         local weld = Instance.new("Weld")
         weld.Name = "ChaosPlatformTrimWeld"
         weld.Part0 = visual
@@ -80,6 +83,7 @@ describe("visual budget rules", function()
         physics:Destroy()
         platforms:Destroy()
         decor:Destroy()
+        visualOwner:Destroy()
         expect(rules.distance(nil, center, deckAtRim)).toBe(math.huge)
     end)
 
