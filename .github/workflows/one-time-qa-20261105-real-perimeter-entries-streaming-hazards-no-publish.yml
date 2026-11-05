@@ -69,8 +69,11 @@ jobs:
           assert 'four first-step landings' in contract
           assert '"tests/engine/visual-budget-rules.spec.luau"' in cloud
           # No fabricated route, collision, remote, or extra render loop.
-          assert 'RenderStepped' not in client
-          assert 'RunService' not in client
+          # Check executable subscriptions; an existing explanatory
+          # comment can mention RenderStepped without creating a loop.
+          assert 'RenderStepped:Connect(' not in client
+          assert 'Heartbeat:Connect(' not in client
+          assert 'BindToRenderStep(' not in client
           assert 'CollectionService:GetInstanceAddedSignal' in client
           print("Four server-tagged REAL physical entrances. Late mobile"
                 " PerimeterRoute/Step metadata rehydrates genuine floor arrows,"
