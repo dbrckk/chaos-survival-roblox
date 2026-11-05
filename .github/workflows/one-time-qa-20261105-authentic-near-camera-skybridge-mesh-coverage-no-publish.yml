@@ -80,6 +80,11 @@ jobs:
           assert 'fits real owner-approved bridge geometry' in tests
           assert 'PremiumRouteMeshKit.sourceFit' in tests
           assert 'PremiumRouteMeshKit.bridgeSegmentCount' in tests
+          advanced=Path("tests/engine/mapbuilder-advanced.spec.luau").read_text()
+          assert 'expect(narrowPanel.LocalTransparencyModifier).toBe(0)' in advanced
+          assert 'Vector3.new(12, 1.3, 9)' in advanced
+          assert 'Vector3.new(11.2, 0.10, 11.2)' in advanced
+          assert '"tests/engine/mapbuilder-advanced.spec.luau"' in cloud
           # Ensure the primary Build Validation agrees on the new bounds.
           ci=Path(".github/workflows/ci.yml").read_text()
           assert '"decks = 8, bridges = 3, segments = 3" in route' in ci

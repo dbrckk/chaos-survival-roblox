@@ -40,8 +40,12 @@ describe("Chaos Survival engine", function()
             model.Parent = holder
         end
         template("PremiumJumpDeck", 98478693994864, Vector3.new(11.9, 1.5, 11.9))
+        -- Approved-source stand-in footprint: a 12x9 crossroad module
+        -- fits the genuine 26x12 promenade after X/Z-aware placement.
+        -- Towers' 49x4.5 bridge is deliberately TOO NARROW to claim
+        -- safe full-module replacement; it must retain its native finish.
         template("PremiumSkybridgeModule", 94023662427980,
-            Vector3.new(10, 1.3, 4.9))
+            Vector3.new(12, 1.3, 9))
         -- Authorized run #41644715829 produced this real Approved
         -- 3,072-triangle original production source. In-engine stand-in
         -- here tests the placement contract, not network moderation:
@@ -70,6 +74,12 @@ describe("Chaos Survival engine", function()
         deck.Parent = platforms
         local nativePanel = Instance.new("Part")
         nativePanel.Name = "PlatformPanel1"
+        nativePanel.Size = Vector3.new(11.2, 0.10, 11.2)
+        nativePanel.Position = deck.Position + Vector3.new(0, 1.055, 0)
+        nativePanel.Anchored = true
+        nativePanel.CanCollide = false
+        nativePanel.CanTouch = false
+        nativePanel.CanQuery = false
         nativePanel.Parent = decor
         local bridge = Instance.new("Part")
         bridge.Name = "Skybridge2"
@@ -79,9 +89,21 @@ describe("Chaos Survival engine", function()
         bridge.Anchored = true
         bridge.CanCollide = true
         bridge.Parent = platforms
+        local narrowPanel = Instance.new("Part")
+        narrowPanel.Name = "PlatformPanel2"
+        narrowPanel.Size = Vector3.new(48.2, 0.10, 3.7)
+        narrowPanel.Position = bridge.Position + Vector3.new(0, 1.055, 0)
+        narrowPanel.Anchored = true
+        narrowPanel.CanCollide = false
+        narrowPanel.CanTouch = false
+        narrowPanel.CanQuery = false
+        narrowPanel.Parent = decor
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
-        -- One true imported deck and three repeated actual bridge modules.
-        expect(PremiumRouteMeshKit.count()).toBe(4)
+        -- One approved near-camera deck. The very narrow Tower Skybridge
+        -- cannot fit 3 normal-size modules without long floating gaps:
+        -- it retains the actual server-owned painted floor instead.
+        expect(PremiumRouteMeshKit.count()).toBe(1)
+        expect(narrowPanel.LocalTransparencyModifier).toBe(0)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
         expect(deck.CanCollide).toBe(true)
         expect(bridge.CanCollide).toBe(true)
@@ -89,8 +111,9 @@ describe("Chaos Survival engine", function()
         expect(nativePanel.LocalTransparencyModifier).toBe(1)
         deck:SetAttribute("CollapsePhase", "Warning")
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
-        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(PremiumRouteMeshKit.count()).toBe(0)
         expect(nativePanel.LocalTransparencyModifier).toBe(0)
+        expect(narrowPanel.LocalTransparencyModifier).toBe(0)
 
         -- Public milestone: genuine approved bridge geometry now follows
         -- the LIVE physical Sky Promenade and Sky Spine, not fake local art.
@@ -108,10 +131,11 @@ describe("Chaos Survival engine", function()
         crossing.Parent = platforms
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        -- Current Medium budget allows TWO authentic three-segment bridges
-        -- alongside one separate underdeck chassis, six route modules total.
-        -- The machine remains below the collider, not an extra safe bridge.
-        expect(PremiumRouteMeshKit.count()).toBe(6)
+        -- Source-footprint adaptive fit uses TWO full-width approved
+        -- promenade modules plus one genuinely below-collider chassis.
+        -- The 49x4.5 Towers Skybridge still never gets unsafe 3D scraps.
+        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(narrowPanel.LocalTransparencyModifier).toBe(0)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         expect(crossing.CanCollide).toBe(true)
         local underfolder = workspace:FindFirstChild("PremiumRouteMeshLocal")
@@ -131,12 +155,12 @@ describe("Chaos Survival engine", function()
         crossing:SetAttribute("SkySpineInterchange", true)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        expect(PremiumRouteMeshKit.count()).toBe(6)
+        expect(PremiumRouteMeshKit.count()).toBe(3)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         crossing:SetAttribute("ChaosPermanentRoute", false)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
-        expect(PremiumRouteMeshKit.count()).toBe(3)
+        expect(PremiumRouteMeshKit.count()).toBe(0)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
         base.Size = Vector3.new(230, 2, 230)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
