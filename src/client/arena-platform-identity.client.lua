@@ -861,7 +861,11 @@ local decorGeneration = 0
 local function scheduleRebuild()
     if rebuildPending then return end
     rebuildPending = true
-    task.defer(function()
+    -- The 320x320 arena can replicate hundreds of Platforms in separate
+    -- network batches. Rebuilding the full 3D weld owner once per defer
+    -- caused first-join Android churn. A single short scheduled batch
+    -- preserves late-source recovery without an update/render loop.
+    task.delay(0.12, function()
         rebuildPending = false
         rebuild()
     end)
@@ -895,8 +899,23 @@ local function watchDecor(generated)
     decorRebuildPending = false
     if decor and decor:IsA("Folder") then
         local function supportChanged(part)
-            if part:IsA("BasePart")
-                and part.Name:match("^PlatformSupport%d+_%d+$") then
+            -- No expensive owner rebuild for native support arrivals if
+            -- Low quality or an original 3D column source isn't loaded.
+            -- The approved-template watcher already covers late uploads.
+            if not part:IsA("BasePart")
+                or not part.Name:match("^PlatformSupport%d+_%d+$")
+                or VfxQuality.deviceTier(
+                    player:GetAttribute("VfxQualityTier"),
+                    UserInputService.TouchEnabled).Name == "Low" then
+                return
+            end
+            local templates = ReplicatedStorage:FindFirstChild(
+                "ApprovedLargeStructureTemplates")
+            local activeArena = workspace:FindFirstChild("GeneratedMap")
+            activeArena = activeArena and activeArena:FindFirstChild("Arena")
+            local variant = activeArena and tostring(
+                activeArena:GetAttribute("VariantId") or "Classic")
+            if templates and variant and templates:FindFirstChild(variant) then
                 queueSupportRebuild()
             end
         end

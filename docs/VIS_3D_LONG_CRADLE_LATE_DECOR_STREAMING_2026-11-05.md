@@ -17,3 +17,7 @@
 ## Milestone checks remaining
 
 One exact-SHA Build Validation and seven real Roblox engine suites on next important milestone. Actual Roblox Studio/Android low-medium-high captures must check early join, late Decor arrival, support loss, shrinking and the five distinct arena identities. Pass in CI is not proof of visual coverage, performance or publication.
+
+## Android streaming rebuild-budget amendment
+
+The existing full-map visual rebuild owner now batches PlatformN streaming bursts into one scheduled 0.12 s reconstruction instead of repeatedly re-creating the whole map once per deferred network batch. The Decor watcher only queues post-driven reconstructs for Medium/High when an actual approved variant source is present; template arrival itself already triggers the existing source watcher. The native hazard/shutter/collapse callbacks and physical server colliders are unaffected. No runtime FPS claim or actual-device proof is made.
