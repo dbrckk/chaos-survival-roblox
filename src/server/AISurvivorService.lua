@@ -3795,6 +3795,7 @@ local function anticipateGroundObstacle(
         and record.targetPart.Parent.Name == "Platforms"
     local committed = record.targetIsPad == true
         or record.targetIsSkyrail == true
+        or record.spineControl ~= nil
         or record.districtTraverse ~= nil
         or record.signalInterestRoute ~= nil
         or record.assistRelay ~= nil
@@ -3967,6 +3968,7 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
     -- not a blended previous turn that curves off a 12-stud walkway.
     -- Ordinary ground roaming keeps its humanlike steering inertia.
     local direct = urgent == true
+        or record.spineControl ~= nil
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
         or record.groundNavigation ~= nil
         or AISurvivorRules.committedWorldRoute(
@@ -4542,15 +4544,18 @@ local function stepRecord(record, now)
             return
         end
 
-        if maybeSocialGesture(record, humanoid, root, now) then
-            return
+        if not record.spineControl then
+            if maybeSocialGesture(record, humanoid, root, now) then
+                return
+            end
+
+            if maybeRoundGesture(record, humanoid, root, now) then
+                return
+            end
         end
 
-        if maybeRoundGesture(record, humanoid, root, now) then
-            return
-        end
-
-        if now < (record.idleUntil or 0) then
+        if now < (record.idleUntil or 0)
+            and not record.spineControl then
             humanoid:Move(Vector3.zero)
             return
         end
@@ -4576,6 +4581,7 @@ local function stepRecord(record, now)
     end
 
     if not urgentTarget and not record.districtTraverse
+        and not record.spineControl
         and now >= record.nextJump then
         local _, pressure = decisionTraits(record)
         local jumpChance = AISurvivorRules.freeJumpChance(
@@ -4861,6 +4867,7 @@ local function stepRecord(record, now)
             local destination = record.target
             if not urgentTarget
                 and not record.groundNavigation
+                and not record.spineControl
                 and AISurvivorRules.allowRouteStrafe(
                     record.targetIsPad,
                     record.targetIsSkyrail,
