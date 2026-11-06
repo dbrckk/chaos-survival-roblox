@@ -164,6 +164,31 @@ function SkybridgeShutters.occupied(state, contestants, isActive)
             end
         end
     end
+    -- HazardContestants can omit server-spawned AI seats during roster
+    -- transitions. Check the authoritative live AI folder as well so a
+    -- shutter never materializes inside a surviving bot's physical root.
+    -- Only four gates and at most seven AI seats; this runs once per
+    -- closure, not on Heartbeat.
+    local aiFolder = workspace:FindFirstChild("AISurvivors")
+    if aiFolder then
+        for _, model in ipairs(aiFolder:GetChildren()) do
+            if model:IsA("Model")
+                and model:GetAttribute("AISurvivor") == true
+                and model:GetAttribute("AISurvivorInRound") == true then
+                local hum = model:FindFirstChildOfClass("Humanoid")
+                local root = model:FindFirstChild("HumanoidRootPart")
+                if hum and hum.Health > 0
+                    and root and root:IsA("BasePart") then
+                    local pos = state.raised:PointToObjectSpace(root.Position)
+                    if math.abs(pos.X) <= gate.Size.X * 0.5 + 2.5
+                        and math.abs(pos.Z) <= gate.Size.Z * 0.5 + 2.5
+                        and pos.Y >= -3.2 and pos.Y <= 6.5 then
+                        return true
+                    end
+                end
+            end
+        end
+    end
     return false
 end
 
