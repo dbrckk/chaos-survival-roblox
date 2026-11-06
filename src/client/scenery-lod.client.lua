@@ -675,6 +675,11 @@ local lodSampleTotalMs = 0
 local lodSamplePeakMs = 0
 local lodSampleFolderTotalMs = 0
 local lodSample3dTotalMs = 0
+-- Three independently expensive 3D owners; their timings are subsets of
+-- the complete pass, never summed as an additional wall-clock duration.
+local lodRouteTotalMs = 0
+local lodGroundTotalMs = 0
+local lodDistrictTotalMs = 0
 
 task.spawn(function()
     while true do
@@ -778,20 +783,24 @@ task.spawn(function()
         -- the SAME existing camera-tier loop owns all local MeshPart
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
+        local routeSyncStartedAt = os.clock()
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch,
             player:GetAttribute("PbrMaterialsDisabled") == true)
+        lodRouteTotalMs += (os.clock() - routeSyncStartedAt) * 1000
         -- Five-arena original 2,976-triangle sculpted floor: healthy
         -- High can now replace all 36 genuine 49-stud native floor bays,
         -- Medium 12 and Low 2. The EXISTING GPU/instance backpressure
         -- automatically demotes to 24/16 High or 8/4 Medium if Android
         -- frame pacing suffers. No new loop; danger decals stay on top.
         -- Shrink/streaming already restore native geometry immediately.
+        local groundSyncStartedAt = os.clock()
         PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch,
             player:GetAttribute("PbrMaterialsDisabled") == true)
+        lodGroundTotalMs += (os.clock() - groundSyncStartedAt) * 1000
         local floorMeshes = PremiumGroundMeshKit.count()
         if player:GetAttribute("LocalOriginalGroundMeshCount") ~= floorMeshes then
             player:SetAttribute("LocalOriginalGroundMeshCount", floorMeshes)
@@ -1195,8 +1204,10 @@ task.spawn(function()
         -- Run AFTER the authoritative native district LOD, so source
         -- doors already have their actual visible/hidden state. Never
         -- show imported facades on an offscreen, culled or shrunk building.
+        local districtSyncStartedAt = os.clock()
         PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, cameraLook)
+        lodDistrictTotalMs += (os.clock() - districtSyncStartedAt) * 1000
         local facadeMeshCount = PremiumDistrictFacadeMeshKit.count()
         if player:GetAttribute("LocalOriginalDistrictFacadeMeshCount")
             ~= facadeMeshCount then
@@ -1319,12 +1330,21 @@ task.spawn(function()
                 math.floor(lodSampleFolderTotalMs / lodSampleCount * 100 + 0.5) / 100)
             player:SetAttribute("ClientSceneryLod3dAvgMs",
                 math.floor(lodSample3dTotalMs / lodSampleCount * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLodRouteAvgMs",
+                math.floor(lodRouteTotalMs / lodSampleCount * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLodGroundAvgMs",
+                math.floor(lodGroundTotalMs / lodSampleCount * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLodDistrictAvgMs",
+                math.floor(lodDistrictTotalMs / lodSampleCount * 100 + 0.5) / 100)
             player:SetAttribute("ClientSceneryLodSampleClock", os.clock())
             lodSampleCount = 0
             lodSampleTotalMs = 0
             lodSamplePeakMs = 0
             lodSampleFolderTotalMs = 0
             lodSample3dTotalMs = 0
+            lodRouteTotalMs = 0
+            lodGroundTotalMs = 0
+            lodDistrictTotalMs = 0
         end
         task.wait(profile.Name == "Low" and 0.65 or 0.90)
     end
