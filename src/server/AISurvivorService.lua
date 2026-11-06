@@ -51,6 +51,19 @@ local AnimationCatalog = if script
 
 local AISurvivorService = {}
 
+-- Server-only diagnostics, not replicated to clients and not used for
+-- gameplay decisions. The existing shared brain loop publishes one
+-- aggregate every 32 passes, avoiding per-bot Instance/attribute churn.
+AISurvivorService.PerformanceDiagnostics = {
+    Samples = 0,
+    AveragePassMs = 0,
+    PeakPassMs = 0,
+    AverageBotStepMs = 0,
+    PeakBotStepMs = 0,
+    BotCount = 0,
+    Phase = "waiting",
+}
+
 local IDENTITIES = {
     {
         Username = "NovaByte",
@@ -4999,9 +5012,16 @@ local function startBrain()
     task.spawn(function()
         local nextPresenceCheck = 0
         local nextReconcileWarningAt = -math.huge
+        local brainPassSamples = 0
+        local brainPassTotalMs = 0
+        local brainPassPeakMs = 0
+        local botStepSamples = 0
+        local botStepTotalMs = 0
+        local botStepPeakMs = 0
 
         while started do
-            local now = os.clock()
+            local passStartedAt = os.clock()
+            local now = passStartedAt
 
             if currentState.phase ~= "round" and now >= nextPresenceCheck then
                 local ok, err = pcall(reconcile)
@@ -5013,12 +5033,39 @@ local function startBrain()
             end
 
             for _, record in ipairs(records) do
+                local stepStartedAt = os.clock()
                 local ok, err, shouldReport = AISurvivorRules.runBrainStep(
                     record, now, stepRecord
                 )
+                local stepMs = (os.clock() - stepStartedAt) * 1000
+                botStepSamples += 1
+                botStepTotalMs += stepMs
+                botStepPeakMs = math.max(botStepPeakMs, stepMs)
                 if not ok and shouldReport then
                     warn("AI Survivor brain step failed:", record.identity.Username, err)
                 end
+            end
+
+            local passMs = (os.clock() - passStartedAt) * 1000
+            brainPassSamples += 1
+            brainPassTotalMs += passMs
+            brainPassPeakMs = math.max(brainPassPeakMs, passMs)
+            if brainPassSamples >= 32 then
+                local diagnostic = AISurvivorService.PerformanceDiagnostics
+                diagnostic.Samples += brainPassSamples
+                diagnostic.AveragePassMs = brainPassTotalMs / brainPassSamples
+                diagnostic.PeakPassMs = brainPassPeakMs
+                diagnostic.AverageBotStepMs = botStepSamples > 0
+                    and botStepTotalMs / botStepSamples or 0
+                diagnostic.PeakBotStepMs = botStepPeakMs
+                diagnostic.BotCount = #records
+                diagnostic.Phase = currentState.phase
+                brainPassSamples = 0
+                brainPassTotalMs = 0
+                brainPassPeakMs = 0
+                botStepSamples = 0
+                botStepTotalMs = 0
+                botStepPeakMs = 0
             end
 
             task.wait(AISurvivorRules.brainCadence(
