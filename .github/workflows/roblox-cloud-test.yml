@@ -74,6 +74,7 @@ jobs:
             "tests/engine/arena-focal-lighting-rules.spec.luau",
             "tests/engine/arena-material-rules.spec.luau",
             "tests/engine/arena-crisis-surface.spec.luau",
+            "tests/engine/district-signal-navigation.spec.luau",
             "tests/engine/arena-presentation.spec.luau",
             "tests/engine/arena-spatial-audio-rules.spec.luau",
             "tests/engine/arena-variants.spec.luau",
@@ -162,6 +163,7 @@ jobs:
             "tests/engine/native-premium-fallback.spec.luau",
             "tests/engine/sky-network-physical-wayfinding.spec.luau",
             "tests/engine/sky-command-bot-approach.spec.luau",
+            "tests/engine/lava-ground-visual-contrast.spec.luau",
             "tests/engine/bot-sky-command-route.spec.luau",
           ]
           backend = "cloud"
