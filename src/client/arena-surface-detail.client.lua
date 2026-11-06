@@ -3,6 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local ArenaCrisisSurfaceRules = require(ReplicatedStorage.Shared.ArenaCrisisSurfaceRules)
+local lavaRulesModule = ReplicatedStorage.Shared:FindFirstChild("LavaGroundContrastRules")
+local LavaGroundContrastRules = if lavaRulesModule
+    then require(lavaRulesModule)
+    else require("../shared/LavaGroundContrastRules")
+local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
@@ -17,6 +22,36 @@ folder.Name = "ArenaSurfaceDetailLocal"
 folder.Parent = workspace
 
 local stopFollowingBase = nil
+-- One weak original color per genuine nonphysical deck tile. Never use
+-- a post-tint color as a new baseline; always restore exactly on the
+-- next survival mode. Server physics, all route decals and lava are
+-- outside this tightly scoped visual-only selection.
+local originalNativeGroundColors = setmetatable({}, {__mode = "k"})
+
+local function refreshSafeFloorContrast(lavaActive)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local decor = arena and arena:FindFirstChild("Decor")
+    if decor and decor:IsA("Folder") then
+        for _, part in ipairs(decor:GetChildren()) do
+            local role = LavaGroundContrastRules.nativeRole(part, decor)
+            if role then
+                local baseColor = originalNativeGroundColors[part]
+                if not baseColor then
+                    baseColor = part.Color
+                    originalNativeGroundColors[part] = baseColor
+                end
+                local target = LavaGroundContrastRules.tint(
+                    baseColor, role, lavaActive)
+                if part.Color ~= target then part.Color = target end
+            end
+        end
+    end
+    -- Authenticated imported floor meshes have their own tiny bounded
+    -- registry (2/12/36 LOD resident tiles). They cannot be recolored
+    -- safely by walking an arbitrary player's workspace descendants.
+    PremiumGroundMeshKit.setLavaContrast(lavaActive)
+end
 
 local function clear()
     if stopFollowingBase then
@@ -357,6 +392,7 @@ local function refreshSurfaceAccent()
         state and state.finalRush == true
     )
     local now = os.clock()
+    refreshSafeFloorContrast(LavaGroundContrastRules.enabled(state))
     for index, part in ipairs(folder:GetChildren()) do
         if part:IsA("BasePart") then
             local baseColor = part:GetAttribute("SurfaceBaseColor")
