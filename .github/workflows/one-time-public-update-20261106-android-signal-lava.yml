@@ -12,7 +12,7 @@
 # actual visualMaterial selection; publish remains fail-closed on tests.
 # Updating THIS existing guarded workflow path triggers a new exact-SHA
 # milestone ONLY on deliberate main-branch merge.
-name: One-time Public Update 2026-11-06 Physical Lava Escape Navigation
+name: One-time Public Update 2026-11-06 Performance Baseline
 on:
   push:
     branches: [main]
@@ -24,7 +24,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: chaos-v3-physical-lava-escape-public-release-20261106
+  group: chaos-v3-performance-baseline-public-release-20261106
   cancel-in-progress: false
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Preflight physical lava escape guidance and all 85 real-engine specs
+      - name: Preflight Android LOD and server AI performance baseline plus 85 engine specs
         shell: bash
         run: |
           set -euo pipefail
@@ -68,7 +68,26 @@ jobs:
           assert 'JumpRouteCueRules.nearestLavaClimbEntry(' in climb_cue
           assert 'nearestEntry(lavaEmergency and 104 or 44)' in climb_cue
           assert 'MobileHudNotices.current() == HAZARD_OWNER' in climb_cue
-          print('85/85 engine specs gated; lava escape and Android visual fixes included.')
+          scenery = Path('src/client/scenery-lod.client.lua').read_text()
+          bots = Path('src/server/AISurvivorService.lua').read_text()
+          plan = Path('docs/PERFORMANCE_AUDIT_EVOLUTION_PLAN_2026-11-06.md').read_text()
+          for attribute in (
+              'ClientSceneryLodAvgPassMs',
+              'ClientSceneryLodMaxPassMs',
+              'ClientSceneryLodFolderAvgMs',
+              'ClientSceneryLod3dAvgMs',
+              'ClientSceneryLodRouteAvgMs',
+              'ClientSceneryLodGroundAvgMs',
+              'ClientSceneryLodDistrictAvgMs',
+          ):
+              assert 'SetAttribute("' + attribute + '"' in scenery, attribute
+              assert attribute in plan, attribute
+          assert 'if lodSampleCount >= 16 then' in scenery
+          assert 'task.wait(profile.Name == "Low" and 0.65 or 0.90)' in scenery
+          assert 'AISurvivorService.PerformanceDiagnostics' in bots
+          assert 'if brainPassSamples >= 32 then' in bots
+          assert 'task.wait(AISurvivorRules.brainCadence(' in bots
+          print('85/85 engine specs gated; safe lava, Android LOD and 7-bot baseline included.')
           PY
       - name: Validate exact source and dispatch guarded existing workflows
         shell: bash
