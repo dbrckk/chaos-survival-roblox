@@ -1,7 +1,11 @@
 -- A finished round is visible to players before any persistence, achievement,
 -- or analytics write. Results are based solely on the frozen server roster.
 -- This module never grants rewards or changes round participation.
-local AISurvivorRules = require(script.Parent.AISurvivorRules)
+-- Keep this pure result serializer loadable by both Roblox's ModuleScript
+-- runtime and Lest's real-engine source-module loader (where script is nil).
+-- The eight-seat game reserves at most seven seats for AI contestants.
+-- Keep this bound aligned with AISurvivorRules.MaxBots.
+local MAX_AI_SEATS = 7
 local RoundResultState = {}
 
 local function nonnegativeInt(value)
@@ -47,7 +51,7 @@ function RoundResultState.snapshot(context)
             -- Accept only real active AI seat indices. The server's bot
             -- capacity is shared with matchmaking, not a stale 3-bot cap.
             -- A missing or invalid unique survivor never earns a title.
-            if aiSlot >= 1 and aiSlot <= AISurvivorRules.MaxBots then
+            if aiSlot >= 1 and aiSlot <= MAX_AI_SEATS then
                 soleSurvivorAISlot = aiSlot
             end
         end
