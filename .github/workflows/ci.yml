@@ -1323,7 +1323,7 @@ jobs:
               assert token in kit, token
           for token in (
               "PremiumGroundPbrKit.tileBudget(",
-              "PremiumGroundPbrKit.attach(entry, variant)",
+              "PremiumGroundPbrKit.attach(",
               "PremiumGroundPbrKit.detach(entry)",
               "LocalApproved3DGroundResident",
               "function PremiumGroundMeshKit.pbrCount()",
@@ -1342,6 +1342,12 @@ jobs:
           assert 'old.Parent = nil' in kit
           assert 'appearance.Parent = part' in kit
           assert 'if attached then attached:Destroy() end' in kit
+          # V3 Android genuine lava-contrast branch intentionally selects
+          # a new VISUAL MATERIAL name while preserving the same source-
+          # approved 2K SurfaceAppearance and the original PBR budget.
+          assert 'local visualMaterial = lavaContrastActive and "LavaSafeSteel" or variant' in ground
+          assert 'entry, visualMaterial)' in ground
+          assert 'if variant == "LavaSafeSteel" then return "BrushedTitanium" end' in kit
           assert "clone.DescendantRemoving:Connect(" in ground
           assert 'PremiumGroundPbrKit.attach(entry, "Classic")' in specs
           assert "SourceImportedMaterialFactors" in specs
