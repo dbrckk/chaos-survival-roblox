@@ -36,7 +36,8 @@ describe("Lava escape: find a genuine dry entry for new and veteran players", fu
                 -- A distant goal outside the strict range is never
                 -- made reachable by increasing UI Billboard distance.
                 expect(JumpRouteCueRules.nearestLavaClimbEntry(
-                    decks, floor, nil, 0)).toBe(nil)
+                    decks, floor + Vector3.new(500, 0, 500),
+                    nil, 12)).toBe(nil)
 
                 -- Real server collapse metadata disqualifies the old
                 -- takeoff immediately; the next safe one is acceptable.
