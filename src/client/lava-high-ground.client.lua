@@ -29,7 +29,7 @@ local collapseConnections = {}
 local currentState = nil
 local rebuildQueued = false
 local currentLava = nil
-local lavaPositionConnection = nil
+local lavaGeometryConnections = {}
 
 local function lavaIsActive(state)
     if type(state) ~= "table"
@@ -81,6 +81,7 @@ local function refresh()
         local visible = active
             and platform.Parent == activePlatforms
             and platform.CanCollide
+            and platform.Transparency < 0.75
             and platform:GetAttribute("CollapsePhase") == nil
             and not (lava and JumpRouteCueRules.lavaOnDeck(platform, lava))
         sign.billboard.Enabled = visible
@@ -93,17 +94,21 @@ end
 -- old lava connection is disconnected when the round replaces the Part.
 local function bindLava(lava)
     if currentLava == lava then return end
-    if lavaPositionConnection then
-        lavaPositionConnection:Disconnect()
-        lavaPositionConnection = nil
+    for _, connection in ipairs(lavaGeometryConnections) do
+        connection:Disconnect()
     end
+    table.clear(lavaGeometryConnections)
     currentLava = lava and lava:IsA("BasePart")
         and lava.Name == "RoundLava" and lava.Parent == workspace
         and lava or nil
     if currentLava then
-        lavaPositionConnection = currentLava:GetPropertyChangedSignal(
-            "Position"
-        ):Connect(refresh)
+        -- The server can move, resize or rotate the hazard volume.
+        -- Re-evaluate actual standing-root clearance on any geometry
+        -- update, without adding a polling loop or trusting deck tier.
+        for _, property in ipairs({"Position", "Size", "CFrame"}) do
+            lavaGeometryConnections[#lavaGeometryConnections + 1] =
+                currentLava:GetPropertyChangedSignal(property):Connect(refresh)
+        end
     end
     refresh()
 end
@@ -193,6 +198,12 @@ local function createSign(platform, accent)
     -- every label during a fast Disappearing Platforms hazard.
     collapseConnections[#collapseConnections + 1] =
         platform:GetAttributeChangedSignal("CollapsePhase"):Connect(refresh)
+    -- A streamed/reconfigured deck must not retain a "safe" sign after
+    -- collision is disabled or it becomes visually absent.
+    for _, property in ipairs({"CanCollide", "Transparency"}) do
+        collapseConnections[#collapseConnections + 1] =
+            platform:GetPropertyChangedSignal(property):Connect(refresh)
+    end
 end
 
 local function rebuild()
