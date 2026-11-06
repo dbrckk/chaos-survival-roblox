@@ -293,7 +293,8 @@ end
 -- Orbital's vertical escape is a continuous, server-built ramp network.
 -- Generic deck-jump rules deliberately refuse this arena, so the mobile
 -- rookie marker must follow its REAL entry/helix/core ramp transitions.
-local function orbitalRampNext(arena, from, root, base, platforms)
+local function orbitalRampNext(arena, from, root, base, platforms,
+    lavaEmergency)
     if arena:GetAttribute("VariantId") ~= "Orbital" then return nil end
     local circuit = arena:FindFirstChild("HelixCircuit")
     if not circuit then return nil end
@@ -322,7 +323,9 @@ local function orbitalRampNext(arena, from, root, base, platforms)
         end
         return closest
     end
-    if from == base then return nearestEntry(44) end
+    if from == base then
+        return nearestEntry(lavaEmergency and 104 or 44)
+    end
     if from.Parent == platforms then
         local id = tonumber(from.Name:match("^Platform(%d+)$"))
         if id == 17 then return nearestEntry(56) end
@@ -523,7 +526,7 @@ local function update()
         -- a genuine Orbital helix ramp with its physical entry.
         local variant = arena:GetAttribute("VariantId")
         if variant == "Orbital" then
-            target = orbitalRampNext(arena, from, root, base, platforms)
+            target = orbitalRampNext(arena, from, root, base, platforms, true)
             if not target and from.Parent == platforms then
                 target = JumpRouteCueRules.nextPhysical(
                     from, pieces, base.Position, variant,
