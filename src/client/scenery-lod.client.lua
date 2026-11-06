@@ -665,8 +665,20 @@ player:GetAttributeChangedSignal("LocalDarknessLightGuard"):Connect(function()
         player:GetAttribute("LocalDarknessLightGuard") == true)
 end)
 
+-- P0 baseline: sample the COST of the existing complete LOD pass, not
+-- the 0.65/0.90s sleep between passes. Publish only once per 16 passes,
+-- with no new task, event, Workspace traversal or remote telemetry.
+-- A total duration is not GPU time: pair this with Roblox MicroProfiler
+-- before claiming a performance improvement.
+local lodSampleCount = 0
+local lodSampleTotalMs = 0
+local lodSamplePeakMs = 0
+local lodSampleFolderTotalMs = 0
+local lodSample3dTotalMs = 0
+
 task.spawn(function()
     while true do
+        local lodStartedAt = os.clock()
         local profile = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), isTouch)
 
         local arenaOrigin, lobbyOrigin = currentOrigins()
@@ -692,6 +704,7 @@ task.spawn(function()
             end
         end
 
+        local folderPassMs = (os.clock() - lodStartedAt) * 1000
         -- Exact local outboard fallback silhouettes: the old all-or-none
         -- center-only LOD hid nearby Native blocks at an arena rim when
         -- no approved 3D replacement was resident. Each builder-tagged
@@ -1288,6 +1301,31 @@ task.spawn(function()
                 profile, lobbyOrigin, cameraPoint)
         end
 
+        local lodPassMs = (os.clock() - lodStartedAt) * 1000
+        lodSampleCount += 1
+        lodSampleTotalMs += lodPassMs
+        lodSampleFolderTotalMs += folderPassMs
+        lodSample3dTotalMs += math.max(0, lodPassMs - folderPassMs)
+        lodSamplePeakMs = math.max(lodSamplePeakMs, lodPassMs)
+        if lodSampleCount >= 16 then
+            -- Client-only diagnostic counters. The existing performance
+            -- pulse can correlate these with frame pacing; these are NOT
+            -- sent to the server, nor exposed as a player-facing HUD.
+            player:SetAttribute("ClientSceneryLodAvgPassMs",
+                math.floor(lodSampleTotalMs / lodSampleCount * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLodMaxPassMs",
+                math.floor(lodSamplePeakMs * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLodFolderAvgMs",
+                math.floor(lodSampleFolderTotalMs / lodSampleCount * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLod3dAvgMs",
+                math.floor(lodSample3dTotalMs / lodSampleCount * 100 + 0.5) / 100)
+            player:SetAttribute("ClientSceneryLodSampleClock", os.clock())
+            lodSampleCount = 0
+            lodSampleTotalMs = 0
+            lodSamplePeakMs = 0
+            lodSampleFolderTotalMs = 0
+            lodSample3dTotalMs = 0
+        end
         task.wait(profile.Name == "Low" and 0.65 or 0.90)
     end
 end)
