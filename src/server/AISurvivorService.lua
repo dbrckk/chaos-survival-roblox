@@ -3523,7 +3523,9 @@ local function requestGroundNavigation(record, root, goal, now)
         end
         record.groundNavigationPending = false
         record.groundNavigationStartedAt = nil
-        if not ok or not waypoints or #waypoints < 3
+        -- A two-waypoint NavMesh path (start + goal) is legitimate.
+        -- Still require the exact same real-floor and corridor checks.
+        if not ok or not waypoints or #waypoints < 2
             or #waypoints > 24 or not rig or not rig.Parent
             or not record.inRound or currentState.phase ~= "round"
             or arenaBase() ~= base or #warningParts() > 0
@@ -3569,7 +3571,7 @@ local function requestGroundNavigation(record, root, goal, now)
         -- hazard appeared: never force it back to the old starting point.
         local liveRoot = rig:FindFirstChild("HumanoidRootPart")
         if not liveRoot or (liveRoot.Position - start).Magnitude > 9
-            or #points < 2 or record.groundNavigationToken ~= token then
+            or #points < 1 or record.groundNavigationToken ~= token then
             return
         end
         record.groundNavigation = {
