@@ -39,6 +39,32 @@ Les seuils doivent être validés sur un vrai appareil de référence. Pour le s
 
 **Gate P0 :** disposer d'une baseline exploitable, identifier les 3 pics CPU/GPU/mémoire dominants et le nombre de sessions valides.
 
+### Instrumentation P0 implémentée — LOD client (sans changer le rendu)
+
+`src/client/scenery-lod.client.lua` mesure désormais la durée réelle du
+passage de synchronisation déjà existant, séparée entre la première phase
+de culling des dossiers et le reste (incluant les kits 3D). Les
+attributs **locaux au joueur** sont rafraîchis toutes les 16 passes
+(~10–15 secondes), jamais à chaque frame :
+
+| Attribut local | Signification |
+|---|---|
+| `ClientSceneryLodAvgPassMs` | Durée moyenne d'un passage complet LOD |
+| `ClientSceneryLodMaxPassMs` | Plus long passage LOD de la fenêtre |
+| `ClientSceneryLodFolderAvgMs` | Temps moyen de la phase dossiers |
+| `ClientSceneryLod3dAvgMs` | Temps moyen du reste du passage (inclut les kits 3D) |
+| `ClientSceneryLodSampleClock` | Horodatage `os.clock()` client du dernier relevé |
+
+Cette instrumentation ne crée ni boucle, ni Part, ni appel distant,
+ni GUI supplémentaire. Elle ne constitue **pas** une mesure GPU et
+ne permet pas à elle seule d'attribuer un coût à un kit 3D précis.
+Ne jamais envoyer ces compteurs client au serveur pour prendre une
+décision de gameplay ; ce sont des diagnostics à recouper avec les
+captures MicroProfiler et le P95 de `juice.client.lua`.
+
+**État :** instrumentation ajoutée au code, tests Roblox Engine et
+mesures sur Android à effectuer au prochain jalon majeur.
+
 ## P1 — supprimer les pics de frame sans dégrader le visuel proche
 
 1. Instrumenter le coût de chaque propriétaire du **LOD commun**, avant/après ses `sync`, avec Roblox MicroProfiler sur appareil/Studio. Distinguer traversée, montage/démontage de MeshParts, changements d'attributs et bascules de transparence.
