@@ -520,7 +520,27 @@ describe("Arena mechanics", function()
         expect(SkybridgeShutters.occupied(
             state, occupants, eligible
         )).toBe(false)
+
+        -- The live bot folder is authoritative even if the human hazard
+        -- roster temporarily omits AI during a round transition.
+        local aiFolder = Instance.new("Folder")
+        aiFolder.Name = "AISurvivors"
+        aiFolder.Parent = workspace
+        bot.Parent = aiFolder
+        bot:SetAttribute("AISurvivorInRound", true)
+        hum.Health = 100
+        root.CFrame = state.raised * CFrame.new(0, 2.1, 0)
+        expect(SkybridgeShutters.occupied(state, {}, eligible)).toBe(true)
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(SkybridgeShutters.occupied(state, {}, eligible)).toBe(false)
+        bot:SetAttribute("AISurvivorInRound", true)
+        root.CFrame = state.raised * CFrame.new(12, 2.1, 0)
+        expect(SkybridgeShutters.occupied(state, {}, eligible)).toBe(false)
+        root.CFrame = state.raised * CFrame.new(0, 2.1, 0)
+        hum.Health = 0
+        expect(SkybridgeShutters.occupied(state, {}, eligible)).toBe(false)
         bot:Destroy()
+        aiFolder:Destroy()
         folder:Destroy()
         map:Destroy()
     end)
