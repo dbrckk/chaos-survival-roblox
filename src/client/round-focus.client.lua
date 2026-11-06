@@ -514,11 +514,13 @@ local function refresh()
     elseif not rookieRound and state.doubleCollapseUnlocked == true then
         text = CoreLocalization.text(localeId, "DOUBLE_COLLAPSE")
         color = UITheme.Colors.Orange
-    elseif not rookieRound and not state.doubleChaos and introAction then
-        -- For experienced players the next *physical action* beats a
-        -- redundant stable/status label for the first few seconds.
-        -- Never override the actual hazard instructions above or the
-        -- first-session SURVIVE objective on mobile.
+    elseif not state.doubleChaos and introAction then
+        -- First-time players also need one concrete, enabled map action:
+        -- climb, move or activate a real arena mechanism. The server
+        -- advertises this only during the first six seconds, and only
+        -- when that mechanic is active. The permanent top HUD still
+        -- owns the danger and countdown; final rush/overdrive remain
+        -- higher priority. Reuse the existing pill, never add an overlay.
         text = introAction
         color = UITheme.Colors.Cyan
     elseif state.doubleChaos then
