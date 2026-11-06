@@ -27,11 +27,24 @@ local stopFollowingBase = nil
 -- next survival mode. Server physics, all route decals and lava are
 -- outside this tightly scoped visual-only selection.
 local originalNativeGroundColors = setmetatable({}, {__mode = "k"})
+local lastGroundDecor = nil
+local lastGroundLavaActive = nil
+local nextGroundScanAt = 0
 
 local function refreshSafeFloorContrast(lavaActive)
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local decor = arena and arena:FindFirstChild("Decor")
+    -- An unchanging round never needs an every-0.21s scan of the AAA
+    -- Decor folder. Recheck once every 3 seconds for newly streamed
+    -- legitimate tile finishes; phase/map switches apply immediately.
+    local now = os.clock()
+    local changed = decor ~= lastGroundDecor
+        or lavaActive ~= lastGroundLavaActive
+    lastGroundDecor = decor
+    lastGroundLavaActive = lavaActive
+    if changed or now >= nextGroundScanAt then
+        nextGroundScanAt = now + 3
     if decor and decor:IsA("Folder") then
         for _, part in ipairs(decor:GetChildren()) do
             local role = LavaGroundContrastRules.nativeRole(part, decor)
@@ -46,6 +59,7 @@ local function refreshSafeFloorContrast(lavaActive)
                 if part.Color ~= target then part.Color = target end
             end
         end
+    end
     end
     -- Authenticated imported floor meshes have their own tiny bounded
     -- registry (2/12/36 LOD resident tiles). They cannot be recolored
