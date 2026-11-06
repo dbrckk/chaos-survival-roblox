@@ -1,3 +1,8 @@
+# 2026-11-06 G1 + G2 gameplay milestone release candidate:
+# Includes PRs #644–#652: result correctness, first-minute survival cues,
+# real collapse/lava escape cues, and seven-bot physical recovery fixes.
+# Reuse the existing fail-closed exact-SHA build + Roblox Engine + public
+# playtest publisher gate. Never publish on a failed or unknown check.
 # 2026-11-06 owner-directed Android SURVIVAL release candidate:
 # Real physics-first lava escape guidance, plus already certified
 # timed-signal reachability and floor-vs-lava contrast. One-shot on merge.
