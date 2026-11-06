@@ -3424,6 +3424,30 @@ local function nearbyRecoveryStep(record, root, failedDestination)
     local originFloorY = groundAt(root.Position)
     if not originFloorY then return nil end
     local clearanceOffsets = {-1.35, 0, 1.1}
+    local function blockedByStatic(origin, displacement)
+        -- Other moving R15 contestants are temporary crowding, not
+        -- permanent walls. A single ray hit on their limbs previously
+        -- discarded otherwise valid recovery routes for all seven bots.
+        -- Look past at most three dynamic hits while still rejecting any
+        -- anchored solid obstruction behind them. This runs only on a
+        -- confirmed physical stall, never on each brain/physics frame.
+        local exclusions = {record.model}
+        local clearanceParams = RaycastParams.new()
+        clearanceParams.FilterType = Enum.RaycastFilterType.Exclude
+        clearanceParams.RespectCanCollide = true
+        for _ = 1, 4 do
+            clearanceParams.FilterDescendantsInstances = exclusions
+            local hit = workspace:Raycast(
+                origin, displacement, clearanceParams
+            )
+            if not hit then return false end
+            if hit.Instance.Anchored then return true end
+            exclusions[#exclusions + 1] = hit.Instance
+        end
+        -- An unusually dense moving crowd cannot justify claiming
+        -- the corridor is clear without seeing past the last body.
+        return true
+    end
     for _, direction in ipairs(directions) do
         local step = direction * 6.5
         local candidate = clampToArena(root.Position + step)
@@ -3433,9 +3457,9 @@ local function nearbyRecoveryStep(record, root, failedDestination)
         if actualStep.Magnitude >= 4.5 then
             local blocked = false
             for _, offset in ipairs(clearanceOffsets) do
-                if workspace:Raycast(
+                if blockedByStatic(
                     root.Position + Vector3.new(0, offset, 0),
-                    actualStep, params
+                    actualStep
                 ) then
                     blocked = true
                     break
