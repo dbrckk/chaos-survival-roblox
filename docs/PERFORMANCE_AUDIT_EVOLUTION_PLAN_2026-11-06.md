@@ -92,6 +92,26 @@ mesures sur Android à effectuer au prochain jalon majeur.
 
 **Gate P2 :** aucune régression visuelle perceptible à 15–55 studs ; charge GPU réduite **mesurée**, pas supposée.
 
+### Instrumentation P0 serveur — coût réel du cerveau IA
+
+`AISurvivorService.PerformanceDiagnostics` expose maintenant, **uniquement
+dans le module serveur**, les agrégats de la boucle de décision existante.
+Les mesures sont publiées toutes les **32 passes**, sans RemoteEvent,
+sans Instance et sans boucle supplémentaire :
+
+- `Samples` : nombre cumulé de passes échantillonnées ;
+- `AveragePassMs`, `PeakPassMs` : durée moyenne et maximum d'une
+  passe de cerveau **incluant** réconciliation éventuelle et décisions ;
+- `AverageBotStepMs`, `PeakBotStepMs` : durée moyenne et maximum
+  des appels `runBrainStep` individuels, **déjà inclus** dans le total ;
+- `BotCount`, `Phase` : contexte de la dernière fenêtre.
+
+**Attention :** `os.clock()` ne remplace pas le MicroProfiler et ne mesure
+ni la simulation physique R15, ni les animations moteur, ni le réseau.
+Les appels de navigation asynchrones doivent être profilés séparément.
+Ces valeurs ne pilotent aucune décision de jeu. Relever les agrégats
+dans une session serveur de référence avec 1, 4 et 7 bots.
+
 ## P3 — IA et réseau à 8 participants
 
 1. Profiler serveur avec 1, 4 et 7 bots : durée réelle des passes du cerveau, raycasts, navigation, animations, physique R15, réplication et latence des signaux.
