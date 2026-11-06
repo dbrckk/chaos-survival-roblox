@@ -211,6 +211,22 @@ describe("Result presentation", function()
         expect(ResultPresentation.fallbackFeedback(aiChampion, 101, false).survived)
             .toBe(false)
 
+        -- The full eight-seat public game can field seven AI contestants.
+        -- A unique surviving AI in any legal slot must be recognized by
+        -- the authoritative result and every countdown packet.
+        for slot = 1, 7 do
+            context.soleAliveAISlot = slot
+            local fullRosterChampion = RoundResultState.snapshot(context)
+            expect(fullRosterChampion.soleSurvivorAISlot).toBe(slot)
+            expect(fullRosterChampion.soleSurvivorUserId).toBe(nil)
+            expect(RoundResultState.atSecond(fullRosterChampion, 1).soleSurvivorAISlot)
+                .toBe(slot)
+            expect(ResultPresentation.spotlightLabelKey(
+                fullRosterChampion.soleSurvivorAISlot == slot, false
+            )).toBe("RESULT_SOLE_SURVIVOR")
+        end
+        context.soleAliveAISlot = 2
+
         -- One human plus one living AI is not a champion result.
         local tied = RoundResultState.snapshot({
             participantUserIds = {101},
