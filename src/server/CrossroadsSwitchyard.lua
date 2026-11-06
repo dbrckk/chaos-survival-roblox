@@ -284,6 +284,12 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
                 break
             end
             cycle += 1
+            -- A junction may be used once per charged window, not once
+            -- for the entire round. Reset per-character lane claims when
+            -- the active pair rotates; retain the independent 4s cooldown.
+            -- This restores repeatable tactical lane changes on 45s rounds
+            -- without allowing repeated Touched impulses in one window.
+            claimed = setmetatable({}, {__mode = "k"})
             paint()
         end
     end)
