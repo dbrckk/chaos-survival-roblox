@@ -520,7 +520,22 @@ local function update()
     local target = nil
     local french = player.LocaleId:sub(1, 2) == "fr"
     local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
-    if lavaClimbActive then
+    local collapseEscape = from.Parent == platforms
+        and from:GetAttribute("CollapsePhase") == "Warning"
+    if collapseEscape then
+        -- A server-warning deck will lose collision in 1.35 seconds.
+        -- Prioritize an actual reachable, still-collidable successor
+        -- over mastery, cargo and ordinary climb advice for EVERY player.
+        -- If no physical exit exists, do not invent a safe arrow.
+        target = JumpRouteCueRules.nextPhysical(
+            from, pieces, base.Position, arena:GetAttribute("VariantId"),
+            skyRouteDirection(from)
+        )
+        if target then
+            hint = french and "QUITTE LA PLATEFORME  ↑"
+                or "LEAVE THE PLATFORM  ↑"
+        end
+    elseif lavaClimbActive then
         -- Never point to a painted floor arrow or a distant invented
         -- refuge. The target is one actual live server PlatformN or
         -- a genuine Orbital helix ramp with its physical entry.
@@ -762,12 +777,15 @@ local function update()
             or Vector3.new(0, target.Size.Y * 0.5 + 3.1, 0)
     end
     sign.Enabled = true
-    return true
+    return true, collapseEscape
 end
 
 task.spawn(function()
     while true do
-        local active = update()
-        task.wait(active and 0.40 or 0.85)
+        local active, collapseEscape = update()
+        -- Only a real, server-confirmed collapse under the player's
+        -- feet warrants faster existing-loop refresh; otherwise retain
+        -- the original Android-friendly 0.40/0.85 second cadence.
+        task.wait(collapseEscape and 0.12 or (active and 0.40 or 0.85))
     end
 end)
