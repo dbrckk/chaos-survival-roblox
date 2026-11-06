@@ -34,6 +34,8 @@ panneaux « High Ground » existaient déjà, mais seulement **au sommet**.
   ou « SUIS LA PASSERELLE », avec anglais équivalent.
 - Les joueurs déjà sur des plateformes suivent la navigation physique
   normale ; Orbital reste sur ses véritables `HelixCircuit` et rampes.
+  Les huit `EntryRamp` d'Orbital sont repérées jusqu'à 104 studs
+  pendant la lave, en pointant leur vrai `HelixStart` et non leur centre.
   La traversée des jonctions H conserve son sens de progression.
 - Les avertissements immédiats (bombes, météores, balayages) restent
   plus prioritaires. Un objectif situé dans une zone de danger est
