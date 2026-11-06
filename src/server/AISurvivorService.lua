@@ -4929,14 +4929,23 @@ local function stepRecord(record, now)
                 and now < (record.failedTargetUntil or 0)
                 and (Vector3.new(target.X - record.failedTarget.X, 0,
                     target.Z - record.failedTarget.Z)).Magnitude < 11 then
-                local alternative = nearbyRecoveryStep(record, root)
+                local alternative = nearbyRecoveryStep(
+                    record, root, record.failedTarget
+                )
                 if alternative then
                     target, hold = alternative, 1.2
-                    record.targetPart = nil
-                    record.targetIsPad = false
-                    record.targetIsSkyrail = false
-                    record.skyrailDirection = nil
+                else
+                    -- The physical detour solver found no safe support.
+                    -- Never fall through to the quarantined wall goal:
+                    -- remain on actual footing and reconsider next tick.
+                    -- An already-pending asynchronous ground route can
+                    -- still replace this hold with validated waypoints.
+                    target, hold = root.Position, 0.65
                 end
+                record.targetPart = nil
+                record.targetIsPad = false
+                record.targetIsSkyrail = false
+                record.skyrailDirection = nil
             end
             -- Before an ordinary ground wander, make a bounded physical
             -- obstruction preview. Upper-deck jumps and urgent hazard
