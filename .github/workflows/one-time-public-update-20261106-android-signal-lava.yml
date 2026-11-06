@@ -1,3 +1,6 @@
+# 2026-11-06 G1/G2 exact-SHA retry after fixing RoundResultState's
+# real-engine Lest source-module load (script is nil in that loader).
+# Do not bypass the 85-spec gate or publisher SHA checks.
 # 2026-11-06 G1 + G2 gameplay milestone release candidate:
 # Includes PRs #644–#652: result correctness, first-minute survival cues,
 # real collapse/lava escape cues, and seven-bot physical recovery fixes.
