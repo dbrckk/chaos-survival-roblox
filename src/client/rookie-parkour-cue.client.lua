@@ -539,11 +539,22 @@ local function update()
                 skyRouteDirection(from))
         end
         if target then
-            hint = from == base
-                and (french and "VERS LES HAUTEURS  ↑"
-                    or "FIND HIGH GROUND  ↑")
-                or (french and "GRIMPE PLUS HAUT  ↑"
-                    or "CLIMB HIGHER  ↑")
+            if from == base then
+                hint = french and "VERS LES HAUTEURS  ↑"
+                    or "FIND HIGH GROUND  ↑"
+            else
+                local nextTop = target.Position.Y + target.Size.Y * 0.5
+                local currentTop = from.Position.Y + from.Size.Y * 0.5
+                if nextTop > currentTop + 0.35 then
+                    hint = french and "GRIMPE PLUS HAUT  ↑"
+                        or "CLIMB HIGHER  ↑"
+                else
+                    -- The genuinely level Sky Spine / promenades
+                    -- should never be labelled as a higher step.
+                    hint = french and "SUIS LA PASSERELLE  ↑"
+                        or "FOLLOW THE SKYWAY  ↑"
+                end
+            end
         end
     elseif not rookie then
         -- Mastery already owns its own physical objective marker. An
