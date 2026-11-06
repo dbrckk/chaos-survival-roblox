@@ -62,6 +62,12 @@ AISurvivorService.PerformanceDiagnostics = {
     PeakBotStepMs = 0,
     BotCount = 0,
     Phase = "waiting",
+    -- Monotonic server-only counters: distinguish detected stalls from
+    -- actual physical exits, and see whether pathfinding is necessary.
+    StallDetections = 0,
+    LocalRecoveryFound = 0,
+    LocalRecoveryFailed = 0,
+    GroundReplansRequested = 0,
 }
 
 local IDENTITIES = {
@@ -3775,6 +3781,7 @@ local function recoverIfStuck(record, humanoid, root, now)
     end
 
     record.stuckCount = (record.stuckCount or 0) + 1
+    AISurvivorService.PerformanceDiagnostics.StallDetections += 1
     if record.groundNavigation then
         cancelGroundNavigation(record)
     end
@@ -3826,8 +3833,20 @@ local function recoverIfStuck(record, humanoid, root, now)
     -- physical ground route. Start only after repeated stalls, or immediately
     -- when no local safe step exists. The existing detour remains usable
     -- while the asynchronous route is being computed.
+    if recovery then
+        AISurvivorService.PerformanceDiagnostics.LocalRecoveryFound += 1
+    else
+        AISurvivorService.PerformanceDiagnostics.LocalRecoveryFailed += 1
+    end
     if not recovery or record.recoveryAttemptCount >= 2 then
+        -- Count actual new requests, not every brain pass while an
+        -- asynchronous NavMesh computation is already in flight.
+        local alreadyNavigating = record.groundNavigationPending
+            or record.groundNavigation ~= nil
         requestGroundNavigation(record, root, goal, now)
+        if not alreadyNavigating and record.groundNavigationPending then
+            AISurvivorService.PerformanceDiagnostics.GroundReplansRequested += 1
+        end
     end
     record.targetPart = nil
     record.targetIsPad = false
