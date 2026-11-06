@@ -202,6 +202,43 @@ function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
     return closest
 end
 
+-- The 320-stud arenas have physically climbable exterior entries
+-- more than 48 studs from a fresh spawn. During RisingLava, veterans
+-- and beginners alike need a REAL starting point rather than a generic
+-- "CLIMB" banner. Extend the range ONLY for this verified emergency.
+-- An entry already under water or collapsing is never a refuge.
+function JumpRouteCueRules.nearestLavaClimbEntry(
+    orderedPlatforms, floorPoint, lava, maxRange
+)
+    if type(orderedPlatforms) ~= "table"
+        or typeof(floorPoint) ~= "Vector3" then return nil end
+    local range = math.clamp(tonumber(maxRange) or 100, 12, 112)
+    local selected, closest = nil, math.huge
+    for _, part in ipairs(orderedPlatforms) do
+        if JumpRouteCueRules.safeLandingTarget(part)
+            and part:GetAttribute("RouteTier") == 1
+            and part:GetAttribute("BranchRoute") == nil
+            and part:GetAttribute("CrosslinkRoute") == nil
+            and (part:GetAttribute("PerimeterRoute") == nil
+                or (part:GetAttribute("PerimeterStep") == 1
+                    and part:GetAttribute("ChaosPermanentRoute") == true))
+            and part.Parent and part.Parent.Name == "Platforms"
+            and not JumpRouteCueRules.lavaOnDeck(part, lava) then
+            local top = part.Position.Y + part.Size.Y * 0.5
+            local rise = top - floorPoint.Y
+            local delta = part.Position - floorPoint
+            local distance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+            -- The nearest floor-to-route step is still a native jump,
+            -- not a teleport to an arbitrary high deck.
+            if rise >= 1.5 and rise <= 5.2
+                and distance <= range and distance < closest then
+                selected, closest = part, distance
+            end
+        end
+    end
+    return selected
+end
+
 -- A real tactical fork exists at perimeter step five: continue up the
 -- main escape ridge or turn toward the side lookout. Expose BOTH
 -- server-authored destinations, but never fabricate a diagonal jump.
