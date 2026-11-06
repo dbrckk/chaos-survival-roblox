@@ -16,6 +16,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local currentPhase = "waiting"
 local currentChallenge = nil
+local currentDisasters = {}
 local finalRush = false
 -- Recovery is session-local cosmetic state, never a server score or entitlement.
 local recoveryDeck = nil
@@ -162,6 +163,8 @@ stateEvent.OnClientEvent:Connect(function(state)
     local previous = currentPhase
     currentPhase = tostring(state.phase or "waiting")
     currentChallenge = state.challengeMetric
+    currentDisasters = type(state.disasterIds) == "table"
+        and state.disasterIds or {}
     finalRush = state.finalRush == true
     if currentPhase ~= previous then
         resetRecovery()
@@ -352,6 +355,11 @@ local function update()
     -- Rookie guidance stays focused on survival. Experienced players
     -- see a cargo cue only while an actual timed Harbor objective exists.
     local rookie = FirstTimeExperience.isRookie(games)
+    -- Rising lava is lethal to beginners AND veteran avatars alike.
+    -- Reuse this ONE existing depth-tested marker to direct a genuine
+    -- ascent instead of creating a competing Android objective card.
+    local lavaClimbActive = currentPhase == "round"
+        and table.find(currentDisasters, "RisingLava") ~= nil
     if (currentPhase ~= "ready" and currentPhase ~= "round")
         or (not rookie and currentPhase ~= "round")
         or player:GetAttribute("RoundParticipant") ~= true
@@ -509,7 +517,35 @@ local function update()
     local target = nil
     local french = player.LocaleId:sub(1, 2) == "fr"
     local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
-    if not rookie then
+    if lavaClimbActive then
+        -- Never point to a painted floor arrow or a distant invented
+        -- refuge. The target is one actual live server PlatformN or
+        -- a genuine Orbital helix ramp with its physical entry.
+        local variant = arena:GetAttribute("VariantId")
+        if variant == "Orbital" then
+            target = orbitalRampNext(arena, from, root, base, platforms)
+            if not target and from.Parent == platforms then
+                target = JumpRouteCueRules.nextPhysical(
+                    from, pieces, base.Position, variant,
+                    skyRouteDirection(from))
+            end
+        elseif from == base then
+            target = JumpRouteCueRules.nearestLavaClimbEntry(
+                pieces, hit.Position, workspace:FindFirstChild("RoundLava"),
+                106)
+        elseif from.Parent == platforms then
+            target = JumpRouteCueRules.nextPhysical(
+                from, pieces, base.Position, variant,
+                skyRouteDirection(from))
+        end
+        if target then
+            hint = from == base
+                and (french and "VERS LES HAUTEURS  ↑"
+                    or "FIND HIGH GROUND  ↑")
+                or (french and "GRIMPE PLUS HAUT  ↑"
+                    or "CLIMB HIGHER  ↑")
+        end
+    elseif not rookie then
         -- Mastery already owns its own physical objective marker. An
         -- optional hint only assists a genuinely stalled platform runner.
         target, hint = cargoWaypoint(
@@ -609,7 +645,7 @@ local function update()
         root.Position, target, dangerWarnings
     ) then
         local alternative = nil
-        if rookie and from == base then
+        if (rookie or lavaClimbActive) and from == base then
             -- Don't simply hide the very first actionable cue when a
             -- meteor covers the nearest entry; look for another REAL
             -- first-tier takeoff in range, only during a live warning.
@@ -621,9 +657,12 @@ local function update()
                     remaining[#remaining + 1] = deck
                 end
             end
-            alternative = JumpRouteCueRules.nearestEntry(
-                remaining, hit.Position, 42
-            )
+            alternative = lavaClimbActive
+                and JumpRouteCueRules.nearestLavaClimbEntry(
+                    remaining, hit.Position,
+                    workspace:FindFirstChild("RoundLava"), 106)
+                or JumpRouteCueRules.nearestEntry(
+                    remaining, hit.Position, 42)
         elseif from.Parent == platforms then
             if from:GetAttribute("PerimeterStep") == 5 then
                 local forward, flank = JumpRouteCueRules.forkOptions(from, pieces)
@@ -658,7 +697,9 @@ local function update()
         and (root.Position - rampStart).Magnitude
         or (target and (root.Position - target.Position).Magnitude
             or math.huge)
-    if not target or guideDistance > 46 then
+    local maxGuideDistance = lavaClimbActive
+        and from == base and 108 or 46
+    if not target or guideDistance > maxGuideDistance then
         hide()
         -- Never burn an extra fast loop to search for optional hints.
         return rookie
@@ -688,10 +729,13 @@ local function update()
         return true
     end
     local sign = gui()
+    sign.MaxDistance = lavaClimbActive and from == base and 112 or 48
     -- Calm teal for normal rookie guidance, sea-green for cargo. Retain
     -- depth testing and a single HUD owner on all Android tiers.
-    local guideColor = rookie and Color3.fromRGB(210, 248, 236)
-        or Color3.fromRGB(146, 255, 196)
+    local guideColor = lavaClimbActive
+        and Color3.fromRGB(208, 255, 227)
+        or (rookie and Color3.fromRGB(210, 248, 236)
+            or Color3.fromRGB(146, 255, 196))
     if caption.TextColor3 ~= guideColor then
         caption.TextColor3 = guideColor
     end
