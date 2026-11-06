@@ -4,6 +4,13 @@
 # on the exact merged main SHA, and publish the EXISTING public place ONLY if
 # BOTH succeed. If either fails, stop: zero speculative Roblox uploads.
 # Physical Android/Studio certification still remains manual after the update.
+# Owner-directed retry: first candidate Build Validation correctly stopped
+# because CI asserted the old literal 'attach(entry, variant)' even though
+# the real lava PBR branch safely passes 'visualMaterial'. The current
+# release gate now checks both source-approved atlas provenance and the
+# actual visualMaterial selection; publish remains fail-closed on tests.
+# Updating THIS exact one-time workflow path triggers a new exact-SHA
+# milestone once the first failed candidate is resolved.
 name: One-time Public Update 2026-11-06 Android Signal And Safe Lava Contrast
 on:
   push:
@@ -51,6 +58,7 @@ jobs:
           visual = Path('src/client/arena-surface-detail.client.lua').read_text()
           assert 'SignalNavigationRules.liveCueReachable(' in navigation
           assert 'PremiumGroundPbrKit.attach(' in material
+          assert 'visualMaterial = lavaContrastActive and "LavaSafeSteel" or variant' in material
           assert 'PremiumGroundMeshKit.setLavaContrast(lavaActive)' in visual
           print('84/84 engine specs gated; both real Android fixes included.')
           PY
