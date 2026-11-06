@@ -1,6 +1,7 @@
 -- A finished round is visible to players before any persistence, achievement,
 -- or analytics write. Results are based solely on the frozen server roster.
 -- This module never grants rewards or changes round participation.
+local AISurvivorRules = require(script.Parent.AISurvivorRules)
 local RoundResultState = {}
 
 local function nonnegativeInt(value)
@@ -43,9 +44,10 @@ function RoundResultState.snapshot(context)
             soleSurvivorUserId = survivorUserIds[1]
         elseif nonnegativeInt(context.aiSurvivorsAlive) == 1 then
             local aiSlot = nonnegativeInt(context.soleAliveAISlot)
-            -- AI slots are currently 1-3. A failed/missing bot snapshot
-            -- never fabricates a champion identity.
-            if aiSlot >= 1 and aiSlot <= 3 then
+            -- Accept only real active AI seat indices. The server's bot
+            -- capacity is shared with matchmaking, not a stale 3-bot cap.
+            -- A missing or invalid unique survivor never earns a title.
+            if aiSlot >= 1 and aiSlot <= AISurvivorRules.MaxBots then
                 soleSurvivorAISlot = aiSlot
             end
         end
