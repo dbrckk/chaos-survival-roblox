@@ -460,11 +460,13 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady,
         tier, pressure, touch, pbrDisabled)
     local remaining = pbrBudget
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local visualMaterial = lavaContrastActive and "LavaSafeSteel" or variant
     for _, candidate in ipairs(candidates) do
         local entry = mounted[candidate.part]
         if entry then
             if remaining > 0 and safeAfterMount(entry, base) then
-                local count = PremiumGroundPbrKit.attach(entry, variant)
+                local count = PremiumGroundPbrKit.attach(
+                    entry, visualMaterial)
                 if count > 0 then
                     remaining -= 1
                 end
