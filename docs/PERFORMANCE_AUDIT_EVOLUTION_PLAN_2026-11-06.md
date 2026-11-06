@@ -55,6 +55,14 @@ attributs **locaux au joueur** sont rafraîchis toutes les 16 passes
 | `ClientSceneryLod3dAvgMs` | Temps moyen du reste du passage (inclut les kits 3D) |
 | `ClientSceneryLodSampleClock` | Horodatage `os.clock()` client du dernier relevé |
 
+Une seconde passe instrumente maintenant les trois kits 3D à forte
+densité dans **la même boucle existante** : `ClientSceneryLodRouteAvgMs`
+(passerelles et sauts), `ClientSceneryLodGroundAvgMs` (sol sculpté)
+et `ClientSceneryLodDistrictAvgMs` (façades détaillées). Ce sont des
+durées de `sync` moyennées sur 16 passages ; elles sont **déjà comprises**
+dans `ClientSceneryLod3dAvgMs`, donc ne jamais les additionner au temps
+total. Le coût GPU des triangles/PBR reste hors de portée de ces mesures.
+
 Cette instrumentation ne crée ni boucle, ni Part, ni appel distant,
 ni GUI supplémentaire. Elle ne constitue **pas** une mesure GPU et
 ne permet pas à elle seule d'attribuer un coût à un kit 3D précis.
