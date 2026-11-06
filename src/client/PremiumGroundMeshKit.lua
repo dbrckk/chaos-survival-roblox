@@ -10,6 +10,11 @@ local PremiumGroundPbrKit = if script and script.Parent
     then require(script.Parent.PremiumGroundPbrKit)
     else require("./PremiumGroundPbrKit")
 
+local groundRulesModule = ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("LavaGroundContrastRules")
+local LavaGroundContrastRules = if groundRulesModule
+    then require(groundRulesModule)
+    else require("../shared/LavaGroundContrastRules")
 local PremiumGroundMeshKit = {}
 
 -- Approved original Roblox MODEL package, not an invented MeshPart.MeshId.
@@ -52,7 +57,34 @@ folder.Name = "OriginalPremiumGroundMeshesLocal"
 folder.Parent = workspace
 
 local mounted = {}
+local lavaContrastActive = false
 local activeArena = nil
+
+local function recolorMounted(entry)
+    if not entry or not entry.pieces then return end
+    for _, piece in ipairs(entry.pieces) do
+        local baseColor = entry.originalColors and entry.originalColors[piece]
+        if piece and piece.Parent and typeof(baseColor) == "Color3" then
+            local target = LavaGroundContrastRules.tint(
+                baseColor, "mesh", lavaContrastActive)
+            if piece.Color ~= target then piece.Color = target end
+        end
+    end
+end
+
+-- Event-driven only: the existing arena-surface controller owns round
+-- state, while the existing scenery LOD owner mounts new approved tiles.
+-- No extra render loop or new instance: all verified mounted meshes are
+-- recolored using their original imported material color, never the
+-- already tinted Color from a previous disaster.
+function PremiumGroundMeshKit.setLavaContrast(enabled)
+    local nextValue = enabled == true
+    if nextValue == lavaContrastActive then return end
+    lavaContrastActive = nextValue
+    for _, entry in pairs(mounted) do
+        recolorMounted(entry)
+    end
+end
 local watchedBase = nil
 local baseChanged = nil
 
@@ -282,7 +314,12 @@ local function mount(ground, decor, base, template)
         model = clone, ground = ground, decor = decor,
         initialSize = ground.Size, initialCFrame = ground.CFrame,
         pieces = pieces, connections = {}, index = number, overlays = {},
+        originalColors = {},
     }
+    for _, piece in ipairs(pieces) do
+        entry.originalColors[piece] = piece.Color
+    end
+    recolorMounted(entry)
     local function onGroundChanged()
         -- Hide untrusted/changed 3D immediately, and restore the native
         -- finish. Reversible if a harmless transparency change is undone.
@@ -423,11 +460,13 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady,
         tier, pressure, touch, pbrDisabled)
     local remaining = pbrBudget
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local visualMaterial = lavaContrastActive and "LavaSafeSteel" or variant
     for _, candidate in ipairs(candidates) do
         local entry = mounted[candidate.part]
         if entry then
             if remaining > 0 and safeAfterMount(entry, base) then
-                local count = PremiumGroundPbrKit.attach(entry, variant)
+                local count = PremiumGroundPbrKit.attach(
+                    entry, visualMaterial)
                 if count > 0 then
                     remaining -= 1
                 end

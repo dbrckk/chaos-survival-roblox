@@ -23,7 +23,13 @@ local APPROVED = {
     ReactorCeramic = true,
 }
 
+-- During a live RisingLava hazard, swap only already approved 2K
+-- source material templates on the visible floor clones. Reusing the
+-- cool BrushedTitanium atlas (rather than warm OxidizedSteel) prevents
+-- the polished rusty floor from reading like the glowing lava volume.
+-- No new texture IDs, downloads, plugin-security writes or mesh clones.
 function Kit.family(variant)
+    if variant == "LavaSafeSteel" then return "BrushedTitanium" end
     return MATERIAL[variant] or MATERIAL.Classic
 end
 
@@ -71,6 +77,9 @@ local function finishForPart(variant, part)
         or string.find(name, "CARBON", 1, true)
         or string.find(name, "GRIP", 1, true) then
         return nil
+    end
+    if variant == "LavaSafeSteel" then
+        return Kit.family(variant)
     end
     if string.find(name, "CERAMIC", 1, true) then
         return "ReactorCeramic"

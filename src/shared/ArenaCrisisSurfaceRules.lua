@@ -26,6 +26,7 @@ local SOUND_SHIFT = {
 function ArenaCrisisSurfaceRules.profile(ids, phase, tier, reduced, finalRush, visualsOverride)
     local out = {
         Active = false,
+        LavaActive = false,
         Primary = nil,
         Secondary = nil,
         Energy = 0,
@@ -39,6 +40,7 @@ function ArenaCrisisSurfaceRules.profile(ids, phase, tier, reduced, finalRush, v
     if phase ~= "round" or type(ids) ~= "table" then return out end
     local visuals = visualsOverride or require(game:GetService("ReplicatedStorage").Shared.DisasterVisuals)
     for _, id in ipairs(ids) do
+        if id == "RisingLava" then out.LavaActive = true end
         local visual = visuals.get(id)
         local energy = INTENSITY[id]
         if visual and energy then
@@ -92,6 +94,13 @@ function ArenaCrisisSurfaceRules.shade(baseColor, material, name, index, profile
     end
     local accent = profile.Secondary and (tonumber(index) or 1) % 2 == 0
         and profile.Secondary or profile.Primary
+    -- The screenshots showed rust-orange *safe* floor details under a
+    -- bright orange lava event. Cool the cosmetic DETAIL (not the lava
+    -- volume or gameplay warnings) to steel-blue for instant separation.
+    -- Keep the old small mixing budget and exact material geometry.
+    if profile.LavaActive then
+        accent = Color3.fromRGB(81, 133, 147)
+    end
     return baseColor:Lerp(accent, math.clamp(mix * pulse, 0, 0.30))
 end
 
