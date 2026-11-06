@@ -45,21 +45,21 @@ local function refreshSafeFloorContrast(lavaActive)
     lastGroundLavaActive = lavaActive
     if changed or now >= nextGroundScanAt then
         nextGroundScanAt = now + 3
-    if decor and decor:IsA("Folder") then
-        for _, part in ipairs(decor:GetChildren()) do
-            local role = LavaGroundContrastRules.nativeRole(part, decor)
-            if role then
-                local baseColor = originalNativeGroundColors[part]
-                if not baseColor then
-                    baseColor = part.Color
-                    originalNativeGroundColors[part] = baseColor
+        if decor and decor:IsA("Folder") then
+            for _, part in ipairs(decor:GetChildren()) do
+                local role = LavaGroundContrastRules.nativeRole(part, decor)
+                if role then
+                    local baseColor = originalNativeGroundColors[part]
+                    if not baseColor then
+                        baseColor = part.Color
+                        originalNativeGroundColors[part] = baseColor
+                    end
+                    local target = LavaGroundContrastRules.tint(
+                        baseColor, role, lavaActive)
+                    if part.Color ~= target then part.Color = target end
                 end
-                local target = LavaGroundContrastRules.tint(
-                    baseColor, role, lavaActive)
-                if part.Color ~= target then part.Color = target end
             end
         end
-    end
     end
     -- Authenticated imported floor meshes have their own tiny bounded
     -- registry (2/12/36 LOD resident tiles). They cannot be recolored
