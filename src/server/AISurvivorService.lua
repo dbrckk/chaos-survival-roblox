@@ -833,7 +833,9 @@ local function createRig(record)
     record.escapeUntil = 0
     record.escapeWarningVersion = nil
     record.escapeKnownWarnings = nil
-    record.routeWarningVersion = warningVersion
+    -- This rig is constructed before the file-local warning tracker is
+    -- declared; use a numeric sentinel, then sync on its first brain step.
+    record.routeWarningVersion = -1
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
