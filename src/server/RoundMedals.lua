@@ -8,6 +8,15 @@ function RoundMedals.evaluate(stats)
         table.insert(medals, "FIRST CHAOS")
     end
 
+    -- Reward real teamwork with visible recognition, not extra currency.
+    -- The server awards these counts only after a relay helped someone.
+    if (tonumber(stats.teamDashShared) or 0) >= 1 then
+        table.insert(medals, "TEAM SUPPORT")
+    end
+    if (tonumber(stats.botDashReceived) or 0) >= 1 then
+        table.insert(medals, "BOT BACKUP")
+    end
+
     if (tonumber(stats.shards) or 0) >= 3 then
         table.insert(medals, "SHARD HUNTER")
     end
