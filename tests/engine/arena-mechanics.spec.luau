@@ -1570,6 +1570,11 @@ describe("Arena mechanics", function()
         band.CFrame = CFrame.new(30, 0, 0)
         velocity = HarborCargoSweep.velocity(Vector3.zero, band, center)
         expect(velocity:Dot(Vector3.new(-30, 0, 0)) > 0).toBe(true)
+        -- The second lane family is long on X, narrow on Z.
+        band.Size = Vector3.new(68, 0.1, 7.5)
+        band.CFrame = CFrame.new(30, 0, 0) * CFrame.Angles(0, math.rad(90), 0)
+        velocity = HarborCargoSweep.velocity(Vector3.zero, band, center)
+        expect(velocity:Dot(Vector3.new(-30, 0, 0)) > 0).toBe(true)
         band:Destroy()
     end)
 
