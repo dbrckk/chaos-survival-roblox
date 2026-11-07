@@ -470,6 +470,14 @@ function AISurvivorRules.nextRecoveryAttempt(previous, lastAt, now)
     return (math.floor(math.max(0, prior)) % 8) + 1
 end
 
+-- Repeated physical stalls against the same obstacle need a longer
+-- cooldown than a first miss. Keep it bounded: an arena can change and
+-- a previously blocked destination may become reachable again.
+function AISurvivorRules.failedGoalCooldown(attempt)
+    local count = math.max(1, math.floor(tonumber(attempt) or 1))
+    return math.min(16, 7.5 + (count - 1) * 2)
+end
+
 function AISurvivorRules.recoveryDirections(position, target, slot)
     if typeof(position) ~= "Vector3" or typeof(target) ~= "Vector3" then
         return {}
