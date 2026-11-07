@@ -11,6 +11,7 @@ local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
 local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local SkybridgeShutters = require("../../src/server/SkybridgeShutters")
+local HarborCargoSweep = require("../../src/server/HarborCargoSweep")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local ClassicGridSweep = require("../../src/server/ClassicGridSweep")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
@@ -1551,6 +1552,60 @@ describe("Arena mechanics", function()
         ctx.EnableDistrictSignals = false
         expect(DistrictSignalRush.allowed(ctx, base)).toBe(false)
         arenaMap:Destroy()
+    end)
+
+    it("applies Harbor sweep once to active AI missing from the roster", function()
+        local band = Instance.new("Part")
+        band.Name = "HarborRegressionSweep"
+        band.Anchored = true
+        band.Size = Vector3.new(7.5, 0.1, 68)
+        band.Position = Vector3.new(32, 0, 0)
+        band:SetAttribute("HarborSweepPhase", "Pulse")
+        band.Parent = workspace
+        local bot = Instance.new("Model")
+        bot:SetAttribute("AISurvivor", true)
+        bot:SetAttribute("AISurvivorInRound", true)
+        local hum = Instance.new("Humanoid")
+        hum.Parent = bot
+        local root = Instance.new("Part")
+        root.Name = "HumanoidRootPart"
+        root.Size = Vector3.new(2, 2, 1)
+        root.CanCollide = false
+        root.Parent = bot
+        bot.Parent = workspace
+        root.Position = band.Position + Vector3.new(0, 2.5, 0)
+        local ctx = {
+            Active = function() return true end,
+            IsContestantActive = function() return true end,
+        }
+        local claimed = {}
+        expect(HarborCargoSweep.applyLiveBot(
+            ctx, band, bot, claimed, Vector3.zero
+        )).toBe(true)
+        expect(claimed[bot]).toBe(true)
+        expect(HarborCargoSweep.applyLiveBot(
+            ctx, band, bot, claimed, Vector3.zero
+        )).toBe(false)
+        expect(HarborCargoSweep.apply(
+            ctx, band, {Character = bot}, claimed, Vector3.zero
+        )).toBe(false)
+        claimed = {}
+        bot:SetAttribute("AISurvivorInRound", false)
+        expect(HarborCargoSweep.applyLiveBot(
+            ctx, band, bot, claimed, Vector3.zero
+        )).toBe(false)
+        bot:SetAttribute("AISurvivorInRound", true)
+        root.Position = band.Position + Vector3.new(0, 8, 0)
+        expect(HarborCargoSweep.applyLiveBot(
+            ctx, band, bot, claimed, Vector3.zero
+        )).toBe(false)
+        root.Position = band.Position + Vector3.new(0, 2.5, 0)
+        hum.Health = 0
+        expect(HarborCargoSweep.applyLiveBot(
+            ctx, band, bot, claimed, Vector3.zero
+        )).toBe(false)
+        bot:Destroy()
+        band:Destroy()
     end)
 
     it("keeps mobility impulses non-lethal and bounded", function()
