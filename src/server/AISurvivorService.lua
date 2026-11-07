@@ -1040,6 +1040,8 @@ local function sendToArena(record)
     record.stuckCount = 0
     record.recoveryAttemptCount = 0
     record.lastRecoveryAt = 0
+    record.recoveryWaypoint = nil
+    record.recoveryCommitUntil = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
     record.nextObstaclePreviewAt = 0
@@ -4372,6 +4374,9 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
     -- humanlike wandering curves and reaction pauses can pull the rig
     -- out of the real hold range even after an AI chose to help someone.
     local direct = urgent == true
+        or (record.recoveryWaypoint
+            and record.target == record.recoveryWaypoint
+            and now < (record.recoveryCommitUntil or 0))
         or record.spineControl ~= nil
         or record.assistShield ~= nil
         or record.assistRelay ~= nil
@@ -5037,6 +5042,9 @@ local function stepRecord(record, now)
         -- airborne shortcuts across its narrow physical corridor.
         and not record.groundNavigation
         and not record.groundNavigationPending
+        and not (record.recoveryWaypoint
+            and record.target == record.recoveryWaypoint
+            and now < (record.recoveryCommitUntil or 0))
         and now >= record.nextJump then
         local _, pressure = decisionTraits(record)
         local jumpChance = AISurvivorRules.freeJumpChance(
@@ -5068,6 +5076,9 @@ local function stepRecord(record, now)
         end
 
         if urgentTarget then
+            -- Any real disaster outranks a local obstacle sidestep.
+            record.recoveryWaypoint = nil
+            record.recoveryCommitUntil = 0
             record.districtTraverse = nil
             record.signalInterestRoute = nil
             record.signalInterestUntil = 0
