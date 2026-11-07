@@ -3513,13 +3513,56 @@ end
 -- A stranded bot must not endlessly retry the exact same piece of
 -- machinery or walk into a wall. Test physical clearance and support only
 -- after genuinely failing to advance; there is no extra per-frame raycast.
-local function nearbyRecoveryStep(record, root, failedDestination)
+local function nearbyRecoveryStep(record, root, failedDestination, now)
     -- Check the REAL intended route, not the NPC's potentially rotated
     -- RightVector: that used to send several stuck bots into the same wall.
     local directions = AISurvivorRules.recoveryDirections(
         root.Position, failedDestination or record.failedTarget
             or (root.Position + root.CFrame.LookVector * 8),
         (record.slot or 1) + (record.recoveryAttemptCount or 0))
+    -- Rank the SAME seven local detours by real contestant occupancy
+    -- before running any expensive collision/floor probes. Previously
+    -- four bots on matching slot parity took the same first sidestep,
+    -- sometimes repeatedly blocking each other. A recent physical
+    -- recovery target is only a short-lived reservation hint, not a
+    -- fabricated wall or reason to reject a valid route.
+    local peers = {}
+    for _, other in ipairs(records) do
+        if other ~= record and other.inRound and other.alive
+            and other.model and other.model.Parent then
+            local otherRoot = other.model:FindFirstChild("HumanoidRootPart")
+            if otherRoot and otherRoot:IsA("BasePart")
+                and math.abs(otherRoot.Position.Y - root.Position.Y) < 6
+                and (otherRoot.Position - root.Position).Magnitude < 18 then
+                peers[#peers + 1] = otherRoot.Position
+                local target = other.target
+                if typeof(target) == "Vector3"
+                    and now - (other.lastRecoveryAt or -math.huge) < 2.2
+                    and now >= (other.lastRecoveryAt or -math.huge)
+                    and (target - otherRoot.Position).Magnitude < 10 then
+                    peers[#peers + 1] = target
+                end
+            end
+        end
+    end
+    local rankedDirections = {}
+    for index, direction in ipairs(directions) do
+        local candidate = clampToArena(root.Position + direction * 6.5)
+        local cost = 0
+        for _, peerPosition in ipairs(peers) do
+            local dx = candidate.X - peerPosition.X
+            local dz = candidate.Z - peerPosition.Z
+            local distance = math.sqrt(dx * dx + dz * dz)
+            cost += math.max(0, 6 - distance)
+        end
+        rankedDirections[#rankedDirections + 1] = {
+            direction = direction, cost = cost, original = index,
+        }
+    end
+    table.sort(rankedDirections, function(a, b)
+        if a.cost == b.cost then return a.original < b.original end
+        return a.cost < b.cost
+    end)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     -- Crowd members are dynamic blockers, never a valid floor. The old
@@ -3582,8 +3625,8 @@ local function nearbyRecoveryStep(record, root, failedDestination)
         -- the corridor is clear without seeing past the last body.
         return true
     end
-    for _, direction in ipairs(directions) do
-        local step = direction * 6.5
+    for _, option in ipairs(rankedDirections) do
+        local step = option.direction * 6.5
         local candidate = clampToArena(root.Position + step)
         local actualStep = Vector3.new(candidate.X - root.Position.X,
             0, candidate.Z - root.Position.Z)
@@ -4059,7 +4102,7 @@ local function recoverIfStuck(record, humanoid, root, now)
     -- which SIDE is tried first, but every step needs real body clearance
     -- plus floor at the midpoint and endpoint. Never PivotTo / warp.
     local recovery = nearbyRecoveryStep(
-        record, root, goal)
+        record, root, goal, now)
     -- A wall wider than the local 6.5-stud rescue step needs a complete
     -- physical ground route. Start only after repeated stalls, or immediately
     -- when no local safe step exists. The existing detour remains usable
@@ -4186,7 +4229,7 @@ local function anticipateGroundObstacle(
     if not obstacle then return nil end
 
     -- One real blocked segment, no generic wander goal and no rig warp.
-    local detour = nearbyRecoveryStep(record, root, goal)
+    local detour = nearbyRecoveryStep(record, root, goal, now)
     record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
         record.recoveryAttemptCount, record.lastRecoveryAt, now)
     record.lastRecoveryAt = now
@@ -5292,7 +5335,7 @@ local function stepRecord(record, now)
                 and (Vector3.new(target.X - record.failedTarget.X, 0,
                     target.Z - record.failedTarget.Z)).Magnitude < 11 then
                 local alternative = nearbyRecoveryStep(
-                    record, root, record.failedTarget
+                    record, root, record.failedTarget, now
                 )
                 if alternative then
                     target, hold = alternative, 1.2
