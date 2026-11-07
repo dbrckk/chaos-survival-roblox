@@ -1499,6 +1499,19 @@ function AISurvivorRules.newImpactIntersectsEscape(
     ) >= 20
 end
 
+-- Direct impact warnings take precedence over global timing cues during
+-- Double Chaos. The priorities only arbitrate *already detected* warnings;
+-- they do not expand detection radii or suppress normal reaction delays.
+function AISurvivorRules.warningThreatPriority(name)
+    if name == "MeteorWarning" or name == "BombWarning" then
+        return 2
+    end
+    if name == "JumpShockWarning" or name == "FreezeWarning" then
+        return 1
+    end
+    return 0
+end
+
 -- A bot that is already dodging one live warning should not switch
 -- its attention on every brain tick when two equal-size blast footprints
 -- overlap. Switch only when the competing warning is meaningfully closer.
