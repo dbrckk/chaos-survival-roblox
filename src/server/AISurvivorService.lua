@@ -4587,7 +4587,11 @@ local function stepRecord(record, now)
                 approach.X - root.Position.X, 0,
                 approach.Z - root.Position.Z
             ).Magnitude
-            if flat <= 4.3 then
+            -- A shockwave jump, fall or interrupted landing cancels the
+            -- physical hold. Merely staying horizontally inside the
+            -- console radius while airborne cannot complete it.
+            if flat <= 4.3 and humanoid.FloorMaterial ~= Enum.Material.Air
+                and humanoid.SeatPart == nil and not humanoid.Jump then
                 if not record.shieldHoldAt then
                     record.shieldHoldAt = now + ArenaSkyShieldNetwork.HoldSeconds
                 end
@@ -4657,7 +4661,10 @@ local function stepRecord(record, now)
             record.nextThink = now + 1.2
             local close = SkySpineSwitchyard.botOpportunity(
                 record.model, now, switchCore) == switchCore
-            if close then
+            -- Require continuous grounded contact for the whole
+            -- switchyard hold, not only at final server activation.
+            if close and humanoid.FloorMaterial ~= Enum.Material.Air
+                and humanoid.SeatPart == nil and not humanoid.Jump then
                 if not record.spineHoldAt then
                     record.spineHoldAt =
                         now + SkySpineSwitchyard.HoldSeconds
@@ -4733,7 +4740,9 @@ local function stepRecord(record, now)
             record.nextThink = now + 1.2
             local delta = assistPoint - root.Position
             local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
-            if horizontal <= 4.3 then
+            if horizontal <= 4.3
+                and humanoid.FloorMaterial ~= Enum.Material.Air
+                and humanoid.SeatPart == nil and not humanoid.Jump then
                 -- Mimic the same physical hold required of a human
                 -- (0.65s), without fabricating ProximityPrompt.Triggered.
                 -- Both model position and real beneficiaries are
