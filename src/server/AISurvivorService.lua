@@ -4324,6 +4324,18 @@ local function maybeRoundGesture(record, humanoid, root, now)
         return false
     end
 
+    -- A cosmetic greeting must never interrupt a real navigation route,
+    -- physical platform crossing or a cooperative interaction. Keep the
+    -- cooldown short when busy so a free bot can still acknowledge peers.
+    if record.groundNavigation or record.groundNavigationPending
+        or record.districtTraverse or record.signalInterestRoute
+        or record.assistRelay or record.assistShield
+        or record.spineControl or record.targetIsSkyrail
+        or record.targetIsPad then
+        record.nextRoundGestureAt = now + 2
+        return false
+    end
+
     record.nextRoundGestureAt = now + 5.5 + math.random() * 5.5
     local _, pressure = decisionTraits(record)
     if pressure > 0.50 or record.threat or record.platformThreat
