@@ -34,6 +34,8 @@ Ce document reste **le plan de référence**, actualisé plutôt que remplacé p
 
 **G4-3 — actions coopératives protégées des sauts de personnalité (source).** En complément de la protection des salutations, les sauts purement cosmétiques des bots sont désactivés pendant les approches et maintiens des relais/boucliers, les routes d'intérêt et les trajets NavMesh physiques actifs/en attente. Les sauts nécessaires pour atteindre les terrasses et les réactions urgentes aux dangers restent autorisés. Cette correction empêche qu'un saut gratuit annule une interaction utile pour un humain ou quitte un corridor au sol validé. **Validation Roblox Studio à huit participants non encore effectuée pour ce commit.**
 
+**G4-3 — récupération des activations coopératives refusées (source).** Le serveur vérifie déjà réellement l'éligibilité au moment de `ArenaSkyShieldNetwork.activateBot` et `TeamDashRelay.activateBot`. Toutefois, le bot appliquait auparavant le long délai d'une réussite (**14 s** bouclier, **13 s** relais) même si l'activation était refusée entre le début et la fin du maintien physique. Il distingue maintenant les deux issues : délai normal après succès, **4 s** après refus, en libérant toujours la réservation et en conservant les mêmes validations serveur. Objectif : permettre à un bot de tenter une autre coopération réelle pendant la même manche sans boucler sur un prompt expiré. Validation moteur et mesures d'activations réussies encore nécessaires.
+
 ### Prochaines actions sans dispersion
 
 1. **G4-1 : source fusionnée via PR #661.** Certification moteur/Android au jalon de release, pas de revendication de validation instrumentée sur le dernier SHA.
