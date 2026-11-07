@@ -3522,7 +3522,19 @@ local function nearbyRecoveryStep(record, root, failedDestination)
         (record.slot or 1) + (record.recoveryAttemptCount or 0))
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {record.model}
+    -- Crowd members are dynamic blockers, never a valid floor. The old
+    -- ground rays could hit a teammate's limb first and reject a real
+    -- safe detour, leaving several clustered bots permanently stalled.
+    -- Filter only avatars for the ground probe; the separate full-body
+    -- clearance check still detects real anchored walls.
+    local groundExclusions = {record.model}
+    if botsFolder then groundExclusions[#groundExclusions + 1] = botsFolder end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            groundExclusions[#groundExclusions + 1] = player.Character
+        end
+    end
+    params.FilterDescendantsInstances = groundExclusions
     params.RespectCanCollide = true
     local function groundAt(candidate)
         local ray = workspace:Raycast(
@@ -3577,14 +3589,32 @@ local function nearbyRecoveryStep(record, root, failedDestination)
             0, candidate.Z - root.Position.Z)
         -- Never treat boundary-clamped 0.5-stud twitching as a rescue.
         if actualStep.Magnitude >= 4.5 then
-            local blocked = false
-            for _, offset in ipairs(clearanceOffsets) do
-                if blockedByStatic(
-                    root.Position + Vector3.new(0, offset, 0),
-                    actualStep
+            -- A mechanically walkable sidestep can still run through a
+            -- genuine upcoming Meteor/Bomb blast. Reject it using the
+            -- same cached warning parts and impact-corridor rule as
+            -- live urgent evasion, before expensive physical probes.
+            local insideImpactRoute = false
+            for _, warning in ipairs(warningParts()) do
+                if AISurvivorRules.newImpactIntersectsEscape(
+                    root.Position, candidate, warning.Name,
+                    warning.Position,
+                    math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                    warning:GetAttribute("WarningEndSize")
                 ) then
-                    blocked = true
+                    insideImpactRoute = true
                     break
+                end
+            end
+            local blocked = insideImpactRoute
+            if not blocked then
+                for _, offset in ipairs(clearanceOffsets) do
+                    if blockedByStatic(
+                        root.Position + Vector3.new(0, offset, 0),
+                        actualStep
+                    ) then
+                        blocked = true
+                        break
+                    end
                 end
             end
             if not blocked then
