@@ -1726,18 +1726,33 @@ local function floorSweepEscape(record, root, now)
     local phaseAttribute = variant == "Classic"
         and "GridSweepPhase" or "HarborSweepPhase"
     local threat
+    local threatApproachPosition = nil
     if folder then
         for _, band in ipairs(folder:GetChildren()) do
             if band:IsA("BasePart") and (
                 band:GetAttribute(phaseAttribute) == "Warning"
                 or band:GetAttribute(phaseAttribute) == "Pulse"
             ) then
+                -- Anticipate an approaching lane during the warning,
+                -- without predicting a dodge from a stationary bot.
+                local velocity = root.AssemblyLinearVelocity
+                local horizon = band:GetAttribute(phaseAttribute) == "Warning"
+                    and 0.32 or 0
+                local predicted = root.Position + Vector3.new(
+                    velocity.X, 0, velocity.Z) * horizon
                 local point = band.CFrame:PointToObjectSpace(root.Position)
-                if math.abs(point.X) <= band.Size.X * 0.5 + 1.2
-                    and math.abs(point.Z) <= band.Size.Z * 0.5 + 1.2
-                    and point.Y >= 1 and point.Y <= 5.1
-                then
+                local ahead = band.CFrame:PointToObjectSpace(predicted)
+                local function nearLane(p)
+                    return math.abs(p.X) <= band.Size.X * 0.5 + 1.2
+                        and math.abs(p.Z) <= band.Size.Z * 0.5 + 1.2
+                        and p.Y >= 1 and p.Y <= 5.1
+                end
+                if nearLane(point) or nearLane(ahead) then
                     threat = band
+                    -- If the bot has not entered the lane yet, use its
+                    -- predicted entry to select the correct escape edge.
+                    threatApproachPosition = nearLane(point)
+                        and root.Position or predicted
                     break
                 end
             end
@@ -1763,7 +1778,8 @@ local function floorSweepEscape(record, root, now)
     -- current Y and normal walk speed (no bot-only teleport or jump).
     local base = arenaBase()
     local exit = AISurvivorRules.floorSweepExitTarget(
-        threat.CFrame, threat.Size, root.Position,
+        threat.CFrame, threat.Size,
+        threatApproachPosition or root.Position,
         base and base.Position or config.ArenaCenter
     )
     return exit and clampToArena(exit) or nil

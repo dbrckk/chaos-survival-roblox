@@ -77,13 +77,18 @@ end
 function HarborCargoSweep.velocity(previous, band, center)
     if not band or not band:IsA("BasePart")
         or typeof(center) ~= "Vector3" then return previous end
+    -- Work in the lane's rotated frame. World-axis pushes can send
+    -- contestants toward the edge when a custom arena is rotated.
     local acrossX = band.Size.X < band.Size.Z
-    local inward
-    if acrossX then
-        inward = Vector3.new(band.Position.X >= center.X and -1 or 1, 0, 0)
-    else
-        inward = Vector3.new(0, 0, band.Position.Z >= center.Z and -1 or 1)
-    end
+    local axis = acrossX and band.CFrame.RightVector or band.CFrame.LookVector
+    local flatAxis = Vector3.new(axis.X, 0, axis.Z)
+    if flatAxis.Magnitude < 0.01 then return previous end
+    flatAxis = flatAxis.Unit
+    local towardCenter = Vector3.new(
+        center.X - band.Position.X, 0, center.Z - band.Position.Z
+    )
+    local sign = towardCenter:Dot(flatAxis) >= 0 and 1 or -1
+    local inward = flatAxis * sign
     return MovementSafety.addImpulse(
         previous, inward * HarborCargoSweep.Push, 42, -52, 58
     )
