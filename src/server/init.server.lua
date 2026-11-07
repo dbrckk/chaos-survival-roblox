@@ -1438,6 +1438,14 @@ local function runDisasterSet(selected, contestants, roundSettings)
         -- the floor, so its stationary fast-travel stations stay disabled.
         EnableDistrictTransit = allowDynamicArenas
             and activeHazards.ShrinkingArena ~= true,
+        -- Bot planners can ask whether a REAL human could receive a
+        -- charge without spending one. The definitive activation still
+        -- goes through exactly the same server-owned recharge gate.
+        CanTeamDashBenefit = function(player)
+            if not roundActive or player.Parent ~= Players
+                or eliminated[player.UserId] then return false end
+            return PhaseDashService.canRecharge(player)
+        end,
         -- The actual PhaseDashService owns BOTH the private monotonic
         -- cooldown and the replicated UI timestamp. A cosmetic attribute
         -- alone cannot recharge a real dash; use its narrow server API.
