@@ -4590,7 +4590,9 @@ local function stepRecord(record, now)
                 record.shieldHoldAt = nil
                 record.target = nil
                 record.nextThink = 0
-                record.nextShieldAt = now + 14
+                -- A contested/expired station is not a successful assist.
+                -- Retry other real opportunities sooner without spamming.
+                record.nextShieldAt = now + (helped and 14 or 4)
                 if helped then
                     showBotSignal(record, "SHIELD UP!", now)
                     record.model:SetAttribute("BotTeamShieldsUsed",
@@ -4729,7 +4731,9 @@ local function stepRecord(record, now)
                 record.assistHoldAt = nil
                 record.target = nil
                 record.nextThink = 0
-                record.nextAssistAt = now + 13
+                -- A failed activation must not sideline this teammate
+                -- for the same cooldown as a successful team charge.
+                record.nextAssistAt = now + (helped and 13 or 4)
                 if helped then
                     showBotSignal(record, "TEAM UP!", now)
                     record.model:SetAttribute("BotTeamDashRelaysUsed",
