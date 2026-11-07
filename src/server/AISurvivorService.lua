@@ -962,6 +962,8 @@ local function sendToLobby(record)
     record.stuckCount = 0
     record.recoveryAttemptCount = 0
     record.lastRecoveryAt = 0
+    record.recoveryWaypoint = nil
+    record.recoveryCommitUntil = 0
     record.failedTarget = nil
     record.failedTargetUntil = 0
     record.nextObstaclePreviewAt = 0
@@ -4132,6 +4134,10 @@ local function recoverIfStuck(record, humanoid, root, now)
     record.moveDirection = Vector3.zero
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
+    -- A validated detour must survive the next random rethink clock.
+    -- A confirmed new stall or any urgent hazard can still interrupt.
+    record.recoveryWaypoint = recovery
+    record.recoveryCommitUntil = recovery and (now + 2.4) or 0
     record.target = recovery
     if record.groundNavigationPending then
         record.groundNavigationFallbackTarget = recovery or root.Position
@@ -4245,6 +4251,8 @@ local function anticipateGroundObstacle(
         (tonumber(record.model:GetAttribute(
             "BotObstaclePreviewCount")) or 0) + 1)
     if detour then
+        record.recoveryWaypoint = detour
+        record.recoveryCommitUntil = now + 2.4
         record.model:SetAttribute("BotObstacleAvoidedCount",
             (tonumber(record.model:GetAttribute(
                 "BotObstacleAvoidedCount")) or 0) + 1)
@@ -4976,7 +4984,10 @@ local function stepRecord(record, now)
             return
         end
 
-        if not record.spineControl then
+        if not record.spineControl
+            and not (record.recoveryWaypoint
+                and record.target == record.recoveryWaypoint
+                and now < (record.recoveryCommitUntil or 0)) then
             if maybeSocialGesture(record, humanoid, root, now) then
                 return
             end
@@ -5251,6 +5262,9 @@ local function stepRecord(record, now)
                 record.districtTraverse ~= nil
             )
             and now >= (record.nextReconsiderAt or 0)
+            and not (record.recoveryWaypoint
+                and record.target == record.recoveryWaypoint
+                and now < (record.recoveryCommitUntil or 0))
         then
             record.nextReconsiderAt = now + 1.4 + math.random() * 2.4
             local traits = decisionTraits(record)
@@ -5304,6 +5318,9 @@ local function stepRecord(record, now)
             and not record.assistShield
             and not record.assistRelay
             and not record.spineControl
+            and not (record.recoveryWaypoint
+                and record.target == record.recoveryWaypoint
+                and now < (record.recoveryCommitUntil or 0))
             and AISurvivorRules.shouldReplanTarget(
             currentState.phase,
             now,
@@ -5339,6 +5356,8 @@ local function stepRecord(record, now)
                 )
                 if alternative then
                     target, hold = alternative, 1.2
+                    record.recoveryWaypoint = alternative
+                    record.recoveryCommitUntil = now + 2.4
                 else
                     -- The physical detour solver found no safe support.
                     -- Never fall through to the quarantined wall goal:
@@ -5389,6 +5408,11 @@ local function stepRecord(record, now)
             local destination = record.target
             if not urgentTarget
                 and not record.groundNavigation
+                -- Do not offset a certified narrow clearance toward
+                -- an obstacle with cosmetic random strafing.
+                and not (record.recoveryWaypoint
+                    and record.target == record.recoveryWaypoint
+                    and now < (record.recoveryCommitUntil or 0))
                 and not record.spineControl
                 and not record.assistShield
                 and not record.assistRelay
