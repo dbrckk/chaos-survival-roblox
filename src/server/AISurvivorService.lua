@@ -73,6 +73,7 @@ AISurvivorService.PerformanceDiagnostics = {
     GroundRoutesCompleted = 0,
     GroundRoutesInvalidated = 0,
     GroundRoutesTimedOut = 0,
+    GroundRoutesNoPath = 0,
     GroundRoutesExpired = 0,
     GroundRoutesActive = 0,
     GroundRoutesPending = 0,
@@ -1049,6 +1050,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotObstacleAvoidedCount", 0)
     record.model:SetAttribute("BotStallRecoveryCount", 0)
     record.model:SetAttribute("BotRecoveryRouteFound", nil)
+    record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
     record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -3747,6 +3749,43 @@ local function requestGroundNavigation(record, root, goal, now)
         end
         record.groundNavigationPending = false
         record.groundNavigationStartedAt = nil
+        -- A real "no path" result is different from a transient engine
+        -- error, a newly active disaster or an obsolete asynchronous
+        -- answer. Quarantine only the original goal when this exact
+        -- still-current request produced no usable NavMesh route.
+        local fallback = record.groundNavigationFallbackTarget
+        if ok and (not waypoints or #waypoints < 2)
+            and rig and rig.Parent and record.inRound
+            and currentState.phase == "round"
+            and arenaBase() == base and #warningParts() == 0
+            and not hasDisaster("RisingLava")
+            and not hasDisaster("ShrinkingArena")
+            and not hasDisaster("Tornado")
+            and not hasDisaster("DisappearingPlatforms")
+            and record.failedTarget == goal
+            and fallback ~= nil and record.target == fallback
+            and record.targetPart == nil
+            and record.assistShield == nil and record.assistRelay == nil
+            and record.spineControl == nil and record.districtTraverse == nil
+            and record.signalInterestRoute == nil then
+            local decidedAt = os.clock()
+            record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
+                record.recoveryAttemptCount, record.lastRecoveryAt, decidedAt)
+            record.lastRecoveryAt = decidedAt
+            record.failedTargetUntil = decidedAt
+                + AISurvivorRules.failedGoalCooldown(
+                    record.recoveryAttemptCount)
+            record.groundNavigationFallbackTarget = nil
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+            AISurvivorService.PerformanceDiagnostics.GroundRoutesNoPath += 1
+            rig:SetAttribute("BotGroundRouteNoPathCount",
+                (tonumber(rig:GetAttribute(
+                    "BotGroundRouteNoPathCount")) or 0) + 1)
+            return
+        end
         -- A two-waypoint NavMesh path (start + goal) is legitimate.
         -- Still require the exact same real-floor and corridor checks.
         if not ok or not waypoints or #waypoints < 2
