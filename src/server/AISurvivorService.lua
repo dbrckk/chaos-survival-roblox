@@ -924,6 +924,7 @@ local function cancelGroundNavigation(record)
     record.groundNavigation = nil
     record.groundNavigationPending = false
     record.groundNavigationStartedAt = nil
+    record.groundNavigationFallbackTarget = nil
     record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
 end
 
@@ -3552,6 +3553,7 @@ local function requestGroundNavigation(record, root, goal, now)
     record.nextGroundNavigationAt = now + 9
     record.groundNavigationPending = true
     record.groundNavigationStartedAt = now
+    record.groundNavigationFallbackTarget = nil
     record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
     local token = record.groundNavigationToken
     local rig = record.model
@@ -3584,7 +3586,16 @@ local function requestGroundNavigation(record, root, goal, now)
             or arenaBase() ~= base or #warningParts() > 0
             or hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
             or hasDisaster("Tornado") or hasDisaster("DisappearingPlatforms")
-            or record.failedTarget ~= goal then
+            or record.failedTarget ~= goal
+            -- A bot may accept a newer cooperative station or roam goal
+            -- while ComputeAsync yields. Never overwrite that decision
+            -- with an obsolete obstacle detour.
+            or record.groundNavigationFallbackTarget == nil
+            or record.target ~= record.groundNavigationFallbackTarget
+            or record.targetPart ~= nil
+            or record.assistShield ~= nil or record.assistRelay ~= nil
+            or record.spineControl ~= nil or record.districtTraverse ~= nil
+            or record.signalInterestRoute ~= nil then
             return
         end
 
@@ -3642,6 +3653,7 @@ local function requestGroundNavigation(record, root, goal, now)
             or #points < 1 or record.groundNavigationToken ~= token then
             return
         end
+        record.groundNavigationFallbackTarget = nil
         record.groundNavigation = {
             points = points,
             origin = start,
@@ -3929,6 +3941,12 @@ local function recoverIfStuck(record, humanoid, root, now)
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
     record.target = recovery
+    if record.groundNavigationPending then
+        record.groundNavigationFallbackTarget = recovery or root.Position
+        -- No safe sidestep: the brain will hold its actual position until
+        -- a verified route arrives; preserve this as the expected fallback.
+        if not recovery then record.target = root.Position end
+    end
     record.lastProgressTarget = recovery
     record.nextThink = recovery and (now + 1.6) or 0
     if record.model then
@@ -4039,6 +4057,9 @@ local function anticipateGroundObstacle(
     -- An unwalkable shortcut is not an invitation to run into the
     -- barrier. Safe, grounded pathfinding is already asynchronous.
     requestGroundNavigation(record, root, goal, now)
+    if record.groundNavigationPending then
+        record.groundNavigationFallbackTarget = root.Position
+    end
     return root.Position, 0.65
 end
 
