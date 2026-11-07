@@ -131,20 +131,30 @@ local function withinLiveFloor(base, source)
         and math.abs(delta.Z) + 7 < base.Size.Z * 0.5
 end
 
--- Only real humans can benefit from a bot's shared-DASH interaction.
--- This check is repeated at activation, never trusted from path planning.
+-- Only real humans with room for an actual DASH benefit should
+-- attract bot helpers. Prefer players whose DASH is currently cooling
+-- down over a mere spare charge; still revalidate at activation time.
+-- The optional callback is server-owned. Older engine contexts without
+-- that callback retain the original proximity-only behavior.
 local function humanNearby(round, station)
+    local score = 0
     for _, player in ipairs(round.ctx.Contestants or {}) do
         if player:GetAttribute("DataLoaded") == true
             and round.ctx.IsContestantActive(player) then
             local root = validCharacter(player)
             if root and (root.Position - station.core.Position).Magnitude
                 <= TeamDashRelay.Radius then
-                return true
+                local eligible, kind = true, "reserve"
+                if type(round.ctx.CanTeamDashBenefit) == "function" then
+                    eligible, kind = round.ctx.CanTeamDashBenefit(player)
+                end
+                if eligible == true then
+                    score += kind == "recharge" and 2 or 1
+                end
             end
         end
     end
-    return false
+    return score > 0, score
 end
 
 function TeamDashRelay.botOpportunity(model, now, preferred)
@@ -153,7 +163,8 @@ function TeamDashRelay.botOpportunity(model, now, preferred)
     if not round or not root or not round.ctx.Active()
         or type(now) ~= "number"
         or not round.folder.Parent then return nil end
-    local best, distance = nil, TeamDashRelay.BotApproachRadius
+    local best, distance, bestScore = nil,
+        TeamDashRelay.BotApproachRadius, 0
     for _, station in ipairs(round.entries) do
         local core = station.core
         local delta = core.Position - root.Position
@@ -164,11 +175,14 @@ function TeamDashRelay.botOpportunity(model, now, preferred)
             and station.prompt.Enabled
             and withinLiveFloor(round.base, core)
             and math.abs(delta.Y) <= 6.5
-            and flat <= distance
+            and flat <= TeamDashRelay.BotApproachRadius
             and not claimedByOther
-            and (preferred == nil or core == preferred)
-            and humanNearby(round, station) then
-            best, distance = station, flat
+            and (preferred == nil or core == preferred) then
+            local eligible, score = humanNearby(round, station)
+            if eligible and (score > bestScore
+                or (score == bestScore and flat < distance)) then
+                best, distance, bestScore = station, flat, score
+            end
         end
     end
     if not best then return nil end
