@@ -4059,6 +4059,13 @@ local function recoverIfStuck(record, humanoid, root, now)
 
     record.stuckCount = (record.stuckCount or 0) + 1
     AISurvivorService.PerformanceDiagnostics.StallDetections += 1
+    -- A NavMesh waypoint is a transient segment, not the real goal.
+    -- Once stuck on one segment, quarantine the ORIGINAL unreachable
+    -- destination and never submit a new full route to that short
+    -- waypoint. The small physical sidestep still avoids the actual
+    -- current segment where progress stopped.
+    local blockedGoal = record.groundNavigation
+        and record.groundNavigation.goal or goal
     if record.groundNavigation then
         cancelGroundNavigation(record)
     end
@@ -4068,7 +4075,7 @@ local function recoverIfStuck(record, humanoid, root, now)
     record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
         record.recoveryAttemptCount, record.lastRecoveryAt, now)
     record.lastRecoveryAt = now
-    record.failedTarget = goal
+    record.failedTarget = blockedGoal
     record.failedTargetUntil = now
         + AISurvivorRules.failedGoalCooldown(record.recoveryAttemptCount)
     -- Physical stations and expedition reservations cannot be held by
@@ -4121,7 +4128,7 @@ local function recoverIfStuck(record, humanoid, root, now)
         -- asynchronous NavMesh computation is already in flight.
         local alreadyNavigating = record.groundNavigationPending
             or record.groundNavigation ~= nil
-        requestGroundNavigation(record, root, goal, now)
+        requestGroundNavigation(record, root, blockedGoal, now)
         if not alreadyNavigating and record.groundNavigationPending then
             AISurvivorService.PerformanceDiagnostics.GroundReplansRequested += 1
         end
