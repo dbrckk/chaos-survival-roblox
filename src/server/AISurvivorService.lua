@@ -3588,15 +3588,30 @@ local function requestGroundNavigation(record, root, goal, now)
             return
         end
 
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Exclude
-        params.FilterDescendantsInstances = {rig}
-        params.RespectCanCollide = true
+        -- An ordinary downward ray can hit a collidable bridge, avatar
+        -- or industrial prop above a valid base waypoint. The computed
+        -- NavMesh route is rejected even though the REAL floor is intact.
+        -- Reuse the base-only support policy of liveGroundRouteCorridorSafe:
+        -- the waypoint must be on this arena's low floor, and the ray must
+        -- contact the exact server-owned base collider.
+        local baseOnly = RaycastParams.new()
+        baseOnly.FilterType = Enum.RaycastFilterType.Include
+        baseOnly.FilterDescendantsInstances = {base}
+        baseOnly.RespectCanCollide = true
         local function onPhysicalBase(point)
+            if typeof(point) ~= "Vector3"
+                or math.abs(point.Y - top) > 5 then
+                return false
+            end
+            local localPoint = base.CFrame:PointToObjectSpace(point)
+            if math.abs(localPoint.X) > base.Size.X * 0.5 - 1.5
+                or math.abs(localPoint.Z) > base.Size.Z * 0.5 - 1.5 then
+                return false
+            end
             local hit = workspace:Raycast(
                 point + Vector3.new(0, 7, 0),
-                Vector3.new(0, -15, 0), params)
-            return hit and hit.Instance == base
+                Vector3.new(0, -15, 0), baseOnly)
+            return hit ~= nil and hit.Instance == base
                 and hit.Normal.Y >= 0.78
                 and math.abs(hit.Position.Y - top) < 2.5
         end
