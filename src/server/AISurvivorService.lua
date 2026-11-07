@@ -68,6 +68,14 @@ AISurvivorService.PerformanceDiagnostics = {
     LocalRecoveryFound = 0,
     LocalRecoveryFailed = 0,
     GroundReplansRequested = 0,
+    -- Outcomes of REAL engine paths, not inferred from request count.
+    GroundRoutesAccepted = 0,
+    GroundRoutesCompleted = 0,
+    GroundRoutesInvalidated = 0,
+    GroundRoutesTimedOut = 0,
+    GroundRoutesActive = 0,
+    GroundRoutesPending = 0,
+    InRoundBots = 0,
 }
 
 local IDENTITIES = {
@@ -3654,6 +3662,7 @@ local function requestGroundNavigation(record, root, goal, now)
             return
         end
         record.groundNavigationFallbackTarget = nil
+        AISurvivorService.PerformanceDiagnostics.GroundRoutesAccepted += 1
         record.groundNavigation = {
             points = points,
             origin = start,
@@ -3748,6 +3757,7 @@ local function advanceGroundNavigation(record, root, now)
         -- Invalidate the still-yielding callback before releasing the
         -- pending state. A late engine response cannot retarget this NPC.
         cancelGroundNavigation(record)
+        AISurvivorService.PerformanceDiagnostics.GroundRoutesTimedOut += 1
         record.nextGroundNavigationAt = now + 3
         if record.model then
             record.model:SetAttribute("BotPathTimeoutCount",
@@ -3780,6 +3790,7 @@ local function advanceGroundNavigation(record, root, now)
         target = route.points[route.index]
     end
     if not target then
+        AISurvivorService.PerformanceDiagnostics.GroundRoutesCompleted += 1
         cancelGroundNavigation(record)
         record.target = nil
         record.nextThink = 0
@@ -3795,6 +3806,7 @@ local function advanceGroundNavigation(record, root, now)
             -- Quarantine its original unreachable GOAL, not the nearby
             -- turn point, and invalidate any stale ComputeAsync token.
             local badGoal = route.goal or target
+            AISurvivorService.PerformanceDiagnostics.GroundRoutesInvalidated += 1
             cancelGroundNavigation(record)
             record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
                 record.recoveryAttemptCount, record.lastRecoveryAt, now)
@@ -5203,6 +5215,17 @@ local function startBrain()
                 diagnostic.PeakBotStepMs = botStepPeakMs
                 diagnostic.BotCount = #records
                 diagnostic.Phase = currentState.phase
+                local active, pending, inRound = 0, 0, 0
+                for _, bot in ipairs(records) do
+                    if bot.inRound and bot.alive then
+                        inRound += 1
+                        if bot.groundNavigation then active += 1 end
+                        if bot.groundNavigationPending then pending += 1 end
+                    end
+                end
+                diagnostic.InRoundBots = inRound
+                diagnostic.GroundRoutesActive = active
+                diagnostic.GroundRoutesPending = pending
                 brainPassSamples = 0
                 brainPassTotalMs = 0
                 brainPassPeakMs = 0
