@@ -1,5 +1,32 @@
 # Chaos Survival — nouveau plan d'amélioration premium après les lots 3D et lumière
 
+## Actualisation opérationnelle — 7 novembre 2026 (priorités de livraison)
+
+Ce document reste **le plan de référence**, actualisé plutôt que remplacé par une nouvelle liste. Les chantiers visuels des sections suivantes restent applicables. État source constaté : `main` après fusion de la [PR #660](https://github.com/dbrckk/chaos-survival-roblox/pull/660), commit `2dfd65c4b517175802c946bbcd4b2e52dacaf3cc`. Le propriétaire a confirmé le bon fonctionnement dans le jeu, mais cette approbation **ne constitue pas** un rapport CI, une mesure Android instrumentée ou une preuve de publication de ce SHA.
+
+### Ordre actif et critères de sortie
+
+| Ordre | Lot | Situation vérifiable | Définition de terminé |
+| --- | --- | --- | --- |
+| **G4-0 — P0** | Sécurité de version et fonctionnement | PR #660 fusionnée dans `main`; publication Roblox exacte non vérifiée | Une seule provenance SHA du build et de l'univers/place publique, accès public et round fonctionnels, procédure de retour arrière disponible |
+| **G4-1 — P0 EN COURS** | **Décisions IA sur dangers simultanés** | Les balayages orientés et leur anticipation sont codés ; arbitrage Meteore/Bomb face à Freeze/JumpShock engagé sur branche dédiée | Aucune alerte globale de saut/gel ne masque un impact local dans l'enveloppe réelle ; choix stable entre deux impacts ; réactions et vitesses physiques inchangées |
+| **G4-2 — P0** | Navigation physique des sept bots | Détection/reprise de blocage et routes réelles déjà présentes | 0 bot bloqué involontairement plus de 6 s dans 30 min de session représentative ; aucun saut privilégié, téléportation ou trajet sur un vide |
+| **G4-3 — P0** | Gameplay à huit et interactions visibles | Remplissage 1 humain + jusqu'à 7 IA au début de manche, relais et stations existants | Huit participants au READY si la création réussit, événements coop réellement activés, issue/recompenses de fin de manche lisibles et immédiatement compréhensibles |
+| **G4-4 — P0** | **Premier plan AAA et lisibilité** | Modèles 3D/PBR approuvés et LOD existants, qualité perceptuelle non certifiée | Sur les **cinq** cartes, vrais grands MeshParts visibles sur routes et ponts High, mode Low sûr, éclairage diurne/nuit/Darkness et danger toujours lisibles sur Android |
+| **G4-5 — P1** | Fluidité Android et interactions cinématiques | Cadence IA échelonnée, budget LOD, sons et effets existants | Profilage réel sur sept R15 + Double Chaos : aucune hausse de coût serveur/client non justifiée ; suivi FPS, mémoire, latence de réaction et éliminations équitables |
+| **G4-6 — P0 release** | **Validation consolidée et publication** | `Build Validation` est à déclenchement manuel sur `main`; aucune CI PR n'est supposée | Même SHA pour build + suites moteur + preuve Studio/Android ; publication gardée explicitement confirmée, lien public vérifié et rollback documenté |
+
+### Prochaines actions sans dispersion
+
+1. Terminer **G4-1** : quand deux avertissements se chevauchent, préférer l'impact local `MeteorWarning`/`BombWarning` à `FreezeWarning`/`JumpShockWarning` ; garder l'hystérésis existante pour des impacts de même urgence. Aucune boucle, raycast, RemoteEvent, vitesse ou privilège physique supplémentaires.
+2. Traiter **G4-2** seulement après vérification de G4-1, en s'appuyant sur la navigation et la télémétrie existantes ; ne pas introduire une seconde IA de mouvement.
+3. Reprendre **G4-4** à l'échelle des grandes surfaces visibles avant les ornements. Préserver la sécurité des vrais colliders, des dangers et des replis visuels.
+4. **G4-6** en jalon unique, sans multiplier les tests durant la phase d'amélioration. Ne déclarer « publié » ni « AAA validé » sans preuve appareil et exact-SHA.
+
+**Suivi :** distinguer systématiquement *source codée*, *fusionnée*, *build/moteur validé*, *essai réel sur appareil* et *publication*. Le retour du propriétaire valide un comportement observé, pas automatiquement les quatre autres statuts. Aucune nouvelle version publique intermédiaire par simple fusion GitHub.
+
+---
+
 **Créé le 4 novembre 2026.** Dépôt : `dbrckk/chaos-survival-roblox`, branche `main`, SHA source de référence : `d36f651572860ee6d3d57c0ae3f4ecd11fef698d`. Plan d'exécution du produit, pas preuve que cette version a été publiée ni que le rendu satisfait déjà un niveau AAA.
 
 > **Cap de production :** fiabilité > jeu réellement fonctionnel > sécurité/équité > architecture > performance > rendu visuel > fonctionnalités secondaires. Le **rendu visible, les vraies routes et les bots** constituent les prochains gros investissements, pas l'accumulation d'ornements. Terminer chaque lot au niveau final visé avant de passer au suivant. Ne créer aucune version publique intermédiaire ni tests unitaires supplémentaires. Exécuter les builds/tests moteur aux jalons importants seulement.

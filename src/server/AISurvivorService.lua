@@ -1788,8 +1788,10 @@ end
 local function immediateThreat(record, root, now)
     local nearest = nil
     local nearestDistance = math.huge
+    local nearestPriority = -1
     local currentThreat = record.threat
     local currentThreatDistance = math.huge
+    local currentPriority = -1
     local velocity = root.AssemblyLinearVelocity
     local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
     local anticipation = 0.18 + (1 - record.profile.Risk) * 0.20
@@ -1804,12 +1806,22 @@ local function immediateThreat(record, root, now)
             warning.Name, warningRadius, warning:GetAttribute("WarningEndSize")
         )
 
-        if distance <= threshold and warning == currentThreat then
-            currentThreatDistance = distance
-        end
-        if distance <= threshold and distance < nearestDistance then
-            nearest = warning
-            nearestDistance = distance
+        if distance <= threshold then
+            local priority = AISurvivorRules.warningThreatPriority(warning.Name)
+            if warning == currentThreat then
+                currentThreatDistance = distance
+                currentPriority = priority
+            end
+            -- An imminent Meteor/Bomb cannot be hidden by a closer
+            -- Freeze/JumpShock cue. Within the same urgency class, keep
+            -- the original nearest-warning behavior.
+            if priority > nearestPriority
+                or (priority == nearestPriority and distance < nearestDistance)
+            then
+                nearest = warning
+                nearestDistance = distance
+                nearestPriority = priority
+            end
         end
     end
 
@@ -1818,6 +1830,7 @@ local function immediateThreat(record, root, now)
     -- remains within four studs of the closest alternative. This retains
     -- realistic reaction timing and avoids a twitchy, cancelled escape.
     if currentThreat ~= nearest
+        and currentPriority == nearestPriority
         and AISurvivorRules.keepThreatFocus(
             currentThreatDistance, nearestDistance, 4
         )
