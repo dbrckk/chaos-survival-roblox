@@ -32,6 +32,8 @@ Ce document reste **le plan de référence**, actualisé plutôt que remplacé p
 
 **G4-3 — interactions sociales sans perte de gameplay (source).** Les salutations entre bots et humains restent possibles lorsqu'un bot est disponible, mais sont désormais reportées pendant une navigation physique (calcul en attente ou route active), une traversée de plateforme, un trajet de signal ou une coopération sur les consoles relais/bouclier/switchyard. Auparavant, un signe de tête pouvait imposer un arrêt volontaire de 0,18 seconde ou un saut de parade au milieu de ces actions. Le bot occupé réévalue la possibilité de saluer deux secondes plus tard, sans nouvelle boucle ni sondage. Les réactions aux menaces conservent leur priorité. **QA moteur et comportement réel à huit participants à confirmer.**
 
+**G4-3 — actions coopératives protégées des sauts de personnalité (source).** En complément de la protection des salutations, les sauts purement cosmétiques des bots sont désactivés pendant les approches et maintiens des relais/boucliers, les routes d'intérêt et les trajets NavMesh physiques actifs/en attente. Les sauts nécessaires pour atteindre les terrasses et les réactions urgentes aux dangers restent autorisés. Cette correction empêche qu'un saut gratuit annule une interaction utile pour un humain ou quitte un corridor au sol validé. **Validation Roblox Studio à huit participants non encore effectuée pour ce commit.**
+
 ### Prochaines actions sans dispersion
 
 1. **G4-1 : source fusionnée via PR #661.** Certification moteur/Android au jalon de release, pas de revendication de validation instrumentée sur le dernier SHA.
