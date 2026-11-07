@@ -3608,10 +3608,10 @@ local function nearbyRecoveryStep(record, root, failedDestination)
             local blocked = insideImpactRoute
             if not blocked then
                 for _, offset in ipairs(clearanceOffsets) do
-                if blockedByStatic(
-                    root.Position + Vector3.new(0, offset, 0),
-                    actualStep
-                ) then
+                    if blockedByStatic(
+                        root.Position + Vector3.new(0, offset, 0),
+                        actualStep
+                    ) then
                         blocked = true
                         break
                     end
