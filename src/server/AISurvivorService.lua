@@ -4951,6 +4951,11 @@ local function stepRecord(record, now)
 
         if currentState.phase == "round"
             and not urgentTarget
+            -- A deliberate NavMesh fallback or live waypoint must not be
+            -- discarded by the unrelated random roam reconsideration.
+            -- Pending requests are already bounded by the timeout guard.
+            and not record.groundNavigationPending
+            and not record.groundNavigation
             and not record.districtTraverse
             and not record.signalInterestRoute
             and record.target

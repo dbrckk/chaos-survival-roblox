@@ -22,6 +22,8 @@ Ce document reste **le plan de référence**, actualisé plutôt que remplacé p
 
 **Avancement G4-2 — temporisation progressive des échecs.** Les blocages confirmés, obstacles anticipés et segments de navigation devenus invalides partagent désormais une quarantaine croissante de **7,5 à 16 secondes** selon les tentatives rapprochées. Le compteur existant `nextRecoveryAttempt` revient à la première tentative après 12 secondes sans nouvel échec. Cette mesure empêche de rechoisir trop rapidement un objectif bloqué sans rendre les zones définitivement interdites ; aucune boucle ni requête Pathfinding supplémentaires. **Validation instrumentée avec sept bots et test moteur toujours requis avant la clôture G4-2.**
 
+**G4-2 — correction de concurrence décisionnelle.** La reconsidération aléatoire des objectifs (`nextReconsiderAt`) pouvait encore supprimer la destination provisoire pendant un `ComputeAsync`, ou abandonner un waypoint `groundNavigation` pourtant validé, malgré les gardes déjà ajoutés sur l'arrivée et le replan ordinaire. La reconsidération cosmétique ne s'applique désormais plus lorsqu'une navigation physique est en attente ou active ; les menaces urgentes, expirations et invalidations de corridor conservent leurs contrôles prioritaires. **Code source seulement : test Roblox Studio avec sept bots, mesures de blocage et publication à valider au jalon G4-6.**
+
 ### Prochaines actions sans dispersion
 
 1. **G4-1 : source fusionnée via PR #661.** Certification moteur/Android au jalon de release, pas de revendication de validation instrumentée sur le dernier SHA.
