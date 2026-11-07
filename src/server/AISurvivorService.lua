@@ -2905,6 +2905,8 @@ local function chooseArenaTarget(record, root, now)
         if helpPoint then
             record.assistShield = station
             record.shieldHoldAt = nil
+            record.idleUntil = 0
+            record.turnPauseUntil = 0
             record.targetPart = nil
             record.targetIsPad = false
             record.nextShieldAt = now + 12
@@ -2930,6 +2932,8 @@ local function chooseArenaTarget(record, root, now)
         if approach and core then
             record.spineControl = core
             record.spineHoldAt = nil
+            record.idleUntil = 0
+            record.turnPauseUntil = 0
             record.targetPart = nil
             record.targetIsPad = false
             record.nextSpineAt = now + 8
@@ -2970,6 +2974,8 @@ local function chooseArenaTarget(record, root, now)
         if assistPoint then
             record.assistRelay = station
             record.assistHoldAt = nil
+            record.idleUntil = 0
+            record.turnPauseUntil = 0
             record.targetPart = nil
             record.targetIsPad = false
             record.nextAssistAt = now + 11
@@ -4204,8 +4210,13 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
     -- Narrow server-owned sky crossings need accurate physical heading,
     -- not a blended previous turn that curves off a 12-stud walkway.
     -- Ordinary ground roaming keeps its humanlike steering inertia.
+    -- Committed cooperative console approaches are deliberate paths:
+    -- humanlike wandering curves and reaction pauses can pull the rig
+    -- out of the real hold range even after an AI chose to help someone.
     local direct = urgent == true
         or record.spineControl ~= nil
+        or record.assistShield ~= nil
+        or record.assistRelay ~= nil
         or (record.targetIsPad == true and horizontal.Magnitude < 10)
         or record.groundNavigation ~= nil
         or AISurvivorRules.committedWorldRoute(
@@ -4612,6 +4623,15 @@ local function stepRecord(record, now)
     if record.inRound and currentState.phase == "round"
         and not urgentTarget and not record.assistShield
         and not record.assistRelay and not record.districtTraverse
+        -- A newly discovered switch must not hijack a verified NavMesh
+        -- route, signal mission, narrow skyrail or an impulse-pad goal.
+        -- A bot already holding the switch may always finish/cancel it.
+        and (record.spineControl ~= nil
+            or (not record.groundNavigation
+                and not record.groundNavigationPending
+                and not record.signalInterestRoute
+                and not record.targetIsSkyrail
+                and not record.targetIsPad))
         and not hasDisaster("ShrinkingArena")
         and not hasDisaster("RisingLava")
         and not hasDisaster("Tornado") then
@@ -4808,7 +4828,9 @@ local function stepRecord(record, now)
         end
 
         if now < (record.idleUntil or 0)
-            and not record.spineControl then
+            and not record.spineControl
+            and not record.assistShield
+            and not record.assistRelay then
             humanoid:Move(Vector3.zero)
             return
         end
@@ -5015,6 +5037,9 @@ local function stepRecord(record, now)
             and not record.groundNavigation
             and not record.districtTraverse
             and not record.signalInterestRoute
+            and not record.assistShield
+            and not record.assistRelay
+            and not record.spineControl
             and record.target
             and not record.targetIsPad
             and not AISurvivorRules.committedWorldRoute(
@@ -5042,6 +5067,9 @@ local function stepRecord(record, now)
             and not record.groundNavigationPending
             and not record.districtTraverse
             and not record.signalInterestRoute
+            and not record.assistShield
+            and not record.assistRelay
+            and not record.spineControl
             and (root.Position - record.target).Magnitude < 4.2
         then
             record.target = nil
@@ -5069,6 +5097,9 @@ local function stepRecord(record, now)
         -- it could be accepted. Urgent threats still cancel it above.
         if not record.groundNavigation
             and not record.groundNavigationPending
+            and not record.assistShield
+            and not record.assistRelay
+            and not record.spineControl
             and AISurvivorRules.shouldReplanTarget(
             currentState.phase,
             now,
@@ -5155,6 +5186,8 @@ local function stepRecord(record, now)
             if not urgentTarget
                 and not record.groundNavigation
                 and not record.spineControl
+                and not record.assistShield
+                and not record.assistRelay
                 and AISurvivorRules.allowRouteStrafe(
                     record.targetIsPad,
                     record.targetIsSkyrail,
