@@ -4831,6 +4831,16 @@ local function stepRecord(record, now)
 
     if not urgentTarget and not record.districtTraverse
         and not record.spineControl
+        -- Personality jumps are cosmetic. A hop while approaching or
+        -- holding a real relay/shield station can break the physical
+        -- hold and prevent a useful action for a nearby human.
+        and not record.assistRelay
+        and not record.assistShield
+        and not record.signalInterestRoute
+        -- The ground route was validated for walking, not random
+        -- airborne shortcuts across its narrow physical corridor.
+        and not record.groundNavigation
+        and not record.groundNavigationPending
         and now >= record.nextJump then
         local _, pressure = decisionTraits(record)
         local jumpChance = AISurvivorRules.freeJumpChance(
