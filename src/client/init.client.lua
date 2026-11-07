@@ -2361,6 +2361,16 @@ local function showRoundFeedback(feedback)
     if nearMissCount > 0 then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_CLOSE_CALLS_TAG", nearMissCount))
     end
+    -- Counts originate only from real server-side relay activations,
+    -- including NPC deliveries; never infer assistance from bot proximity.
+    local teamDashShared = math.max(0, math.floor(tonumber(feedback.teamDashShared) or 0))
+    local botDashReceived = math.max(0, math.floor(tonumber(feedback.botDashReceived) or 0))
+    if botDashReceived > 0 then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_BOT_BACKUP_TAG", botDashReceived))
+    end
+    if teamDashShared > 0 then
+        table.insert(tags, CoreLocalization.text(localeId, "RESULT_TEAM_SHARED_TAG", teamDashShared))
+    end
     if momentumBest >= 2 then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_MOMENTUM_TAG", momentumBest))
     end
@@ -2434,6 +2444,10 @@ local function showRoundFeedback(feedback)
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CHALLENGE_TAG"))
         elseif feedback.criticalSurvival then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_CLUTCH_TAG"))
+        elseif botDashReceived > 0 then
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_BOT_BACKUP_TAG", botDashReceived))
+        elseif teamDashShared > 0 then
+            table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_TEAM_SHARED_TAG", teamDashShared))
         elseif survived and streakCount >= 2 then
             table.insert(compactTags, CoreLocalization.text(localeId, "RESULT_STREAK_TAG", streakCount))
         elseif crewRounds >= 1 then

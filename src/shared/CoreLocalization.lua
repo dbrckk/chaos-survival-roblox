@@ -246,6 +246,8 @@ local TEXT = {
         RESULT_MOMENTUM_TAG = "MOMENTUM x%d",
         RESULT_PARKOUR_TAG = "PARKOUR x%d",
         RESULT_MEDALS_TAG = "MEDALS x%d",
+        RESULT_TEAM_SHARED_TAG = "TEAM DASH SHARED x%d",
+        RESULT_BOT_BACKUP_TAG = "BOT HELP x%d",
         RESULT_STREAK_TAG = "STREAK x%d",
         RESULT_CREW_ROUNDS = "CREW • %d ROUNDS TOGETHER",
         RESULT_SURVIVOR_COUNT = "%d SURVIVORS",
@@ -543,6 +545,8 @@ local TEXT = {
         RESULT_MOMENTUM_TAG = "ÉLAN x%d",
         RESULT_PARKOUR_TAG = "PARCOURS x%d",
         RESULT_MEDALS_TAG = "MÉDAILLES x%d",
+        RESULT_TEAM_SHARED_TAG = "DASH PARTAGÉ x%d",
+        RESULT_BOT_BACKUP_TAG = "AIDE DU BOT x%d",
         RESULT_STREAK_TAG = "SÉRIE x%d",
         RESULT_CREW_ROUNDS = "ÉQUIPE • %d MANCHES ENSEMBLE",
         RESULT_SURVIVOR_COUNT = "%d SURVIVANTS",
@@ -832,6 +836,8 @@ local MEDAL_COPY = {
         ["PARKOUR ACE"] = "PARKOUR ACE",
         ["RIDGE LEGEND"] = "RIDGE LEGEND",
         ["CLUTCH"] = "CLUTCH",
+        ["TEAM SUPPORT"] = "TEAM SUPPORT",
+        ["BOT BACKUP"] = "BOT BACKUP",
     },
     fr = {
         ["FIRST CHAOS"] = "PREMIER CHAOS",
@@ -843,6 +849,8 @@ local MEDAL_COPY = {
         ["PARKOUR ACE"] = "AS DU PARCOURS",
         ["RIDGE LEGEND"] = "LÉGENDE DES CRÊTES",
         ["CLUTCH"] = "SURVIE EXTRÊME",
+        ["TEAM SUPPORT"] = "SOUTIEN D'ÉQUIPE",
+        ["BOT BACKUP"] = "RENFORT DU BOT",
     },
 }
 

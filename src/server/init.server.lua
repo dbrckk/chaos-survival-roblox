@@ -1087,6 +1087,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundTeamRelaysActivated", 0)
         player:SetAttribute("RoundTeamDashShared", 0)
         player:SetAttribute("RoundTeamDashReceived", 0)
+        -- Only successful NPC-to-human relay deliveries count as bot help.
+        -- This is a per-round server-only statistic, never a cash grant.
+        player:SetAttribute("RoundBotDashReceived", 0)
         player:SetAttribute("RoundParticipant", true)
         player:SetAttribute("RoundEliminated", false)
         player:SetAttribute("RoundChaosShards", 0)
@@ -1502,6 +1505,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
                     local received = math.max(0, math.floor(tonumber(
                         target:GetAttribute("RoundTeamDashReceived")) or 0))
                     target:SetAttribute("RoundTeamDashReceived", received + 1)
+                    local botHelp = math.max(0, math.floor(tonumber(
+                        target:GetAttribute("RoundBotDashReceived")) or 0))
+                    target:SetAttribute("RoundBotDashReceived", botHelp + 1)
                     arenaMechanicFeedbackEvent:FireClient(target, {
                         variantId = currentArenaVariant,
                         mechanicName = "ALLY DASH SHARED",
@@ -2595,6 +2601,8 @@ while true do
                 momentumBest = roundMomentumBest,
                 parkourBest = roundParkourBest,
                 criticalSurvival = criticalSurvival,
+                teamDashShared = p:GetAttribute("RoundTeamDashShared"),
+                botDashReceived = p:GetAttribute("RoundBotDashReceived"),
                 eliminationCause = survived and nil or eliminationCauses[p.UserId],
                 arenaMastery = arenaMasteryState,
                 arenaMasteryName = roundSettings.ArenaName,
@@ -2682,6 +2690,12 @@ while true do
                 challengeCoins = challengeCoins,
                 challengeXP = challengeXP,
                 medals = medals,
+                -- Visible, truthful cooperation receipt; these counts do
+                -- not add Coins or XP beyond the existing payouts.
+                teamDashShared = math.max(0, math.floor(tonumber(
+                    p:GetAttribute("RoundTeamDashShared")) or 0)),
+                botDashReceived = math.max(0, math.floor(tonumber(
+                    p:GetAttribute("RoundBotDashReceived")) or 0)),
                 parkourBest = roundParkourBest,
                 parkourXP = parkourXP,
                 momentumBest = roundMomentumBest,
