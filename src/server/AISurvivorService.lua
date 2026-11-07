@@ -1726,6 +1726,7 @@ local function floorSweepEscape(record, root, now)
     local phaseAttribute = variant == "Classic"
         and "GridSweepPhase" or "HarborSweepPhase"
     local threat
+    local threatApproachPosition = nil
     if folder then
         for _, band in ipairs(folder:GetChildren()) do
             if band:IsA("BasePart") and (
@@ -1748,6 +1749,10 @@ local function floorSweepEscape(record, root, now)
                 end
                 if nearLane(point) or nearLane(ahead) then
                     threat = band
+                    -- If the bot has not entered the lane yet, use its
+                    -- predicted entry to select the correct escape edge.
+                    threatApproachPosition = nearLane(point)
+                        and root.Position or predicted
                     break
                 end
             end
@@ -1773,7 +1778,8 @@ local function floorSweepEscape(record, root, now)
     -- current Y and normal walk speed (no bot-only teleport or jump).
     local base = arenaBase()
     local exit = AISurvivorRules.floorSweepExitTarget(
-        threat.CFrame, threat.Size, root.Position,
+        threat.CFrame, threat.Size,
+        threatApproachPosition or root.Position,
         base and base.Position or config.ArenaCenter
     )
     return exit and clampToArena(exit) or nil
