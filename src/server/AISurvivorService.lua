@@ -1465,8 +1465,12 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
         ).Magnitude
         local score = walked * 0.20 + math.min(55, warningDistance) * 0.90
 
-        -- A safe endpoint is not sufficient if the middle of the route is
-        -- a gap. Never reward a route whose floor has already collapsed.
+        -- A scored penalty is not a safety constraint: if EVERY route
+        -- crosses a void, the "least bad" route would still be selected.
+        -- Accept only a physically supported route at both existing
+        -- checkpoints, including real solid/available ground and a
+        -- walkable surface normal. No additional physics queries.
+        local supported = walked >= 1
         for _, fraction in ipairs({0.55, 1.0}) do
             local sample = root.Position:Lerp(destination, fraction)
             local support = workspace:Raycast(
@@ -1474,26 +1478,26 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                 Vector3.new(0, -18, 0),
                 params
             )
-            if not support then
-                score -= 100
-            else
-                local part = support.Instance
-                if part.Parent and part.Parent.Name == "Platforms"
-                    and not AISurvivorRules.platformAvailable(
+            local part = support and support.Instance
+            local walkable = support and part and part.CanCollide
+                and support.Normal.Y >= 0.78
+                and (part:IsA("Terrain") or part.Anchored)
+                and (not part.Parent or part.Parent.Name ~= "Platforms"
+                    or AISurvivorRules.platformAvailable(
                         part.CanCollide, part.Transparency,
                         part:GetAttribute("CollapsePhase"),
                         part:GetAttribute("BridgeShutterPhase")
-                    )
-                then
-                    score -= 110
-                end
-                -- The impact point is the WALKABLE SURFACE. A thick
-                -- elevated foundation's center can be >8 studs below
-                -- the real floor and previously looked like a cliff.
-                score -= AISurvivorRules.escapeGroundStepPenalty(
-                    root.Position.Y, support.Position.Y
-                )
+                    ))
+                and (not standingDeck or part == standingDeck)
+            if not walkable then
+                supported = false
+                break
             end
+            -- Use the true contact surface; a thick foundation's
+            -- center can be far below the level where a bot walks.
+            score -= AISurvivorRules.escapeGroundStepPenalty(
+                root.Position.Y, support.Position.Y
+            )
         end
 
         for _, threat in ipairs(activeWarnings) do
@@ -1526,12 +1530,15 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
             ) * 1.6
         end
 
-        if score > bestScore then
+        if supported and score > bestScore then
             bestScore = score
             best = destination
         end
     end
-    return best or clampToArena(root.Position + away * length)
+    -- Never walk into unverified air just because every visible option
+    -- is poor. Stand on the current support until a real hazard or floor
+    -- change permits a safe, physically grounded escape direction.
+    return best or root.Position
 end
 
 local function disappearingPlatformEscape(record, root, now)
