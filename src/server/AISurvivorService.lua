@@ -1446,6 +1446,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
     local length = 17 + (1 - record.profile.Risk) * 7
     local best = nil
     local bestScore = -math.huge
+    local bestLandingExposures = math.huge
     local activeWarnings = warningParts()
     local liveSweeps = activeFloorSweepBands()
     for _, heading in ipairs(headings) do
@@ -1500,6 +1501,11 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
             )
         end
 
+        -- Count real impact footprints covering the actual destination.
+        -- Landing outside every blast is a strict first-class goal:
+        -- raw distance/comfort scores must never beat a zero-exposure
+        -- route merely because it walks farther from the first warning.
+        local landingExposures = 0
         for _, threat in ipairs(activeWarnings) do
             if threat.Name == "MeteorWarning" or threat.Name == "BombWarning" then
                 local radius = math.max(5, AISurvivorRules.warningDetectionRadius(
@@ -1514,6 +1520,9 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                     destination.X - threat.Position.X, 0,
                     destination.Z - threat.Position.Z
                 ).Magnitude - radius
+                if clearance < 3 then
+                    landingExposures += 1
+                end
                 if clearance < 4 then
                     score -= (4 - clearance) * 4
                 end
@@ -1530,7 +1539,15 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
             ) * 1.6
         end
 
-        if supported and score > bestScore then
+        -- First minimize the number of simultaneous Meteor/Bomb impact
+        -- footprints still covering the landing. Among equally exposed
+        -- physically supported routes, preserve the existing threat,
+        -- sweep and terrain score. If all landings are exposed, still
+        -- choose the least dangerous valid escape rather than freezing.
+        if supported and (landingExposures < bestLandingExposures
+            or (landingExposures == bestLandingExposures
+                and score > bestScore)) then
+            bestLandingExposures = landingExposures
             bestScore = score
             best = destination
         end
