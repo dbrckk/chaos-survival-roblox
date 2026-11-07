@@ -19,7 +19,10 @@ function PhaseDashService.resetRound(player)
     end
 end
 
-function PhaseDashService.recharge(player)
+-- Read-only server eligibility for bot relay planning. The cooldown
+-- and reserved charge are PRIVATE server tables; replicated attributes
+-- alone cannot tell whether another charge would actually help.
+function PhaseDashService.canRecharge(player)
     if not phaseNow or phaseNow() ~= "round"
         or not player or player.Parent ~= Players
         or player:GetAttribute("RoundParticipant") ~= true
@@ -31,6 +34,19 @@ function PhaseDashService.recharge(player)
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not humanoid or humanoid.Health <= 0 or not root
         or not root:IsA("BasePart") or not root:IsDescendantOf(workspace) then
+        return false
+    end
+    if (nextAllowed[player] or 0) > os.clock() then
+        return true, "recharge"
+    end
+    if relayReserve[player] ~= true then
+        return true, "reserve"
+    end
+    return false
+end
+
+function PhaseDashService.recharge(player)
+    if not PhaseDashService.canRecharge(player) then
         return false
     end
     local now = os.clock()
