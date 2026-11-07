@@ -1562,6 +1562,14 @@ describe("Arena mechanics", function()
         local velocity = HarborCargoSweep.velocity(Vector3.zero, band, center)
         local towardCenter = Vector3.new(0, 0, -30)
         expect(velocity:Dot(towardCenter) > 0).toBe(true)
+        -- Opposite-side rotated lane must also push inward.
+        band.CFrame = CFrame.new(0, 0, -30) * CFrame.Angles(0, math.rad(90), 0)
+        velocity = HarborCargoSweep.velocity(Vector3.zero, band, center)
+        expect(velocity:Dot(Vector3.new(0, 0, 30)) > 0).toBe(true)
+        -- Preserve normal world-aligned lanes.
+        band.CFrame = CFrame.new(30, 0, 0)
+        velocity = HarborCargoSweep.velocity(Vector3.zero, band, center)
+        expect(velocity:Dot(Vector3.new(-30, 0, 0)) > 0).toBe(true)
         band:Destroy()
     end)
 
