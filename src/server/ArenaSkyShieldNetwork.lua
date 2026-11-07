@@ -360,7 +360,37 @@ local function botRoot(model)
     return root, hum
 end
 
-local function humanBeneficiary(round, entry)
+-- A bot should provide NEW protection, not race towards a generator
+-- when every nearby human is already covered by a live shield or link.
+-- Mirror the real damage mitigation's active dome and link checks.
+local function protectionDeadline(round, position, now)
+    local deadline = now
+    for _, station in ipairs(round.stations) do
+        if station.model.Parent == round.folder and station.floorValid
+            and now < station.activeUntil
+            and Shield.contains(station.center, position, station.groundY) then
+            deadline = math.max(deadline, station.activeUntil)
+        end
+    end
+    for _, link in pairs(round.links) do
+        if link.live then
+            local untilTime = Shield.pairDeadline(link.from, link.to, now)
+            if untilTime and Shield.linkContains(
+                link.from.center, link.to.center, position, round.groundY
+            ) then
+                deadline = math.max(deadline, untilTime)
+            end
+        end
+    end
+    return deadline
+end
+
+-- Score ONLY server-verified live humans that would gain a new protective
+-- zone or an actually connected corridor. The bot can also prepare a
+-- replacement when existing protection has under 3 seconds remaining.
+-- Unprotected humans outrank near-expiry refreshes (3:1).
+local function humanBeneficiary(round, entry, now)
+    local score = 0
     for _, player in ipairs(round.ctx.Contestants or {}) do
         if player.Parent == Players
             and player:GetAttribute("DataLoaded") == true
@@ -368,27 +398,39 @@ local function humanBeneficiary(round, entry)
             local character = player.Character
             local hum = character and character:FindFirstChildOfClass("Humanoid")
             local root = character and character:FindFirstChild("HumanoidRootPart")
-            if hum and hum.Health > 0 and root and root:IsA("BasePart") then
-                if Shield.contains(entry.center, root.Position, entry.groundY) then
-                    return true
+            if hum and hum.Health > 0 and root and root:IsA("BasePart")
+                and root:IsDescendantOf(workspace) then
+                local position = root.Position
+                local wouldCover = Shield.contains(
+                    entry.center, position, entry.groundY)
+                if not wouldCover then
+                    -- A new corridor is possible only if its OTHER
+                    -- physical endpoint is live long enough to complete
+                    -- the real hold. Never claim a non-existent link.
+                    for _, other in ipairs(round.stations) do
+                        if other ~= entry and other.model.Parent == round.folder
+                            and other.floorValid
+                            and other.activeUntil > now + Shield.HoldSeconds
+                            and Shield.linkContains(other.center, entry.center,
+                                position, entry.groundY) then
+                            wouldCover = true
+                            break
+                        end
+                    end
                 end
-                -- A solo human can still coordinate with a real AI teammate:
-                -- if another generator is ALREADY live and this machine
-                -- would create a protective lane passing over the human,
-                -- that is a genuinely useful bot activation as well.
-                local now = os.clock()
-                for _, other in ipairs(round.stations) do
-                    if other ~= entry and other.floorValid
-                        and now < other.activeUntil
-                        and Shield.linkContains(other.center, entry.center,
-                            root.Position, entry.groundY) then
-                        return true
+                if wouldCover then
+                    local remaining = protectionDeadline(
+                        round, position, now) - now
+                    if remaining <= 0 then
+                        score += 3
+                    elseif remaining < 3 then
+                        score += 1
                     end
                 end
             end
         end
     end
-    return false
+    return score > 0, score
 end
 
 function Shield.releaseBot(model)
@@ -408,7 +450,7 @@ function Shield.botOpportunity(model, now, preferred)
     if not round or not round.active() or not round.ctx.Active()
         or not root or type(now) ~= "number"
         or not round.folder.Parent then return nil end
-    local chosen, nearest = nil, Shield.BotApproachRadius
+    local chosen, nearest, bestScore = nil, Shield.BotApproachRadius, 0
     for _, entry in ipairs(round.stations) do
         local delta = entry.core.Position - root.Position
         local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
@@ -419,10 +461,13 @@ function Shield.botOpportunity(model, now, preferred)
             and now >= entry.readyAt
             and not entry.guard and not reserved
             and math.abs(delta.Y) < 8
-            and flat <= nearest
-            and (preferred == nil or preferred == entry.core)
-            and humanBeneficiary(round, entry) then
-            chosen, nearest = entry, flat
+            and flat <= Shield.BotApproachRadius
+            and (preferred == nil or preferred == entry.core) then
+            local useful, score = humanBeneficiary(round, entry, now)
+            if useful and (score > bestScore
+                or (score == bestScore and flat < nearest)) then
+                chosen, nearest, bestScore = entry, flat, score
+            end
         end
     end
     if not chosen then return nil end
@@ -447,7 +492,7 @@ function Shield.activate(entry, actor, fromBot)
         root, hum = botRoot(actor)
         if not root or hum.FloorMaterial == Enum.Material.Air
             or (root.Position - entry.core.Position).Magnitude > Shield.BotReach
-            or not humanBeneficiary(round, entry) then
+            or not humanBeneficiary(round, entry, os.clock()) then
             return false
         end
     else
@@ -557,6 +602,7 @@ function Shield.start(ctx)
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local active = true
     local round = {ctx = ctx, folder = folder, stations = stations,
+        links = links, groundY = floorY,
         base = base, active = function() return active end}
     activeRound = round
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
