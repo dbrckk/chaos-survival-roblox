@@ -1,3 +1,6 @@
+# 2026-11-07 G3 public release candidate: Crossroads switchyard window reuse
+# (#655) and Towers AI shutter occupancy guard (#656). Reuse all existing
+# exact-SHA 85-spec engine/build checks and fail-closed public publisher.
 # 2026-11-06 G1/G2 exact-SHA retry after fixing RoundResultState's
 # real-engine Lest source-module load (script is nil in that loader).
 # Do not bypass the 85-spec gate or publisher SHA checks.
