@@ -30,6 +30,8 @@ Ce document reste **le plan de référence**, actualisé plutôt que remplacé p
 
 **G4-2 — expiration liée à la progression réelle.** Une route physique acceptée était annulée après 11 secondes, même lorsque le bot avançait effectivement à travers ses waypoints. Le délai est désormais renouvelé **uniquement lors du franchissement réel d'un waypoint**, pour 11 secondes au maximum, avec une limite absolue de **30 secondes** depuis l'acceptation. Les routes expirées sont comptabilisées séparément (`GroundRoutesExpired`) des calculs NavMesh jamais terminés (`GroundRoutesTimedOut`). Les dangers, le contrôle du corridor physique et l'absence de téléportation ne changent pas. La durée et les compteurs doivent encore être vérifiés dans une session Studio avec sept bots ; ne pas confondre source intégrée et validation moteur.
 
+**G4-3 — interactions sociales sans perte de gameplay (source).** Les salutations entre bots et humains restent possibles lorsqu'un bot est disponible, mais sont désormais reportées pendant une navigation physique (calcul en attente ou route active), une traversée de plateforme, un trajet de signal ou une coopération sur les consoles relais/bouclier/switchyard. Auparavant, un signe de tête pouvait imposer un arrêt volontaire de 0,18 seconde ou un saut de parade au milieu de ces actions. Le bot occupé réévalue la possibilité de saluer deux secondes plus tard, sans nouvelle boucle ni sondage. Les réactions aux menaces conservent leur priorité. **QA moteur et comportement réel à huit participants à confirmer.**
+
 ### Prochaines actions sans dispersion
 
 1. **G4-1 : source fusionnée via PR #661.** Certification moteur/Android au jalon de release, pas de revendication de validation instrumentée sur le dernier SHA.
