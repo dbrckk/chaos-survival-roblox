@@ -1,3 +1,7 @@
+## Plan produit actif — 7 novembre 2026
+
+Le [plan premium actualisé](docs/NEXT_PREMIUM_PRODUCTION_ROADMAP_2026-11-04.md#actualisation-opérationnelle--7-novembre-2026-priorités-de-livraison) fixe désormais l'ordre **G4 : version vérifiée → arbitrage IA multi-dangers → navigation physique des bots → interactions à huit → grands visuels 3D → performances Android → validation/publication exact-SHA**. Le correctif Harbor/Classic [#660](https://github.com/dbrckk/chaos-survival-roblox/pull/660) est fusionné en source ; l'IA multi-avertissements est en développement. **Le HEAD de GitHub ne prouve pas à lui seul l'état de la place publique Roblox.**
+
 ## Source-authentic Sky Spine gateway lighting — 5 November 2026
 
 The four real Sky Spine gateway Models now add restrained, physically motivated local `PointLight` only on verified `SIGNAL` MeshParts from our creator-approved sculpture. Lights are disabled on Low and immediately under either primary or secondary Darkness, warning/shutter or visual GPU pressure. Caps Medium 1, High touch 1, High desktop 2; all Lights enter the existing `VisualBudgetRules` census. No extra geometry, collision or render loop. [Engineering and Android acceptance](docs/SKY_SPINE_GENUINE_SIGNAL_LIGHTING_2026-11-05.md). **Unpublished source until full exact-SHA Cloud verification.**
