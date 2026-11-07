@@ -3796,8 +3796,12 @@ local function advanceGroundNavigation(record, root, now)
             -- turn point, and invalidate any stale ComputeAsync token.
             local badGoal = route.goal or target
             cancelGroundNavigation(record)
+            record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
+                record.recoveryAttemptCount, record.lastRecoveryAt, now)
+            record.lastRecoveryAt = now
             record.failedTarget = badGoal
-            record.failedTargetUntil = now + 7.5
+            record.failedTargetUntil = now
+                + AISurvivorRules.failedGoalCooldown(record.recoveryAttemptCount)
             record.target = nil
             record.targetPart = nil
             record.lastMoveTarget = nil
@@ -3874,7 +3878,8 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.recoveryAttemptCount, record.lastRecoveryAt, now)
     record.lastRecoveryAt = now
     record.failedTarget = goal
-    record.failedTargetUntil = now + 7.5
+    record.failedTargetUntil = now
+        + AISurvivorRules.failedGoalCooldown(record.recoveryAttemptCount)
     -- Physical stations and expedition reservations cannot be held by
     -- an NPC walking into a wall. Release ALL claims before detouring.
     if record.assistShield then
@@ -4038,8 +4043,12 @@ local function anticipateGroundObstacle(
 
     -- One real blocked segment, no generic wander goal and no rig warp.
     local detour = nearbyRecoveryStep(record, root, goal)
+    record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
+        record.recoveryAttemptCount, record.lastRecoveryAt, now)
+    record.lastRecoveryAt = now
     record.failedTarget = goal
-    record.failedTargetUntil = now + 7.5
+    record.failedTargetUntil = now
+        + AISurvivorRules.failedGoalCooldown(record.recoveryAttemptCount)
     record.lastMoveTarget = nil
     record.targetPart = nil
     record.targetIsPad = false
