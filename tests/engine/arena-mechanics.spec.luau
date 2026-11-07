@@ -1554,6 +1554,17 @@ describe("Arena mechanics", function()
         arenaMap:Destroy()
     end)
 
+    it("pushes Harbor sweep victims toward the center on rotated arenas", function()
+        local band = Instance.new("Part")
+        band.Size = Vector3.new(7.5, 0.1, 68)
+        band.CFrame = CFrame.new(30, 0, 0) * CFrame.Angles(0, math.rad(90), 0)
+        local center = Vector3.zero
+        local velocity = HarborCargoSweep.velocity(Vector3.zero, band, center)
+        local towardCenter = Vector3.new(-30, 0, 0)
+        expect(velocity:Dot(towardCenter) > 0).toBe(true)
+        band:Destroy()
+    end)
+
     it("applies Harbor sweep once to active AI missing from the roster", function()
         local band = Instance.new("Part")
         band.Name = "HarborRegressionSweep"
