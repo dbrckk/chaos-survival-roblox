@@ -4965,6 +4965,10 @@ local function stepRecord(record, now)
 
         if not urgentTarget and record.target
             and not record.groundNavigation
+            -- The pending path's physical fallback is deliberately a
+            -- temporary waypoint (possibly the bot's own position).
+            -- Do not clear it as "arrived" before ComputeAsync returns.
+            and not record.groundNavigationPending
             and not record.districtTraverse
             and not record.signalInterestRoute
             and (root.Position - record.target).Magnitude < 4.2
@@ -4988,7 +4992,13 @@ local function stepRecord(record, now)
             end
         end
 
-        if not record.groundNavigation and AISurvivorRules.shouldReplanTarget(
+        -- Preserve the pending request's fallback for its bounded
+        -- six-second lifetime. Replanning an ordinary roam target on
+        -- every brain pass invalidated the asynchronous result before
+        -- it could be accepted. Urgent threats still cancel it above.
+        if not record.groundNavigation
+            and not record.groundNavigationPending
+            and AISurvivorRules.shouldReplanTarget(
             currentState.phase,
             now,
             record.nextThink,
