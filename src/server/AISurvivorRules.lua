@@ -1512,6 +1512,37 @@ function AISurvivorRules.newImpactIntersectsEscape(
     ) >= 20
 end
 
+-- Compare only authoritative, current Meteor/Bomb telegraphs. Missing
+-- timing metadata must not invent a deadline; old warnings retain
+-- proximity-based selection for backward compatibility.
+function AISurvivorRules.impactLeadRemaining(name, startedAt, duration, now)
+    if name ~= "MeteorWarning" and name ~= "BombWarning" then
+        return math.huge
+    end
+    local started = tonumber(startedAt)
+    local seconds = tonumber(duration)
+    local current = tonumber(now)
+    if not started or not seconds or not current
+        or started ~= started or seconds ~= seconds or current ~= current
+        or math.abs(started) == math.huge
+        or math.abs(seconds) == math.huge
+        or math.abs(current) == math.huge
+        or seconds <= 0 then
+        return math.huge
+    end
+    return math.max(0, started + seconds - current)
+end
+
+-- A modest 0.30s margin prevents equal-time warnings from competing
+-- for attention every brain tick. Within the margin, use distance.
+function AISurvivorRules.impactDeadlineEarlier(candidate, current, margin)
+    local a, b = tonumber(candidate), tonumber(current)
+    if not a or not b or a ~= a or b ~= b then return false end
+    if a == math.huge then return false end
+    if b == math.huge then return true end
+    return a + math.clamp(tonumber(margin) or 0.30, 0, 1) < b
+end
+
 -- Direct impact warnings take precedence over global timing cues during
 -- Double Chaos. The priorities only arbitrate *already detected* warnings;
 -- they do not expand detection radii or suppress normal reaction delays.

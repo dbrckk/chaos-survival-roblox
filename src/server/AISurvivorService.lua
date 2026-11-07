@@ -1806,9 +1806,12 @@ local function immediateThreat(record, root, now)
     local nearest = nil
     local nearestDistance = math.huge
     local nearestPriority = -1
+    local nearestLead = math.huge
     local currentThreat = record.threat
     local currentThreatDistance = math.huge
     local currentPriority = -1
+    local currentLead = math.huge
+    local serverTime = workspace:GetServerTimeNow()
     local velocity = root.AssemblyLinearVelocity
     local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
     local anticipation = 0.18 + (1 - record.profile.Risk) * 0.20
@@ -1825,19 +1828,36 @@ local function immediateThreat(record, root, now)
 
         if distance <= threshold then
             local priority = AISurvivorRules.warningThreatPriority(warning.Name)
+            local lead = AISurvivorRules.impactLeadRemaining(
+                warning.Name, warning:GetAttribute("WarningStartedAt"),
+                warning:GetAttribute("WarningDuration"), serverTime
+            )
             if warning == currentThreat then
                 currentThreatDistance = distance
                 currentPriority = priority
+                currentLead = lead
             end
-            -- An imminent Meteor/Bomb cannot be hidden by a closer
-            -- Freeze/JumpShock cue. Within the same urgency class, keep
-            -- the original nearest-warning behavior.
+            -- Under simultaneous Meteor/Bomb rings, a genuinely EARLIER
+            -- impact outranks a nearer one only when its deadline beats
+            -- the other by >0.30s. Otherwise preserve nearby focus and
+            -- the original individual reaction delay.
+            local earlier = priority == 2
+                and AISurvivorRules.impactDeadlineEarlier(
+                    lead, nearestLead, 0.30
+                )
+            local notLater = priority ~= 2
+                or not AISurvivorRules.impactDeadlineEarlier(
+                    nearestLead, lead, 0.30
+                )
             if priority > nearestPriority
-                or (priority == nearestPriority and distance < nearestDistance)
+                or (priority == nearestPriority
+                    and (earlier
+                        or (notLater and distance < nearestDistance)))
             then
                 nearest = warning
                 nearestDistance = distance
                 nearestPriority = priority
+                nearestLead = lead
             end
         end
     end
@@ -1848,6 +1868,12 @@ local function immediateThreat(record, root, now)
     -- realistic reaction timing and avoids a twitchy, cancelled escape.
     if currentThreat ~= nearest
         and currentPriority == nearestPriority
+        -- Do not lock focus onto a slightly nearer impact if another
+        -- already visible blast will land appreciably sooner.
+        and (nearestPriority ~= 2
+            or not AISurvivorRules.impactDeadlineEarlier(
+                nearestLead, currentLead, 0.30
+            ))
         and AISurvivorRules.keepThreatFocus(
             currentThreatDistance, nearestDistance, 4
         )
