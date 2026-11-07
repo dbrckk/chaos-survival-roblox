@@ -544,7 +544,12 @@ function AISurvivorRules.filterRecentlyFailedCandidates(
             end
         end
     end
-    return #viable > 0 and viable or candidates
+    -- A quarantined goal must never be reintroduced just because all
+    -- available candidates happen to be near it. The caller already
+    -- handles an empty list by holding the bot on its real footing;
+    -- otherwise a single inaccessible destination can cause an
+    -- endless walk-into-wall / recover / walk-into-wall cycle.
+    return viable
 end
 
 -- Five grounded samples along a detour prevent a bot from trying
