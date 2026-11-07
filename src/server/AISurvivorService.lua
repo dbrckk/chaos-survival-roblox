@@ -3972,36 +3972,6 @@ local function advanceGroundNavigation(record, root, now)
     end
     local route = record.groundNavigation
     if not route then return end
-    if now > route.expires or now > route.hardExpires then
-        -- Expiring a real NavMesh path means the ORIGINAL destination
-        -- failed, not just its last temporary turn waypoint. Without
-        -- quarantine, the very next normal roam decision can select
-        -- the exact same blocked goal and restart an endless route loop.
-        -- Use the same bounded failed-goal policy as a live invalidation.
-        local badGoal = route.goal
-        AISurvivorService.PerformanceDiagnostics.GroundRoutesExpired += 1
-        cancelGroundNavigation(record)
-        record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
-            record.recoveryAttemptCount, record.lastRecoveryAt, now)
-        record.lastRecoveryAt = now
-        if typeof(badGoal) == "Vector3" then
-            record.failedTarget = badGoal
-            record.failedTargetUntil = now
-                + AISurvivorRules.failedGoalCooldown(
-                    record.recoveryAttemptCount)
-        end
-        record.target = nil
-        record.targetPart = nil
-        record.lastMoveTarget = nil
-        record.lastProgressTarget = nil
-        record.nextThink = 0
-        if record.model then
-            record.model:SetAttribute("BotGroundRouteExpiryCount",
-                (tonumber(record.model:GetAttribute(
-                    "BotGroundRouteExpiryCount")) or 0) + 1)
-        end
-        return
-    end
     if #warningParts() > 0
         or hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
         or hasDisaster("Tornado") or hasDisaster("DisappearingPlatforms")
@@ -4035,6 +4005,41 @@ local function advanceGroundNavigation(record, root, now)
         cancelGroundNavigation(record)
         record.target = nil
         record.nextThink = 0
+        return
+    end
+    -- Check completion and authoritative hazard cancellation BEFORE
+    -- treating a deadline as a failure. A bot physically at the final
+    -- waypoint succeeded even if this AI pass began just after its TTL.
+    -- Conversely a hazard interruption is not evidence that the goal
+    -- itself was unreachable.
+    if now > route.expires or now > route.hardExpires then
+        -- Expiring a real NavMesh path means the ORIGINAL destination
+        -- failed, not just its last temporary turn waypoint. Without
+        -- quarantine, the very next normal roam decision can select
+        -- the exact same blocked goal and restart an endless route loop.
+        -- Use the same bounded failed-goal policy as a live invalidation.
+        local badGoal = route.goal
+        AISurvivorService.PerformanceDiagnostics.GroundRoutesExpired += 1
+        cancelGroundNavigation(record)
+        record.recoveryAttemptCount = AISurvivorRules.nextRecoveryAttempt(
+            record.recoveryAttemptCount, record.lastRecoveryAt, now)
+        record.lastRecoveryAt = now
+        if typeof(badGoal) == "Vector3" then
+            record.failedTarget = badGoal
+            record.failedTargetUntil = now
+                + AISurvivorRules.failedGoalCooldown(
+                    record.recoveryAttemptCount)
+        end
+        record.target = nil
+        record.targetPart = nil
+        record.lastMoveTarget = nil
+        record.lastProgressTarget = nil
+        record.nextThink = 0
+        if record.model then
+            record.model:SetAttribute("BotGroundRouteExpiryCount",
+                (tonumber(record.model:GetAttribute(
+                    "BotGroundRouteExpiryCount")) or 0) + 1)
+        end
         return
     end
     if now >= (route.nextLiveCheckAt or 0) then
