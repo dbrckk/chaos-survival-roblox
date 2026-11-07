@@ -73,6 +73,7 @@ AISurvivorService.PerformanceDiagnostics = {
     GroundRoutesCompleted = 0,
     GroundRoutesInvalidated = 0,
     GroundRoutesTimedOut = 0,
+    GroundRoutesExpired = 0,
     GroundRoutesActive = 0,
     GroundRoutesPending = 0,
     InRoundBots = 0,
@@ -3663,6 +3664,7 @@ local function requestGroundNavigation(record, root, goal, now)
         end
         record.groundNavigationFallbackTarget = nil
         AISurvivorService.PerformanceDiagnostics.GroundRoutesAccepted += 1
+        local acceptedAt = os.clock()
         record.groundNavigation = {
             points = points,
             origin = start,
@@ -3670,7 +3672,11 @@ local function requestGroundNavigation(record, root, goal, now)
             base = base,
             index = 1,
             nextLiveCheckAt = 0,
-            expires = os.clock() + 11,
+            -- Allow a long but genuinely advancing route to finish.
+            -- Still enforce both a per-waypoint stall deadline and a
+            -- hard lifetime, so the bot cannot retain a path forever.
+            expires = acceptedAt + 11,
+            hardExpires = acceptedAt + 30,
         }
         record.target = points[1]
         record.targetPart = nil
@@ -3767,7 +3773,14 @@ local function advanceGroundNavigation(record, root, now)
     end
     local route = record.groundNavigation
     if not route then return end
-    if now > route.expires or #warningParts() > 0
+    if now > route.expires or now > route.hardExpires then
+        AISurvivorService.PerformanceDiagnostics.GroundRoutesExpired += 1
+        cancelGroundNavigation(record)
+        record.target = nil
+        record.nextThink = 0
+        return
+    end
+    if #warningParts() > 0
         or hasDisaster("RisingLava") or hasDisaster("ShrinkingArena")
         or hasDisaster("Tornado") or hasDisaster("DisappearingPlatforms")
         or not record.inRound or currentState.phase ~= "round" then
@@ -3777,6 +3790,7 @@ local function advanceGroundNavigation(record, root, now)
         return
     end
     local target = route.points[route.index]
+    local previousIndex = route.index
     while target do
         local dx = target.X - root.Position.X
         local dz = target.Z - root.Position.Z
@@ -3788,6 +3802,11 @@ local function advanceGroundNavigation(record, root, now)
         end
         route.index += 1
         target = route.points[route.index]
+    end
+    if route.index > previousIndex then
+        -- Only REAL waypoint arrival counts as progress; a bot that
+        -- repeatedly pushes into a wall cannot extend this deadline.
+        route.expires = math.min(now + 11, route.hardExpires)
     end
     if not target then
         AISurvivorService.PerformanceDiagnostics.GroundRoutesCompleted += 1
