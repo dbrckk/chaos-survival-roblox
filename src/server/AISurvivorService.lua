@@ -833,6 +833,8 @@ local function createRig(record)
     record.escapeUntil = 0
     record.escapeWarningVersion = nil
     record.escapeKnownWarnings = nil
+    -- The rig is constructed before the file-local warning tracker.
+    record.routeWarningVersion = -1
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
@@ -5110,6 +5112,51 @@ local function stepRecord(record, now)
             record.targetIsSkyrail = false
             record.skyrailDirection = nil
             record.nextThink = 0
+        end
+
+        -- A freshly spawned server warning can cut across an ordinary
+        -- walking route while its bot is still OUTSIDE the warning circle.
+        -- The local impact dodge would not yet fire, so do not let the
+        -- existing rethink timer send the bot back into that future blast.
+        -- Check the event-owned warning cache only when its version changes,
+        -- not every physics frame, and never replace committed platform
+        -- crossings, real console holds, or an emergency escape.
+        if currentState.phase == "round"
+            and not urgentTarget
+            and record.routeWarningVersion ~= warningVersion then
+            record.routeWarningVersion = warningVersion
+            if record.target and not record.groundNavigation
+                and not record.groundNavigationPending
+                and not record.districtTraverse
+                and not record.signalInterestRoute
+                and not record.assistShield
+                and not record.assistRelay
+                and not record.spineControl
+                and not record.targetIsSkyrail
+                and not AISurvivorRules.committedWorldRoute(
+                    record.targetIsSkyrail, record.targetPart, false
+                ) then
+                for _, warning in ipairs(warningParts()) do
+                    if AISurvivorRules.newImpactIntersectsEscape(
+                        root.Position, record.target, warning.Name,
+                        warning.Position,
+                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                        warning:GetAttribute("WarningEndSize")
+                    ) then
+                        record.target = nil
+                        record.targetPart = nil
+                        record.targetIsPad = false
+                        record.lastMoveTarget = nil
+                        record.nextThink = 0
+                        record.idleUntil = 0
+                        record.turnPauseUntil = 0
+                        record.model:SetAttribute("BotHazardRouteInvalidations",
+                            (tonumber(record.model:GetAttribute(
+                                "BotHazardRouteInvalidations")) or 0) + 1)
+                        break
+                    end
+                end
+            end
         end
 
         if currentState.phase == "round"
