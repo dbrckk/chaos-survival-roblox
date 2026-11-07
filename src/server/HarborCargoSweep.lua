@@ -89,11 +89,35 @@ function HarborCargoSweep.velocity(previous, band, center)
     )
 end
 
+-- A bot can be temporarily absent from HazardContestants while its
+-- physical model is still alive. Keep one claim per CHARACTER, shared
+-- between roster and folder scans, so the same pulse cannot hit twice.
+function HarborCargoSweep.applyLiveBot(ctx, band, model, hitOnce, center)
+    if not ctx or type(ctx.Active) ~= "function" or not ctx.Active()
+        or not band or not band.Parent
+        or band:GetAttribute("HarborSweepPhase") ~= "Pulse"
+        or not model or not model:IsA("Model")
+        or model:GetAttribute("AISurvivor") ~= true
+        or model:GetAttribute("AISurvivorInRound") ~= true
+        or hitOnce[model] then return false end
+    local humanoid = model:FindFirstChildOfClass("Humanoid")
+    local root = model:FindFirstChild("HumanoidRootPart")
+    if not humanoid or humanoid.Health <= 0
+        or not root or not root:IsA("BasePart")
+        or not HarborCargoSweep.inside(root.Position, band)
+        or not ctx.Active() then return false end
+    hitOnce[model] = true
+    root.AssemblyLinearVelocity = HarborCargoSweep.velocity(
+        root.AssemblyLinearVelocity, band, center
+    )
+    return true
+end
+
 function HarborCargoSweep.apply(ctx, band, subject, hitOnce, center)
     if not ctx or type(ctx.Active) ~= "function" or not ctx.Active()
         or not band or not band.Parent
         or band:GetAttribute("HarborSweepPhase") ~= "Pulse"
-        or not subject or hitOnce[subject]
+        or not subject
         or type(ctx.IsContestantActive) ~= "function"
         or ctx.IsContestantActive(subject) ~= true
     then return false end
@@ -108,7 +132,8 @@ function HarborCargoSweep.apply(ctx, band, subject, hitOnce, center)
     then return false end
     if not ctx.Active() then return false end
 
-    hitOnce[subject] = true
+    if hitOnce[character] then return false end
+    hitOnce[character] = true
     root.AssemblyLinearVelocity = HarborCargoSweep.velocity(
         root.AssemblyLinearVelocity, band, center
     )
@@ -269,6 +294,17 @@ function HarborCargoSweep.start(ctx, arena)
                     HarborCargoSweep.apply(
                         ctx, current.band, subject, hitOnce, base.Position
                     )
+                end
+                -- Cover live server-owned AI even if the hazard roster
+                -- briefly omits their proxy. Both paths share character
+                -- claims; no extra per-frame loop outside the pulse.
+                local bots = workspace:FindFirstChild("AISurvivors")
+                if bots then
+                    for _, model in ipairs(bots:GetChildren()) do
+                        HarborCargoSweep.applyLiveBot(
+                            ctx, current.band, model, hitOnce, base.Position
+                        )
+                    end
                 end
                 task.wait(HarborCargoSweep.SampleSeconds)
                 elapsed += HarborCargoSweep.SampleSeconds
