@@ -20,6 +20,8 @@ Ce document reste **le plan de référence**, actualisé plutôt que remplacé p
 
 **Avancement G4-2 — quarantaine des destinations inaccessibles.** La règle `filterRecentlyFailedCandidates` réintroduisait silencieusement la liste complète si *toutes* les destinations disponibles se trouvaient dans les 11 studs du dernier objectif échoué. Cela permettait de renvoyer le bot contre le même obstacle à chaque nouvelle décision. Désormais, la liste filtrée peut rester vide : `chooseArenaTarget` possède déjà le repli physique sûr sur `root.Position` pendant la quarantaine (7,5 s), sans marche dans le vide ni téléportation. Les alertes de danger restent prioritaires. **Code source fusionnable ; mesure des échecs réels et validation moteur/Android encore requises avant clôture de G4-2.**
 
+**Avancement G4-2 — temporisation progressive des échecs.** Les blocages confirmés, obstacles anticipés et segments de navigation devenus invalides partagent désormais une quarantaine croissante de **7,5 à 16 secondes** selon les tentatives rapprochées. Le compteur existant `nextRecoveryAttempt` revient à la première tentative après 12 secondes sans nouvel échec. Cette mesure empêche de rechoisir trop rapidement un objectif bloqué sans rendre les zones définitivement interdites ; aucune boucle ni requête Pathfinding supplémentaires. **Validation instrumentée avec sept bots et test moteur toujours requis avant la clôture G4-2.**
+
 ### Prochaines actions sans dispersion
 
 1. **G4-1 : source fusionnée via PR #661.** Certification moteur/Android au jalon de release, pas de revendication de validation instrumentée sur le dernier SHA.
