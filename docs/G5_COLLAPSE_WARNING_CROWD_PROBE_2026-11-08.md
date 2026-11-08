@@ -33,3 +33,7 @@ The previously merged #698 fix already applied mobile-character exclusions to Me
 ## Verification status
 
 11 source invariants were checked before writing: shared helper ordering, correct exclusion list, collidable support, both callers, unchanged raycast sites, exact server warning phase, unchanged reaction gate and supported deck validation. **Roblox Engine and Android execution have not been run on this commit.** The branch does not automatically publish to the Roblox live experience. Follow the repo's owner-controlled release validation gates at the relevant milestone.
+
+## Authoritative disaster lifecycle cross-check
+
+Reviewed `src/server/Disasters/DisappearingPlatforms.lua` on `main`: `eligiblePlatforms` only selects initially `CanCollide` physical decks, then `D.start` sets `CollapsePhase="Warning"` without disabling collision. **Only after** the 1.35-second shared warning does it set `CollapsePhase="Gone"`, transparency to 1, and `CanCollide=false`. Therefore `RespectCanCollide=true` still detects genuine warning surfaces and refuses floors once physically gone. This cross-check confirms the source contract, not a completed engine test.
