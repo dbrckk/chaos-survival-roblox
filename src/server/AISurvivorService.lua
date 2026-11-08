@@ -1358,6 +1358,28 @@ local function warningParts()
     return cachedWarningParts
 end
 
+-- The same authoritative Meteor/Bomb corridor rule protects optional
+-- missions, active missions, and the final grounded MoveTo. Read the
+-- event-maintained warning cache, never scan Workspace or add raycasts.
+local function impactCorridorIntersects(origin, destination, warnings)
+    if typeof(origin) ~= "Vector3" or typeof(destination) ~= "Vector3" then
+        return false
+    end
+    for _, warning in ipairs(warnings or warningParts()) do
+        if (warning.Name == "MeteorWarning"
+                or warning.Name == "BombWarning")
+            and AISurvivorRules.newImpactIntersectsEscape(
+                origin, destination, warning.Name,
+                warning.Position,
+                math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                warning:GetAttribute("WarningEndSize")
+            ) then
+            return true
+        end
+    end
+    return false
+end
+
 -- Avoid repeating a giant AI-branded phrase every brain tick. Gestures and
 -- warnings are visible above bots, never in the actual player chat.
 local function warnNearbyContestants(record, now)
@@ -2491,8 +2513,12 @@ local function socialArenaTarget(record, root, traits, now)
             safeDeck.CFrame, safeDeck.Size, target
         ) or target
     end
-    -- A social impulse may not override the existing server hazard evaluator.
-    if scoreCandidate(record, root, {position = target}, traits) < -32 then
+    -- A social impulse is optional: refuse a route that crosses ANY
+    -- live Meteor/Bomb footprint, even when a personality score remains
+    -- attractive and the destination itself is outside the blast.
+    local score, landingExposures, corridorExposures =
+        scoreCandidate(record, root, {position = target}, traits)
+    if score < -32 or landingExposures > 0 or corridorExposures > 0 then
         return nil
     end
     return target, safeDeck
@@ -2952,18 +2978,30 @@ local function liveDistrictSignalTarget(record, root, now, traits)
         if math.random() > chance * (0.8 + risk * 0.35) then
             return nil
         end
-        -- Existing impact-path danger scoring also protects this new
-        -- optional interest. A mission never takes priority over life.
-        if scoreCandidate(record, root, {position = target}, traits) < -25 then
+        -- A mission is not a valid excuse to cross a live impact.
+        -- The weighted personality score alone allowed risky shortcuts
+        -- even with safe alternative ordinary routes available.
+        local score, landingExposures, corridorExposures =
+            scoreCandidate(record, root, {position = target}, traits)
+        if score < -25 or landingExposures > 0 or corridorExposures > 0 then
             return nil
         end
         record.signalInterestRoute = route
     end
 
+    -- Social spacing may shift a safe station approach INTO a warning.
+    -- Check the final selected mission goal before committing this tick.
+    local approach = separateTarget(record, target)
+    if impactCorridorIntersects(root.Position, approach) then
+        record.signalInterestRoute = nil
+        record.signalInterestUntil = 0
+        record.nextSignalInterestAt = now + 4
+        return nil
+    end
     record.signalInterestUntil = now + math.min(6, remaining)
     record.targetPart = nil
     record.targetIsPad = false
-    return separateTarget(record, target), math.clamp(
+    return approach, math.clamp(
         distance / speed + 0.40, 1.1, 4.3)
 end
 
@@ -4682,17 +4720,8 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
         local warnings = warningParts() -- event-cached; no Workspace scan
         if #warnings > 0 then
             local function crossesLiveImpact(point)
-                for _, warning in ipairs(warnings) do
-                    if AISurvivorRules.newImpactIntersectsEscape(
-                        root.Position, point, warning.Name,
-                        warning.Position,
-                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
-                        warning:GetAttribute("WarningEndSize")
-                    ) then
-                        return true
-                    end
-                end
-                return false
+                return impactCorridorIntersects(
+                    root.Position, point, warnings)
             end
             if crossesLiveImpact(target) or crossesLiveImpact(destination) then
                 -- A safe original goal can still be reached directly if
@@ -5276,6 +5305,14 @@ local function stepRecord(record, now)
             and currentState.finalRush ~= true
             and (not endAt or endAt <= 0
                 or workspace:GetServerTimeNow() + 0.30 < endAt)
+        -- The active objective is exempt from ordinary roaming checks.
+        -- Release that optional commitment if a NEW impact now crosses
+        -- its current route; otherwise the bot follows a risky mission.
+        -- Only one NPC pursues a signal at a time.
+        if stillOpen and record.target
+            and impactCorridorIntersects(root.Position, record.target) then
+            stillOpen = false
+        end
         local reached = false
         if stillOpen then
             local delta = foundation.Position - root.Position
