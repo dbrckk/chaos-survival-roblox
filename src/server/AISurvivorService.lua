@@ -6132,6 +6132,12 @@ local function stepRecord(record, now)
         -- airborne shortcuts across its narrow physical corridor.
         and not record.groundNavigation
         and not record.groundNavigationPending
+        -- Cosmetic hops may start before JumpShock's short late-jump
+        -- window and leave the bot airborne when a REAL dodge is due.
+        -- Reserve its ordinary grounded jump for danger response while
+        -- any authoritative warning is live; never suppress jumps that
+        -- the physical parkour/district traversal actually needs.
+        and #warningParts() == 0
         and not (record.recoveryWaypoint
             and record.target == record.recoveryWaypoint
             and now < (record.recoveryCommitUntil or 0))
