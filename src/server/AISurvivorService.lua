@@ -1737,8 +1737,16 @@ local function disappearingPlatformEscape(record, root, now)
     -- collapse disaster. Other arenas avoid a new per-bot raycast each tick.
     if not hasDisaster("DisappearingPlatforms")
         and arenaVariantId() ~= "Towers" then
+        -- A previous warning may have expired while the disaster was
+        -- removed. Never carry a cached escape into a different event.
         record.platformThreat = nil
         record.platformThreatSeenAt = nil
+        record.collapsePlanThreat = nil
+        record.collapsePlanDeck = nil
+        record.collapsePlanTarget = nil
+        record.collapsePlanUntil = 0
+        record.collapsePlanWarningVersion = -1
+        record.collapsePlanSweepExposures = 0
         return nil
     end
 
@@ -1762,6 +1770,8 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanDeck = nil
         record.collapsePlanTarget = nil
         record.collapsePlanUntil = 0
+        record.collapsePlanWarningVersion = -1
+        record.collapsePlanSweepExposures = 0
         return nil
     end
 
@@ -1772,6 +1782,8 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanDeck = nil
         record.collapsePlanTarget = nil
         record.collapsePlanUntil = 0
+        record.collapsePlanWarningVersion = -1
+        record.collapsePlanSweepExposures = 0
     end
 
     if not AISurvivorRules.reactionReady(
