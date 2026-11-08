@@ -2066,7 +2066,14 @@ local function disappearingPlatformEscape(record, root, now)
             local partialCost = flatDistance
             if partialCost < nearestPartialCost then
                 local partialHit = physicalFloor(partial, true)
-                if partialHit then
+                -- A fallback may also end on a DIFFERENT supported deck.
+                -- Do not allow that endpoint alone to hide a gap in the
+                -- walking corridor. A point still on the same convex
+                -- doomed floor is safe until the warning expires.
+                if partialHit and (partialHit.Instance == part
+                    or physicalFloor(
+                        root.Position:Lerp(partial, 0.55), true
+                    )) then
                     nearestPartial = partial
                     nearestPartialSupport = partialHit.Instance
                     nearestPartialCost = partialCost
