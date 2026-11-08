@@ -1969,6 +1969,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             title = title,
             hint = roundHint,
             seconds = botShowdownActive and (t - botShowdownDeadlineT) or t,
+            botShowdown = botShowdownActive,
             doubleChaos = #selected > 1,
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
