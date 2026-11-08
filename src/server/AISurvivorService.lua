@@ -2085,6 +2085,9 @@ local function disappearingPlatformEscape(record, root, now)
     local bestSweepImpacts = math.huge
     local bestCost = math.huge
     local nearestPartial, nearestPartialCost = nil, math.huge
+    local nearestPartialLanding = math.huge
+    local nearestPartialCorridor = math.huge
+    local nearestPartialSweep = math.huge
     local nearestPartialSupport = nil
     for _, localExit in ipairs(exits) do
         local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
@@ -2097,9 +2100,33 @@ local function disappearingPlatformEscape(record, root, now)
             local partial = root.Position
                 + Vector3.new(delta.X, 0, delta.Z).Unit
                     * math.min(12, flatDistance)
-            local partialCost =
-                flatDistance + 8 * sweepExposures(partial)
-            if partialCost < nearestPartialCost then
+            local partialLanding, partialCorridor = 0, 0
+            for _, impact in ipairs(impacts) do
+                local diff = partial - impact.position
+                if Vector3.new(diff.X, 0, diff.Z).Magnitude
+                    < impact.radius + 3 then
+                    partialLanding += 1
+                end
+                if AISurvivorRules.routeWarningPenalty(
+                    root.Position, partial,
+                    impact.position, impact.radius
+                ) >= 20 then
+                    partialCorridor += 1
+                end
+            end
+            local partialSweep = sweepExposures(partial)
+            local partialCost = flatDistance
+            local betterPartial = partialLanding < nearestPartialLanding
+            if partialLanding == nearestPartialLanding then
+                if partialCorridor < nearestPartialCorridor then
+                    betterPartial = true
+                elseif partialCorridor == nearestPartialCorridor then
+                    betterPartial = partialSweep < nearestPartialSweep
+                        or (partialSweep == nearestPartialSweep
+                            and partialCost < nearestPartialCost)
+                end
+            end
+            if betterPartial then
                 local partialHit = physicalFloor(partial, true)
                 -- A fallback may also end on a DIFFERENT supported deck.
                 -- Do not allow that endpoint alone to hide a gap in the
@@ -2111,6 +2138,9 @@ local function disappearingPlatformEscape(record, root, now)
                     )) then
                     nearestPartial = partial
                     nearestPartialSupport = partialHit.Instance
+                    nearestPartialLanding = partialLanding
+                    nearestPartialCorridor = partialCorridor
+                    nearestPartialSweep = partialSweep
                     nearestPartialCost = partialCost
                 end
             end
@@ -2193,7 +2223,7 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanThreat = part
         record.collapsePlanDeck = nearestPartialSupport
         record.collapsePlanTarget = nearestPartial
-        record.collapsePlanSweepExposures = sweepExposures(nearestPartial)
+        record.collapsePlanSweepExposures = nearestPartialSweep
         record.collapsePlanUntil = now + 0.32
         record.collapsePlanWarningVersion = warningVersion
         record.model:SetAttribute("BotCollapsePartialRetreats",
