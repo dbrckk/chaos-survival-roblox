@@ -63,12 +63,18 @@ function D.start(ctx)
             marker.Color = Color3.fromRGB(255,50,50)
             marker.Position = impactPosition
             marker:SetAttribute("ImpactWaveMode", waveMode)
+            -- Publish complete blast geometry and timing BEFORE this
+            -- marker becomes visible to bots and clients. Previously
+            -- configure() ran in a later spawned coroutine, leaving a
+            -- temporary small, metadata-free warning in Workspace.
+            HazardWarning.configure(
+                marker, "Bomb", warningSeconds, 5.5, radius * 2
+            )
             marker.Parent = workspace
             pending[marker] = true
             ctx.Cleanup[#ctx.Cleanup+1] = marker
 
             task.spawn(function()
-                HazardWarning.configure(marker, "Bomb", warningSeconds, 5.5, radius * 2)
                 task.wait(warningSeconds)
                 if not marker.Parent or not ctx.Active() then
                     pending[marker] = nil

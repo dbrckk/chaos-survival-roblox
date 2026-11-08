@@ -829,6 +829,12 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.collapsePlanThreat = nil
+    record.collapsePlanDeck = nil
+    record.collapsePlanTarget = nil
+    record.collapsePlanUntil = 0
+    record.collapsePlanWarningVersion = -1
+    record.collapsePlanSweepExposures = 0
     record.escapeWarning = nil
     record.escapeTarget = nil
     record.escapeUntil = 0
@@ -950,6 +956,12 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.collapsePlanThreat = nil
+    record.collapsePlanDeck = nil
+    record.collapsePlanTarget = nil
+    record.collapsePlanUntil = 0
+    record.collapsePlanWarningVersion = -1
+    record.collapsePlanSweepExposures = 0
     record.districtTraverse = nil
     record.signalInterestRoute = nil
     record.signalInterestUntil = 0
@@ -1017,6 +1029,12 @@ local function sendToArena(record)
 
     record.inRound = true
     record.model:SetAttribute("AISurvivorInRound", true)
+    record.collapsePlanThreat = nil
+    record.collapsePlanDeck = nil
+    record.collapsePlanTarget = nil
+    record.collapsePlanUntil = 0
+    record.collapsePlanWarningVersion = -1
+    record.collapsePlanSweepExposures = 0
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.routeWarningVersion = -1
@@ -1059,6 +1077,9 @@ local function sendToArena(record)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
     record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotImpactReactionHandoffs", 0)
+    record.model:SetAttribute("BotCollapseSafeExitPlans", 0)
+    record.model:SetAttribute("BotCollapsePartialRetreats", 0)
+    record.model:SetAttribute("BotCollapseBlockedPlans", 0)
     record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -1161,6 +1182,12 @@ local function newRecord(slot)
         threatSeenAt = nil,
         platformThreat = nil,
         platformThreatSeenAt = nil,
+        collapsePlanThreat = nil,
+        collapsePlanDeck = nil,
+        collapsePlanTarget = nil,
+        collapsePlanUntil = 0,
+        collapsePlanWarningVersion = -1,
+        collapsePlanSweepExposures = 0,
         idleUntil = 0,
         lastProgressPosition = nil,
         lastProgressAt = 0,
@@ -1421,6 +1448,30 @@ local function activeFloorSweepBands()
     return bands
 end
 
+-- Only real static terrain / authored platforms may determine whether
+-- a bot has ground underneath it. Moving contestants (including a human
+-- standing over a collapse warning) can occlude the physical surface.
+-- Build this filter only for a real emergency floor probe. It does not
+-- modify Roblox collision groups or movement physics.
+local function emergencyFloorProbeParams(record)
+    local exclusions = {}
+    if botsFolder then
+        exclusions[#exclusions + 1] = botsFolder
+    elseif record.model then
+        exclusions[#exclusions + 1] = record.model
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            exclusions[#exclusions + 1] = player.Character
+        end
+    end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = exclusions
+    params.RespectCanCollide = true
+    return params
+end
+
 -- Sample several WALKABLE escape headings rather than committing to one
 -- random tangent. This matters at arena edges, on narrow platforms, and
 -- when two growing meteor/bomb warnings overlap. Bounded to six headings,
@@ -1444,27 +1495,9 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
         -tangent,
     }
 
-    -- A live player's collidable character can stand above the actual
-    -- floor or occupy a sampled landing point during a busy round.
-    -- Exclude mobile contestants from SUPPORT probes: otherwise an
-    -- avatar hides a safe deck/base and every emergency dodge heading
-    -- may be rejected as unsupported. Keep authored static collision
-    -- intact and use the same existing origin/midpoint/landing raycasts.
-    local exclusions = {}
-    if botsFolder then
-        exclusions[#exclusions + 1] = botsFolder
-    elseif record.model then
-        exclusions[#exclusions + 1] = record.model
-    end
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            exclusions[#exclusions + 1] = player.Character
-        end
-    end
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = exclusions
-    params.RespectCanCollide = true
+    -- Physical support must not be hidden by mobile participants.
+    -- Share the exact same floor filter with collapsing-deck warnings.
+    local params = emergencyFloorProbeParams(record)
 
     -- High sky-deck meteors previously chose a long free-space dodge
     -- using only soft unsupported-floor penalties. Every direction
@@ -1709,10 +1742,10 @@ local function disappearingPlatformEscape(record, root, now)
         return nil
     end
 
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    rayParams.FilterDescendantsInstances = record.model and {record.model} or {}
-
+    -- A stacked player or adjacent NPC should not hide a REAL
+    -- disappearing platform from the short floor probe. Respect
+    -- collidable surfaces; decoration is not a valid warning floor.
+    local rayParams = emergencyFloorProbeParams(record)
     local hit = workspace:Raycast(root.Position, Vector3.new(0, -7, 0), rayParams)
     local part = hit and hit.Instance
     local platforms = part and part.Parent
@@ -1725,12 +1758,20 @@ local function disappearingPlatformEscape(record, root, now)
     if not isWarning then
         record.platformThreat = nil
         record.platformThreatSeenAt = nil
+        record.collapsePlanThreat = nil
+        record.collapsePlanDeck = nil
+        record.collapsePlanTarget = nil
+        record.collapsePlanUntil = 0
         return nil
     end
 
     if record.platformThreat ~= part then
         record.platformThreat = part
         record.platformThreatSeenAt = now
+        record.collapsePlanThreat = nil
+        record.collapsePlanDeck = nil
+        record.collapsePlanTarget = nil
+        record.collapsePlanUntil = 0
     end
 
     if not AISurvivorRules.reactionReady(
@@ -1750,9 +1791,130 @@ local function disappearingPlatformEscape(record, root, now)
         )
     end
 
+    -- A real concurrent grid/cargo sweep can make an otherwise safe
+    -- collapse route lethal. Read only authoritative active bands and
+    -- apply their existing segment-intersection physics (including height).
+    local liveSweeps = activeFloorSweepBands()
+    local function sweepExposures(target)
+        local exposed = 0
+        for _, band in ipairs(liveSweeps) do
+            if AISurvivorRules.floorSweepRoutePenalty(
+                root.Position, target, band.CFrame, band.Size
+            ) > 0 then
+                exposed += 1
+            end
+        end
+        return exposed
+    end
+
+    -- A recent physically verified retreat is a real movement commitment,
+    -- not a new random choice every ~0.18s. A newly spawned/expired impact
+    -- invalidates it immediately via the warning event version; the
+    -- supporting platform must also remain solid and available.
+    local previousDeck = record.collapsePlanDeck
+    if record.collapsePlanThreat == part
+        and typeof(record.collapsePlanTarget) == "Vector3"
+        and now < (record.collapsePlanUntil or 0)
+        and record.collapsePlanWarningVersion == warningVersion
+        -- A newly activated floor sweep isn't a Meteor/Bomb marker, so
+        -- the warning version alone cannot validate the cached path.
+        and sweepExposures(record.collapsePlanTarget)
+            <= (record.collapsePlanSweepExposures or 0)
+        and previousDeck and previousDeck.Parent
+        and (previousDeck:IsA("Terrain")
+            or (previousDeck:IsA("BasePart")
+                and (AISurvivorRules.platformAvailable(
+                    previousDeck.CanCollide, previousDeck.Transparency,
+                    previousDeck:GetAttribute("CollapsePhase"),
+                    previousDeck:GetAttribute("BridgeShutterPhase")
+                ) or (previousDeck == part
+                    and part.CanCollide and part.Transparency < 0.90
+                    and part:GetAttribute("CollapsePhase") == "Warning"))))
+    then
+        local basePart = arenaBase()
+        local elevated = basePart and root.Position.Y >
+            basePart.Position.Y + basePart.Size.Y * 0.5 + 8
+        if not elevated or (previousDeck.Parent == part.Parent
+            and AISurvivorRules.safeCollapseNeighbor(
+                part.CFrame, part.Size,
+                previousDeck.CFrame, previousDeck.Size, true
+            )) then
+            record.collapseEscapeDeck = elevated and previousDeck or nil
+            return record.collapsePlanTarget
+        end
+    end
+
     local base = arenaBase()
     local baseTopY = base and (base.Position.Y + base.Size.Y * 0.5)
         or config.ArenaCenter.Y
+    -- Prepare impact geometry and nearby participant occupancy only
+    -- AFTER the collapse reaction and short plan-cache validation. One
+    -- bounded sample serves both elevated decks and low-floor exits.
+    local impacts = {}
+    for _, warning in ipairs(warningParts()) do
+        if warning.Name == "MeteorWarning"
+            or warning.Name == "BombWarning" then
+            impacts[#impacts + 1] = {
+                position = warning.Position,
+                radius = math.max(5,
+                    AISurvivorRules.warningDetectionRadius(
+                        warning.Name,
+                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                        warning:GetAttribute("WarningEndSize")
+                    ) - 9),
+            }
+        end
+    end
+
+    -- Spread competing R15 survivors between physically connected
+    -- refuges only AFTER impact safety. Mobile characters are soft
+    -- occupancy hints, never grounds or forbidden destinations.
+    local crowd = {}
+    local function includePeer(position, weight)
+        if typeof(position) == "Vector3"
+            and math.abs(position.Y - root.Position.Y) < 7 then
+            crowd[#crowd + 1] = {position = position, weight = weight}
+        end
+    end
+    for _, other in ipairs(records) do
+        if other ~= record and other.inRound and other.alive
+            and other.model and other.model.Parent then
+            local otherHumanoid =
+                other.model:FindFirstChildOfClass("Humanoid")
+            local otherRoot =
+                other.model:FindFirstChild("HumanoidRootPart")
+            if otherHumanoid and otherHumanoid.Health > 0
+                and otherRoot and otherRoot:IsA("BasePart") then
+                includePeer(otherRoot.Position, 0.65)
+                -- A teammate's brief retreat is a reservation,
+                -- never a lasting blockade after its warning ends.
+                if other.collapsePlanDeck
+                    and other.collapsePlanDeck.Parent
+                    and other.collapsePlanThreat
+                    and other.collapsePlanThreat.Parent
+                    and other.collapsePlanThreat:GetAttribute(
+                        "CollapsePhase") == "Warning"
+                    and (other.collapsePlanUntil or 0) > now then
+                    includePeer(other.collapsePlanTarget, 1.0)
+                end
+            end
+        end
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true then
+            local character = player.Character
+            local playerRoot = character
+                and character:FindFirstChild("HumanoidRootPart")
+            local playerHumanoid = character
+                and character:FindFirstChildOfClass("Humanoid")
+            if playerRoot and playerRoot:IsA("BasePart")
+                and playerHumanoid and playerHumanoid.Health > 0 then
+                includePeer(playerRoot.Position, 0.9)
+            end
+        end
+    end
+
     if root.Position.Y > baseTopY + 8 then
         -- The existing centre-directed dodge is safe on the ground, but
         -- sends bots off a 20-stud HIGH perimeter / promenade landing.
@@ -1760,7 +1922,16 @@ local function disappearingPlatformEscape(record, root, now)
         -- This scans just the arena's authoritative Platforms folder
         -- during a confirmed warning, after the normal reaction delay.
         local platforms = part.Parent
-        local closest, closestCost = nil, math.huge
+        local closest, closestWaypoint = nil, nil
+        local closestCost = math.huge
+        local leastLandingImpacts = math.huge
+        local leastCorridorImpacts = math.huge
+        local leastSweepImpacts = math.huge
+        -- An elevated collapsing platform can be adjacent to multiple
+        -- physical refuges. The nearest one must NOT win when a live
+        -- Meteor/Bomb warning covers that landing or the walking lane.
+        -- This is an event-cached read on an already-confirmed platform
+        -- collapse, with no additional raycast or world scan.
         for _, deck in ipairs(platforms:GetChildren()) do
             if deck ~= part and deck:IsA("BasePart") then
                 local available = AISurvivorRules.platformAvailable(
@@ -1772,24 +1943,101 @@ local function disappearingPlatformEscape(record, root, now)
                     part.CFrame, part.Size,
                     deck.CFrame, deck.Size, available
                 ) then
-                    local waypoint = deck.Position
-                        + deck.CFrame.UpVector * (deck.Size.Y * 0.5 + 2.4)
+                    -- A full deck centre can be 20+ studs farther than
+                    -- its genuinely reachable near edge. Aim at the
+                    -- nearest R15-safe point ON the selected solid deck,
+                    -- not its far-away centre, preserving world rotation
+                    -- and the existing two-stud physical edge margin.
+                    local deckLocal = deck.CFrame:PointToObjectSpace(
+                        root.Position)
+                    local waypoint = AISurvivorRules.clampWaypointToDeck(
+                        deck.CFrame, deck.Size,
+                        deck.CFrame:PointToWorldSpace(Vector3.new(
+                            deckLocal.X, deck.Size.Y * 0.5 + 2.4,
+                            deckLocal.Z))
+                    )
                     local difference = waypoint - root.Position
                     local flatDistance = Vector3.new(
                         difference.X, 0, difference.Z
                     ).Magnitude
                     -- No world-spanning diagonals across disconnected
                     -- sky sectors even if broad bounding boxes overlap.
-                    if flatDistance < 34 and flatDistance < closestCost then
-                        closest, closestCost = deck, flatDistance
+                    if flatDistance < 34 then
+                        local landingImpacts = 0
+                        local corridorImpacts = 0
+                        for _, impact in ipairs(impacts) do
+                            local offset = waypoint - impact.position
+                            local horizontal = Vector3.new(
+                                offset.X, 0, offset.Z).Magnitude
+                            if horizontal < impact.radius + 3 then
+                                landingImpacts += 1
+                            end
+                            -- Identical 20-point threshold and footprint
+                            -- as newImpactIntersectsEscape, but calculated
+                            -- from the cached radius for each candidate.
+                            if AISurvivorRules.routeWarningPenalty(
+                                root.Position, waypoint,
+                                impact.position, impact.radius
+                            ) >= 20 then
+                                corridorImpacts += 1
+                            end
+                        end
+
+                        local crowdCost = 0
+                        for _, entry in ipairs(crowd) do
+                            local diff = waypoint - entry.position
+                            local separation = Vector3.new(
+                                diff.X, 0, diff.Z).Magnitude
+                            if separation < 10 then
+                                crowdCost += (10 - separation)
+                                    * entry.weight
+                            end
+                        end
+                        -- Never let a crowded but SAFE landing become
+                        -- worse than a less crowded impact footprint.
+                        local adjustedCost =
+                            flatDistance + math.min(12, crowdCost)
+                        local sweepImpacts = sweepExposures(waypoint)
+                        -- A supported landing OUTSIDE the impact outranks
+                        -- any closer exposed one. For equally safe
+                        -- landings avoid intersecting warning corridors;
+                        -- only then prefer the nearest walkable deck.
+                        -- If none is fully clear, still pick the least
+                        -- exposed physical option instead of freezing.
+                        local better = landingImpacts < leastLandingImpacts
+                        if landingImpacts == leastLandingImpacts then
+                            if corridorImpacts < leastCorridorImpacts then
+                                better = true
+                            elseif corridorImpacts == leastCorridorImpacts then
+                                better = sweepImpacts < leastSweepImpacts
+                                    or (sweepImpacts == leastSweepImpacts
+                                        and adjustedCost < closestCost)
+                            end
+                        end
+                        if better then
+                            closest = deck
+                            closestWaypoint = waypoint
+                            closestCost = adjustedCost
+                            leastLandingImpacts = landingImpacts
+                            leastCorridorImpacts = corridorImpacts
+                            leastSweepImpacts = sweepImpacts
+                        end
                     end
                 end
             end
         end
         if closest then
+            record.collapsePlanThreat = part
+            record.collapsePlanDeck = closest
+            record.collapsePlanTarget = closestWaypoint
+            record.collapsePlanSweepExposures = leastSweepImpacts
+            record.collapsePlanUntil = now + 0.42
+            record.collapsePlanWarningVersion = warningVersion
             record.collapseEscapeDeck = closest
-            return closest.Position
-                + closest.CFrame.UpVector * (closest.Size.Y * 0.5 + 2.4)
+            record.model:SetAttribute("BotCollapseSafeExitPlans",
+                (tonumber(record.model:GetAttribute(
+                    "BotCollapseSafeExitPlans")) or 0) + 1)
+            return closestWaypoint
         end
         -- No physically supported high escape exists. An urgent hold
         -- beats continuing a stale route over void. Preserve threat
@@ -1798,21 +2046,231 @@ local function disappearingPlatformEscape(record, root, now)
         return nil
     end
 
-    local center = base and base.Position or config.ArenaCenter
-    local towardCenter = center - root.Position
-    local horizontal = Vector3.new(towardCenter.X, 0, towardCenter.Z)
-    if horizontal.Magnitude < 0.5 then
-        local angle = record.slot * 2.13 + now
-        horizontal = Vector3.new(math.cos(angle), 0, math.sin(angle))
-    else
-        horizontal = horizontal.Unit
+    -- Low floor: stop issuing a NEW random center/tangent dodge every
+    -- brain pass. Find one of the FOUR real edges of the doomed part,
+    -- verify a solid walkable landing and one supported midpoint, then
+    -- rank impact exposure, crowding and distance. The warning deck
+    -- remains physical only until the server changes it to Gone.
+    local originLocal = part.CFrame:PointToObjectSpace(root.Position)
+    local halfX, halfZ = part.Size.X * 0.5, part.Size.Z * 0.5
+    local clearance = 3.6
+    local exits = {
+        Vector3.new(halfX + clearance, originLocal.Y, originLocal.Z),
+        Vector3.new(-halfX - clearance, originLocal.Y, originLocal.Z),
+        Vector3.new(originLocal.X, originLocal.Y, halfZ + clearance),
+        Vector3.new(originLocal.X, originLocal.Y, -halfZ - clearance),
+    }
+    local floorParams = emergencyFloorProbeParams(record)
+    local function physicalFloor(point, allowWarningOrigin)
+        local result = workspace:Raycast(
+            point + Vector3.new(0, 3, 0),
+            Vector3.new(0, -16, 0), floorParams
+        )
+        local floor = result and result.Instance
+        if not floor or not floor.CanCollide
+            or result.Normal.Y < 0.78
+            -- A probe eight studs below a proposed landing is NOT
+            -- proof that an R15 bot can walk across that gap. Compare
+            -- with the actual contact height of the warned takeoff
+            -- platform, not only the root's approximate world Y.
+            or math.abs(result.Position.Y - hit.Position.Y) > 2.75
+            or math.abs(result.Position.Y + 2.5 - point.Y) > 4.5 then
+            return nil
+        end
+        if floor == part then
+            return allowWarningOrigin == true
+                and part:GetAttribute("CollapsePhase") == "Warning"
+                and part.Transparency < 0.90 and result or nil
+        end
+        if floor:IsA("Terrain") then
+            return result
+        end
+        if floor:IsA("BasePart") and floor.Anchored
+            and AISurvivorRules.platformAvailable(
+                floor.CanCollide, floor.Transparency,
+                floor:GetAttribute("CollapsePhase"),
+                floor:GetAttribute("BridgeShutterPhase")
+            ) then
+            return result
+        end
+        return nil
     end
 
-    local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
-    local dodge = horizontal * (9 + math.random() * 5)
-        + tangent * ((math.random() * 2 - 1) * 5)
+    local bestExit, bestSupport = nil, nil
+    local bestLandingImpacts, bestCorridorImpacts = math.huge, math.huge
+    local bestSweepImpacts = math.huge
+    local bestCost = math.huge
+    local nearestPartial, nearestPartialCost = nil, math.huge
+    local nearestPartialLanding = math.huge
+    local nearestPartialCorridor = math.huge
+    local nearestPartialSweep = math.huge
+    local nearestPartialSupport = nil
+    for _, localExit in ipairs(exits) do
+        local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
+        local delta = exit - root.Position
+        local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        if flatDistance > 1 then
+            -- When a giant platform is impossible to clear before impact,
+            -- preserve physical progress toward its closest edge rather
+            -- than freezing in place or inventing a safe landing.
+            local partial = root.Position
+                + Vector3.new(delta.X, 0, delta.Z).Unit
+                    * math.min(12, flatDistance)
+            local partialLanding, partialCorridor = 0, 0
+            for _, impact in ipairs(impacts) do
+                local diff = partial - impact.position
+                if Vector3.new(diff.X, 0, diff.Z).Magnitude
+                    < impact.radius + 3 then
+                    partialLanding += 1
+                end
+                if AISurvivorRules.routeWarningPenalty(
+                    root.Position, partial,
+                    impact.position, impact.radius
+                ) >= 20 then
+                    partialCorridor += 1
+                end
+            end
+            local partialSweep = sweepExposures(partial)
+            local partialCost = flatDistance
+            local betterPartial = partialLanding < nearestPartialLanding
+            if partialLanding == nearestPartialLanding then
+                if partialCorridor < nearestPartialCorridor then
+                    betterPartial = true
+                elseif partialCorridor == nearestPartialCorridor then
+                    betterPartial = partialSweep < nearestPartialSweep
+                        or (partialSweep == nearestPartialSweep
+                            and partialCost < nearestPartialCost)
+                end
+            end
+            if betterPartial then
+                local partialHit = physicalFloor(partial, true)
+                -- A fallback may also end on a DIFFERENT supported deck.
+                -- Do not allow that endpoint alone to hide a gap in the
+                -- walking corridor. A point still on the same convex
+                -- doomed floor is safe until the warning expires.
+                local partialCorridorSupported = partialHit ~= nil
+                if partialCorridorSupported and partialHit.Instance ~= part then
+                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
+                        if not physicalFloor(
+                            root.Position:Lerp(partial, fraction), true
+                        ) then
+                            partialCorridorSupported = false
+                            break
+                        end
+                    end
+                end
+                if partialCorridorSupported then
+                    nearestPartial = partial
+                    nearestPartialSupport = partialHit.Instance
+                    nearestPartialLanding = partialLanding
+                    nearestPartialCorridor = partialCorridor
+                    nearestPartialSweep = partialSweep
+                    nearestPartialCost = partialCost
+                end
+            end
 
-    return clampToArena(root.Position + dodge)
+            local worldExitLocal = part.CFrame:PointToObjectSpace(exit)
+            local outsideThreat = math.abs(worldExitLocal.X) > halfX + 1.4
+                or math.abs(worldExitLocal.Z) > halfZ + 1.4
+            if outsideThreat and flatDistance <= 34 then
+                local landing = physicalFloor(exit, false)
+                if landing then
+                    -- A single midpoint can hide a missing bridge
+                    -- between two separately supported endpoints.
+                    -- Probe a bounded set of intermediate contacts.
+                    local corridorSupported = true
+                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
+                        if not physicalFloor(
+                            root.Position:Lerp(exit, fraction), true
+                        ) then
+                            corridorSupported = false
+                            break
+                        end
+                    end
+                    if corridorSupported then
+                        local landingImpacts, corridorImpacts = 0, 0
+                        for _, impact in ipairs(impacts) do
+                            local off = exit - impact.position
+                            local horizontal = Vector3.new(
+                                off.X, 0, off.Z).Magnitude
+                            if horizontal < impact.radius + 3 then
+                                landingImpacts += 1
+                            end
+                            if AISurvivorRules.routeWarningPenalty(
+                                root.Position, exit,
+                                impact.position, impact.radius
+                            ) >= 20 then
+                                corridorImpacts += 1
+                            end
+                        end
+                        local crowdCost = 0
+                        for _, entry in ipairs(crowd) do
+                            local diff = exit - entry.position
+                            local separation = Vector3.new(
+                                diff.X, 0, diff.Z).Magnitude
+                            if separation < 9 then
+                                crowdCost += (9 - separation)
+                                    * entry.weight
+                            end
+                        end
+                        local cost = flatDistance
+                            + math.min(10, crowdCost)
+                        local sweepImpacts = sweepExposures(exit)
+                        local better = landingImpacts < bestLandingImpacts
+                        if landingImpacts == bestLandingImpacts then
+                            if corridorImpacts < bestCorridorImpacts then
+                                better = true
+                            elseif corridorImpacts == bestCorridorImpacts then
+                                better = sweepImpacts < bestSweepImpacts
+                                    or (sweepImpacts == bestSweepImpacts
+                                        and cost < bestCost)
+                            end
+                        end
+                        if better then
+                            bestExit, bestSupport = exit, landing.Instance
+                            bestLandingImpacts = landingImpacts
+                            bestCorridorImpacts = corridorImpacts
+                            bestSweepImpacts = sweepImpacts
+                            bestCost = cost
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if bestExit then
+        record.collapsePlanThreat = part
+        record.collapsePlanDeck = bestSupport
+        record.collapsePlanTarget = bestExit
+        record.collapsePlanSweepExposures = bestSweepImpacts
+        record.collapsePlanUntil = now + 0.42
+        record.collapsePlanWarningVersion = warningVersion
+        record.model:SetAttribute("BotCollapseSafeExitPlans",
+            (tonumber(record.model:GetAttribute(
+                "BotCollapseSafeExitPlans")) or 0) + 1)
+        return bestExit
+    end
+    if nearestPartial then
+        -- Partial progress is allowed only on real ground confirmed by
+        -- the raycast. The target is still urgent and will be recomputed
+        -- as the bot approaches the edge.
+        record.collapsePlanThreat = part
+        record.collapsePlanDeck = nearestPartialSupport
+        record.collapsePlanTarget = nearestPartial
+        record.collapsePlanSweepExposures = nearestPartialSweep
+        record.collapsePlanUntil = now + 0.32
+        record.collapsePlanWarningVersion = warningVersion
+        record.model:SetAttribute("BotCollapsePartialRetreats",
+            (tonumber(record.model:GetAttribute(
+                "BotCollapsePartialRetreats")) or 0) + 1)
+        return nearestPartial
+    end
+    record.collapseEscapeHolding = true
+    record.model:SetAttribute("BotCollapseBlockedPlans",
+        (tonumber(record.model:GetAttribute(
+            "BotCollapseBlockedPlans")) or 0) + 1)
+    return nil
 end
 
 -- A bot that committed to a Skyrail bridge BEFORE its warning should
@@ -4697,10 +5155,11 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
         ) then return false end
 
     record.nextGapProbeAt = now + 0.20
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {record.model}
-    params.RespectCanCollide = true
+    -- The takeoff, gap and landing probes require REAL static deck
+    -- support. Nearby R15 players/NPCs are moving collision bodies, not
+    -- a floor. Reuse the same filter as the emergency collapse probes
+    -- so standing spectators cannot hide a valid landing or gap.
+    local params = emergencyFloorProbeParams(record)
     local forward = travel.Unit
     local function floorAt(distance, allowThreatenedOrigin)
         local result = workspace:Raycast(
@@ -5605,11 +6064,20 @@ local function stepRecord(record, now)
             local warnedEscape = record.escapeWarning
                 and record.escapeWarning.Parent
                 and record.escapeTarget == urgentTarget
+            -- Both low-floor and high-deck collapse exits were checked
+            -- against live hazards and real support. A cosmetic crowd
+            -- separation after selection would undo that validation.
+            local physicalCollapseEscape = record.platformThreat
+                and record.platformThreat.Parent
+                and record.platformThreat:GetAttribute(
+                    "CollapsePhase") == "Warning"
+                and record.collapsePlanThreat == record.platformThreat
+                and record.collapsePlanTarget == urgentTarget
             -- An imminent elevated collapse has a prevalidated real
             -- landing. Social spacing must not push that target off it.
             record.target = (skybridgeEscape or floorSweepEscape
-                or warnedEscape or record.collapseEscapeDeck
-                or record.collapseEscapeHolding)
+                or warnedEscape or physicalCollapseEscape
+                or record.collapseEscapeDeck or record.collapseEscapeHolding)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
