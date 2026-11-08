@@ -830,7 +830,7 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
-    record.pulseWarningSeenAt = setmetatable({}, {__mode = "k"})
+    record.shockWarningSeenAt = setmetatable({}, {__mode = "k"})
     record.collapsePlanThreat = nil
     record.collapsePlanDeck = nil
     record.collapsePlanTarget = nil
@@ -958,7 +958,7 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
-    record.pulseWarningSeenAt = setmetatable({}, {__mode = "k"})
+    record.shockWarningSeenAt = setmetatable({}, {__mode = "k"})
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.emergencyMoveActive = false
     record.collapsePlanThreat = nil
@@ -1042,7 +1042,7 @@ local function sendToArena(record)
     record.collapsePlanWarningVersion = -1
     record.collapsePlanSweepExposures = 0
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
-    record.pulseWarningSeenAt = setmetatable({}, {__mode = "k"})
+    record.shockWarningSeenAt = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.routeWarningVersion = -1
     record.routeWarningTarget = nil
@@ -1085,7 +1085,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotImpactReactionHandoffs", 0)
     record.model:SetAttribute("BotEmergencyResumeCount", 0)
-    record.model:SetAttribute("BotPulseJumpCommands", 0)
+    record.model:SetAttribute("BotShockJumpCommands", 0)
     record.model:SetAttribute("BotCollapseSafeExitPlans", 0)
     record.model:SetAttribute("BotCollapsePartialRetreats", 0)
     record.model:SetAttribute("BotCollapseBlockedPlans", 0)
@@ -1191,7 +1191,7 @@ local function newRecord(slot)
         threatSeenAt = nil,
         -- Weak warning keys retain each pulse's independent first-sighting
         -- delay without retaining expired disaster Instances indefinitely.
-        pulseWarningSeenAt = setmetatable({}, {__mode = "k"}),
+        shockWarningSeenAt = setmetatable({}, {__mode = "k"}),
         emergencyMoveActive = false,
         platformThreat = nil,
         platformThreatSeenAt = nil,
@@ -2456,11 +2456,15 @@ end
 -- competing horizontal escape destination. Resolve its jump separately
 -- from the impact/collapse route so an active Meteor/Bomb dodge or a
 -- collapsing deck cannot mask a real JumpShock warning.
-local function reactToPulseWarnings(record, humanoid, root, now)
-    local seen = record.pulseWarningSeenAt
+-- A JumpShock wave requires a precisely timed vertical action, even
+-- while another physical disaster owns the bot's horizontal direction.
+-- Freeze's optional personality jump remains in the ordinary focus
+-- priority; it must not interrupt a more urgent Meteor/Bomb retreat.
+local function reactToShockWarning(record, humanoid, root, now)
+    local seen = record.shockWarningSeenAt
     if not seen then
         seen = setmetatable({}, {__mode = "k"})
-        record.pulseWarningSeenAt = seen
+        record.shockWarningSeenAt = seen
     end
     local handled = record.reactedWarnings
     if not handled then
@@ -2469,42 +2473,41 @@ local function reactToPulseWarnings(record, humanoid, root, now)
     end
     local serverNow = workspace:GetServerTimeNow()
     for _, warning in ipairs(warningParts()) do
-        local name = warning.Name
-        if name == "FreezeWarning" or name == "JumpShockWarning" then
-            local radius = math.max(warning.Size.X,
+        if warning.Name == "JumpShockWarning" then
+            local visualRadius = math.max(warning.Size.X,
                 warning.Size.Z, warning.Size.Y) * 0.5
             local threshold = AISurvivorRules.warningDetectionRadius(
-                name, radius, warning:GetAttribute("WarningEndSize")
+                warning.Name, visualRadius,
+                warning:GetAttribute("WarningEndSize")
             )
             if (root.Position - warning.Position).Magnitude <= threshold then
                 if not seen[warning] then
                     seen[warning] = now
                     warnNearbyContestants(record, now)
                 end
-                -- Retain individual personality reaction latency and
-                -- JumpShock's strictly late server-time dodge window.
-                local ready = AISurvivorRules.reactionReady(
-                    seen[warning], now, record.profile.ReactionSeconds
-                )
-                if ready and not handled[warning]
+                -- Keep the existing individual reaction latency, the
+                -- server-authoritative final 0.10..0.34-second window,
+                -- and genuine grounded humanoid-jump requirements.
+                if not handled[warning]
+                    and AISurvivorRules.reactionReady(
+                        seen[warning], now, record.profile.ReactionSeconds
+                    )
+                    and AISurvivorRules.shockJumpWindow(
+                        warning:GetAttribute("WarningStartedAt"),
+                        warning:GetAttribute("WarningDuration"),
+                        serverNow
+                    )
                     and humanoid.FloorMaterial ~= Enum.Material.Air
                     and humanoid.SeatPart == nil
                     and humanoid:GetAttribute("ChaosFrozen") ~= true
-                    and (name ~= "JumpShockWarning"
-                        or AISurvivorRules.shockJumpWindow(
-                            warning:GetAttribute("WarningStartedAt"),
-                            warning:GetAttribute("WarningDuration"),
-                            serverNow
-                        ))
                 then
                     if AISurvivorRules.consumeWarningJump(
-                        handled, warning, math.random(),
-                        record.profile.FreezeJumpChance
+                        handled, warning, 0
                     ) then
                         humanoid.Jump = true
-                        record.model:SetAttribute("BotPulseJumpCommands",
+                        record.model:SetAttribute("BotShockJumpCommands",
                             (tonumber(record.model:GetAttribute(
-                                "BotPulseJumpCommands")) or 0) + 1)
+                                "BotShockJumpCommands")) or 0) + 1)
                     end
                 end
             end
@@ -2528,10 +2531,9 @@ local function immediateThreat(record, root, now)
     local predictedPosition = root.Position + horizontalVelocity * anticipation
 
     for _, warning in ipairs(warningParts()) do
-        -- Pulses have their own independent, timed body action. Preserve
-        -- the actual Meteor/Bomb horizontal route focus while jumping.
-        if warning.Name ~= "MeteorWarning"
-            and warning.Name ~= "BombWarning" then
+        -- Only the timed JumpShock body action runs independently.
+        -- Freeze keeps its original low-priority personality reaction.
+        if warning.Name == "JumpShockWarning" then
             continue
         end
         local currentDistance = (root.Position - warning.Position).Magnitude
@@ -2605,7 +2607,7 @@ local function immediateThreat(record, root, now)
         -- impact overtakes the first. Preserve readiness ONLY during an
         -- actual, recent impact-to-impact handoff. The new impact still
         -- discards the old path and computes a fresh supported escape.
-        -- Initial warnings, expired plans, and Freeze/JumpShock changes
+        -- Initial warnings, expired plans and Freeze changes still
         -- retain their normal personality-dependent reaction delay.
         local impactHandoff = previous ~= nil
             and nearest ~= nil
@@ -2644,6 +2646,28 @@ local function immediateThreat(record, root, now)
             record.profile.ReactionSeconds
         )
     then
+        return nil
+    end
+
+    if nearest.Name == "FreezeWarning" then
+        -- Freeze is a lower-priority optional personality reaction,
+        -- unlike JumpShock's physically timed survival action. Do not
+        -- interrupt the current higher-priority Meteor/Bomb escape.
+        local handled = record.reactedWarnings
+        if not handled then
+            handled = setmetatable({}, {__mode = "k"})
+            record.reactedWarnings = handled
+        end
+        if AISurvivorRules.consumeWarningJump(
+            handled, nearest, math.random(),
+            record.profile.FreezeJumpChance
+        ) then
+            local humanoid = record.model
+                and record.model:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Jump = true
+            end
+        end
         return nil
     end
 
@@ -5715,7 +5739,7 @@ local function stepRecord(record, now)
     if record.inRound and currentState.phase == "round" then
         -- Run once per brain pass, regardless of which horizontal hazard
         -- later takes priority. This remains a server-owned real jump.
-        reactToPulseWarnings(record, humanoid, root, now)
+        reactToShockWarning(record, humanoid, root, now)
         urgentTarget = disappearingPlatformEscape(record, root, now)
         if not urgentTarget then
             urgentTarget = immediateThreat(record, root, now)
