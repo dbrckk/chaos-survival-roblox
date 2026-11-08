@@ -4001,13 +4001,22 @@ local function advanceGroundNavigation(record, root, now)
     end
     local target = route.points[route.index]
     local previousIndex = route.index
-    while target do
+    local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+    -- A horizontal overlap is not a waypoint arrival while falling or
+    -- jumping across the route. The bot must actually stand near the
+    -- waypoint at the expected elevation before progressing the path
+    -- or counting a completed long route.
+    local grounded = humanoid and humanoid.Health > 0
+        and humanoid.FloorMaterial ~= Enum.Material.Air
+        and humanoid.SeatPart == nil
+    while target and grounded do
         local dx = target.X - root.Position.X
         local dz = target.Z - root.Position.Z
         local previous = route.points[route.index - 1] or route.origin
         local upcoming = route.points[route.index + 1]
-        if dx*dx + dz*dz > AISurvivorRules.groundNavigationArrivalRadius(
-            previous, target, upcoming)^2 then
+        if math.abs(target.Y - root.Position.Y) > 3.5
+            or dx*dx + dz*dz > AISurvivorRules.groundNavigationArrivalRadius(
+                previous, target, upcoming)^2 then
             break
         end
         route.index += 1
