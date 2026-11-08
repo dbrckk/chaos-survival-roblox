@@ -102,3 +102,9 @@ The PR began with **15** `workspace:Raycast(` call sites in `AISurvivorService.l
 ### Release gate
 
 The prior merged `main` was owner-reported functional, but **this aggregate PR branch has not been exercised by Roblox Studio, Open Cloud Engine Tests, or an Android live session**. The repository’s `Build Validation` workflow explicitly runs only on manually dispatched **main** release candidates; it cannot prove a feature-branch commit works. Keep PR #701 unmerged until owner gameplay validation, then run the exact-commit build/engine/publisher gate before claiming the Roblox public place is updated.
+
+### Late review: hazard priority for supported partial retreats
+
+A final source review identified that a **supported partial** retreat could originally be selected only by proximity, even when another partial direction crossed fewer simultaneous hazards. Commit `4d975009d3188ebbf1298b355d07409cb8d5f367` now ranks partials with the **same strict hierarchy as complete exits**: fewer Meteor/Bomb exposed endpoints, fewer warning corridor intersections, fewer live sweep crossings, then the shorter physical step. Midpoint support remains mandatory when the partial destination is on a different physical part. The short `0.32s` commitment and real-collision checks are unchanged.
+
+Source code checks do not establish actual survival rates, latency, or Android FPS.
