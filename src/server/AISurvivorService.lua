@@ -1058,6 +1058,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotRecoveryRouteFound", nil)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
     record.model:SetAttribute("BotHazardSteeringCorrections", 0)
+    record.model:SetAttribute("BotImpactReactionHandoffs", 0)
     record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -2035,13 +2036,40 @@ local function immediateThreat(record, root, now)
     end
 
     if nearest ~= record.threat then
+        local previous = record.threat
+        local previousSeenAt = record.threatSeenAt
+        -- A bot already taking a real Meteor/Bomb escape must not stop
+        -- moving for another full first-sighting reaction when a second
+        -- impact overtakes the first. Preserve readiness ONLY during an
+        -- actual, recent impact-to-impact handoff. The new impact still
+        -- discards the old path and computes a fresh supported escape.
+        -- Initial warnings, expired plans, and Freeze/JumpShock changes
+        -- retain their normal personality-dependent reaction delay.
+        local impactHandoff = previous ~= nil
+            and nearest ~= nil
+            and (previous.Name == "MeteorWarning"
+                or previous.Name == "BombWarning")
+            and (nearest.Name == "MeteorWarning"
+                or nearest.Name == "BombWarning")
+            and record.escapeWarning == previous
+            and typeof(record.escapeTarget) == "Vector3"
+            and (record.escapeUntil or 0) + 0.20 >= now
+            and AISurvivorRules.reactionReady(
+                previousSeenAt, now, record.profile.ReactionSeconds
+            )
         record.threat = nearest
-        record.threatSeenAt = nearest and now or nil
+        record.threatSeenAt = nearest
+            and (impactHandoff and previousSeenAt or now) or nil
         record.escapeTarget = nil
         record.escapeWarning = nil
         record.escapeUntil = 0
         record.escapeWarningVersion = nil
         record.escapeKnownWarnings = nil
+        if impactHandoff then
+            record.model:SetAttribute("BotImpactReactionHandoffs",
+                (tonumber(record.model:GetAttribute(
+                    "BotImpactReactionHandoffs")) or 0) + 1)
+        end
         if nearest then
             warnNearbyContestants(record, now)
         end
