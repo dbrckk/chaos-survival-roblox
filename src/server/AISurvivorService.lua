@@ -5737,9 +5737,6 @@ local function stepRecord(record, now)
     -- through an incoming impact or a collapsing deck.
     local urgentTarget = nil
     if record.inRound and currentState.phase == "round" then
-        -- Run once per brain pass, regardless of which horizontal hazard
-        -- later takes priority. This remains a server-owned real jump.
-        reactToShockWarning(record, humanoid, root, now)
         urgentTarget = disappearingPlatformEscape(record, root, now)
         if not urgentTarget then
             urgentTarget = immediateThreat(record, root, now)
@@ -5755,6 +5752,11 @@ local function stepRecord(record, now)
         urgentTarget = AISurvivorRules.collapseFallbackTarget(
             urgentTarget, record.collapseEscapeHolding, root.Position
         )
+        -- JumpShock is an independent vertical action, regardless of
+        -- which escape goal won. Resolve the higher-priority impact
+        -- first so its shared nearby-player warning cue isn't stolen
+        -- by a simultaneous shock ring.
+        reactToShockWarning(record, humanoid, root, now)
     end
 
     if urgentTarget then
