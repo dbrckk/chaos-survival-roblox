@@ -1443,10 +1443,26 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
         -tangent,
     }
 
+    -- A live player's collidable character can stand above the actual
+    -- floor or occupy a sampled landing point during a busy round.
+    -- Exclude mobile contestants from SUPPORT probes: otherwise an
+    -- avatar hides a safe deck/base and every emergency dodge heading
+    -- may be rejected as unsupported. Keep authored static collision
+    -- intact and use the same existing origin/midpoint/landing raycasts.
+    local exclusions = {}
+    if botsFolder then
+        exclusions[#exclusions + 1] = botsFolder
+    elseif record.model then
+        exclusions[#exclusions + 1] = record.model
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            exclusions[#exclusions + 1] = player.Character
+        end
+    end
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = botsFolder and {botsFolder}
-        or (record.model and {record.model} or {})
+    params.FilterDescendantsInstances = exclusions
     params.RespectCanCollide = true
 
     -- High sky-deck meteors previously chose a long free-space dodge
