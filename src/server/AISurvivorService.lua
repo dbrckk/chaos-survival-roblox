@@ -4147,6 +4147,10 @@ local function recoverIfStuck(record, humanoid, root, now)
         and (Vector3.new(goal.X - root.Position.X, 0,
             goal.Z - root.Position.Z)).Magnitude > 3.5
     if not grounded or not walking then
+        -- A pause or knockback is not a physical navigation failure.
+        -- Restart the progress baseline at the current position so a
+        -- subsequent grounded walking pass must actually spend 1.15s
+        -- attempting movement before it can be classified as stalled.
         record.lastProgressPosition = root.Position
         record.lastProgressAt = now
         return false
@@ -4159,6 +4163,11 @@ local function recoverIfStuck(record, humanoid, root, now)
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
     if not isStalled then
+        -- Genuine movement is not necessarily evidence that a previously
+        -- blocked destination is now reachable. Keep the bounded recovery
+        -- attempt history until its existing cooldown policy ages it out.
+        -- Otherwise a bot making small successful sidesteps can retry
+        -- the same obstacle forever from the same recovery side.
         record.stuckCount = 0
         return false
     end
