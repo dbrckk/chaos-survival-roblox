@@ -1421,6 +1421,30 @@ local function activeFloorSweepBands()
     return bands
 end
 
+-- Only real static terrain / authored platforms may determine whether
+-- a bot has ground underneath it. Moving contestants (including a human
+-- standing over a collapse warning) can occlude the physical surface.
+-- Build this filter only for a real emergency floor probe. It does not
+-- modify Roblox collision groups or movement physics.
+local function emergencyFloorProbeParams(record)
+    local exclusions = {}
+    if botsFolder then
+        exclusions[#exclusions + 1] = botsFolder
+    elseif record.model then
+        exclusions[#exclusions + 1] = record.model
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            exclusions[#exclusions + 1] = player.Character
+        end
+    end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = exclusions
+    params.RespectCanCollide = true
+    return params
+end
+
 -- Sample several WALKABLE escape headings rather than committing to one
 -- random tangent. This matters at arena edges, on narrow platforms, and
 -- when two growing meteor/bomb warnings overlap. Bounded to six headings,
@@ -1444,27 +1468,9 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
         -tangent,
     }
 
-    -- A live player's collidable character can stand above the actual
-    -- floor or occupy a sampled landing point during a busy round.
-    -- Exclude mobile contestants from SUPPORT probes: otherwise an
-    -- avatar hides a safe deck/base and every emergency dodge heading
-    -- may be rejected as unsupported. Keep authored static collision
-    -- intact and use the same existing origin/midpoint/landing raycasts.
-    local exclusions = {}
-    if botsFolder then
-        exclusions[#exclusions + 1] = botsFolder
-    elseif record.model then
-        exclusions[#exclusions + 1] = record.model
-    end
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            exclusions[#exclusions + 1] = player.Character
-        end
-    end
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = exclusions
-    params.RespectCanCollide = true
+    -- Physical support must not be hidden by mobile participants.
+    -- Share the exact same floor filter with collapsing-deck warnings.
+    local params = emergencyFloorProbeParams(record)
 
     -- High sky-deck meteors previously chose a long free-space dodge
     -- using only soft unsupported-floor penalties. Every direction
@@ -1709,10 +1715,10 @@ local function disappearingPlatformEscape(record, root, now)
         return nil
     end
 
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    rayParams.FilterDescendantsInstances = record.model and {record.model} or {}
-
+    -- A stacked player or adjacent NPC should not hide a REAL
+    -- disappearing platform from the short floor probe. Respect
+    -- collidable surfaces; decoration is not a valid warning floor.
+    local rayParams = emergencyFloorProbeParams(record)
     local hit = workspace:Raycast(root.Position, Vector3.new(0, -7, 0), rayParams)
     local part = hit and hit.Instance
     local platforms = part and part.Parent
