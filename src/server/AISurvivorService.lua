@@ -3109,15 +3109,21 @@ local function chooseArenaTarget(record, root, now)
     local socialTarget, socialDeck =
         socialArenaTarget(record, root, traits, now)
     if socialTarget then
-        record.targetIsPad = false
-        record.targetPart = socialDeck
         local waypoint = separateTarget(record, socialTarget)
         if socialDeck then
             waypoint = AISurvivorRules.clampWaypointToDeck(
                 socialDeck.CFrame, socialDeck.Size, waypoint
             ) or socialTarget
         end
-        return waypoint, 0.65 + math.random() * 1.0
+        -- The first social proposal was safe, but the FINAL crowd
+        -- separation can move it into an active impact corridor.
+        -- Validate the exact returned waypoint before committing a
+        -- social platform or target; otherwise choose ordinary roaming.
+        if not impactCorridorIntersects(root.Position, waypoint) then
+            record.targetIsPad = false
+            record.targetPart = socialDeck
+            return waypoint, 0.65 + math.random() * 1.0
+        end
     end
 
     -- When a Flux Relay can be reached before its charge window ends,
@@ -5727,29 +5733,23 @@ local function stepRecord(record, now)
                 or record.routeWarningTarget ~= record.target) then
             record.routeWarningVersion = warningVersion
             record.routeWarningTarget = record.target
-            for _, warning in ipairs(warningParts()) do
-                if AISurvivorRules.newImpactIntersectsEscape(
-                    root.Position, record.target, warning.Name,
-                    warning.Position,
-                    math.max(warning.Size.X, warning.Size.Z) * 0.5,
-                    warning:GetAttribute("WarningEndSize")
-                ) then
-                    record.target = nil
-                    record.routeWarningTarget = nil
-                    record.targetPart = nil
-                    record.targetIsPad = false
-                    record.lastMoveTarget = nil
-                    record.nextThink = 0
-                    record.idleUntil = 0
-                    record.turnPauseUntil = 0
-                    -- Stop the previous MoveTo rather than keep entering
-                    -- the warned lane while the next goal is selected.
-                    humanoid:Move(Vector3.zero)
-                    record.model:SetAttribute("BotHazardRouteInvalidations",
-                        (tonumber(record.model:GetAttribute(
-                            "BotHazardRouteInvalidations")) or 0) + 1)
-                    break
-                end
+            -- Use the same collision test as social goals, signal
+            -- missions and the actual MoveTo segment. A single source
+            -- of truth avoids divergent thresholds after future tuning.
+            if impactCorridorIntersects(root.Position, record.target) then
+                record.target = nil
+                record.routeWarningTarget = nil
+                record.targetPart = nil
+                record.targetIsPad = false
+                record.lastMoveTarget = nil
+                record.nextThink = 0
+                record.idleUntil = 0
+                record.turnPauseUntil = 0
+                -- Stop the old MoveTo until another safe goal is chosen.
+                humanoid:Move(Vector3.zero)
+                record.model:SetAttribute("BotHazardRouteInvalidations",
+                    (tonumber(record.model:GetAttribute(
+                        "BotHazardRouteInvalidations")) or 0) + 1)
             end
         end
 
