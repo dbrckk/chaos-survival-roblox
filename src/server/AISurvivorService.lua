@@ -2556,8 +2556,14 @@ local function reactToShockWarning(record, humanoid, root, now)
                         and math.abs(started) < math.huge
                         and math.abs(duration) < math.huge
                         and duration > 0 then
+                        -- Stagger seven/bot slots slightly rather
+                        -- than making every survivor jump on exactly
+                        -- the same rendered frame. All offsets remain
+                        -- inside the physically useful rising window.
+                        local jumpLead = 0.18
+                            + ((record.slot or 1) % 5) * 0.01
                         local delaySeconds = started + duration
-                            - serverNow - 0.20
+                            - serverNow - jumpLead
                         -- Only one short callback per observed shock.
                         -- A replacement rig, ended round, expired marker
                         -- or changed warning-state table invalidates it.
