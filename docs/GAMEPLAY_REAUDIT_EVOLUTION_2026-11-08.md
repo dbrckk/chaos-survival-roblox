@@ -30,8 +30,8 @@
 
 **Fichiers modifiés :**
 - `src/server/init.server.lua` : après la dernière élimination humaine, conserver la même manche serveur et ses vrais dangers pendant **4 secondes maximum en solo**, **6 secondes maximum en multi**, bornées par le temps restant. Quitter immédiatement si plus aucun bot vivant ou plus aucun joueur connecté. Le mode Studio d'analyse IA garde son comportement actuel.
-- `src/server/init.server.lua` : réutiliser le packet `RoundState` à 1 Hz, avec `botShowdown=true`, une durée de finale véridique et un titre dédié. Aucune boucle, RemoteEvent, nouvelle Part, collision, accélération ni invulnérabilité.
-- `src/client/spectator.client.lua` + `src/shared/CoreLocalization.lua` : afficher « FINALE DES BOTS » / « FINAL BOT SHOWDOWN » directement dans la carte de spectateur déjà existante, avec le vrai nombre de survivants et le compte à rebours. Pas de GUI supplémentaire.
+- `src/server/init.server.lua` : conserver l'horloge officielle `RoundState.seconds=t` pour le rendu des catastrophes et ajouter `botShowdown=true`, `botShowdownSeconds` (4/6 s) pour la finale. Aucun nouveau passage de boucle, RemoteEvent, Part, collision, accélération ni invulnérabilité.
+- `src/client/spectator.client.lua`, `src/client/init.client.lua` et `src/shared/CoreLocalization.lua` : afficher « FINALE DES BOTS » / « FINAL BOT SHOWDOWN » dans la carte spectateur et le HUD déjà existants ; timer de finale dédié et textes FR/EN, sans GUI supplémentaire.
 - L'économie, les conditions de survivant/champion, le roster serveur, les durées initiales de manche, l'intermission et le résultat restent inchangés.
 
 **Objectif produit :** transformer une sortie abrupte en séquence courte de compétition visible, sans bloquer la prochaine manche. Les bots sont tuables par les vraies catastrophes pendant cette fenêtre. La finale ne simule pas une mort ni un classement.
@@ -61,7 +61,7 @@
 
 ## 5. Publication et sécurité
 
-- Les remplacements ont passé des contrôles structuraux ciblés de source : points d'insertion uniques, ancienne coupure supprimée et durée finale présente dans le seul broadcast normal. **Ces contrôles ne sont pas des tests Roblox Engine.**
+- Les remplacements ont passé des contrôles structuraux ciblés de source : points d'insertion uniques, ancienne coupure supprimée et deux durées distinctes dans le broadcast normal. **Ces contrôles ne sont pas des tests Roblox Engine.**
 - Pas de nouveaux tests unitaires pendant l'itération, conformément à `AGENTS.md`. Avant fusion ou publication importante : utiliser la validation moteur et le jalon release exact-SHA existants, puis vérifier la caméra et le résultat sur Android réel.
 - **Aucune publication Roblox exécutée** par ce document / ces commits. Fusion de PR et publication de place sont deux opérations distinctes.
 - Retour arrière : revert des quatre fichiers modifiés ou revert du commit de fusion si le jeu a une régression ; préserver les releases publiques existantes jusqu'à preuve de réussite.
@@ -71,3 +71,11 @@
 Place publique connue dans le dépôt : https://www.roblox.com/games/95351659174730/Chaos-Survival
 
 Ce lien identifie la place publiée, **pas** la version de la branche en attente de validation. Vérifier le SHA effectivement publié via les workflows avant tout test de la nouvelle finale.
+
+### Correction complémentaire — horloges et HUD cohérents
+
+Le premier jet remplaçait `RoundState.seconds` par le compte à rebours 4/6 s. Or le client utilise ce champ pour présenter le rythme réel de la manche et ses dangers : l'écrasement pouvait provoquer une régression de lisibilité. Corrigé : `seconds` reste la durée physique originale, `botShowdownSeconds` est un champ distinct pour la présentation de la finale.
+
+Dans `src/client/init.client.lua`, la finale est détectée avant `CoreLocalization.hazardTitle` : auparavant la traduction de son titre était remplacée par le nom de la catastrophe. Le HUD affiche maintenant le compte à rebours court, comme la carte spectateur, sans changer la durée officielle. `round-focus.client.lua` masque déjà sa barre aux joueurs éliminés.
+
+**À vérifier dans Roblox Engine :** catastrophe toujours calée sur son horloge serveur, transition finale/résultat sans flash de HUD et décompte cohérent en FR et EN.
