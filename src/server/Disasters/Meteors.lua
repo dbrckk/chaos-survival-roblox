@@ -70,18 +70,20 @@ function D.start(ctx)
             marker.Transparency = 0.65
             marker.Position = impactPosition
             marker:SetAttribute("ImpactWaveMode", waveMode)
-            marker.Parent = workspace
-            pending[marker] = true
-            ctx.Cleanup[#ctx.Cleanup+1] = marker
-
-            -- The server inflicts damage AFTER both the warning interval
-            -- and the falling meteor's travel time. Keep the warning alive
-            -- through descent so the danger indicator never vanishes early.
+            -- Publish the complete authoritative footprint and lead time
+            -- BEFORE ChildAdded exposes this marker to server bot routing
+            -- and client warning renderers. No small-radius first frame.
+            -- The warning stays alive through the meteor's descent.
             HazardWarning.configure(
                 marker, "Meteor",
                 HazardWarning.impactLeadDuration(warningSeconds, travelSeconds),
                 5.5, radius * 2
             )
+            marker.Parent = workspace
+            pending[marker] = true
+            ctx.Cleanup[#ctx.Cleanup+1] = marker
+
+            -- Real damage still occurs after the full warning and fall.
             task.wait(warningSeconds)
 
             if not ctx.Active() then
