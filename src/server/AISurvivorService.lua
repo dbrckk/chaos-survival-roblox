@@ -2184,6 +2184,7 @@ local function scoreCandidate(record, root, candidate, traits)
     local variantId = arenaVariantId()
     local score = (math.random() * 8) - (travelDistance * 0.035)
     local landingExposures = 0
+    local corridorExposures = 0
     score += AISurvivorRules.routeAffinity(variantId, position, center)
     score += AISurvivorRules.routeContinuity(
         variantId,
@@ -2246,9 +2247,16 @@ local function scoreCandidate(record, root, candidate, traits)
                 math.max(warning.Size.X, warning.Size.Z) * 0.5,
                 warning:GetAttribute("WarningEndSize")
             ) - 9)
-            score -= AISurvivorRules.routeWarningPenalty(
+            local routePenalty = AISurvivorRules.routeWarningPenalty(
                 root.Position, position, warning.Position, radius
-            ) * (1 - risk * 0.25)
+            )
+            score -= routePenalty * (1 - risk * 0.25)
+            -- Use the SAME corridor threshold as the final live warning
+            -- guard. A safe landing is not enough if the bot must cross
+            -- a full Meteor/Bomb footprint to reach it.
+            if routePenalty >= 20 then
+                corridorExposures += 1
+            end
             -- The destination must not win a personality lottery while
             -- still inside the TRUE final blast footprint. Count distinct
             -- currently live Meteor/Bomb areas; retain the full-path
@@ -2274,7 +2282,7 @@ local function scoreCandidate(record, root, candidate, traits)
         score -= 120
     end
 
-    return score, landingExposures
+    return score, landingExposures, corridorExposures
 end
 
 local function socialArenaTarget(record, root, traits, now)
@@ -3260,6 +3268,7 @@ local function chooseArenaTarget(record, root, now)
 
     local ranked = {}
     local lowestExposure = math.huge
+    local lowestCorridorExposure = math.huge
     for _, candidate in ipairs(candidates) do
         -- Once already standing on an upper deck, prefer progressing
         -- to a physically adjacent platform instead of repeatedly
@@ -3269,22 +3278,31 @@ local function chooseArenaTarget(record, root, now)
             and candidate.part and candidate.part ~= standingDeck
             and candidate.part.Parent == standingDeck.Parent
             and 10 or 0
-        local score, landingExposures =
+        local score, landingExposures, corridorExposures =
             scoreCandidate(record, root, candidate, traits)
-        lowestExposure = math.min(lowestExposure, landingExposures)
+        if landingExposures < lowestExposure then
+            lowestExposure = landingExposures
+            lowestCorridorExposure = corridorExposures
+        elseif landingExposures == lowestExposure then
+            lowestCorridorExposure = math.min(
+                lowestCorridorExposure, corridorExposures)
+        end
         table.insert(ranked, {
             candidate = candidate,
             score = score + continuation,
             landingExposures = landingExposures,
+            corridorExposures = corridorExposures,
         })
     end
-    -- Random personality choices may vary within the safest tier, but
-    -- cannot pick a blast-covered destination if a verified candidate
-    -- outside every active impact exists. When all are exposed, prefer
-    -- the least-overlapping locations before applying ordinary scoring.
+    -- Minimize landing impacts first, then FULL corridor crossings.
+    -- Personality variance only breaks ties among these safest tiers;
+    -- a short tempting route through a Meteor/Bomb lane must not beat a
+    -- walkable alternative that stays outside the warned footprint.
+    -- Retain the prior least-exposed fallback if every route is threatened.
     local safeRanked = {}
     for _, entry in ipairs(ranked) do
-        if entry.landingExposures == lowestExposure then
+        if entry.landingExposures == lowestExposure
+            and entry.corridorExposures == lowestCorridorExposure then
             safeRanked[#safeRanked + 1] = entry
         end
     end
