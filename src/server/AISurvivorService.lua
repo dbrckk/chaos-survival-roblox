@@ -4006,9 +4006,31 @@ local function advanceGroundNavigation(record, root, now)
         record.groundNavigationPending,
         record.groundNavigationStartedAt, now
     ) then
+        -- The async request may have left the bot holding its own
+        -- temporary recovery fallback (including its current position).
+        -- A timeout must release that owned target, or the bot can remain
+        -- idle even though the obsolete ComputeAsync answer was canceled.
+        -- Never erase a newer hazard, station or roaming decision.
+        local pendingGoal = record.groundNavigationPendingGoal
+        local fallback = record.groundNavigationFallbackTarget
+        local ownsFallback = pendingGoal ~= nil and fallback ~= nil
+            and record.failedTarget == pendingGoal
+            and record.target == fallback
+            and record.targetPart == nil
+            and record.assistShield == nil and record.assistRelay == nil
+            and record.spineControl == nil and record.districtTraverse == nil
+            and record.signalInterestRoute == nil
         -- Invalidate the still-yielding callback before releasing the
         -- pending state. A late engine response cannot retarget this NPC.
         cancelGroundNavigation(record)
+        if ownsFallback then
+            record.recoveryWaypoint = nil
+            record.recoveryCommitUntil = 0
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+        end
         AISurvivorService.PerformanceDiagnostics.GroundRoutesTimedOut += 1
         record.nextGroundNavigationAt = now + 3
         if record.model then
