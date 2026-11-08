@@ -1074,6 +1074,9 @@ local function sendToArena(record)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
     record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotImpactReactionHandoffs", 0)
+    record.model:SetAttribute("BotCollapseSafeExitPlans", 0)
+    record.model:SetAttribute("BotCollapsePartialRetreats", 0)
+    record.model:SetAttribute("BotCollapseBlockedPlans", 0)
     record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -1794,11 +1797,16 @@ local function disappearingPlatformEscape(record, root, now)
         and now < (record.collapsePlanUntil or 0)
         and record.collapsePlanWarningVersion == warningVersion
         and previousDeck and previousDeck.Parent
-        and AISurvivorRules.platformAvailable(
-            previousDeck.CanCollide, previousDeck.Transparency,
-            previousDeck:GetAttribute("CollapsePhase"),
-            previousDeck:GetAttribute("BridgeShutterPhase")
-        ) then
+        and (previousDeck:IsA("Terrain")
+            or (previousDeck:IsA("BasePart")
+                and (AISurvivorRules.platformAvailable(
+                    previousDeck.CanCollide, previousDeck.Transparency,
+                    previousDeck:GetAttribute("CollapsePhase"),
+                    previousDeck:GetAttribute("BridgeShutterPhase")
+                ) or (previousDeck == part
+                    and part.CanCollide and part.Transparency < 0.90
+                    and part:GetAttribute("CollapsePhase") == "Warning"))))
+    then
         local basePart = arenaBase()
         local elevated = basePart and root.Position.Y >
             basePart.Position.Y + basePart.Size.Y * 0.5 + 8
