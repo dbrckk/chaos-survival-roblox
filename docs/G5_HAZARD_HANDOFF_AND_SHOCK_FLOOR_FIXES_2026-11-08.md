@@ -138,3 +138,35 @@ A continued audit found three competing jump sources that could defeat the new i
 | Meteor/Bomb or collapse overlaps JumpShock | Horizontal escape remains prioritized and real shock jump is independently evaluated |
 
 **Verification status:** source-level structural checks only. Neither actual jump clearance/damage outcomes nor Roblox Engine frame scheduling nor Android FPS was observed. No changes to shock damage, physics impulses, character jump height, movement speed, or Roblox release publication were made.
+
+## Final G5 follow-up — shock-jump timing independent of AI brain cadence
+
+### Confirmed timing weakness
+
+The shock avoidance path was still driven by the ordinary per-bot AI brain step (about 0.18 seconds between passes). The `shockJumpWindow` function allows a real jump request when the warning has between 0.10 and 0.34 seconds remaining, but the **server's actual dodge rule** (`JumpShock.dodgedByJump`) independently requires the humanoid to be airborne, vertically rising above 3 studs/s **and** physically at least 4.5 studs above the nearest real ground at the exact damage instant. A jump command near either extreme of the broader AI decision window can therefore fail with normal Roblox jump physics, even if the threat was recognized.
+
+### Bounded, server-authoritative scheduling
+
+- When a particular `JumpShockWarning` is first observed within its authoritative coverage, the server calculates a one-shot callback relative to its prepublished `WarningStartedAt + WarningDuration`.
+- The planned physical jump is **0.18–0.22 seconds before the impact**, with a small fixed per-slot stagger so the survivors do not all jump on precisely the same frame. This is a scheduling target, **not** a guarantee of the actual engine execution instant.
+- The callback revalidates: same original rig and humanoid, still alive and in the same active round, same original weak-key warning-sighting table and one-shot handled table, warning Instance still directly in Workspace with `WarningKind="JumpShock"`, valid authoritative duration and remaining time, individual personality reaction delay, genuine grounded and unseated state, not frozen and jump capability not explicitly disabled (`JumpPower` / `JumpHeight`).
+- Only an actual one-shot `Humanoid.Jump=true` request increments `BotShockJumpCommands`; there is **no direct reward, safety status, impulse, forced clearance, higher jump height, or immunity**.
+- As a fallback for a delayed callback or a warning first seen near its deadline, the ordinary brain can request the same one-shot jump only while **0.12–0.23 seconds** remain. That is a subset of the existing public `shockJumpWindow` and checks the identical server physics state.
+- At most **one short `task.delay` callback per newly observed, eligible real shock warning per active bot** is added. It is bounded to an initial delay of 0–4 seconds; stale callbacks simply return. No new `workspace:Raycast`, pathfinding computation, global Workspace scan, unconditional heartbeat listener or replicated RemoteEvent was introduced.
+- The final server impact still runs the unchanged `JumpShock.applyShock` physical rising-velocity and real clearance test. A Jump request can legitimately fail to dodge if physics or scheduling differs from expectations.
+
+### Acceptance before merging PR #702
+
+| Scenario | Expected |
+| --- | --- |
+| Eight bots detect one JumpShock warning near the arena edges | Bots schedule slightly staggered normal jumps close to impact, instead of being quantized to the 0.18-second brain cadence |
+| An AI pass falls outside the narrow intended jump timing | The timed callback still provides a chance to issue the jump |
+| Scheduled callback executes after the warning disappears | No jump command, no new counter |
+| A bot was replaced, died, left the round or returned to lobby | Old callback cannot jump the newer character or a nonparticipating bot |
+| A bot is seated, airborne or still genuinely frozen when callback runs | No fake extra jump command, and no server-side dodge bypass |
+| Two genuine waves overlap | Each warning has an independent one-shot state; a warning never issues multiple jumps |
+| Timed callback and brain fallback are both eligible in the same impact window | Shared `reactedWarnings` table ensures at most one command per warning |
+| Eight players under Meteor/Bomb/Collapse/Freeze + JumpShock | The real physical jump window and hazard priorities apply, while other movement goals stay intact; inspect bot CPU/Android FPS |
+| Nondefault gravity or modified humanoid jump physics | Verify the 0.18–0.22 second target is still appropriate; do not assume a successful dodge without Roblox Engine testing |
+
+**Release status:** the code is committed on PR #702 only. No Roblox Engine timing validation, live damage/reward observation, publish, CPU profile or Android playtest was performed in this turn.
