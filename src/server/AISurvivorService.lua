@@ -2481,6 +2481,12 @@ local function reactToShockWarning(record, humanoid, root, now)
                 warning:GetAttribute("WarningEndSize")
             )
             if (root.Position - warning.Position).Magnitude <= threshold then
+                -- Hold only the cosmetic hop timer during the telegraph
+                -- and immediately after the warning disappears. A
+                -- post-warning random jump could otherwise occur in the
+                -- narrow gap between marker removal and server impact.
+                -- nextRouteJumpAt (real parkour) is unaffected.
+                record.nextJump = math.max(record.nextJump or 0, now + 1.0)
                 if not seen[warning] then
                     seen[warning] = now
                     warnNearbyContestants(record, now)
