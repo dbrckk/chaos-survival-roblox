@@ -63,3 +63,42 @@ If no impact warnings exist, this produces the original nearest valid neighbor. 
 | Several live impact warnings under Android load | Inspect bot escape target, existing profiler numbers, physical landing and frame rate; source adds no new physics queries |
 
 Source-level safety checks include hazard-priority ordering, original platform support and 34-stud gate, only one platform-folder traversal, unchanged number of raycast sites and return of the selected actual waypoint. This is **not** evidence of runtime validation.
+
+## Integrated G5 batch — physical exits, coordinated shelters and authoritative hazard metadata
+
+This section documents the later **aggregate PR #701**, superseding earlier notes about “no additional raycasts” and “nearest deck” that applied to the original smaller changes only.
+
+### Completed source work
+
+- Centralized the emergency-floor `RaycastParams` exclusion list so human player rigs and NPC rigs cannot mask the real collision surface during collapse warnings, Meteor/Bomb support sampling **or a physically verified sky-gap jump**. No Roblox collision groups or character physics are changed.
+- Added a **short commitment (0.42 seconds for a verified exit, 0.32 seconds for a supported partial retreat)** to the actually chosen collapse goal. Reuse requires the same active warning, still-valid collidable support and unchanged Meteor/Bomb warning version. A newly dangerous floor sweep also invalidates the cached route.
+- Elevated collapse: require the original same-network `safeCollapseNeighbor`, usable deck, and less-than-34-stud travel. Precompute live Meteor/Bomb final radii once for each real plan. Compare alternatives by *fewest impact-exposed landings*, *fewest impact corridor crossings*, *fewest active grid/cargo sweep crossings*, then *travel cost plus a capped soft occupancy penalty*. Occupancy considers nearby living bots, non-eliminated humans and recent committed bot refuges on similar height; it never blocks the only physically supported exit.
+- Ground-level collapse: replace a new random center/tangent move every brain tick with **four authored geometry-derived edge exits** in the warning platform’s own oriented coordinate space. A destination must be off that warned floor, be within the arena and 34-stud bound, and have genuine solid support at the landing and a midpoint. Use the same hazard tiers and bounded peer-occupancy cost. If every full exit fails but a shorter approach to a real edge is supported, retain **partial physical progress** without claiming the endpoint is safe. If neither exists, hold actual footing rather than sending a bot into unverified void.
+- Never apply cosmetic `separateTarget` to a physical collapse escape whose final waypoint was already verified. This prevents an otherwise correct low-floor target from shifting back inside a doomed tile or off an elevated deck.
+- Fix **hazard publication ordering** in `src/server/Disasters/Meteors.lua` and `Bombs.lua`: `HazardWarning.configure` now runs **before** `marker.Parent=workspace`, so the `ChildAdded` watcher and every replicated client first see the authoritative `WarningEndSize`, `WarningStartedAt`, `WarningDuration` and `WarningKind`. The actual damage radii, meteor descent and bomb delays are preserved.
+- Expose round-reset per-NPC diagnostics: `BotCollapseSafeExitPlans`, `BotCollapsePartialRetreats`, `BotCollapseBlockedPlans`. They count decisions, **not** successful completed escapes.
+
+### Performance and safety accounting
+
+The PR began with **15** `workspace:Raycast(` call sites in `AISurvivorService.lua`; there are now **16**. The single new site is the `physicalFloor` support probe used by up to **four** actual low-ground edge candidates and their partial/midpoint checks. This can execute multiple times, but only **after** identifying a real collidable `CollapsePhase="Warning"` floor and passing the original personal reaction delay. The planned waypoint is reused for 0.32–0.42 seconds when still valid; at most four physical exit candidates are enumerated per recomputation. No additional `Workspace:GetDescendants`, asynchronous path requests, unbounded loops, client-trusted warning data, teleports, speed buffs or immunity are introduced. The true server CPU cost and Android FPS effect have **not** been measured.
+
+### Release acceptance matrix for the full batch
+
+| Scenario | Expected evidence in a real 8-contestant match |
+| --- | --- |
+| A second bot or human physically masks the collapsing warning floor | The bot recognizes the same real `Warning` deck and begins its normal delayed evacuation |
+| Ordinary low platform warns while no extra disaster is active | Bot targets a physically supported exit beyond the actual edge, not an arbitrary new random position every brain pass |
+| A ground edge leads to a missing, non-collidable or insufficiently supported surface | Reject that full exit; never send a direct movement command into unverified empty space |
+| Full exit is unavailable but an earlier same-deck physical waypoint is safe until collapse | Bot advances toward its nearest real edge without treating the partial waypoint as a confirmed refuge |
+| Two connected high refuges, one under a Meteor/Bomb | Prefer the less exposed real deck even when farther or busier |
+| Two equally safe neighboring high refuges, one already crowded by real participants | Prefer lower occupancy without forbidding the only real usable deck |
+| Collapse warning and grid/cargo sweep activate together | Prefer fewer active sweep intersections after minimizing actual Meteor/Bomb exposure |
+| A new sweep band activates during a cached collapse retreat | Recheck its new segment exposure; invalidate and reconsider if worse than at commitment |
+| Impact marker spawns while bots are already processing warnings | `WarningEndSize`, `WarningDuration`, `WarningStartedAt` and `WarningKind` are already present when the marker enters Workspace |
+| Two human avatars stand across a true sky gap that a bot must jump | The jump probe sees real origin/landing decks and actual gap, not the human avatar as a floor |
+| New round begins after collapse event | Previous `collapsePlanThreat`, support and target are cleared; all three plan counters reset |
+| Multiple overlapping hazards on Android | Compare real escape completion, humanoid movement, `AISurvivorService.PerformanceDiagnostics`, warning-version invalidations, bot CPU and frame-time against the pre-PR baseline |
+
+### Release gate
+
+The prior merged `main` was owner-reported functional, but **this aggregate PR branch has not been exercised by Roblox Studio, Open Cloud Engine Tests, or an Android live session**. The repository’s `Build Validation` workflow explicitly runs only on manually dispatched **main** release candidates; it cannot prove a feature-branch commit works. Keep PR #701 unmerged until owner gameplay validation, then run the exact-commit build/engine/publisher gate before claiming the Roblox public place is updated.
