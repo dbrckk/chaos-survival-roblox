@@ -32,3 +32,24 @@ Ordinary roam candidate scoring already penalized intersections, but its safest 
 ## Release gate
 
 Source checks passed for target snapshot/round reset, one event-cached warning scan and reuse of the existing route-penalty threshold. This is **not** a real Roblox engine pass. Follow the repository's existing exact-SHA Build Validation, Cloud suites, and device QA policy before publishing the existing place. Public experience state cannot be inferred from a GitHub commit.
+
+## Source correction — actual Humanoid MoveTo vs planned goal
+
+Commit `62b3a2399ca08afbbc6200140f7492c189682488` closes a second, independent gap: the impact path guard checked `record.target`, while `moveHumanLike` can send `Humanoid:MoveTo` toward a *different* short position because of the steering blend (`steeredDirection`) or visual crowd-separation bias.
+
+The final, arena-clamped short segment is now compared against the existing server-owned Meteor/Bomb warning cache **before MoveTo**. It checks both the passed-in (possibly socially offset) target and actual short step. If a warning intersects, the bot attempts a straight bounded step toward its *original* unshifted target; both the original route and the corrected short step must be clear. If neither is clear, it cancels that ordinary goal and the current movement without inventing a new safe location.
+
+This guard only applies during actual rounds and to ordinary ground roaming, not urgent escape, verified NavMesh, physical deck paths, pad crossings, console holds or ongoing missions. No extra Workspace traversal, `Raycast`, `ComputeAsync`, or speed changes. `BotHazardSteeringCorrections` is a new per-bot, per-round attribute counting corrected (rather than canceled) moves. Existing `BotHazardRouteInvalidations` counts canceled dangerous commands.
+
+### Further real-engine acceptance
+
+| Scenario | Expected |
+| --- | --- |
+| Safe ordinary goal; previous movement direction bends the next short step across a warning | Redirect the next actual MoveTo segment toward the safe original goal; increment `BotHazardSteeringCorrections` |
+| Social/crowd offset points through a warning while the true target is safe | Use the straight, bounded original route; do not move into the warning |
+| Both the current short segment and original route intersect a warning | Cancel the ordinary target, issue physical `Humanoid:Move(Vector3.zero)`, then choose another goal on the next brain pass |
+| Zero Meteor/Bomb warnings, routine walking | Keep existing blended humanlike steering; no new physics queries |
+| Urgent evasion, real NavMesh or narrow raised route | Keep their committed movement semantics without applying the ordinary steering override |
+| Eight mobile participants during overlapping impacts | Compare per-bot correction/invalidation counters, real collision movement and frame-time against the prior baseline |
+
+Validation status: inspected source and nine targeted structural checks passed after write. **Not Roblox engine-tested, not merged, not published.**
