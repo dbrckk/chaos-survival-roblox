@@ -1857,6 +1857,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end)
     end
     local endedEarly = false
+    -- After the final human is eliminated, allow a short REAL bot finale.
+    -- Existing hazards, AI and spectator camera keep running; no extra loop.
+    -- The deadline is measured in existing 1 Hz round ticks, never extended
+    -- by consecutive bot deaths or a newly connected late spectator.
+    local botShowdownDeadlineT = nil
     for t = roundSettings.RoundSeconds, 1, -1 do
         overdriveActive = overdriveEligible
             and t <= overdriveStartRemaining
@@ -1866,36 +1871,25 @@ local function runDisasterSet(selected, contestants, roundSettings)
         local humanSurvivorsAlive = countContestantsRemaining()
         local aiSurvivorsAlive = AISurvivorService.aliveRoundCount()
         local survivorsAlive = humanSurvivorsAlive + aiSurvivorsAlive
-        -- An authenticated, isolated Studio AI-camera review must keep
-        -- observing autonomous survivors even if its idle human observer
-        -- gets eliminated. Public solo rounds still end immediately.
+        -- The private Studio AI-camera review still observes the full round.
+        -- In public games, a defeated player can watch a bounded REAL finale,
+        -- with server-authoritative hazards and AI still active. Do not wait
+        -- when everyone is dead or when the server is empty.
+        local botShowdownActive = false
         if humanSurvivorsAlive <= 0 and not isStudioVisualAI then
-            endedEarly = true
-
-            if aiSurvivorsAlive > 0 then
-                local spectateDisasterIds = {}
-                for _, disaster in ipairs(selected) do
-                    table.insert(spectateDisasterIds, disaster.Id)
-                end
-
-                broadcast({
-                    phase = "round",
-                    title = "YOU WERE ELIMINATED",
-                    hint = "WATCH THE SURVIVORS • NEXT ROUND SOON",
-                    seconds = math.min(3, t),
-                    doubleChaos = #selected > 1,
-                    fusionName = fusionName,
-                    soloMode = roundSettings.Solo,
-                    arenaName = roundSettings.ArenaName or currentArenaVariant,
-                    disasterIds = spectateDisasterIds,
-                    survivorsAlive = aiSurvivorsAlive,
-                    contestantCount = #contestants + AISurvivorService.roundRosterCount(),
-                    aiSurvivors = aiSurvivorsAlive,
-                    spectating = true,
-                })
-                task.wait(2.25)
+            if aiSurvivorsAlive <= 0 or #Players:GetPlayers() == 0 then
+                endedEarly = true
+                break
             end
-            break
+            if botShowdownDeadlineT == nil then
+                botShowdownDeadlineT = t
+                    - math.min(t, roundSettings.Solo and 4 or 6)
+            end
+            if t <= botShowdownDeadlineT then
+                endedEarly = true
+                break
+            end
+            botShowdownActive = true
         end
 
         if roundChallenge.Metric == "highGround" and masteryPlatforms
@@ -1946,6 +1940,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
         elseif overdriveActive then
             roundHint = "OVERDRIVE • Boost pads + Shard surge • " .. roundHint
         end
+        if botShowdownActive then
+            title = "FINAL BOT SHOWDOWN"
+            roundHint = "WATCH THE LAST BOTS • FINAL RESULT SOON"
+        end
 
         local halfX, halfZ = ArenaTargeting.activeHalfExtents(6, 42)
         local impactWaveMode = ImpactWaveDirector.forContext(
@@ -1970,7 +1968,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             blackoutStage = ctx.BlackoutStage,
             title = title,
             hint = roundHint,
-            seconds = t,
+            seconds = botShowdownActive and (t - botShowdownDeadlineT) or t,
             doubleChaos = #selected > 1,
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
