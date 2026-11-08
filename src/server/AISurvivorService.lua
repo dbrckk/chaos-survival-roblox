@@ -4069,7 +4069,13 @@ local function advanceGroundNavigation(record, root, now)
         end
         return
     end
-    if now >= (route.nextLiveCheckAt or 0) then
+    -- Corridor rays assume a grounded walking rig. A brief physical
+    -- knock-up or fall can put the root outside the base-height band
+    -- even though the same path is still usable after landing. Do not
+    -- quarantine the ORIGINAL goal solely because of that airborne
+    -- frame. The unchanged absolute/rolling TTL still bounds the wait,
+    -- and urgent hazards were already handled above.
+    if grounded and now >= (route.nextLiveCheckAt or 0) then
         route.nextLiveCheckAt = now + 0.72
             + ((record.slot or 1) % 3) * 0.12
         if arenaBase() ~= route.base
