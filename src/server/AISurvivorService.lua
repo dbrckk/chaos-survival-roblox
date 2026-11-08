@@ -836,6 +836,7 @@ local function createRig(record)
     record.escapeKnownWarnings = nil
     -- The rig is constructed before the file-local warning tracker.
     record.routeWarningVersion = -1
+    record.routeWarningTarget = nil
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
@@ -954,6 +955,8 @@ local function sendToLobby(record)
     record.signalInterestUntil = 0
     record.model:SetAttribute("AISurvivorInRound", false)
     record.target = nil
+    record.routeWarningVersion = -1
+    record.routeWarningTarget = nil
     record.targetPart = nil
     record.targetIsPad = false
     record.targetIsSkyrail = false
@@ -1016,6 +1019,8 @@ local function sendToArena(record)
     record.model:SetAttribute("AISurvivorInRound", true)
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
+    record.routeWarningVersion = -1
+    record.routeWarningTarget = nil
     record.targetPart = nil
     record.targetIsPad = false
     record.targetIsSkyrail = false
@@ -1052,6 +1057,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotStallRecoveryCount", 0)
     record.model:SetAttribute("BotRecoveryRouteFound", nil)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
+    record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -1350,6 +1356,28 @@ local function warningParts()
 
     warningCacheDirty = false
     return cachedWarningParts
+end
+
+-- The same authoritative Meteor/Bomb corridor rule protects optional
+-- missions, active missions, and the final grounded MoveTo. Read the
+-- event-maintained warning cache, never scan Workspace or add raycasts.
+local function impactCorridorIntersects(origin, destination, warnings)
+    if typeof(origin) ~= "Vector3" or typeof(destination) ~= "Vector3" then
+        return false
+    end
+    for _, warning in ipairs(warnings or warningParts()) do
+        if (warning.Name == "MeteorWarning"
+                or warning.Name == "BombWarning")
+            and AISurvivorRules.newImpactIntersectsEscape(
+                origin, destination, warning.Name,
+                warning.Position,
+                math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                warning:GetAttribute("WarningEndSize")
+            ) then
+            return true
+        end
+    end
+    return false
 end
 
 -- Avoid repeating a giant AI-branded phrase every brain tick. Gestures and
@@ -2179,6 +2207,7 @@ local function scoreCandidate(record, root, candidate, traits)
     local variantId = arenaVariantId()
     local score = (math.random() * 8) - (travelDistance * 0.035)
     local landingExposures = 0
+    local corridorExposures = 0
     score += AISurvivorRules.routeAffinity(variantId, position, center)
     score += AISurvivorRules.routeContinuity(
         variantId,
@@ -2241,9 +2270,16 @@ local function scoreCandidate(record, root, candidate, traits)
                 math.max(warning.Size.X, warning.Size.Z) * 0.5,
                 warning:GetAttribute("WarningEndSize")
             ) - 9)
-            score -= AISurvivorRules.routeWarningPenalty(
+            local routePenalty = AISurvivorRules.routeWarningPenalty(
                 root.Position, position, warning.Position, radius
-            ) * (1 - risk * 0.25)
+            )
+            score -= routePenalty * (1 - risk * 0.25)
+            -- Use the SAME corridor threshold as the final live warning
+            -- guard. A safe landing is not enough if the bot must cross
+            -- a full Meteor/Bomb footprint to reach it.
+            if routePenalty >= 20 then
+                corridorExposures += 1
+            end
             -- The destination must not win a personality lottery while
             -- still inside the TRUE final blast footprint. Count distinct
             -- currently live Meteor/Bomb areas; retain the full-path
@@ -2269,7 +2305,7 @@ local function scoreCandidate(record, root, candidate, traits)
         score -= 120
     end
 
-    return score, landingExposures
+    return score, landingExposures, corridorExposures
 end
 
 local function socialArenaTarget(record, root, traits, now)
@@ -2477,8 +2513,12 @@ local function socialArenaTarget(record, root, traits, now)
             safeDeck.CFrame, safeDeck.Size, target
         ) or target
     end
-    -- A social impulse may not override the existing server hazard evaluator.
-    if scoreCandidate(record, root, {position = target}, traits) < -32 then
+    -- A social impulse is optional: refuse a route that crosses ANY
+    -- live Meteor/Bomb footprint, even when a personality score remains
+    -- attractive and the destination itself is outside the blast.
+    local score, landingExposures, corridorExposures =
+        scoreCandidate(record, root, {position = target}, traits)
+    if score < -32 or landingExposures > 0 or corridorExposures > 0 then
         return nil
     end
     return target, safeDeck
@@ -2938,18 +2978,30 @@ local function liveDistrictSignalTarget(record, root, now, traits)
         if math.random() > chance * (0.8 + risk * 0.35) then
             return nil
         end
-        -- Existing impact-path danger scoring also protects this new
-        -- optional interest. A mission never takes priority over life.
-        if scoreCandidate(record, root, {position = target}, traits) < -25 then
+        -- A mission is not a valid excuse to cross a live impact.
+        -- The weighted personality score alone allowed risky shortcuts
+        -- even with safe alternative ordinary routes available.
+        local score, landingExposures, corridorExposures =
+            scoreCandidate(record, root, {position = target}, traits)
+        if score < -25 or landingExposures > 0 or corridorExposures > 0 then
             return nil
         end
         record.signalInterestRoute = route
     end
 
+    -- Social spacing may shift a safe station approach INTO a warning.
+    -- Check the final selected mission goal before committing this tick.
+    local approach = separateTarget(record, target)
+    if impactCorridorIntersects(root.Position, approach) then
+        record.signalInterestRoute = nil
+        record.signalInterestUntil = 0
+        record.nextSignalInterestAt = now + 4
+        return nil
+    end
     record.signalInterestUntil = now + math.min(6, remaining)
     record.targetPart = nil
     record.targetIsPad = false
-    return separateTarget(record, target), math.clamp(
+    return approach, math.clamp(
         distance / speed + 0.40, 1.1, 4.3)
 end
 
@@ -3057,15 +3109,21 @@ local function chooseArenaTarget(record, root, now)
     local socialTarget, socialDeck =
         socialArenaTarget(record, root, traits, now)
     if socialTarget then
-        record.targetIsPad = false
-        record.targetPart = socialDeck
         local waypoint = separateTarget(record, socialTarget)
         if socialDeck then
             waypoint = AISurvivorRules.clampWaypointToDeck(
                 socialDeck.CFrame, socialDeck.Size, waypoint
             ) or socialTarget
         end
-        return waypoint, 0.65 + math.random() * 1.0
+        -- The first social proposal was safe, but the FINAL crowd
+        -- separation can move it into an active impact corridor.
+        -- Validate the exact returned waypoint before committing a
+        -- social platform or target; otherwise choose ordinary roaming.
+        if not impactCorridorIntersects(root.Position, waypoint) then
+            record.targetIsPad = false
+            record.targetPart = socialDeck
+            return waypoint, 0.65 + math.random() * 1.0
+        end
     end
 
     -- When a Flux Relay can be reached before its charge window ends,
@@ -3255,6 +3313,7 @@ local function chooseArenaTarget(record, root, now)
 
     local ranked = {}
     local lowestExposure = math.huge
+    local lowestCorridorExposure = math.huge
     for _, candidate in ipairs(candidates) do
         -- Once already standing on an upper deck, prefer progressing
         -- to a physically adjacent platform instead of repeatedly
@@ -3264,22 +3323,31 @@ local function chooseArenaTarget(record, root, now)
             and candidate.part and candidate.part ~= standingDeck
             and candidate.part.Parent == standingDeck.Parent
             and 10 or 0
-        local score, landingExposures =
+        local score, landingExposures, corridorExposures =
             scoreCandidate(record, root, candidate, traits)
-        lowestExposure = math.min(lowestExposure, landingExposures)
+        if landingExposures < lowestExposure then
+            lowestExposure = landingExposures
+            lowestCorridorExposure = corridorExposures
+        elseif landingExposures == lowestExposure then
+            lowestCorridorExposure = math.min(
+                lowestCorridorExposure, corridorExposures)
+        end
         table.insert(ranked, {
             candidate = candidate,
             score = score + continuation,
             landingExposures = landingExposures,
+            corridorExposures = corridorExposures,
         })
     end
-    -- Random personality choices may vary within the safest tier, but
-    -- cannot pick a blast-covered destination if a verified candidate
-    -- outside every active impact exists. When all are exposed, prefer
-    -- the least-overlapping locations before applying ordinary scoring.
+    -- Minimize landing impacts first, then FULL corridor crossings.
+    -- Personality variance only breaks ties among these safest tiers;
+    -- a short tempting route through a Meteor/Bomb lane must not beat a
+    -- walkable alternative that stays outside the warned footprint.
+    -- Retain the prior least-exposed fallback if every route is threatened.
     local safeRanked = {}
     for _, entry in ipairs(ranked) do
-        if entry.landingExposures == lowestExposure then
+        if entry.landingExposures == lowestExposure
+            and entry.corridorExposures == lowestCorridorExposure then
             safeRanked[#safeRanked + 1] = entry
         end
     end
@@ -4642,9 +4710,72 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
         horizontal.Magnitude < 10 and target.Y or root.Position.Y,
         destination.Z
     )
-    humanoid:MoveTo(
-        arenaBounded == false and destination or clampToArena(destination)
-    )
+    destination = arenaBounded == false and destination
+        or clampToArena(destination)
+
+    -- The chosen goal may be safe while humanlike turn inertia or a
+    -- temporary crowd-avoidance strafe sends the ACTUAL MoveTo segment
+    -- through a Meteor/Bomb warning. Verify the commanded short segment,
+    -- not only the previously ranked goal. This only runs for ordinary
+    -- roaming while server-owned warnings are present; real sky routes,
+    -- cooperative holds, pad crossings and emergency dodges remain intact.
+    if not direct and arenaBounded ~= false
+        and currentState.phase == "round" and record.inRound
+        and not record.targetIsPad and record.targetPart == nil
+        and not record.signalInterestRoute then
+        local warnings = warningParts() -- event-cached; no Workspace scan
+        if #warnings > 0 then
+            local function crossesLiveImpact(point)
+                return impactCorridorIntersects(
+                    root.Position, point, warnings)
+            end
+            if crossesLiveImpact(target) or crossesLiveImpact(destination) then
+                -- A safe original goal can still be reached directly if
+                -- only the ornamental steering offset was hazardous.
+                local original = record.target
+                local safeOriginal = typeof(original) == "Vector3"
+                    and not crossesLiveImpact(original)
+                local towards = safeOriginal and Vector3.new(
+                    original.X - root.Position.X, 0,
+                    original.Z - root.Position.Z) or Vector3.zero
+                local straight = nil
+                if towards.Magnitude > 0.05 then
+                    local directStep = root.Position
+                        + towards.Unit * math.min(towards.Magnitude, 10)
+                    directStep = Vector3.new(
+                        directStep.X,
+                        towards.Magnitude < 10 and original.Y
+                            or root.Position.Y,
+                        directStep.Z
+                    )
+                    straight = clampToArena(directStep)
+                end
+                if straight and not crossesLiveImpact(straight) then
+                    destination = straight
+                    record.moveDirection = towards.Unit
+                    record.model:SetAttribute("BotHazardSteeringCorrections",
+                        (tonumber(record.model:GetAttribute(
+                            "BotHazardSteeringCorrections")) or 0) + 1)
+                else
+                    -- No verified ordinary segment: never push the bot
+                    -- into the impact merely to preserve natural inertia.
+                    -- The next brain pass may choose another real goal.
+                    record.target = nil
+                    record.routeWarningTarget = nil
+                    record.lastMoveTarget = nil
+                    record.nextThink = 0
+                    record.turnPauseUntil = 0
+                    record.moveDirection = Vector3.zero
+                    humanoid:Move(Vector3.zero)
+                    record.model:SetAttribute("BotHazardRouteInvalidations",
+                        (tonumber(record.model:GetAttribute(
+                            "BotHazardRouteInvalidations")) or 0) + 1)
+                    return
+                end
+            end
+        end
+    end
+    humanoid:MoveTo(destination)
 end
 
 local function maybeSocialGesture(record, humanoid, root, now)
@@ -5180,6 +5311,14 @@ local function stepRecord(record, now)
             and currentState.finalRush ~= true
             and (not endAt or endAt <= 0
                 or workspace:GetServerTimeNow() + 0.30 < endAt)
+        -- The active objective is exempt from ordinary roaming checks.
+        -- Release that optional commitment if a NEW impact now crosses
+        -- its current route; otherwise the bot follows a risky mission.
+        -- Only one NPC pursues a signal at a time.
+        if stillOpen and record.target
+            and impactCorridorIntersects(root.Position, record.target) then
+            stillOpen = false
+        end
         local reached = false
         if stillOpen then
             local delta = foundation.Position - root.Position
@@ -5426,51 +5565,6 @@ local function stepRecord(record, now)
             record.nextThink = 0
         end
 
-        -- A freshly spawned server warning can cut across an ordinary
-        -- walking route while its bot is still OUTSIDE the warning circle.
-        -- The local impact dodge would not yet fire, so do not let the
-        -- existing rethink timer send the bot back into that future blast.
-        -- Check the event-owned warning cache only when its version changes,
-        -- not every physics frame, and never replace committed platform
-        -- crossings, real console holds, or an emergency escape.
-        if currentState.phase == "round"
-            and not urgentTarget
-            and record.routeWarningVersion ~= warningVersion then
-            record.routeWarningVersion = warningVersion
-            if record.target and not record.groundNavigation
-                and not record.groundNavigationPending
-                and not record.districtTraverse
-                and not record.signalInterestRoute
-                and not record.assistShield
-                and not record.assistRelay
-                and not record.spineControl
-                and not record.targetIsSkyrail
-                and not AISurvivorRules.committedWorldRoute(
-                    record.targetIsSkyrail, record.targetPart, false
-                ) then
-                for _, warning in ipairs(warningParts()) do
-                    if AISurvivorRules.newImpactIntersectsEscape(
-                        root.Position, record.target, warning.Name,
-                        warning.Position,
-                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
-                        warning:GetAttribute("WarningEndSize")
-                    ) then
-                        record.target = nil
-                        record.targetPart = nil
-                        record.targetIsPad = false
-                        record.lastMoveTarget = nil
-                        record.nextThink = 0
-                        record.idleUntil = 0
-                        record.turnPauseUntil = 0
-                        record.model:SetAttribute("BotHazardRouteInvalidations",
-                            (tonumber(record.model:GetAttribute(
-                                "BotHazardRouteInvalidations")) or 0) + 1)
-                        break
-                    end
-                end
-            end
-        end
-
         if currentState.phase == "round"
             and not urgentTarget
             -- A deliberate NavMesh fallback or live waypoint must not be
@@ -5611,6 +5705,52 @@ local function stepRecord(record, now)
             end
             record.target = target
             record.nextThink = now + hold * (traits.FollowThrough or 1)
+        end
+
+        -- Revalidate BOTH a new warning and a newly selected ordinary
+        -- movement goal. A warning first seen during a committed deck
+        -- crossing must not be marked as handled before normal roaming
+        -- resumes. Checking immediately after target selection also avoids
+        -- sending the bot toward an existing blast for one extra AI pass.
+        -- The event-owned warning cache is scanned only when the actual
+        -- eligible target changes or its warning version changes, not on
+        -- every physics frame or every brain pass.
+        if currentState.phase == "round"
+            and not urgentTarget
+            and record.target
+            and not record.groundNavigation
+            and not record.groundNavigationPending
+            and not record.districtTraverse
+            and not record.signalInterestRoute
+            and not record.assistShield
+            and not record.assistRelay
+            and not record.spineControl
+            and not record.targetIsSkyrail
+            and not AISurvivorRules.committedWorldRoute(
+                record.targetIsSkyrail, record.targetPart, false
+            )
+            and (record.routeWarningVersion ~= warningVersion
+                or record.routeWarningTarget ~= record.target) then
+            record.routeWarningVersion = warningVersion
+            record.routeWarningTarget = record.target
+            -- Use the same collision test as social goals, signal
+            -- missions and the actual MoveTo segment. A single source
+            -- of truth avoids divergent thresholds after future tuning.
+            if impactCorridorIntersects(root.Position, record.target) then
+                record.target = nil
+                record.routeWarningTarget = nil
+                record.targetPart = nil
+                record.targetIsPad = false
+                record.lastMoveTarget = nil
+                record.nextThink = 0
+                record.idleUntil = 0
+                record.turnPauseUntil = 0
+                -- Stop the old MoveTo until another safe goal is chosen.
+                humanoid:Move(Vector3.zero)
+                record.model:SetAttribute("BotHazardRouteInvalidations",
+                    (tonumber(record.model:GetAttribute(
+                        "BotHazardRouteInvalidations")) or 0) + 1)
+            end
         end
 
         if record.target then
