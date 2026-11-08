@@ -3760,6 +3760,30 @@ local function requestGroundNavigation(record, root, goal, now)
         -- answer. Quarantine only the original goal when this exact
         -- still-current request produced no usable NavMesh route.
         local fallback = record.groundNavigationFallbackTarget
+        -- A completed computation can be rejected after checking its
+        -- real floor, geometry or stale origin. Release ONLY the still-
+        -- owned recovery fallback; never erase a newer safety objective.
+        local function releaseOwnedFallback()
+            if record.groundNavigationToken ~= token
+                or record.model ~= rig or not rig or not rig.Parent
+                or record.groundNavigationFallbackTarget ~= fallback
+                or fallback == nil or record.failedTarget ~= goal
+                or record.target ~= fallback or record.targetPart ~= nil
+                or record.assistShield ~= nil or record.assistRelay ~= nil
+                or record.spineControl ~= nil or record.districtTraverse ~= nil
+                or record.signalInterestRoute ~= nil then
+                return
+            end
+            record.groundNavigationFallbackTarget = nil
+            if record.recoveryWaypoint == fallback then
+                record.recoveryWaypoint = nil
+                record.recoveryCommitUntil = 0
+            end
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+        end
         if ok and (not waypoints or #waypoints < 2)
             and rig and rig.Parent and record.inRound
             and currentState.phase == "round"
@@ -3781,15 +3805,17 @@ local function requestGroundNavigation(record, root, goal, now)
             record.failedTargetUntil = decidedAt
                 + AISurvivorRules.failedGoalCooldown(
                     record.recoveryAttemptCount)
-            record.groundNavigationFallbackTarget = nil
-            record.target = nil
-            record.lastMoveTarget = nil
-            record.lastProgressTarget = nil
-            record.nextThink = 0
+            releaseOwnedFallback()
             AISurvivorService.PerformanceDiagnostics.GroundRoutesNoPath += 1
             rig:SetAttribute("BotGroundRouteNoPathCount",
                 (tonumber(rig:GetAttribute(
                     "BotGroundRouteNoPathCount")) or 0) + 1)
+            return
+        end
+        -- A transient ComputeAsync exception does not prove the goal
+        -- is unreachable. Only release an owned recovery fallback.
+        if not ok then
+            releaseOwnedFallback()
             return
         end
         -- A two-waypoint NavMesh path (start + goal) is legitimate.
@@ -3810,6 +3836,7 @@ local function requestGroundNavigation(record, root, goal, now)
             or record.assistShield ~= nil or record.assistRelay ~= nil
             or record.spineControl ~= nil or record.districtTraverse ~= nil
             or record.signalInterestRoute ~= nil then
+            releaseOwnedFallback()
             return
         end
 
@@ -3840,12 +3867,18 @@ local function requestGroundNavigation(record, root, goal, now)
                 and hit.Normal.Y >= 0.78
                 and math.abs(hit.Position.Y - top) < 2.5
         end
-        if not onPhysicalBase(start) then return end
+        if not onPhysicalBase(start) then
+            releaseOwnedFallback()
+            return
+        end
         local points = {}
         local previous = start
         local length = 0
         for index, waypoint in ipairs(waypoints) do
-            if waypoint.Action == Enum.PathWaypointAction.Jump then return end
+            if waypoint.Action == Enum.PathWaypointAction.Jump then
+                releaseOwnedFallback()
+                return
+            end
             if index > 1 then
                 local point = waypoint.Position
                 local difference = point - previous
@@ -3854,6 +3887,7 @@ local function requestGroundNavigation(record, root, goal, now)
                 if distance > 13 or length > 155
                     or not onPhysicalBase(point)
                     or not onPhysicalBase(previous + difference * 0.5) then
+                    releaseOwnedFallback()
                     return
                 end
                 table.insert(points, Vector3.new(point.X, start.Y, point.Z))
@@ -3865,6 +3899,7 @@ local function requestGroundNavigation(record, root, goal, now)
         local liveRoot = rig:FindFirstChild("HumanoidRootPart")
         if not liveRoot or (liveRoot.Position - start).Magnitude > 9
             or #points < 1 or record.groundNavigationToken ~= token then
+            releaseOwnedFallback()
             return
         end
         record.groundNavigationFallbackTarget = nil
@@ -3979,13 +4014,62 @@ local function liveGroundRouteCorridorSafe(record, root, waypoint, base)
 end
 
 local function advanceGroundNavigation(record, root, now)
+    -- An in-flight ComputeAsync must not keep its old recovery hold when
+    -- the arena changes into an unsafe state. Previously only accepted
+    -- routes were canceled here; pending requests waited for timeout.
+    -- Preserve any newer target that no longer belongs to the fallback.
+    if record.groundNavigationPending
+        and (#warningParts() > 0
+            or hasDisaster("RisingLava")
+            or hasDisaster("ShrinkingArena")
+            or hasDisaster("Tornado")
+            or hasDisaster("DisappearingPlatforms")
+            or not record.inRound or currentState.phase ~= "round") then
+        local fallback = record.groundNavigationFallbackTarget
+        local ownsFallback = fallback ~= nil and record.target == fallback
+            and record.targetPart == nil
+            and record.assistShield == nil and record.assistRelay == nil
+            and record.spineControl == nil and record.districtTraverse == nil
+            and record.signalInterestRoute == nil
+        cancelGroundNavigation(record)
+        if ownsFallback then
+            record.recoveryWaypoint = nil
+            record.recoveryCommitUntil = 0
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+        end
+    end
     if AISurvivorRules.groundNavigationQueryTimedOut(
         record.groundNavigationPending,
         record.groundNavigationStartedAt, now
     ) then
+        -- The async request may have left the bot holding its own
+        -- temporary recovery fallback (including its current position).
+        -- A timeout must release that owned target, or the bot can remain
+        -- idle even though the obsolete ComputeAsync answer was canceled.
+        -- Never erase a newer hazard, station or roaming decision.
+        local pendingGoal = record.groundNavigationPendingGoal
+        local fallback = record.groundNavigationFallbackTarget
+        local ownsFallback = pendingGoal ~= nil and fallback ~= nil
+            and record.failedTarget == pendingGoal
+            and record.target == fallback
+            and record.targetPart == nil
+            and record.assistShield == nil and record.assistRelay == nil
+            and record.spineControl == nil and record.districtTraverse == nil
+            and record.signalInterestRoute == nil
         -- Invalidate the still-yielding callback before releasing the
         -- pending state. A late engine response cannot retarget this NPC.
         cancelGroundNavigation(record)
+        if ownsFallback then
+            record.recoveryWaypoint = nil
+            record.recoveryCommitUntil = 0
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+        end
         AISurvivorService.PerformanceDiagnostics.GroundRoutesTimedOut += 1
         record.nextGroundNavigationAt = now + 3
         if record.model then
@@ -4147,6 +4231,10 @@ local function recoverIfStuck(record, humanoid, root, now)
         and (Vector3.new(goal.X - root.Position.X, 0,
             goal.Z - root.Position.Z)).Magnitude > 3.5
     if not grounded or not walking then
+        -- A pause or knockback is not a physical navigation failure.
+        -- Restart the progress baseline at the current position so a
+        -- subsequent grounded walking pass must actually spend 1.15s
+        -- attempting movement before it can be classified as stalled.
         record.lastProgressPosition = root.Position
         record.lastProgressAt = now
         return false
@@ -4159,6 +4247,11 @@ local function recoverIfStuck(record, humanoid, root, now)
     record.lastProgressPosition = root.Position
     record.lastProgressAt = now
     if not isStalled then
+        -- Genuine movement is not necessarily evidence that a previously
+        -- blocked destination is now reachable. Keep the bounded recovery
+        -- attempt history until its existing cooldown policy ages it out.
+        -- Otherwise a bot making small successful sidesteps can retry
+        -- the same obstacle forever from the same recovery side.
         record.stuckCount = 0
         return false
     end

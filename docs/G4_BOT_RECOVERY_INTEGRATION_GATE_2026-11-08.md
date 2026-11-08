@@ -1,0 +1,71 @@
+# G4 — Bot recovery integration gate (2026-11-08)
+
+Baseline: `7984351bac09f80819bb4825dc6152a13605a615` on `main`. This is an inspection/acceptance contract, not a claim of engine validation or public publication.
+
+## Verified source behavior
+
+- `AISurvivorService.recoverIfStuck` waits for grounded walking and a genuine 1.15 s progress stall before recovery.
+- A failed route quarantines its **original goal**, not its temporary NavMesh waypoint; a pending computation retains its original destination.
+- Physical local sidesteps are checked before requesting a full asynchronous route. No teleport is used.
+- Sky Shield, Team Dash, Sky Spine and district reservations are released on confirmed stall.
+- The existing `PerformanceDiagnostics` exposes stall, local recovery, replan, accepted/completed/invalidated/expired routes and pending/active counts.
+
+## Integration scenarios to certify
+
+| Scenario | Expected authoritative outcome |
+| --- | --- |
+| Wide anchored wall; local detour impossible | One bounded async NavMesh request, eventual physical route or goal quarantine; no infinite same-goal retry |
+| Pending path + repeated stall | Original pending destination retained; no replacement request to a transient sidestep |
+| Knockback during active path | Airborne frame does not invalidate grounded corridor; hazard response still wins |
+| Shutter closes during route | Bot does not enter a closed physical gate; recovery never fabricates safe floor |
+| Collapse/shrink removes a deck | Route invalidated; no move onto missing collider |
+| Two consecutive recoveries | Recovery side rotates and original goal is quarantined; no teleport |
+| Player joins during eight-participant round | No extra participant beyond admission rules; eliminated bots remain eliminated |
+| 30-minute Android session | No unresolved non-deliberate >6 s immobilization; measure CPU, FPS and memory rather than infer them |
+
+## Diagnostic collection (existing counters only)
+
+Capture before/after each scenario: `StallDetections`, `LocalRecoveryFound`, `LocalRecoveryFailed`, `GroundReplansRequested`, `GroundRoutesAccepted`, `GroundRoutesCompleted`, `GroundRoutesInvalidated`, `GroundRoutesExpired`, `GroundRoutesPending`, `GroundRoutesActive`, `AverageBotStepMs`, `PeakBotStepMs`, and `InRoundBots`. Also record actual observed freeze duration and a short video for each failure.
+
+## Release gate
+
+Do not merge a behavioral change solely from static inspection. For the final candidate, run existing Build Validation and all seven Roblox Cloud engine suites on the **same SHA**, then perform real Android gameplay checks and verify published place version. Do not mark any of these gates passed without artifacts.
+
+## Next implementation decision
+
+If a scenario fails, change the **smallest** navigation state transition that reproduces the failure; retain existing bounded request and diagnostics infrastructure. Prioritize a reproducible blocking bug over cosmetic AI changes. Avoid extra polling loops, invented floor coordinates, unverified models and unconditional resets of recovery attempts.
+
+## Source change — transient ComputeAsync exception
+
+Commit `2f54889` releases a still-owned recovery fallback when `ComputeAsync` raises an exception. It does **not** mark the destination as unreachable and it does not overwrite a newer station, district, hazard or ordinary target. The existing nine-second path-request throttle remains intact.
+
+Acceptance: force a transient path computation exception while a local recovery fallback is owned; verify that the fallback is released and normal destination selection resumes. Repeat with a newer target and verify it remains unchanged. This has **not** been validated in a live Roblox engine session.
+
+## Source change — pending path timeout
+
+Commit `d4a0ae4` releases an owned temporary fallback when a pending `ComputeAsync` exceeds the existing query timeout. It preserves a newer objective, invalidates the old async token and retains the existing retry throttle. This is source-reviewed but **not engine-tested**.
+
+Acceptance: force a pending route timeout while the bot holds its own position; verify it selects another normal objective. Repeat with a newly assigned station/hazard target and verify the target is preserved. Confirm that a late callback cannot change the target and that `GroundRoutesTimedOut` increments once.
+
+## Source change — pending route interrupted by danger
+
+Commit `a980752` cancels still-pending ground paths as soon as the authoritative arena reports an incompatible hazard, not only after the path is accepted. It clears the recovery hold only if that fallback still belongs to the pending request; late callbacks are rejected by the existing navigation token.
+
+Acceptance: while `ComputeAsync` is pending, activate each incompatible disaster and a warning part. Verify the bot drops the owned hold immediately, handles the danger normally, and a late path response cannot override the new target. Repeat with a newer cooperative objective to verify it is preserved. Engine validation remains outstanding.
+
+## Source change — rejected computed route without active NavMesh
+
+Commit `2ae62036b89c83841bf2535415c039306ad65a3d` handles a previously uncovered state: `ComputeAsync` resolves, `groundNavigationPending` becomes false, but subsequent geometry or start-position checks reject the route. Previously the physical-recovery fallback could remain selected indefinitely because there was neither an active route nor a pending query to time out.
+
+An ownership-checked `releaseOwnedFallback` now clears only the same request's temporary target, for: an engine exception, no usable path, oversized/invalid routes, unsupported floor, jump waypoints, excessive segment/total distance, and stale/missing start rig. A still-current cooperative or hazard decision must remain untouched. The genuine NoPath branch retains its original-goal cooldown and diagnostic increment; a geometry rejection does not count as NoPath.
+
+### Acceptance scenarios for this commit
+
+- **Unsupported real floor:** while `ComputeAsync` is running, remove the base collider beneath a returned waypoint; reject it, release the owned recovery hold, and never drive onto the absent floor.
+- **Stale origin:** move the bot more than nine studs before a path resolves; reject the obsolete path, then allow a new normal decision if the recovery fallback is still owned.
+- **Excessive route / jump waypoint:** reject invalid geometry and release the old fallback; never move to a fabricated coordinate.
+- **New objective wins:** assign a real cooperative station, survival escape or new roam target before route acceptance; verify the callback leaves that target unchanged.
+- **Valid route preserved:** for a genuine two-waypoint or longer grounded corridor, verify a physical route is accepted and completed normally.
+- **NoPath remains distinct:** only a real completed no-path response increments `GroundRoutesNoPath` and extends the original-goal quarantine.
+
+Source checks confirmed the guarded cleanup is reached on all six rejected-path exits. GitHub Actions returned zero workflow runs for this branch head when checked. Roblox engine behavior, Android FPS, and publication remain **unverified**.
