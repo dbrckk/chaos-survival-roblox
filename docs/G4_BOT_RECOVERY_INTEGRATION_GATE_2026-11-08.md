@@ -40,3 +40,9 @@ If a scenario fails, change the **smallest** navigation state transition that re
 Commit `2f54889` releases a still-owned recovery fallback when `ComputeAsync` raises an exception. It does **not** mark the destination as unreachable and it does not overwrite a newer station, district, hazard or ordinary target. The existing nine-second path-request throttle remains intact.
 
 Acceptance: force a transient path computation exception while a local recovery fallback is owned; verify that the fallback is released and normal destination selection resumes. Repeat with a newer target and verify it remains unchanged. This has **not** been validated in a live Roblox engine session.
+
+## Source change — pending path timeout
+
+Commit `d4a0ae4` releases an owned temporary fallback when a pending `ComputeAsync` exceeds the existing query timeout. It preserves a newer objective, invalidates the old async token and retains the existing retry throttle. This is source-reviewed but **not engine-tested**.
+
+Acceptance: force a pending route timeout while the bot holds its own position; verify it selects another normal objective. Repeat with a newly assigned station/hazard target and verify the target is preserved. Confirm that a late callback cannot change the target and that `GroundRoutesTimedOut` increments once.
