@@ -3894,6 +3894,27 @@ end
 -- An engine NavMesh path can become stale after a physical obstacle enters
 -- the next lane. Recheck ONLY the immediate segment every ~0.8s per bot.
 -- Never claim a sky deck, dynamic avatar or invisible bridge as base floor.
+-- Short-lived physics query for permanent-obstacle probes. A moving
+-- participant is never a static wall or the arena's floor: without this
+-- filter, a body in front can hide a real anchored barrier behind it.
+-- Only executed by bounded NavMesh corridor / ground preview checks.
+local function staticObstacleProbeParams(record)
+    local exclusions = {record.model}
+    if botsFolder then
+        exclusions[#exclusions + 1] = botsFolder
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            exclusions[#exclusions + 1] = player.Character
+        end
+    end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = exclusions
+    params.RespectCanCollide = true
+    return params
+end
+
 local function liveGroundRouteCorridorSafe(record, root, waypoint, base)
     if not root or not root.Parent or not base or not base.Parent
         or not base:IsA("BasePart")
@@ -3913,10 +3934,7 @@ local function liveGroundRouteCorridorSafe(record, root, waypoint, base)
     local travel = Vector3.new(waypoint.X - root.Position.X, 0,
         waypoint.Z - root.Position.Z)
     if travel.Magnitude > 14.5 then return false end
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {record.model}
-    params.RespectCanCollide = true
+    local params = staticObstacleProbeParams(record)
     -- A human or one of the other six moving R15 bots may stand exactly
     -- above the midpoint. Only the REAL floor counts as ground support:
     -- filtering the downward sample to the server base prevents those
@@ -4280,10 +4298,7 @@ local function anticipateGroundObstacle(
     ) then return nil end
     record.nextObstaclePreviewAt = now + 2.4
         + ((record.slot or 1) % 3) * 0.12
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {record.model}
-    params.RespectCanCollide = true
+    local params = staticObstacleProbeParams(record)
     local standing = workspace:Raycast(
         root.Position + Vector3.new(0, 0.5, 0),
         Vector3.new(0, -6.5, 0), params
