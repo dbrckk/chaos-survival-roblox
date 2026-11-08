@@ -1822,6 +1822,73 @@ local function disappearingPlatformEscape(record, root, now)
         -- This scans just the arena's authoritative Platforms folder
         -- during a confirmed warning, after the normal reaction delay.
         local platforms = part.Parent
+        -- Cache the live blast footprint once for this committed
+        -- collapse plan. The deck loop may consider multiple physical
+        -- neighbors; don't recompute radius/metadata for every one.
+        local impacts = {}
+        for _, warning in ipairs(warningParts()) do
+            if warning.Name == "MeteorWarning"
+                or warning.Name == "BombWarning" then
+                impacts[#impacts + 1] = {
+                    position = warning.Position,
+                    radius = math.max(5,
+                        AISurvivorRules.warningDetectionRadius(
+                            warning.Name,
+                            math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                            warning:GetAttribute("WarningEndSize")
+                        ) - 9),
+                }
+            end
+        end
+
+        -- Spread competing R15 survivors between physically connected
+        -- refuges only AFTER impact safety. Mobile characters are soft
+        -- occupancy hints, never grounds or forbidden destinations.
+        local crowd = {}
+        local function includePeer(position, weight)
+            if typeof(position) == "Vector3"
+                and math.abs(position.Y - root.Position.Y) < 7 then
+                crowd[#crowd + 1] = {position = position, weight = weight}
+            end
+        end
+        for _, other in ipairs(records) do
+            if other ~= record and other.inRound and other.alive
+                and other.model and other.model.Parent then
+                local otherHumanoid =
+                    other.model:FindFirstChildOfClass("Humanoid")
+                local otherRoot =
+                    other.model:FindFirstChild("HumanoidRootPart")
+                if otherHumanoid and otherHumanoid.Health > 0
+                    and otherRoot and otherRoot:IsA("BasePart") then
+                    includePeer(otherRoot.Position, 0.65)
+                    -- A teammate's brief retreat is a reservation,
+                    -- never a lasting blockade after its warning ends.
+                    if other.collapsePlanDeck
+                        and other.collapsePlanDeck.Parent
+                        and other.collapsePlanThreat
+                        and other.collapsePlanThreat.Parent
+                        and other.collapsePlanThreat:GetAttribute(
+                            "CollapsePhase") == "Warning"
+                        and (other.collapsePlanUntil or 0) > now then
+                        includePeer(other.collapsePlanTarget, 1.0)
+                    end
+                end
+            end
+        end
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player:GetAttribute("RoundParticipant") == true
+                and player:GetAttribute("RoundEliminated") ~= true then
+                local character = player.Character
+                local playerRoot = character
+                    and character:FindFirstChild("HumanoidRootPart")
+                local playerHumanoid = character
+                    and character:FindFirstChildOfClass("Humanoid")
+                if playerRoot and playerRoot:IsA("BasePart")
+                    and playerHumanoid and playerHumanoid.Health > 0 then
+                    includePeer(playerRoot.Position, 0.9)
+                end
+            end
+        end
         local closest, closestWaypoint = nil, nil
         local closestCost = math.huge
         local leastLandingImpacts = math.huge
@@ -1831,7 +1898,6 @@ local function disappearingPlatformEscape(record, root, now)
         -- Meteor/Bomb warning covers that landing or the walking lane.
         -- This is an event-cached read on an already-confirmed platform
         -- collapse, with no additional raycast or world scan.
-        local liveWarnings = warningParts()
         for _, deck in ipairs(platforms:GetChildren()) do
             if deck ~= part and deck:IsA("BasePart") then
                 local available = AISurvivorRules.platformAvailable(
@@ -1854,33 +1920,38 @@ local function disappearingPlatformEscape(record, root, now)
                     if flatDistance < 34 then
                         local landingImpacts = 0
                         local corridorImpacts = 0
-                        for _, warning in ipairs(liveWarnings) do
-                            if warning.Name == "MeteorWarning"
-                                or warning.Name == "BombWarning" then
-                                local radius = math.max(5,
-                                    AISurvivorRules.warningDetectionRadius(
-                                        warning.Name,
-                                        math.max(warning.Size.X,
-                                            warning.Size.Z) * 0.5,
-                                        warning:GetAttribute("WarningEndSize")
-                                    ) - 9)
-                                local offset = waypoint - warning.Position
-                                local horizontal = Vector3.new(
-                                    offset.X, 0, offset.Z).Magnitude
-                                if horizontal < radius + 3 then
-                                    landingImpacts += 1
-                                end
-                                if AISurvivorRules.newImpactIntersectsEscape(
-                                    root.Position, waypoint, warning.Name,
-                                    warning.Position,
-                                    math.max(warning.Size.X,
-                                        warning.Size.Z) * 0.5,
-                                    warning:GetAttribute("WarningEndSize")
-                                ) then
-                                    corridorImpacts += 1
-                                end
+                        for _, impact in ipairs(impacts) do
+                            local offset = waypoint - impact.position
+                            local horizontal = Vector3.new(
+                                offset.X, 0, offset.Z).Magnitude
+                            if horizontal < impact.radius + 3 then
+                                landingImpacts += 1
+                            end
+                            -- Identical 20-point threshold and footprint
+                            -- as newImpactIntersectsEscape, but calculated
+                            -- from the cached radius for each candidate.
+                            if AISurvivorRules.routeWarningPenalty(
+                                root.Position, waypoint,
+                                impact.position, impact.radius
+                            ) >= 20 then
+                                corridorImpacts += 1
                             end
                         end
+
+                        local crowdCost = 0
+                        for _, entry in ipairs(crowd) do
+                            local diff = waypoint - entry.position
+                            local separation = Vector3.new(
+                                diff.X, 0, diff.Z).Magnitude
+                            if separation < 10 then
+                                crowdCost += (10 - separation)
+                                    * entry.weight
+                            end
+                        end
+                        -- Never let a crowded but SAFE landing become
+                        -- worse than a less crowded impact footprint.
+                        local adjustedCost =
+                            flatDistance + math.min(12, crowdCost)
                         -- A supported landing OUTSIDE the impact outranks
                         -- any closer exposed one. For equally safe
                         -- landings avoid intersecting warning corridors;
@@ -1891,11 +1962,11 @@ local function disappearingPlatformEscape(record, root, now)
                             or (landingImpacts == leastLandingImpacts
                                 and (corridorImpacts < leastCorridorImpacts
                                     or (corridorImpacts == leastCorridorImpacts
-                                        and flatDistance < closestCost)))
+                                        and adjustedCost < closestCost)))
                         then
                             closest = deck
                             closestWaypoint = waypoint
-                            closestCost = flatDistance
+                            closestCost = adjustedCost
                             leastLandingImpacts = landingImpacts
                             leastCorridorImpacts = corridorImpacts
                         end
@@ -1904,6 +1975,11 @@ local function disappearingPlatformEscape(record, root, now)
             end
         end
         if closest then
+            record.collapsePlanThreat = part
+            record.collapsePlanDeck = closest
+            record.collapsePlanTarget = closestWaypoint
+            record.collapsePlanUntil = now + 0.42
+            record.collapsePlanWarningVersion = warningVersion
             record.collapseEscapeDeck = closest
             return closestWaypoint
         end
