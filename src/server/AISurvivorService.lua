@@ -2117,75 +2117,11 @@ local function disappearingPlatformEscape(record, root, now)
     local bestLandingImpacts, bestCorridorImpacts = math.huge, math.huge
     local bestSweepImpacts = math.huge
     local bestCost = math.huge
-    local nearestPartial, nearestPartialCost = nil, math.huge
-    local nearestPartialLanding = math.huge
-    local nearestPartialCorridor = math.huge
-    local nearestPartialSweep = math.huge
-    local nearestPartialSupport = nil
     for _, localExit in ipairs(exits) do
         local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
         local delta = exit - root.Position
         local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
         if flatDistance > 1 then
-            -- When a giant platform is impossible to clear before impact,
-            -- preserve physical progress toward its closest edge rather
-            -- than freezing in place or inventing a safe landing.
-            local partial = root.Position
-                + Vector3.new(delta.X, 0, delta.Z).Unit
-                    * math.min(12, flatDistance)
-            local partialLanding, partialCorridor = 0, 0
-            for _, impact in ipairs(impacts) do
-                local diff = partial - impact.position
-                if Vector3.new(diff.X, 0, diff.Z).Magnitude
-                    < impact.radius + 3 then
-                    partialLanding += 1
-                end
-                if AISurvivorRules.routeWarningPenalty(
-                    root.Position, partial,
-                    impact.position, impact.radius
-                ) >= 20 then
-                    partialCorridor += 1
-                end
-            end
-            local partialSweep = sweepExposures(partial)
-            local partialCost = flatDistance
-            local betterPartial = partialLanding < nearestPartialLanding
-            if partialLanding == nearestPartialLanding then
-                if partialCorridor < nearestPartialCorridor then
-                    betterPartial = true
-                elseif partialCorridor == nearestPartialCorridor then
-                    betterPartial = partialSweep < nearestPartialSweep
-                        or (partialSweep == nearestPartialSweep
-                            and partialCost < nearestPartialCost)
-                end
-            end
-            if betterPartial then
-                local partialHit = physicalFloor(partial, true)
-                -- A fallback may also end on a DIFFERENT supported deck.
-                -- Do not allow that endpoint alone to hide a gap in the
-                -- walking corridor. A point still on the same convex
-                -- doomed floor is safe until the warning expires.
-                local partialCorridorSupported = partialHit ~= nil
-                if partialCorridorSupported and partialHit.Instance ~= part then
-                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
-                        if not physicalFloor(
-                            root.Position:Lerp(partial, fraction), true
-                        ) then
-                            partialCorridorSupported = false
-                            break
-                        end
-                    end
-                end
-                if partialCorridorSupported then
-                    nearestPartial = partial
-                    nearestPartialSupport = partialHit.Instance
-                    nearestPartialLanding = partialLanding
-                    nearestPartialCorridor = partialCorridor
-                    nearestPartialSweep = partialSweep
-                    nearestPartialCost = partialCost
-                end
-            end
-
             local worldExitLocal = part.CFrame:PointToObjectSpace(exit)
             local outsideThreat = math.abs(worldExitLocal.X) > halfX + 1.4
                 or math.abs(worldExitLocal.Z) > halfZ + 1.4
@@ -2268,6 +2204,83 @@ local function disappearingPlatformEscape(record, root, now)
                 "BotCollapseSafeExitPlans")) or 0) + 1)
         return bestExit
     end
+    -- Only if ALL four complete physical exits have failed do we sample
+    -- a shorter approach toward the nearest verified platform edge.
+    -- Successful full evacuations avoid every optional partial-retreat
+    -- collision query; retain the exact same physical and hazard gates
+    -- for genuinely blocked layouts.
+    local nearestPartial, nearestPartialCost = nil, math.huge
+    local nearestPartialLanding = math.huge
+    local nearestPartialCorridor = math.huge
+    local nearestPartialSweep = math.huge
+    local nearestPartialSupport = nil
+    for _, localExit in ipairs(exits) do
+        local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
+        local delta = exit - root.Position
+        local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        if flatDistance > 1 then
+            -- When a giant platform is impossible to clear before impact,
+            -- preserve physical progress toward its closest edge rather
+            -- than freezing in place or inventing a safe landing.
+            local partial = root.Position
+                + Vector3.new(delta.X, 0, delta.Z).Unit
+                    * math.min(12, flatDistance)
+            local partialLanding, partialCorridor = 0, 0
+            for _, impact in ipairs(impacts) do
+                local diff = partial - impact.position
+                if Vector3.new(diff.X, 0, diff.Z).Magnitude
+                    < impact.radius + 3 then
+                    partialLanding += 1
+                end
+                if AISurvivorRules.routeWarningPenalty(
+                    root.Position, partial,
+                    impact.position, impact.radius
+                ) >= 20 then
+                    partialCorridor += 1
+                end
+            end
+            local partialSweep = sweepExposures(partial)
+            local partialCost = flatDistance
+            local betterPartial = partialLanding < nearestPartialLanding
+            if partialLanding == nearestPartialLanding then
+                if partialCorridor < nearestPartialCorridor then
+                    betterPartial = true
+                elseif partialCorridor == nearestPartialCorridor then
+                    betterPartial = partialSweep < nearestPartialSweep
+                        or (partialSweep == nearestPartialSweep
+                            and partialCost < nearestPartialCost)
+                end
+            end
+            if betterPartial then
+                local partialHit = physicalFloor(partial, true)
+                -- A fallback may also end on a DIFFERENT supported deck.
+                -- Do not allow that endpoint alone to hide a gap in the
+                -- walking corridor. A point still on the same convex
+                -- doomed floor is safe until the warning expires.
+                local partialCorridorSupported = partialHit ~= nil
+                if partialCorridorSupported and partialHit.Instance ~= part then
+                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
+                        if not physicalFloor(
+                            root.Position:Lerp(partial, fraction), true
+                        ) then
+                            partialCorridorSupported = false
+                            break
+                        end
+                    end
+                end
+                if partialCorridorSupported then
+                    nearestPartial = partial
+                    nearestPartialSupport = partialHit.Instance
+                    nearestPartialLanding = partialLanding
+                    nearestPartialCorridor = partialCorridor
+                    nearestPartialSweep = partialSweep
+                    nearestPartialCost = partialCost
+                end
+            end
+
+        end
+    end
+
     if nearestPartial then
         -- Partial progress is allowed only on real ground confirmed by
         -- the raycast. The target is still urgent and will be recomputed
