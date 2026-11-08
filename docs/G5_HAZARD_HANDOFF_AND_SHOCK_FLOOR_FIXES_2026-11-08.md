@@ -52,3 +52,38 @@ Build the exclusions from the authoritative `ctx.HazardContestants` (fallback `c
 ## Validation policy / deployment state
 
 Source-level structural checks were performed before creating this document. **Roblox Engine, cloud build/publisher and Android live runtime checks have not run for this branch.** The repository's `Build Validation` job is restricted to manually dispatched `main` release milestones. This PR remains open until owner gameplay validation. No Roblox public place is published by a GitHub code commit alone.
+
+## Continued fixes on PR #702 — Freeze stalls, collapse CPU and arena-wide pulse reach
+
+### 5. Freeze speed reduction must not be treated as a navigation stall
+
+`Freeze.lua` sets the server-owned Humanoid `ChaosFrozen=true` while enforcing `WalkSpeed=4` and disabling jumping for `FreezeSeconds` (by profile). The ordinary AI `recoverIfStuck` considered a 1.15-second interval with under 0.85 studs of progress toward its goal a genuine blocked path, regardless of the deliberately imposed Freeze state. That could quarantine a perfectly reachable destination or spend an expensive recovery calculation during the pulse.
+
+`recoverIfStuck` now skips the genuine-stall classification **only while the server Humanoid is actually `ChaosFrozen=true`**, resetting its observed walking position, current goal and elapsed-time baseline. After Freeze ends, the bot must spend the original 1.15s of active walking before a real blockage can trigger recovery again. It does not erase a real failure/quarantine history or alter the Freeze effects for players and bots.
+
+### 6. Full exits before partial fallback: collapse CPU optimization
+
+On a real, low-elevation `CollapsePhase="Warning"` platform, the emergency solver previously sampled partial edge approaches for all four headings **before** testing complete exits. Even when one or more complete physically supported refuge targets were found, the partial-fallback raycasts and warning/sweep scoring had already run and the results were discarded.
+
+The revised order first tests all four full exits (including their exact destination and three real corridor support contacts), ranks only real eligible destinations, **returns immediately upon choosing one**, and only then evaluates supported partial approaches if every full exit failed. The exact hazard hierarchy for partials, 0.32s commitment, and same verified collision samples are preserved. No new raycast call site, server physics cheat or world traversal was introduced. A measurable CPU/FPS improvement has **not** been established; it removes avoidable queries only on the common case with at least one valid full exit.
+
+### 7. Shock/Freeze awareness uses real arena coverage rather than a fixed 80-stud circle
+
+All five authored arenas currently have a 320 × 320-stud base. The server `HazardWarning.arenaCoverageDiameter` publishes the authoritative base diagonal (+6 studs) to the `WarningEndSize` of actual Freeze and JumpShock warnings; these disasters can affect participants far beyond 80 studs from the center. However `AISurvivorRules.warningDetectionRadius` had a fixed 80-stud result for both warning types, preventing perimeter bots from reacting.
+
+The pulse detection rule now computes `max(80, min(512, WarningEndSize/2 + 9))` when the server-provided diameter is finite and strictly positive. Invalid or absent diameter keeps the original **80 studs** for older warnings, preserving compatibility with existing engine specs that check this no-metadata behavior. Meteor/Bomb footprint calculations are unchanged. No increase in warning spawn rate, server damage range, character speed, or warning duration.
+
+### Additional acceptance matrix
+
+| Scenario | Expected |
+| --- | --- |
+| A physically unblocked bot moves at the server-imposed Freeze speed | No new `BotStallRecoveryCount`, failed-goal quarantine, or ComputeAsync triggered by the Freeze itself |
+| The same bot hits a genuine wall after thawing | Original 1.15-second walking evidence is still required, and a verified recovery proceeds |
+| One ground-platform collapse has at least one supported full exit | **No partial-fallback probes** are executed; full-exit selection is unchanged |
+| No complete escape from a very large or isolated warned platform | Supported partial options are considered and ranked by Meteor/Bomb landing exposure, corridor exposure, floor sweeps, then distance |
+| A JumpShock warning covers Classic's 320 × 320 floor | A bot near a map corner detects the server-provided full-coverage warning, with its original reaction window and real vertical jump check |
+| A pulse marker lacks valid `WarningEndSize` | Falls back to 80 studs rather than creating an unlimited detection radius |
+| Meteor/Bomb warnings coexist with an arena-wide pulse | Existing priority and actual final impact radii remain intact; no invented immunity |
+| Eight contestants on Android | Compare server bot decision-pass duration, source counters and actual FPS before claiming an optimization |
+
+The engine tests, Android behavior and runtime profiles are **not executed on this branch**. Do not claim the improved detection radius guarantees a successful dodge: bots still need a valid real jump in the authoritative timing window and can be distracted by more urgent hazards.
