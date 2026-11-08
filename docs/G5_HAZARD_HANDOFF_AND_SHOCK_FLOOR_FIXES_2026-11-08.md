@@ -87,3 +87,33 @@ The pulse detection rule now computes `max(80, min(512, WarningEndSize/2 + 9))` 
 | Eight contestants on Android | Compare server bot decision-pass duration, source counters and actual FPS before claiming an optimization |
 
 The engine tests, Android behavior and runtime profiles are **not executed on this branch**. Do not claim the improved detection radius guarantees a successful dodge: bots still need a valid real jump in the authoritative timing window and can be distracted by more urgent hazards.
+
+## Independent JumpShock body action during concurrent hazard escapes
+
+### Confirmed arbitration defect
+
+Previously `stepRecord` ran `disappearingPlatformEscape` **before** `immediateThreat`, only invoking the latter if the platform escape had no target. Separately, `immediateThreat` ranked Meteor/Bomb warnings above JumpShock and Freeze. Consequently, an NPC standing on a collapsing deck or continuously dodging overlapping impacts could **never reach the JumpShock jump branch**, even when it saw a live, arena-wide shock warning during the short authoritative jump window.
+
+### Focused correction
+
+- `reactToShockWarning(record, humanoid, root, now)` runs once per actual **in-round AI brain pass, ahead of every horizontal escape**, reading only the existing server event-cached `warningParts()` set. There is no new event connection, raycast, global Workspace search or pathfinding call.
+- For the actual `JumpShockWarning`, check the server's published final `WarningEndSize`, individual `ReactionSeconds` after **the bot's own first real sighting** (`shockWarningSeenAt`, a weak-key table) and `AISurvivorRules.shockJumpWindow` based on authoritative `WarningStartedAt` / `WarningDuration`. Only a nonseated, grounded, non-frozen Humanoid issues the normal `Jump` request.
+- Call the **existing** `consumeWarningJump` one-shot rule, so the same warning Instance cannot trigger repeated jump commands. Increment observational `BotShockJumpCommands` only when a server Jump command is actually issued. This does **not** count successful dodges or grant immunity.
+- `immediateThreat` skips JumpShock for **route focus**, not for awareness. This avoids throwing away a previously selected Meteor/Bomb escape direction because an independent shock ring became visible.
+- Freeze remains a **lower-priority optional personality jump**, processed only when the normal threat resolver selects Freeze. A cosmetic Freeze jump must not interrupt a higher-priority bomb, meteor or collapse retreat.
+- The weak first-sighting table and existing one-shot table reset on rig replacement and round transition, and are cleared when the bot returns to the lobby.
+
+### Concurrent-disaster engine acceptance matrix
+
+| Situation | Expected observable behavior |
+| --- | --- |
+| A bot is following a real Meteor/Bomb escape when JumpShock's late window starts | It can issue **one** ordinary grounded jump without clearing or replacing its impact escape waypoint |
+| A bot is evacuating a confirmed disappearing platform when JumpShock fires | The timed shock jump still receives a chance even though the collapse route owns horizontal movement |
+| A bot has never seen JumpShock before this AI pass | Existing individual reaction latency remains mandatory; no instantaneous superhuman dodge |
+| A bot is already airborne, seated or truly `ChaosFrozen` | No fake extra jump or bypass of the server's physical timing and clearance conditions |
+| A bot receives repeated AI ticks for the same shock warning | No repeated `BotShockJumpCommands` increment from that Instance |
+| Freeze overlaps an imminent Meteor/Bomb warning | The optional Freeze jump stays subordinate to the genuine impact escape |
+| An old JumpShock warning expires and a new Instance appears | Independent weak-key first-sighting latency and one-shot eligibility start afresh |
+| Eight participants, Double Chaos and shock waves on Android | Measure **actual** airborne clearance, server reward/damage decisions, escape targets, FPS/CPU and `BotShockJumpCommands` versus real successful dodges |
+
+The branch source has undergone targeted static invariant checks only. **No Roblox Engine execution, actual shock-dodge completion test, measured CPU/FPS or publication has been performed on this change.**
