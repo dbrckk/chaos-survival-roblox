@@ -836,6 +836,7 @@ local function createRig(record)
     record.escapeKnownWarnings = nil
     -- The rig is constructed before the file-local warning tracker.
     record.routeWarningVersion = -1
+    record.routeWarningTarget = nil
     record.lastObservedHealth = 100
     record.lastDamageSignalAt = -math.huge
 
@@ -954,6 +955,8 @@ local function sendToLobby(record)
     record.signalInterestUntil = 0
     record.model:SetAttribute("AISurvivorInRound", false)
     record.target = nil
+    record.routeWarningVersion = -1
+    record.routeWarningTarget = nil
     record.targetPart = nil
     record.targetIsPad = false
     record.targetIsSkyrail = false
@@ -1016,6 +1019,8 @@ local function sendToArena(record)
     record.model:SetAttribute("AISurvivorInRound", true)
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
+    record.routeWarningVersion = -1
+    record.routeWarningTarget = nil
     record.targetPart = nil
     record.targetIsPad = false
     record.targetIsSkyrail = false
@@ -5426,51 +5431,6 @@ local function stepRecord(record, now)
             record.nextThink = 0
         end
 
-        -- A freshly spawned server warning can cut across an ordinary
-        -- walking route while its bot is still OUTSIDE the warning circle.
-        -- The local impact dodge would not yet fire, so do not let the
-        -- existing rethink timer send the bot back into that future blast.
-        -- Check the event-owned warning cache only when its version changes,
-        -- not every physics frame, and never replace committed platform
-        -- crossings, real console holds, or an emergency escape.
-        if currentState.phase == "round"
-            and not urgentTarget
-            and record.routeWarningVersion ~= warningVersion then
-            record.routeWarningVersion = warningVersion
-            if record.target and not record.groundNavigation
-                and not record.groundNavigationPending
-                and not record.districtTraverse
-                and not record.signalInterestRoute
-                and not record.assistShield
-                and not record.assistRelay
-                and not record.spineControl
-                and not record.targetIsSkyrail
-                and not AISurvivorRules.committedWorldRoute(
-                    record.targetIsSkyrail, record.targetPart, false
-                ) then
-                for _, warning in ipairs(warningParts()) do
-                    if AISurvivorRules.newImpactIntersectsEscape(
-                        root.Position, record.target, warning.Name,
-                        warning.Position,
-                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
-                        warning:GetAttribute("WarningEndSize")
-                    ) then
-                        record.target = nil
-                        record.targetPart = nil
-                        record.targetIsPad = false
-                        record.lastMoveTarget = nil
-                        record.nextThink = 0
-                        record.idleUntil = 0
-                        record.turnPauseUntil = 0
-                        record.model:SetAttribute("BotHazardRouteInvalidations",
-                            (tonumber(record.model:GetAttribute(
-                                "BotHazardRouteInvalidations")) or 0) + 1)
-                        break
-                    end
-                end
-            end
-        end
-
         if currentState.phase == "round"
             and not urgentTarget
             -- A deliberate NavMesh fallback or live waypoint must not be
@@ -5611,6 +5571,58 @@ local function stepRecord(record, now)
             end
             record.target = target
             record.nextThink = now + hold * (traits.FollowThrough or 1)
+        end
+
+        -- Revalidate BOTH a new warning and a newly selected ordinary
+        -- movement goal. A warning first seen during a committed deck
+        -- crossing must not be marked as handled before normal roaming
+        -- resumes. Checking immediately after target selection also avoids
+        -- sending the bot toward an existing blast for one extra AI pass.
+        -- The event-owned warning cache is scanned only when the actual
+        -- eligible target changes or its warning version changes, not on
+        -- every physics frame or every brain pass.
+        if currentState.phase == "round"
+            and not urgentTarget
+            and record.target
+            and not record.groundNavigation
+            and not record.groundNavigationPending
+            and not record.districtTraverse
+            and not record.signalInterestRoute
+            and not record.assistShield
+            and not record.assistRelay
+            and not record.spineControl
+            and not record.targetIsSkyrail
+            and not AISurvivorRules.committedWorldRoute(
+                record.targetIsSkyrail, record.targetPart, false
+            )
+            and (record.routeWarningVersion ~= warningVersion
+                or record.routeWarningTarget ~= record.target) then
+            record.routeWarningVersion = warningVersion
+            record.routeWarningTarget = record.target
+            for _, warning in ipairs(warningParts()) do
+                if AISurvivorRules.newImpactIntersectsEscape(
+                    root.Position, record.target, warning.Name,
+                    warning.Position,
+                    math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                    warning:GetAttribute("WarningEndSize")
+                ) then
+                    record.target = nil
+                    record.routeWarningTarget = nil
+                    record.targetPart = nil
+                    record.targetIsPad = false
+                    record.lastMoveTarget = nil
+                    record.nextThink = 0
+                    record.idleUntil = 0
+                    record.turnPauseUntil = 0
+                    -- Stop the previous MoveTo rather than keep entering
+                    -- the warned lane while the next goal is selected.
+                    humanoid:Move(Vector3.zero)
+                    record.model:SetAttribute("BotHazardRouteInvalidations",
+                        (tonumber(record.model:GetAttribute(
+                            "BotHazardRouteInvalidations")) or 0) + 1)
+                    break
+                end
+            end
         end
 
         if record.target then
