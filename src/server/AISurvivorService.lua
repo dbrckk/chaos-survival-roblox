@@ -4893,6 +4893,18 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.lastProgressAt = now
         return false
     end
+    -- Freeze applies a server-owned movement penalty to BOTH players
+    -- and bots. A legitimate 4-stud/s slowdown (or a disabled jump)
+    -- cannot justify quarantining a perfectly valid destination as a
+    -- navigation obstruction. Reset the physical progress baseline
+    -- throughout the actual frozen state; require a fresh 1.15 seconds
+    -- of ordinary walking once the authoritative marker is restored.
+    if humanoid:GetAttribute("ChaosFrozen") == true then
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = goal
+        record.lastProgressAt = now
+        return false
+    end
     -- Deliberate pauses, grounded prompt-holds, airborne jumps and
     -- turn animations must NEVER be interpreted as failed navigation.
     local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
