@@ -813,6 +813,7 @@ local function createRig(record)
     record.proxy.Character = model
     record.alive = true
     record.target = nil
+    record.emergencyMoveActive = false
     record.targetPart = nil
     record.targetIsPad = false
     record.nextThink = 0
@@ -956,6 +957,7 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.emergencyMoveActive = false
     record.collapsePlanThreat = nil
     record.collapsePlanDeck = nil
     record.collapsePlanTarget = nil
@@ -1028,6 +1030,7 @@ local function sendToArena(record)
     end
 
     record.inRound = true
+    record.emergencyMoveActive = false
     record.model:SetAttribute("AISurvivorInRound", true)
     record.collapsePlanThreat = nil
     record.collapsePlanDeck = nil
@@ -1077,6 +1080,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
     record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotImpactReactionHandoffs", 0)
+    record.model:SetAttribute("BotEmergencyResumeCount", 0)
     record.model:SetAttribute("BotCollapseSafeExitPlans", 0)
     record.model:SetAttribute("BotCollapsePartialRetreats", 0)
     record.model:SetAttribute("BotCollapseBlockedPlans", 0)
@@ -1180,6 +1184,7 @@ local function newRecord(slot)
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
+        emergencyMoveActive = false,
         platformThreat = nil,
         platformThreatSeenAt = nil,
         collapsePlanThreat = nil,
@@ -5656,6 +5661,41 @@ local function stepRecord(record, now)
         urgentTarget = AISurvivorRules.collapseFallbackTarget(
             urgentTarget, record.collapseEscapeHolding, root.Position
         )
+    end
+
+    if urgentTarget then
+        -- Stuck detection measures NORMAL, intentional ground walking.
+        -- A deliberate emergency turn, jump or shelter hold is not a
+        -- failed attempt toward the older roaming destination.
+        record.emergencyMoveActive = true
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = nil
+        record.lastProgressAt = now
+    elseif record.emergencyMoveActive then
+        -- Once the authoritative danger is gone, do NOT keep following
+        -- yesterday's short dodge endpoint as an ordinary objective.
+        -- Drop its MoveTo/turn inertia and choose a fresh real target
+        -- this same brain pass; still preserve failure quarantines and
+        -- the accumulated genuine recovery-attempt history.
+        record.emergencyMoveActive = false
+        record.target = nil
+        record.targetPart = nil
+        record.targetIsPad = false
+        record.targetIsSkyrail = false
+        record.skyrailDirection = nil
+        record.lastMoveTarget = nil
+        record.moveDirection = Vector3.zero
+        record.nextThink = 0
+        record.idleUntil = 0
+        record.turnPauseUntil = 0
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = nil
+        record.lastProgressAt = now
+        if record.model then
+            record.model:SetAttribute("BotEmergencyResumeCount",
+                (tonumber(record.model:GetAttribute(
+                    "BotEmergencyResumeCount")) or 0) + 1)
+        end
     end
 
     if urgentTarget and (record.groundNavigation
