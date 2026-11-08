@@ -46,3 +46,9 @@ Acceptance: force a transient path computation exception while a local recovery 
 Commit `d4a0ae4` releases an owned temporary fallback when a pending `ComputeAsync` exceeds the existing query timeout. It preserves a newer objective, invalidates the old async token and retains the existing retry throttle. This is source-reviewed but **not engine-tested**.
 
 Acceptance: force a pending route timeout while the bot holds its own position; verify it selects another normal objective. Repeat with a newly assigned station/hazard target and verify the target is preserved. Confirm that a late callback cannot change the target and that `GroundRoutesTimedOut` increments once.
+
+## Source change — pending route interrupted by danger
+
+Commit `a980752` cancels still-pending ground paths as soon as the authoritative arena reports an incompatible hazard, not only after the path is accepted. It clears the recovery hold only if that fallback still belongs to the pending request; late callbacks are rejected by the existing navigation token.
+
+Acceptance: while `ComputeAsync` is pending, activate each incompatible disaster and a warning part. Verify the bot drops the owned hold immediately, handles the danger normally, and a late path response cannot override the new target. Repeat with a newer cooperative objective to verify it is preserved. Engine validation remains outstanding.
