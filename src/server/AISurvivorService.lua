@@ -4757,10 +4757,11 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
         ) then return false end
 
     record.nextGapProbeAt = now + 0.20
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {record.model}
-    params.RespectCanCollide = true
+    -- The takeoff, gap and landing probes require REAL static deck
+    -- support. Nearby R15 players/NPCs are moving collision bodies, not
+    -- a floor. Reuse the same filter as the emergency collapse probes
+    -- so standing spectators cannot hide a valid landing or gap.
+    local params = emergencyFloorProbeParams(record)
     local forward = travel.Unit
     local function floorAt(distance, allowThreatenedOrigin)
         local result = workspace:Raycast(
