@@ -77,13 +77,23 @@ function D.applyShock(ctx, subject, horizontalForce)
         return false
     end
 
-    -- Raycast below the current character to verify meaningful clearance.
-    -- Only world collision can supply a ground reference; ignore the
-    -- character itself. If no ground is found, do not grant a free dodge.
+    -- A shock dodge is earned by real clearance over a solid floor.
+    -- Other contestants' collidable R15 bodies must NOT masquerade as
+    -- that floor and deny a legitimate airborne dodge. The existing
+    -- server round context owns the human and bot-proxy roster; avoid
+    -- scanning Workspace or trusting client-provided participants.
+    local exclusions = {subject.Character}
+    for _, contestant in ipairs(ctx.HazardContestants
+        or ctx.Contestants or {}) do
+        local character = contestant.Character
+        if character and character ~= subject.Character then
+            exclusions[#exclusions + 1] = character
+        end
+    end
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
     rayParams.RespectCanCollide = true
-    rayParams.FilterDescendantsInstances = {subject.Character}
+    rayParams.FilterDescendantsInstances = exclusions
     -- A high jump on Towers/Orbital may be over fourteen studs above its
     -- landing deck; missing that deck must not cancel an earned dodge.
     local ground = workspace:Raycast(
