@@ -834,6 +834,7 @@ local function createRig(record)
     record.collapsePlanTarget = nil
     record.collapsePlanUntil = 0
     record.collapsePlanWarningVersion = -1
+    record.collapsePlanSweepExposures = 0
     record.escapeWarning = nil
     record.escapeTarget = nil
     record.escapeUntil = 0
@@ -960,6 +961,7 @@ local function sendToLobby(record)
     record.collapsePlanTarget = nil
     record.collapsePlanUntil = 0
     record.collapsePlanWarningVersion = -1
+    record.collapsePlanSweepExposures = 0
     record.districtTraverse = nil
     record.signalInterestRoute = nil
     record.signalInterestUntil = 0
@@ -1032,6 +1034,7 @@ local function sendToArena(record)
     record.collapsePlanTarget = nil
     record.collapsePlanUntil = 0
     record.collapsePlanWarningVersion = -1
+    record.collapsePlanSweepExposures = 0
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.routeWarningVersion = -1
@@ -1184,6 +1187,7 @@ local function newRecord(slot)
         collapsePlanTarget = nil,
         collapsePlanUntil = 0,
         collapsePlanWarningVersion = -1,
+        collapsePlanSweepExposures = 0,
         idleUntil = 0,
         lastProgressPosition = nil,
         lastProgressAt = 0,
@@ -1787,6 +1791,22 @@ local function disappearingPlatformEscape(record, root, now)
         )
     end
 
+    -- A real concurrent grid/cargo sweep can make an otherwise safe
+    -- collapse route lethal. Read only authoritative active bands and
+    -- apply their existing segment-intersection physics (including height).
+    local liveSweeps = activeFloorSweepBands()
+    local function sweepExposures(target)
+        local exposed = 0
+        for _, band in ipairs(liveSweeps) do
+            if AISurvivorRules.floorSweepRoutePenalty(
+                root.Position, target, band.CFrame, band.Size
+            ) > 0 then
+                exposed += 1
+            end
+        end
+        return exposed
+    end
+
     -- A recent physically verified retreat is a real movement commitment,
     -- not a new random choice every ~0.18s. A newly spawned/expired impact
     -- invalidates it immediately via the warning event version; the
@@ -1796,6 +1816,10 @@ local function disappearingPlatformEscape(record, root, now)
         and typeof(record.collapsePlanTarget) == "Vector3"
         and now < (record.collapsePlanUntil or 0)
         and record.collapsePlanWarningVersion == warningVersion
+        -- A newly activated floor sweep isn't a Meteor/Bomb marker, so
+        -- the warning version alone cannot validate the cached path.
+        and sweepExposures(record.collapsePlanTarget)
+            <= (record.collapsePlanSweepExposures or 0)
         and previousDeck and previousDeck.Parent
         and (previousDeck:IsA("Terrain")
             or (previousDeck:IsA("BasePart")
@@ -1902,6 +1926,7 @@ local function disappearingPlatformEscape(record, root, now)
         local closestCost = math.huge
         local leastLandingImpacts = math.huge
         local leastCorridorImpacts = math.huge
+        local leastSweepImpacts = math.huge
         -- An elevated collapsing platform can be adjacent to multiple
         -- physical refuges. The nearest one must NOT win when a live
         -- Meteor/Bomb warning covers that landing or the walking lane.
@@ -1961,23 +1986,30 @@ local function disappearingPlatformEscape(record, root, now)
                         -- worse than a less crowded impact footprint.
                         local adjustedCost =
                             flatDistance + math.min(12, crowdCost)
+                        local sweepImpacts = sweepExposures(waypoint)
                         -- A supported landing OUTSIDE the impact outranks
                         -- any closer exposed one. For equally safe
                         -- landings avoid intersecting warning corridors;
                         -- only then prefer the nearest walkable deck.
                         -- If none is fully clear, still pick the least
                         -- exposed physical option instead of freezing.
-                        if landingImpacts < leastLandingImpacts
-                            or (landingImpacts == leastLandingImpacts
-                                and (corridorImpacts < leastCorridorImpacts
-                                    or (corridorImpacts == leastCorridorImpacts
-                                        and adjustedCost < closestCost)))
-                        then
+                        local better = landingImpacts < leastLandingImpacts
+                        if landingImpacts == leastLandingImpacts then
+                            if corridorImpacts < leastCorridorImpacts then
+                                better = true
+                            elseif corridorImpacts == leastCorridorImpacts then
+                                better = sweepImpacts < leastSweepImpacts
+                                    or (sweepImpacts == leastSweepImpacts
+                                        and adjustedCost < closestCost)
+                            end
+                        end
+                        if better then
                             closest = deck
                             closestWaypoint = waypoint
                             closestCost = adjustedCost
                             leastLandingImpacts = landingImpacts
                             leastCorridorImpacts = corridorImpacts
+                            leastSweepImpacts = sweepImpacts
                         end
                     end
                 end
@@ -1987,6 +2019,7 @@ local function disappearingPlatformEscape(record, root, now)
             record.collapsePlanThreat = part
             record.collapsePlanDeck = closest
             record.collapsePlanTarget = closestWaypoint
+            record.collapsePlanSweepExposures = leastSweepImpacts
             record.collapsePlanUntil = now + 0.42
             record.collapsePlanWarningVersion = warningVersion
             record.collapseEscapeDeck = closest
@@ -2049,6 +2082,7 @@ local function disappearingPlatformEscape(record, root, now)
 
     local bestExit, bestSupport = nil, nil
     local bestLandingImpacts, bestCorridorImpacts = math.huge, math.huge
+    local bestSweepImpacts = math.huge
     local bestCost = math.huge
     local nearestPartial, nearestPartialCost = nil, math.huge
     local nearestPartialSupport = nil
@@ -2063,7 +2097,8 @@ local function disappearingPlatformEscape(record, root, now)
             local partial = root.Position
                 + Vector3.new(delta.X, 0, delta.Z).Unit
                     * math.min(12, flatDistance)
-            local partialCost = flatDistance
+            local partialCost =
+                flatDistance + 8 * sweepExposures(partial)
             if partialCost < nearestPartialCost then
                 local partialHit = physicalFloor(partial, true)
                 -- A fallback may also end on a DIFFERENT supported deck.
@@ -2115,14 +2150,22 @@ local function disappearingPlatformEscape(record, root, now)
                         end
                         local cost = flatDistance
                             + math.min(10, crowdCost)
-                        if landingImpacts < bestLandingImpacts
-                            or (landingImpacts == bestLandingImpacts
-                                and (corridorImpacts < bestCorridorImpacts
-                                    or (corridorImpacts == bestCorridorImpacts
-                                        and cost < bestCost))) then
+                        local sweepImpacts = sweepExposures(exit)
+                        local better = landingImpacts < bestLandingImpacts
+                        if landingImpacts == bestLandingImpacts then
+                            if corridorImpacts < bestCorridorImpacts then
+                                better = true
+                            elseif corridorImpacts == bestCorridorImpacts then
+                                better = sweepImpacts < bestSweepImpacts
+                                    or (sweepImpacts == bestSweepImpacts
+                                        and cost < bestCost)
+                            end
+                        end
+                        if better then
                             bestExit, bestSupport = exit, landing.Instance
                             bestLandingImpacts = landingImpacts
                             bestCorridorImpacts = corridorImpacts
+                            bestSweepImpacts = sweepImpacts
                             bestCost = cost
                         end
                     end
@@ -2135,6 +2178,7 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanThreat = part
         record.collapsePlanDeck = bestSupport
         record.collapsePlanTarget = bestExit
+        record.collapsePlanSweepExposures = bestSweepImpacts
         record.collapsePlanUntil = now + 0.42
         record.collapsePlanWarningVersion = warningVersion
         record.model:SetAttribute("BotCollapseSafeExitPlans",
@@ -2149,6 +2193,7 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanThreat = part
         record.collapsePlanDeck = nearestPartialSupport
         record.collapsePlanTarget = nearestPartial
+        record.collapsePlanSweepExposures = sweepExposures(nearestPartial)
         record.collapsePlanUntil = now + 0.32
         record.collapsePlanWarningVersion = warningVersion
         record.model:SetAttribute("BotCollapsePartialRetreats",
