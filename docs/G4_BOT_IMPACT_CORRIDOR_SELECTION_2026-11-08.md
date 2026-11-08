@@ -77,3 +77,23 @@ Commit `fd6170f7fa4821144dd15ae94f95b7434c8faa50` closes a bypass of the normal-
 | Eight participants including NPCs during multiple simultaneous warnings | Observe real server mission claims, route cancellation counter, and Android FPS; no extra raycasts expected from source |
 
 Source-level review: all `scoreCandidate` call sites are now compatible with the three return values, and the shared helper is declared before its consumers. Runtime proof still requires the exact-SHA Roblox engine suites and Android observation.
+
+## Source correction — final social target after crowd separation
+
+Commit `5378ebff924f0a87189f2d3ad8695449ad98b52f` fixes one additional override after the prior safety checks: `socialArenaTarget` validates the proposed target, but `chooseArenaTarget` applies another `separateTarget` and possible upper-deck clamp *before returning the actual waypoint*. That last displacement could put an otherwise safe social move back inside a current impact corridor.
+
+- The final crowd-separated and platform-clamped social waypoint is now checked with the shared cached-warning corridor guard before committing `targetPart` or returning the social goal.
+- An unsafe optional social approach falls through into ordinary arena choice, rather than retaining a stale social platform target.
+- Ordinary event-version revalidation now also calls the same shared guard. There is only one authoritative Meteor/Bomb intersection rule.
+- No new raycasts, frame polling, teleporting, or changes to committed sky-platform traversal.
+
+### Final social waypoint acceptance
+
+| Scenario | Expected |
+| --- | --- |
+| An initially safe social goal is shifted into a Meteor/Bomb ring by nearby bot separation | Decline social follow before committing a goal or platform; choose other normal opportunities |
+| Separation stays outside all current impact areas | Social follow is allowed, with existing personality behavior |
+| Elevated social route is clamped onto the actual physical deck | Verify the **clamped waypoint**, not only its earlier approximate location |
+| No current Meteor/Bomb warning | Normal social interactions remain available without extra physics queries |
+
+Verification so far: uniquely matched source edits and six explicit structural invariants passed. Full Roblox Studio/Cloud and Android runtime validation remains outstanding.
