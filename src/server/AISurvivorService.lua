@@ -1057,6 +1057,7 @@ local function sendToArena(record)
     record.model:SetAttribute("BotStallRecoveryCount", 0)
     record.model:SetAttribute("BotRecoveryRouteFound", nil)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
+    record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotLiveRouteInvalidationCount", 0)
     record.moveDirection = Vector3.zero
     record.lastMoveTarget = nil
@@ -4665,9 +4666,81 @@ local function moveHumanLike(record, humanoid, root, target, now, urgent, arenaB
         horizontal.Magnitude < 10 and target.Y or root.Position.Y,
         destination.Z
     )
-    humanoid:MoveTo(
-        arenaBounded == false and destination or clampToArena(destination)
-    )
+    destination = arenaBounded == false and destination
+        or clampToArena(destination)
+
+    -- The chosen goal may be safe while humanlike turn inertia or a
+    -- temporary crowd-avoidance strafe sends the ACTUAL MoveTo segment
+    -- through a Meteor/Bomb warning. Verify the commanded short segment,
+    -- not only the previously ranked goal. This only runs for ordinary
+    -- roaming while server-owned warnings are present; real sky routes,
+    -- cooperative holds, pad crossings and emergency dodges remain intact.
+    if not direct and arenaBounded ~= false
+        and currentState.phase == "round" and record.inRound
+        and not record.targetIsPad and record.targetPart == nil
+        and not record.signalInterestRoute then
+        local warnings = warningParts() -- event-cached; no Workspace scan
+        if #warnings > 0 then
+            local function crossesLiveImpact(point)
+                for _, warning in ipairs(warnings) do
+                    if AISurvivorRules.newImpactIntersectsEscape(
+                        root.Position, point, warning.Name,
+                        warning.Position,
+                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                        warning:GetAttribute("WarningEndSize")
+                    ) then
+                        return true
+                    end
+                end
+                return false
+            end
+            if crossesLiveImpact(target) or crossesLiveImpact(destination) then
+                -- A safe original goal can still be reached directly if
+                -- only the ornamental steering offset was hazardous.
+                local original = record.target
+                local safeOriginal = typeof(original) == "Vector3"
+                    and not crossesLiveImpact(original)
+                local towards = safeOriginal and Vector3.new(
+                    original.X - root.Position.X, 0,
+                    original.Z - root.Position.Z) or Vector3.zero
+                local straight = nil
+                if towards.Magnitude > 0.05 then
+                    local directStep = root.Position
+                        + towards.Unit * math.min(towards.Magnitude, 10)
+                    directStep = Vector3.new(
+                        directStep.X,
+                        towards.Magnitude < 10 and original.Y
+                            or root.Position.Y,
+                        directStep.Z
+                    )
+                    straight = clampToArena(directStep)
+                end
+                if straight and not crossesLiveImpact(straight) then
+                    destination = straight
+                    record.moveDirection = towards.Unit
+                    record.model:SetAttribute("BotHazardSteeringCorrections",
+                        (tonumber(record.model:GetAttribute(
+                            "BotHazardSteeringCorrections")) or 0) + 1)
+                else
+                    -- No verified ordinary segment: never push the bot
+                    -- into the impact merely to preserve natural inertia.
+                    -- The next brain pass may choose another real goal.
+                    record.target = nil
+                    record.routeWarningTarget = nil
+                    record.lastMoveTarget = nil
+                    record.nextThink = 0
+                    record.turnPauseUntil = 0
+                    record.moveDirection = Vector3.zero
+                    humanoid:Move(Vector3.zero)
+                    record.model:SetAttribute("BotHazardRouteInvalidations",
+                        (tonumber(record.model:GetAttribute(
+                            "BotHazardRouteInvalidations")) or 0) + 1)
+                    return
+                end
+            end
+        end
+    end
+    humanoid:MoveTo(destination)
 end
 
 local function maybeSocialGesture(record, humanoid, root, now)
