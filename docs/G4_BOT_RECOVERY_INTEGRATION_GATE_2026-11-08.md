@@ -52,3 +52,20 @@ Acceptance: force a pending route timeout while the bot holds its own position; 
 Commit `a980752` cancels still-pending ground paths as soon as the authoritative arena reports an incompatible hazard, not only after the path is accepted. It clears the recovery hold only if that fallback still belongs to the pending request; late callbacks are rejected by the existing navigation token.
 
 Acceptance: while `ComputeAsync` is pending, activate each incompatible disaster and a warning part. Verify the bot drops the owned hold immediately, handles the danger normally, and a late path response cannot override the new target. Repeat with a newer cooperative objective to verify it is preserved. Engine validation remains outstanding.
+
+## Source change — rejected computed route without active NavMesh
+
+Commit `2ae62036b89c83841bf2535415c039306ad65a3d` handles a previously uncovered state: `ComputeAsync` resolves, `groundNavigationPending` becomes false, but subsequent geometry or start-position checks reject the route. Previously the physical-recovery fallback could remain selected indefinitely because there was neither an active route nor a pending query to time out.
+
+An ownership-checked `releaseOwnedFallback` now clears only the same request's temporary target, for: an engine exception, no usable path, oversized/invalid routes, unsupported floor, jump waypoints, excessive segment/total distance, and stale/missing start rig. A still-current cooperative or hazard decision must remain untouched. The genuine NoPath branch retains its original-goal cooldown and diagnostic increment; a geometry rejection does not count as NoPath.
+
+### Acceptance scenarios for this commit
+
+- **Unsupported real floor:** while `ComputeAsync` is running, remove the base collider beneath a returned waypoint; reject it, release the owned recovery hold, and never drive onto the absent floor.
+- **Stale origin:** move the bot more than nine studs before a path resolves; reject the obsolete path, then allow a new normal decision if the recovery fallback is still owned.
+- **Excessive route / jump waypoint:** reject invalid geometry and release the old fallback; never move to a fabricated coordinate.
+- **New objective wins:** assign a real cooperative station, survival escape or new roam target before route acceptance; verify the callback leaves that target unchanged.
+- **Valid route preserved:** for a genuine two-waypoint or longer grounded corridor, verify a physical route is accepted and completed normally.
+- **NoPath remains distinct:** only a real completed no-path response increments `GroundRoutesNoPath` and extends the original-goal quarantine.
+
+Source checks confirmed the guarded cleanup is reached on all six rejected-path exits. GitHub Actions returned zero workflow runs for this branch head when checked. Roblox engine behavior, Android FPS, and publication remain **unverified**.
