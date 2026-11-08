@@ -4609,7 +4609,18 @@ local function maybeRoundGesture(record, humanoid, root, now)
         or record.districtTraverse or record.signalInterestRoute
         or record.assistRelay or record.assistShield
         or record.spineControl or record.targetIsSkyrail
-        or record.targetIsPad then
+        or record.targetIsPad
+        -- An actual obstacle-recovery detour is a committed physical
+        -- action, not free time for a greeting or a show-off jump.
+        or (record.recoveryWaypoint
+            and record.target == record.recoveryWaypoint
+            and now < (record.recoveryCommitUntil or 0))
+        -- Even if no impact currently intersects this bot, warning
+        -- markers can appear during its next short social pause. A
+        -- disaster warning takes priority over optional social flair.
+        or #warningParts() > 0
+        or humanoid.FloorMaterial == Enum.Material.Air
+        or humanoid.SeatPart ~= nil then
         record.nextRoundGestureAt = now + 2
         return false
     end
