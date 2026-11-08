@@ -829,6 +829,11 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.collapsePlanThreat = nil
+    record.collapsePlanDeck = nil
+    record.collapsePlanTarget = nil
+    record.collapsePlanUntil = 0
+    record.collapsePlanWarningVersion = -1
     record.escapeWarning = nil
     record.escapeTarget = nil
     record.escapeUntil = 0
@@ -950,6 +955,11 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.collapsePlanThreat = nil
+    record.collapsePlanDeck = nil
+    record.collapsePlanTarget = nil
+    record.collapsePlanUntil = 0
+    record.collapsePlanWarningVersion = -1
     record.districtTraverse = nil
     record.signalInterestRoute = nil
     record.signalInterestUntil = 0
@@ -1017,6 +1027,11 @@ local function sendToArena(record)
 
     record.inRound = true
     record.model:SetAttribute("AISurvivorInRound", true)
+    record.collapsePlanThreat = nil
+    record.collapsePlanDeck = nil
+    record.collapsePlanTarget = nil
+    record.collapsePlanUntil = 0
+    record.collapsePlanWarningVersion = -1
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.routeWarningVersion = -1
@@ -1161,6 +1176,11 @@ local function newRecord(slot)
         threatSeenAt = nil,
         platformThreat = nil,
         platformThreatSeenAt = nil,
+        collapsePlanThreat = nil,
+        collapsePlanDeck = nil,
+        collapsePlanTarget = nil,
+        collapsePlanUntil = 0,
+        collapsePlanWarningVersion = -1,
         idleUntil = 0,
         lastProgressPosition = nil,
         lastProgressAt = 0,
@@ -1731,12 +1751,20 @@ local function disappearingPlatformEscape(record, root, now)
     if not isWarning then
         record.platformThreat = nil
         record.platformThreatSeenAt = nil
+        record.collapsePlanThreat = nil
+        record.collapsePlanDeck = nil
+        record.collapsePlanTarget = nil
+        record.collapsePlanUntil = 0
         return nil
     end
 
     if record.platformThreat ~= part then
         record.platformThreat = part
         record.platformThreatSeenAt = now
+        record.collapsePlanThreat = nil
+        record.collapsePlanDeck = nil
+        record.collapsePlanTarget = nil
+        record.collapsePlanUntil = 0
     end
 
     if not AISurvivorRules.reactionReady(
@@ -1754,6 +1782,34 @@ local function disappearingPlatformEscape(record, root, now)
         return AISurvivorRules.skybridgeEscapeTarget(
             root.Position, part.CFrame, part.Size, root.AssemblyLinearVelocity
         )
+    end
+
+    -- A recent physically verified retreat is a real movement commitment,
+    -- not a new random choice every ~0.18s. A newly spawned/expired impact
+    -- invalidates it immediately via the warning event version; the
+    -- supporting platform must also remain solid and available.
+    local previousDeck = record.collapsePlanDeck
+    if record.collapsePlanThreat == part
+        and typeof(record.collapsePlanTarget) == "Vector3"
+        and now < (record.collapsePlanUntil or 0)
+        and record.collapsePlanWarningVersion == warningVersion
+        and previousDeck and previousDeck.Parent
+        and AISurvivorRules.platformAvailable(
+            previousDeck.CanCollide, previousDeck.Transparency,
+            previousDeck:GetAttribute("CollapsePhase"),
+            previousDeck:GetAttribute("BridgeShutterPhase")
+        ) then
+        local basePart = arenaBase()
+        local elevated = basePart and root.Position.Y >
+            basePart.Position.Y + basePart.Size.Y * 0.5 + 8
+        if not elevated or (previousDeck.Parent == part.Parent
+            and AISurvivorRules.safeCollapseNeighbor(
+                part.CFrame, part.Size,
+                previousDeck.CFrame, previousDeck.Size, true
+            )) then
+            record.collapseEscapeDeck = elevated and previousDeck or nil
+            return record.collapsePlanTarget
+        end
     end
 
     local base = arenaBase()
