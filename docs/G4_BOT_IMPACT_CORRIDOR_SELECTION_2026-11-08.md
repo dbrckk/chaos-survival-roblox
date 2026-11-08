@@ -53,3 +53,27 @@ This guard only applies during actual rounds and to ordinary ground roaming, not
 | Eight mobile participants during overlapping impacts | Compare per-bot correction/invalidation counters, real collision movement and frame-time against the prior baseline |
 
 Validation status: inspected source and nine targeted structural checks passed after write. **Not Roblox engine-tested, not merged, not published.**
+
+## Source correction — optional social and live signal objectives
+
+Commit `fd6170f7fa4821144dd15ae94f95b7434c8faa50` closes a bypass of the normal-roaming impact guard. A social-follow goal could win on personality score even when its corridor intersected a live Meteor/Bomb. A signal-run goal had the same weighted-score issue; once its mission flag was set, the normal-ground guard intentionally excluded that route, leaving a subsequent warning unhandled until a local urgent dodge.
+
+- All three impact consumers (ordinary movement, optional social selection, signal missions) now use the same cached warning corridor rule, via `impactCorridorIntersects`.
+- Optional social and signal intent is refused on **any** landing or corridor exposure, independent of personality scoring. This does not interrupt mandatory urgent evasions.
+- A signal approach is checked **after** target crowd separation, since the adjustment can move an otherwise safe approach into the danger zone.
+- An already active signal is released if a live warning cuts its current path. The existing route-availability and cooldown mechanism handles cancellation; no phantom movement or auto-claim.
+- The project permits at most one AI signal pursuer at a time. The added check uses the existing server warning cache without any additional raycasts, Workspace traversal, timers or pathfinding.
+
+### Additional engine acceptance scenarios
+
+| Situation | Expected |
+| --- | --- |
+| Social target beyond an impact warning, safe landing but crossed corridor | Bot declines social follow and chooses a normal safe goal |
+| Social follow under no impact warning | Personality-driven interaction remains available |
+| Newly activated signal with a high weighted score but intersecting Meteor/Bomb corridor | Bot declines the signal mission before claiming it |
+| Safe raw signal foundation but unsafe post-separation approach | Bot releases the signal intent rather than issuing its first risky MoveTo |
+| Active signal mission intersected by a new live warning | Bot releases mission target and returns to ordinary safe planning, without staying committed until expiration |
+| Signal mission during unrelated distant warning | Existing timed pursuit remains unaffected |
+| Eight participants including NPCs during multiple simultaneous warnings | Observe real server mission claims, route cancellation counter, and Android FPS; no extra raycasts expected from source |
+
+Source-level review: all `scoreCandidate` call sites are now compatible with the three return values, and the shared helper is declared before its consumers. Runtime proof still requires the exact-SHA Roblox engine suites and Android observation.
