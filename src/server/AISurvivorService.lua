@@ -1424,7 +1424,7 @@ end
 -- random tangent. This matters at arena edges, on narrow platforms, and
 -- when two growing meteor/bomb warnings overlap. Bounded to six headings,
 -- two ground probes per heading, and one re-plan about every half-second.
-local function saferThreatEscape(record, root, predictedPosition, warning)
+local function saferThreatEscape(record, root, predictedPosition, warning, now)
     local away = predictedPosition - warning.Position
     away = Vector3.new(away.X, 0, away.Z)
     if away.Magnitude < 0.2 then
@@ -1530,7 +1530,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                 addContender(otherRoot.Position, 7, 0.7)
                 -- Another bot's emergency decision is a short-lived
                 -- reservation, not an obstacle that stays forever.
-                if (other.escapeUntil or 0) > os.clock()
+                if (other.escapeUntil or 0) > now
                     and other.escapeWarning
                     and other.escapeWarning.Parent
                     and typeof(other.escapeTarget) == "Vector3" then
@@ -2132,7 +2132,8 @@ local function immediateThreat(record, root, now)
     end
 
     record.escapeWarning = nearest
-    record.escapeTarget = saferThreatEscape(record, root, predictedPosition, nearest)
+    record.escapeTarget = saferThreatEscape(
+        record, root, predictedPosition, nearest, now)
     record.escapeUntil = now + 0.54
     record.escapeWarningVersion = warningVersion
     -- Remember only impact warnings included in this plan, with weak keys.
