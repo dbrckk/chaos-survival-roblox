@@ -1424,7 +1424,7 @@ end
 -- random tangent. This matters at arena edges, on narrow platforms, and
 -- when two growing meteor/bomb warnings overlap. Bounded to six headings,
 -- two ground probes per heading, and one re-plan about every half-second.
-local function saferThreatEscape(record, root, predictedPosition, warning)
+local function saferThreatEscape(record, root, predictedPosition, warning, now)
     local away = predictedPosition - warning.Position
     away = Vector3.new(away.X, 0, away.Z)
     if away.Magnitude < 0.2 then
@@ -1498,9 +1498,66 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
     end
 
     local length = 17 + (1 - record.profile.Risk) * 7
+
+    -- Sample the actual participants ONCE per real emergency route plan.
+    -- Current peers and their still-committed escape landings compete for
+    -- a finite physical refuge; a shared waypoint can jam several R15
+    -- rigs even when every individual landing is otherwise safe.
+    -- Mobile actors influence scoring only; they never become ground.
+    local contenders = {}
+    local function addContender(position, radius, weight)
+        if typeof(position) ~= "Vector3"
+            or math.abs(position.Y - root.Position.Y) > 6 then
+            return
+        end
+        local delta = position - root.Position
+        local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        if flatDistance <= length + radius + 10 then
+            contenders[#contenders + 1] = {
+                position = position, radius = radius, weight = weight,
+            }
+        end
+    end
+    for _, other in ipairs(records) do
+        if other ~= record and other.inRound and other.alive
+            and other.model and other.model.Parent then
+            local otherHumanoid =
+                other.model:FindFirstChildOfClass("Humanoid")
+            local otherRoot =
+                other.model:FindFirstChild("HumanoidRootPart")
+            if otherHumanoid and otherHumanoid.Health > 0
+                and otherRoot and otherRoot:IsA("BasePart") then
+                addContender(otherRoot.Position, 7, 0.7)
+                -- Another bot's emergency decision is a short-lived
+                -- reservation, not an obstacle that stays forever.
+                if (other.escapeUntil or 0) > now
+                    and other.escapeWarning
+                    and other.escapeWarning.Parent
+                    and typeof(other.escapeTarget) == "Vector3" then
+                    addContender(other.escapeTarget, 11, 1.1)
+                end
+            end
+        end
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true then
+            local character = player.Character
+            local humanRoot = character
+                and character:FindFirstChild("HumanoidRootPart")
+            local human = character
+                and character:FindFirstChildOfClass("Humanoid")
+            if humanRoot and humanRoot:IsA("BasePart")
+                and human and human.Health > 0 then
+                addContender(humanRoot.Position, 8, 1.0)
+            end
+        end
+    end
+
     local best = nil
     local bestScore = -math.huge
     local bestLandingExposures = math.huge
+    local bestCorridorExposures = math.huge
     local activeWarnings = warningParts()
     local liveSweeps = activeFloorSweepBands()
     for _, heading in ipairs(headings) do
@@ -1560,6 +1617,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
         -- raw distance/comfort scores must never beat a zero-exposure
         -- route merely because it walks farther from the first warning.
         local landingExposures = 0
+        local corridorExposures = 0
         for _, threat in ipairs(activeWarnings) do
             if threat.Name == "MeteorWarning" or threat.Name == "BombWarning" then
                 local radius = math.max(5, AISurvivorRules.warningDetectionRadius(
@@ -1567,9 +1625,13 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
                     math.max(threat.Size.X, threat.Size.Z) * 0.5,
                     threat:GetAttribute("WarningEndSize")
                 ) - 9)
-                score -= AISurvivorRules.routeWarningPenalty(
+                local routePenalty = AISurvivorRules.routeWarningPenalty(
                     root.Position, destination, threat.Position, radius
-                ) * 1.4
+                )
+                score -= routePenalty * 1.4
+                if routePenalty >= 20 then
+                    corridorExposures += 1
+                end
                 local clearance = Vector3.new(
                     destination.X - threat.Position.X, 0,
                     destination.Z - threat.Position.Z
@@ -1593,15 +1655,35 @@ local function saferThreatEscape(record, root, predictedPosition, warning)
             ) * 1.6
         end
 
-        -- First minimize the number of simultaneous Meteor/Bomb impact
-        -- footprints still covering the landing. Among equally exposed
-        -- physically supported routes, preserve the existing threat,
-        -- sweep and terrain score. If all landings are exposed, still
-        -- choose the least dangerous valid escape rather than freezing.
+        -- Avoid turning a shared refuge into a pile-up. Compare only
+        -- contenders at similar height, and cap their *soft* influence.
+        -- This cannot override the physical-support gate, lower landing
+        -- exposure, or a truly clearer Meteor/Bomb corridor.
+        if supported and #contenders > 0 then
+            local crowdPenalty = 0
+            for _, contender in ipairs(contenders) do
+                local offset = destination - contender.position
+                local flat = Vector3.new(offset.X, 0, offset.Z).Magnitude
+                if flat < contender.radius then
+                    crowdPenalty +=
+                        (contender.radius - flat) * contender.weight
+                end
+            end
+            score -= math.min(14, crowdPenalty)
+        end
+
+        -- Physical support is mandatory. Among supported options, first
+        -- minimize true impact-exposed landings, then full impact-lane
+        -- crossings, THEN use the original terrain/sweep score with
+        -- bounded spacing. If all headings remain dangerous, choose the
+        -- least exposed supported direction rather than freezing.
         if supported and (landingExposures < bestLandingExposures
             or (landingExposures == bestLandingExposures
-                and score > bestScore)) then
+                and (corridorExposures < bestCorridorExposures
+                    or (corridorExposures == bestCorridorExposures
+                        and score > bestScore)))) then
             bestLandingExposures = landingExposures
+            bestCorridorExposures = corridorExposures
             bestScore = score
             best = destination
         end
@@ -2050,7 +2132,8 @@ local function immediateThreat(record, root, now)
     end
 
     record.escapeWarning = nearest
-    record.escapeTarget = saferThreatEscape(record, root, predictedPosition, nearest)
+    record.escapeTarget = saferThreatEscape(
+        record, root, predictedPosition, nearest, now)
     record.escapeUntil = now + 0.54
     record.escapeWarningVersion = warningVersion
     -- Remember only impact warnings included in this plan, with weak keys.
