@@ -2650,9 +2650,27 @@ local function immediateThreat(record, root, now)
     end
 
     if nearest.Name == "FreezeWarning" then
-        -- Freeze is a lower-priority optional personality reaction,
-        -- unlike JumpShock's physically timed survival action. Do not
-        -- interrupt the current higher-priority Meteor/Bomb escape.
+        -- Freeze is a lower-priority optional personality reaction.
+        -- If a real JumpShock warning covers this bot, an early show-off
+        -- Freeze jump can leave it AIRBORNE when the mandatory timed
+        -- shock-dodge window opens. Preserve that grounded jump for the
+        -- independently handled JumpShock instead.
+        for _, candidate in ipairs(warningParts()) do
+            if candidate.Name == "JumpShockWarning" then
+                local visual = math.max(candidate.Size.X,
+                    candidate.Size.Y, candidate.Size.Z) * 0.5
+                local radius = AISurvivorRules.warningDetectionRadius(
+                    candidate.Name, visual,
+                    candidate:GetAttribute("WarningEndSize")
+                )
+                if (root.Position - candidate.Position).Magnitude <= radius then
+                    return nil
+                end
+            end
+        end
+        -- Unlike JumpShock, Freeze doesn't replace the horizontal
+        -- Meteor/Bomb/collapse route and keeps its original one-shot
+        -- personality reaction probability.
         local handled = record.reactedWarnings
         if not handled then
             handled = setmetatable({}, {__mode = "k"})
