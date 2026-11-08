@@ -117,3 +117,24 @@ Previously `stepRecord` ran `disappearingPlatformEscape` **before** `immediateTh
 | Eight participants, Double Chaos and shock waves on Android | Measure **actual** airborne clearance, server reward/damage decisions, escape targets, FPS/CPU and `BotShockJumpCommands` versus real successful dodges |
 
 The branch source has undergone targeted static invariant checks only. **No Roblox Engine execution, actual shock-dodge completion test, measured CPU/FPS or publication has been performed on this change.**
+
+## Follow-up safety correction: reserve jumping for authoritative warnings
+
+A continued audit found three competing jump sources that could defeat the new independent JumpShock defense without changing any of the underlying damage physics:
+
+1. The normal, low-probability `freeJumpChance` path in `stepRecord` did **not** check the already-cached server warning list. A bot might start a cosmetic hop early during a JumpShock telegraph and remain airborne when the real late-window jump was due. The casual-only condition now requires `#warningParts() == 0`. It does **not** restrict physical sky-gap jumps, district route elevation jumps, recovery motions, or the actual JumpShock jump.
+2. The old optional Freeze personality jump could still fire during an overlapping, physically relevant JumpShock warning, before the independent timed shock jump. The Freeze branch now checks for an active `JumpShockWarning` covering the bot (using its server-authoritative `WarningEndSize` and the shared detection rule), and skips the **optional Freeze jump** when present. The existing Meteor/Bomb horizontal hazard priority and Freeze's original chance remain unchanged otherwise.
+3. Marker removal and the subsequent server-side shock damage are adjacent but separate operations. To avoid a cosmetic jump becoming immediately eligible in that interval, each in-range, real JumpShock warning now postpones only the bot's `nextJump` casual-hop clock to at least `now + 1.0` seconds. The actual parkour `nextRouteJumpAt` timer and server physical shock-jump window are unchanged.
+
+### Additional real-engine acceptance checks
+
+| Case | Expected |
+| --- | --- |
+| Casual roaming while JumpShock warning is active | No early personality hop; bot remains able to issue a real timed shock jump |
+| Freeze and JumpShock warnings overlap | Optional Freeze hop is suppressed while JumpShock covers the bot; timed shock jump retains priority |
+| A character must cross a physical sky gap during a warning | The real parkour jump is not gated by the cosmetic jump timer |
+| Shock warning expires, server impact callback runs, and bot brain ticks concurrently | No immediate random hop from a stale `nextJump` deadline |
+| No warnings and a normal round underway | Original personality jump chance and scheduling continue |
+| Meteor/Bomb or collapse overlaps JumpShock | Horizontal escape remains prioritized and real shock jump is independently evaluated |
+
+**Verification status:** source-level structural checks only. Neither actual jump clearance/damage outcomes nor Roblox Engine frame scheduling nor Android FPS was observed. No changes to shock damage, physics impulses, character jump height, movement speed, or Roblox release publication were made.
