@@ -937,6 +937,7 @@ local function cancelGroundNavigation(record)
     record.groundNavigationPending = false
     record.groundNavigationStartedAt = nil
     record.groundNavigationFallbackTarget = nil
+    record.groundNavigationPendingGoal = nil
     record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
 end
 
@@ -1159,6 +1160,7 @@ local function newRecord(slot)
         stuckCount = 0,
         groundNavigation = nil,
         groundNavigationPending = false,
+        groundNavigationPendingGoal = nil,
         groundNavigationToken = 0,
         nextGroundNavigationAt = 0,
         recoveryAttemptCount = 0,
@@ -3725,6 +3727,9 @@ local function requestGroundNavigation(record, root, goal, now)
     record.groundNavigationPending = true
     record.groundNavigationStartedAt = now
     record.groundNavigationFallbackTarget = nil
+    -- Keep the actual requested destination while ComputeAsync yields.
+    -- The temporary physical sidestep is not the goal to quarantine.
+    record.groundNavigationPendingGoal = goal
     record.groundNavigationToken = (record.groundNavigationToken or 0) + 1
     local token = record.groundNavigationToken
     local rig = record.model
@@ -3749,6 +3754,7 @@ local function requestGroundNavigation(record, root, goal, now)
         end
         record.groundNavigationPending = false
         record.groundNavigationStartedAt = nil
+        record.groundNavigationPendingGoal = nil
         -- A real "no path" result is different from a transient engine
         -- error, a newly active disaster or an obsolete asynchronous
         -- answer. Quarantine only the original goal when this exact
@@ -4165,7 +4171,10 @@ local function recoverIfStuck(record, humanoid, root, now)
     -- waypoint. The small physical sidestep still avoids the actual
     -- current segment where progress stopped.
     local blockedGoal = record.groundNavigation
-        and record.groundNavigation.goal or goal
+        and record.groundNavigation.goal
+        or (record.groundNavigationPending
+            and record.groundNavigationPendingGoal)
+        or goal
     if record.groundNavigation then
         cancelGroundNavigation(record)
     end
