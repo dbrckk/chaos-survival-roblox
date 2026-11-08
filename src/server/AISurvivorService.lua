@@ -4002,6 +4002,33 @@ local function liveGroundRouteCorridorSafe(record, root, waypoint, base)
 end
 
 local function advanceGroundNavigation(record, root, now)
+    -- An in-flight ComputeAsync must not keep its old recovery hold when
+    -- the arena changes into an unsafe state. Previously only accepted
+    -- routes were canceled here; pending requests waited for timeout.
+    -- Preserve any newer target that no longer belongs to the fallback.
+    if record.groundNavigationPending
+        and (#warningParts() > 0
+            or hasDisaster("RisingLava")
+            or hasDisaster("ShrinkingArena")
+            or hasDisaster("Tornado")
+            or hasDisaster("DisappearingPlatforms")
+            or not record.inRound or currentState.phase ~= "round") then
+        local fallback = record.groundNavigationFallbackTarget
+        local ownsFallback = fallback ~= nil and record.target == fallback
+            and record.targetPart == nil
+            and record.assistShield == nil and record.assistRelay == nil
+            and record.spineControl == nil and record.districtTraverse == nil
+            and record.signalInterestRoute == nil
+        cancelGroundNavigation(record)
+        if ownsFallback then
+            record.recoveryWaypoint = nil
+            record.recoveryCommitUntil = 0
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+        end
+    end
     if AISurvivorRules.groundNavigationQueryTimedOut(
         record.groundNavigationPending,
         record.groundNavigationStartedAt, now
