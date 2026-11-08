@@ -2460,6 +2460,66 @@ end
 -- while another physical disaster owns the bot's horizontal direction.
 -- Freeze's optional personality jump remains in the ordinary focus
 -- priority; it must not interrupt a more urgent Meteor/Bomb retreat.
+-- Humanoid jumps need positive R15 clearance and upward velocity at
+-- impact, not merely a Jump=true request sometime within the warning.
+-- The engine physics check remains authoritative (JumpShock.applyShock).
+-- A one-shot timed callback aims for 0.20s before impact; the regular
+-- brain pass retains a narrow fallback window if that callback is late.
+local function issueTimedShockJump(
+    record, model, humanoid, warning, seen, handled)
+    if record.model ~= model or not model or not model.Parent
+        or not record.inRound or not record.alive
+        or currentState.phase ~= "round"
+        or not humanoid or humanoid.Parent ~= model
+        or humanoid.Health <= 0
+        or warning.Parent ~= workspace
+        or warning.Name ~= "JumpShockWarning"
+        or warning:GetAttribute("WarningKind") ~= "JumpShock"
+        or record.shockWarningSeenAt ~= seen
+        or record.reactedWarnings ~= handled
+        or handled[warning] then
+        return false
+    end
+    local started = tonumber(warning:GetAttribute("WarningStartedAt"))
+    local duration = tonumber(warning:GetAttribute("WarningDuration"))
+    if not started or not duration
+        or started ~= started or duration ~= duration
+        or math.abs(started) == math.huge
+        or math.abs(duration) == math.huge
+        or duration <= 0 then
+        return false
+    end
+    local now = workspace:GetServerTimeNow()
+    local remaining = started + duration - now
+    -- At default Roblox jump physics, a 0.10s jump can be too low,
+    -- while a 0.34s jump may already be descending at impact.
+    -- This tighter physical attempt window is strictly INSIDE the
+    -- existing shockJumpWindow; no hit immunity is fabricated.
+    if remaining < 0.12 or remaining > 0.23
+        or not AISurvivorRules.shockJumpWindow(
+            started, duration, now
+        )
+        or not AISurvivorRules.reactionReady(
+            seen[warning], os.clock(), record.profile.ReactionSeconds
+        )
+        or humanoid.FloorMaterial == Enum.Material.Air
+        or humanoid.SeatPart ~= nil
+        or humanoid:GetAttribute("ChaosFrozen") == true
+        or (humanoid.UseJumpPower and humanoid.JumpPower <= 0)
+        or (not humanoid.UseJumpPower and humanoid.JumpHeight <= 0)
+    then
+        return false
+    end
+    if AISurvivorRules.consumeWarningJump(handled, warning, 0) then
+        humanoid.Jump = true
+        model:SetAttribute("BotShockJumpCommands",
+            (tonumber(model:GetAttribute("BotShockJumpCommands"))
+                or 0) + 1)
+        return true
+    end
+    return false
+end
+
 local function reactToShockWarning(record, humanoid, root, now)
     local seen = record.shockWarningSeenAt
     if not seen then
@@ -2481,41 +2541,44 @@ local function reactToShockWarning(record, humanoid, root, now)
                 warning:GetAttribute("WarningEndSize")
             )
             if (root.Position - warning.Position).Magnitude <= threshold then
-                -- Hold only the cosmetic hop timer during the telegraph
-                -- and immediately after the warning disappears. A
-                -- post-warning random jump could otherwise occur in the
-                -- narrow gap between marker removal and server impact.
-                -- nextRouteJumpAt (real parkour) is unaffected.
+                -- Only defer the cosmetic hop clock; the physical
+                -- parkour-jump cooldown never changes here.
                 record.nextJump = math.max(record.nextJump or 0, now + 1.0)
                 if not seen[warning] then
                     seen[warning] = now
                     warnNearbyContestants(record, now)
-                end
-                -- Keep the existing individual reaction latency, the
-                -- server-authoritative final 0.10..0.34-second window,
-                -- and genuine grounded humanoid-jump requirements.
-                if not handled[warning]
-                    and AISurvivorRules.reactionReady(
-                        seen[warning], now, record.profile.ReactionSeconds
-                    )
-                    and AISurvivorRules.shockJumpWindow(
-                        warning:GetAttribute("WarningStartedAt"),
-                        warning:GetAttribute("WarningDuration"),
-                        serverNow
-                    )
-                    and humanoid.FloorMaterial ~= Enum.Material.Air
-                    and humanoid.SeatPart == nil
-                    and humanoid:GetAttribute("ChaosFrozen") ~= true
-                then
-                    if AISurvivorRules.consumeWarningJump(
-                        handled, warning, 0
-                    ) then
-                        humanoid.Jump = true
-                        record.model:SetAttribute("BotShockJumpCommands",
-                            (tonumber(record.model:GetAttribute(
-                                "BotShockJumpCommands")) or 0) + 1)
+                    local started = tonumber(
+                        warning:GetAttribute("WarningStartedAt"))
+                    local duration = tonumber(
+                        warning:GetAttribute("WarningDuration"))
+                    if started and duration and started == started
+                        and duration == duration
+                        and math.abs(started) < math.huge
+                        and math.abs(duration) < math.huge
+                        and duration > 0 then
+                        local delaySeconds = started + duration
+                            - serverNow - 0.20
+                        -- Only one short callback per observed shock.
+                        -- A replacement rig, ended round, expired marker
+                        -- or changed warning-state table invalidates it.
+                        if delaySeconds >= 0 and delaySeconds <= 4 then
+                            local model = record.model
+                            task.delay(delaySeconds, function()
+                                issueTimedShockJump(
+                                    record, model, humanoid,
+                                    warning, seen, handled
+                                )
+                            end)
+                        end
                     end
                 end
+                -- Brain-cadence fallback for a first sighting near the
+                -- deadline or a delayed engine timer. The same handled
+                -- table guarantees one jump command per real warning.
+                issueTimedShockJump(
+                    record, record.model, humanoid,
+                    warning, seen, handled
+                )
             end
         end
     end
