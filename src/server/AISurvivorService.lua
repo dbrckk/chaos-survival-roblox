@@ -1943,8 +1943,19 @@ local function disappearingPlatformEscape(record, root, now)
                     part.CFrame, part.Size,
                     deck.CFrame, deck.Size, available
                 ) then
-                    local waypoint = deck.Position
-                        + deck.CFrame.UpVector * (deck.Size.Y * 0.5 + 2.4)
+                    -- A full deck centre can be 20+ studs farther than
+                    -- its genuinely reachable near edge. Aim at the
+                    -- nearest R15-safe point ON the selected solid deck,
+                    -- not its far-away centre, preserving world rotation
+                    -- and the existing two-stud physical edge margin.
+                    local deckLocal = deck.CFrame:PointToObjectSpace(
+                        root.Position)
+                    local waypoint = AISurvivorRules.clampWaypointToDeck(
+                        deck.CFrame, deck.Size,
+                        deck.CFrame:PointToWorldSpace(Vector3.new(
+                            deckLocal.X, deck.Size.Y * 0.5 + 2.4,
+                            deckLocal.Z))
+                    )
                     local difference = waypoint - root.Position
                     local flatDistance = Vector3.new(
                         difference.X, 0, difference.Z
@@ -2058,7 +2069,12 @@ local function disappearingPlatformEscape(record, root, now)
         local floor = result and result.Instance
         if not floor or not floor.CanCollide
             or result.Normal.Y < 0.78
-            or math.abs(result.Position.Y + 2.5 - point.Y) > 8.5 then
+            -- A probe eight studs below a proposed landing is NOT
+            -- proof that an R15 bot can walk across that gap. Compare
+            -- with the actual contact height of the warned takeoff
+            -- platform, not only the root's approximate world Y.
+            or math.abs(result.Position.Y - hit.Position.Y) > 2.75
+            or math.abs(result.Position.Y + 2.5 - point.Y) > 4.5 then
             return nil
         end
         if floor == part then
