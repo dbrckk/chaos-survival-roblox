@@ -34,3 +34,9 @@ Do not merge a behavioral change solely from static inspection. For the final ca
 ## Next implementation decision
 
 If a scenario fails, change the **smallest** navigation state transition that reproduces the failure; retain existing bounded request and diagnostics infrastructure. Prioritize a reproducible blocking bug over cosmetic AI changes. Avoid extra polling loops, invented floor coordinates, unverified models and unconditional resets of recovery attempts.
+
+## Source change — transient ComputeAsync exception
+
+Commit `2f54889` releases a still-owned recovery fallback when `ComputeAsync` raises an exception. It does **not** mark the destination as unreachable and it does not overwrite a newer station, district, hazard or ordinary target. The existing nine-second path-request throttle remains intact.
+
+Acceptance: force a transient path computation exception while a local recovery fallback is owned; verify that the fallback is released and normal destination selection resumes. Repeat with a newer target and verify it remains unchanged. This has **not** been validated in a live Roblox engine session.
