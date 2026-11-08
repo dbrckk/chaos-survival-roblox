@@ -1815,6 +1815,74 @@ local function disappearingPlatformEscape(record, root, now)
     local base = arenaBase()
     local baseTopY = base and (base.Position.Y + base.Size.Y * 0.5)
         or config.ArenaCenter.Y
+    -- Prepare impact geometry and nearby participant occupancy only
+    -- AFTER the collapse reaction and short plan-cache validation. One
+    -- bounded sample serves both elevated decks and low-floor exits.
+    local impacts = {}
+    for _, warning in ipairs(warningParts()) do
+        if warning.Name == "MeteorWarning"
+            or warning.Name == "BombWarning" then
+            impacts[#impacts + 1] = {
+                position = warning.Position,
+                radius = math.max(5,
+                    AISurvivorRules.warningDetectionRadius(
+                        warning.Name,
+                        math.max(warning.Size.X, warning.Size.Z) * 0.5,
+                        warning:GetAttribute("WarningEndSize")
+                    ) - 9),
+            }
+        end
+    end
+
+    -- Spread competing R15 survivors between physically connected
+    -- refuges only AFTER impact safety. Mobile characters are soft
+    -- occupancy hints, never grounds or forbidden destinations.
+    local crowd = {}
+    local function includePeer(position, weight)
+        if typeof(position) == "Vector3"
+            and math.abs(position.Y - root.Position.Y) < 7 then
+            crowd[#crowd + 1] = {position = position, weight = weight}
+        end
+    end
+    for _, other in ipairs(records) do
+        if other ~= record and other.inRound and other.alive
+            and other.model and other.model.Parent then
+            local otherHumanoid =
+                other.model:FindFirstChildOfClass("Humanoid")
+            local otherRoot =
+                other.model:FindFirstChild("HumanoidRootPart")
+            if otherHumanoid and otherHumanoid.Health > 0
+                and otherRoot and otherRoot:IsA("BasePart") then
+                includePeer(otherRoot.Position, 0.65)
+                -- A teammate's brief retreat is a reservation,
+                -- never a lasting blockade after its warning ends.
+                if other.collapsePlanDeck
+                    and other.collapsePlanDeck.Parent
+                    and other.collapsePlanThreat
+                    and other.collapsePlanThreat.Parent
+                    and other.collapsePlanThreat:GetAttribute(
+                        "CollapsePhase") == "Warning"
+                    and (other.collapsePlanUntil or 0) > now then
+                    includePeer(other.collapsePlanTarget, 1.0)
+                end
+            end
+        end
+    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player:GetAttribute("RoundParticipant") == true
+            and player:GetAttribute("RoundEliminated") ~= true then
+            local character = player.Character
+            local playerRoot = character
+                and character:FindFirstChild("HumanoidRootPart")
+            local playerHumanoid = character
+                and character:FindFirstChildOfClass("Humanoid")
+            if playerRoot and playerRoot:IsA("BasePart")
+                and playerHumanoid and playerHumanoid.Health > 0 then
+                includePeer(playerRoot.Position, 0.9)
+            end
+        end
+    end
+
     if root.Position.Y > baseTopY + 8 then
         -- The existing centre-directed dodge is safe on the ground, but
         -- sends bots off a 20-stud HIGH perimeter / promenade landing.
@@ -1822,73 +1890,6 @@ local function disappearingPlatformEscape(record, root, now)
         -- This scans just the arena's authoritative Platforms folder
         -- during a confirmed warning, after the normal reaction delay.
         local platforms = part.Parent
-        -- Cache the live blast footprint once for this committed
-        -- collapse plan. The deck loop may consider multiple physical
-        -- neighbors; don't recompute radius/metadata for every one.
-        local impacts = {}
-        for _, warning in ipairs(warningParts()) do
-            if warning.Name == "MeteorWarning"
-                or warning.Name == "BombWarning" then
-                impacts[#impacts + 1] = {
-                    position = warning.Position,
-                    radius = math.max(5,
-                        AISurvivorRules.warningDetectionRadius(
-                            warning.Name,
-                            math.max(warning.Size.X, warning.Size.Z) * 0.5,
-                            warning:GetAttribute("WarningEndSize")
-                        ) - 9),
-                }
-            end
-        end
-
-        -- Spread competing R15 survivors between physically connected
-        -- refuges only AFTER impact safety. Mobile characters are soft
-        -- occupancy hints, never grounds or forbidden destinations.
-        local crowd = {}
-        local function includePeer(position, weight)
-            if typeof(position) == "Vector3"
-                and math.abs(position.Y - root.Position.Y) < 7 then
-                crowd[#crowd + 1] = {position = position, weight = weight}
-            end
-        end
-        for _, other in ipairs(records) do
-            if other ~= record and other.inRound and other.alive
-                and other.model and other.model.Parent then
-                local otherHumanoid =
-                    other.model:FindFirstChildOfClass("Humanoid")
-                local otherRoot =
-                    other.model:FindFirstChild("HumanoidRootPart")
-                if otherHumanoid and otherHumanoid.Health > 0
-                    and otherRoot and otherRoot:IsA("BasePart") then
-                    includePeer(otherRoot.Position, 0.65)
-                    -- A teammate's brief retreat is a reservation,
-                    -- never a lasting blockade after its warning ends.
-                    if other.collapsePlanDeck
-                        and other.collapsePlanDeck.Parent
-                        and other.collapsePlanThreat
-                        and other.collapsePlanThreat.Parent
-                        and other.collapsePlanThreat:GetAttribute(
-                            "CollapsePhase") == "Warning"
-                        and (other.collapsePlanUntil or 0) > now then
-                        includePeer(other.collapsePlanTarget, 1.0)
-                    end
-                end
-            end
-        end
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player:GetAttribute("RoundParticipant") == true
-                and player:GetAttribute("RoundEliminated") ~= true then
-                local character = player.Character
-                local playerRoot = character
-                    and character:FindFirstChild("HumanoidRootPart")
-                local playerHumanoid = character
-                    and character:FindFirstChildOfClass("Humanoid")
-                if playerRoot and playerRoot:IsA("BasePart")
-                    and playerHumanoid and playerHumanoid.Health > 0 then
-                    includePeer(playerRoot.Position, 0.9)
-                end
-            end
-        end
         local closest, closestWaypoint = nil, nil
         local closestCost = math.huge
         local leastLandingImpacts = math.huge
