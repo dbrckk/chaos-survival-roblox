@@ -1766,7 +1766,16 @@ local function disappearingPlatformEscape(record, root, now)
         -- This scans just the arena's authoritative Platforms folder
         -- during a confirmed warning, after the normal reaction delay.
         local platforms = part.Parent
-        local closest, closestCost = nil, math.huge
+        local closest, closestWaypoint = nil, nil
+        local closestCost = math.huge
+        local leastLandingImpacts = math.huge
+        local leastCorridorImpacts = math.huge
+        -- An elevated collapsing platform can be adjacent to multiple
+        -- physical refuges. The nearest one must NOT win when a live
+        -- Meteor/Bomb warning covers that landing or the walking lane.
+        -- This is an event-cached read on an already-confirmed platform
+        -- collapse, with no additional raycast or world scan.
+        local liveWarnings = warningParts()
         for _, deck in ipairs(platforms:GetChildren()) do
             if deck ~= part and deck:IsA("BasePart") then
                 local available = AISurvivorRules.platformAvailable(
@@ -1786,16 +1795,61 @@ local function disappearingPlatformEscape(record, root, now)
                     ).Magnitude
                     -- No world-spanning diagonals across disconnected
                     -- sky sectors even if broad bounding boxes overlap.
-                    if flatDistance < 34 and flatDistance < closestCost then
-                        closest, closestCost = deck, flatDistance
+                    if flatDistance < 34 then
+                        local landingImpacts = 0
+                        local corridorImpacts = 0
+                        for _, warning in ipairs(liveWarnings) do
+                            if warning.Name == "MeteorWarning"
+                                or warning.Name == "BombWarning" then
+                                local radius = math.max(5,
+                                    AISurvivorRules.warningDetectionRadius(
+                                        warning.Name,
+                                        math.max(warning.Size.X,
+                                            warning.Size.Z) * 0.5,
+                                        warning:GetAttribute("WarningEndSize")
+                                    ) - 9)
+                                local offset = waypoint - warning.Position
+                                local horizontal = Vector3.new(
+                                    offset.X, 0, offset.Z).Magnitude
+                                if horizontal < radius + 3 then
+                                    landingImpacts += 1
+                                end
+                                if AISurvivorRules.newImpactIntersectsEscape(
+                                    root.Position, waypoint, warning.Name,
+                                    warning.Position,
+                                    math.max(warning.Size.X,
+                                        warning.Size.Z) * 0.5,
+                                    warning:GetAttribute("WarningEndSize")
+                                ) then
+                                    corridorImpacts += 1
+                                end
+                            end
+                        end
+                        -- A supported landing OUTSIDE the impact outranks
+                        -- any closer exposed one. For equally safe
+                        -- landings avoid intersecting warning corridors;
+                        -- only then prefer the nearest walkable deck.
+                        -- If none is fully clear, still pick the least
+                        -- exposed physical option instead of freezing.
+                        if landingImpacts < leastLandingImpacts
+                            or (landingImpacts == leastLandingImpacts
+                                and (corridorImpacts < leastCorridorImpacts
+                                    or (corridorImpacts == leastCorridorImpacts
+                                        and flatDistance < closestCost)))
+                        then
+                            closest = deck
+                            closestWaypoint = waypoint
+                            closestCost = flatDistance
+                            leastLandingImpacts = landingImpacts
+                            leastCorridorImpacts = corridorImpacts
+                        end
                     end
                 end
             end
         end
         if closest then
             record.collapseEscapeDeck = closest
-            return closest.Position
-                + closest.CFrame.UpVector * (closest.Size.Y * 0.5 + 2.4)
+            return closestWaypoint
         end
         -- No physically supported high escape exists. An urgent hold
         -- beats continuing a stale route over void. Preserve threat
