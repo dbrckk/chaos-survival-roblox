@@ -1990,6 +1990,9 @@ local function disappearingPlatformEscape(record, root, now)
             record.collapsePlanUntil = now + 0.42
             record.collapsePlanWarningVersion = warningVersion
             record.collapseEscapeDeck = closest
+            record.model:SetAttribute("BotCollapseSafeExitPlans",
+                (tonumber(record.model:GetAttribute(
+                    "BotCollapseSafeExitPlans")) or 0) + 1)
             return closestWaypoint
         end
         -- No physically supported high escape exists. An urgent hold
@@ -5944,11 +5947,20 @@ local function stepRecord(record, now)
             local warnedEscape = record.escapeWarning
                 and record.escapeWarning.Parent
                 and record.escapeTarget == urgentTarget
+            -- Both low-floor and high-deck collapse exits were checked
+            -- against live hazards and real support. A cosmetic crowd
+            -- separation after selection would undo that validation.
+            local physicalCollapseEscape = record.platformThreat
+                and record.platformThreat.Parent
+                and record.platformThreat:GetAttribute(
+                    "CollapsePhase") == "Warning"
+                and record.collapsePlanThreat == record.platformThreat
+                and record.collapsePlanTarget == urgentTarget
             -- An imminent elevated collapse has a prevalidated real
             -- landing. Social spacing must not push that target off it.
             record.target = (skybridgeEscape or floorSweepEscape
-                or warnedEscape or record.collapseEscapeDeck
-                or record.collapseEscapeHolding)
+                or warnedEscape or physicalCollapseEscape
+                or record.collapseEscapeDeck or record.collapseEscapeHolding)
                 and urgentTarget or separateTarget(record, urgentTarget)
             record.nextThink = now + 0.55
         end
