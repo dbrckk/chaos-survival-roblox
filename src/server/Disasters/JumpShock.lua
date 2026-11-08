@@ -34,7 +34,7 @@ function D.rewardDodge(ctx, subject)
     return pcall(ctx.OnHazardNearMiss, subject, "JumpShock", nil, nil)
 end
 
-local function makeWarning(ctx)
+local function makeWarning(ctx, warningSeconds, warningDiameter)
     local ring = Instance.new("Part")
     ring.Name = "JumpShockWarning"
     ring.Shape = Enum.PartType.Cylinder
@@ -48,6 +48,11 @@ local function makeWarning(ctx)
     ring.Material = Enum.Material.Neon
     ring.Color = Color3.fromRGB(80, 155, 255)
     ring.Transparency = 0.62
+    -- Jump timing and the wave's real coverage are authoritative from
+    -- the very first server/client frame, before ChildAdded listeners.
+    HazardWarning.configure(
+        ring, "JumpShock", warningSeconds, 8, warningDiameter
+    )
     ring.Parent = workspace
     ctx.Cleanup[#ctx.Cleanup+1] = ring
     return ring
@@ -123,10 +128,11 @@ function D.start(ctx)
             task.wait(math.max(3.2, math.random(4,6) / intensity))
             if not ctx.Active() then break end
 
-            local warning = makeWarning(ctx)
             local warningSeconds = D.WarningSeconds
             local warningDiameter = HazardWarning.arenaCoverageDiameter(150)
-            HazardWarning.configure(warning, "JumpShock", warningSeconds, 8, warningDiameter)
+            local warning = makeWarning(
+                ctx, warningSeconds, warningDiameter
+            )
             task.wait(warningSeconds)
 
             if warning.Parent then
