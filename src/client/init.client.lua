@@ -3239,7 +3239,12 @@ local function localizedStateCopy(state)
     local displayHint = state.hint or ""
     local phase = tostring(state.phase or "")
 
-    if phase == "intermission" and FirstTimeExperience.hasVoteOptions(state) then
+    if phase == "round" and state.botShowdown == true then
+        -- Only the spectator presentation uses the shorter finale timer.
+        -- Keep state.seconds unchanged for hazards and round mechanics.
+        displayTitle = CoreLocalization.text(localeId, "BOT_SHOWDOWN")
+        displayHint = CoreLocalization.text(localeId, "BOT_SHOWDOWN_HINT")
+    elseif phase == "intermission" and FirstTimeExperience.hasVoteOptions(state) then
         displayTitle = CoreLocalization.text(localeId, "VOTE_TITLE")
         displayHint = CoreLocalization.text(
             localeId,
@@ -3357,7 +3362,10 @@ stateEvent.OnClientEvent:Connect(function(state)
 
     title.Text = displayTitle
     hint.Text = displayHint
-    timer.Text = tostring(state.seconds or 0)
+    timer.Text = tostring(
+        state.phase == "round" and state.botShowdown == true
+            and state.botShowdownSeconds or state.seconds or 0
+    )
 
     if state.phase == "result" then
         -- Personalized RoundFeedback is the primary rich reward receipt.
