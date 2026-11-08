@@ -1999,21 +1999,158 @@ local function disappearingPlatformEscape(record, root, now)
         return nil
     end
 
-    local center = base and base.Position or config.ArenaCenter
-    local towardCenter = center - root.Position
-    local horizontal = Vector3.new(towardCenter.X, 0, towardCenter.Z)
-    if horizontal.Magnitude < 0.5 then
-        local angle = record.slot * 2.13 + now
-        horizontal = Vector3.new(math.cos(angle), 0, math.sin(angle))
-    else
-        horizontal = horizontal.Unit
+    -- Low floor: stop issuing a NEW random center/tangent dodge every
+    -- brain pass. Find one of the FOUR real edges of the doomed part,
+    -- verify a solid walkable landing and one supported midpoint, then
+    -- rank impact exposure, crowding and distance. The warning deck
+    -- remains physical only until the server changes it to Gone.
+    local originLocal = part.CFrame:PointToObjectSpace(root.Position)
+    local halfX, halfZ = part.Size.X * 0.5, part.Size.Z * 0.5
+    local clearance = 3.6
+    local exits = {
+        Vector3.new(halfX + clearance, originLocal.Y, originLocal.Z),
+        Vector3.new(-halfX - clearance, originLocal.Y, originLocal.Z),
+        Vector3.new(originLocal.X, originLocal.Y, halfZ + clearance),
+        Vector3.new(originLocal.X, originLocal.Y, -halfZ - clearance),
+    }
+    local floorParams = emergencyFloorProbeParams(record)
+    local function physicalFloor(point, allowWarningOrigin)
+        local result = workspace:Raycast(
+            point + Vector3.new(0, 3, 0),
+            Vector3.new(0, -16, 0), floorParams
+        )
+        local floor = result and result.Instance
+        if not floor or not floor.CanCollide
+            or result.Normal.Y < 0.78
+            or math.abs(result.Position.Y + 2.5 - point.Y) > 8.5 then
+            return nil
+        end
+        if floor == part then
+            return allowWarningOrigin == true
+                and part:GetAttribute("CollapsePhase") == "Warning"
+                and part.Transparency < 0.90 and result or nil
+        end
+        if floor:IsA("Terrain") then
+            return result
+        end
+        if floor:IsA("BasePart") and floor.Anchored
+            and AISurvivorRules.platformAvailable(
+                floor.CanCollide, floor.Transparency,
+                floor:GetAttribute("CollapsePhase"),
+                floor:GetAttribute("BridgeShutterPhase")
+            ) then
+            return result
+        end
+        return nil
     end
 
-    local tangent = Vector3.new(-horizontal.Z, 0, horizontal.X)
-    local dodge = horizontal * (9 + math.random() * 5)
-        + tangent * ((math.random() * 2 - 1) * 5)
+    local bestExit, bestSupport = nil, nil
+    local bestLandingImpacts, bestCorridorImpacts = math.huge, math.huge
+    local bestCost = math.huge
+    local nearestPartial, nearestPartialCost = nil, math.huge
+    local nearestPartialSupport = nil
+    for _, localExit in ipairs(exits) do
+        local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
+        local delta = exit - root.Position
+        local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        if flatDistance > 1 then
+            -- When a giant platform is impossible to clear before impact,
+            -- preserve physical progress toward its closest edge rather
+            -- than freezing in place or inventing a safe landing.
+            local partial = root.Position
+                + Vector3.new(delta.X, 0, delta.Z).Unit
+                    * math.min(12, flatDistance)
+            local partialCost = flatDistance
+            if partialCost < nearestPartialCost then
+                local partialHit = physicalFloor(partial, true)
+                if partialHit then
+                    nearestPartial = partial
+                    nearestPartialSupport = partialHit.Instance
+                    nearestPartialCost = partialCost
+                end
+            end
 
-    return clampToArena(root.Position + dodge)
+            local worldExitLocal = part.CFrame:PointToObjectSpace(exit)
+            local outsideThreat = math.abs(worldExitLocal.X) > halfX + 1.4
+                or math.abs(worldExitLocal.Z) > halfZ + 1.4
+            if outsideThreat and flatDistance <= 34 then
+                local landing = physicalFloor(exit, false)
+                if landing then
+                    local mid = root.Position:Lerp(exit, 0.55)
+                    if physicalFloor(mid, true) then
+                        local landingImpacts, corridorImpacts = 0, 0
+                        for _, impact in ipairs(impacts) do
+                            local off = exit - impact.position
+                            local horizontal = Vector3.new(
+                                off.X, 0, off.Z).Magnitude
+                            if horizontal < impact.radius + 3 then
+                                landingImpacts += 1
+                            end
+                            if AISurvivorRules.routeWarningPenalty(
+                                root.Position, exit,
+                                impact.position, impact.radius
+                            ) >= 20 then
+                                corridorImpacts += 1
+                            end
+                        end
+                        local crowdCost = 0
+                        for _, entry in ipairs(crowd) do
+                            local diff = exit - entry.position
+                            local separation = Vector3.new(
+                                diff.X, 0, diff.Z).Magnitude
+                            if separation < 9 then
+                                crowdCost += (9 - separation)
+                                    * entry.weight
+                            end
+                        end
+                        local cost = flatDistance
+                            + math.min(10, crowdCost)
+                        if landingImpacts < bestLandingImpacts
+                            or (landingImpacts == bestLandingImpacts
+                                and (corridorImpacts < bestCorridorImpacts
+                                    or (corridorImpacts == bestCorridorImpacts
+                                        and cost < bestCost))) then
+                            bestExit, bestSupport = exit, landing.Instance
+                            bestLandingImpacts = landingImpacts
+                            bestCorridorImpacts = corridorImpacts
+                            bestCost = cost
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if bestExit then
+        record.collapsePlanThreat = part
+        record.collapsePlanDeck = bestSupport
+        record.collapsePlanTarget = bestExit
+        record.collapsePlanUntil = now + 0.42
+        record.collapsePlanWarningVersion = warningVersion
+        record.model:SetAttribute("BotCollapseSafeExitPlans",
+            (tonumber(record.model:GetAttribute(
+                "BotCollapseSafeExitPlans")) or 0) + 1)
+        return bestExit
+    end
+    if nearestPartial then
+        -- Partial progress is allowed only on real ground confirmed by
+        -- the raycast. The target is still urgent and will be recomputed
+        -- as the bot approaches the edge.
+        record.collapsePlanThreat = part
+        record.collapsePlanDeck = nearestPartialSupport
+        record.collapsePlanTarget = nearestPartial
+        record.collapsePlanUntil = now + 0.32
+        record.collapsePlanWarningVersion = warningVersion
+        record.model:SetAttribute("BotCollapsePartialRetreats",
+            (tonumber(record.model:GetAttribute(
+                "BotCollapsePartialRetreats")) or 0) + 1)
+        return nearestPartial
+    end
+    record.collapseEscapeHolding = true
+    record.model:SetAttribute("BotCollapseBlockedPlans",
+        (tonumber(record.model:GetAttribute(
+            "BotCollapseBlockedPlans")) or 0) + 1)
+    return nil
 end
 
 -- A bot that committed to a Skyrail bridge BEFORE its warning should
