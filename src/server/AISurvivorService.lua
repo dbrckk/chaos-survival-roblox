@@ -2148,10 +2148,18 @@ local function disappearingPlatformEscape(record, root, now)
                 -- Do not allow that endpoint alone to hide a gap in the
                 -- walking corridor. A point still on the same convex
                 -- doomed floor is safe until the warning expires.
-                if partialHit and (partialHit.Instance == part
-                    or physicalFloor(
-                        root.Position:Lerp(partial, 0.55), true
-                    )) then
+                local partialCorridorSupported = partialHit ~= nil
+                if partialCorridorSupported and partialHit.Instance ~= part then
+                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
+                        if not physicalFloor(
+                            root.Position:Lerp(partial, fraction), true
+                        ) then
+                            partialCorridorSupported = false
+                            break
+                        end
+                    end
+                end
+                if partialCorridorSupported then
                     nearestPartial = partial
                     nearestPartialSupport = partialHit.Instance
                     nearestPartialLanding = partialLanding
@@ -2167,8 +2175,19 @@ local function disappearingPlatformEscape(record, root, now)
             if outsideThreat and flatDistance <= 34 then
                 local landing = physicalFloor(exit, false)
                 if landing then
-                    local mid = root.Position:Lerp(exit, 0.55)
-                    if physicalFloor(mid, true) then
+                    -- A single midpoint can hide a missing bridge
+                    -- between two separately supported endpoints.
+                    -- Probe a bounded set of intermediate contacts.
+                    local corridorSupported = true
+                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
+                        if not physicalFloor(
+                            root.Position:Lerp(exit, fraction), true
+                        ) then
+                            corridorSupported = false
+                            break
+                        end
+                    end
+                    if corridorSupported then
                         local landingImpacts, corridorImpacts = 0, 0
                         for _, impact in ipairs(impacts) do
                             local off = exit - impact.position
