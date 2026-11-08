@@ -3792,6 +3792,29 @@ local function requestGroundNavigation(record, root, goal, now)
                     "BotGroundRouteNoPathCount")) or 0) + 1)
             return
         end
+        -- ComputeAsync may raise a transient engine error rather than
+        -- returning a definitive NoPath. When the bot still owns this
+        -- recovery fallback, release it so normal AI can choose another
+        -- physically valid objective. Never quarantine the original
+        -- destination for an engine exception, and never overwrite a
+        -- newer cooperative or hazard decision.
+        if not ok and rig and rig.Parent and record.inRound
+            and currentState.phase == "round"
+            and record.failedTarget == goal
+            and fallback ~= nil and record.target == fallback
+            and record.targetPart == nil
+            and record.assistShield == nil and record.assistRelay == nil
+            and record.spineControl == nil and record.districtTraverse == nil
+            and record.signalInterestRoute == nil then
+            record.groundNavigationFallbackTarget = nil
+            record.recoveryWaypoint = nil
+            record.recoveryCommitUntil = 0
+            record.target = nil
+            record.lastMoveTarget = nil
+            record.lastProgressTarget = nil
+            record.nextThink = 0
+            return
+        end
         -- A two-waypoint NavMesh path (start + goal) is legitimate.
         -- Still require the exact same real-floor and corridor checks.
         if not ok or not waypoints or #waypoints < 2
