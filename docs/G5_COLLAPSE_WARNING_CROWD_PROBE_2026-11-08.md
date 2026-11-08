@@ -37,3 +37,29 @@ The previously merged #698 fix already applied mobile-character exclusions to Me
 ## Authoritative disaster lifecycle cross-check
 
 Reviewed `src/server/Disasters/DisappearingPlatforms.lua` on `main`: `eligiblePlatforms` only selects initially `CanCollide` physical decks, then `D.start` sets `CollapsePhase="Warning"` without disabling collision. **Only after** the 1.35-second shared warning does it set `CollapsePhase="Gone"`, transparency to 1, and `CanCollide=false`. Therefore `RespectCanCollide=true` still detects genuine warning surfaces and refuses floors once physically gone. This cross-check confirms the source contract, not a completed engine test.
+
+## Simultaneous impact and elevated collapse: safe refuge ranking
+
+Commit `a24bdb56030cabd4bf5fb52690d037b451b93587` fixes a related high-deck priority error: when several physical neighboring decks exist, `disappearingPlatformEscape` previously chose the **nearest** deck without checking a simultaneous Meteor/Bomb warning. Because collapse is evaluated before `immediateThreat`, the NPC could be sent directly into a live blast footprint.
+
+The neighbor list is unchanged and still requires `platformAvailable`, `safeCollapseNeighbor`, and the original horizontal distance bound of 34 studs. For each physically valid option, rank by:
+
+1. Fewest current Meteor/Bomb final-footprint **landings**.
+2. Fewest real Meteor/Bomb warning **route intersections**, using `AISurvivorRules.newImpactIntersectsEscape` and the same cached warnings as regular bot routing.
+3. Shortest walk among equally exposed options.
+
+If no impact warnings exist, this produces the original nearest valid neighbor. If no safe physical neighbor exists, the existing urgent hold/multi-hazard fallback remains. No extra raycast, platform directory scan, pathfinding call, speed/physics change or invented support.
+
+### Further acceptance cases
+
+| Case | Expected |
+| --- | --- |
+| Warned high deck has two physically adjacent solid landings; closer one is covered by a Meteor | Bot chooses the farther unexposed landing |
+| Both landings outside the blast, but one walking corridor crosses a Bomb warning | Prefer the corridor with fewer live impact intersections |
+| Both alternatives impacted, but one has fewer endpoint warnings | Choose the least-exposed **physically supported** deck rather than freezing |
+| No Meteor/Bomb warnings | Preserve prior choice of the nearest real connected, available platform |
+| Only neighboring platform collapsed or disconnected | Do not select it, even if its landing would be outside every impact |
+| Double Chaos with player models obstructing the floor probe | Correctly detect the actual warning platform and select a real, lower-exposure physical destination |
+| Several live impact warnings under Android load | Inspect bot escape target, existing profiler numbers, physical landing and frame rate; source adds no new physics queries |
+
+Source-level safety checks include hazard-priority ordering, original platform support and 34-stud gate, only one platform-folder traversal, unchanged number of raycast sites and return of the selected actual waypoint. This is **not** evidence of runtime validation.
