@@ -1968,8 +1968,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
             blackoutStage = ctx.BlackoutStage,
             title = title,
             hint = roundHint,
-            seconds = botShowdownActive and (t - botShowdownDeadlineT) or t,
+            -- Never overload the authoritative round timer: live client
+            -- disaster and final-rush visuals use the real remaining time.
+            seconds = t,
             botShowdown = botShowdownActive,
+            botShowdownSeconds = botShowdownActive
+                and (t - botShowdownDeadlineT) or nil,
             doubleChaos = #selected > 1,
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
