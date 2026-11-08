@@ -506,6 +506,9 @@ local function roundSummary()
     local alive = tonumber(state.survivorsAlive)
     local seconds = tonumber(state.seconds)
     local pieces = {}
+    if state.botShowdown == true then
+        table.insert(pieces, CoreLocalization.text(localeId, "BOT_SHOWDOWN"))
+    end
 
     if alive then
         table.insert(
