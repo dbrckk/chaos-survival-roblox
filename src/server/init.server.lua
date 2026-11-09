@@ -1884,8 +1884,13 @@ local function runDisasterSet(selected, contestants, roundSettings)
                 break
             end
             if botShowdownDeadlineAt == nil then
-                botShowdownDeadlineAt = os.clock()
-                    + math.min(t, roundSettings.Solo and 4 or 6)
+                -- Respect the original physical round end as well as
+                -- the spectator budget. Delayed 1 Hz ticks must not keep
+                -- the round alive after its active hazards have ended.
+                botShowdownDeadlineAt = math.min(
+                    ctx.RoundEndsAt,
+                    os.clock() + math.min(t, roundSettings.Solo and 4 or 6)
+                )
             end
             local remaining = botShowdownDeadlineAt - os.clock()
             if remaining <= 0 then
