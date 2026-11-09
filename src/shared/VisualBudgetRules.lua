@@ -102,6 +102,10 @@ VisualBudgetRules.LocalFolders = {
     -- per selected authentic station; in shared 440/680/900 census.
     -- Low 0 / Medium 1 / High touch 2 / High PC 3, pressure-adaptive.
     "ApprovedPerimeterVariantApexLocal",
+    -- Four source-authenticated industrial skyline towers (seven MeshParts
+    -- each), controlled by existing LOD and pressure on shared Android
+    -- 440/680/900 Part census. Low 0, Medium 2, High touch 3 / PC 4.
+    "ApprovedExteriorTowerMeshesLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",

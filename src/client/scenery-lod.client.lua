@@ -20,6 +20,7 @@ local ApprovedPerimeterRotorMeshKit = require(script.Parent.ApprovedPerimeterRot
 local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimeterStructuresMeshKit)
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
+local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1262,6 +1263,25 @@ task.spawn(function()
             ~=nativeApexesReplaced then
             player:SetAttribute("LocalPerimeterVariantNativePiecesReplaced",
                 nativeApexesReplaced)
+        end
+        -- Source-approved complete-height forged industrial skyline. Only
+        -- four big native tower body/cap/rib Parts are replaced. The original
+        -- SignalBand and Antenna stay readable. Existing LOD camera sample
+        -- controls proximity, quality, pressure and fallback; no new loop.
+        ApprovedExteriorTowerMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local exteriorTowers=ApprovedExteriorTowerMeshKit.count()
+        if player:GetAttribute("LocalApprovedExteriorTowerCount")
+            ~=exteriorTowers then
+            player:SetAttribute("LocalApprovedExteriorTowerCount",
+                exteriorTowers)
+        end
+        local nativeTowersReplaced=ApprovedExteriorTowerMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalExteriorPrimitiveTowerPartsReplaced")
+            ~=nativeTowersReplaced then
+            player:SetAttribute("LocalExteriorPrimitiveTowerPartsReplaced",
+                nativeTowersReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
