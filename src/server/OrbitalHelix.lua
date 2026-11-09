@@ -390,6 +390,7 @@ OrbitalHelix.ChainCap = 3
 -- seconds. All eight solid ramps stay walkable, even when not charged.
 OrbitalHelix.PulsePairSeconds = 8
 OrbitalHelix.PulseBoost = 7
+OrbitalHelix.MasterPulseBoost = 11
 OrbitalHelix.PulseSpeedCap = 42
 
 -- Helix ramps are permanently traversable. Only the optional pulse bonus
@@ -430,13 +431,15 @@ function OrbitalHelix.pulseActive(lane, pair)
         and (id == selected or id == selected + 4)
 end
 
-function OrbitalHelix.pulseVelocity(velocity, inward)
+function OrbitalHelix.pulseVelocity(velocity, inward, mastered)
     if typeof(inward) ~= "Vector3" then return velocity end
     local flat = Vector3.new(inward.X, 0, inward.Z)
     if flat.Magnitude <= 0.01 then return velocity end
     return MovementSafety.addImpulse(
-        velocity, flat.Unit * OrbitalHelix.PulseBoost,
-        OrbitalHelix.PulseSpeedCap, -52, 58
+        velocity, flat.Unit * (
+            mastered == true and OrbitalHelix.MasterPulseBoost
+                or OrbitalHelix.PulseBoost
+        ), OrbitalHelix.PulseSpeedCap, -52, 58
     )
 end
 
@@ -550,6 +553,7 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
     -- the two currently charged lanes. Once per rig/lane per round prevents
     -- standing at a sensor and farming the acceleration or celebration.
     local pulsed = false
+    local masterPulseSpent = false
     if OrbitalHelix.pulseAllowed(ctx)
         and sensor:GetAttribute("HelixPulseActive") == true
         and type(ctx.HelixPulseClaims) == "table"
@@ -561,10 +565,42 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
                 ctx.HelixPulseClaims[rig] = claimed
             end
             claimed[lane] = true
+            local masterReady = if player then
+                player:GetAttribute("RoundHelixMasterPulseReady") == true
+                else rig:GetAttribute("HelixMasterPulseReady") == true
             root.AssemblyLinearVelocity = OrbitalHelix.pulseVelocity(
-                root.AssemblyLinearVelocity, sensor.CFrame.LookVector
+                root.AssemblyLinearVelocity, sensor.CFrame.LookVector,
+                masterReady
             )
+            if masterReady then
+                masterPulseSpent = true
+                if player then
+                    player:SetAttribute("RoundHelixMasterPulseReady", false)
+                else
+                    rig:SetAttribute("HelixMasterPulseReady", false)
+                end
+            end
             pulsed = true
+        end
+    end
+
+    -- A physical three-ramp chain grants one charged *future* pulse.
+    -- If the third crossing was already pulsing, its normal impulse
+    -- resolves first; only a later valid charged crossing spends mastery.
+    -- No false promise in rookie/multi-hazard rounds with pulse disabled.
+    local masteryAwarded = false
+    if advanced and newChain.tier == OrbitalHelix.ChainCap
+        and type(ctx.HelixPulseClaims) == "table" then
+        if player then
+            if player:GetAttribute("RoundHelixMasterPulseEarned") ~= true then
+                player:SetAttribute("RoundHelixMasterPulseEarned", true)
+                player:SetAttribute("RoundHelixMasterPulseReady", true)
+                masteryAwarded = true
+            end
+        elseif bot and rig:GetAttribute("HelixMasterPulseEarned") ~= true then
+            rig:SetAttribute("HelixMasterPulseEarned", true)
+            rig:SetAttribute("HelixMasterPulseReady", true)
+            masteryAwarded = true
         end
     end
 
@@ -580,11 +616,12 @@ function OrbitalHelix.tryFlow(ctx, sensor, hit, ready, now)
             newChain.tier
         ))
         if ctx.OnArenaMechanicUsed and (advanced or pulsed) then
-            local title = (newChain.tier == 3 and advanced)
-                and "ORBIT MASTER"
-                or (pulsed and "ORBIT PULSE"
-                    or (newChain.tier == 2 and "HELIX CHAIN x2"
-                        or "HELIX FLOW"))
+            local title = masterPulseSpent and "MASTER ORBIT PULSE"
+                or (masteryAwarded and "ORBIT MASTER - PULSE READY"
+                    or ((newChain.tier == 3 and advanced) and "ORBIT MASTER"
+                        or (pulsed and "ORBIT PULSE"
+                            or (newChain.tier == 2 and "HELIX CHAIN x2"
+                                or "HELIX FLOW"))))
             pcall(ctx.OnArenaMechanicUsed, player, "Orbital", title, false)
         end
     end
