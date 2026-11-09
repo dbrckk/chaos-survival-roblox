@@ -1582,6 +1582,18 @@ end
 -- outside that radius, but retain each personality's reaction delay.
 function AISurvivorRules.warningDetectionRadius(warningName, visualRadius, endDiameter)
     if warningName == "FreezeWarning" or warningName == "JumpShockWarning" then
+        -- These pulses affect ALL real contestants across the authored
+        -- arena, not just an arbitrary 80-stud circle around its center.
+        -- The server supplies the physical arena coverage diameter in
+        -- WarningEndSize before publishing each warning. Respect that
+        -- geometry (plus the existing reaction margin) so bots on the
+        -- far perimeter still perceive JumpShock in time to jump.
+        -- Older/missing metadata keeps the established 80-stud behavior.
+        local coverage = tonumber(endDiameter)
+        if coverage and coverage == coverage and coverage > 0
+            and math.abs(coverage) < math.huge then
+            return math.max(80, math.min(512, coverage * 0.5 + 9))
+        end
         return 80
     end
 

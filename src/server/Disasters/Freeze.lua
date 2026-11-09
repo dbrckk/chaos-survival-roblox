@@ -10,7 +10,7 @@ function D.restoredFrozenMarker(currentMarker, originalMarker)
     return originalMarker
 end
 
-local function createWarning(ctx, diameter)
+local function createWarning(ctx, diameter, warningSeconds)
     local warning = Instance.new("Part")
     warning.Name = "FreezeWarning"
     warning.Shape = Enum.PartType.Cylinder
@@ -24,6 +24,11 @@ local function createWarning(ctx, diameter)
     warning.Material = Enum.Material.Neon
     warning.Color = Color3.fromRGB(100, 205, 255)
     warning.Transparency = 0.78
+    -- The server ChildAdded observer and every client must first see
+    -- a fully configured warning, never a metadata-free first frame.
+    HazardWarning.configure(
+        warning, "Freeze", warningSeconds, diameter, diameter
+    )
     warning.Parent = workspace
     ctx.Cleanup[#ctx.Cleanup+1] = warning
     return warning
@@ -84,8 +89,9 @@ function D.start(ctx)
             if not ctx.Active() then break end
 
             local warningDiameter = HazardWarning.arenaCoverageDiameter(150)
-            local warning = createWarning(ctx, warningDiameter)
-            HazardWarning.configure(warning, "Freeze", warningSeconds, warningDiameter, warningDiameter)
+            local warning = createWarning(
+                ctx, warningDiameter, warningSeconds
+            )
             task.wait(warningSeconds)
 
             if warning.Parent then

@@ -813,6 +813,7 @@ local function createRig(record)
     record.proxy.Character = model
     record.alive = true
     record.target = nil
+    record.emergencyMoveActive = false
     record.targetPart = nil
     record.targetIsPad = false
     record.nextThink = 0
@@ -829,6 +830,7 @@ local function createRig(record)
     record.threat = nil
     record.threatSeenAt = nil
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.shockWarningSeenAt = setmetatable({}, {__mode = "k"})
     record.collapsePlanThreat = nil
     record.collapsePlanDeck = nil
     record.collapsePlanTarget = nil
@@ -956,6 +958,9 @@ local function sendToLobby(record)
     end
 
     record.inRound = false
+    record.shockWarningSeenAt = setmetatable({}, {__mode = "k"})
+    record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.emergencyMoveActive = false
     record.collapsePlanThreat = nil
     record.collapsePlanDeck = nil
     record.collapsePlanTarget = nil
@@ -1028,6 +1033,7 @@ local function sendToArena(record)
     end
 
     record.inRound = true
+    record.emergencyMoveActive = false
     record.model:SetAttribute("AISurvivorInRound", true)
     record.collapsePlanThreat = nil
     record.collapsePlanDeck = nil
@@ -1036,6 +1042,7 @@ local function sendToArena(record)
     record.collapsePlanWarningVersion = -1
     record.collapsePlanSweepExposures = 0
     record.reactedWarnings = setmetatable({}, {__mode = "k"})
+    record.shockWarningSeenAt = setmetatable({}, {__mode = "k"})
     record.target = nil
     record.routeWarningVersion = -1
     record.routeWarningTarget = nil
@@ -1077,6 +1084,12 @@ local function sendToArena(record)
     record.model:SetAttribute("BotGroundRouteNoPathCount", 0)
     record.model:SetAttribute("BotHazardSteeringCorrections", 0)
     record.model:SetAttribute("BotImpactReactionHandoffs", 0)
+    record.model:SetAttribute("BotEmergencyResumeCount", 0)
+    record.model:SetAttribute("BotShockJumpCommands", 0)
+    -- Real shock outcomes are counted by the server impact handler,
+    -- not inferred from attempted AI jump commands.
+    record.model:SetAttribute("BotShockDodges", 0)
+    record.model:SetAttribute("BotShockHits", 0)
     record.model:SetAttribute("BotCollapseSafeExitPlans", 0)
     record.model:SetAttribute("BotCollapsePartialRetreats", 0)
     record.model:SetAttribute("BotCollapseBlockedPlans", 0)
@@ -1180,6 +1193,10 @@ local function newRecord(slot)
         strafeBias = (math.random() * 2 - 1) * 0.32,
         threat = nil,
         threatSeenAt = nil,
+        -- Weak warning keys retain each pulse's independent first-sighting
+        -- delay without retaining expired disaster Instances indefinitely.
+        shockWarningSeenAt = setmetatable({}, {__mode = "k"}),
+        emergencyMoveActive = false,
         platformThreat = nil,
         platformThreatSeenAt = nil,
         collapsePlanThreat = nil,
@@ -1737,8 +1754,16 @@ local function disappearingPlatformEscape(record, root, now)
     -- collapse disaster. Other arenas avoid a new per-bot raycast each tick.
     if not hasDisaster("DisappearingPlatforms")
         and arenaVariantId() ~= "Towers" then
+        -- A previous warning may have expired while the disaster was
+        -- removed. Never carry a cached escape into a different event.
         record.platformThreat = nil
         record.platformThreatSeenAt = nil
+        record.collapsePlanThreat = nil
+        record.collapsePlanDeck = nil
+        record.collapsePlanTarget = nil
+        record.collapsePlanUntil = 0
+        record.collapsePlanWarningVersion = -1
+        record.collapsePlanSweepExposures = 0
         return nil
     end
 
@@ -1762,6 +1787,8 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanDeck = nil
         record.collapsePlanTarget = nil
         record.collapsePlanUntil = 0
+        record.collapsePlanWarningVersion = -1
+        record.collapsePlanSweepExposures = 0
         return nil
     end
 
@@ -1772,6 +1799,8 @@ local function disappearingPlatformEscape(record, root, now)
         record.collapsePlanDeck = nil
         record.collapsePlanTarget = nil
         record.collapsePlanUntil = 0
+        record.collapsePlanWarningVersion = -1
+        record.collapsePlanSweepExposures = 0
     end
 
     if not AISurvivorRules.reactionReady(
@@ -2100,75 +2129,11 @@ local function disappearingPlatformEscape(record, root, now)
     local bestLandingImpacts, bestCorridorImpacts = math.huge, math.huge
     local bestSweepImpacts = math.huge
     local bestCost = math.huge
-    local nearestPartial, nearestPartialCost = nil, math.huge
-    local nearestPartialLanding = math.huge
-    local nearestPartialCorridor = math.huge
-    local nearestPartialSweep = math.huge
-    local nearestPartialSupport = nil
     for _, localExit in ipairs(exits) do
         local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
         local delta = exit - root.Position
         local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
         if flatDistance > 1 then
-            -- When a giant platform is impossible to clear before impact,
-            -- preserve physical progress toward its closest edge rather
-            -- than freezing in place or inventing a safe landing.
-            local partial = root.Position
-                + Vector3.new(delta.X, 0, delta.Z).Unit
-                    * math.min(12, flatDistance)
-            local partialLanding, partialCorridor = 0, 0
-            for _, impact in ipairs(impacts) do
-                local diff = partial - impact.position
-                if Vector3.new(diff.X, 0, diff.Z).Magnitude
-                    < impact.radius + 3 then
-                    partialLanding += 1
-                end
-                if AISurvivorRules.routeWarningPenalty(
-                    root.Position, partial,
-                    impact.position, impact.radius
-                ) >= 20 then
-                    partialCorridor += 1
-                end
-            end
-            local partialSweep = sweepExposures(partial)
-            local partialCost = flatDistance
-            local betterPartial = partialLanding < nearestPartialLanding
-            if partialLanding == nearestPartialLanding then
-                if partialCorridor < nearestPartialCorridor then
-                    betterPartial = true
-                elseif partialCorridor == nearestPartialCorridor then
-                    betterPartial = partialSweep < nearestPartialSweep
-                        or (partialSweep == nearestPartialSweep
-                            and partialCost < nearestPartialCost)
-                end
-            end
-            if betterPartial then
-                local partialHit = physicalFloor(partial, true)
-                -- A fallback may also end on a DIFFERENT supported deck.
-                -- Do not allow that endpoint alone to hide a gap in the
-                -- walking corridor. A point still on the same convex
-                -- doomed floor is safe until the warning expires.
-                local partialCorridorSupported = partialHit ~= nil
-                if partialCorridorSupported and partialHit.Instance ~= part then
-                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
-                        if not physicalFloor(
-                            root.Position:Lerp(partial, fraction), true
-                        ) then
-                            partialCorridorSupported = false
-                            break
-                        end
-                    end
-                end
-                if partialCorridorSupported then
-                    nearestPartial = partial
-                    nearestPartialSupport = partialHit.Instance
-                    nearestPartialLanding = partialLanding
-                    nearestPartialCorridor = partialCorridor
-                    nearestPartialSweep = partialSweep
-                    nearestPartialCost = partialCost
-                end
-            end
-
             local worldExitLocal = part.CFrame:PointToObjectSpace(exit)
             local outsideThreat = math.abs(worldExitLocal.X) > halfX + 1.4
                 or math.abs(worldExitLocal.Z) > halfZ + 1.4
@@ -2251,6 +2216,83 @@ local function disappearingPlatformEscape(record, root, now)
                 "BotCollapseSafeExitPlans")) or 0) + 1)
         return bestExit
     end
+    -- Only if ALL four complete physical exits have failed do we sample
+    -- a shorter approach toward the nearest verified platform edge.
+    -- Successful full evacuations avoid every optional partial-retreat
+    -- collision query; retain the exact same physical and hazard gates
+    -- for genuinely blocked layouts.
+    local nearestPartial, nearestPartialCost = nil, math.huge
+    local nearestPartialLanding = math.huge
+    local nearestPartialCorridor = math.huge
+    local nearestPartialSweep = math.huge
+    local nearestPartialSupport = nil
+    for _, localExit in ipairs(exits) do
+        local exit = clampToArena(part.CFrame:PointToWorldSpace(localExit))
+        local delta = exit - root.Position
+        local flatDistance = Vector3.new(delta.X, 0, delta.Z).Magnitude
+        if flatDistance > 1 then
+            -- When a giant platform is impossible to clear before impact,
+            -- preserve physical progress toward its closest edge rather
+            -- than freezing in place or inventing a safe landing.
+            local partial = root.Position
+                + Vector3.new(delta.X, 0, delta.Z).Unit
+                    * math.min(12, flatDistance)
+            local partialLanding, partialCorridor = 0, 0
+            for _, impact in ipairs(impacts) do
+                local diff = partial - impact.position
+                if Vector3.new(diff.X, 0, diff.Z).Magnitude
+                    < impact.radius + 3 then
+                    partialLanding += 1
+                end
+                if AISurvivorRules.routeWarningPenalty(
+                    root.Position, partial,
+                    impact.position, impact.radius
+                ) >= 20 then
+                    partialCorridor += 1
+                end
+            end
+            local partialSweep = sweepExposures(partial)
+            local partialCost = flatDistance
+            local betterPartial = partialLanding < nearestPartialLanding
+            if partialLanding == nearestPartialLanding then
+                if partialCorridor < nearestPartialCorridor then
+                    betterPartial = true
+                elseif partialCorridor == nearestPartialCorridor then
+                    betterPartial = partialSweep < nearestPartialSweep
+                        or (partialSweep == nearestPartialSweep
+                            and partialCost < nearestPartialCost)
+                end
+            end
+            if betterPartial then
+                local partialHit = physicalFloor(partial, true)
+                -- A fallback may also end on a DIFFERENT supported deck.
+                -- Do not allow that endpoint alone to hide a gap in the
+                -- walking corridor. A point still on the same convex
+                -- doomed floor is safe until the warning expires.
+                local partialCorridorSupported = partialHit ~= nil
+                if partialCorridorSupported and partialHit.Instance ~= part then
+                    for _, fraction in ipairs({0.30, 0.55, 0.80}) do
+                        if not physicalFloor(
+                            root.Position:Lerp(partial, fraction), true
+                        ) then
+                            partialCorridorSupported = false
+                            break
+                        end
+                    end
+                end
+                if partialCorridorSupported then
+                    nearestPartial = partial
+                    nearestPartialSupport = partialHit.Instance
+                    nearestPartialLanding = partialLanding
+                    nearestPartialCorridor = partialCorridor
+                    nearestPartialSweep = partialSweep
+                    nearestPartialCost = partialCost
+                end
+            end
+
+        end
+    end
+
     if nearestPartial then
         -- Partial progress is allowed only on real ground confirmed by
         -- the raycast. The target is still urgent and will be recomputed
@@ -2414,6 +2456,158 @@ local function floorSweepEscape(record, root, now)
     return exit and clampToArena(exit) or nil
 end
 
+-- A timed arena-wide pulse requires a vertical body action, not a
+-- competing horizontal escape destination. Resolve its jump separately
+-- from the impact/collapse route so an active Meteor/Bomb dodge or a
+-- collapsing deck cannot mask a real JumpShock warning.
+-- A JumpShock wave requires a precisely timed vertical action, even
+-- while another physical disaster owns the bot's horizontal direction.
+-- Freeze's optional personality jump remains in the ordinary focus
+-- priority; it must not interrupt a more urgent Meteor/Bomb retreat.
+-- Humanoid jumps need positive R15 clearance and upward velocity at
+-- impact, not merely a Jump=true request sometime within the warning.
+-- The engine physics check remains authoritative (JumpShock.applyShock).
+-- A one-shot timed callback aims for 0.20s before impact; the regular
+-- brain pass retains a narrow fallback window if that callback is late.
+local function issueTimedShockJump(
+    record, model, humanoid, warning, seen, handled)
+    if record.model ~= model or not model or not model.Parent
+        or not record.inRound or not record.alive
+        or currentState.phase ~= "round"
+        or not humanoid or humanoid.Parent ~= model
+        or humanoid.Health <= 0
+        or warning.Parent ~= workspace
+        or warning.Name ~= "JumpShockWarning"
+        or warning:GetAttribute("WarningKind") ~= "JumpShock"
+        or record.shockWarningSeenAt ~= seen
+        or record.reactedWarnings ~= handled
+        or handled[warning] then
+        return false
+    end
+    local started = tonumber(warning:GetAttribute("WarningStartedAt"))
+    local duration = tonumber(warning:GetAttribute("WarningDuration"))
+    if not started or not duration
+        or started ~= started or duration ~= duration
+        or math.abs(started) == math.huge
+        or math.abs(duration) == math.huge
+        or duration <= 0 then
+        return false
+    end
+    local now = workspace:GetServerTimeNow()
+    local remaining = started + duration - now
+    -- At default Roblox jump physics, a 0.10s jump can be too low,
+    -- while a 0.34s jump may already be descending at impact.
+    -- This tighter physical attempt window is strictly INSIDE the
+    -- existing shockJumpWindow; no hit immunity is fabricated.
+    if remaining < 0.12 or remaining > 0.23
+        or not AISurvivorRules.shockJumpWindow(
+            started, duration, now
+        )
+        or not AISurvivorRules.reactionReady(
+            seen[warning], os.clock(), record.profile.ReactionSeconds
+        )
+        or humanoid.FloorMaterial == Enum.Material.Air
+        or humanoid.SeatPart ~= nil
+        or humanoid:GetAttribute("ChaosFrozen") == true
+        or (humanoid.UseJumpPower and humanoid.JumpPower <= 0)
+        or (not humanoid.UseJumpPower and humanoid.JumpHeight <= 0)
+    then
+        return false
+    end
+    if AISurvivorRules.consumeWarningJump(handled, warning, 0) then
+        humanoid.Jump = true
+        model:SetAttribute("BotShockJumpCommands",
+            (tonumber(model:GetAttribute("BotShockJumpCommands"))
+                or 0) + 1)
+        return true
+    end
+    return false
+end
+
+-- JumpShock/Freeze are arena-wide pulses, not 3D blast spheres.
+-- A bot on a real high platform must not miss a whole-arena warning
+-- solely because vertical elevation increases its spatial distance.
+-- Meteor/Bomb keep their existing physical 3D warning distances.
+local function warningDistance(position, center, name)
+    if name == "FreezeWarning" or name == "JumpShockWarning" then
+        local dx = position.X - center.X
+        local dz = position.Z - center.Z
+        return math.sqrt(dx * dx + dz * dz)
+    end
+    return (position - center).Magnitude
+end
+
+local function reactToShockWarning(record, humanoid, root, now)
+    local seen = record.shockWarningSeenAt
+    if not seen then
+        seen = setmetatable({}, {__mode = "k"})
+        record.shockWarningSeenAt = seen
+    end
+    local handled = record.reactedWarnings
+    if not handled then
+        handled = setmetatable({}, {__mode = "k"})
+        record.reactedWarnings = handled
+    end
+    local serverNow = workspace:GetServerTimeNow()
+    for _, warning in ipairs(warningParts()) do
+        if warning.Name == "JumpShockWarning" then
+            local visualRadius = math.max(warning.Size.X,
+                warning.Size.Z, warning.Size.Y) * 0.5
+            local threshold = AISurvivorRules.warningDetectionRadius(
+                warning.Name, visualRadius,
+                warning:GetAttribute("WarningEndSize")
+            )
+            if warningDistance(root.Position, warning.Position, warning.Name)
+                <= threshold then
+                -- Only defer the cosmetic hop clock; the physical
+                -- parkour-jump cooldown never changes here.
+                record.nextJump = math.max(record.nextJump or 0, now + 1.0)
+                if not seen[warning] then
+                    seen[warning] = now
+                    warnNearbyContestants(record, now)
+                    local started = tonumber(
+                        warning:GetAttribute("WarningStartedAt"))
+                    local duration = tonumber(
+                        warning:GetAttribute("WarningDuration"))
+                    if started and duration and started == started
+                        and duration == duration
+                        and math.abs(started) < math.huge
+                        and math.abs(duration) < math.huge
+                        and duration > 0 then
+                        -- Stagger seven/bot slots slightly rather
+                        -- than making every survivor jump on exactly
+                        -- the same rendered frame. All offsets remain
+                        -- inside the physically useful rising window.
+                        local jumpLead = 0.18
+                            + ((record.slot or 1) % 5) * 0.01
+                        local delaySeconds = started + duration
+                            - serverNow - jumpLead
+                        -- Only one short callback per observed shock.
+                        -- A replacement rig, ended round, expired marker
+                        -- or changed warning-state table invalidates it.
+                        if delaySeconds >= 0 and delaySeconds <= 4 then
+                            local model = record.model
+                            task.delay(delaySeconds, function()
+                                issueTimedShockJump(
+                                    record, model, humanoid,
+                                    warning, seen, handled
+                                )
+                            end)
+                        end
+                    end
+                end
+                -- Brain-cadence fallback for a first sighting near the
+                -- deadline or a delayed engine timer. The same handled
+                -- table guarantees one jump command per real warning.
+                issueTimedShockJump(
+                    record, record.model, humanoid,
+                    warning, seen, handled
+                )
+            end
+        end
+    end
+end
+
 local function immediateThreat(record, root, now)
     local nearest = nil
     local nearestDistance = math.huge
@@ -2430,8 +2624,15 @@ local function immediateThreat(record, root, now)
     local predictedPosition = root.Position + horizontalVelocity * anticipation
 
     for _, warning in ipairs(warningParts()) do
-        local currentDistance = (root.Position - warning.Position).Magnitude
-        local predictedDistance = (predictedPosition - warning.Position).Magnitude
+        -- Only the timed JumpShock body action runs independently.
+        -- Freeze keeps its original low-priority personality reaction.
+        if warning.Name == "JumpShockWarning" then
+            continue
+        end
+        local currentDistance = warningDistance(
+            root.Position, warning.Position, warning.Name)
+        local predictedDistance = warningDistance(
+            predictedPosition, warning.Position, warning.Name)
         local distance = math.min(currentDistance, predictedDistance)
         local warningRadius = math.max(warning.Size.X, warning.Size.Z, warning.Size.Y) * 0.5
         local threshold = AISurvivorRules.warningDetectionRadius(
@@ -2501,7 +2702,7 @@ local function immediateThreat(record, root, now)
         -- impact overtakes the first. Preserve readiness ONLY during an
         -- actual, recent impact-to-impact handoff. The new impact still
         -- discards the old path and computes a fresh supported escape.
-        -- Initial warnings, expired plans, and Freeze/JumpShock changes
+        -- Initial warnings, expired plans and Freeze changes still
         -- retain their normal personality-dependent reaction delay.
         local impactHandoff = previous ~= nil
             and nearest ~= nil
@@ -2543,31 +2744,39 @@ local function immediateThreat(record, root, now)
         return nil
     end
 
-    if nearest.Name == "FreezeWarning" or nearest.Name == "JumpShockWarning" then
-        -- Jump Shock requires a *late* jump; jumping on first sight would
-        -- leave a bot descending when the new physical dodge check runs.
-        -- Warning timestamps are workspace server-time, unlike the
-        -- os.clock() used for routine AI reaction delays.
-        if nearest.Name == "JumpShockWarning"
-            and not AISurvivorRules.shockJumpWindow(
-                nearest:GetAttribute("WarningStartedAt"),
-                nearest:GetAttribute("WarningDuration"),
-                workspace:GetServerTimeNow()
-            ) then
-            return nil
+    if nearest.Name == "FreezeWarning" then
+        -- Freeze is a lower-priority optional personality reaction.
+        -- If a real JumpShock warning covers this bot, an early show-off
+        -- Freeze jump can leave it AIRBORNE when the mandatory timed
+        -- shock-dodge window opens. Preserve that grounded jump for the
+        -- independently handled JumpShock instead.
+        for _, candidate in ipairs(warningParts()) do
+            if candidate.Name == "JumpShockWarning" then
+                local visual = math.max(candidate.Size.X,
+                    candidate.Size.Y, candidate.Size.Z) * 0.5
+                local radius = AISurvivorRules.warningDetectionRadius(
+                    candidate.Name, visual,
+                    candidate:GetAttribute("WarningEndSize")
+                )
+                if (root.Position - candidate.Position).Magnitude <= radius then
+                    return nil
+                end
+            end
         end
-        -- Keep one reaction per actual pulse instance, even if it remains in
-        -- range for many 0.18-second AI brain steps. Weak keys prevent stale
-        -- destroyed warning parts from being retained across long sessions.
+        -- Unlike JumpShock, Freeze doesn't replace the horizontal
+        -- Meteor/Bomb/collapse route and keeps its original one-shot
+        -- personality reaction probability.
         local handled = record.reactedWarnings
         if not handled then
             handled = setmetatable({}, {__mode = "k"})
             record.reactedWarnings = handled
         end
         if AISurvivorRules.consumeWarningJump(
-            handled, nearest, math.random(), record.profile.FreezeJumpChance
+            handled, nearest, math.random(),
+            record.profile.FreezeJumpChance
         ) then
-            local humanoid = record.model and record.model:FindFirstChildOfClass("Humanoid")
+            local humanoid = record.model
+                and record.model:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid.Jump = true
             end
@@ -4876,6 +5085,18 @@ local function recoverIfStuck(record, humanoid, root, now)
         record.lastProgressAt = now
         return false
     end
+    -- Freeze applies a server-owned movement penalty to BOTH players
+    -- and bots. A legitimate 4-stud/s slowdown (or a disabled jump)
+    -- cannot justify quarantining a perfectly valid destination as a
+    -- navigation obstruction. Reset the physical progress baseline
+    -- throughout the actual frozen state; require a fresh 1.15 seconds
+    -- of ordinary walking once the authoritative marker is restored.
+    if humanoid:GetAttribute("ChaosFrozen") == true then
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = goal
+        record.lastProgressAt = now
+        return false
+    end
     -- Deliberate pauses, grounded prompt-holds, airborne jumps and
     -- turn animations must NEVER be interpreted as failed navigation.
     local grounded = humanoid.FloorMaterial ~= Enum.Material.Air
@@ -5644,6 +5865,46 @@ local function stepRecord(record, now)
         urgentTarget = AISurvivorRules.collapseFallbackTarget(
             urgentTarget, record.collapseEscapeHolding, root.Position
         )
+        -- JumpShock is an independent vertical action, regardless of
+        -- which escape goal won. Resolve the higher-priority impact
+        -- first so its shared nearby-player warning cue isn't stolen
+        -- by a simultaneous shock ring.
+        reactToShockWarning(record, humanoid, root, now)
+    end
+
+    if urgentTarget then
+        -- Stuck detection measures NORMAL, intentional ground walking.
+        -- A deliberate emergency turn, jump or shelter hold is not a
+        -- failed attempt toward the older roaming destination.
+        record.emergencyMoveActive = true
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = nil
+        record.lastProgressAt = now
+    elseif record.emergencyMoveActive then
+        -- Once the authoritative danger is gone, do NOT keep following
+        -- yesterday's short dodge endpoint as an ordinary objective.
+        -- Drop its MoveTo/turn inertia and choose a fresh real target
+        -- this same brain pass; still preserve failure quarantines and
+        -- the accumulated genuine recovery-attempt history.
+        record.emergencyMoveActive = false
+        record.target = nil
+        record.targetPart = nil
+        record.targetIsPad = false
+        record.targetIsSkyrail = false
+        record.skyrailDirection = nil
+        record.lastMoveTarget = nil
+        record.moveDirection = Vector3.zero
+        record.nextThink = 0
+        record.idleUntil = 0
+        record.turnPauseUntil = 0
+        record.lastProgressPosition = root.Position
+        record.lastProgressTarget = nil
+        record.lastProgressAt = now
+        if record.model then
+            record.model:SetAttribute("BotEmergencyResumeCount",
+                (tonumber(record.model:GetAttribute(
+                    "BotEmergencyResumeCount")) or 0) + 1)
+        end
     end
 
     if urgentTarget and (record.groundNavigation
@@ -5984,6 +6245,12 @@ local function stepRecord(record, now)
         -- airborne shortcuts across its narrow physical corridor.
         and not record.groundNavigation
         and not record.groundNavigationPending
+        -- Cosmetic hops may start before JumpShock's short late-jump
+        -- window and leave the bot airborne when a REAL dodge is due.
+        -- Reserve its ordinary grounded jump for danger response while
+        -- any authoritative warning is live; never suppress jumps that
+        -- the physical parkour/district traversal actually needs.
+        and #warningParts() == 0
         and not (record.recoveryWaypoint
             and record.target == record.recoveryWaypoint
             and now < (record.recoveryCommitUntil or 0))
