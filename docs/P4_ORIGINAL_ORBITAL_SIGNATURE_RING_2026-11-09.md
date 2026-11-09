@@ -1,5 +1,8 @@
 # P4 — Anneau réacteur géant sculpté pour Orbital
 
+**Mise à jour source intégrée — 9 novembre 2026.** La géométrie originale OBJ/glTF a passé la validation du workflow [#42711150534](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42711150534) : **7 232 triangles, sept sous-meshes industriels et source 16,98 × 16,98 × 1,27668 studs**. Asset Roblox propriétaire véritable **125070862497818**, **Moderation: Approved**. Les modules PremiumOrbitalSignatureRingAssets et ApprovedOrbitalSignatureRingMeshKit utilisent désormais cet ID; le nouveau kit est compté dans VisualBudgetRules et appelé par scenery-lod. L'import et le raccordement source ne constituent pas un rendu Engine validé ou une publication de la Place.
+
+
 9 novembre 2026. Fabrication d'un Model original, sans mise à jour de Place.
 
 ## Cible réellement auditée

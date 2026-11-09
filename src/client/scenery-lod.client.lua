@@ -21,6 +21,7 @@ local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArm
 local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimeterStructuresMeshKit)
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
+local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1282,6 +1283,25 @@ task.spawn(function()
             ~=nativeTowersReplaced then
             player:SetAttribute("LocalExteriorPrimitiveTowerPartsReplaced",
                 nativeTowersReplaced)
+        end
+        -- P4: sixteen rectangular native Orbital ReactorArc segments are
+        -- swapped for one TRUE source-approved continuous hollow 3D torus,
+        -- after all sixteen source arcs are present and source Model fits.
+        -- Uses existing camera/quality/pressure sampler; no extra loop.
+        ApprovedOrbitalSignatureRingMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local trueOrbitalRings=ApprovedOrbitalSignatureRingMeshKit.count()
+        if player:GetAttribute("LocalApprovedOrbitalSignatureRingCount")
+            ~=trueOrbitalRings then
+            player:SetAttribute("LocalApprovedOrbitalSignatureRingCount",
+                trueOrbitalRings)
+        end
+        local arcsReplaced=ApprovedOrbitalSignatureRingMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPrimitiveOrbitalSignatureArcsReplaced")
+            ~=arcsReplaced then
+            player:SetAttribute("LocalPrimitiveOrbitalSignatureArcsReplaced",
+                arcsReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

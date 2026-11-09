@@ -55,6 +55,7 @@ local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
 local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructuresAssets)
 local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
 local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
+local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -216,6 +217,9 @@ if not isStudioE2E then
     -- Four moderated full-height skyline Models, source-only, optional
     -- cosmetic imports delayed after critical round/AI startup.
     task.defer(PremiumExteriorTowerAssets.start)
+    -- A single genuine continuous Orbital megareactor torus, separate
+    -- optional Model importer; never blocks rounds, human or AI spawn.
+    task.defer(PremiumOrbitalSignatureRingAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

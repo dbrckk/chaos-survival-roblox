@@ -618,6 +618,14 @@
       "source": "tools/generate_original_exterior_towers.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42702281053
+    },
+    {
+      "name": "signature_orbital_reactor_ring",
+      "asset_id": "125070862497818",
+      "moderation": "Approved",
+      "source": "tools/generate_original_signature_orbital_ring.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42711150534
     }
   ]
 }

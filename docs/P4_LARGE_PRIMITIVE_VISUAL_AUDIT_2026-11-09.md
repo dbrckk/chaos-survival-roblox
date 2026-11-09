@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Nouveau lot Orbital :** le modèle de monument `ArenaSignatureMegastructure` conserve ses structures physiques cosmétiques d'origine et son cœur, mais ses **16 ReactorArc** rectangulaires sont désormais éligibles à un remplacement atomique par un tore original 3D continu **vérifié, téléchargé et approuvé** (Model 125070862497818). Ces **16 éléments-source conditionnellement substituables** sont distincts des 23 éléments comptés par station, des 120 pièces de tours extérieures et ne constituent pas un pourcentage global. Le nombre réellement visible demeure dépendant du LOD et du chargement d'assets.
+
+
 9 novembre 2026. Inspection de src/server/MapBuilder.lua et des kits de substitution client sur la branche main.
 
 ## Séparation impérative des populations
