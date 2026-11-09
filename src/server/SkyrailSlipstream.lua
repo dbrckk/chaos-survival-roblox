@@ -57,10 +57,13 @@ function SkyrailSlipstream.boostForSpan(span, localLongitudinal, travelSign, mas
     local projected = travelSign == 1 and offset
         or (travelSign == -1 and -offset or math.abs(offset))
     local remaining = halfSpan - projected
-    -- A mastered surge never overrides remaining runway clearance.
-    -- Raising only the impulse cap (12 -> 15) on a long solid deck
-    -- preserves the same 4.5-stud end margin on shrinking spans.
-    return math.clamp((remaining - 4.5) * 0.65, 0,
+    -- Real Tower bridges span 49 studs before shrink. A 15-stud
+    -- cap alone would give a mere +1 at midspan (13 vs 12);
+    -- slightly raise the runway-weighting for a tangible Ace cut
+    -- while preserving the same 4.5-stud end margin and speed cap.
+    local runway = math.max(0, remaining - 4.5)
+    local multiplier = mastered == true and 0.80 or 0.65
+    return math.clamp(runway * multiplier, 0,
         mastered == true and SkyrailSlipstream.AceBoost
             or SkyrailSlipstream.Boost)
 end
