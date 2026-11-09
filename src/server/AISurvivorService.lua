@@ -1086,6 +1086,10 @@ local function sendToArena(record)
     record.model:SetAttribute("BotImpactReactionHandoffs", 0)
     record.model:SetAttribute("BotEmergencyResumeCount", 0)
     record.model:SetAttribute("BotShockJumpCommands", 0)
+    -- Real shock outcomes are counted by the server impact handler,
+    -- not inferred from attempted AI jump commands.
+    record.model:SetAttribute("BotShockDodges", 0)
+    record.model:SetAttribute("BotShockHits", 0)
     record.model:SetAttribute("BotCollapseSafeExitPlans", 0)
     record.model:SetAttribute("BotCollapsePartialRetreats", 0)
     record.model:SetAttribute("BotCollapseBlockedPlans", 0)
@@ -2520,6 +2524,19 @@ local function issueTimedShockJump(
     return false
 end
 
+-- JumpShock/Freeze are arena-wide pulses, not 3D blast spheres.
+-- A bot on a real high platform must not miss a whole-arena warning
+-- solely because vertical elevation increases its spatial distance.
+-- Meteor/Bomb keep their existing physical 3D warning distances.
+local function warningDistance(position, center, name)
+    if name == "FreezeWarning" or name == "JumpShockWarning" then
+        local dx = position.X - center.X
+        local dz = position.Z - center.Z
+        return math.sqrt(dx * dx + dz * dz)
+    end
+    return (position - center).Magnitude
+end
+
 local function reactToShockWarning(record, humanoid, root, now)
     local seen = record.shockWarningSeenAt
     if not seen then
@@ -2540,7 +2557,8 @@ local function reactToShockWarning(record, humanoid, root, now)
                 warning.Name, visualRadius,
                 warning:GetAttribute("WarningEndSize")
             )
-            if (root.Position - warning.Position).Magnitude <= threshold then
+            if warningDistance(root.Position, warning.Position, warning.Name)
+                <= threshold then
                 -- Only defer the cosmetic hop clock; the physical
                 -- parkour-jump cooldown never changes here.
                 record.nextJump = math.max(record.nextJump or 0, now + 1.0)
@@ -2611,8 +2629,10 @@ local function immediateThreat(record, root, now)
         if warning.Name == "JumpShockWarning" then
             continue
         end
-        local currentDistance = (root.Position - warning.Position).Magnitude
-        local predictedDistance = (predictedPosition - warning.Position).Magnitude
+        local currentDistance = warningDistance(
+            root.Position, warning.Position, warning.Name)
+        local predictedDistance = warningDistance(
+            predictedPosition, warning.Position, warning.Name)
         local distance = math.min(currentDistance, predictedDistance)
         local warningRadius = math.max(warning.Size.X, warning.Size.Z, warning.Size.Y) * 0.5
         local threshold = AISurvivorRules.warningDetectionRadius(
