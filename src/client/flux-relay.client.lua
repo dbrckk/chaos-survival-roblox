@@ -459,8 +459,58 @@ local function renderHUD(serverTime)
     return nextParity
 end
 
+-- The real JunctionSwitchyard already owns its four golden chevrons
+-- and server-managed BillboardGuis. Repaint those SAME objects locally,
+-- only while the authoritative server has an active pair and this player
+-- has an earned one-use master cut. No fake new destination, 3D geometry,
+-- extra render loop, RemoteEvent or server-wide cosmetic side effect.
+local function renderJunctions()
+    local arena = source and source:FindFirstChild("Arena")
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local yard = mechanics and mechanics:FindFirstChild("JunctionSwitchyard")
+    if not yard then return end
+    local ready = player:GetAttribute("RoundFluxJunctionBoostReady") == true
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
+        and activeRound
+    for index = 1, 4 do
+        local pad = yard:FindFirstChild("JunctionSwitch" .. index)
+        local active = pad and pad:GetAttribute("JunctionActive") == true
+        local personal = ready and active
+        local board = yard:FindFirstChild("JunctionRouteSign" .. index)
+        local label = board and board:FindFirstChild("JunctionRouteText")
+        if label and label:IsA("TextLabel") then
+            local caption = personal
+                and (french and "COUPE MAÎTRE" or "MASTER CUT")
+                or (french and "↔ COUPE LATÉRALE"
+                    or "↔ TURN TO BOOST")
+            if label.Text ~= caption then label.Text = caption end
+            local desired = personal and Color3.fromRGB(255, 247, 167)
+                or Color3.fromRGB(255, 203, 99)
+            if label.TextColor3 ~= desired then
+                label.TextColor3 = desired
+            end
+        end
+        -- These two pieces belong to the REAL active switch. Preserve
+        -- the standard off-pair violet and on-pair amber. A player with
+        -- charge sees a brighter master-white pair only where usable.
+        local tint = personal and Color3.fromRGB(255, 245, 172)
+            or (active and Color3.fromRGB(255, 203, 99)
+                or Color3.fromRGB(122, 104, 174))
+        for _, suffix in ipairs({"A", "B"}) do
+            local chevron = yard:FindFirstChild(
+                "JunctionChevron" .. index .. suffix)
+            if chevron and chevron:IsA("BasePart")
+                and chevron.Color ~= tint then
+                chevron.Color = tint
+            end
+        end
+    end
+end
+
 local function render(now)
     local serverTime = workspace:GetServerTimeNow()
+    renderJunctions()
     local nextParity = renderHUD(serverTime)
     local reduced = player:GetAttribute("ReduceMotion") == true
     for trigger, entry in pairs(gates) do
