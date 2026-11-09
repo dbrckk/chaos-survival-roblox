@@ -1,3 +1,9 @@
+## Plan directeur actif — 9 novembre 2026
+
+Le [nouveau plan de production premium](docs/PREMIUM_MASTER_PLAN_2026-11-09.md) fixe désormais l'ordre **P0 publication exact-SHA → P1 première manche compréhensible → P2 IA crédible à huit → P3 interactions signatures des cinq arènes → P4 grande refonte visuelle du premier plan → P5 catastrophes, animation et audio → P6 performances Android/PC → P7 rejouabilité**. Les plans antérieurs restent des références techniques, mais n'imposent plus l'ordre d'exécution.
+
+**État vérifié au début de ce plan :** `main@0d334571560dac92d55190b02f19c1221b28959b` intègre les PR #702, #704 et #705. Le dernier workflow de publication pour ce SHA a échoué sur la vérification des checks Build/Cloud absents pour ce même commit ; **aucune publication de ces corrections n'est attestée**. Cette modification du README et du plan se fait dans une PR **documentation seulement**, non fusionnée pendant la validation du SHA. Ne pas réexécuter la publication avant deux checks verts sur le commit exact.
+
 ## Plan produit actif — 7 novembre 2026
 
 Le [plan premium actualisé](docs/NEXT_PREMIUM_PRODUCTION_ROADMAP_2026-11-04.md#actualisation-opérationnelle--7-novembre-2026-priorités-de-livraison) fixe désormais l'ordre **G4 : version vérifiée → arbitrage IA multi-dangers → navigation physique des bots → interactions à huit → grands visuels 3D → performances Android → validation/publication exact-SHA**. Le correctif Harbor/Classic [#660](https://github.com/dbrckk/chaos-survival-roblox/pull/660) est fusionné en source ; l'IA multi-avertissements est en développement. **Le HEAD de GitHub ne prouve pas à lui seul l'état de la place publique Roblox.**
