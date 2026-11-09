@@ -413,6 +413,8 @@ local function updateLook()
     local stage = tonumber(player:GetAttribute("RoundGridCircuitStep")) or 0
     local destination = tonumber(player:GetAttribute("RoundGridCircuitNext")) or 0
     local complete = player:GetAttribute("RoundGridCircuitComplete") == true
+    local boostReady = complete
+        and player:GetAttribute("RoundGridCircuitBoostReady") == true
     local participant = player:GetAttribute("RoundParticipant") == true
         and player:GetAttribute("RoundEliminated") ~= true
     -- The independent client controller must never show a Classic-only
@@ -422,7 +424,7 @@ local function updateLook()
     local remain = math.max(0, math.ceil(deadline - workspace:GetServerTimeNow()))
     local key = tostring(stage) .. "/" .. tostring(destination) .. "/"
         .. tostring(complete) .. "/" .. tostring(phase)
-        .. "/" .. tostring(remain)
+        .. "/" .. tostring(remain) .. "/" .. tostring(boostReady)
     -- The human can approach a node without any replicated progress
     -- changing. Recompute proximity visibility BEFORE returning early
     -- on the unchanged decorative/style key.
@@ -460,7 +462,13 @@ local function updateLook()
     end
     if phase then
         if complete then
-            banner.Text = "GRID CIRCUIT  //  CLEAR"
+            -- A completed circuit now changes a real mobility choice.
+            -- The cue is per-player; other contestants cannot spend it.
+            banner.Text = boostReady
+                and (french and "CIRCUIT OK • BOOST PRÊT"
+                    or "GRID CLEAR • PAD BOOST")
+                or (french and "CIRCUIT OK • BOOST UTILISÉ"
+                    or "GRID CLEAR • BOOST USED")
         elseif stage == 0 then
             banner.Text = french and "CIRCUIT • TOUCHE UNE BORNE"
                 or "GRID RUN • TOUCH ANY NODE"
