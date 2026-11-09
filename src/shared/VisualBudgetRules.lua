@@ -78,6 +78,11 @@ VisualBudgetRules.LocalFolders = {
     -- tall steel MeshParts. All mounted clones count in 440/680/900 local
     -- Part census; severe Android VFX pressure removes them first.
     "ApprovedPerimeterButtressesLocal",
+    -- Three authentic MeshPart mechanical housings per selected real
+    -- perimeter station, counted inside 440/680/900 local Part census.
+    -- Low 0; Medium one station; High touch two / desktop three;
+    -- optional pressure demotes and native cuboids safely restore.
+    "ApprovedPerimeterMachineryLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",
