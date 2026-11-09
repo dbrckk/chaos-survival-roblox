@@ -14,8 +14,10 @@ local visuals = {}
 local overdriveActive = false
 local roundActive = false
 
--- Only server-awarded, personal movement charges change the local
--- appearance of real pads. This never creates a client-side reward.
+-- Only server-awarded, personal movement charges that are SPENT on
+-- these real pads (Classic/Harbor) change their local appearance.
+-- Towers/Orbital/Crossroads spend charges elsewhere: do not imply
+-- their mobility pads can consume those earned powers.
 local function masteryState(pad)
     if not roundActive
         or player:GetAttribute("RoundParticipant") ~= true
@@ -26,15 +28,6 @@ local function masteryState(pad)
     if variant == "Classic"
         and player:GetAttribute("RoundGridCircuitBoostReady") == true
     then return "CIRCUIT", "GRID" end
-    if variant == "Towers"
-        and player:GetAttribute("RoundSkyrailAceBoostReady") == true
-    then return "SKYRAIL", "ACE" end
-    if variant == "Crossroads"
-        and player:GetAttribute("RoundFluxJunctionBoostReady") == true
-    then return "FLUX", "MASTER" end
-    if variant == "Orbital"
-        and player:GetAttribute("RoundHelixMasterPulseReady") == true
-    then return "ORBIT", "MASTER" end
     if variant == "Harbor"
         and player:GetAttribute("RoundHarborTransferReady") == true
     then return "SQUALL", "READY" end
@@ -166,7 +159,7 @@ local function refreshRates()
                 state.surface:Destroy()
             end
         else
-            local chargeKind, chargeLabel = masteryState(pad)
+            local chargeKind = masteryState(pad)
             local mastered = chargeKind ~= nil
             local personalColor = Color3.fromRGB(255, 227, 145)
             -- A private, subtle cyan-gold edge makes the charged *real*
@@ -449,9 +442,7 @@ player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshRates)
 -- Repaint on server replication only, never on RenderStepped/Heartbeat.
 for _, attribute in ipairs({
     "RoundParticipant", "RoundEliminated",
-    "RoundGridCircuitBoostReady", "RoundFluxJunctionBoostReady",
-    "RoundSkyrailAceBoostReady", "RoundHelixMasterPulseReady",
-    "RoundHarborTransferReady",
+    "RoundGridCircuitBoostReady", "RoundHarborTransferReady",
 }) do
     player:GetAttributeChangedSignal(attribute):Connect(refreshRates)
 end
