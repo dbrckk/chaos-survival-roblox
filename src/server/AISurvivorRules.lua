@@ -532,8 +532,10 @@ end
 -- A quarantined unreachable goal must not enter the ordinary
 -- candidate lottery again on the very next brain tick. Keep all other
 -- real physical targets eligible; never fabricate a waypoint in midair.
--- If a tiny map has no alternative, preserve the original list so the
--- existing physical recovery/idle fallback remains authoritative.
+-- If all candidate goals are quarantined, return an EMPTY list. The
+-- caller's existing no-candidate branch holds the bot on its current
+-- physical footing until the cooldown expires instead of sending it
+-- back into the same wall.
 function AISurvivorRules.filterRecentlyFailedCandidates(
     candidates, failedTarget, now, expiresAt)
     if type(candidates) ~= "table" then return {} end

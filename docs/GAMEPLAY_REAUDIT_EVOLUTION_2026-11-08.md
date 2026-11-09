@@ -117,3 +117,11 @@ Aucun score de test moteur ni publication pour ce commit : la vérification actu
 5. Première session Android : vérification du HUD à la transition lobby/ready/round et absence de ralentissement visible.
 
 **Limite :** contrôle logique du code source, pas observation des paquets dans Roblox Engine ou sur téléphone.
+
+### 9 novembre — gate réel Roblox Open Cloud : test de quarantaine de destination
+
+**Preuve observée :** GitHub Actions [Build Validation #42603750446](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42603750446) **PASS** sur `87f6cc7397fc404c2bb39c0cfef48f2827cfb43d`. Le job Roblox Open Cloud [#42605796466](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42605796466) a réussi les suites `gameplay_hazards` (144/144), `gameplay_world` (181/181), `gameplay_rounds` (61/61) et `matrix` (7/7), puis échoué sur **1 assertion de `core_a`** (371/372 réussies). L'échec est dans l'ancien contrat du spec `ai-survivor-rules.spec.luau`, cas « recovers real stalls with alternate grounded sides » : il attend `{bad}` lorsque le seul objectif a été mis en quarantaine, mais l'implémentation renvoie déjà délibérément `{}`.
+
+**Décision :** préserver le comportement existant plus sûr : `filterRecentlyFailedCandidates` exclut la cible inaccessible pendant son délai de quarantaine. Si aucune alternative n'existe, `AISurvivorService.chooseTarget` retourne la position physique actuelle du bot, pas la cible défaillante. Le code de déplacement ne change pas. L'assertion existante et un commentaire source obsolète sont alignés sur ce contrat réel, sans création de nouveau fichier de test, ni désactivation de suite, ni contournement du gate.
+
+**Validation obligatoire :** les workflows Build Validation, Roblox Open Cloud Engine Tests et publication doivent être relancés **sur le nouveau SHA exact de `main` après fusion de la correction**. Les succès du 7 novembre et le Build PASS sur `87f6...` ne certifient pas le SHA corrigé. La publication [#42606065164](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42606065164) a été **bloquée** par l'absence de suite Cloud PASS ; aucune version de jeu n'a été publiée par ce run.

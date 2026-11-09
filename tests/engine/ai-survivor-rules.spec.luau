@@ -388,9 +388,15 @@ describe("AI survivor rules", function()
             choices, Vector3.new(4, 4, 4), 10, 9.5)).toBe(choices)
         expect(AISurvivorRules.filterRecentlyFailedCandidates(
             choices, nil, 2, 9.5)).toBe(choices)
+        -- When EVERY candidate is still quarantined, the caller must
+        -- hold on the real current footing instead of walking into the
+        -- same blocked goal again. A zero-candidate result is intentional,
+        -- not a request to re-enable the already failed destination.
         local onlyBlocked = {bad}
-        expect(AISurvivorRules.filterRecentlyFailedCandidates(
-            onlyBlocked, Vector3.new(4, 4, 4), 2, 9.5)).toBe(onlyBlocked)
+        local noSafeAlternatives = AISurvivorRules.filterRecentlyFailedCandidates(
+            onlyBlocked, Vector3.new(4, 4, 4), 2, 9.5)
+        expect(#noSafeAlternatives).toBe(0)
+        expect(onlyBlocked[1]).toBe(bad)
 
         -- A landing that looks safe only at its midpoint/end must not
         -- encourage bots to walk over a missing quarter of real floor.
