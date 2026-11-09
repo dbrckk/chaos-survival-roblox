@@ -646,7 +646,7 @@ local ARENA_COPY = {
             name = "TOWER RUN",
             strategy = "Four ascending routes • reach the bridges from the central hub",
             mechanicName = "UPDRAFT PADS",
-            mechanicHint = "Climb the marked tiers; cyan pads boost jumps near the outer towers",
+            mechanicHint = "Use cyan pads to climb; three different Skyrails earn one extra bridge surge",
         },
         Crossroads = {
             name = "CROSSROADS",
@@ -658,13 +658,13 @@ local ARENA_COPY = {
             name = "ORBITAL RING",
             strategy = "Climb the outer ramps • cross the Helix ring • reach the raised reactor",
             mechanicName = "ORBIT BOOSTERS",
-            mechanicHint = "Green pads circle the lower floor; amber Helix lanes and core ramps lead upward",
+            mechanicHint = "Green pads lead to the Helix; chain three ramp crossings for an optional master pulse",
         },
         Harbor = {
             name = "STORM HARBOR",
             strategy = "Climb the cargo piers • jump between switchbacks • survive to zero",
             mechanicName = "SQUALL TRANSFER PADS",
-            mechanicHint = "Blue pads transfer between docks; amber sweep bays mean jump or move away",
+            mechanicHint = "Cross two blue pads within 14s for a bonus transfer; dodge amber cargo sweeps",
         },
     },
     fr = {
@@ -678,7 +678,7 @@ local ARENA_COPY = {
             name = "TOURS",
             strategy = "Quatre voies montantes • rejoins les ponts depuis le centre",
             mechanicName = "PADS ASCENDANTS",
-            mechanicHint = "Monte les paliers indiqués ; les pads cyan aident à prendre de la hauteur",
+            mechanicHint = "Monte avec les pads cyan ; 3 ponts Skyrail différents donnent un élan bonus",
         },
         Crossroads = {
             name = "CARREFOUR",
@@ -690,13 +690,13 @@ local ARENA_COPY = {
             name = "ANNEAU ORBITAL",
             strategy = "Monte par les rampes extérieures • traverse les hélices • rejoins le réacteur",
             mechanicName = "BOOSTERS ORBITAUX",
-            mechanicHint = "Les pads verts sont au sol ; les rampes de l'anneau mènent au réacteur surélevé"
+            mechanicHint = "Les pads verts mènent aux hélices ; enchaîne 3 rampes pour une pulsation bonus"
         },
         Harbor = {
             name = "PORT DES TEMPÊTES",
             strategy = "Monte sur les quais • saute entre les plateformes • survis jusqu'à zéro",
             mechanicName = "PADS DE TRANSFERT",
-            mechanicHint = "Les pads bleus relient les quais ; évite les balayages orange ou saute",
+            mechanicHint = "2 pads bleus différents en 14 s donnent un transfert bonus ; évite le balayage",
         },
     },
 }
