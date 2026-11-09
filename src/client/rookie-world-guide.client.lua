@@ -69,7 +69,21 @@ local function nearestReachablePad(parts)
         return nil
     end
 
+    -- Rival rigs are dynamic obstacles, not terrain. In the eight-seat
+    -- READY formation a bot or another player's body can cross a valid
+    -- floor corridor, and an NPC's feet can falsely appear as its ground.
+    -- Exclude only the bounded player roster and the server-owned AI
+    -- survivor rigs; keep every authored arena collider in the query.
     local ignored = {markerFolder}
+    local botRigs = workspace:FindFirstChild("AISurvivors")
+    if botRigs and botRigs:IsA("Folder") then
+        table.insert(ignored, botRigs)
+    end
+    for _, human in ipairs(Players:GetPlayers()) do
+        if human.Character then
+            table.insert(ignored, human.Character)
+        end
+    end
     if root.Parent then
         table.insert(ignored, root.Parent)
     end
