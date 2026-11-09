@@ -15,7 +15,6 @@ holder:SetAttribute("CosmeticOnly", true)
 holder.Parent = workspace
 
 local mounted = {}
-local serial = 0
 
 local function genuineSource()
     local parent = ReplicatedStorage:FindFirstChild(
@@ -80,6 +79,7 @@ local function removePad(pad)
     if not entry then return end
     mounted[pad] = nil
     if entry.connection then entry.connection:Disconnect() end
+    if entry.meshConnection then entry.meshConnection:Disconnect() end
     if entry.model.Parent then entry.model:Destroy() end
 end
 
@@ -151,6 +151,11 @@ local function mount(pad, source)
     entry.connection = pad.AncestryChanged:Connect(function()
         if not genuinePad(pad) then removePad(pad) end
     end)
+    -- A streamed/externally removed piece cannot leave a half-finished
+    -- metal shell hiding the gameplay marker; discard the broken clone.
+    entry.meshConnection = copy.DescendantRemoving:Connect(function(part)
+        if part:IsA("MeshPart") then removePad(pad) end
+    end)
     return true
 end
 
@@ -212,7 +217,6 @@ function Kit.sync(pads, tier, rawPressure, touch)
 end
 
 function Kit.clear()
-    serial += 1
     removeAll()
 end
 
