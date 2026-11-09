@@ -48,27 +48,145 @@ end
 local function characterRoot()
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    -- The READY packet can arrive while Roblox is replacing a dead rig.
+    -- Only a living character may receive a physical movement cue.
+    if not humanoid or humanoid.Health <= 0 then return nil end
     return root and root:IsA("BasePart") and root or nil
 end
 
-local function nearestPart(parts)
+-- A close-looking pad can still be on another elevation, behind a
+-- solid wall, or separated from the avatar by a missing piece of floor.
+-- READY is the only phase in which this optional marker is shown; never
+-- promise a route which we cannot confirm on the replicated physical map.
+-- These few bounded probes execute only when the server sends READY or
+-- the map/character changes, not in RenderStepped or a second scanner.
+local function nearestReachablePad(parts)
     local root = characterRoot()
-    if not root then
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not root or not root:IsDescendantOf(workspace) or not arena then
         return nil
     end
 
-    local nearest = nil
-    local nearestDistance = math.huge
-    for _, part in ipairs(parts) do
-        if part:IsA("BasePart") then
-            local distance = (part.Position - root.Position).Magnitude
-            if distance < nearestDistance then
-                nearest = part
-                nearestDistance = distance
+    -- Rival rigs are dynamic obstacles, not terrain. In the eight-seat
+    -- READY formation a bot or another player's body can cross a valid
+    -- floor corridor, and an NPC's feet can falsely appear as its ground.
+    -- Exclude only the bounded player roster and the server-owned AI
+    -- survivor rigs; keep every authored arena collider in the query.
+    local ignored = {markerFolder}
+    local botRigs = workspace:FindFirstChild("AISurvivors")
+    if botRigs and botRigs:IsA("Folder") then
+        table.insert(ignored, botRigs)
+    end
+    for _, human in ipairs(Players:GetPlayers()) do
+        if human.Character then
+            table.insert(ignored, human.Character)
+        end
+    end
+    if root.Parent then
+        table.insert(ignored, root.Parent)
+    end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = ignored
+    params.RespectCanCollide = true
+
+    -- Rank eight or fewer authored pads by real horizontal distance FIRST.
+    -- Once a safe pad is found, never raycast the remaining farther pads.
+    -- These are local READY-only physics probes, not pathfinding or a loop.
+    local ranked = {}
+    for _, pad in ipairs(parts) do
+        if pad:IsA("BasePart") and pad.Parent
+            and pad.CanTouch and pad:GetAttribute("ArenaMobilityPad") == true
+            and pad:IsDescendantOf(arena) then
+            local offset = pad.Position - root.Position
+            local flat = Vector3.new(offset.X, 0, offset.Z)
+            local distance = flat.Magnitude
+            if distance >= 4 and distance <= 56
+                and math.abs(offset.Y) <= 5 then
+                ranked[#ranked + 1] = {
+                    part = pad,
+                    flat = flat,
+                    distance = distance,
+                }
             end
         end
     end
-    return nearest
+    table.sort(ranked, function(a, b)
+        return a.distance < b.distance
+    end)
+
+    for _, candidate in ipairs(ranked) do
+        -- The nearest pad may be behind a wall or on a different
+        -- physical route. Only point to an objectively direct approach.
+        local obstacle = workspace:Raycast(
+            root.Position, candidate.flat, params
+        )
+        if not obstacle
+            or obstacle.Distance >= candidate.distance - 3.5 then
+            local supported = true
+            local groundY = nil
+            local samples = math.max(3, math.ceil(candidate.distance / 3.5))
+            local side = Vector3.new(-candidate.flat.Z, 0, candidate.flat.X).Unit * 1.3
+
+            -- Probe BOTH endpoints and intermediate supports at <=3.5
+            -- studs. Every other intermediate point probes the shoulder
+            -- width too, rejecting tiny rails too narrow for an R15 rig.
+            -- No unbounded search, extra workspace scan or frame loop.
+            for step = 0, samples do
+                local location = root.Position:Lerp(
+                    candidate.part.Position, step / samples
+                )
+                local ground = workspace:Raycast(
+                    location + Vector3.new(0, 2, 0),
+                    Vector3.new(0, -11, 0), params
+                )
+                if not ground or not ground.Instance:IsDescendantOf(arena)
+                    or ground.Normal.Y < 0.65
+                    or ground.Position.Y > location.Y - 0.3
+                    or (step == 0
+                        and root.Position.Y - ground.Position.Y > 6)
+                    or (groundY and math.abs(ground.Position.Y - groundY) > 2)
+                then
+                    supported = false
+                    break
+                end
+                groundY = ground.Position.Y
+
+                if step > 0 and step < samples and step % 2 == 0 then
+                    for direction = -1, 1, 2 do
+                        local shoulder = location + side * direction
+                        local support = workspace:Raycast(
+                            shoulder + Vector3.new(0, 2, 0),
+                            Vector3.new(0, -11, 0), params
+                        )
+                        if not support
+                            or not support.Instance:IsDescendantOf(arena)
+                            or support.Normal.Y < 0.65
+                            or support.Position.Y > shoulder.Y - 0.3
+                            or math.abs(support.Position.Y - groundY) > 1.25
+                        then
+                            supported = false
+                            break
+                        end
+                    end
+                    if not supported then break end
+                end
+            end
+
+            if supported then
+                -- A READY state may outlive the exact physical pad if the
+                -- arena is removed while client data is streaming.
+                if candidate.part.Parent and candidate.part.CanTouch
+                    and candidate.part:IsDescendantOf(arena) then
+                    return candidate.part
+                end
+                return nil
+            end
+        end
+    end
+    return nil
 end
 
 local function practicePads()
@@ -205,7 +323,8 @@ local function buildWorldBeacon(part, color)
 end
 
 local function mark(part, text, color)
-    if currentTarget == part and highlight and billboard then
+    if currentTarget == part and highlight
+        and (billboard or UserInputService.TouchEnabled) then
         return
     end
 
@@ -227,6 +346,11 @@ local function mark(part, text, color)
     highlight.Parent = markerFolder
 
     buildWorldBeacon(part, color)
+
+    -- Mobile already shows the survival goal and imminent hazard in two
+    -- existing HUD owners. A third AlwaysOnTop label obscures the avatar
+    -- on narrow screens; the bounded world highlight alone is enough.
+    if UserInputService.TouchEnabled then return end
 
     billboard = Instance.new("BillboardGui")
     billboard.Name = "RookieGuideLabel"
@@ -284,7 +408,11 @@ local function mark(part, text, color)
 end
 
 local function refresh()
-    if player:GetAttribute("DataLoaded") ~= true then
+    -- A temporarily unavailable DataStore must not disable read-only
+    -- guidance. Never grant rewards, purchases or progression from this
+    -- fallback; the player remains subject to the normal server roster.
+    if player:GetAttribute("DataLoaded") ~= true
+        and player:GetAttribute("DataLoadFailed") ~= true then
         clearMarker()
         return
     end
@@ -293,7 +421,10 @@ local function refresh()
         player:GetAttribute("Games"),
         player:GetAttribute("SessionRoundsPlayed")
     )
-    if not FirstTimeExperience.isFirstRound(games) then
+    -- The round focus HUD guides the first THREE entered rounds.
+    -- Keep the optional real-world mobility cue consistent with that
+    -- same window, including the third READY countdown.
+    if not FirstTimeExperience.isGuidedPhase(games, currentState.phase) then
         clearMarker()
         return
     end
@@ -317,18 +448,15 @@ local function refresh()
     end
 
     if currentState.phase == "ready" then
-        -- Touch players already see the arena pads and top HUD guidance.
-        -- A world-space AlwaysOnTop billboard during the opening countdown
-        -- obscured the avatar and other players' escape paths.
-        if UserInputService.TouchEnabled then
-            clearMarker()
-        else
-            mark(
-                nearestPart(arenaPads()),
-                CoreLocalization.text(localeId, "ESCAPE_PAD"),
-                Color3.fromRGB(120, 225, 255)
-            )
-        end
+        -- Only advertise an actually replicated, touch-enabled pad whose
+        -- straight approach is supported by real collidable arena floor.
+        -- If there is no verified route, prefer no marker to a fake one.
+        -- Touch uses a world highlight, never a blocking billboard.
+        mark(
+            nearestReachablePad(arenaPads()),
+            CoreLocalization.text(localeId, "ESCAPE_PAD"),
+            Color3.fromRGB(120, 225, 255)
+        )
         return
     end
 
@@ -415,7 +543,10 @@ local function watchCharacter(character)
         return
     end
     characterRootConnection = character.ChildAdded:Connect(function(child)
-        if child.Name == "HumanoidRootPart" then
+        -- The root may replicate before Humanoid (or the reverse).
+        -- Re-check once BOTH are present; otherwise a single early
+        -- READY refresh can permanently omit guidance on slow devices.
+        if child.Name == "HumanoidRootPart" or child:IsA("Humanoid") then
             queueRefresh()
         end
     end)
@@ -433,6 +564,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
+player:GetAttributeChangedSignal("DataLoadFailed"):Connect(refresh)
 player:GetAttributeChangedSignal("Games"):Connect(refresh)
 player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(refresh)
