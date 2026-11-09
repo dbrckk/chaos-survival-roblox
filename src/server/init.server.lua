@@ -1129,6 +1129,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundFluxWeaveBest", 0)
         player:SetAttribute("RoundFluxWeaveNextParity", -1)
         player:SetAttribute("RoundFluxWeaveDeadline", 0)
+        -- Crossroads mastery is earned at most once and spent at most
+        -- once in this round, never carried into another arena.
+        player:SetAttribute("RoundFluxJunctionBoostEarned", false)
+        player:SetAttribute("RoundFluxJunctionBoostReady", false)
         player:SetAttribute("RoundOverdriveUses", 0)
         player:SetAttribute("RoundFlowCoins", 0)
         player:SetAttribute("RoundMomentum", 0)

@@ -88,6 +88,26 @@ function CrossroadsFluxRelay.tryTrigger(ctx, trigger, hit, ready, epoch, now, se
         states[character] = weave
     end
     local tier = weave and weave.tier or 1
+    -- Three different charged gates in alternating pairs are the ONLY
+    -- way to earn the one-use master junction cut. The earned flag is
+    -- separate from the pending charge: replaying the route after the
+    -- boost was spent must not mint another charge this round.
+    -- Beginner/suppressed rounds deliberately have no active junction.
+    -- Do not hand out a promise the contestant cannot redeem.
+    local mechanics = trigger.Parent and trigger.Parent.Parent
+    local junction = mechanics
+        and mechanics:FindFirstChild("JunctionSwitchyard")
+    if advanced and tier == FluxRelayRules.WeaveCap and junction then
+        if player and player:GetAttribute(
+            "RoundFluxJunctionBoostEarned") ~= true then
+            player:SetAttribute("RoundFluxJunctionBoostEarned", true)
+            player:SetAttribute("RoundFluxJunctionBoostReady", true)
+        elseif bot and character:GetAttribute(
+            "FluxJunctionBoostEarned") ~= true then
+            character:SetAttribute("FluxJunctionBoostEarned", true)
+            character:SetAttribute("FluxJunctionBoostReady", true)
+        end
+    end
     if player then
         player:SetAttribute("RoundFluxWeaveCombo", tier)
         player:SetAttribute("RoundFluxWeaveNextParity",
@@ -127,6 +147,14 @@ function CrossroadsFluxRelay.start(ctx, mechanics, center)
     folder.Parent = mechanics
     local ready = setmetatable({}, {__mode = "k"})
     ctx.FluxWeaveStates = setmetatable({}, {__mode = "k"})
+    -- Defence in depth if arena initialization order changes; the
+    -- central round setup also clears both fields for all variants.
+    for _, contestant in ipairs(ctx.Contestants or {}) do
+        if typeof(contestant) == "Instance" and contestant:IsA("Player") then
+            contestant:SetAttribute("RoundFluxJunctionBoostEarned", false)
+            contestant:SetAttribute("RoundFluxJunctionBoostReady", false)
+        end
+    end
     local epoch = workspace:GetServerTimeNow()
 
     for index = 1, #FluxRelayRules.Offsets do

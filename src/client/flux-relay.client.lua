@@ -412,12 +412,31 @@ local function renderHUD(serverTime)
     local nextParity = stage > 0 and stage < FluxRelayRules.WeaveCap
         and (tonumber(player:GetAttribute("RoundFluxWeaveNextParity")) or -1)
         or -1
+    local boostReady =
+        player:GetAttribute("RoundFluxJunctionBoostReady") == true
+    local boostEarned =
+        player:GetAttribute("RoundFluxJunctionBoostEarned") == true
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local mechanics = arena and arena:FindFirstChild("Mechanics")
+    local junctionLive = mechanics
+        and mechanics:FindFirstChild("JunctionSwitchyard") ~= nil
     local key = tostring(stage) .. "/" .. tostring(remaining)
-        .. "/" .. tostring(nextParity)
+        .. "/" .. tostring(nextParity) .. "/" .. tostring(boostReady)
+        .. "/" .. tostring(boostEarned) .. "/" .. tostring(junctionLive)
     if key ~= lastHudKey then
         lastHudKey = key
-        if stage == FluxRelayRules.WeaveCap then
-            hudTitle.Text = "FLUX MASTER  //  3/3"
+        if boostReady and junctionLive then
+            -- Show the actual GOLD destination, not an abstract reward.
+            -- No second HUD: reuse the existing mobile-safe progress chip.
+            hudTitle.Text = french and "BOOST • AIGUILLAGE OR"
+                or "BOOST • GOLD JUNCTION"
+            hudTitle.TextColor3 = style.Signal
+        elseif stage == FluxRelayRules.WeaveCap then
+            hudTitle.Text = boostEarned and junctionLive
+                and (french and "FLUX MASTER • CUT UTILISÉ"
+                    or "FLUX MASTER • CUT USED")
+                or "FLUX MASTER  //  3/3"
             hudTitle.TextColor3 = style.Signal
         elseif stage == 0 then
             hudTitle.Text = if touchDevice

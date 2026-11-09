@@ -13,6 +13,7 @@ CrossroadsSwitchyard.PairSeconds = 9
 CrossroadsSwitchyard.Cooldown = 4
 CrossroadsSwitchyard.Offset = 13
 CrossroadsSwitchyard.SideImpulse = 20
+CrossroadsSwitchyard.MasterSideImpulse = 26
 
 -- A forced spin, freeze or arena deformation makes a lateral cut look
 -- deliberate when it is not. Keep Flux Relays and all normal paths active.
@@ -74,10 +75,15 @@ function CrossroadsSwitchyard.tangentVelocity(velocity, outward)
     return along * math.sign(sideways)
 end
 
-function CrossroadsSwitchyard.velocity(current, tangent)
+function CrossroadsSwitchyard.velocity(current, tangent, masterBoost)
     if typeof(tangent) ~= "Vector3" then return current end
+    -- Same ordinary physics cap, but one noticeably stronger lateral cut
+    -- earned by completing a real three-gate Flux Weave sequence.
+    local impulse = masterBoost == true
+        and CrossroadsSwitchyard.MasterSideImpulse
+        or CrossroadsSwitchyard.SideImpulse
     return MovementSafety.addImpulse(
-        current, tangent * CrossroadsSwitchyard.SideImpulse, 48, -52, 58
+        current, tangent * impulse, 48, -52, 58
     )
 end
 
@@ -132,18 +138,35 @@ function CrossroadsSwitchyard.tryTrigger(ctx, pad, hit, ready, claimed, now)
     if not ctx.Active() or pad:GetAttribute("JunctionActive") ~= true
     then return false end
 
+    -- No boost is consumed by a disabled pad, invalid accessory touch,
+    -- missed sideways run, wrong parity or junction cooldown: all of
+    -- those were rejected above. Humans and NPCs use identical caps.
+    local boostReady = false
+    if player then
+        boostReady = player:GetAttribute("RoundFluxJunctionBoostReady") == true
+    else
+        boostReady = character:GetAttribute("FluxJunctionBoostReady") == true
+    end
     ready[character] = now + CrossroadsSwitchyard.Cooldown
     if not claimed[character] then claimed[character] = {} end
     claimed[character][index] = true
     root.AssemblyLinearVelocity = CrossroadsSwitchyard.velocity(
-        root.AssemblyLinearVelocity, direction
+        root.AssemblyLinearVelocity, direction, boostReady
     )
+    if boostReady then
+        if player then
+            player:SetAttribute("RoundFluxJunctionBoostReady", false)
+        else
+            character:SetAttribute("FluxJunctionBoostReady", false)
+        end
+    end
     pad:SetAttribute("JunctionTriggeredAt", workspace:GetServerTimeNow())
     pad:SetAttribute("JunctionTravelSign", direction:Dot(
         Vector3.new(-offset.Z, 0, offset.X)
     ) >= 0 and 1 or -1)
     if player and ctx.OnArenaMechanicUsed then
-        pcall(ctx.OnArenaMechanicUsed, player, "Crossroads", "JUNCTION CUT", false)
+        pcall(ctx.OnArenaMechanicUsed, player, "Crossroads",
+            boostReady and "MASTER JUNCTION CUT" or "JUNCTION CUT", false)
     end
     return true
 end
