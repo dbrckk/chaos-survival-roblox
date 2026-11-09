@@ -15,6 +15,7 @@ local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonume
 local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
 local ApprovedPerimeterButtressMeshKit = require(script.Parent.ApprovedPerimeterButtressMeshKit)
+local ApprovedPerimeterMachineryMeshKit = require(script.Parent.ApprovedPerimeterMachineryMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1160,6 +1161,25 @@ task.spawn(function()
             ~= stationPrimitives then
             player:SetAttribute("LocalPerimeterPrimitivePillarsReplaced",
                 stationPrimitives)
+        end
+        -- The SAME existing LOD pass replaces the three big native machine
+        -- cuboids at each actual perimeter station only after all three
+        -- authentic equipment meshes are ready. No camera loop or physics.
+        ApprovedPerimeterMachineryMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local machineStations = ApprovedPerimeterMachineryMeshKit.count()
+        if player:GetAttribute("LocalApprovedPerimeterMachineryStationCount")
+            ~= machineStations then
+            player:SetAttribute("LocalApprovedPerimeterMachineryStationCount",
+                machineStations)
+        end
+        local machinePrimitives =
+            ApprovedPerimeterMachineryMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPerimeterPrimitiveMachineryReplaced")
+            ~= machinePrimitives then
+            player:SetAttribute("LocalPerimeterPrimitiveMachineryReplaced",
+                machinePrimitives)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
