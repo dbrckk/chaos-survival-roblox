@@ -18,6 +18,7 @@ local ApprovedPerimeterButtressMeshKit = require(script.Parent.ApprovedPerimeter
 local ApprovedPerimeterMachineryMeshKit = require(script.Parent.ApprovedPerimeterMachineryMeshKit)
 local ApprovedPerimeterRotorMeshKit = require(script.Parent.ApprovedPerimeterRotorMeshKit)
 local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArmorMeshKit)
+local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimeterStructuresMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1221,6 +1222,25 @@ task.spawn(function()
             ~= wedgePrimitives then
             player:SetAttribute("LocalPerimeterPrimitiveWedgesReplaced",
                 wedgePrimitives)
+        end
+        -- Two final broad rectangular server station pieces: restore safe
+        -- native cosmetics if genuine source, streaming or GPU tier fails.
+        -- This consumes only the existing scenery camera/LOD sample.
+        ApprovedPerimeterStructuresMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local sculptedStructures = ApprovedPerimeterStructuresMeshKit.count()
+        if player:GetAttribute("LocalApprovedPerimeterStructureStationCount")
+            ~= sculptedStructures then
+            player:SetAttribute("LocalApprovedPerimeterStructureStationCount",
+                sculptedStructures)
+        end
+        local remainingBlockSubstitutions =
+            ApprovedPerimeterStructuresMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPerimeterPrimitiveStructuralBlocksReplaced")
+            ~= remainingBlockSubstitutions then
+            player:SetAttribute("LocalPerimeterPrimitiveStructuralBlocksReplaced",
+                remainingBlockSubstitutions)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
