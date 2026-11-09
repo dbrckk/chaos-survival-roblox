@@ -213,6 +213,12 @@ local function rebuild(circuit, tier, reduced, ramps, access)
 end
 
 local function draw(time)
+    -- Only genuine active pulse ramps can spend Orbit Master charge.
+    -- Recolor the existing moving 3D glyphs, never paint an uncharged
+    -- ramp as powered or imply an unsafe shortcut across open air.
+    local masterReady = player:GetAttribute("RoundHelixMasterPulseReady") == true
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
     for _, runner in ipairs(runners) do
         local ramp = runner.Ramp
         if ramp and ramp.Parent then
@@ -229,13 +235,18 @@ local function draw(time)
             -- Reuse the existing 8/24 moving glyphs to signal which two
             -- routes are charged. Low/ReduceMotion see server gold rails.
             local charged = ramp:GetAttribute("HelixPulseActive") == true
-            runner.Part.Color = charged
-                and Color3.fromRGB(255, 215, 102)
-                or (runner.Lane % 2 == 0
-                    and Color3.fromRGB(121, 253, 209)
-                    or Color3.fromRGB(95, 201, 255))
-            runner.Part.Transparency = charged and 0.12
-                or (currentTier == "High" and 0.24 or 0.40)
+            local masterLane = charged and masterReady
+            local targetColor = masterLane and Color3.fromRGB(255, 246, 166)
+                or (charged and Color3.fromRGB(255, 215, 102)
+                    or (runner.Lane % 2 == 0
+                        and Color3.fromRGB(121, 253, 209)
+                        or Color3.fromRGB(95, 201, 255)))
+            if runner.Part.Color ~= targetColor then
+                runner.Part.Color = targetColor
+            end
+            runner.Part.Transparency = masterLane and 0.045
+                or (charged and 0.12
+                    or (currentTier == "High" and 0.24 or 0.40))
         end
     end
 end
