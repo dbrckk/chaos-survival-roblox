@@ -307,6 +307,19 @@ local lastRoundState = {
 local function broadcast(payload)
     lastRoundState = payload
     pcall(AISurvivorService.setRoundState, payload)
+    if payload.phase == "ready" then
+        -- The first READY broadcast also spawns/positions the committed
+        -- AI roster. Count only AFTER that transition, otherwise the
+        -- opening HUD falsely reports a solo contestant while seven
+        -- real bots are already entering the arena.
+        local readyHumans = math.max(0,
+            math.floor(tonumber(payload.readyHumanCount) or 0))
+        local botsAlive = AISurvivorService.aliveRoundCount()
+        payload.aiSurvivors = botsAlive
+        payload.survivorsAlive = readyHumans + botsAlive
+        payload.contestantCount = readyHumans
+            + AISurvivorService.roundRosterCount()
+    end
     stateEvent:FireAllClients(payload)
 end
 
@@ -1857,6 +1870,12 @@ local function runDisasterSet(selected, contestants, roundSettings)
         end)
     end
     local endedEarly = false
+    -- After the final human is eliminated, allow a short REAL bot finale.
+    -- Existing hazards, AI and spectator camera keep running; no extra loop.
+    -- A monotonic deadline bounds the finale even on a busy server where
+    -- task.wait(1) can resume late. Never restart it after bot deaths or
+    -- a newly connected late spectator.
+    local botShowdownDeadlineAt = nil
     for t = roundSettings.RoundSeconds, 1, -1 do
         overdriveActive = overdriveEligible
             and t <= overdriveStartRemaining
@@ -1866,36 +1885,33 @@ local function runDisasterSet(selected, contestants, roundSettings)
         local humanSurvivorsAlive = countContestantsRemaining()
         local aiSurvivorsAlive = AISurvivorService.aliveRoundCount()
         local survivorsAlive = humanSurvivorsAlive + aiSurvivorsAlive
-        -- An authenticated, isolated Studio AI-camera review must keep
-        -- observing autonomous survivors even if its idle human observer
-        -- gets eliminated. Public solo rounds still end immediately.
+        -- The private Studio AI-camera review still observes the full round.
+        -- In public games, a defeated player can watch a bounded REAL finale,
+        -- with server-authoritative hazards and AI still active. Do not wait
+        -- when everyone is dead or when the server is empty.
+        local botShowdownActive = false
+        local botShowdownSeconds = nil
         if humanSurvivorsAlive <= 0 and not isStudioVisualAI then
-            endedEarly = true
-
-            if aiSurvivorsAlive > 0 then
-                local spectateDisasterIds = {}
-                for _, disaster in ipairs(selected) do
-                    table.insert(spectateDisasterIds, disaster.Id)
-                end
-
-                broadcast({
-                    phase = "round",
-                    title = "YOU WERE ELIMINATED",
-                    hint = "WATCH THE SURVIVORS • NEXT ROUND SOON",
-                    seconds = math.min(3, t),
-                    doubleChaos = #selected > 1,
-                    fusionName = fusionName,
-                    soloMode = roundSettings.Solo,
-                    arenaName = roundSettings.ArenaName or currentArenaVariant,
-                    disasterIds = spectateDisasterIds,
-                    survivorsAlive = aiSurvivorsAlive,
-                    contestantCount = #contestants + AISurvivorService.roundRosterCount(),
-                    aiSurvivors = aiSurvivorsAlive,
-                    spectating = true,
-                })
-                task.wait(2.25)
+            if aiSurvivorsAlive <= 0 or #Players:GetPlayers() == 0 then
+                endedEarly = true
+                break
             end
-            break
+            if botShowdownDeadlineAt == nil then
+                -- Respect the original physical round end as well as
+                -- the spectator budget. Delayed 1 Hz ticks must not keep
+                -- the round alive after its active hazards have ended.
+                botShowdownDeadlineAt = math.min(
+                    ctx.RoundEndsAt,
+                    os.clock() + math.min(t, roundSettings.Solo and 4 or 6)
+                )
+            end
+            local remaining = botShowdownDeadlineAt - os.clock()
+            if remaining <= 0 then
+                endedEarly = true
+                break
+            end
+            botShowdownActive = true
+            botShowdownSeconds = math.max(1, math.ceil(remaining))
         end
 
         if roundChallenge.Metric == "highGround" and masteryPlatforms
@@ -1946,6 +1962,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
         elseif overdriveActive then
             roundHint = "OVERDRIVE • Boost pads + Shard surge • " .. roundHint
         end
+        if botShowdownActive then
+            title = "FINAL BOT SHOWDOWN"
+            roundHint = "WATCH THE LAST BOTS • FINAL RESULT SOON"
+        end
 
         local halfX, halfZ = ArenaTargeting.activeHalfExtents(6, 42)
         local impactWaveMode = ImpactWaveDirector.forContext(
@@ -1970,7 +1990,11 @@ local function runDisasterSet(selected, contestants, roundSettings)
             blackoutStage = ctx.BlackoutStage,
             title = title,
             hint = roundHint,
+            -- Never overload the authoritative round timer: live client
+            -- disaster and final-rush visuals use the real remaining time.
             seconds = t,
+            botShowdown = botShowdownActive,
+            botShowdownSeconds = botShowdownSeconds,
             doubleChaos = #selected > 1,
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
@@ -2006,7 +2030,15 @@ local function runDisasterSet(selected, contestants, roundSettings)
             ),
         })
 
-        task.wait(1)
+        -- Preserve the ordinary 1 Hz rhythm, but never sleep beyond the
+        -- remaining spectator finale budget after a slow server pass.
+        if botShowdownActive then
+            task.wait(math.min(
+                1, math.max(0.03, botShowdownDeadlineAt - os.clock())
+            ))
+        else
+            task.wait(1)
+        end
     end
 
     overdriveActive = false
@@ -2326,10 +2358,8 @@ while true do
             displayTitle = "QUICK RUSH: " .. selectedSet[1].Name
         end
 
-        -- Alive AI and admitted AI are different measurements: an NPC can
-        -- have entered safely and then died during the countdown.
-        local aiReadyAlive = AISurvivorService.aliveRoundCount()
-        local aiRoundRoster = AISurvivorService.roundRosterCount()
+        -- The broadcast reconciles and spawns bots before sampling
+        -- the actual alive/admitted roster, even on READY's first tick.
         broadcast({
             phase = "ready",
             roundNumber = upcomingRoundNumber,
@@ -2347,9 +2377,6 @@ while true do
             arenaName = roundSettings.ArenaName,
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
-            survivorsAlive = readyCount + aiReadyAlive,
-            contestantCount = readyCount + aiRoundRoster,
-            aiSurvivors = aiReadyAlive,
         })
         task.wait(1)
     end
