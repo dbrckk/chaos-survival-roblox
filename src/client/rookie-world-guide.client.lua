@@ -352,7 +352,10 @@ local function refresh()
         player:GetAttribute("Games"),
         player:GetAttribute("SessionRoundsPlayed")
     )
-    if not FirstTimeExperience.isFirstRound(games) then
+    -- The round focus HUD guides the first THREE entered rounds.
+    -- Keep the optional real-world mobility cue consistent with that
+    -- same window, including the third READY countdown.
+    if not FirstTimeExperience.isGuidedPhase(games, currentState.phase) then
         clearMarker()
         return
     end
