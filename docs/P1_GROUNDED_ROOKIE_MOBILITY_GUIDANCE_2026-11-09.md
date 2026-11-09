@@ -12,7 +12,7 @@
 
 ## Implémentation
 
-1. `nearestReachablePad` remplace l'ancien simple calcul de distance ; il filtre la distance horizontale (4–56 studs), la hauteur (5 studs), le parent réel, l'attribut `ArenaMobilityPad` et `CanTouch`.
+1. `nearestReachablePad` remplace l'ancien simple calcul de distance ; il exige un avatar vivant avec Humanoid, filtre la distance horizontale (4–56 studs), la hauteur (5 studs), le parent réel, l'attribut `ArenaMobilityPad` et `CanTouch`.
 2. Un raycast horizontal depuis le HumanoidRootPart rejette les obstacles collidables dans l'approche ; des raycasts verticaux adaptatifs (départ, arrivée, puis intervalles ≤3,5 studs) vérifient le support physique échantillonné du sol `Arena`, une normale de support suffisante, un impact situé sous la trajectoire (un toit/plafond au-dessus ne doit jamais être assimilé au sol), le vrai support sous les pieds au départ et les transitions de hauteur (≤2 studs entre échantillons). Si **aucun** pad n'est vérifié : **aucune flèche ni marque trompeuse**. Ce n'est pas un pathfinder : les chemins contournés restent à parcourir librement, ils ne sont pas annoncés comme raccourcis directs.
 3. Pendant le compte à rebours READY, PC conserve le grand repère uniquement lorsque cette approche est sûre. Sur écran tactile, le marqueur physique `Highlight` / anneau existant est autorisé mais **sans BillboardGui**, ni panneau supplémentaire ; les HUD de survie et de danger restent prioritaires. Tier Low : aucun nouvel anneau 3D (comportement de VfxQuality existant), seulement le Highlight quand vérifié.
 4. Le repère reste limité aux **trois phases d'apprentissage** déjà définies dans `FirstTimeExperience.isGuidedPhase`. Aucun marqueur n'est visible pendant le Round, même les six premières secondes, pour éviter de pousser à travers un danger déclenché après READY ; il disparaît également lors des votes, morts, sorties de phase et changements de carte.
@@ -26,6 +26,7 @@
 - Personnage sur passerelle haute ou derrière un mur réel : aucun pad du sol ne doit être marqué comme direct, même si sa distance 3D est petite.
 - Trou de sol entre deux positions anciennement sondées ou toiture surplombant le parcours : l'échantillonnage adaptatif, les extrémités et le contrôle de hauteur par rapport à la trajectoire doivent rejeter ce faux chemin. Un intervalle inférieur à 3,5 studs peut toujours exiger une vérification physique sur appareil ; ne pas prétendre à une preuve mathématique de continuité.
 - Début de manche / finale / résultat : highlight et billboard retirés ; jamais d'indication de traverser une zone létale.
+- Avatar mort ou en cours de remplacement pendant READY : aucune proposition d'itinéraire sur un corps inactif.
 - Android Low, Medium, High et portrait/paysage : pas de grand panneau en superposition, pas de modification des boutons saut/dash, pas d'avertissement masqué ; Low ne construit pas d'anneau 3D.
 - Premier, deuxième et troisième READY : même règle et aucun guide persistant après la troisième manche.
 - DataStore temporairement indisponible : guide facultatif uniquement ; aucune monnaie, victoire, progression ou achat attribué côté client.
