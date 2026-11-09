@@ -118,6 +118,9 @@ local function genuineStation(arena, base, decor, station, index)
     end
     local left = station:FindFirstChild("LeftButtress")
     local right = station:FindFirstChild("RightButtress")
+    -- An unfinished/late-streamed station must never qualify with only
+    -- its left pillar: ipairs would otherwise skip a nil right entry.
+    if not left or not right then return nil end
     for _, native in ipairs({left, right}) do
         if not native or not native:IsA("Part")
             or native.Parent ~= station or not native.Anchored
@@ -193,7 +196,7 @@ end
 
 local function mount(arena, base, decor, station, index, source, variant)
     local left, right = genuineStation(arena, base, decor, station, index)
-    if not left or mounted[station] then return end
+    if not left or not right or mounted[station] then return end
     -- Both pillars must succeed before hiding ANY primitive. A partially
     -- available/streamed source never makes a one-sided station.
     local first, firstParts = fittedClone(source, left, APPROVED[variant])
