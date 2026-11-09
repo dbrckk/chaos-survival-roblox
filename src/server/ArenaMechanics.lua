@@ -273,8 +273,18 @@ function ArenaMechanics.start(ctx, variantId)
             cooldownUntil[player.UserId] = now + ArenaMechanics.cooldownFor(finalRush)
 
             local overdrive = ctx.Overdrive and ctx.Overdrive() == true
+            -- Skill-earned Classic boost is individual, server-owned,
+            -- optional and one-use. Do not consume it when the whole
+            -- round is already in global overdrive: that would spend
+            -- a reward with no extra movement effect.
+            local circuitBoost = variantId == "Classic" and not overdrive
+                and player:GetAttribute("RoundGridCircuitBoostReady") == true
             local currentImpulse = ArenaMechanics.readPadImpulse(pad, impulse)
-            local appliedImpulse = ArenaMechanics.impulseFor(currentImpulse, overdrive)
+            local appliedImpulse = ArenaMechanics.impulseFor(
+                currentImpulse, overdrive or circuitBoost)
+            if circuitBoost then
+                player:SetAttribute("RoundGridCircuitBoostReady", false)
+            end
 
             root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
                 root.AssemblyLinearVelocity,

@@ -1118,6 +1118,9 @@ local function runDisasterSet(selected, contestants, roundSettings)
         player:SetAttribute("RoundSignalCoins", 0)
         player:SetAttribute("RoundNearMisses", 0)
         player:SetAttribute("RoundMechanicUses", 0)
+        -- A Classic circuit charge is single-round and never survives
+        -- a transition to Towers, Crossroads, Orbital or Harbor.
+        player:SetAttribute("RoundGridCircuitBoostReady", false)
         player:SetAttribute("RoundHelixFlowChain", 0)
         player:SetAttribute("RoundHelixFlowBest", 0)
         player:SetAttribute("RoundSkyrailFlowCombo", 0)

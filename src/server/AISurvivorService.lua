@@ -4347,10 +4347,19 @@ local function tryPadImpulse(record, root, now)
     end
 
     local overdrive = currentState.overdrive == true
+    -- Exactly the same earned single-use Classic pad boost as a human.
+    -- The circuit node service writes the charge on the real NPC rig.
+    -- Do not consume a charge in a global overdrive round.
+    local circuitBoost = arenaVariantId() == "Classic" and not overdrive
+        and record.model
+        and record.model:GetAttribute("GridCircuitBoostReady") == true
     root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
         root.AssemblyLinearVelocity,
-        ArenaMechanics.impulseFor(impulse, overdrive)
+        ArenaMechanics.impulseFor(impulse, overdrive or circuitBoost)
     )
+    if circuitBoost then
+        record.model:SetAttribute("GridCircuitBoostReady", false)
+    end
 
     record.nextPadAt = now + ArenaMechanics.cooldownFor(currentState.finalRush == true)
     record.target = nil
@@ -6887,6 +6896,7 @@ function AISurvivorService.resetGridCircuit(model)
     model:SetAttribute("GridCircuitNext", 0)
     model:SetAttribute("GridCircuitDeadline", 0)
     model:SetAttribute("GridCircuitComplete", false)
+    model:SetAttribute("GridCircuitBoostReady", false)
     return true
 end
 

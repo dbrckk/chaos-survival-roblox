@@ -1,5 +1,7 @@
 -- Classic Grid: four-station skill circuit, individually tracked per
--- contestant. The circuit is optional; never changes survival or rewards.
+-- contestant. The circuit remains optional, free and server-verified:
+-- completion now unlocks ONE capped Classic mobility-pad impulse. Normal
+-- climbing and survival remain possible without finishing the course.
 local GridCircuitRules = {}
 
 GridCircuitRules.Window = 20
