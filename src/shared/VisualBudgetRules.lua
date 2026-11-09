@@ -19,6 +19,11 @@ VisualBudgetRules.LocalFolders = {
     -- actual imported MeshPart counts in 440/680/900 Parts budget.
     "OriginalOrbitalHaloTrussesLocal",
     "ArenaSurfaceReliefLocal",
+    -- P4 real approved CornerGuard MeshParts sculpted over server-owned
+    -- mobility pads: Medium up to 2, High touch 3 / desktop 4, Low 0;
+    -- severe GPU pressure 0. Their imported MeshParts MUST count in
+    -- the same existing 440/680/900 local Part census as ground shells.
+    "OriginalMobilityPadHardwareLocal",
     "ArenaSilhouetteBreakupLocal",
     "ArenaMidgroundMassLocal",
     -- Authentic four-way outboard Classic/Crossroads skyline replacements.
