@@ -1,0 +1,84 @@
+# One-time ORIGINAL creator-owned 3D upload. Never publishes a Roblox Place.
+name: One-time Perimeter Wing Cap Source-Gated 3D 2026-11-09
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-perimeter-armor-20261109.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-perimeter-armor-owner-import-once-20261109
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuinely triangulated wing/cap, seven glTF materials and reproducible OBJ
+        shell: bash
+        run: |
+          set -euo pipefail
+          for model in perimeter_wing perimeter_cap; do
+            python3 tools/generate_original_perimeter_armor.py --model "$model" --output "$RUNNER_TEMP/chaos_$model.obj" > "$RUNNER_TEMP/$model.json"
+            python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/chaos_$model.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/chaos_$model.gltf" > "$RUNNER_TEMP/$model-export.json"
+          done
+          python3 - "$RUNNER_TEMP" <<'PY'
+          from pathlib import Path
+          import base64,hashlib,json,sys
+          root=Path(sys.argv[1])
+          profiles={'perimeter_wing':(3.36,1.64,5.62),'perimeter_cap':(2.84,2.14,2.34)}
+          palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          for name,expected in profiles.items():
+              obj=(root/f'chaos_{name}.obj').read_bytes()
+              info=json.loads((root/f'{name}.json').read_text())
+              gltf=json.loads((root/f'chaos_{name}.gltf').read_text())
+              assert info['asset']==name and info['sha256']==hashlib.sha256(obj).hexdigest()
+              assert info['groups']>=16 and 500<=info['triangles']<=3200
+              for actual,bound in zip(info['dimensions'],expected):
+                  assert actual>=bound*.88 and actual<=bound*1.04,(name,info['dimensions'])
+              assert set(info['materials'])==palette
+              for key in ('ClosedSweptDiecastArmorHull','CastSideWearCassette',
+                          'InsetHeatVentCarrier','AngularForgedLoadRib',
+                          'RecessedCoolingLouver','DiamondHeatReflector',
+                          'RecessedUpperTelemetry','RetainedServicePin'):
+                  assert key.encode() in obj,(name,key)
+              assert gltf['asset']['version']=='2.0'
+              assert {m['name'] for m in gltf['materials']}==palette
+              primitives=gltf['meshes'][0]['primitives']
+              assert len(primitives)==7
+              assert sum(gltf['accessors'][p['attributes']['POSITION']]['count']//3
+                         for p in primitives)==info['triangles']
+              assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}
+                         <=set(p['attributes']) for p in primitives)
+              buf=gltf['buffers'][0]
+              assert len(base64.b64decode(buf['uri'].split(',',1)[1],
+                                          validate=True))==buf['byteLength']
+              print(name,'SOURCE PASS',info['triangles'],'triangles',
+                    info['dimensions'],info['sha256'])
+          print('NO PUBLIC ROBLOX PLACE PUBLISH')
+          PY
+  import-wing:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: perimeter_wing
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+  import-cap:
+    needs: import-wing
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: perimeter_cap
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
