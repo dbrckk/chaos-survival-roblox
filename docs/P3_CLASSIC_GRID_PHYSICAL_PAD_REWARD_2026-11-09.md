@@ -12,7 +12,7 @@ Le défi `GridCircuitService` vérifie correctement la traversée chronométrée
 2. Sur le prochain pad Classic que le participant **active physiquement** : l'impulsion existante est multipliée par **1,28**, puis repasse à la normale. Les deux chemins gardent la limitation `MovementSafety.addImpulse` (horizontal 60, vertical -52 à 58), les collisions ordinaires, la vitesse réelle du rig et le cooldown du pad. Aucun téléport, immunité, monnaie supplémentaire ou objet acheté.
 3. Si un overdrive de manche est déjà actif, le pad conserve son comportement normal **et ne consomme pas la charge** : elle reste disponible jusqu'au prochain pad classique sans overdrive au cours de la même manche. Rien n'est réutilisable à la manche suivante.
 4. Le chemin humain utilise `ArenaMechanics.start` et `ctx.IsContestantActive` ; le bot utilise `AISurvivorService.tryPadImpulse` sur son **vrai modèle vivant**, et le reset par `AISurvivorService.resetGridCircuit`. Même récompense et limites physiques, sans bot-only avantage.
-5. Le HUD `grid-circuit.client.lua`, déjà rafraîchi et non intrusif sur Android, indique **BOOST PRÊT** puis **BOOST UTILISÉ** en FR/EN. Aucun nouvel écran, boucle client, RemoteEvent, module ou asset factice.
+5. Le HUD `grid-circuit.client.lua`, déjà rafraîchi et non intrusif sur Android, indique **BOOST PRÊT** puis **BOOST UTILISÉ** en FR/EN. `src/server/init.server.lua` réinitialise aussi la charge à **chaque manche**, même si la nouvelle arène n'est plus Classic. Aucun nouvel écran, boucle client, RemoteEvent, module ou asset factice.
 6. Le challenge reste facultatif et le parcours libre reste viable sans le réussir. Ce lot n'ouvre pas de passerelle imaginaire, ne modifie aucun collider et ne touche pas aux statistiques de victoire.
 
 ## Réception nécessaire
@@ -28,6 +28,6 @@ Le défi `GridCircuitService` vérifie correctement la traversée chronométrée
 
 ## Dépendances et garde-fous
 
-Ce lot ne change que `src/server/GridCircuitService.lua`, `ArenaMechanics.lua`, `AISurvivorService.lua`, `src/client/grid-circuit.client.lua`, `src/shared/GridCircuitRules.lua` et ce document. L'implémentation P3 est indépendante de la nouvelle cadence IA P2, mais elle ne doit **pas** être fusionnée avant que P2 soit publiée pour préserver la validité des tests exact-SHA.
+Ce lot ne change que `src/server/GridCircuitService.lua`, `ArenaMechanics.lua`, `AISurvivorService.lua`, `init.server.lua`, `src/client/grid-circuit.client.lua`, `src/shared/GridCircuitRules.lua` et ce document. L'implémentation P3 est indépendante de la nouvelle cadence IA P2, mais elle ne doit **pas** être fusionnée avant que P2 soit publiée pour préserver la validité des tests exact-SHA.
 
 **Mesures non obtenues :** aucun gameplay observé sur Android pour cette branche, aucune statistique de part de circuit terminé ou de boost consommé, aucun gain de rétention ni de FPS mesuré. Les nouveaux attributs ne sont pas de la télémétrie.
