@@ -141,9 +141,12 @@ function CrossroadsSwitchyard.tryTrigger(ctx, pad, hit, ready, claimed, now)
     -- No boost is consumed by a disabled pad, invalid accessory touch,
     -- missed sideways run, wrong parity or junction cooldown: all of
     -- those were rejected above. Humans and NPCs use identical caps.
-    local boostReady = if player then
-        player:GetAttribute("RoundFluxJunctionBoostReady") == true
-        else character:GetAttribute("FluxJunctionBoostReady") == true
+    local boostReady = false
+    if player then
+        boostReady = player:GetAttribute("RoundFluxJunctionBoostReady") == true
+    else
+        boostReady = character:GetAttribute("FluxJunctionBoostReady") == true
+    end
     ready[character] = now + CrossroadsSwitchyard.Cooldown
     if not claimed[character] then claimed[character] = {} end
     claimed[character][index] = true
