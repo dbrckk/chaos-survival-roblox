@@ -1140,6 +1140,27 @@ task.spawn(function()
             player:SetAttribute("LocalApprovedFoundationChassis3DCount",
                 foundationMeshes)
         end
+        -- Replace the most visible raw rectangular station buttresses
+        -- with two owner-approved vertical structural meshes per real
+        -- perimeter station (up to one Medium, two touch High, four PC High).
+        -- It uses this SAME camera pass and respects VFX pressure; server
+        -- collision, floor and nearby warning lights are never touched.
+        ApprovedPerimeterButtressMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local stationMeshes = ApprovedPerimeterButtressMeshKit.count()
+        if player:GetAttribute("LocalApprovedPerimeterStation3DCount")
+            ~= stationMeshes then
+            player:SetAttribute("LocalApprovedPerimeterStation3DCount",
+                stationMeshes)
+        end
+        local stationPrimitives =
+            ApprovedPerimeterButtressMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPerimeterPrimitivePillarsReplaced")
+            ~= stationPrimitives then
+            player:SetAttribute("LocalPerimeterPrimitivePillarsReplaced",
+                stationPrimitives)
+        end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
         -- Parts survive; four separate cranes retain zero visible Parts.
