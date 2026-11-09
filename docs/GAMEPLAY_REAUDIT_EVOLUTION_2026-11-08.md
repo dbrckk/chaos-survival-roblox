@@ -29,9 +29,9 @@
 ## 2. Lot appliqué — finale de bots et spectacle court
 
 **Fichiers modifiés :**
-- `src/server/init.server.lua` : après la dernière élimination humaine, conserver la même manche serveur et ses vrais dangers pendant **4 secondes maximum en solo**, **6 secondes maximum en multi**, bornées par le temps restant. Quitter immédiatement si plus aucun bot vivant ou plus aucun joueur connecté. Le mode Studio d'analyse IA garde son comportement actuel.
+- `src/server/init.server.lua` : après la dernière élimination humaine, conserver la même manche serveur et ses vrais dangers pendant **4 secondes maximum en solo**, **6 secondes maximum en multi**, bornées par le temps restant. Une échéance `os.clock()` empêche qu'un cycle serveur retardé n'allonge artificiellement la finale ; la dernière attente est plafonnée au temps restant. Quitter immédiatement si plus aucun bot vivant ou plus aucun joueur connecté. Le mode Studio d'analyse IA garde son comportement actuel.
 - `src/server/init.server.lua` : conserver l'horloge officielle `RoundState.seconds=t` pour le rendu des catastrophes et ajouter `botShowdown=true`, `botShowdownSeconds` (4/6 s) pour la finale. Aucun nouveau passage de boucle, RemoteEvent, Part, collision, accélération ni invulnérabilité.
-- `src/client/spectator.client.lua`, `src/client/init.client.lua` et `src/shared/CoreLocalization.lua` : afficher « FINALE DES BOTS » / « FINAL BOT SHOWDOWN » dans la carte spectateur et le HUD déjà existants ; timer de finale dédié et textes FR/EN, sans GUI supplémentaire.
+- `src/client/spectator.client.lua`, `src/client/init.client.lua` et `src/shared/CoreLocalization.lua` : annoncer « FINALE DES BOTS » / « FINAL BOT SHOWDOWN » dans le HUD principal FR/EN ; la carte spectateur Android, très étroite, garde le nom de la cible + survivants + temps, sans répéter un titre long qui réduirait fortement la taille du texte.
 - L'économie, les conditions de survivant/champion, le roster serveur, les durées initiales de manche, l'intermission et le résultat restent inchangés.
 
 **Objectif produit :** transformer une sortie abrupte en séquence courte de compétition visible, sans bloquer la prochaine manche. Les bots sont tuables par les vraies catastrophes pendant cette fenêtre. La finale ne simule pas une mort ni un classement.
@@ -61,7 +61,7 @@
 
 ## 5. Publication et sécurité
 
-- Les remplacements ont passé des contrôles structuraux ciblés de source : points d'insertion uniques, ancienne coupure supprimée et deux durées distinctes dans le broadcast normal. **Ces contrôles ne sont pas des tests Roblox Engine.**
+- Les remplacements ont passé des contrôles structuraux ciblés de source : points d'insertion uniques, ancienne coupure supprimée, compte à rebours visuel séparé et attente bornée par une échéance monotone. **Ces contrôles ne sont pas des tests Roblox Engine.**
 - Pas de nouveaux tests unitaires pendant l'itération, conformément à `AGENTS.md`. Avant fusion ou publication importante : utiliser la validation moteur et le jalon release exact-SHA existants, puis vérifier la caméra et le résultat sur Android réel.
 - **Aucune publication Roblox exécutée** par ce document / ces commits. Fusion de PR et publication de place sont deux opérations distinctes.
 - Retour arrière : revert des quatre fichiers modifiés ou revert du commit de fusion si le jeu a une régression ; préserver les releases publiques existantes jusqu'à preuve de réussite.
@@ -79,3 +79,11 @@ Le premier jet remplaçait `RoundState.seconds` par le compte à rebours 4/6 s. 
 Dans `src/client/init.client.lua`, la finale est détectée avant `CoreLocalization.hazardTitle` : auparavant la traduction de son titre était remplacée par le nom de la catastrophe. Le HUD affiche maintenant le compte à rebours court, comme la carte spectateur, sans changer la durée officielle. `round-focus.client.lua` masque déjà sa barre aux joueurs éliminés.
 
 **À vérifier dans Roblox Engine :** catastrophe toujours calée sur son horloge serveur, transition finale/résultat sans flash de HUD et décompte cohérent en FR et EN.
+
+### 9 novembre — durée monotone et lisibilité Android
+
+La version précédente comptait 4/6 **tours de boucle** espacés par `task.wait(1)`. Sous contention serveur, `task.wait` peut reprendre après plus d'une seconde et la finale durer plus que promis. Désormais, l'entrée dans la finale pose une seule échéance monotone `os.clock() + min(remainingRoundTicks, solo ? 4 : 6)`. Chaque tick calcule le compte à rebours avec `ceil(deadline - os.clock())`, sort dès que l'échéance est atteinte et plafonne l'attente finale au budget encore disponible. Les manches ordinaires gardent leur boucle et attente historiques ; aucune boucle, RemoteEvent ni coroutine supplémentaire.
+
+Le top HUD restant visible pendant `phase="round"`, il annonce la finale et son titre FR/EN. Répéter `FINALE DES BOTS` dans le `TextScaled` de la carte spectateur compressait le texte sur Android étroit. La carte donne désormais l'information utile non dupliquée : **cible suivie + survivants + secondes**. Le HUD affiche l'identité de la phase séparément.
+
+**Limite des preuves** : `os.clock()` empêche de prolonger délibérément la finale sous charge, mais l'exécution et le scheduling réels doivent encore être validés sur Roblox Engine. Les horloges UI sont échantillonnées une fois par tick ; elles ne garantissent pas une résolution visuelle milliseconde.
