@@ -74,6 +74,7 @@ local function createPart(parts, name, size, bridge, localCf, color, material, o
         Part = p,
         LocalCf = localCf,
         BaseTransparency = opacity,
+        BaseColor = color,
     })
     return p
 end
@@ -290,12 +291,22 @@ local function rebuild(platforms, tier, reduced, ordered)
 end
 
 draw = function(timestamp)
+    -- One personal server-earned future Skyrail surge changes the actual
+    -- next traversable bridge signal, not a disconnected UI icon.
+    -- Reuse the existing canopy draw; no additional loop or world Parts.
+    local aceReady = player:GetAttribute("RoundSkyrailAceBoostReady") == true
+        and player:GetAttribute("RoundParticipant") == true
+        and player:GetAttribute("RoundEliminated") ~= true
     for _, structure in ipairs(canopy) do
         local bridge = structure.Bridge
         if bridge.Parent then
             local phase = bridge:GetAttribute("CollapsePhase")
             local gone = phase == "Gone" or not bridge.CanCollide
+            local shutter = bridge:GetAttribute("BridgeShutterPhase")
             local warning = phase == "Warning"
+                or (shutter ~= nil and shutter ~= "Idle")
+            local safeAce = aceReady and not warning and not gone
+                and phase == nil
             if gone or warning then
                 activeSurges[bridge] = nil
             end
@@ -315,6 +326,25 @@ draw = function(timestamp)
                         or item.Part.Name:find("SkyrailCrownBeam") then
                         alpha = surging and 0.03 or 0.23
                     end
+                    -- These existing real-bridge fittings are personal
+                    -- navigational signals. Never recolor warning bridges,
+                    -- never hide the original server danger palette.
+                    local name = item.Part.Name
+                    local accent = name:find("SkyrailCrownBeam")
+                        or name:find("SkyrailInsetFiber")
+                        or name:find("SkyrailGroundMarker")
+                        or name:find("SkyrailSignalWing")
+                    if accent then
+                        local desired = safeAce and colors.Gold
+                            or (name:find("SkyrailGroundMarker")
+                                and colors.Cyan
+                                or (name:find("SkyrailCrownBeam")
+                                    and colors.Cyan
+                                    or item.BaseColor))
+                        if item.Part.Color ~= desired then
+                            item.Part.Color = desired
+                        end
+                    end
                     item.Part.Transparency = alpha
                 end
             end
@@ -327,7 +357,13 @@ draw = function(timestamp)
                     bridge.Size.Y * 0.5 + 5.50, 0)
                 runner.Part.CFrame = bridge.CFrame * cf
                 runner.Part.Transparency = (gone or warning) and 1
-                    or (0.34 + 0.28 * math.abs(2 * progress - 1))
+                    or (safeAce and 0.13
+                        or (0.34 + 0.28 * math.abs(2 * progress - 1)))
+                local runnerColor = safeAce and colors.Gold
+                    or (runner.Offset == 0 and colors.Cyan or colors.Gold)
+                if runner.Part.Color ~= runnerColor then
+                    runner.Part.Color = runnerColor
+                end
             end
         end
     end
