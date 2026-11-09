@@ -102,3 +102,18 @@ Autre régression évitée : `init.client.lua` conserve `lastRoundHint` uniqueme
 - transitions FR/EN et téléphone compact : pas de titre dupliqué ou compteur figé.
 
 Aucun score de test moteur ni publication pour ce commit : la vérification actuelle est strictement en source.
+
+### 9 novembre — remplissage réel des huit places dès le premier READY
+
+**Constat vérifié dans le serveur :** dans le premier tick `ready`, `init.server.lua` comptait `AISurvivorService.aliveRoundCount()` et `roundRosterCount()` avant `broadcast`. Or `broadcast` appelle `AISurvivorService.setRoundState`, et c'est précisément la transition `ready` qui `reconcile(true)` puis exécute `sendToArena` sur les slots IA. Le premier paquet READY pouvait donc afficher une population humaine seule (par exemple 1/1) juste avant le remplissage réel jusqu'à 1 humain + 7 bots.
+
+**Correction :** pour les paquets `phase="ready"`, `broadcast` déclenche d'abord la transition serveur et lit **ensuite** les deux états réels des bots, avant `FireAllClients`. Le nombre d'humains éligibles reste celui de `readyHumanCount` calculé par le serveur. Les champs `aiSurvivors`, `survivorsAlive`, `contestantCount` correspondent maintenant dès le premier affichage à l'état effectivement placé, y compris lorsqu'un bot manque à cause d'un spawn non sécurisé. Les paquets `round`, `result` et les récompenses ne changent pas ; aucun bot fictif n'est ajouté pour forcer artificiellement huit.
+
+**Matrice à vérifier sur Roblox Engine :**
+1. Un nouveau joueur, sept bots admis → premier paquet READY avec 8 contestants, sans flash 1/1.
+2. Quatre humains, quatre bots admis → premier paquet READY avec 8 ; une arrivée tardive ne déloge pas le roster.
+3. Spawn bot momentanément impossible → compteur honnête au premier READY puis progression au moment des retries.
+4. Plusieurs bots éliminés pendant READY → survivants vivants distincts du total admis.
+5. Première session Android : vérification du HUD à la transition lobby/ready/round et absence de ralentissement visible.
+
+**Limite :** contrôle logique du code source, pas observation des paquets dans Roblox Engine ou sur téléphone.
