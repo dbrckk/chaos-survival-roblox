@@ -1,8 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local PremiumMobilityPad3DKit = require(
+    script.Parent.PremiumMobilityPad3DKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -14,6 +18,88 @@ local function profile()
 end
 
 local currentRate = 6 * profile().ParticleScale
+local french = string.sub(string.lower(
+    LocalizationService.RobloxLocaleId), 1, 2) == "fr"
+
+-- Premium readable top plate even when Low Android cannot afford any
+-- optional original 3D meshes. All pieces are SurfaceGui 2D primitives
+-- ON the REAL physical pad, not floating screen UI or extra world Parts.
+local function topPlate(pad)
+    local arena = pad.Parent and pad.Parent.Parent
+    local variant = arena and arena:GetAttribute("VariantId") or "Classic"
+    local word = ({
+        Classic = french and "ÉVASION" or "ESCAPE",
+        Towers = french and "ASCENSION" or "UPDRAFT",
+        Crossroads = french and "VOIE" or "LANE",
+        Orbital = french and "ORBITE" or "ORBIT",
+        Harbor = french and "TRANSFERT" or "TRANSFER",
+    })[variant] or "BOOST"
+
+    local gui = Instance.new("SurfaceGui")
+    gui.Name = "MobilityPadTopPlateLocal"
+    gui.Adornee = pad
+    gui.Face = Enum.NormalId.Top
+    gui.CanvasSize = Vector2.new(256, 256)
+    gui.AlwaysOnTop = false
+    gui.LightInfluence = 0.25
+    gui.MaxDistance = 115
+    gui.Parent = pad
+
+    local panel = Instance.new("Frame")
+    panel.Name = "ForgedCautionFrame"
+    panel.AnchorPoint = Vector2.new(0.5, 0.5)
+    panel.Position = UDim2.fromScale(0.5, 0.5)
+    panel.Size = UDim2.fromScale(0.84, 0.84)
+    panel.BackgroundColor3 = Color3.fromRGB(17, 27, 42)
+    -- Keep the original bright pad visible even on dim Android devices.
+    panel.BackgroundTransparency = 0.72
+    panel.BorderSizePixel = 0
+    panel.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0.10, 0)
+    corner.Parent = panel
+
+    local outline = Instance.new("UIStroke")
+    outline.Color = pad.Color:Lerp(Color3.new(1, 1, 1), 0.2)
+    outline.Thickness = 3
+    outline.Transparency = 0.10
+    outline.Parent = panel
+
+    local number = Instance.new("TextLabel")
+    number.Name = "StationOrdinal"
+    number.BackgroundTransparency = 1
+    number.Position = UDim2.fromScale(0.10, 0.12)
+    number.Size = UDim2.fromScale(0.30, 0.24)
+    number.Font = Enum.Font.GothamBlack
+    number.TextScaled = true
+    number.TextXAlignment = Enum.TextXAlignment.Left
+    number.Text = string.format("%02d", tonumber(
+        pad:GetAttribute("ArenaMobilityPadIndex")) or 0)
+    number.TextColor3 = pad.Color
+    number.Parent = panel
+
+    local label = Instance.new("TextLabel")
+    label.Name = "MobilityFunction"
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.fromScale(0.08, 0.44)
+    label.Size = UDim2.fromScale(0.84, 0.35)
+    label.Font = Enum.Font.GothamBlack
+    label.TextScaled = true
+    label.Text = word
+    label.TextColor3 = Color3.fromRGB(238, 246, 251)
+    label.Parent = panel
+
+    local bar = Instance.new("Frame")
+    bar.Name = "CurrentChannel"
+    bar.BorderSizePixel = 0
+    bar.Position = UDim2.fromScale(0.50, 0.18)
+    bar.Size = UDim2.fromScale(0.37, 0.035)
+    bar.BackgroundColor3 = pad.Color
+    bar.Parent = panel
+
+    return gui, outline, number, bar
+end
 
 local function refreshRates()
     local tier = profile()
@@ -34,6 +120,9 @@ local function refreshRates()
             end
             if state.attachment.Parent then state.attachment:Destroy() end
             if state.highlight.Parent then state.highlight:Destroy() end
+            if state.surface and state.surface.Parent then
+                state.surface:Destroy()
+            end
         else
             state.emitter.Rate = currentRate
             state.highlight.FillColor = overdriveActive
@@ -44,6 +133,16 @@ local function refreshRates()
                 or pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
             state.highlight.FillTransparency = tier.Name == "Low" and 1 or (overdriveActive and 0.74 or 0.86)
             state.highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or (overdriveActive and 0.04 or 0.16)
+            if state.surface and state.surface.Parent then
+                local tint = overdriveActive and Color3.fromRGB(255, 217, 126)
+                    or pad.Color
+                state.surfaceOutline.Color = tint
+                state.surfaceNumber.TextColor3 = tint
+                state.surfaceBar.BackgroundColor3 = tint
+                -- Critical hazard outlines are already owned elsewhere;
+                -- a pad top-plate must not become a glowing false warning.
+                state.surface.Enabled = true
+            end
 
             local light = pad:FindFirstChild("MobilityPadLight")
             if light and light:IsA("PointLight") then
@@ -52,6 +151,19 @@ local function refreshRates()
                 light.Brightness = (0.55 + (0.20 * tier.Scale)) * (overdriveActive and 1.65 or 1)
             end
         end
+    end
+
+    -- Only real source-authenticated MeshParts in the *existing*
+    -- mobile visual census. No new polling loop; reuse event-driven
+    -- pad/quality/pressure and late template readiness updates.
+    local count = PremiumMobilityPad3DKit.sync(
+        visuals, VfxQuality.deviceTier(
+            player:GetAttribute("VfxQualityTier"),
+            UserInputService.TouchEnabled).Name,
+        player:GetAttribute("OptionalVfxPressure"),
+        UserInputService.TouchEnabled)
+    if player:GetAttribute("LocalOriginalMobilityPad3DCount") ~= count then
+        player:SetAttribute("LocalOriginalMobilityPad3DCount", count)
     end
 end
 
@@ -67,6 +179,9 @@ local function destroyVisual(pad)
         end
         if state.highlight.Parent then
             state.highlight:Destroy()
+        end
+        if state.surface and state.surface.Parent then
+            state.surface:Destroy()
         end
     end
 end
@@ -109,6 +224,8 @@ local function attach(pad)
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = pad
 
+    local surface, surfaceOutline, surfaceNumber, surfaceBar = topPlate(pad)
+
     local colorConnection = pad:GetPropertyChangedSignal("Color"):Connect(function()
         -- A Color property can also arrive after the marker attribute.
         -- Keep the particles and highlights aligned with the real pad.
@@ -123,6 +240,10 @@ local function attach(pad)
         emitter = emitter,
         highlight = highlight,
         colorConnection = colorConnection,
+        surface = surface,
+        surfaceOutline = surfaceOutline,
+        surfaceNumber = surfaceNumber,
+        surfaceBar = surfaceBar,
     }
 
     local light = pad:FindFirstChild("MobilityPadLight")
@@ -150,6 +271,10 @@ local function clearAll()
     end
     for _, pad in ipairs(pads) do
         destroyVisual(pad)
+    end
+    PremiumMobilityPad3DKit.clear()
+    if player:GetAttribute("LocalOriginalMobilityPad3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalMobilityPad3DCount", 0)
     end
 end
 
@@ -256,6 +381,46 @@ end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshRates)
+
+-- The approved 3D kit arrives after the server's serialized low-priority
+-- import (about 34 seconds); do not lock visual quality to a startup
+-- timeout. A late genuine template can fill existing pads immediately.
+local watchedSourceHolder = nil
+local sourceConnections = {}
+local function bindSourceHolder(parent)
+    if watchedSourceHolder == parent then return end
+    for _, connection in ipairs(sourceConnections) do
+        connection:Disconnect()
+    end
+    table.clear(sourceConnections)
+    watchedSourceHolder = parent
+    if parent and parent:IsA("Folder") then
+        table.insert(sourceConnections, parent.ChildAdded:Connect(function(child)
+            if child.Name == "CornerGuard" then scheduleReconcile() end
+        end))
+        table.insert(sourceConnections, parent.ChildRemoved:Connect(function(child)
+            if child.Name == "CornerGuard" then scheduleReconcile() end
+        end))
+        table.insert(sourceConnections, parent:GetAttributeChangedSignal(
+            "OwnerVerified"):Connect(scheduleReconcile))
+    end
+    scheduleReconcile()
+end
+
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "ApprovedFloorReliefTemplates" then
+        bindSourceHolder(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == watchedSourceHolder then
+        bindSourceHolder(ReplicatedStorage:FindFirstChild(
+            "ApprovedFloorReliefTemplates"))
+    end
+end)
+bindSourceHolder(ReplicatedStorage:FindFirstChild(
+    "ApprovedFloorReliefTemplates"))
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
