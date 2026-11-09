@@ -6927,6 +6927,12 @@ function AISurvivorService.setRoundState(state)
                 record.readySpawnRetries = 0
                 sendToArena(record)
                 AISurvivorService.resetGridCircuit(record.model)
+                -- Reused real bot rigs must not carry a mastered Flux
+                -- junction charge between rounds or respawn attempts.
+                if record.model then
+                    record.model:SetAttribute("FluxJunctionBoostEarned", false)
+                    record.model:SetAttribute("FluxJunctionBoostReady", false)
+                end
             end
         elseif phase == "result" then
             for _, record in ipairs(records) do
