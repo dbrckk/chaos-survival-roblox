@@ -48,6 +48,10 @@ end
 local function characterRoot()
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    -- The READY packet can arrive while Roblox is replacing a dead rig.
+    -- Only a living character may receive a physical movement cue.
+    if not humanoid or humanoid.Health <= 0 then return nil end
     return root and root:IsA("BasePart") and root or nil
 end
 
