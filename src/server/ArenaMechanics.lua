@@ -91,7 +91,7 @@ ArenaMechanics.Definitions = {
     },
     Harbor = {
         Name = "SQUALL TRANSFER PADS",
-        Hint = "Climb timber cargo piers; orange sweep bays turn red—jump or move to a clear lane",
+        Hint = "Cross two different blue squall pads in 14s for a one-use stronger dock transfer; dodge the red cargo sweep",
         Color = Color3.fromRGB(78, 202, 222),
         Pads = {
             -- Clear of pier footprints and first eight spawn points.
@@ -113,7 +113,7 @@ ArenaMechanics.BaselineHints = {
     Towers = "Climb from the hub through low-to-high decks; cyan updrafts assist when safe",
     Crossroads = "Reach the hub, then climb an outer lane and its elevated side branch",
     Orbital = "Follow a floor-level green booster to an outer ramp and cross a Helix",
-    Harbor = "Follow seven-step cargo switchbacks; blue squall pads offer optional cross-dock transfers",
+    Harbor = "Follow cargo switchbacks; two different blue squall pads in 14s earn a transfer boost",
 }
 
 function ArenaMechanics.effectiveHint(variantId, dynamicStarted)
@@ -153,6 +153,9 @@ local function createPad(folder, center, definition, index)
     pad.TopSurface = Enum.SurfaceType.Smooth
     pad.BottomSurface = Enum.SurfaceType.Smooth
     pad:SetAttribute("ArenaMobilityPad", true)
+    -- Authoritative index for two distinct Harbor transfers; no client
+    -- touch claims or string parsing of prefabs.
+    pad:SetAttribute("ArenaMobilityPadIndex", index)
     pad:SetAttribute("ImpulseX", padDefinition.impulse.X)
     pad:SetAttribute("ImpulseY", padDefinition.impulse.Y)
     pad:SetAttribute("ImpulseZ", padDefinition.impulse.Z)
@@ -196,6 +199,27 @@ end
 function ArenaMechanics.impulseFor(impulse, overdrive)
     local multiplier = overdrive == true and 1.28 or 1
     return impulse * multiplier
+end
+
+ArenaMechanics.HarborTransferWindow = 14
+
+-- One complete cross-dock link (two DIFFERENT real pads within 14 s)
+-- earns a single capped 1.28x transfer. A repeated pad cannot progress
+-- the run or extend the original deadline. Both player Touched and NPC
+-- server movement use this exact pure rule. Invalid inputs never award.
+function ArenaMechanics.advanceHarborTransfer(previous, rawIndex, rawNow)
+    local index, now = tonumber(rawIndex), tonumber(rawNow)
+    if not index or index % 1 ~= 0 or index < 1 or index > 4
+        or not now or now ~= now or math.abs(now) == math.huge
+    then return previous, false end
+    local old = type(previous) == "table" and previous or nil
+    if old and old.earned == true then return old, false end
+    if old and type(old.at) == "number" and now >= old.at
+        and now - old.at <= ArenaMechanics.HarborTransferWindow then
+        if old.index == index then return old, false end
+        return {index = index, at = now, earned = true}, true
+    end
+    return {index = index, at = now, earned = false}, false
 end
 
 function ArenaMechanics.readPadImpulse(pad, fallback)
@@ -251,6 +275,8 @@ function ArenaMechanics.start(ctx, variantId)
     table.insert(ctx.Cleanup, folder)
 
     local cooldownUntil = {}
+    -- Local server-owned chain state, born and discarded with this round.
+    local harborTransferStates = {}
 
     for index = 1, #definition.Pads do
         local pad, impulse = createPad(folder, base.Position, definition, index)
@@ -264,6 +290,15 @@ function ArenaMechanics.start(ctx, variantId)
             if not root or not player or not ctx.IsContestantActive(player) then
                 return
             end
+            -- The actual HumanoidRootPart must be on the physical pad.
+            -- An oversized accessory's distant Touched signal cannot
+            -- launch a player or fake one of two Harbor transfer touches.
+            local offset = root.Position - pad.Position
+            if math.abs(offset.Y) > 5
+                or Vector3.new(offset.X, 0, offset.Z).Magnitude > 4.8
+            then
+                return
+            end
 
             local now = os.clock()
             if (cooldownUntil[player.UserId] or 0) > now then
@@ -273,25 +308,65 @@ function ArenaMechanics.start(ctx, variantId)
             cooldownUntil[player.UserId] = now + ArenaMechanics.cooldownFor(finalRush)
 
             local overdrive = ctx.Overdrive and ctx.Overdrive() == true
-            -- Skill-earned Classic boost is individual, server-owned,
-            -- optional and one-use. Do not consume it when the whole
-            -- round is already in global overdrive: that would spend
-            -- a reward with no extra movement effect.
+            -- A Harbor combo is recorded only AFTER a real eligible pad
+            -- contact; random movement or client input cannot claim it.
+            local harborNewClear = false
+            local harborNewStart = false
+            if variantId == "Harbor" then
+                local previousState = harborTransferStates[player]
+                local nextState
+                nextState, harborNewClear = ArenaMechanics.advanceHarborTransfer(
+                    previousState, index, now)
+                harborTransferStates[player] = nextState
+                harborNewStart = nextState ~= nil
+                    and nextState ~= previousState and not harborNewClear
+                if harborNewClear
+                    and player:GetAttribute("RoundHarborTransferEarned") ~= true
+                then
+                    player:SetAttribute("RoundHarborTransferEarned", true)
+                    player:SetAttribute("RoundHarborTransferReady", true)
+                end
+                player:SetAttribute("RoundHarborTransferStep",
+                    nextState and nextState.earned and 2 or 1)
+                player:SetAttribute("RoundHarborTransferDeadline",
+                    nextState and not nextState.earned
+                        and workspace:GetServerTimeNow()
+                            + math.max(0, ArenaMechanics.HarborTransferWindow
+                                - (now - nextState.at)) or 0)
+            end
+            -- Both bonus charges are individual, single-use and cannot
+            -- be wasted in global overdrive. Keep every existing speed,
+            -- cooldown and physics limit.
             local circuitBoost = variantId == "Classic" and not overdrive
                 and player:GetAttribute("RoundGridCircuitBoostReady") == true
+            local harborBoost = variantId == "Harbor" and not overdrive
+                and player:GetAttribute("RoundHarborTransferReady") == true
             local currentImpulse = ArenaMechanics.readPadImpulse(pad, impulse)
             local appliedImpulse = ArenaMechanics.impulseFor(
-                currentImpulse, overdrive or circuitBoost)
+                currentImpulse, overdrive or circuitBoost or harborBoost)
             if circuitBoost then
                 player:SetAttribute("RoundGridCircuitBoostReady", false)
             end
+            if harborBoost then
+                player:SetAttribute("RoundHarborTransferReady", false)
+            end
 
             root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
-                root.AssemblyLinearVelocity,
-                appliedImpulse
-            )
+                root.AssemblyLinearVelocity, appliedImpulse)
             if ctx.OnArenaMechanicUsed then
-                pcall(ctx.OnArenaMechanicUsed, player, variantId, definition.Name, overdrive)
+                local label = definition.Name
+                if variantId == "Harbor" then
+                    -- A repeated pad must not spam a center-screen
+                    -- achievement on mobile. Only announce a genuinely
+                    -- started, completed or spent route; ordinary pads
+                    -- keep their original low-priority VFX.
+                    label = harborBoost and "SQUALL RUN BOOST"
+                        or (harborNewClear and "SQUALL RUN - BOOST READY"
+                            or (harborNewStart and "SQUALL RUN 1/2"
+                                or definition.Name))
+                end
+                pcall(ctx.OnArenaMechanicUsed, player, variantId, label,
+                    overdrive)
             end
         end)
     end

@@ -10,6 +10,7 @@ local SkyrailSlipstream = {}
 SkyrailSlipstream.Cooldown = 4.5
 SkyrailSlipstream.MinRunSpeed = 9
 SkyrailSlipstream.Boost = 12
+SkyrailSlipstream.AceBoost = 15
 SkyrailSlipstream.SpeedCap = 42
 SkyrailSlipstream.ComboWindow = 16
 SkyrailSlipstream.ComboCap = 3
@@ -48,7 +49,7 @@ end
 -- On shrinking bridges, a full +12 impulse can launch someone over the
 -- destination deck. Scale by actual remaining half-span, retaining a
 -- safety margin at each end. Near an edge there is no activation.
-function SkyrailSlipstream.boostForSpan(span, localLongitudinal, travelSign)
+function SkyrailSlipstream.boostForSpan(span, localLongitudinal, travelSign, mastered)
     local halfSpan = math.max(0, tonumber(span) or 0) * 0.5
     local offset = tonumber(localLongitudinal) or 0
     -- With no direction, use the safer nearest endpoint. Otherwise,
@@ -56,8 +57,15 @@ function SkyrailSlipstream.boostForSpan(span, localLongitudinal, travelSign)
     local projected = travelSign == 1 and offset
         or (travelSign == -1 and -offset or math.abs(offset))
     local remaining = halfSpan - projected
-    return math.clamp((remaining - 4.5) * 0.65, 0,
-        SkyrailSlipstream.Boost)
+    -- Real Tower bridges span 49 studs before shrink. A 15-stud
+    -- cap alone would give a mere +1 at midspan (13 vs 12);
+    -- slightly raise the runway-weighting for a tangible Ace cut
+    -- while preserving the same 4.5-stud end margin and speed cap.
+    local runway = math.max(0, remaining - 4.5)
+    local multiplier = mastered == true and 0.80 or 0.65
+    return math.clamp(runway * multiplier, 0,
+        mastered == true and SkyrailSlipstream.AceBoost
+            or SkyrailSlipstream.Boost)
 end
 
 function SkyrailSlipstream.direction(bridge, velocity)
@@ -79,14 +87,16 @@ function SkyrailSlipstream.direction(bridge, velocity)
     return speed > 0 and planar or -planar
 end
 
-function SkyrailSlipstream.velocity(current, direction, boost)
+function SkyrailSlipstream.velocity(current, direction, boost, mastered)
     if typeof(direction) ~= "Vector3"
         or direction.Magnitude < 0.99
     then
         return current
     end
-    local impulse = math.clamp(tonumber(boost) or SkyrailSlipstream.Boost,
-        0, SkyrailSlipstream.Boost)
+    local maxImpulse = mastered == true and SkyrailSlipstream.AceBoost
+        or SkyrailSlipstream.Boost
+    local impulse = math.clamp(tonumber(boost) or maxImpulse,
+        0, maxImpulse)
     return MovementSafety.addImpulse(
         current, direction.Unit * impulse,
         SkyrailSlipstream.SpeedCap, -52, 48
@@ -155,13 +165,27 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
     local axis = bridge.Size.X > bridge.Size.Z
         and bridge.CFrame.RightVector or bridge.CFrame.LookVector
     local travelSign = direction:Dot(axis) >= 0 and 1 or -1
-    local boost = SkyrailSlipstream.boostForSpan(span, along, travelSign)
+    -- Consume the one earned Ace surge only on a valid running,
+    -- solid bridge. Never waste it on a bridge about to collapse.
+    local aceReady = (if player then
+        player:GetAttribute("RoundSkyrailAceBoostReady") == true
+        else rig:GetAttribute("SkyrailAceBoostReady") == true)
+        and bridge:GetAttribute("CollapsePhase") == nil
+    local boost = SkyrailSlipstream.boostForSpan(
+        span, along, travelSign, aceReady)
     if boost < 0.5 then return false end
 
     ready[rig] = now + SkyrailSlipstream.Cooldown
     root.AssemblyLinearVelocity = SkyrailSlipstream.velocity(
-        root.AssemblyLinearVelocity, direction, boost
+        root.AssemblyLinearVelocity, direction, boost, aceReady
     )
+    if aceReady then
+        if player then
+            player:SetAttribute("RoundSkyrailAceBoostReady", false)
+        else
+            rig:SetAttribute("SkyrailAceBoostReady", false)
+        end
+    end
     local chains = ctx.SkyrailChainStates
     local oldChain = type(chains) == "table" and chains[rig] or nil
     local nextChain, advanced = SkyrailSlipstream.advanceChain(
@@ -171,6 +195,20 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
         chains[rig] = nextChain
     end
     local tier = nextChain and nextChain.tier or 1
+    -- Three distinct physically crossed Skyrails earn exactly ONE
+    -- future Ace surge per round. This newly earned charge is never
+    -- consumed on the same crossing that completes the third step.
+    if advanced and tier == SkyrailSlipstream.ComboCap then
+        if player then
+            if player:GetAttribute("RoundSkyrailAceBoostEarned") ~= true then
+                player:SetAttribute("RoundSkyrailAceBoostEarned", true)
+                player:SetAttribute("RoundSkyrailAceBoostReady", true)
+            end
+        elseif bot and rig:GetAttribute("SkyrailAceBoostEarned") ~= true then
+            rig:SetAttribute("SkyrailAceBoostEarned", true)
+            rig:SetAttribute("SkyrailAceBoostReady", true)
+        end
+    end
     local usedAt = workspace:GetServerTimeNow()
     -- Set tier first, timestamp last to let clients render the exact rank.
     sensor:SetAttribute("SkyrailFlowTier", tier)
@@ -185,10 +223,11 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
             tonumber(player:GetAttribute("RoundSkyrailFlowBest")) or 0,
             tier
         ))
-        if advanced and ctx.OnArenaMechanicUsed then
-            local label = tier >= 3 and "SKYRAIL ACE"
-                or (tier == 2 and "SKYRAIL CHAIN x2"
-                    or "SKYRAIL SLIPSTREAM")
+        if ctx.OnArenaMechanicUsed and (advanced or aceReady) then
+            local label = aceReady and "ACE SURGE"
+                or (tier >= 3 and advanced and "SKYRAIL ACE - SURGE READY"
+                    or (tier == 2 and "SKYRAIL CHAIN x2"
+                        or "SKYRAIL SLIPSTREAM"))
             pcall(ctx.OnArenaMechanicUsed, player, "Towers", label, false)
         end
     end

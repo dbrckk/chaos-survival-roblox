@@ -174,33 +174,50 @@ end
 feedbackEvent.OnClientEvent:Connect(function(payload)
     if type(payload) ~= "table" then return end
     local now = os.clock()
-    local gridClear = payload.mechanicName == "GRID CIRCUIT CLEAR"
-    local skyrail = payload.mechanicName == "SKYRAIL SLIPSTREAM"
-        or payload.mechanicName == "SKYRAIL CHAIN x2"
-        or payload.mechanicName == "SKYRAIL ACE"
-    local skyrailAce = payload.mechanicName == "SKYRAIL ACE"
-    local fluxWeave = payload.mechanicName == "FLUX WEAVE x2"
-        or payload.mechanicName == "FLUX MASTER"
-    local fluxMaster = payload.mechanicName == "FLUX MASTER"
-    -- The final challenge success should never be swallowed by a mobility
-    -- pad's short visual cooldown during a fast last-node crossing.
-    local teamDash = payload.mechanicName == "DASH RECHARGED"
-        or payload.mechanicName == "DASH RESERVE"
-        or payload.mechanicName == "TEAM DASH SHARED"
-        or payload.mechanicName == "ALLY DASH SHARED"
-    local orbitMaster = payload.mechanicName == "ORBIT MASTER"
-    local priority = gridClear or fluxWeave or skyrailAce or fluxMaster
-        or orbitMaster
+    local mechanic = tostring(payload.mechanicName or "")
+    local gridClear = mechanic == "GRID CIRCUIT CLEAR"
+    local skyrail = mechanic == "SKYRAIL SLIPSTREAM"
+        or mechanic == "SKYRAIL CHAIN x2"
+        or mechanic == "SKYRAIL ACE"
+        or mechanic == "SKYRAIL ACE - SURGE READY"
+        or mechanic == "ACE SURGE"
+    local skyrailAce = mechanic == "SKYRAIL ACE"
+        or mechanic == "SKYRAIL ACE - SURGE READY"
+        or mechanic == "ACE SURGE"
+    local fluxWeave = mechanic == "FLUX WEAVE x2"
+        or mechanic == "FLUX MASTER"
+        or mechanic == "MASTER JUNCTION CUT"
+    local fluxMaster = mechanic == "FLUX MASTER"
+        or mechanic == "MASTER JUNCTION CUT"
+    local junction = mechanic == "JUNCTION CUT"
+        or mechanic == "MASTER JUNCTION CUT"
+    local harbor = mechanic == "SQUALL RUN 1/2"
+        or mechanic == "SQUALL RUN - BOOST READY"
+        or mechanic == "SQUALL RUN BOOST"
+        or mechanic == "SQUALL TRANSFER"
+    local harborMaster = mechanic == "SQUALL RUN - BOOST READY"
+        or mechanic == "SQUALL RUN BOOST"
+    local orbitMaster = mechanic == "ORBIT MASTER"
+        or mechanic == "ORBIT MASTER - PULSE READY"
+        or mechanic == "MASTER ORBIT PULSE"
+    local helixFlow = mechanic == "HELIX FLOW"
+        or mechanic == "HELIX CHAIN x2" or orbitMaster
+        or mechanic == "ORBIT PULSE"
+    -- Mastery awards are real movement options and must never be
+    -- swallowed by an unrelated pad's short visual cooldown.
+    local teamDash = mechanic == "DASH RECHARGED"
+        or mechanic == "DASH RESERVE"
+        or mechanic == "TEAM DASH SHARED"
+        or mechanic == "ALLY DASH SHARED"
+    local priority = gridClear or fluxMaster or skyrailAce
+        or orbitMaster or harborMaster
     if now - lastTrigger < 0.18 and not priority then
         return
     end
     lastTrigger = now
 
     local overdrive = payload.overdrive == true
-    local fluxRelay = payload.mechanicName == "FLUX RELAY" or fluxWeave
-    local helixFlow = payload.mechanicName == "HELIX FLOW"
-        or payload.mechanicName == "HELIX CHAIN x2"
-        or payload.mechanicName == "ORBIT MASTER"
+    local fluxRelay = mechanic == "FLUX RELAY" or fluxWeave or junction
     local accent = overdrive
         and Color3.fromRGB(255, 210, 90)
         or (fluxRelay and Color3.fromRGB(88, 250, 229)
@@ -211,7 +228,7 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
     elseif skyrail and not overdrive then
         accent = skyrailAce and Color3.fromRGB(255, 214, 117)
             or Color3.fromRGB(100, 230, 250)
-    elseif fluxMaster and not overdrive then
+    elseif (fluxMaster or harborMaster or orbitMaster) and not overdrive then
         accent = Color3.fromRGB(255, 206, 106)
     end
     local tier = currentVfxTier()
@@ -237,7 +254,8 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         pulseCharacter(accent)
     end
 
-    if overdrive or fluxRelay or helixFlow or gridClear or skyrail or teamDash then
+    if overdrive or fluxRelay or helixFlow or gridClear
+        or skyrail or harbor or teamDash then
         if touchDevice and not MobileHudNotices.claim("mechanic", 20) then
             return
         end
@@ -245,18 +263,16 @@ feedbackEvent.OnClientEvent:Connect(function(payload)
         local token = titleToken
         stopTitleTweens()
         local serverCue = overdrive and "OVERDRIVE BOOST"
-            or (gridClear and "GRID CIRCUIT CLEAR"
-                or (fluxWeave and tostring(payload.mechanicName)
-                    or (skyrail and tostring(payload.mechanicName)
-                        or (teamDash and tostring(payload.mechanicName)
-                            or (helixFlow and tostring(payload.mechanicName) or "FLUX RELAY")))))
+            or (gridClear and "GRID CIRCUIT CLEAR" or mechanic)
         overdriveLabel.Text = CoreLocalization.mechanicFeedback(localeId, serverCue)
-        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce or fluxMaster)
+        overdriveLabel.TextColor3 = (overdrive or orbitMaster or skyrailAce
+            or fluxMaster or harborMaster)
             and Color3.fromRGB(255, 225, 115)
             or (gridClear and Color3.fromRGB(197, 255, 218)
                 or (helixFlow and Color3.fromRGB(184, 255, 216)
                     or Color3.fromRGB(147, 255, 232)))
-        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce or fluxMaster)
+        overdriveStroke.Color = (overdrive or orbitMaster or skyrailAce
+            or fluxMaster or harborMaster)
             and Color3.fromRGB(255, 210, 90)
             or (gridClear and Color3.fromRGB(120, 245, 179)
                 or (helixFlow and Color3.fromRGB(106, 245, 176)

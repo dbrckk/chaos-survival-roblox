@@ -4347,18 +4347,38 @@ local function tryPadImpulse(record, root, now)
     end
 
     local overdrive = currentState.overdrive == true
-    -- Exactly the same earned single-use Classic pad boost as a human.
-    -- The circuit node service writes the charge on the real NPC rig.
-    -- Do not consume a charge in a global overdrive round.
-    local circuitBoost = arenaVariantId() == "Classic" and not overdrive
+    local variant = arenaVariantId()
+    -- NPC and human Harbor transfer chains use the SAME two distinct
+    -- physical pad rule. No teleport or fabricated touch event.
+    if variant == "Harbor" and record.model then
+        local nextState, completed = ArenaMechanics.advanceHarborTransfer(
+            record.harborTransferState,
+            record.targetPart:GetAttribute("ArenaMobilityPadIndex"), now)
+        record.harborTransferState = nextState
+        if completed
+            and record.model:GetAttribute("HarborTransferEarned") ~= true then
+            record.model:SetAttribute("HarborTransferEarned", true)
+            record.model:SetAttribute("HarborTransferReady", true)
+        end
+    end
+    -- Same nonstacking 1.28x boost cap for Classic and Harbor, same
+    -- physics/cooldown as real human pad activations.
+    local circuitBoost = variant == "Classic" and not overdrive
         and record.model
         and record.model:GetAttribute("GridCircuitBoostReady") == true
+    local harborBoost = variant == "Harbor" and not overdrive
+        and record.model
+        and record.model:GetAttribute("HarborTransferReady") == true
     root.AssemblyLinearVelocity = ArenaMechanics.safeVelocity(
         root.AssemblyLinearVelocity,
-        ArenaMechanics.impulseFor(impulse, overdrive or circuitBoost)
+        ArenaMechanics.impulseFor(
+            impulse, overdrive or circuitBoost or harborBoost)
     )
     if circuitBoost then
         record.model:SetAttribute("GridCircuitBoostReady", false)
+    end
+    if harborBoost then
+        record.model:SetAttribute("HarborTransferReady", false)
     end
 
     record.nextPadAt = now + ArenaMechanics.cooldownFor(currentState.finalRush == true)
@@ -6927,11 +6947,19 @@ function AISurvivorService.setRoundState(state)
                 record.readySpawnRetries = 0
                 sendToArena(record)
                 AISurvivorService.resetGridCircuit(record.model)
-                -- Reused real bot rigs must not carry a mastered Flux
-                -- junction charge between rounds or respawn attempts.
+                -- Reused real bots cannot carry mastery across rounds:
+                -- every authored skill still requires current-round
+                -- physical contacts with live parts.
+                record.harborTransferState = nil
                 if record.model then
                     record.model:SetAttribute("FluxJunctionBoostEarned", false)
                     record.model:SetAttribute("FluxJunctionBoostReady", false)
+                    record.model:SetAttribute("SkyrailAceBoostEarned", false)
+                    record.model:SetAttribute("SkyrailAceBoostReady", false)
+                    record.model:SetAttribute("HelixMasterPulseEarned", false)
+                    record.model:SetAttribute("HelixMasterPulseReady", false)
+                    record.model:SetAttribute("HarborTransferEarned", false)
+                    record.model:SetAttribute("HarborTransferReady", false)
                 end
             end
         elseif phase == "result" then
