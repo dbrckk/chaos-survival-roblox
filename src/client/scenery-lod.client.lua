@@ -19,6 +19,7 @@ local ApprovedPerimeterMachineryMeshKit = require(script.Parent.ApprovedPerimete
 local ApprovedPerimeterRotorMeshKit = require(script.Parent.ApprovedPerimeterRotorMeshKit)
 local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimeterStructuresMeshKit)
+local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1241,6 +1242,26 @@ task.spawn(function()
             ~= remainingBlockSubstitutions then
             player:SetAttribute("LocalPerimeterPrimitiveStructuralBlocksReplaced",
                 remainingBlockSubstitutions)
+        end
+        -- Approved, truly different station apex 3D models on all five
+        -- arena variants. Both authored native variant silhouettes restore
+        -- atomically on missing source, StreamingEnabled or GPU pressure.
+        -- Uses the SAME scenery LOD clock and camera input, no new loop.
+        ApprovedPerimeterVariantApexMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local variantApexes=ApprovedPerimeterVariantApexMeshKit.count()
+        if player:GetAttribute("LocalApprovedPerimeterVariantApexCount")
+            ~=variantApexes then
+            player:SetAttribute("LocalApprovedPerimeterVariantApexCount",
+                variantApexes)
+        end
+        local nativeApexesReplaced=
+            ApprovedPerimeterVariantApexMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPerimeterVariantNativePiecesReplaced")
+            ~=nativeApexesReplaced then
+            player:SetAttribute("LocalPerimeterVariantNativePiecesReplaced",
+                nativeApexesReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

@@ -1,5 +1,8 @@
 # P4 — Couronnes de stations propres aux cinq arènes
 
+**Actualisation du 9 novembre 2026 :** les quatre Model packages ont été créés et modérés **Approved** dans le workflow #42699542702 (IDs Towers 131413152501235, Orbital 131188899020391, Crossroads 134533469777794, Relay 110237986522853). Le module serveur de chargement et le kit client de remplacement conditionnel sont désormais intégrés à la source. Les mentions d'import futur ci-dessous correspondent à la phase précédente. Aucun test moteur ni nouvelle publication de Place n'est revendiqué.
+
+
 9 novembre 2026. Fabrication de modèles originaux exclusivement, sans mise à jour de Place publique.
 
 Les cinq variantes possèdent chacune deux pièces natives spéciales au sommet des stations. Quatre familles géométriques couvrent les cinq variantes.

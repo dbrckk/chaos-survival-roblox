@@ -98,6 +98,10 @@ VisualBudgetRules.LocalFolders = {
     -- Android 440/680/900 Part census. Low 0 / Medium 1 / High touch 2
     -- / High desktop 3 stations, with pressure-2 native fallback.
     "ApprovedPerimeterStructuresLocal",
+    -- One original four-way variant apex Model (7 genuine MeshParts)
+    -- per selected authentic station; in shared 440/680/900 census.
+    -- Low 0 / Medium 1 / High touch 2 / High PC 3, pressure-adaptive.
+    "ApprovedPerimeterVariantApexLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",
