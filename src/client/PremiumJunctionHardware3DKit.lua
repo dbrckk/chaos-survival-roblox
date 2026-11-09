@@ -129,12 +129,17 @@ local function mount(pad, yard, owner, source)
 end
 
 function Kit.sync(yard, owner, quality, pressure, touch, activeRound)
-    local source = activeRound == true and verifiedSource() or nil
     local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
     local cap = quality == "High" and (touch and 2 or 2)
         or (quality == "Medium" and 1 or 0)
     if stress == 1 then cap = math.min(cap, 1) end
-    if stress == 2 or not source then cap = 0 end
+    if stress == 2 then cap = 0 end
+    -- Low or pressurized Android never runs expensive source/mesh census.
+    -- A newly arrived verified template is still picked up on the
+    -- existing Flux Relay cadence as soon as graphics are eligible.
+    local source = cap > 0 and activeRound == true
+        and verifiedSource() or nil
+    if not source then cap = 0 end
 
     -- A never-lit or currently inactive junction is not shown as usable.
     -- Active pairs are server-owned; late streaming and a rotated pair
