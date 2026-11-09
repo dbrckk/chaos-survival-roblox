@@ -15,6 +15,17 @@
 - **Livraison bloquée à cette date :** [Build Validation #42603750446](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42603750446) a réussi sur l'ancien SHA `87f6cc...`, mais le test moteur [#42605796466](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42605796466) a échoué sur une ancienne assertion de récupération IA. La PR #705 a corrigé cette attente **sans changer la logique de déplacement** ; elle n'est pas encore validée par les workflows sur son nouveau SHA `0d334571...`. La tentative de publication [#42608816130](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42608816130) a refusé l'envoi faute de deux checks verts sur le SHA exact. La dernière publication publique réussie constatée est [#42358436832](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42358436832), sur une version plus ancienne, le 7 novembre.
 - Aucun test utilisateur naïf, aucun profilage MicroProfiler, aucune capture Android comparative, aucun taux de rétention ou mesure de victoire ne sont disponibles pour **cette version**. Ne pas confondre audit source, test Open Cloud et validation sur appareil.
 
+## A.1 Actualisation opérationnelle — publication P0 réussie le 9 novembre
+
+La situation de blocage décrite plus haut correspond à l'état **avant** la relance. Les preuves plus récentes changent la priorité :
+
+- [Build Validation #42620069635](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42620069635) : **success**, SHA `0d334571560dac92d55190b02f19c1221b28959b`.
+- [Roblox Open Cloud Engine Tests #42620126398](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42620126398) : **success**, même SHA.
+- [Public Release Readiness #42620873220](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42620873220) : **success**, même SHA.
+- [Publication publique #42608816130, tentative 2](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42608816130) : **success**, cible autorisée `10771083668` / `95351659174730`; build Rojo, étape d'upload Roblox et archivage de la preuve **réussis**.
+- **Encore non certifié :** capture Android réelle, ressenti gameplay, FPS/mémoire, latence et comportement à 1+7. Les tests moteur ne démontrent pas ces qualités de session.
+- **Nouvelle étape active :** P1, accompagnement débutant avec vraies surfaces de déplacement, dans [PR #707](https://github.com/dbrckk/chaos-survival-roblox/pull/707). Ne pas confondre le commit public P0 avec les changements P1 non encore publiés.
+
 ## B. Décision produit
 
 **Promesse en une phrase :** « Survis à une succession de catastrophes imprévisibles en exploitant cinq arènes physiques uniques, face à sept adversaires crédibles lorsque tu joues seul. »
@@ -158,7 +169,7 @@ La priorité n'est plus d'accumuler de nouveaux mini-systèmes. Il faut **finir 
 
 ## E. Prochaine action directement exécutable
 
-**Priorité unique : achever P0.** La PR #705 a corrigé l'unique assertion de récupération incohérente observée. Faire passer Build Validation puis Roblox Open Cloud sur `0d334571...` ; si un autre test échoue, conserver le build public précédent et corriger le cas réel avant de republier. Lorsque le gate est vert, effectuer le workflow public avec numéro de version et session Android réelle. **Ensuite seulement**, ouvrir le lot P1 « première manche immédiatement comprise » ; ne pas rouvrir simultanément dix sous-projets de graphismes, de bots et d'économie.
+**Priorité actuelle : terminer P1 sans sacrifier la sécurité de publication.** P0 a passé Build, Roblox Engine et publication publique sur `0d334571...` (liens de preuve ci-dessus) ; la validation visuelle Android reste ouverte. Intégrer la PR #707 une fois ses contrats source et les revues terminés, puis exécuter Build/Cloud sur le **nouveau** commit exact avant d'envisager sa publication. Cibler un premier parcours compréhensible, un repère réellement praticable et aucun faux avertissement. Ne pas rouvrir dix sous-projets de graphismes, de bots ou d'économie tant que P1 n'est pas reçu.
 
 ### Documents conservés en référence
 
