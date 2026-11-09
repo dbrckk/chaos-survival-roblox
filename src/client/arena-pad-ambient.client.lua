@@ -1,8 +1,11 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local PremiumMobilityPad3DKit = require(
+    script.Parent.PremiumMobilityPad3DKit)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -52,6 +55,19 @@ local function refreshRates()
                 light.Brightness = (0.55 + (0.20 * tier.Scale)) * (overdriveActive and 1.65 or 1)
             end
         end
+    end
+
+    -- Only real source-authenticated MeshParts in the *existing*
+    -- mobile visual census. No new polling loop; reuse event-driven
+    -- pad/quality/pressure and late template readiness updates.
+    local count = PremiumMobilityPad3DKit.sync(
+        visuals, VfxQuality.deviceTier(
+            player:GetAttribute("VfxQualityTier"),
+            UserInputService.TouchEnabled).Name,
+        player:GetAttribute("OptionalVfxPressure"),
+        UserInputService.TouchEnabled)
+    if player:GetAttribute("LocalOriginalMobilityPad3DCount") ~= count then
+        player:SetAttribute("LocalOriginalMobilityPad3DCount", count)
     end
 end
 
@@ -150,6 +166,10 @@ local function clearAll()
     end
     for _, pad in ipairs(pads) do
         destroyVisual(pad)
+    end
+    PremiumMobilityPad3DKit.clear()
+    if player:GetAttribute("LocalOriginalMobilityPad3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalMobilityPad3DCount", 0)
     end
 end
 
@@ -256,6 +276,46 @@ end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshRates)
+
+-- The approved 3D kit arrives after the server's serialized low-priority
+-- import (about 34 seconds); do not lock visual quality to a startup
+-- timeout. A late genuine template can fill existing pads immediately.
+local watchedSourceHolder = nil
+local sourceConnections = {}
+local function bindSourceHolder(parent)
+    if watchedSourceHolder == parent then return end
+    for _, connection in ipairs(sourceConnections) do
+        connection:Disconnect()
+    end
+    table.clear(sourceConnections)
+    watchedSourceHolder = parent
+    if parent and parent:IsA("Folder") then
+        table.insert(sourceConnections, parent.ChildAdded:Connect(function(child)
+            if child.Name == "CornerGuard" then scheduleReconcile() end
+        end))
+        table.insert(sourceConnections, parent.ChildRemoved:Connect(function(child)
+            if child.Name == "CornerGuard" then scheduleReconcile() end
+        end))
+        table.insert(sourceConnections, parent:GetAttributeChangedSignal(
+            "OwnerVerified"):Connect(scheduleReconcile))
+    end
+    scheduleReconcile()
+end
+
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child.Name == "ApprovedFloorReliefTemplates" then
+        bindSourceHolder(child)
+    end
+end)
+ReplicatedStorage.ChildRemoved:Connect(function(child)
+    if child == watchedSourceHolder then
+        bindSourceHolder(ReplicatedStorage:FindFirstChild(
+            "ApprovedFloorReliefTemplates"))
+    end
+end)
+bindSourceHolder(ReplicatedStorage:FindFirstChild(
+    "ApprovedFloorReliefTemplates"))
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
