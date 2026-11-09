@@ -51,20 +51,69 @@ local function characterRoot()
     return root and root:IsA("BasePart") and root or nil
 end
 
-local function nearestPart(parts)
+-- A close-looking pad can still be on another elevation, behind a
+-- solid wall, or separated from the avatar by a missing piece of floor.
+-- READY is the only phase in which this optional marker is shown; never
+-- promise a route which we cannot confirm on the replicated physical map.
+-- These few bounded probes execute only when the server sends READY or
+-- the map/character changes, not in RenderStepped or a second scanner.
+local function nearestReachablePad(parts)
     local root = characterRoot()
-    if not root then
-        return nil
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not root or not arena then return nil end
+
+    local ignored = {markerFolder}
+    if root.Parent then
+        table.insert(ignored, root.Parent)
     end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = ignored
+    params.RespectCanCollide = true
 
     local nearest = nil
-    local nearestDistance = math.huge
-    for _, part in ipairs(parts) do
-        if part:IsA("BasePart") then
-            local distance = (part.Position - root.Position).Magnitude
-            if distance < nearestDistance then
-                nearest = part
-                nearestDistance = distance
+    local bestDistance = math.huge
+    for _, pad in ipairs(parts) do
+        if pad:IsA("BasePart") and pad.Parent
+            and pad.CanTouch and pad:GetAttribute("ArenaMobilityPad") == true
+            and pad:IsDescendantOf(arena) then
+            local offset = pad.Position - root.Position
+            local flat = Vector3.new(offset.X, 0, offset.Z)
+            local distance = flat.Magnitude
+            if distance >= 4 and distance <= 56
+                and distance < bestDistance
+                and math.abs(offset.Y) <= 5 then
+                -- The pad itself is a non-colliding trigger, not a floor.
+                -- Reject walls in the direct approach; if there is a
+                -- bend in the authored route, omit the beacon rather than
+                -- teach a first-time player a wall-crossing shortcut.
+                local obstacle = workspace:Raycast(
+                    root.Position, flat, params
+                )
+                if not obstacle or obstacle.Distance >= distance - 3.5 then
+                    local supported = true
+                    local groundY = nil
+                    for _, fraction in ipairs({0.12, 0.34, 0.56, 0.78, 0.96}) do
+                        local location = root.Position:Lerp(pad.Position, fraction)
+                        local ground = workspace:Raycast(
+                            location + Vector3.new(0, 2, 0),
+                            Vector3.new(0, -11, 0), params
+                        )
+                        if not ground or not ground.Instance:IsDescendantOf(arena)
+                            or ground.Normal.Y < 0.65
+                            or (groundY and math.abs(ground.Position.Y - groundY) > 2)
+                        then
+                            supported = false
+                            break
+                        end
+                        groundY = ground.Position.Y
+                    end
+                    if supported then
+                        nearest = pad
+                        bestDistance = distance
+                    end
+                end
             end
         end
     end
@@ -205,7 +254,8 @@ local function buildWorldBeacon(part, color)
 end
 
 local function mark(part, text, color)
-    if currentTarget == part and highlight and billboard then
+    if currentTarget == part and highlight
+        and (billboard or UserInputService.TouchEnabled) then
         return
     end
 
@@ -227,6 +277,11 @@ local function mark(part, text, color)
     highlight.Parent = markerFolder
 
     buildWorldBeacon(part, color)
+
+    -- Mobile already shows the survival goal and imminent hazard in two
+    -- existing HUD owners. A third AlwaysOnTop label obscures the avatar
+    -- on narrow screens; the bounded world highlight alone is enough.
+    if UserInputService.TouchEnabled then return end
 
     billboard = Instance.new("BillboardGui")
     billboard.Name = "RookieGuideLabel"
@@ -284,7 +339,11 @@ local function mark(part, text, color)
 end
 
 local function refresh()
-    if player:GetAttribute("DataLoaded") ~= true then
+    -- A temporarily unavailable DataStore must not disable read-only
+    -- guidance. Never grant rewards, purchases or progression from this
+    -- fallback; the player remains subject to the normal server roster.
+    if player:GetAttribute("DataLoaded") ~= true
+        and player:GetAttribute("DataLoadFailed") ~= true then
         clearMarker()
         return
     end
@@ -317,18 +376,15 @@ local function refresh()
     end
 
     if currentState.phase == "ready" then
-        -- Touch players already see the arena pads and top HUD guidance.
-        -- A world-space AlwaysOnTop billboard during the opening countdown
-        -- obscured the avatar and other players' escape paths.
-        if UserInputService.TouchEnabled then
-            clearMarker()
-        else
-            mark(
-                nearestPart(arenaPads()),
-                CoreLocalization.text(localeId, "ESCAPE_PAD"),
-                Color3.fromRGB(120, 225, 255)
-            )
-        end
+        -- Only advertise an actually replicated, touch-enabled pad whose
+        -- straight approach is supported by real collidable arena floor.
+        -- If there is no verified route, prefer no marker to a fake one.
+        -- Touch uses a world highlight, never a blocking billboard.
+        mark(
+            nearestReachablePad(arenaPads()),
+            CoreLocalization.text(localeId, "ESCAPE_PAD"),
+            Color3.fromRGB(120, 225, 255)
+        )
         return
     end
 
@@ -433,6 +489,7 @@ stateEvent.OnClientEvent:Connect(function(state)
 end)
 
 player:GetAttributeChangedSignal("DataLoaded"):Connect(refresh)
+player:GetAttributeChangedSignal("DataLoadFailed"):Connect(refresh)
 player:GetAttributeChangedSignal("Games"):Connect(refresh)
 player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(refresh)
