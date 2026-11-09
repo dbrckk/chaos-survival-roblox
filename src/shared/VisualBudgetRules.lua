@@ -73,6 +73,11 @@ VisualBudgetRules.LocalFolders = {
     -- Five genuine creator-approved hero skyline MeshParts replace native
     -- silhouettes and must count in the existing Android Parts budget.
     "ApprovedOriginalHeroStructuresLocal",
+    -- Four near-player perimeter stations can replace two primitive
+    -- rectangular pillars apiece with previously creator-approved, real
+    -- tall steel MeshParts. All mounted clones count in 440/680/900 local
+    -- Part census; severe Android VFX pressure removes them first.
+    "ApprovedPerimeterButtressesLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",
