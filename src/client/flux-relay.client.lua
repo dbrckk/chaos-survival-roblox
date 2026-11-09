@@ -497,7 +497,8 @@ local function renderJunctions()
         local tint = personal and Color3.fromRGB(255, 245, 172)
             or (active and Color3.fromRGB(255, 203, 99)
                 or Color3.fromRGB(122, 104, 174))
-        for _, suffix in ipairs({"A", "B"}) do
+        for side = 1, 2 do
+            local suffix = side == 1 and "A" or "B"
             local chevron = yard:FindFirstChild(
                 "JunctionChevron" .. index .. suffix)
             if chevron and chevron:IsA("BasePart")
