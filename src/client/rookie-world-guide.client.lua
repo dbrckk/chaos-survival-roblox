@@ -529,7 +529,10 @@ local function watchCharacter(character)
         return
     end
     characterRootConnection = character.ChildAdded:Connect(function(child)
-        if child.Name == "HumanoidRootPart" then
+        -- The root may replicate before Humanoid (or the reverse).
+        -- Re-check once BOTH are present; otherwise a single early
+        -- READY refresh can permanently omit guidance on slow devices.
+        if child.Name == "HumanoidRootPart" or child:IsA("Humanoid") then
             queueRefresh()
         end
     end)
