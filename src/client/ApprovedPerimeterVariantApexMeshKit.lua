@@ -154,8 +154,8 @@ local function nativePair(arena, station, index, spec)
         or not first.Anchored or first.CanCollide or first.CanTouch
         or first.CanQuery or first.Shape ~= spec.firstShape
         or (first.Size-spec.firstSize).Magnitude > .12 then return nil end
-    if not second or second.Parent ~= station
-        or not second.Anchored or second.CanCollide or second.CanTouch
+    if not second or not second:IsA("BasePart")
+        or second.Parent ~= station or not second.Anchored or second.CanCollide or second.CanTouch
         or second.CanQuery or
         (second.Size-spec.secondSize).Magnitude>.12 then return nil end
     if spec.secondWedge then
