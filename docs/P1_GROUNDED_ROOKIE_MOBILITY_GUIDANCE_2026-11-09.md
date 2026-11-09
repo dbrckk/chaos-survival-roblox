@@ -2,7 +2,7 @@
 
 **Lot :** première prise en main de Chaos Survival ; branche `feat/rookie-safe-pad-ready-guidance-20261109`.  
 **Référence du code initial :** `main@0d334571560dac92d55190b02f19c1221b28959b`.  
-**État :** code intégré dans une branche distincte, **pas fusionné ni publié**. La sortie publique P0 et les tests moteur du SHA actuel restent prioritaires.
+**État initial :** correctif isolé dans une branche P1, non publié. **Mise à jour :** P0 a réussi les workflows Build [#42620069635](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42620069635), Open Cloud [#42620126398](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42620126398) et la publication publique [#42608816130](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42608816130), tentative 2, sur le SHA précédent `0d334571...`. La publication de P1 nécessite **une nouvelle** validation exact-SHA.
 
 ## Défaillance identifiée dans le code source
 
@@ -35,4 +35,4 @@
 
 ## Conditions de fusion et publication
 
-La branche reste séparée du `main` existant pour ne pas invalider le gate de P0. Aucun test unitaire nouveau. L'intégrer après les réussites exact-SHA Build + Open Cloud et la publication du candidat précédent, puis vérifier ce lot au prochain jalon de release. Les tests automatisés sont nécessaires mais ne prouvent pas la qualité visuelle d'un guidage Android, laquelle dépend d'une capture de partie.
+P0 est maintenant publié et la roadmap principale intégrée. Ce lot P1 peut être fusionné dans le code source, **sans publication automatique** : lancer ensuite Build Validation puis Roblox Open Cloud Engine Tests sur le **nouveau HEAD de main**, et ne publier qu'après résultats verts sur ce SHA exact. Aucun test unitaire nouveau. Les tests automatisés ne prouvent pas la qualité visuelle du guidage Android : une capture de partie reste nécessaire.
