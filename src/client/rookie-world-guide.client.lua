@@ -109,9 +109,11 @@ local function nearestReachablePad(parts)
                         )
                         if not ground or not ground.Instance:IsDescendantOf(arena)
                             or ground.Normal.Y < 0.65
-                            or (step == 0 and (
-                                ground.Position.Y > root.Position.Y - 0.3
-                                or root.Position.Y - ground.Position.Y > 6))
+                            -- Ignore an overhead slab/bridge mistaken for
+                            -- the floor at ANY sample, not just at spawn.
+                            or ground.Position.Y > location.Y - 0.3
+                            or (step == 0
+                                and root.Position.Y - ground.Position.Y > 6)
                             or (groundY and math.abs(ground.Position.Y - groundY) > 2)
                         then
                             supported = false
