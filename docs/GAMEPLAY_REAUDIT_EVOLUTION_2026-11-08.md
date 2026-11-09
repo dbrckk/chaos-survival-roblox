@@ -87,3 +87,18 @@ La version précédente comptait 4/6 **tours de boucle** espacés par `task.wait
 Le top HUD restant visible pendant `phase="round"`, il annonce la finale et son titre FR/EN. Répéter `FINALE DES BOTS` dans le `TextScaled` de la carte spectateur compressait le texte sur Android étroit. La carte donne désormais l'information utile non dupliquée : **cible suivie + survivants + secondes**. Le HUD affiche l'identité de la phase séparément.
 
 **Limite des preuves** : `os.clock()` empêche de prolonger délibérément la finale sous charge, mais l'exécution et le scheduling réels doivent encore être validés sur Roblox Engine. Les horloges UI sont échantillonnées une fois par tick ; elles ne garantissent pas une résolution visuelle milliseconde.
+
+### 9 novembre — borne physique et conseil de défaite restauré
+
+Le décompte spectatoriel est maintenant borné **à la fois** par son budget de 4/6 secondes **et** par `ctx.RoundEndsAt`, échéance autoritaire des catastrophes. Sur un serveur où `task.wait(1)` reprend tard, le nombre `t` peut être en retard sur le temps de simulation ; limiter uniquement `os.clock() + 4/6` pourrait présenter une « finale physique » après l'arrêt normal des dangers. L'échéance est fixée une seule fois à `min(ctx.RoundEndsAt, os.clock() + min(t, budget))`. La carte et le HUD utilisent ce même temps restant.
+
+Autre régression évitée : `init.client.lua` conserve `lastRoundHint` uniquement pendant les vrais états `round` **hors** `botShowdown`. La fiche de résultat d'un joueur éliminé peut réutiliser cette variable comme conseil d'apprentissage. Elle ne doit donc pas afficher « REGARDE LES DERNIERS BOTS » comme conseil pour la prochaine tentative à la place des consignes réelles de catastrophe.
+
+**Revue moteur à effectuer avant fusion :**
+- dernier humain éliminé alors que l'échéance physique est presque atteinte : pas de finale artificiellement prolongée ;
+- catastrophe terminée : aucun timer de spectacle sans dangers actifs ;
+- défaite après finale : conseil lié à la vraie catastrophe, pas à la consigne de spectateur ;
+- vrai vivant après catastrophe : aucun changement de récompense ou de résultat ;
+- transitions FR/EN et téléphone compact : pas de titre dupliqué ou compteur figé.
+
+Aucun score de test moteur ni publication pour ce commit : la vérification actuelle est strictement en source.
