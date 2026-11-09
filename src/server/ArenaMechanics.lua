@@ -302,11 +302,15 @@ function ArenaMechanics.start(ctx, variantId)
             -- A Harbor combo is recorded only AFTER a real eligible pad
             -- contact; random movement or client input cannot claim it.
             local harborNewClear = false
+            local harborNewStart = false
             if variantId == "Harbor" then
+                local previousState = harborTransferStates[player]
                 local nextState
                 nextState, harborNewClear = ArenaMechanics.advanceHarborTransfer(
-                    harborTransferStates[player], index, now)
+                    previousState, index, now)
                 harborTransferStates[player] = nextState
+                harborNewStart = nextState ~= nil
+                    and nextState ~= previousState and not harborNewClear
                 if harborNewClear
                     and player:GetAttribute("RoundHarborTransferEarned") ~= true
                 then
@@ -343,12 +347,14 @@ function ArenaMechanics.start(ctx, variantId)
             if ctx.OnArenaMechanicUsed then
                 local label = definition.Name
                 if variantId == "Harbor" then
+                    -- A repeated pad must not spam a center-screen
+                    -- achievement on mobile. Only announce a genuinely
+                    -- started, completed or spent route; ordinary pads
+                    -- keep their original low-priority VFX.
                     label = harborBoost and "SQUALL RUN BOOST"
                         or (harborNewClear and "SQUALL RUN - BOOST READY"
-                            or (player:GetAttribute(
-                                "RoundHarborTransferEarned") == true
-                                    and "SQUALL TRANSFER"
-                                or "SQUALL RUN 1/2"))
+                            or (harborNewStart and "SQUALL RUN 1/2"
+                                or definition.Name))
                 end
                 pcall(ctx.OnArenaMechanicUsed, player, variantId, label,
                     overdrive)
