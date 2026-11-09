@@ -1,6 +1,6 @@
 # P3 — Classic Grid : un vrai choix de mobilité après le circuit
 
-**9 novembre 2026.** Préparé depuis `main@ae4ae044e991ef4ca28a991991f2e11b9df49c84` sur `feat/p3-classic-grid-earned-pad-boost-20261109`. **Pas fusionné ni publié.** P2 est Build/Roblox-Engine vert mais n'a pas encore de workflow public réussi sur ce SHA.
+**9 novembre 2026.** Préparé depuis `main@ae4ae044e991ef4ca28a991991f2e11b9df49c84` sur `feat/p3-classic-grid-earned-pad-boost-20261109`. P2 a passé [Build Validation #42633546073](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42633546073), [Roblox Engine #42633618547](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42633618547) et sa [publication publique #42650986552](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42650986552) sur ce même SHA. **P3 n'est pas encore publiée ni certifiée sur moteur.**
 
 ## Constat source
 
@@ -28,6 +28,6 @@ Le défi `GridCircuitService` vérifie correctement la traversée chronométrée
 
 ## Dépendances et garde-fous
 
-Ce lot ne change que `src/server/GridCircuitService.lua`, `ArenaMechanics.lua`, `AISurvivorService.lua`, `init.server.lua`, `src/client/grid-circuit.client.lua`, `src/shared/GridCircuitRules.lua` et ce document. L'implémentation P3 est indépendante de la nouvelle cadence IA P2, mais elle ne doit **pas** être fusionnée avant que P2 soit publiée pour préserver la validité des tests exact-SHA.
+Ce lot ne change que `src/server/GridCircuitService.lua`, `ArenaMechanics.lua`, `AISurvivorService.lua`, `init.server.lua`, `src/client/grid-circuit.client.lua`, `src/shared/GridCircuitRules.lua` et ce document. L'implémentation P3 est indépendante de la cadence IA P2 désormais **publiée**. P3 peut être fusionnée dans `main` ; le nouveau commit exigera sa **propre** validation Build/Roblox Engine et une publication distincte, sans supposer que les résultats verts du SHA P2 restent valables.
 
 **Mesures non obtenues :** aucun gameplay observé sur Android pour cette branche, aucune statistique de part de circuit terminé ou de boost consommé, aucun gain de rétention ni de FPS mesuré. Les nouveaux attributs ne sont pas de la télémétrie.
