@@ -53,6 +53,7 @@ local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAsse
 local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
 local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
 local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructuresAssets)
+local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -208,6 +209,9 @@ if not isStudioE2E then
     -- Actual owner-approved 3D open truss and machined rotor guard.
     -- Late optional load, no collision or round lifecycle change.
     task.defer(PremiumPerimeterStructuresAssets.start)
+    -- Four authenticated 3D apex silhouettes, late-loaded as optional art.
+    -- One of four Model templates is selected per actual arena variant.
+    task.defer(PremiumPerimeterVariantApexAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

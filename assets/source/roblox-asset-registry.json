@@ -554,6 +554,38 @@
       "source": "tools/generate_original_perimeter_structures.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42696898936
+    },
+    {
+      "name": "perimeter_towers_apex",
+      "asset_id": "131413152501235",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_apex.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42699542702
+    },
+    {
+      "name": "perimeter_orbital_apex",
+      "asset_id": "131188899020391",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_apex.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42699542702
+    },
+    {
+      "name": "perimeter_crossroads_apex",
+      "asset_id": "134533469777794",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_apex.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42699542702
+    },
+    {
+      "name": "perimeter_relay_apex",
+      "asset_id": "110237986522853",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_apex.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42699542702
     }
   ]
 }
