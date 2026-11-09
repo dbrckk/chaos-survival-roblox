@@ -92,9 +92,16 @@ local function nearestReachablePad(parts)
                     root.Position, flat, params
                 )
                 if not obstacle or obstacle.Distance >= distance - 3.5 then
+                    -- Check BOTH endpoints and adapt the intermediate
+                    -- sample count to travel distance. Five fixed probes
+                    -- could skip a real hole between 12-stud intervals.
+                    -- A 56-stud route needs at most 17 floor casts, and
+                    -- only during the existing READY event/refresh.
                     local supported = true
                     local groundY = nil
-                    for _, fraction in ipairs({0.12, 0.34, 0.56, 0.78, 0.96}) do
+                    local samples = math.max(3, math.ceil(distance / 3.5))
+                    for step = 0, samples do
+                        local fraction = step / samples
                         local location = root.Position:Lerp(pad.Position, fraction)
                         local ground = workspace:Raycast(
                             location + Vector3.new(0, 2, 0),
@@ -102,6 +109,9 @@ local function nearestReachablePad(parts)
                         )
                         if not ground or not ground.Instance:IsDescendantOf(arena)
                             or ground.Normal.Y < 0.65
+                            or (step == 0 and (
+                                ground.Position.Y > root.Position.Y - 0.3
+                                or root.Position.Y - ground.Position.Y > 6))
                             or (groundY and math.abs(ground.Position.Y - groundY) > 2)
                         then
                             supported = false
