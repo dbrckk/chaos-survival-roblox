@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
@@ -17,6 +18,87 @@ local function profile()
 end
 
 local currentRate = 6 * profile().ParticleScale
+local french = string.sub(string.lower(
+    LocalizationService.RobloxLocaleId), 1, 2) == "fr"
+
+-- Premium readable top plate even when Low Android cannot afford any
+-- optional original 3D meshes. All pieces are SurfaceGui 2D primitives
+-- ON the REAL physical pad, not floating screen UI or extra world Parts.
+local function topPlate(pad)
+    local arena = pad.Parent and pad.Parent.Parent
+    local variant = arena and arena:GetAttribute("VariantId") or "Classic"
+    local word = ({
+        Classic = french and "ÉVASION" or "ESCAPE",
+        Towers = french and "ASCENSION" or "UPDRAFT",
+        Crossroads = french and "VOIE" or "LANE",
+        Orbital = french and "ORBITE" or "ORBIT",
+        Harbor = french and "TRANSFERT" or "TRANSFER",
+    })[variant] or "BOOST"
+
+    local gui = Instance.new("SurfaceGui")
+    gui.Name = "MobilityPadTopPlateLocal"
+    gui.Adornee = pad
+    gui.Face = Enum.NormalId.Top
+    gui.CanvasSize = Vector2.new(256, 256)
+    gui.AlwaysOnTop = false
+    gui.LightInfluence = 0.25
+    gui.MaxDistance = 115
+    gui.Parent = pad
+
+    local panel = Instance.new("Frame")
+    panel.Name = "ForgedCautionFrame"
+    panel.AnchorPoint = Vector2.new(0.5, 0.5)
+    panel.Position = UDim2.fromScale(0.5, 0.5)
+    panel.Size = UDim2.fromScale(0.84, 0.84)
+    panel.BackgroundColor3 = Color3.fromRGB(17, 27, 42)
+    panel.BackgroundTransparency = 0.42
+    panel.BorderSizePixel = 0
+    panel.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0.10, 0)
+    corner.Parent = panel
+
+    local outline = Instance.new("UIStroke")
+    outline.Color = pad.Color:Lerp(Color3.new(1, 1, 1), 0.2)
+    outline.Thickness = 3
+    outline.Transparency = 0.10
+    outline.Parent = panel
+
+    local number = Instance.new("TextLabel")
+    number.Name = "StationOrdinal"
+    number.BackgroundTransparency = 1
+    number.Position = UDim2.fromScale(0.10, 0.12)
+    number.Size = UDim2.fromScale(0.30, 0.24)
+    number.Font = Enum.Font.GothamBlack
+    number.TextScaled = true
+    number.TextXAlignment = Enum.TextXAlignment.Left
+    number.Text = string.format("%02d", tonumber(
+        pad:GetAttribute("ArenaMobilityPadIndex")) or 0)
+    number.TextColor3 = pad.Color
+    number.Parent = panel
+
+    local label = Instance.new("TextLabel")
+    label.Name = "MobilityDirection"
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.fromScale(0.08, 0.44)
+    label.Size = UDim2.fromScale(0.84, 0.35)
+    label.Font = Enum.Font.GothamBlack
+    label.TextScaled = true
+    label.Text = word
+    label.TextColor3 = Color3.fromRGB(238, 246, 251)
+    label.Parent = panel
+
+    local bar = Instance.new("Frame")
+    bar.Name = "CurrentChannel"
+    bar.BorderSizePixel = 0
+    bar.Position = UDim2.fromScale(0.50, 0.18)
+    bar.Size = UDim2.fromScale(0.37, 0.035)
+    bar.BackgroundColor3 = pad.Color
+    bar.Parent = panel
+
+    return gui, outline, number, bar
+end
 
 local function refreshRates()
     local tier = profile()
@@ -37,6 +119,9 @@ local function refreshRates()
             end
             if state.attachment.Parent then state.attachment:Destroy() end
             if state.highlight.Parent then state.highlight:Destroy() end
+            if state.surface and state.surface.Parent then
+                state.surface:Destroy()
+            end
         else
             state.emitter.Rate = currentRate
             state.highlight.FillColor = overdriveActive
@@ -47,6 +132,16 @@ local function refreshRates()
                 or pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
             state.highlight.FillTransparency = tier.Name == "Low" and 1 or (overdriveActive and 0.74 or 0.86)
             state.highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or (overdriveActive and 0.04 or 0.16)
+            if state.surface and state.surface.Parent then
+                local tint = overdriveActive and Color3.fromRGB(255, 217, 126)
+                    or pad.Color
+                state.surfaceOutline.Color = tint
+                state.surfaceNumber.TextColor3 = tint
+                state.surfaceBar.BackgroundColor3 = tint
+                -- Critical hazard outlines are already owned elsewhere;
+                -- a pad top-plate must not become a glowing false warning.
+                state.surface.Enabled = true
+            end
 
             local light = pad:FindFirstChild("MobilityPadLight")
             if light and light:IsA("PointLight") then
@@ -83,6 +178,9 @@ local function destroyVisual(pad)
         end
         if state.highlight.Parent then
             state.highlight:Destroy()
+        end
+        if state.surface and state.surface.Parent then
+            state.surface:Destroy()
         end
     end
 end
@@ -125,6 +223,8 @@ local function attach(pad)
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = pad
 
+    local surface, surfaceOutline, surfaceNumber, surfaceBar = topPlate(pad)
+
     local colorConnection = pad:GetPropertyChangedSignal("Color"):Connect(function()
         -- A Color property can also arrive after the marker attribute.
         -- Keep the particles and highlights aligned with the real pad.
@@ -139,6 +239,10 @@ local function attach(pad)
         emitter = emitter,
         highlight = highlight,
         colorConnection = colorConnection,
+        surface = surface,
+        surfaceOutline = surfaceOutline,
+        surfaceNumber = surfaceNumber,
+        surfaceBar = surfaceBar,
     }
 
     local light = pad:FindFirstChild("MobilityPadLight")
