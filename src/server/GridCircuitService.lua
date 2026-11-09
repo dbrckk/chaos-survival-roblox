@@ -84,6 +84,12 @@ function GridCircuitService.tryTouch(ctx, sensor, hit, states, readyAt, now, ser
         player:SetAttribute("RoundGridCircuitNext", nextState.nextNode)
         player:SetAttribute("RoundGridCircuitDeadline", nextState.expiresAt)
         player:SetAttribute("RoundGridCircuitComplete", nextState.completed)
+        if nextState.completed then
+            -- A genuine four-node clockwise clear earns ONE physical
+            -- stronger Classic escape-pad launch this round. Server-only
+            -- touch validation decides whether it is consumed.
+            player:SetAttribute("RoundGridCircuitBoostReady", true)
+        end
     else
         -- NPCs advertise their state for server navigation; no player
         -- rewards, statistics, or DataStore writes are ever awarded to bots.
@@ -91,6 +97,9 @@ function GridCircuitService.tryTouch(ctx, sensor, hit, states, readyAt, now, ser
         rig:SetAttribute("GridCircuitNext", nextState.nextNode)
         rig:SetAttribute("GridCircuitDeadline", nextState.expiresAt)
         rig:SetAttribute("GridCircuitComplete", nextState.completed)
+        if nextState.completed then
+            rig:SetAttribute("GridCircuitBoostReady", true)
+        end
     end
 
     sensor:SetAttribute("GridCircuitPulseStep", nextState.step)
@@ -120,6 +129,7 @@ function GridCircuitService.start(ctx, mechanics, arenaCenter)
             player:SetAttribute("RoundGridCircuitNext", 0)
             player:SetAttribute("RoundGridCircuitDeadline", 0)
             player:SetAttribute("RoundGridCircuitComplete", false)
+            player:SetAttribute("RoundGridCircuitBoostReady", false)
         end
     end
 
