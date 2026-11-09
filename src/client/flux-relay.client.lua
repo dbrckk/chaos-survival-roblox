@@ -427,8 +427,10 @@ local function renderHUD(serverTime)
     if key ~= lastHudKey then
         lastHudKey = key
         if boostReady and junctionLive then
-            hudTitle.Text = french and "FLUX MASTER • CUT PRÊT"
-                or "FLUX MASTER • CUT READY"
+            -- Show the actual GOLD destination, not an abstract reward.
+            -- No second HUD: reuse the existing mobile-safe progress chip.
+            hudTitle.Text = french and "BOOST • AIGUILLAGE OR"
+                or "BOOST • GOLD JUNCTION"
             hudTitle.TextColor3 = style.Signal
         elseif stage == FluxRelayRules.WeaveCap then
             hudTitle.Text = boostEarned and junctionLive
