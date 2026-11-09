@@ -307,6 +307,19 @@ local lastRoundState = {
 local function broadcast(payload)
     lastRoundState = payload
     pcall(AISurvivorService.setRoundState, payload)
+    if payload.phase == "ready" then
+        -- The first READY broadcast also spawns/positions the committed
+        -- AI roster. Count only AFTER that transition, otherwise the
+        -- opening HUD falsely reports a solo contestant while seven
+        -- real bots are already entering the arena.
+        local readyHumans = math.max(0,
+            math.floor(tonumber(payload.readyHumanCount) or 0))
+        local botsAlive = AISurvivorService.aliveRoundCount()
+        payload.aiSurvivors = botsAlive
+        payload.survivorsAlive = readyHumans + botsAlive
+        payload.contestantCount = readyHumans
+            + AISurvivorService.roundRosterCount()
+    end
     stateEvent:FireAllClients(payload)
 end
 
@@ -2345,10 +2358,8 @@ while true do
             displayTitle = "QUICK RUSH: " .. selectedSet[1].Name
         end
 
-        -- Alive AI and admitted AI are different measurements: an NPC can
-        -- have entered safely and then died during the countdown.
-        local aiReadyAlive = AISurvivorService.aliveRoundCount()
-        local aiRoundRoster = AISurvivorService.roundRosterCount()
+        -- The broadcast reconciles and spawns bots before sampling
+        -- the actual alive/admitted roster, even on READY's first tick.
         broadcast({
             phase = "ready",
             roundNumber = upcomingRoundNumber,
@@ -2366,9 +2377,6 @@ while true do
             arenaName = roundSettings.ArenaName,
             arenaId = currentArenaVariant,
             disasterIds = readyDisasterIds,
-            survivorsAlive = readyCount + aiReadyAlive,
-            contestantCount = readyCount + aiRoundRoster,
-            aiSurvivors = aiReadyAlive,
         })
         task.wait(1)
     end
