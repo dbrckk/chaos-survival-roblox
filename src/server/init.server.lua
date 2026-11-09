@@ -51,6 +51,7 @@ local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
 local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
 local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
+local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -201,6 +202,8 @@ if not isStudioE2E then
     -- Verified approved seven-material rotor Model; delayed separate
     -- optional import, never blocking a human join, AI or disaster.
     task.defer(PremiumPerimeterRotorAssets.start)
+    -- Original 3D forged wing and cap assets; deferred, optional, nonphysical.
+    task.defer(PremiumPerimeterArmorAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

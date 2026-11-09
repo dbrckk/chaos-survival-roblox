@@ -17,6 +17,7 @@ local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundatio
 local ApprovedPerimeterButtressMeshKit = require(script.Parent.ApprovedPerimeterButtressMeshKit)
 local ApprovedPerimeterMachineryMeshKit = require(script.Parent.ApprovedPerimeterMachineryMeshKit)
 local ApprovedPerimeterRotorMeshKit = require(script.Parent.ApprovedPerimeterRotorMeshKit)
+local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1201,6 +1202,25 @@ task.spawn(function()
             ~= rotorPrimitives then
             player:SetAttribute("LocalPerimeterPrimitiveRotorsReplaced",
                 rotorPrimitives)
+        end
+        -- Genuine forged 3D replacement for four untouched native WedgeParts
+        -- on the actual near-camera perimeter station. Same camera sampler,
+        -- no new loop, no native collision/AI/disaster writes.
+        ApprovedPerimeterArmorMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local armoredStations = ApprovedPerimeterArmorMeshKit.count()
+        if player:GetAttribute("LocalApprovedPerimeterArmorStationCount")
+            ~= armoredStations then
+            player:SetAttribute("LocalApprovedPerimeterArmorStationCount",
+                armoredStations)
+        end
+        local wedgePrimitives =
+            ApprovedPerimeterArmorMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPerimeterPrimitiveWedgesReplaced")
+            ~= wedgePrimitives then
+            player:SetAttribute("LocalPerimeterPrimitiveWedgesReplaced",
+                wedgePrimitives)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

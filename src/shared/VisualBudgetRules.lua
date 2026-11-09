@@ -88,6 +88,11 @@ VisualBudgetRules.LocalFolders = {
     -- MeshParts per station are in the existing Android 440/680/900 census.
     -- Low 0, Medium one station, High touch two / PC three, stress demotes.
     "ApprovedPerimeterRotorsLocal",
+    -- Four exact existing native angled wedges per original station are
+    -- masked behind two Wing plus two Cap approved 3D Model clones only
+    -- after ALL FOUR match. Each source has 7 real MeshParts: up to
+    -- 28 pieces/station counted inside SAME 440/680/900 Android budget.
+    "ApprovedPerimeterArmorLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",

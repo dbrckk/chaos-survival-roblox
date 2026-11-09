@@ -1,5 +1,8 @@
 # P4 — Deux modèles d'armure périphérique 3D originale
 
+**Actualisation vérifiée :** les deux packages ont été réellement créés et modérés Approved dans GitHub Actions #42694744112 : Wing 138096293972093, Cap 88962643359267. Le montage client se trouve dans la suite du dossier P4_RUNTIME_PERIMETER_ARMOR_2026-11-09.md. Les étapes initiales de source fabrication ci-dessous restent un historique et ne signifient plus que les imports sont en attente.
+
+
 **9 novembre 2026. Phase de fabrication d'assets — aucune publication Roblox Place.**
 
 Dans MapBuilder, les cinq variantes ont chacune quatre stations périphériques. AngledServiceWingL/R (3,4 × 1,7 × 5,7 studs) et LeftAngledCap/RightAngledCap (2,9 × 2,2 × 2,4 studs) sont encore des WedgeParts Roblox natifs, très visibles de près. Ce sont deux paires par station, donc **80 primitives dans les sources des cinq variantes**.

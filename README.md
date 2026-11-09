@@ -14,7 +14,9 @@ Le [nouveau plan de production premium](docs/PREMIUM_MASTER_PLAN_2026-11-09.md) 
 
 **Historique P4 — source de vrais rotors 3D :** le [rotor de station sculpté de 1 304 triangles](docs/P4_ORIGINAL_PERIMETER_ROTOR_2026-11-09.md) et son workflow d’import vérifié sont maintenant dans le dépôt. Le chargement en jeu reste volontairement désactivé jusqu'à l'obtention d'un Model ID approuvé ; il ne faut pas qualifier cette étape de substitution publique ni de test moteur.
 
-**P4 — prochaines grandes surfaces primitives :** deux modèles 3D originaux, [ailes profilées et capots mécaniques](docs/P4_AUTHORED_PERIMETER_WINGS_CAPS_2026-11-09.md), sont préparés pour les 80 WedgeParts des quatre stations sur les cinq variantes. L'import sécurisé produit d'abord les assets approuvés, avant toute prétention de remplacement effectif en jeu.
+**P4 — ailes et capots désormais branchés en source :** [deux assets originaux modérés Approved](docs/P4_RUNTIME_PERIMETER_ARMOR_2026-11-09.md), modèles Roblox 138096293972093 et 88962643359267 (workflow #42694744112), remplacent de manière conditionnelle les quatre WedgeParts de chaque vraie station proche ; cadence LOD et pression Android déjà existantes. Le code est intégré, **pas encore testé Roblox Engine ni publié**.
+
+**Historique P4 — prochaines grandes surfaces primitives :** deux modèles 3D originaux, [ailes profilées et capots mécaniques](docs/P4_AUTHORED_PERIMETER_WINGS_CAPS_2026-11-09.md), sont préparés pour les 80 WedgeParts des quatre stations sur les cinq variantes. L'import sécurisé produit d'abord les assets approuvés, avant toute prétention de remplacement effectif en jeu.
 
 ## Plan produit actif — 7 novembre 2026
 
