@@ -51,7 +51,8 @@ local function topPlate(pad)
     panel.Position = UDim2.fromScale(0.5, 0.5)
     panel.Size = UDim2.fromScale(0.84, 0.84)
     panel.BackgroundColor3 = Color3.fromRGB(17, 27, 42)
-    panel.BackgroundTransparency = 0.42
+    -- Keep the original bright pad visible even on dim Android devices.
+    panel.BackgroundTransparency = 0.72
     panel.BorderSizePixel = 0
     panel.Parent = gui
 
@@ -79,7 +80,7 @@ local function topPlate(pad)
     number.Parent = panel
 
     local label = Instance.new("TextLabel")
-    label.Name = "MobilityDirection"
+    label.Name = "MobilityFunction"
     label.BackgroundTransparency = 1
     label.Position = UDim2.fromScale(0.08, 0.44)
     label.Size = UDim2.fromScale(0.84, 0.35)
