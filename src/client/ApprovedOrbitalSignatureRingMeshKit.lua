@@ -113,7 +113,7 @@ local function context(arena)
             or (arc.Size-Vector3.new(CHORD,1.35,2.1)).Magnitude>.10 then
             return nil
         end
-        local angle=k*math.tau/SEGMENTS
+        local angle=k*(2*math.pi)/SEGMENTS
         local intended=CFrame.new(center+Vector3.new(
             RADIUS*math.sin(angle),RADIUS*math.cos(angle),0))
             *CFrame.Angles(0,0,-angle)
