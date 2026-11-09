@@ -6825,13 +6825,12 @@ local function startBrain()
                     -- Never accelerate an overloaded server. passMs is
                     -- measured for this very same brain pass, not a
                     -- client-reported FPS or speculative device tier.
+                    local diagnostic = AISurvivorService.PerformanceDiagnostics
                     if passMs <= 14 then
                         cadence = 0.30
-                        AISurvivorService.PerformanceDiagnostics
-                            .HazardResponsivePasses += 1
+                        diagnostic.HazardResponsivePasses += 1
                     else
-                        AISurvivorService.PerformanceDiagnostics
-                            .HazardResponsiveLoadDeferrals += 1
+                        diagnostic.HazardResponsiveLoadDeferrals += 1
                     end
                 end
             end
