@@ -3356,7 +3356,11 @@ stateEvent.OnClientEvent:Connect(function(state)
     end
 
     local displayTitle, displayHint = localizedStateCopy(state)
-    if state.phase == "round" and displayHint ~= "" then
+    -- After elimination the finale speaks to spectators, not players.
+    -- Do not reuse WATCH THE BOTS as a gameplay tip on the loss receipt.
+    -- Preserve the last actual hazard guidance instead.
+    if state.phase == "round" and state.botShowdown ~= true
+        and displayHint ~= "" then
         lastRoundHint = displayHint
     end
 
