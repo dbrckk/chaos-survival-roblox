@@ -290,6 +290,15 @@ function ArenaMechanics.start(ctx, variantId)
             if not root or not player or not ctx.IsContestantActive(player) then
                 return
             end
+            -- The actual HumanoidRootPart must be on the physical pad.
+            -- An oversized accessory's distant Touched signal cannot
+            -- launch a player or fake one of two Harbor transfer touches.
+            local offset = root.Position - pad.Position
+            if math.abs(offset.Y) > 5
+                or Vector3.new(offset.X, 0, offset.Z).Magnitude > 4.8
+            then
+                return
+            end
 
             local now = os.clock()
             if (cooldownUntil[player.UserId] or 0) > now then
