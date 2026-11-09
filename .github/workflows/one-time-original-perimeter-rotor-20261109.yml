@@ -1,0 +1,62 @@
+# Owner-authorized one-time import of an original mesh Model, no Place update.
+name: One-time Original Perimeter Rotor 3D 2026-11-09
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-perimeter-rotor-20261109.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-perimeter-rotor-20261109
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate exact original source, UV/tangents and glTF art
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_perimeter_rotor.py --output "$RUNNER_TEMP/perimeter_rotor.obj" > "$RUNNER_TEMP/perimeter_rotor.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/perimeter_rotor.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/perimeter_rotor.gltf" > "$RUNNER_TEMP/perimeter_rotor.gltf.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          from pathlib import Path
+          import base64,json,sys
+          root=Path(sys.argv[1])
+          model=json.loads((root/'perimeter_rotor.json').read_text())
+          gltf=json.loads((root/'perimeter_rotor.gltf').read_text())
+          obj=(root/'perimeter_rotor.obj').read_text()
+          assert model['asset']=='perimeter_rotor'
+          assert model['triangles']==1304 and model['groups']==32
+          assert model['dimensions']==[2.56,0.8155,2.56]
+          assert model['sha256']=='1a7862b9477f97924c7efbb6222a0ce65652eea6d86c748383d7c8607aab8d1c'
+          assert obj.count('SculptedSweptImpellerBlade')==9
+          assert gltf['asset']['version']=='2.0'
+          mats={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          assert {m['name'] for m in gltf['materials']}==mats
+          prim=gltf['meshes'][0]['primitives']
+          assert len(prim)==7
+          assert sum(gltf['accessors'][p['attributes']['POSITION']]['count']//3 for p in prim)==1304
+          assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}<=set(p['attributes']) for p in prim)
+          buf=gltf['buffers'][0]
+          assert len(base64.b64decode(buf['uri'].split(',',1)[1],validate=True))==buf['byteLength']
+          print('Original rotor source verified. Roblox Place is not published.')
+          PY
+
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: perimeter_rotor
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
