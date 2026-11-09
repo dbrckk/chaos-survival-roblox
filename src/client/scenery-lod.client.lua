@@ -14,6 +14,7 @@ local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacade
 local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonumentMeshKit)
 local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
+local ApprovedPerimeterButtressMeshKit = require(script.Parent.ApprovedPerimeterButtressMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
