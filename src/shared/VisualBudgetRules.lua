@@ -83,6 +83,11 @@ VisualBudgetRules.LocalFolders = {
     -- Low 0; Medium one station; High touch two / desktop three;
     -- optional pressure demotes and native cuboids safely restore.
     "ApprovedPerimeterMachineryLocal",
+    -- Each verified original Rotor Model is SEVEN real UV/tangent MeshParts.
+    -- Exactly three rotors per selected perimeter station. All twenty-one
+    -- MeshParts per station are in the existing Android 440/680/900 census.
+    -- Low 0, Medium one station, High touch two / PC three, stress demotes.
+    "ApprovedPerimeterRotorsLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",

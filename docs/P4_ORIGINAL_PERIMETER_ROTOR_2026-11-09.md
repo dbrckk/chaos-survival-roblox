@@ -1,5 +1,8 @@
 # P4 — Rotor de station sculpté en 3D authentique
 
+> **Mise à jour après import — 9 novembre 2026 :** asset Model `133526819668194` effectivement créé et modéré **Approved** dans [le workflow #42691052644](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42691052644). Le code de montage est décrit dans [la suite P4](P4_RUNTIME_PERIMETER_ROTORS_2026-11-09.md). La mention d'asset non encore approuvé ci-dessous décrit le statut de la première étape de fabrication, avant le résultat de l'import.
+
+
 **9 novembre 2026 — étape de fabrication et d’import d’asset ; aucun déploiement du jeu.**
 
 ## Audit du code source

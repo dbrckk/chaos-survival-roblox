@@ -16,6 +16,7 @@ local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructure
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
 local ApprovedPerimeterButtressMeshKit = require(script.Parent.ApprovedPerimeterButtressMeshKit)
 local ApprovedPerimeterMachineryMeshKit = require(script.Parent.ApprovedPerimeterMachineryMeshKit)
+local ApprovedPerimeterRotorMeshKit = require(script.Parent.ApprovedPerimeterRotorMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1180,6 +1181,26 @@ task.spawn(function()
             ~= machinePrimitives then
             player:SetAttribute("LocalPerimeterPrimitiveMachineryReplaced",
                 machinePrimitives)
+        end
+        -- P4: same already-running camera sample and pressure meter:
+        -- three authentic previously moderated 3D rotor assemblies
+        -- replace three native cylinder visuals per genuine perimeter
+        -- station. Never alter MapBuilder, physics or disaster warnings.
+        ApprovedPerimeterRotorMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local rotorStations = ApprovedPerimeterRotorMeshKit.count()
+        if player:GetAttribute("LocalApprovedPerimeterRotorStationCount")
+            ~= rotorStations then
+            player:SetAttribute("LocalApprovedPerimeterRotorStationCount",
+                rotorStations)
+        end
+        local rotorPrimitives =
+            ApprovedPerimeterRotorMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPerimeterPrimitiveRotorsReplaced")
+            ~= rotorPrimitives then
+            player:SetAttribute("LocalPerimeterPrimitiveRotorsReplaced",
+                rotorPrimitives)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

@@ -10,7 +10,9 @@ Le [nouveau plan de production premium](docs/PREMIUM_MASTER_PLAN_2026-11-09.md) 
 
 **Suite P4, stations périphériques — source du 9 novembre 2026 :** les trois grands blocs mécaniques de chaque station (boîtier central et deux compresseurs) disposent maintenant d'une substitution 3D authentifiée à partir des modèles `ApprovedServiceEquipmentTemplates.Orbital/Towers` approuvés, décrite dans [le dossier P4 des machines périphériques](docs/P4_AUTHENTIC_PERIMETER_MACHINERY_2026-11-09.md). Seules les stations proches et complètes sont substituées (Low 0 / Medium 1 / High Android 2 / High PC 3) ; les voyants, les lentilles, les collisions et les catastrophes conservent leur contrôle natif. Ce code n'est **ni testé en Engine, ni publié**. Les meshes peuvent rester en fallback si leur provenance ou leur taille réelle ne convient pas.
 
-**P4 — source de vrais rotors 3D :** le [rotor de station sculpté de 1 304 triangles](docs/P4_ORIGINAL_PERIMETER_ROTOR_2026-11-09.md) et son workflow d’import vérifié sont maintenant dans le dépôt. Le chargement en jeu reste volontairement désactivé jusqu'à l'obtention d'un Model ID approuvé ; il ne faut pas qualifier cette étape de substitution publique ni de test moteur.
+**P4 — rotor 3D approuvé et branché en source :** import original confirmé **Approved**, Model ID `133526819668194` ([upload #42691052644](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42691052644)). Le vrai rotor source est maintenant réutilisé sur les trois cylindres des stations proches de la caméra, mais **aucun build, test moteur ou publication publique de ce nouveau code n'est encore attesté**. [Plan et limites de réception](docs/P4_RUNTIME_PERIMETER_ROTORS_2026-11-09.md).
+
+**Historique P4 — source de vrais rotors 3D :** le [rotor de station sculpté de 1 304 triangles](docs/P4_ORIGINAL_PERIMETER_ROTOR_2026-11-09.md) et son workflow d’import vérifié sont maintenant dans le dépôt. Le chargement en jeu reste volontairement désactivé jusqu'à l'obtention d'un Model ID approuvé ; il ne faut pas qualifier cette étape de substitution publique ni de test moteur.
 
 ## Plan produit actif — 7 novembre 2026
 
