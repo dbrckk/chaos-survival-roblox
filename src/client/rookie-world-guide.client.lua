@@ -65,7 +65,9 @@ local function nearestReachablePad(parts)
     local root = characterRoot()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
-    if not root or not arena then return nil end
+    if not root or not root:IsDescendantOf(workspace) or not arena then
+        return nil
+    end
 
     local ignored = {markerFolder}
     if root.Parent then
@@ -76,8 +78,10 @@ local function nearestReachablePad(parts)
     params.FilterDescendantsInstances = ignored
     params.RespectCanCollide = true
 
-    local nearest = nil
-    local bestDistance = math.huge
+    -- Rank eight or fewer authored pads by real horizontal distance FIRST.
+    -- Once a safe pad is found, never raycast the remaining farther pads.
+    -- These are local READY-only physics probes, not pathfinding or a loop.
+    local ranked = {}
     for _, pad in ipairs(parts) do
         if pad:IsA("BasePart") and pad.Parent
             and pad.CanTouch and pad:GetAttribute("ArenaMobilityPad") == true
@@ -86,54 +90,89 @@ local function nearestReachablePad(parts)
             local flat = Vector3.new(offset.X, 0, offset.Z)
             local distance = flat.Magnitude
             if distance >= 4 and distance <= 56
-                and distance < bestDistance
                 and math.abs(offset.Y) <= 5 then
-                -- The pad itself is a non-colliding trigger, not a floor.
-                -- Reject walls in the direct approach; if there is a
-                -- bend in the authored route, omit the beacon rather than
-                -- teach a first-time player a wall-crossing shortcut.
-                local obstacle = workspace:Raycast(
-                    root.Position, flat, params
+                ranked[#ranked + 1] = {
+                    part = pad,
+                    flat = flat,
+                    distance = distance,
+                }
+            end
+        end
+    end
+    table.sort(ranked, function(a, b)
+        return a.distance < b.distance
+    end)
+
+    for _, candidate in ipairs(ranked) do
+        -- The nearest pad may be behind a wall or on a different
+        -- physical route. Only point to an objectively direct approach.
+        local obstacle = workspace:Raycast(
+            root.Position, candidate.flat, params
+        )
+        if not obstacle
+            or obstacle.Distance >= candidate.distance - 3.5 then
+            local supported = true
+            local groundY = nil
+            local samples = math.max(3, math.ceil(candidate.distance / 3.5))
+            local side = Vector3.new(-candidate.flat.Z, 0, candidate.flat.X).Unit * 1.3
+
+            -- Probe BOTH endpoints and intermediate supports at <=3.5
+            -- studs. Every other intermediate point probes the shoulder
+            -- width too, rejecting tiny rails too narrow for an R15 rig.
+            -- No unbounded search, extra workspace scan or frame loop.
+            for step = 0, samples do
+                local location = root.Position:Lerp(
+                    candidate.part.Position, step / samples
                 )
-                if not obstacle or obstacle.Distance >= distance - 3.5 then
-                    -- Check BOTH endpoints and adapt the intermediate
-                    -- sample count to travel distance. Five fixed probes
-                    -- could skip a real hole between 12-stud intervals.
-                    -- A 56-stud route needs at most 17 floor casts, and
-                    -- only during the existing READY event/refresh.
-                    local supported = true
-                    local groundY = nil
-                    local samples = math.max(3, math.ceil(distance / 3.5))
-                    for step = 0, samples do
-                        local fraction = step / samples
-                        local location = root.Position:Lerp(pad.Position, fraction)
-                        local ground = workspace:Raycast(
-                            location + Vector3.new(0, 2, 0),
+                local ground = workspace:Raycast(
+                    location + Vector3.new(0, 2, 0),
+                    Vector3.new(0, -11, 0), params
+                )
+                if not ground or not ground.Instance:IsDescendantOf(arena)
+                    or ground.Normal.Y < 0.65
+                    or ground.Position.Y > location.Y - 0.3
+                    or (step == 0
+                        and root.Position.Y - ground.Position.Y > 6)
+                    or (groundY and math.abs(ground.Position.Y - groundY) > 2)
+                then
+                    supported = false
+                    break
+                end
+                groundY = ground.Position.Y
+
+                if step > 0 and step < samples and step % 2 == 0 then
+                    for direction = -1, 1, 2 do
+                        local shoulder = location + side * direction
+                        local support = workspace:Raycast(
+                            shoulder + Vector3.new(0, 2, 0),
                             Vector3.new(0, -11, 0), params
                         )
-                        if not ground or not ground.Instance:IsDescendantOf(arena)
-                            or ground.Normal.Y < 0.65
-                            -- Ignore an overhead slab/bridge mistaken for
-                            -- the floor at ANY sample, not just at spawn.
-                            or ground.Position.Y > location.Y - 0.3
-                            or (step == 0
-                                and root.Position.Y - ground.Position.Y > 6)
-                            or (groundY and math.abs(ground.Position.Y - groundY) > 2)
+                        if not support
+                            or not support.Instance:IsDescendantOf(arena)
+                            or support.Normal.Y < 0.65
+                            or support.Position.Y > shoulder.Y - 0.3
+                            or math.abs(support.Position.Y - groundY) > 1.25
                         then
                             supported = false
                             break
                         end
-                        groundY = ground.Position.Y
                     end
-                    if supported then
-                        nearest = pad
-                        bestDistance = distance
-                    end
+                    if not supported then break end
                 end
+            end
+
+            if supported then
+                -- A READY state may outlive the exact physical pad if the
+                -- arena is removed while client data is streaming.
+                if candidate.part.Parent and candidate.part.CanTouch
+                    and candidate.part:IsDescendantOf(arena) then
+                    return candidate.part
+                end
+                return nil
             end
         end
     end
-    return nearest
+    return nil
 end
 
 local function practicePads()
