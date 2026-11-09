@@ -14,6 +14,8 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local FluxRelayRules = require(ReplicatedStorage.Shared.FluxRelayRules)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
+local PremiumJunctionHardware3DKit = require(
+    script.Parent.PremiumJunctionHardware3DKit)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -165,8 +167,12 @@ local function clear()
         c:Disconnect()
     end
     table.clear(connections)
+    PremiumJunctionHardware3DKit.clear()
     folder:ClearAllChildren()
     table.clear(gates)
+    if player:GetAttribute("LocalApprovedJunctionHousing3DCount") ~= 0 then
+        player:SetAttribute("LocalApprovedJunctionHousing3DCount", 0)
+    end
     hudEligible = false
     refreshProgressVisibility()
     lastHudKey = ""
@@ -468,6 +474,12 @@ local function renderJunctions()
     local arena = source and source:FindFirstChild("Arena")
     local mechanics = arena and arena:FindFirstChild("Mechanics")
     local yard = mechanics and mechanics:FindFirstChild("JunctionSwitchyard")
+    local count = PremiumJunctionHardware3DKit.sync(
+        yard, folder, quality(), player:GetAttribute("OptionalVfxPressure"),
+        touchDevice, activeRound)
+    if player:GetAttribute("LocalApprovedJunctionHousing3DCount") ~= count then
+        player:SetAttribute("LocalApprovedJunctionHousing3DCount", count)
+    end
     if not yard then return end
     local ready = player:GetAttribute("RoundFluxJunctionBoostReady") == true
         and player:GetAttribute("RoundParticipant") == true
