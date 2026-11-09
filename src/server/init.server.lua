@@ -54,6 +54,7 @@ local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
 local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
 local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructuresAssets)
 local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
+local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -212,6 +213,9 @@ if not isStudioE2E then
     -- Four authenticated 3D apex silhouettes, late-loaded as optional art.
     -- One of four Model templates is selected per actual arena variant.
     task.defer(PremiumPerimeterVariantApexAssets.start)
+    -- Four moderated full-height skyline Models, source-only, optional
+    -- cosmetic imports delayed after critical round/AI startup.
+    task.defer(PremiumExteriorTowerAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

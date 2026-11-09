@@ -1,5 +1,7 @@
 # P4 — Grandes silhouettes industrielles extérieures, vraie géométrie 3D
 
+**Mise à jour source intégrée :** workflow #42702281053 terminé avec quatre Models Approved (21 : 137744886537150, 24 : 74958476744494, 27 : 97864559770371, 30 : 112172520488996). Serveur, kit client, source, registre et budget visuel du jeu sont reliés à ces vrais IDs ; l'étape d'import futur ci-dessous est historique. L'intégration ne signifie PAS déploiement public Roblox ni FPS mesuré.
+
 9 novembre 2026. Production de meshes originaux; aucune publication de Place Roblox.
 
 ## Audit du code source
