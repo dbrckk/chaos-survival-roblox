@@ -1859,9 +1859,10 @@ local function runDisasterSet(selected, contestants, roundSettings)
     local endedEarly = false
     -- After the final human is eliminated, allow a short REAL bot finale.
     -- Existing hazards, AI and spectator camera keep running; no extra loop.
-    -- The deadline is measured in existing 1 Hz round ticks, never extended
-    -- by consecutive bot deaths or a newly connected late spectator.
-    local botShowdownDeadlineT = nil
+    -- A monotonic deadline bounds the finale even on a busy server where
+    -- task.wait(1) can resume late. Never restart it after bot deaths or
+    -- a newly connected late spectator.
+    local botShowdownDeadlineAt = nil
     for t = roundSettings.RoundSeconds, 1, -1 do
         overdriveActive = overdriveEligible
             and t <= overdriveStartRemaining
@@ -1876,20 +1877,23 @@ local function runDisasterSet(selected, contestants, roundSettings)
         -- with server-authoritative hazards and AI still active. Do not wait
         -- when everyone is dead or when the server is empty.
         local botShowdownActive = false
+        local botShowdownSeconds = nil
         if humanSurvivorsAlive <= 0 and not isStudioVisualAI then
             if aiSurvivorsAlive <= 0 or #Players:GetPlayers() == 0 then
                 endedEarly = true
                 break
             end
-            if botShowdownDeadlineT == nil then
-                botShowdownDeadlineT = t
-                    - math.min(t, roundSettings.Solo and 4 or 6)
+            if botShowdownDeadlineAt == nil then
+                botShowdownDeadlineAt = os.clock()
+                    + math.min(t, roundSettings.Solo and 4 or 6)
             end
-            if t <= botShowdownDeadlineT then
+            local remaining = botShowdownDeadlineAt - os.clock()
+            if remaining <= 0 then
                 endedEarly = true
                 break
             end
             botShowdownActive = true
+            botShowdownSeconds = math.max(1, math.ceil(remaining))
         end
 
         if roundChallenge.Metric == "highGround" and masteryPlatforms
@@ -1972,8 +1976,7 @@ local function runDisasterSet(selected, contestants, roundSettings)
             -- disaster and final-rush visuals use the real remaining time.
             seconds = t,
             botShowdown = botShowdownActive,
-            botShowdownSeconds = botShowdownActive
-                and (t - botShowdownDeadlineT) or nil,
+            botShowdownSeconds = botShowdownSeconds,
             doubleChaos = #selected > 1,
             fusionName = fusionName,
             soloMode = roundSettings.Solo,
@@ -2009,7 +2012,15 @@ local function runDisasterSet(selected, contestants, roundSettings)
             ),
         })
 
-        task.wait(1)
+        -- Preserve the ordinary 1 Hz rhythm, but never sleep beyond the
+        -- remaining spectator finale budget after a slow server pass.
+        if botShowdownActive then
+            task.wait(math.min(
+                1, math.max(0.03, botShowdownDeadlineAt - os.clock())
+            ))
+        else
+            task.wait(1)
+        end
     end
 
     overdriveActive = false
