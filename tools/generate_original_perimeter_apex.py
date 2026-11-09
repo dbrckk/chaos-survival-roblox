@@ -80,6 +80,11 @@ def towers(art):
                           side*.78,2.95,0,.52,.27,1.62,.075)
         art.beveled_block("CeramicInsulator%s"%side,"CERAMIC",
                           side*.68,3.84,-.47,.26,.16,.38,.055)
+    for k in range(4):
+        a = (-1 if k%2==0 else 1)
+        z = (-.56 if k<2 else .56)
+        art.rod("CrownDuctTruss%02d"%k,"ALLOY",
+                (a*.24,2.75,z*.72),(a*.93,3.62,z*.67),.052,8)
     art.beveled_block("CrownClosedOverheadCanopy","ARMOR",
                       0,3.51,0,2.13,.85,1.72,.20)
     art.beveled_block("CrownCentralSignalCell","SIGNAL",
@@ -163,6 +168,11 @@ def relay(art):
                           side*.61,2.55,-.82,.31,.41,.12,.04)
         art.beveled_block("CeramicLightningShield%s"%side,"CERAMIC",
                           side*.84,2.88,0,.40,.23,1.33,.08)
+    for k in range(5):
+        a=math.tau*k/5
+        art.beveled_block("RelayPerimeterFinBolt%02d"%k,"ALLOY",
+                          .71*math.cos(a),2.55,.71*math.sin(a),
+                          .16,.17,.16,.038)
     art.beveled_block("RelayClosedApexCap","BRUSHED",
                       0,2.36,0,2.26,1.28,1.89,.22)
     art.beveled_block("ProtectedDirectionalPilot","SIGNAL",
