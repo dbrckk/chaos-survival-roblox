@@ -25,6 +25,13 @@ local routeSigns = {}
 local flowFolder = nil
 local flowConnections = {}
 
+-- Palette cached once: the existing 8/24 glyph renderer already runs
+-- often on High. Avoid allocating four new Color3 values per glyph.
+local MASTER_GOLD = Color3.fromRGB(255, 246, 166)
+local ACTIVE_GOLD = Color3.fromRGB(255, 215, 102)
+local HELIX_MINT = Color3.fromRGB(121, 253, 209)
+local HELIX_CYAN = Color3.fromRGB(95, 201, 255)
+
 local function resolveCircuit()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
@@ -236,11 +243,10 @@ local function draw(time)
             -- routes are charged. Low/ReduceMotion see server gold rails.
             local charged = ramp:GetAttribute("HelixPulseActive") == true
             local masterLane = charged and masterReady
-            local targetColor = masterLane and Color3.fromRGB(255, 246, 166)
-                or (charged and Color3.fromRGB(255, 215, 102)
+            local targetColor = masterLane and MASTER_GOLD
+                or (charged and ACTIVE_GOLD
                     or (runner.Lane % 2 == 0
-                        and Color3.fromRGB(121, 253, 209)
-                        or Color3.fromRGB(95, 201, 255)))
+                        and HELIX_MINT or HELIX_CYAN))
             if runner.Part.Color ~= targetColor then
                 runner.Part.Color = targetColor
             end
