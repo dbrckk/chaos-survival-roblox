@@ -1,0 +1,71 @@
+# Original seven-material Orbital signature reactor Model only, NEVER a Place.
+name: One-time Original Orbital Signature Reactor 2026-11-09
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-orbital-signature-ring-20261109.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-orbital-signature-reactor-20261109
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuine continuous torus, triangles, provenance and 7 glTF materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_signature_orbital_ring.py --output "$RUNNER_TEMP/original_orbital_ring.obj" > "$RUNNER_TEMP/original_orbital_ring.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/original_orbital_ring.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/original_orbital_ring.gltf" > "$RUNNER_TEMP/original_orbital_ring.gltf.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,hashlib,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          obj=(root/'original_orbital_ring.obj').read_bytes()
+          meta=json.loads((root/'original_orbital_ring.json').read_text())
+          gltf=json.loads((root/'original_orbital_ring.gltf').read_text())
+          assert meta['asset']=='signature_orbital_reactor_ring'
+          assert hashlib.sha256(obj).hexdigest()==meta['sha256']
+          assert 45<=meta['groups']<=65 and 5500<=meta['triangles']<=10000
+          assert 16.8<=meta['bounds'][0]<=17.4
+          assert 16.8<=meta['bounds'][1]<=17.4
+          assert 1.1<=meta['bounds'][2]<=1.9
+          palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          assert set(meta['materials'])==palette
+          for required in (b'ForgedContinuousSeventyTwoSegmentMainTorus',
+                           b'MachinedInnerFluxContainmentRim',
+                           b'SealedBackDielectricInsulator',
+                           b'CeramicCryogenicShieldFlange',
+                           b'CurvedForgedFieldLink',
+                           b'EmbossedFluxVentCassette',
+                           b'RadiantSegmentReader'):
+              assert required in obj
+          assert gltf['asset']['version']=='2.0'
+          assert {m['name'] for m in gltf['materials']}==palette
+          primitives=gltf['meshes'][0]['primitives']
+          assert len(primitives)==7
+          assert sum(gltf['accessors'][p['attributes']['POSITION']]['count']//3 for p in primitives)==meta['triangles']
+          assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}<=set(p['attributes']) for p in primitives)
+          buffer=gltf['buffers'][0]
+          assert len(base64.b64decode(buffer['uri'].split(',',1)[1],validate=True))==buffer['byteLength']
+          print('SOURCE PASS -- genuine hollow torus, 7 materials',meta['triangles'],meta['bounds'],meta['sha256'])
+          print('NO ROBLOX PLACE PUBLICATION')
+          PY
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: signature_orbital_reactor_ring
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
