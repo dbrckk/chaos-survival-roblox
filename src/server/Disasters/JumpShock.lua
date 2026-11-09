@@ -100,14 +100,27 @@ function D.applyShock(ctx, subject, horizontalForce)
         root.Position, Vector3.new(0, -24, 0), rayParams
     )
     local clearance = ground and (root.Position.Y - ground.Position.Y) or 0
+    local isBot = type(subject) == "table" and subject.IsAISurvivor == true
     if D.dodgedByJump(
         hum:GetState(), root.AssemblyLinearVelocity.Y, clearance,
         hum.FloorMaterial == Enum.Material.Air
     ) then
+        -- Record outcomes at the actual server impact, not when the AI
+        -- issues a Jump command. Human near-miss rewards stay unchanged.
+        if isBot then
+            subject.Character:SetAttribute("BotShockDodges",
+                (tonumber(subject.Character:GetAttribute("BotShockDodges"))
+                    or 0) + 1)
+        end
         D.rewardDodge(ctx, subject)
         return false
     end
 
+    if isBot then
+        subject.Character:SetAttribute("BotShockHits",
+            (tonumber(subject.Character:GetAttribute("BotShockHits"))
+                or 0) + 1)
+    end
     local horizontal = math.max(0, tonumber(horizontalForce) or 0)
     root.AssemblyLinearVelocity = MovementSafety.addImpulse(
         root.AssemblyLinearVelocity,
