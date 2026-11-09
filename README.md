@@ -14,6 +14,8 @@ Le [nouveau plan de production premium](docs/PREMIUM_MASTER_PLAN_2026-11-09.md) 
 
 **Historique P4 — source de vrais rotors 3D :** le [rotor de station sculpté de 1 304 triangles](docs/P4_ORIGINAL_PERIMETER_ROTOR_2026-11-09.md) et son workflow d’import vérifié sont maintenant dans le dépôt. Le chargement en jeu reste volontairement désactivé jusqu'à l'obtention d'un Model ID approuvé ; il ne faut pas qualifier cette étape de substitution publique ni de test moteur.
 
+**P4 — prochaines grandes surfaces primitives :** deux modèles 3D originaux, [ailes profilées et capots mécaniques](docs/P4_AUTHORED_PERIMETER_WINGS_CAPS_2026-11-09.md), sont préparés pour les 80 WedgeParts des quatre stations sur les cinq variantes. L'import sécurisé produit d'abord les assets approuvés, avant toute prétention de remplacement effectif en jeu.
+
 ## Plan produit actif — 7 novembre 2026
 
 Le [plan premium actualisé](docs/NEXT_PREMIUM_PRODUCTION_ROADMAP_2026-11-04.md#actualisation-opérationnelle--7-novembre-2026-priorités-de-livraison) fixe désormais l'ordre **G4 : version vérifiée → arbitrage IA multi-dangers → navigation physique des bots → interactions à huit → grands visuels 3D → performances Android → validation/publication exact-SHA**. Le correctif Harbor/Classic [#660](https://github.com/dbrckk/chaos-survival-roblox/pull/660) est fusionné en source ; l'IA multi-avertissements est en développement. **Le HEAD de GitHub ne prouve pas à lui seul l'état de la place publique Roblox.**
