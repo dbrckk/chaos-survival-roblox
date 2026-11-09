@@ -170,3 +170,34 @@ The shock avoidance path was still driven by the ordinary per-bot AI brain step 
 | Nondefault gravity or modified humanoid jump physics | Verify the 0.18–0.22 second target is still appropriate; do not assume a successful dodge without Roblox Engine testing |
 
 **Release status:** the code is committed on PR #702 only. No Roblox Engine timing validation, live damage/reward observation, publish, CPU profile or Android playtest was performed in this turn.
+
+## 9 novembre — couverture horizontale réelle et observabilité des esquives
+
+### Problème de portée identifié dans le code
+
+L'avertissement `FreezeWarning` / `JumpShockWarning` est construit à partir du diamètre diagonal du socle 320 × 320, et `D.start(ctx)` affecte les participants actifs du serveur indépendamment de leur altitude. La détection IA utilisait néanmoins la **magnitude 3D** entre le bot et le marqueur près du sol. À la périphérie d'une grande arène, une hauteur supplémentaire pouvait faire sortir un bot de la portée d'anticipation alors qu'il était bel et bien touché par l'effet serveur.
+
+Correction dans `AISurvivorService.warningDistance` :
+- uniquement pour `FreezeWarning` et `JumpShockWarning`, la distance d'anticipation est désormais en plan **X/Z**, conforme à leur couverture d'arène ; conserver le seuil borné de `AISurvivorRules.warningDetectionRadius` et les délais de personnalité ;
+- les avertissements Meteor/Bomb restent évalués en **3D**, sans modification de leur dégâts, rayons ni itinéraires ;
+- aucune nouvelle recherche physique, trajectoire, boucle ou allocation de Part, seulement un calcul de distance arithmétique borné sur la liste existante.
+
+### Mesure réelle : commandes versus résultats
+
+`BotShockJumpCommands` ne compte que les tentatives de saut du cerveau IA, pas les véritables évitements. Deux nouveaux attributs diagnostiques **par rig et réinitialisés à chaque manche** sont mis à jour exclusivement dans `Disasters/JumpShock.applyShock`, au moment de l'impact serveur :
+- `BotShockDodges` : `D.dodgedByJump` a effectivement renvoyé `true` sur une vague ayant atteint ce bot, avec vitesse verticale et dégagement physique suffisants ;
+- `BotShockHits` : ce même bot valide n'a **pas** satisfait le critère d'esquive et a reçu l'impulsion normale ;
+- le traitement des joueurs humains et leur récompense `OnHazardNearMiss` restent inchangés ; aucun gain, bouclier, immunité ni baisse artificielle du nombre de coups n'est introduit.
+
+Ces deux compteurs sont des **observations runtime**, pas des preuves anticipées de réussite. Chaque vague ne modifie un compteur de bot que lors de son évaluation physique (pas par frame). Un Humanoid mort/absent avant la vague n'est ni un hit ni une dodge. La somme `BotShockDodges + BotShockHits` permet de vérifier le nombre de bots physiquement évalués. `BotShockJumpCommands` est indépendant : un bot peut esquiver après un vrai saut de parcours, et une tentative IA peut être ratée.
+
+### Acceptation moteur additionnelle
+
+1. Même position X/Z, hauteurs différentes : Freeze et JumpShock sont perçus avec la même portée horizontale, sans changer la date de la vague ni la physique ; un avertissement à métadonnées invalides conserve son comportement conservateur.
+2. Même situation Meteor/Bomb : la distance physique 3D reste inchangée.
+3. 1 humain + 7 bots sur une vraie vague JumpShock : `BotShockJumpCommands`, `BotShockDodges` et `BotShockHits` donnent des valeurs par bot; la somme des résultats d'impact correspond exactement aux bots vivants/actifs réellement évalués.
+4. Un bot sur un saut de parcours déjà montant peut esquiver sans commande de saut JumpShock ; un bot recevant une commande trop tard peut être réellement touché : ne pas déduire le succès de `BotShockJumpCommands`.
+5. Réapparition et nouvelle manche : nouveaux compteurs à zéro, pas de résultats hérités de l'ancienne catastrophe.
+6. Serveur Android/PC : observer la cadence de la boucle IA et le coût de l'impact ; ne déduire aucun gain de FPS des corrections de calcul avant une mesure réelle.
+
+**Statut :** source modifiée sur PR #702 ; relecture statique à faire ; Roblox Engine, publication et métriques appareil non exécutés dans ce lot.
