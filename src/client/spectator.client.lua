@@ -504,7 +504,13 @@ local function roundSummary()
     end
 
     local alive = tonumber(state.survivorsAlive)
-    local seconds = tonumber(state.seconds)
+    local seconds = state.botShowdown == true
+        and tonumber(state.botShowdownSeconds)
+        or tonumber(state.seconds)
+    -- The always-visible top HUD already announces BOT SHOWDOWN.
+    -- Keep this narrow Android spectator card to two readable lines:
+    -- target name, then surviving contestants and the correct clock.
+    -- Repeating the long finale title here shrinks TextScaled to noise.
     local pieces = {}
 
     if alive then
