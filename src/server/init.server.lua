@@ -50,6 +50,7 @@ local PremiumRouteMeshAssets = require(script.PremiumRouteMeshAssets)
 local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
 local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
+local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -197,6 +198,9 @@ if not isStudioE2E then
     task.defer(PremiumSkyfleetMeshAssets.start)
     -- Five late-loading moderated miniature machines; never block a round.
     task.defer(PremiumServiceEquipmentAssets.start)
+    -- Verified approved seven-material rotor Model; delayed separate
+    -- optional import, never blocking a human join, AI or disaster.
+    task.defer(PremiumPerimeterRotorAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

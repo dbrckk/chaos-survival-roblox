@@ -514,6 +514,14 @@
       "source": "tools/generate_original_towers_cooling_stack.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 41904135484
+    },
+    {
+      "name": "perimeter_rotor",
+      "asset_id": "133526819668194",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_rotor.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42691052644
     }
   ]
 }
