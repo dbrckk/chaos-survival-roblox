@@ -78,6 +78,11 @@ AISurvivorService.PerformanceDiagnostics = {
     GroundRoutesActive = 0,
     GroundRoutesPending = 0,
     InRoundBots = 0,
+    -- Server-only counters: whether a nearby real, timed impact earned a
+    -- slightly faster AI pass, or pressure forced the ordinary cadence.
+    -- These are scheduling decisions, NOT measured dodge successes.
+    HazardResponsivePasses = 0,
+    HazardResponsiveLoadDeferrals = 0,
 }
 
 local IDENTITIES = {
@@ -6770,10 +6775,67 @@ local function startBrain()
                 botStepPeakMs = 0
             end
 
-            task.wait(AISurvivorRules.brainCadence(
-                #records,
-                currentState.phase
-            ))
+            local cadence = AISurvivorRules.brainCadence(
+                #records, currentState.phase)
+            -- A seven-bot round normally has a 0.42-second shared
+            -- decision interval. Real Meteor/Bomb markers can appear
+            -- immediately after a pass, leaving no time to react once
+            -- the profile's humanlike hesitation is also applied.
+            --
+            -- ONLY during an ACTUAL nearby physical impact, shorten
+            -- that interval to 0.30 seconds. Scan the event-maintained
+            -- warning cache (never Workspace) and the existing roster,
+            -- without a new task, heartbeat listener or client signal.
+            -- JumpShock's one-shot scheduled jump still owns its timing;
+            -- this only helps the brain observe new warnings sooner.
+            if currentState.phase == "round" and cadence > 0.30 then
+                local nearbyImpact = false
+                for _, warning in ipairs(warningParts()) do
+                    if warning.Parent and (
+                        warning.Name == "MeteorWarning"
+                        or warning.Name == "BombWarning"
+                        or warning.Name == "JumpShockWarning"
+                    ) then
+                        local radius = math.max(
+                            warning.Size.X, warning.Size.Y, warning.Size.Z
+                        ) * 0.5
+                        local threshold = AISurvivorRules.warningDetectionRadius(
+                            warning.Name, radius,
+                            warning:GetAttribute("WarningEndSize"))
+                        for _, record in ipairs(records) do
+                            if record.inRound and record.alive then
+                                local model = record.model
+                                local root = model
+                                    and model:FindFirstChild("HumanoidRootPart")
+                                if root and root:IsA("BasePart")
+                                    and warningDistance(
+                                        root.Position,
+                                        warning.Position,
+                                        warning.Name
+                                    ) <= threshold then
+                                    nearbyImpact = true
+                                    break
+                                end
+                            end
+                        end
+                        if nearbyImpact then break end
+                    end
+                end
+                if nearbyImpact then
+                    -- Never accelerate an overloaded server. passMs is
+                    -- measured for this very same brain pass, not a
+                    -- client-reported FPS or speculative device tier.
+                    if passMs <= 14 then
+                        cadence = 0.30
+                        AISurvivorService.PerformanceDiagnostics
+                            .HazardResponsivePasses += 1
+                    else
+                        AISurvivorService.PerformanceDiagnostics
+                            .HazardResponsiveLoadDeferrals += 1
+                    end
+                end
+            end
+            task.wait(cadence)
         end
         brainStarted = false
     end)
