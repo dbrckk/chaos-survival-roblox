@@ -12,6 +12,27 @@ local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local visuals = {}
 local overdriveActive = false
+local roundActive = false
+
+-- Only server-awarded, personal movement charges that are SPENT on
+-- these real pads (Classic/Harbor) change their local appearance.
+-- Towers/Orbital/Crossroads spend charges elsewhere: do not imply
+-- their mobility pads can consume those earned powers.
+local function masteryState(pad)
+    if not roundActive
+        or player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+    then return nil end
+    local arena = pad.Parent and pad.Parent.Parent
+    local variant = arena and arena:GetAttribute("VariantId")
+    if variant == "Classic"
+        and player:GetAttribute("RoundGridCircuitBoostReady") == true
+    then return "CIRCUIT", "GRID" end
+    if variant == "Harbor"
+        and player:GetAttribute("RoundHarborTransferReady") == true
+    then return "SQUALL", "READY" end
+    return nil
+end
 
 local function profile()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
@@ -98,7 +119,21 @@ local function topPlate(pad)
     bar.BackgroundColor3 = pad.Color
     bar.Parent = panel
 
-    return gui, outline, number, bar
+    -- Reuse the existing pad SurfaceGui, not a floating BillboardGui or
+    -- new world geometry. Its label only lights up after real mastery.
+    local charge = Instance.new("TextLabel")
+    charge.Name = "PersonalCharge"
+    charge.BackgroundTransparency = 1
+    charge.Position = UDim2.fromScale(0.08, 0.80)
+    charge.Size = UDim2.fromScale(0.84, 0.15)
+    charge.Font = Enum.Font.GothamBold
+    charge.TextScaled = true
+    charge.TextColor3 = Color3.fromRGB(255, 230, 155)
+    charge.Text = ""
+    charge.Visible = false
+    charge.Parent = panel
+
+    return gui, outline, number, bar, label, charge
 end
 
 local function refreshRates()
@@ -124,13 +159,19 @@ local function refreshRates()
                 state.surface:Destroy()
             end
         else
+            local chargeKind = masteryState(pad)
+            local mastered = chargeKind ~= nil
+            local personalColor = Color3.fromRGB(255, 227, 145)
+            -- A private, subtle cyan-gold edge makes the charged *real*
+            -- pads stand out. Overdrive and hazard orange always win.
             state.emitter.Rate = currentRate
             state.highlight.FillColor = overdriveActive
                 and Color3.fromRGB(255, 205, 92)
                 or pad.Color
             state.highlight.OutlineColor = overdriveActive
                 and Color3.fromRGB(255, 245, 190)
-                or pad.Color:Lerp(Color3.new(1, 1, 1), 0.42)
+                or (mastered and personalColor
+                    or pad.Color:Lerp(Color3.new(1, 1, 1), 0.42))
             state.highlight.FillTransparency = tier.Name == "Low" and 1 or (overdriveActive and 0.74 or 0.86)
             state.highlight.OutlineTransparency = tier.Name == "Low" and 0.36 or (overdriveActive and 0.04 or 0.16)
             if state.surface and state.surface.Parent then
@@ -138,7 +179,18 @@ local function refreshRates()
                     or pad.Color
                 state.surfaceOutline.Color = tint
                 state.surfaceNumber.TextColor3 = tint
-                state.surfaceBar.BackgroundColor3 = tint
+                state.surfaceBar.BackgroundColor3 =
+                    mastered and not overdriveActive and personalColor or tint
+                if state.surfaceCharge then
+                    state.surfaceCharge.Visible = mastered
+                    state.surfaceCharge.Text = mastered and (
+                        french and "BONUS PRÊT" or "BONUS READY") or ""
+                end
+                if state.surfaceLabel then
+                    state.surfaceLabel.TextColor3 = mastered
+                        and not overdriveActive and Color3.fromRGB(255, 245, 209)
+                        or Color3.fromRGB(238, 246, 251)
+                end
                 -- Critical hazard outlines are already owned elsewhere;
                 -- a pad top-plate must not become a glowing false warning.
                 state.surface.Enabled = true
@@ -224,7 +276,8 @@ local function attach(pad)
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = pad
 
-    local surface, surfaceOutline, surfaceNumber, surfaceBar = topPlate(pad)
+    local surface, surfaceOutline, surfaceNumber, surfaceBar,
+        surfaceLabel, surfaceCharge = topPlate(pad)
 
     local colorConnection = pad:GetPropertyChangedSignal("Color"):Connect(function()
         -- A Color property can also arrive after the marker attribute.
@@ -244,6 +297,8 @@ local function attach(pad)
         surfaceOutline = surfaceOutline,
         surfaceNumber = surfaceNumber,
         surfaceBar = surfaceBar,
+        surfaceLabel = surfaceLabel,
+        surfaceCharge = surfaceCharge,
     }
 
     local light = pad:FindFirstChild("MobilityPadLight")
@@ -383,6 +438,15 @@ bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshRates)
 player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshRates)
 
+-- The existing visual owner already has all pads and budget information.
+-- Repaint on server replication only, never on RenderStepped/Heartbeat.
+for _, attribute in ipairs({
+    "RoundParticipant", "RoundEliminated",
+    "RoundGridCircuitBoostReady", "RoundHarborTransferReady",
+}) do
+    player:GetAttributeChangedSignal(attribute):Connect(refreshRates)
+end
+
 -- The approved 3D kit arrives after the server's serialized low-priority
 -- import (about 34 seconds); do not lock visual quality to a startup
 -- timeout. A late genuine template can fill existing pads immediately.
@@ -424,8 +488,10 @@ bindSourceHolder(ReplicatedStorage:FindFirstChild(
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
-    local nextOverdrive = state.phase == "round" and state.overdrive == true
-    if nextOverdrive ~= overdriveActive then
+    local nextRound = state.phase == "round"
+    local nextOverdrive = nextRound and state.overdrive == true
+    if nextOverdrive ~= overdriveActive or nextRound ~= roundActive then
+        roundActive = nextRound
         overdriveActive = nextOverdrive
         refreshRates()
     end
