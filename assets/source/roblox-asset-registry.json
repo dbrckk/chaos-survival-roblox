@@ -538,6 +538,22 @@
       "source": "tools/generate_original_perimeter_armor.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42694744112
+    },
+    {
+      "name": "perimeter_crossbrace",
+      "asset_id": "108452611210970",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_structures.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42696898936
+    },
+    {
+      "name": "perimeter_generator_shield",
+      "asset_id": "113687802206554",
+      "moderation": "Approved",
+      "source": "tools/generate_original_perimeter_structures.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42696898936
     }
   ]
 }

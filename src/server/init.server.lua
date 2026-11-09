@@ -52,6 +52,7 @@ local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
 local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
 local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
 local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
+local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructuresAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -204,6 +205,9 @@ if not isStudioE2E then
     task.defer(PremiumPerimeterRotorAssets.start)
     -- Original 3D forged wing and cap assets; deferred, optional, nonphysical.
     task.defer(PremiumPerimeterArmorAssets.start)
+    -- Actual owner-approved 3D open truss and machined rotor guard.
+    -- Late optional load, no collision or round lifecycle change.
+    task.defer(PremiumPerimeterStructuresAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

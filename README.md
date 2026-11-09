@@ -18,6 +18,8 @@ Le [nouveau plan de production premium](docs/PREMIUM_MASTER_PLAN_2026-11-09.md) 
 
 **Historique P4 — prochaines grandes surfaces primitives :** deux modèles 3D originaux, [ailes profilées et capots mécaniques](docs/P4_AUTHORED_PERIMETER_WINGS_CAPS_2026-11-09.md), sont préparés pour les 80 WedgeParts des quatre stations sur les cinq variantes. L'import sécurisé produit d'abord les assets approuvés, avant toute prétention de remplacement effectif en jeu.
 
+**P4 — traverse et protection de générateur originales approuvées :** les deux Models [importés avec confirmation Approved](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42696898936) (ID 108452611210970 / 113687802206554) ont désormais un montage 3D réversible sur les blocs exacts des quatre vraies stations. La [mesure de couverture 3D des stations](docs/P4_SOURCE_3D_COVERAGE_INVENTORY_2026-11-09.md) est **14/23 = 60,9 % de types de pièces source potentiellement substituables** ; elle ne constitue ni un pourcentage du jeu entier ni une vérification de rendu Android. Aucun nouvel upload public de Place à ce stade.
+
 ## Plan produit actif — 7 novembre 2026
 
 Le [plan premium actualisé](docs/NEXT_PREMIUM_PRODUCTION_ROADMAP_2026-11-04.md#actualisation-opérationnelle--7-novembre-2026-priorités-de-livraison) fixe désormais l'ordre **G4 : version vérifiée → arbitrage IA multi-dangers → navigation physique des bots → interactions à huit → grands visuels 3D → performances Android → validation/publication exact-SHA**. Le correctif Harbor/Classic [#660](https://github.com/dbrckk/chaos-survival-roblox/pull/660) est fusionné en source ; l'IA multi-avertissements est en développement. **Le HEAD de GitHub ne prouve pas à lui seul l'état de la place publique Roblox.**

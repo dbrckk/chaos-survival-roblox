@@ -1,5 +1,8 @@
 # P4 — Traverse ajourée et blindage de générateur authentiques
 
+> **Import et montage désormais préparés — 9 novembre 2026 :** l'action [#42696898936](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42696898936) a vérifié les deux sources, puis Roblox a attribué les Models **108452611210970** (traverse) et **113687802206554** (blindage), tous deux **Approved**. Le code du client/serveur et son registre sont maintenant intégrés à la source. La section « prochaine étape » ci-dessous présente l'état antérieur à l'import.
+
+
 **9 novembre 2026.** Fabrication originale et import de Model uniquement ; aucun changement dans la Place publiée.
 
 ## Périmètre exact

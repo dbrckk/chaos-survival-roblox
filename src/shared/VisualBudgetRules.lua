@@ -93,6 +93,11 @@ VisualBudgetRules.LocalFolders = {
     -- after ALL FOUR match. Each source has 7 real MeshParts: up to
     -- 28 pieces/station counted inside SAME 440/680/900 Android budget.
     "ApprovedPerimeterArmorLocal",
+    -- Two further creator-approved original seven-MeshPart 3D structures
+    -- per selected real perimeter station: 14 MeshParts/station in SAME
+    -- Android 440/680/900 Part census. Low 0 / Medium 1 / High touch 2
+    -- / High desktop 3 stations, with pressure-2 native fallback.
+    "ApprovedPerimeterStructuresLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",
