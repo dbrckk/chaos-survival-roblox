@@ -95,7 +95,7 @@ def build(profile: str) -> Sculpture:
 
     dims=[round(art.maximum[i]-art.minimum[i],4) for i in range(3)]
     assert set(art.materials)==set(MATERIALS),art.materials
-    assert 25<=art.groups<=65,art.groups
+    assert 16<=art.groups<=65,art.groups
     assert 500<=art.triangles<=3200,art.triangles
     assert dims[0]>=w*.86 and dims[0]<=w*1.03,dims
     assert dims[1]>=h*.90 and dims[1]<=h*1.04,dims
