@@ -1,5 +1,8 @@
 # P4 — Anneau d’observation Orbital de l’horizon sud (source originale)
 
+**Actualisation source (10 novembre 2026) :** le [workflow #42821753995](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42821753995) a validé la source OBJ/glTF : **7 048 triangles**, **sept matériaux**, **14,84 × 14,84 × 1,19565 studs**. Le vrai Model Roblox créateur `124474310430876` est **Moderation: Approved**. Le serveur et le client sont raccordés au LOD et à la restauration des primitives : [contrat technique](P4_RUNTIME_SOUTH_ORBITAL_RING_2026-11-10.md). **Aucune publication de Place ni test Roblox Engine/Android n'est revendiqué.**
+
+
 **10 novembre 2026.** Audit de \`src/server/MapBuilder.lua\` à \`addSouthHorizonMonument\` : Orbital crée **14 Part rectangulaires non physiques** \`ObservationArc1..14\` d'un anneau vertical de rayon 17 studs, centre d'origine (0,23,0), segments orientés autour de Z. Les supports \`LeftRingSupport\` et \`RightRingSupport\`, l'orbe luminescent \`SuspendedOrb\` et \`OrbClamp\` sont déjà des repères utiles et doivent rester inchangés.
 
 Une sculpture originale de véritable tore creux à 72 sections remplace les 14 rectangles. Le générateur \`tools/generate_original_south_orbital_observation_ring.py\` crée quatre coques toroïdales concentriques réelles, 14 supports de champ, 14 modules de ventilation en volume et 14 lecteurs de signal, sept matériaux PBR et géométrie OBJ/glTF source avec UV, normales et tangentes. Ce modèle est distinct de l'anneau **nord** (\`ReactorArc1..16\`), déjà remplacé ; les deux kits ne doivent jamais masquer les mêmes primitives.

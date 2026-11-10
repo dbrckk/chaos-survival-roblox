@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Horizon sud Orbital (10 novembre 2026) :** les **14** `ObservationArc1..14` du `SouthHorizonMonument` Orbital ont maintenant un remplacement 3D original, asset `124474310430876` approuvé (tore creux, sept MeshParts), chargé seulement sous conditions strictes de carte/LOD/streaming. Les supports, l'orbe et le clamp restent natifs. C'est **14 anciennes primitives-source éligibles** dans une famille différente des signatures nord et des stations périphériques ; **pas** un pourcentage global du jeu.
+
+
 **Classic — supports originaux du 10 novembre 2026 :** `RelayButtressWest/East`, `RelaySparWest/East`, `ServicePanel` sont éligibles à l'unique modèle 3D source de **5 924 triangles et sept MeshParts**, asset Roblox réellement Approved `91717127334369`. Le kit Classic primaire du mât et des deux paraboles reste indépendant. **Sur les 14 Parts/WedgeParts natives créées par `addArenaSignatureMegastructure` en Classic, 12 sont éligibles à un masquage 3D sous LOD** (sept du primaire et cinq de ces supports) ; `Foundation` et `InsetBase` restent dans leur forme native. Le pourcentage 12/14 ne vaut que pour ce monument, ni pour toutes les arènes ni pour tout le jeu.
 
 
