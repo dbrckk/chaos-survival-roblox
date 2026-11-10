@@ -36,3 +36,18 @@ deux variantes distinctes, pas huit fûts simultanément en jeu ni le
 pourcentage global des primitives. Les 16 bandes lumineuses ne sont
 pas « remplacées » car conservées intentionnellement. Révision
 Studio/Android et publication Place séparées du contrôle source.
+
+## Import approuvé et branchement dans le jeu
+
+Le workflow [#42874906992](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42874906992) a produit deux **Models Roblox propriétaire avec modération Approved** :
+
+- Classic `105555650820011` — **2 364 triangles**, 73 groupes de sculpture, 7 matériaux ; centre d'identité `GridMarker`.
+- Towers `86423178125318` — **3 348 triangles**, 105 groupes de sculpture, 7 matériaux ; centre d'identité `TowerSpine`.
+
+Le chargeur serveur `PremiumVariantIdentitySpineAssets` utilise les IDs réels approuvés, appelle `OriginalMeshScenery.sanitize` et exige sept MeshParts d'authenticité par source. Le kit client `ApprovedVariantIdentitySpineMeshKit` valide les quatre positions natives de chaque variante avec les dimensions **originales** de l'arène ; les tailles physiques de la plateforme peuvent changer pendant les catastrophes sans invalider artificiellement l'art décoratif.
+
+Chaque corps native n'est masqué qu'après montage sécurisé de 7 MeshParts. Les **4 couronnes Classic et 12 bandes Towers sont exclues du remplacement** parce que `arena-identity-motion` les anime en temps réel. La restauration du fût natif est automatique en cas de source absente, streaming, mutation ou baisse de LOD.
+
+Capacités maximum : Low 0, Medium Android 1/PC 2, High Android 2/PC 4 ; si pression graphique 2, aucun modèle complémentaire. Les attributs client mesurent les corps **réellement montés**, sans inventer de couverture totale.
+
+L'import d'assets et le merge GitHub ne prouvent pas le rendu dans Roblox Studio, les FPS Android ou la mise à jour de la Place publique.
