@@ -26,7 +26,7 @@ for height,asset in ASSETS.items():
 assert "ApprovedExteriorTowerTemplates" in KIT
 for guard in ('"OwnerVerified"','"OriginalExteriorTower3D"',
               '"Original3DAssetId"','"CosmeticOnly"',
-              'part:IsA("MeshPart")','n ~= 7',
+              'part:IsA("MeshPart")','count ~= 7',
               'body:IsA("WedgePart")','body.Anchored',
               'body.CanCollide','body.CanTouch','body.CanQuery',
               'source.DescendantRemoving:Connect',
