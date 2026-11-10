@@ -1,0 +1,82 @@
+name: One-time Original South Harbor Drydock 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-south-harbor-drydock-20261110.yml
+      - tools/generate_original_south_harbor_drydock.py
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-south-harbor-drydock-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify real South Harbor sculpted drydock, source and glTF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_south_harbor_drydock.py --output "$RUNNER_TEMP/harbor.obj" > "$RUNNER_TEMP/harbor.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/harbor.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/harbor.gltf" > "$RUNNER_TEMP/orbital-gltf.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,hashlib,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          obj=(root/'harbor.obj').read_bytes()
+          m=json.loads((root/'harbor.json').read_text())
+          g=json.loads((root/'harbor.gltf').read_text())
+          assert m['asset']=='south_harbor_sculpted_drydock'
+          assert hashlib.sha256(obj).hexdigest()==m['sha256']
+          assert 200<=m['groups']<=1450 and 4500<=m['triangles']<=27000
+          palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          assert set(m['materials'])==palette
+          x,y,z=m['bounds']
+          assert 16.45<=x<=17.25 and 17.6<=y<=18.8 and 4.45<=z<=4.95
+          assert all(abs(v)<.75 for v in m['center'])
+          for name in (b'ArmoredSouthernDrydockPlatform',
+                       b'CastTwelveFacetQuayColumn',
+                       b'CastDrydockCargoContainment',
+                       b'MultiStrandCargoHoist',
+                       b'ForgedQuayRigMainChord',
+                       b'ForgedHarborLightshipMainChord',
+                       b'BeveledLightshipCommandCabin',
+                       b'DarkenedStormLensOpticalHousing',
+                       b'StormAntennaForgedShaft'):
+              assert name in obj,name
+          assert g['asset']['version']=='2.0'
+          assert {v['name'] for v in g['materials']}==palette
+          prim=g['meshes'][0]['primitives']
+          assert len(prim)==7
+          assert sum(g['accessors'][v['attributes']['POSITION']]['count']//3 for v in prim)==m['triangles']
+          assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}<=set(v['attributes']) for v in prim)
+          buf=g['buffers'][0]
+          assert len(base64.b64decode(buf['uri'].split(',',1)[1],validate=True))==buf['byteLength']
+          source=Path('src/server/MapBuilder.lua').read_text()
+          for name in ('"Foundation"','"FloorInset"',
+                       '"WestQuayColumn"','"EastQuayColumn"',
+                       '"WestQuayCargo"','"EastQuayCargo"',
+                       '"WestContainerHoist"','"EastContainerHoist"',
+                       '"WestQuayRig"','"EastQuayRig"',
+                       '"HarborLightshipBridge"','"HarborSignalCab"',
+                       '"HarborStormLens"','"HarborStormBeacon"'):
+              assert name in source,name
+          print('SOURCE PASS original South Harbor drydock',m['triangles'],m['bounds'],m['sha256'])
+          print('NO ROBLOX PLACE PUBLICATION')
+          PY
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: south_harbor_sculpted_drydock
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
