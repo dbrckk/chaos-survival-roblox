@@ -4,6 +4,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local PremiumSkyfleetMeshAssets = {}
 local ASSET_ID = 84239592388200
@@ -29,7 +30,7 @@ function PremiumSkyfleetMeshAssets.start()
         task.wait(12)
         if holder:FindFirstChild("OriginalSkyfleetCarrier") then return end
         for attempt = 1, 3 do
-            local ok, raw = pcall(AssetService.LoadAssetAsync,
+            local ok, raw = pcall(GlobalApprovedImportGate.load,
                 AssetService, ASSET_ID)
             if ok and raw and raw:IsA("Model") then
                 local clean = OriginalMeshScenery.sanitize(raw)
