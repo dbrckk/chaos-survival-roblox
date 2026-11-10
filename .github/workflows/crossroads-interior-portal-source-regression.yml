@@ -1,0 +1,27 @@
+name: Crossroads interior sculpted portal original source regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_variant_crossroads_entrance_portal.py
+      - tools/verify_original_crossroads_entrance_portal.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/crossroads-interior-portal-source-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_variant_crossroads_entrance_portal.py
+      - tools/verify_original_crossroads_entrance_portal.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/crossroads-interior-portal-source-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate authentic OBJ/glTF and native four-gate contract
+        run: python3 tools/verify_original_crossroads_entrance_portal.py
