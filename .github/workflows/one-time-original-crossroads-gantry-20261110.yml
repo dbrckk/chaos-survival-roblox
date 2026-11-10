@@ -1,0 +1,34 @@
+# Source-gated ONE-TIME upload of one creator-owned decorative Roblox Model.
+# This does not change or publish the playable Roblox Place.
+name: One-time Crossroads Original Open Gantry 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-crossroads-gantry-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-crossroads-open-gantry-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check provenance, the real open 3D truss and glTF materials
+        run: python3 tools/verify_variant_crossroads_gantry_source.py
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: variant_crossroads_forged_gantry
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
