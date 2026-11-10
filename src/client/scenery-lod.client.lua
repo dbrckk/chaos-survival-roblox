@@ -25,6 +25,7 @@ local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbita
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
+local ApprovedClassicSignatureObservatoryMeshKit = require(script.Parent.ApprovedClassicSignatureObservatoryMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1366,6 +1367,27 @@ task.spawn(function()
             ~=harborPrimitiveBlocks then
             player:SetAttribute("LocalHarborSignaturePrimitiveBlocksReplaced",
                 harborPrimitiveBlocks)
+        end
+        -- Classic signature landmark: a continuous sculpted tapered relay
+        -- mast + two REAL concave parabolic receivers replace exactly the
+        -- seven huge native primitive silhouettes together. Existing LOD
+        -- camera/pressure sampler, zero extra frame loops or collisions.
+        ApprovedClassicSignatureObservatoryMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local classicOriginalObservatories=
+            ApprovedClassicSignatureObservatoryMeshKit.count()
+        if player:GetAttribute("LocalApprovedClassicObservatoryCount")
+            ~=classicOriginalObservatories then
+            player:SetAttribute("LocalApprovedClassicObservatoryCount",
+                classicOriginalObservatories)
+        end
+        local classicNativePartsReplaced=
+            ApprovedClassicSignatureObservatoryMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalClassicSignaturePrimitivePartsReplaced")
+            ~=classicNativePartsReplaced then
+            player:SetAttribute("LocalClassicSignaturePrimitivePartsReplaced",
+                classicNativePartsReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

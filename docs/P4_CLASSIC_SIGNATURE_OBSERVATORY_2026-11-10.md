@@ -1,5 +1,8 @@
 # P4 — Observatoire Classic sculpté et paraboles réelles
 
+**Mise à jour source intégrée — 10 novembre 2026.** Le [workflow #42787663042](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42787663042) a validé l'OBJ/glTF original (**6 664 triangles, 110 groupes de géométrie, sept matériaux, 9,105 × 15,0875 × 1,03 studs en unité source normalisée**). Roblox a créé le vrai Model propriétaire **`112493873850364`**, modéré **Approved**. Le serveur et le kit client sont maintenant intégrés dans le dépôt et le code de restauration est présent ; voir [le contrat runtime](P4_RUNTIME_CLASSIC_OBSERVATORY_2026-11-10.md). Le reste de cette page décrit également la fabrication antérieure. **Aucune publication publique de la Place ou validation visuelle Android.**
+
+
 **10 novembre 2026.** Fabrication originale de l'observatoire signature Classic, sans déploiement de la Place.
 
 ## Contexte vérifié dans MapBuilder

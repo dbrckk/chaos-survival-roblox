@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Classic — lot du 10 novembre 2026 :** les sept silhouettes `PrimaryRelayMast`, `RelayHead`, `DishBridge`, `ReceiverDishWest/East` et `ReceiverHubWest/East` du monument nord Classic possèdent désormais **un remplacement original commun** : 6 664 triangles, deux paraboles réellement creuses, sept MeshParts PBR, Model propriétaire `112493873850364` modéré Approved. Le kit intégré masque les sept natives en bloc, uniquement si la source et les éléments de la vraie carte sont validés. Cette étape ne modifie pas le dénominateur de 23 pièces des stations périphériques ; **ne pas présenter leur 69,57 % comme une amélioration du jeu entier**.
+
+
 **Harbor — lot du 10 novembre 2026 :** la grosse poutre `QuayCraneSpanningBeam`, le contrepoids `QuayCraneCounterweight` et la cabine `QuayControlCab` de la vraie `ArenaSignatureMegastructure` Harbor sont désormais éligibles à une **sculpture 3D originale unique** de 2 940 triangles et sept matériaux, Model Roblox créateur `124368710235343`, modération Approved. Le montage source local ne supprime aucune pièce du gameplay. Cela ajoute **trois autres primitives-source potentiellement remplacées** hors de la famille des stations périphériques. Il ne faut toujours pas présenter la couverture 16/23 des stations comme une couverture 3D de l'ensemble du jeu.
 
 
