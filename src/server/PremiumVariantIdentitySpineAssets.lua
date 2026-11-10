@@ -44,10 +44,26 @@ function Assets.start()
     end
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        -- 2 serial owner imports; no parallel client calls and no
-        -- waiting on these sources before the round can start.
-        task.wait(97)
+        -- Prioritize the live map's visible identity sculpture. The
+        -- previous 97s initial delay hid all four premium masts during
+        -- most early rounds, even though the source is already Approved.
+        -- Keep a delayed, serial, nonblocking server-only import: the
+        -- fallback native geometry remains until the seven MeshParts
+        -- are verified and replicated.
+        task.wait(51)
+        local arena=workspace:FindFirstChild("GeneratedMap")
+        arena=arena and arena:FindFirstChild("Arena")
+        local active=arena and arena:GetAttribute("VariantId")
+        local ordered={}
+        if active=="Classic" or active=="Towers" then
+            for _,spec in ipairs(SOURCES) do
+                if spec.name==active then ordered[#ordered+1]=spec end
+            end
+        end
         for _,spec in ipairs(SOURCES) do
+            if spec.name~=active then ordered[#ordered+1]=spec end
+        end
+        for _,spec in ipairs(ordered) do
             if not folder:FindFirstChild(spec.name) then
                 for attempt=1,3 do
                     local ok,raw=pcall(AssetService.LoadAssetAsync,
@@ -79,7 +95,8 @@ function Assets.start()
                     end
                 end
             end
-            task.wait(13)
+            -- Separate two potentially expensive Open Cloud imports.
+            task.wait(24)
         end
     end)
 end
