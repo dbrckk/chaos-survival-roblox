@@ -67,3 +67,42 @@ inchangés.
 Ces compteurs mesurent la durée des appels API, pas les FPS ou la
 visibilité d'un MeshPart sur Android ; la mesure sur appareil reste
 distincte.
+
+
+## Identification du vrai modèle 3D qui ralentit le chargement
+
+Le dossier **serveur uniquement**
+`ServerStorage.PremiumApprovedImportDiagnostics` expose maintenant aussi
+les attributs numériques suivants, mis à jour **après des appels réels** :
+
+| Attribut | Sens |
+|---|---|
+| `LastRequestAssetId` | Asset ID Roblox du dernier appel terminé |
+| `SlowestRequestAssetId` | Asset ID responsable de la requête API la plus longue |
+| `MaxRequestMs` | Durée de cette requête en millisecondes |
+| `SlowestQueueAssetId` | Asset ID dont le temps d'attente en file a été le plus long |
+| `MaxQueueWaitMs` | Durée de cette attente |
+| `TotalRequestMs` | Somme des durées des appels API terminés |
+| `TotalQueueWaitMs` | Somme des attentes terminées |
+| `SlowRequestCount` | Nombre d'appels d'au moins huit secondes |
+| `SlowQueueCount` | Nombre d'attentes d'au moins huit secondes |
+| `SlowThresholdMs` | Seuil diagnostic : 8 000 ms |
+
+À défaut de requête terminée, l'identifiant reste **0**, pas une valeur
+inventée. Les compteurs ne sont pas répliqués aux joueurs et ne
+modifient ni le LOD, ni le taux de FPS. Les totaux sont propres à la
+session serveur (non persistants) et un appel qui reste bloqué dans
+l'API n'entre pas dans les durées *terminées*.
+
+**Pour diagnostiquer sans exporter de données privées :** dans une
+session de test **Serveur** de Roblox Studio, ouvrir
+`ServerStorage > PremiumApprovedImportDiagnostics`, consulter les
+attributs après quelques manches, puis rechercher l'ID le plus lent
+dans `assets/source/roblox-asset-registry.json` du dépôt. Répéter
+sur plusieurs sessions : un seul maximum peut refléter une lenteur
+transitoire du réseau Roblox.
+
+Les tests Python vérifient ces chemins et leurs invariants dans le code.
+Un test Lest côté moteur vérifie le conteneur de diagnostics et le rejet
+des appels malformés sans importer d'asset. Les vrais temps d'API et
+les FPS Android ne sont **pas** inventés par la CI source.
