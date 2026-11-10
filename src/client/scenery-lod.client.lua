@@ -29,6 +29,7 @@ local ApprovedSouthTowersFinishingMeshKit = require(script.Parent.ApprovedSouthT
 local ApprovedSouthCrossroadsExchangeMeshKit = require(script.Parent.ApprovedSouthCrossroadsExchangeMeshKit)
 local ApprovedSouthOrbitalFinishingMeshKit = require(script.Parent.ApprovedSouthOrbitalFinishingMeshKit)
 local ApprovedSouthHarborDrydockMeshKit = require(script.Parent.ApprovedSouthHarborDrydockMeshKit)
+local ApprovedSouthClassicObservatoryMeshKit = require(script.Parent.ApprovedSouthClassicObservatoryMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1538,6 +1539,24 @@ task.spawn(function()
             ~=southDrydockReplaced then
             player:SetAttribute("LocalSouthHarborPrimitivePartsReplaced",
                 southDrydockReplaced)
+        end
+        -- Classic south: two sculpted radar dishes and eleven support,
+        -- bridge, cabin and foundation natives, all cosmetic.
+        ApprovedSouthClassicObservatoryMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local classicSouthCount=ApprovedSouthClassicObservatoryMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthClassicObservatoryCount")
+            ~=classicSouthCount then
+            player:SetAttribute("LocalApprovedSouthClassicObservatoryCount",
+                classicSouthCount)
+        end
+        local classicSouthReplaced=
+            ApprovedSouthClassicObservatoryMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthClassicPrimitivesReplaced")
+            ~=classicSouthReplaced then
+            player:SetAttribute("LocalSouthClassicPrimitivesReplaced",
+                classicSouthReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
