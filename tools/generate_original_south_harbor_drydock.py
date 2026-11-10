@@ -40,14 +40,14 @@ def foundation(a):
         z=face*6.27
         rod(a,"ContinuousForgedDrydockRim%s"%face,"ALLOY",
             (-22.9,-.51,z),(22.9,-.51,z),.15,10)
-        for i in range(14):
-            x=-21.24+i*3.26
+        for i in range(10):
+            x=-21.24+i*4.72
             block(a,"DrydockHullSegment%s_%02d"%(face,i),"GRIP",
                   x,-1.13,z,2.71,.56,.19,.057)
             rod(a,"DrydockClampingRivet%s_%02d"%(face,i),"BRUSHED",
                 (x,-1.51,z+face*.11),(x,-.78,z+face*.11),.061,8)
-    for i in range(16):
-        x=-18.0+i*2.40
+    for i in range(12):
+        x=-18.0+i*3.27
         block(a,"AntiSlipCeramicLoadingDeck%02d"%i,"CERAMIC",
               x,.243,0,2.09,.076,9.02,.036)
         for face in (-1,1):
@@ -86,18 +86,18 @@ def quay_columns(a):
             first=(len(levels)-1)*n
             tris.append((first,first+k,first+k+1))
         a.add("CastTwelveFacetQuayColumn%s"%side,"ARMOR",verts,tris)
-        for i in range(9):
-            y=4+i*3.17
+        for i in range(6):
+            y=4+i*4.85
             for face in (-1,1):
                 z=face*2.08
                 block(a,"QuayPierCarbonInset%s_%s_%02d"%(side,face,i),
                       "CARBON",x,y,z,2.27,2.13,.095,.036)
-                for j in range(3):
+                for j in range(2):
                     block(a,"DockVentilationLouvre%s_%s_%02d_%02d"%
                           (side,face,i,j),"GRIP",
-                          x+(j-1)*.62,y,z+face*.069,.19,1.69,.055,.022)
-        for i in range(10):
-            y=3.4+i*2.77
+                          x+(j-.5)*.80,y,z+face*.069,.19,1.69,.055,.022)
+        for i in range(8):
+            y=3.4+i*3.85
             block(a,"HarborLoadLevelSignal%s_%02d"%(side,i),"SIGNAL",
                   x+side*1.85,y,-2.13,.24,.31,.11,.03)
 
@@ -111,13 +111,13 @@ def cargo_container(a,side):
         z=face*3.87
         block(a,"SuspendedCargoInsulatingSide%s_%s"%(side,face),
               "CARBON",x,5.48,z,10.28,5.98,.15,.066)
-        for i in range(15):
-            xx=x-4.82+i*.69
+        for i in range(10):
+            xx=x-4.82+i*1.07
             block(a,"DeepCorrugatedContainerRib%s_%s_%02d"%
                   (side,face,i),"BRUSHED",
                   xx,5.47,z+face*.105,.25,5.92,.18,.055)
-        for i in range(5):
-            xx=x-3.99+i*1.99
+        for i in range(3):
+            xx=x-3.99+i*3.99
             block(a,"CargoISOInspectionPlacard%s_%s_%02d"%
                   (side,face,i),"CERAMIC",
                   xx,7.42,z+face*.215,.88,.32,.08,.037)
@@ -125,8 +125,8 @@ def cargo_container(a,side):
         for y in (2.25,8.74):
             rod(a,"CargoExteriorSafetyRail%s_%s_%s"%(side,z,y),
                 "ALLOY",(x-5.05,y,z),(x+5.05,y,z),.13,10)
-    for i in range(6):
-        xx=x-4.25+i*1.7
+    for i in range(5):
+        xx=x-4.25+i*2.12
         block(a,"LowerCargoBeacon%s_%02d"%(side,i),"SIGNAL",
               xx,1.95,-3.78,.31,.19,.21,.038)
 
@@ -137,16 +137,16 @@ def container_hoist(a,side):
     for dx in (-.23,.23):
         rod(a,"MultiStrandCargoHoist%s_%s"%(side,dx),"ALLOY",
             (x+dx,17.51,0),(x+dx,36.47,0),.105,10)
-    for i in range(12):
-        y=18.0+i*1.60
+    for i in range(8):
+        y=18.0+i*2.47
         block(a,"MachinedCargoHoistCoupler%s_%02d"%(side,i),
               "GRIP",x,y,0,.76,.23,.87,.057)
         block(a,"TensionLoadGauge%s_%02d"%(side,i),"SIGNAL",
               x,y+.04,-.48,.32,.16,.07,.027)
     rod(a,"DieCastHoistDriveWheel%s"%side,"ARMOR",
         (x-.54,36.30,0),(x+.54,36.30,0),.49,16)
-    for i in range(8):
-        t=i*math.tau/8
+    for i in range(6):
+        t=i*math.tau/6
         xx=.45*math.cos(t)
         yy=.45*math.sin(t)
         rod(a,"HoistDriveWheelSpoke%s_%02d"%(side,i),"BRUSHED",
@@ -162,13 +162,13 @@ def rig(a,side):
             (x-3.93,36.20,z),(x+3.93,39.72,z),.23,10)
         rod(a,"QuayRigLowerChord%s_%s"%(side,face),"BRUSHED",
             (x-3.9,36.2,z),(x+3.9,36.2,z),.17,10)
-        for i in range(8):
-            xx=x-3.4+i*.95
-            yy=36.4+i*.42
+        for i in range(6):
+            xx=x-3.4+i*1.34
+            yy=36.4+i*.63
             rod(a,"QuayRigDiagonalWeld%s_%s_%02d"%(side,face,i),
                 "ALLOY",(xx,36.3,z),(xx+.78,yy+.32,z),.098,8)
-    for i in range(7):
-        xx=x-3.36+i*1.11
+    for i in range(5):
+        xx=x-3.36+i*1.68
         rod(a,"QuayRigTransverseCarrier%s_%02d"%(side,i),"GRIP",
             (xx,38.18,-2.15),(xx,38.18,2.15),.105,8)
         block(a,"QuayRigCeramicSkid%s_%02d"%(side,i),"CERAMIC",
@@ -182,20 +182,20 @@ def lightship_bridge(a):
         for yy in (33.59,35.40):
             rod(a,"ForgedHarborLightshipMainChord%s_%s"%(face,yy),
                 "ARMOR",(-20.23,yy,z),(20.23,yy,z),.30,12)
-        for i in range(18):
-            x=-19.1+i*2.15
+        for i in range(12):
+            x=-19.1+i*3.45
             rod(a,"PiercedHarborBridgeTruss%s_%02d"%(face,i),"ALLOY",
                 (x-1.15,33.64,z),(x+.92,35.35,z),.108,8)
     block(a,"AntiSlipHarborOverpassDeck","CARBON",
           0,34.55,0,40.1,.25,5.12,.11)
-    for i in range(20):
-        x=-19.0+i*2
+    for i in range(12):
+        x=-19.0+i*3.45
         rod(a,"LightshipCrossTraverse%02d"%i,"BRUSHED",
             (x,34.29,-2.38),(x,34.29,2.38),.10,8)
         block(a,"InlaidBridgeServiceTile%02d"%i,"GRIP",
               x,34.72,0,.48,.065,4.75,.030)
-    for i in range(10):
-        x=-17.8+i*3.93
+    for i in range(8):
+        x=-17.8+i*5.08
         block(a,"HarborBeaconStrip%02d"%i,"SIGNAL",
               x,35.59,-2.4,.37,.16,.20,.047)
 
@@ -205,8 +205,8 @@ def storm_cabin(a):
           0,39,0,8.64,4.14,5.72,.27)
     block(a,"DarkenedStormLensOpticalHousing","CARBON",
           0,39.3,-3.06,6.56,1.79,.27,.11)
-    for i in range(9):
-        x=-2.96+i*.74
+    for i in range(7):
+        x=-2.96+i*.99
         block(a,"StormWindowForgedMullion%02d"%i,"CERAMIC",
               x,39.28,-3.27,.115,1.78,.11,.042)
     for y in (38.50,40.05):
@@ -219,8 +219,8 @@ def storm_cabin(a):
     # Original seven-stud beacon, with an open machined aerial tip.
     rod(a,"StormAntennaForgedShaft","ARMOR",
         (0,42.51,0),(0,49.49,0),.34,12)
-    for i in range(8):
-        y=43.2+i*.80
+    for i in range(6):
+        y=43.2+i*1.10
         rod(a,"DieCastStormAerialCollar%02d"%i,"BRUSHED",
             (-.49,y,0),(.49,y,0),.12,10)
         for dx in (-.45,.45):
@@ -229,8 +229,8 @@ def storm_cabin(a):
     for face in (-1,1):
         rod(a,"PiercedStormTelemetryCrossarm%s"%face,"ALLOY",
             (face*.09,46.98,-1.18),(face*.09,46.98,1.18),.07,8)
-    for i in range(5):
-        y=44.18+i*.98
+    for i in range(4):
+        y=44.18+i*1.29
         block(a,"AntennaCeramicFrequencyBaffle%02d"%i,"CERAMIC",
               0,y,-.43,.48,.12,.15,.026)
 
@@ -250,8 +250,8 @@ def export(path):
     dims=[round(a.maximum[i]-a.minimum[i],5) for i in range(3)]
     center=[round((a.maximum[i]+a.minimum[i])*.5,5) for i in range(3)]
     assert set(a.materials)==set(MATERIALS),a.materials
-    assert 200<=a.groups<=1450,(a.groups,a.triangles)
-    assert 4500<=a.triangles<=27000,a.triangles
+    assert 200<=a.groups<=512,(a.groups,a.triangles)
+    assert 4500<=a.triangles<=16000,a.triangles
     assert 16.45<=dims[0]<=17.25,dims
     assert 17.6<=dims[1]<=18.8,dims
     assert 4.45<=dims[2]<=4.95,dims
