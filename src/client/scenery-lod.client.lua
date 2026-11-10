@@ -27,6 +27,7 @@ local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVaria
 local ApprovedCrossroadsOpenGantryMeshKit = require(script.Parent.ApprovedCrossroadsOpenGantryMeshKit)
 local ApprovedClassicBroadcastFinMeshKit = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local ApprovedOrbitalReactorLandmarkMeshKit = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+local ApprovedCrossroadsEntrancePortalMeshKit = require(script.Parent.ApprovedCrossroadsEntrancePortalMeshKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1424,6 +1425,24 @@ task.spawn(function()
             ~=orbitalReactorNative then
             player:SetAttribute("LocalOrbitalReactorNativePartsReplaced",
                 orbitalReactorNative)
+        end
+        -- Four interior Crossroads gateways: original seven-part
+        -- sculpted arches replace 12 primitive rails/posts with no colliders.
+        ApprovedCrossroadsEntrancePortalMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local entranceMeshes=ApprovedCrossroadsEntrancePortalMeshKit.count()
+        if player:GetAttribute("LocalCrossroadsEntrance3DCount")
+            ~=entranceMeshes then
+            player:SetAttribute("LocalCrossroadsEntrance3DCount",
+                entranceMeshes)
+        end
+        local entranceReplaced=
+            ApprovedCrossroadsEntrancePortalMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalCrossroadsEntranceNativePartsReplaced")
+            ~=entranceReplaced then
+            player:SetAttribute("LocalCrossroadsEntranceNativePartsReplaced",
+                entranceReplaced)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,

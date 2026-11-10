@@ -1,0 +1,35 @@
+name: Crossroads approved entrance portal 3D runtime regression
+on:
+  pull_request:
+    paths:
+      - src/client/ApprovedCrossroadsEntrancePortalMeshKit.lua
+      - src/server/PremiumCrossroadsEntrancePortalAssets.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/server/MapBuilder.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/generate_original_variant_crossroads_entrance_portal.py
+      - tools/verify_crossroads_entrance_portal_runtime.py
+      - .github/workflows/crossroads-entrance-portal-runtime-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedCrossroadsEntrancePortalMeshKit.lua
+      - src/server/PremiumCrossroadsEntrancePortalAssets.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/server/MapBuilder.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/generate_original_variant_crossroads_entrance_portal.py
+      - tools/verify_crossroads_entrance_portal_runtime.py
+      - .github/workflows/crossroads-entrance-portal-runtime-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate one actual Approved source, four positions and native rollback
+        run: python3 tools/verify_crossroads_entrance_portal_runtime.py
