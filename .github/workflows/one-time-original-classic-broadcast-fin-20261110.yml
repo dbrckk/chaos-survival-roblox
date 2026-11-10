@@ -1,0 +1,33 @@
+# One original decorative Roblox Model, NEVER a Place/public publish.
+name: One-time Classic Original Broadcast Fin 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-classic-broadcast-fin-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-one-time-classic-broadcast-fin-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source provenance, forged aerofoil and glTF identity
+        run: python3 tools/verify_variant_classic_broadcast_fin_source.py
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: variant_classic_sculpted_broadcast_fin
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
