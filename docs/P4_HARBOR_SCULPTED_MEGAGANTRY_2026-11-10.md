@@ -1,5 +1,8 @@
 # P4 — Grue portuaire géante sculptée, Harbor
 
+**Étape source intégrée — 10 novembre 2026.** Le workflow [#42780163672](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42780163672) a authentifié l'OBJ/glTF original (**2 940 triangles, sept matériaux, 40,8 × 14,0425 × 9,141 studs**) et créé le Model Roblox propriétaire **`124368710235343`**, réellement modéré **Approved**. Le nouveau kit serveur/client est branché au jeu ; voir [le contrat de montage P4](P4_RUNTIME_HARBOR_MEGAGANTRY_2026-11-10.md). Le reste de cette page décrit également l'étape de conception antérieure. La source intégrée ne constitue pas un rendu Roblox Engine vérifié ou une Place publique mise à jour.
+
+
 **10 novembre 2026 — création d'un Model original ; aucune mise à jour de Place publique.**
 
 ## Source réelle et cible

@@ -58,6 +58,7 @@ local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
 local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
+local PremiumHarborSignatureGantryAssets = require(script.PremiumHarborSignatureGantryAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -228,6 +229,9 @@ if not isStudioE2E then
     -- Original approved seven-material Crossroads interchange sculpture.
     -- Optional delayed art; the switchyard and bot route remain physical.
     task.defer(PremiumCrossroadsSignatureInterchangeAssets.start)
+    -- Genuine owner-verified Harbor industrial signature gantry source.
+    -- Delayed cosmetic Model import, detached from real hoist/gameplay.
+    task.defer(PremiumHarborSignatureGantryAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)
