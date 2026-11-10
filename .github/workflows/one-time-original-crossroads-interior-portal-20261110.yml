@@ -1,0 +1,33 @@
+# Upload one original, owner-controlled Model without publishing Roblox Place.
+name: One-time Crossroads Interior Sculpted Portal 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-crossroads-interior-portal-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-crossroads-interior-portal-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate original 3D entrance model geometry and materials
+        run: python3 tools/verify_original_crossroads_entrance_portal.py
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: variant_crossroads_sculpted_entrance_portal
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
