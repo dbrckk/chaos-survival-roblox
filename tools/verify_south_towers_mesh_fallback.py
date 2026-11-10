@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Source-level regression gate for the two approved South Towers LOD kits.
+"""Source-level regression gate for all three approved South Towers LOD kits.
 
 Does not replace Roblox Studio runtime verification.
 """
@@ -15,6 +15,15 @@ specs=[
   ["Foundation","FloorInset","WestLiftRail","EastLiftRail",
    "WestSuspension","EastSuspension","TransferSignal"],7),
 ]
+all_targets=[name for _,_,names,_ in specs for name in names]
+assert len(all_targets)==13 and len(set(all_targets))==13,all_targets
+expected_targets={
+    "Foundation","FloorInset","WestLift","EastLift",
+    "WestCrown","EastCrown","WestLiftRail","EastLiftRail",
+    "WestSuspension","EastSuspension","SkyTransfer",
+    "UnderslungLift","TransferSignal",
+}
+assert set(all_targets)==expected_targets,(set(all_targets)^expected_targets)
 for filename,asset,names,count in specs:
     source=(root/"src/client"/filename).read_text()
     assert "local MODEL_ID="+asset in source,filename
@@ -31,8 +40,20 @@ for filename,asset,names,count in specs:
     assert 'if cap==0 or not cameraReady' in source,filename
     assert "RenderStepped" not in source and "Heartbeat" not in source,filename
     assert "part.CanCollide=false" in source,filename
+    assert "Original3DAssetId" in source and "OwnerVerified" in source,filename
+    assert "SouthHorizonMonument" in source and '"Towers"' in source,filename
+    assert "source.DescendantRemoving:Connect" in source,filename
     print("PASS",filename,asset,count,"native fallback")
 for p in ("src/server/init.server.lua","src/client/scenery-lod.client.lua",
           "src/shared/VisualBudgetRules.lua"):
-    assert "SouthTowersLiftTwins" in (root/p).read_text(),p
+    text=(root/p).read_text()
+    assert "SouthTowersLiftTwins" in text and "SouthTowersFinishing" in text,p
 print("PASS shared LOD wiring")
+
+import json
+registry=json.loads((root/"assets/source/roblox-asset-registry.json").read_text())
+models={model["name"]:model for model in registry["models"]}
+assert models["south_towers_forged_finishing"]["asset_id"]=="79666240429608"
+assert models["south_towers_forged_finishing"]["moderation"]=="Approved"
+assert models["south_towers_forged_finishing"]["workflow_run_id"]==42840287655
+print("PASS full South Towers 13/13 authored primitive coverage, disjoint LOD targets and registry")
