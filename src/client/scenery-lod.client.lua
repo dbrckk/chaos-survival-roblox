@@ -24,6 +24,7 @@ local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTower
 local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
 local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
 local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVariantTowersLandmarkMeshKit)
+local ApprovedCrossroadsOpenGantryMeshKit = require(script.Parent.ApprovedCrossroadsOpenGantryMeshKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1371,6 +1372,23 @@ task.spawn(function()
             ~=landmarkHidden then
             player:SetAttribute("LocalTowersLandmarkPrimitivesReplaced",
                 landmarkHidden)
+        end
+        -- Four open-frame 3D Crossroads gantries; preserve native
+        -- neon signal strips and never modify route collision.
+        ApprovedCrossroadsOpenGantryMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local gantryModels=ApprovedCrossroadsOpenGantryMeshKit.count()
+        if player:GetAttribute("LocalCrossroadsGantryMeshCount")
+            ~=gantryModels then
+            player:SetAttribute("LocalCrossroadsGantryMeshCount",gantryModels)
+        end
+        local gantryHidden=
+            ApprovedCrossroadsOpenGantryMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalCrossroadsGantryPrimitivesReplaced")
+            ~=gantryHidden then
+            player:SetAttribute("LocalCrossroadsGantryPrimitivesReplaced",
+                gantryHidden)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
