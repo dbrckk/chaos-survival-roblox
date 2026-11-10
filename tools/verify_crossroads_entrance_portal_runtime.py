@@ -96,11 +96,14 @@ assert 'Low=0,Medium=340,High=470' in CLIENT
 assert 'math.min(cap,2)' in CLIENT and 'math.min(cap,1)' in CLIENT
 assert 'if stress>=2 then cap=0 end' in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
+# Comments documenting the absence of a loop are not executable Lua.
+# Detect forbidden API calls only in actual source statements.
+client_code="\\n".join(line.split("--",1)[0] for line in CLIENT.splitlines())
 for forbidden in ('game:GetService("AssetService")',
                   'AssetService.LoadAssetAsync',
                   'RenderStepped','Heartbeat:Connect',
                   'RemoteEvent','RemoteFunction','CanCollide=true'):
-    assert forbidden not in CLIENT,forbidden
+    assert forbidden not in client_code,forbidden
 
 # Validate source independently of the import receipt. Each gate should
 # occupy the native 2-post span and remain an open nonphysical passage.
