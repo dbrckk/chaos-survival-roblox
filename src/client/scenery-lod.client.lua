@@ -26,6 +26,7 @@ local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMe
 local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVariantTowersLandmarkMeshKit)
 local ApprovedCrossroadsOpenGantryMeshKit = require(script.Parent.ApprovedCrossroadsOpenGantryMeshKit)
 local ApprovedClassicBroadcastFinMeshKit = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
+local ApprovedOrbitalReactorLandmarkMeshKit = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1404,6 +1405,25 @@ task.spawn(function()
         if player:GetAttribute("LocalClassicFinPrimitivesReplaced")
             ~=finReplaced then
             player:SetAttribute("LocalClassicFinPrimitivesReplaced",finReplaced)
+        end
+        -- Original Orbital reactor node and support sculptures: atomic
+        -- 14-MeshPart pair swaps, never affecting disaster/gameplay physics.
+        ApprovedOrbitalReactorLandmarkMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local orbitalReactorPairs=
+            ApprovedOrbitalReactorLandmarkMeshKit.count()
+        if player:GetAttribute("LocalOrbitalReactorSculptPairCount")
+            ~=orbitalReactorPairs then
+            player:SetAttribute("LocalOrbitalReactorSculptPairCount",
+                orbitalReactorPairs)
+        end
+        local orbitalReactorNative=
+            ApprovedOrbitalReactorLandmarkMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOrbitalReactorNativePartsReplaced")
+            ~=orbitalReactorNative then
+            player:SetAttribute("LocalOrbitalReactorNativePartsReplaced",
+                orbitalReactorNative)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
