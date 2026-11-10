@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local ID=126298311664881
@@ -43,7 +44,7 @@ function Assets.start()
     task.spawn(function()
         -- Art lane: allow first round, player spawn and existing sources
         -- to initialize. Model absence never delays a disaster.
-        task.wait(62)
+        ActiveSignatureSchedule.waitFor("Towers",47,62)
         if holder:FindFirstChild("ForgedBridge") then return end
         for attempt=1,3 do
             local ok,raw=pcall(AssetService.LoadAssetAsync,
