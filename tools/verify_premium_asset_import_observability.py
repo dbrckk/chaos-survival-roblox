@@ -26,8 +26,12 @@ assert 'local queuedAt = os.clock()' in SRC
 assert 'local startedAt = os.clock()' in SRC
 assert 'math.floor((os.clock()-queuedAt)*1000+.5)' in SRC
 assert 'math.floor((os.clock()-startedAt)*1000+.5)' in SRC
-assert 'maxQueueWaitMs = math.max(maxQueueWaitMs, lastQueueWaitMs)' in SRC
-assert 'maxRequestMs = math.max(maxRequestMs, lastRequestMs)' in SRC
+assert 'if lastQueueWaitMs > maxQueueWaitMs then' in SRC
+assert 'maxQueueWaitMs = lastQueueWaitMs' in SRC
+assert 'slowestQueueAssetId = assetId' in SRC
+assert 'if lastRequestMs > maxRequestMs then' in SRC
+assert 'maxRequestMs = lastRequestMs' in SRC
+assert 'slowestRequestAssetId = assetId' in SRC
 for name in ('InFlight','Waiting','PeakInFlight','Limit','Completed','Failed',
              'TotalWaits','LastQueueWaitMs','MaxQueueWaitMs',
              'LastRequestMs','MaxRequestMs'):
