@@ -5,6 +5,7 @@ local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
 local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
+local SouthImportGate=require("./PremiumSouthApprovedImportGate")
 
 local Assets={}
 local APPROVED_ID=125428569657840
@@ -48,7 +49,7 @@ function Assets.start()
         ActiveSignatureSchedule.waitFor("Harbor",59,129)
         if folder:FindFirstChild("SculptedDrydock") then return end
         for attempt=1,3 do
-            local ok,raw=pcall(AssetService.LoadAssetAsync,
+            local ok,raw=pcall(SouthImportGate.load,
                 AssetService,APPROVED_ID)
             if ok and raw and raw:IsA("Model") then
                 local clean=OriginalMeshScenery.sanitize(raw)
