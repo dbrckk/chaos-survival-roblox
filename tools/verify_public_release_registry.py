@@ -37,7 +37,31 @@ for model in models:
     assert type(model["workflow_run_id"]) is int and model["workflow_run_id"]>0
     for attr in ("source","source_materials"):
         path=Path(model[attr])
-        assert (ROOT/path).is_file(),(model["name"],attr,path)
+        if not (ROOT/path).is_file():
+            # Seven legacy OBJ files are deterministic outputs of the
+            # FIRST official Build Validation step, not committed blobs.
+            # Preserve exact allowed names rather than accepting arbitrary
+            # unavailable creator models.
+            generated = {
+                "premium_ground_tile", "district_observatory",
+                "district_freight", "district_turbine",
+                "district_aerial", "skyfleet_carrier",
+                "underdeck_chassis",
+            }
+            assert attr=="source" and model["name"] in generated, (
+                model["name"],attr,path)
+            assert path.is_relative_to("assets/source") and path.suffix==".obj"
+            producer = (
+                "tools/generate_premium_ground_tile.py"
+                if model["name"]=="premium_ground_tile" else
+                "tools/generate_district_profile_meshes.py"
+                if model["name"].startswith("district_") else
+                "tools/generate_original_skyfleet_carrier.py"
+                if model["name"]=="skyfleet_carrier" else
+                "tools/generate_original_underdeck_chassis.py"
+            )
+            assert (ROOT/producer).is_file(),producer
+            assert producer in workflow,producer
         if attr=="source" and model["name"] in named["premium_extension_names"]:
             assert path.is_relative_to("tools")
             assert path.name.startswith("generate_original_")
