@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local APPROVED_ID=112493873850364
@@ -47,7 +48,7 @@ function Assets.start()
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
         -- Main spawn and bot scheduler must never wait for optional art.
-        task.wait(104)
+        ActiveSignatureSchedule.waitFor("Classic",44,104)
         if holder:FindFirstChild("DualDishObservatory") then return end
         for attempt=1,3 do
             local ok,raw=pcall(AssetService.LoadAssetAsync,
