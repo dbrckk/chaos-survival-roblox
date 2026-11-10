@@ -1,6 +1,6 @@
--- True creator-owned 3D South Towers Observation Torus.
--- Atomically replaces 14 nonphysical SouthHorizonMonument SkyTransfers.
--- Distinct from NORTH Towers reactor; no physics/network or extra loop.
+-- Creator-approved original South Towers lift shafts and forged crowns.
+-- Replaces four nonphysical southern monument primitives, including
+-- two WedgePart crowns; never touches northern Towers or gameplay.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
@@ -24,7 +24,7 @@ local function restore()
     entry=nil
     for _,c in ipairs(current.connections) do c:Disconnect() end
     for part,alpha in pairs(current.natives) do
-        if part.Parent==current.owner and part:IsA("Part")
+        if part.Parent==current.owner and part:IsA("BasePart")
             and part.Anchored and not part.CanCollide
             and not part.CanTouch and not part.CanQuery
             and part.Transparency==1 then
