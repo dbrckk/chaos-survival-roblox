@@ -27,6 +27,7 @@ local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSout
 local ApprovedSouthTowersLiftTwinsMeshKit = require(script.Parent.ApprovedSouthTowersLiftTwinsMeshKit)
 local ApprovedSouthTowersFinishingMeshKit = require(script.Parent.ApprovedSouthTowersFinishingMeshKit)
 local ApprovedSouthCrossroadsExchangeMeshKit = require(script.Parent.ApprovedSouthCrossroadsExchangeMeshKit)
+local ApprovedSouthOrbitalFinishingMeshKit = require(script.Parent.ApprovedSouthOrbitalFinishingMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1499,6 +1500,25 @@ task.spawn(function()
             ~=crossroadsSouthReplaced then
             player:SetAttribute("LocalSouthCrossroadsPrimitivesReplaced",
                 crossroadsSouthReplaced)
+        end
+        -- South Orbital: keep the 14-arc approved torus independent.
+        -- Replace its six remaining cosmetic native Parts with sphere,
+        -- forged pylons, original clamp and 3D foundation only when valid.
+        ApprovedSouthOrbitalFinishingMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local orbitalFinishingCount=ApprovedSouthOrbitalFinishingMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthOrbitalFinishingCount")
+            ~=orbitalFinishingCount then
+            player:SetAttribute("LocalApprovedSouthOrbitalFinishingCount",
+                orbitalFinishingCount)
+        end
+        local orbitalFinishingReplaced=
+            ApprovedSouthOrbitalFinishingMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthOrbitalFinishingPrimitivesReplaced")
+            ~=orbitalFinishingReplaced then
+            player:SetAttribute("LocalSouthOrbitalFinishingPrimitivesReplaced",
+                orbitalFinishingReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
