@@ -1,0 +1,78 @@
+name: One-time Original South Crossroads Exchange 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-south-crossroads-exchange-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-south-crossroads-exchange-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate full Crossroads southern freight sculpture OBJ glTF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_south_crossroads_exchange.py --output "$RUNNER_TEMP/crossroads.obj" > "$RUNNER_TEMP/crossroads.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/crossroads.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/crossroads.gltf" > "$RUNNER_TEMP/crossroads-gltf.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,hashlib,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          obj=(root/'crossroads.obj').read_bytes()
+          m=json.loads((root/'crossroads.json').read_text())
+          g=json.loads((root/'crossroads.gltf').read_text())
+          assert m['asset']=='south_crossroads_forged_exchange'
+          assert hashlib.sha256(obj).hexdigest()==m['sha256']
+          assert 200<=m['groups']<=1250 and 4500<=m['triangles']<=22000
+          palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          assert set(m['materials'])==palette
+          x,y,z=m['bounds']
+          assert 18.05<=x<=18.9 and 16.6<=y<=17.8 and 4.35<=z<=4.85
+          assert all(abs(v)<.85 for v in m['center'])
+          for name in (b'IndustrialCrossroadsArmoredPlatform',
+                       b'ForgedDodecagonFreightControlShaft',
+                       b'CantileverForgedLongChord',
+                       b'PressedFreightCantileverNose',
+                       b'CastTwelveSidedFreightCounterweight',
+                       b'ArticulatedSevenStudRailSignal',
+                       b'ArchitectedCageCabinCore',
+                       b'InsetCommandCabinWindow'):
+              assert name in obj,name
+          assert g['asset']['version']=='2.0'
+          assert {v['name'] for v in g['materials']}==palette
+          prim=g['meshes'][0]['primitives']
+          assert len(prim)==7
+          assert sum(g['accessors'][v['attributes']['POSITION']]['count']//3 for v in prim)==m['triangles']
+          assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}<=set(v['attributes']) for v in prim)
+          buf=g['buffers'][0]
+          assert len(base64.b64decode(buf['uri'].split(',',1)[1],validate=True))==buf['byteLength']
+          src=Path('src/server/MapBuilder.lua').read_text()
+          for name in ('"Foundation"','"FloorInset"','"ExchangeCore"',
+                       '"WestFork"','"EastFork"','"WestFreightArm"',
+                       '"EastFreightArm"','"WestCounterweight"',
+                       '"EastCounterweight"','"WestSignal"',
+                       '"EastSignal"','"CentralSwitchCab"','"CabWindow"'):
+              assert name in src,name
+          print('SOURCE PASS original South Crossroads',m['triangles'],m['bounds'],m['sha256'])
+          print('NO ROBLOX PLACE PUBLICATION')
+          PY
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: south_crossroads_forged_exchange
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
