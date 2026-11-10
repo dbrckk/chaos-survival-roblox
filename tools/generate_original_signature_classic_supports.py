@@ -160,7 +160,7 @@ def telemetry_panel(art):
     for side in (-1,1):
         for y in (33.79,36.16):
             rod(art,"RetainedStainlessPanelBolt%s_%s"%(side,y),"ALLOY",
-                (side*2.20,y,-2.570),(side*2.20,y,-2.614),.075,8)
+                (side*2.20,y,-2.565),(side*2.20,y,-2.695),.075,8)
 
 
 def export(path: Path):
