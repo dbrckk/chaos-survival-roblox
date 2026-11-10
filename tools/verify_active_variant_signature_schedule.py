@@ -49,7 +49,8 @@ for variant,(path,asset,early,normal) in SOURCES.items():
     assert "PremiumActiveVariantImportSchedule" in source
     assert f'ActiveSignatureSchedule.waitFor("{variant}",{early},{normal})' in source
     assert f"task.wait({normal})" not in source
-    assert source.count("AssetService.LoadAssetAsync")==1
+    assert source.count("GlobalApprovedImportGate.load")==1
+    assert 'require("./PremiumApprovedAssetImportGate")' in source
     assert source.count("task.spawn(function()")==1
     assert "OriginalMeshScenery.sanitize(raw)" in source
     assert 'holder:SetAttribute("OwnerVerified",true)' in source or (
