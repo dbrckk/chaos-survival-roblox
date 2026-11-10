@@ -730,6 +730,38 @@
       "source": "tools/generate_original_south_classic_observatory.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42849092927
+    },
+    {
+      "name": "exterior_ridges_nw",
+      "asset_id": "123836720232695",
+      "moderation": "Approved",
+      "source": "tools/generate_original_exterior_ridges.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42854203855
+    },
+    {
+      "name": "exterior_ridges_ne",
+      "asset_id": "83853948389204",
+      "moderation": "Approved",
+      "source": "tools/generate_original_exterior_ridges.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42854203855
+    },
+    {
+      "name": "exterior_ridges_sw",
+      "asset_id": "108491064314671",
+      "moderation": "Approved",
+      "source": "tools/generate_original_exterior_ridges.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42854203855
+    },
+    {
+      "name": "exterior_ridges_se",
+      "asset_id": "83023096720529",
+      "moderation": "Approved",
+      "source": "tools/generate_original_exterior_ridges.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42854203855
     }
   ]
 }

@@ -106,6 +106,7 @@ VisualBudgetRules.LocalFolders = {
     -- each), controlled by existing LOD and pressure on shared Android
     -- 440/680/900 Part census. Low 0, Medium 2, High touch 3 / PC 4.
     "ApprovedExteriorTowerMeshesLocal",
+    "ApprovedExteriorRidgesLocal",
     -- Seven genuine toroidal MeshParts replace SIXTEEN Orbital native
     -- rectangular ReactorArcs in one visual swap. Shared existing
     -- Android 440/680/900 census. Low/pressure fallback retains natives.
