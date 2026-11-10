@@ -114,6 +114,7 @@ VisualBudgetRules.LocalFolders = {
     -- replace 14 nonphysical ObservationArc primitives, under SAME
     -- shared mobile visual budget and camera-pressure gating.
     "ApprovedSouthOrbitalObservationTorusLocal",
+    "ApprovedSouthTowersSkytransferLocal",
     -- One original Towers forged bridge Model (seven genuine MeshParts)
     -- replaces exactly two decorative native slabs in a nonphysical
     -- outboard monument. Existing 440/680/900 Android/PC census owns it.
