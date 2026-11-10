@@ -2,6 +2,9 @@
 -- Unlike nominal task.wait slots, this gate bounds actual overlapping
 -- AssetService.LoadAssetAsync calls from these eight specific owners.
 -- Does not intercept gameplay, other independent asset owners, or clients.
+-- Keep the stricter single South-source permit, while sharing the
+-- global two-import budget with all other premium owner-approved art.
+local GlobalApprovedImportGate=require("./PremiumApprovedAssetImportGate")
 local Gate={}
 local busy=false
 local waiting=0
@@ -21,7 +24,7 @@ function Gate.load(service,assetId)
     peak=math.max(peak,1)
     -- The engine may yield or throw. The permit must be released even on
     -- Roblox HTTP/permission errors, so no later approved art is stranded.
-    local ok,result=pcall(service.LoadAssetAsync,service,assetId)
+    local ok,result=pcall(GlobalApprovedImportGate.load,service,assetId)
     if ok then completed+=1 else failures+=1 end
     busy=false
     if not ok then error(result,0) end
