@@ -1,0 +1,27 @@
+name: Original Towers corner machinery source 3D regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_variant_towers_machinery.py
+      - tools/verify_variant_towers_machinery_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-towers-machinery-source-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_variant_towers_machinery.py
+      - tools/verify_variant_towers_machinery_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-towers-machinery-source-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify sculpted Towers source and genuine glTF
+        run: python3 tools/verify_variant_towers_machinery_source.py
