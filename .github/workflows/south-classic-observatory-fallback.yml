@@ -1,0 +1,33 @@
+name: South Classic original 3D runtime regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedSouthClassicObservatoryMeshKit.lua
+      - src/server/PremiumSouthClassicObservatoryAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_harbor_drydock_fallback.py
+      - .github/workflows/south-classic-observatory-fallback.yml
+  pull_request:
+    paths:
+      - src/client/ApprovedSouthClassicObservatoryMeshKit.lua
+      - src/server/PremiumSouthClassicObservatoryAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_harbor_drydock_fallback.py
+      - .github/workflows/south-classic-observatory-fallback.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all 14 Classic native targets and safe rollback
+        run: python3 tools/verify_south_harbor_drydock_fallback.py
