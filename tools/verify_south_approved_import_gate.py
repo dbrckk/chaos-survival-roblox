@@ -29,10 +29,10 @@ assert 'function Gate.snapshot()' in gate
 assert "busy=true" in gate and "busy=false" in gate
 assert 'require("./PremiumApprovedAssetImportGate")' in gate
 assert "local ok,result=pcall(GlobalApprovedImportGate.load,service,assetId)" in gate
-assert gate.index("release()\\n    if not ok then") > gate.index(
+assert gate.index("release()\n    if not ok then") > gate.index(
     "local ok,result=pcall(GlobalApprovedImportGate.load,service,assetId)")
 assert "pcall(service.LoadAssetAsync" not in gate
-assert gate.index("release()\\n    if not ok then")<gate.index(
+assert gate.index("release()\n    if not ok then")<gate.index(
     "if not ok then error(result,0) end")
 assert "function Gate.snapshot()" in gate
 assert "InFlight=busy and 1 or 0" in gate
