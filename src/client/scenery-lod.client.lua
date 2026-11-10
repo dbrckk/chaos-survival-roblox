@@ -21,6 +21,7 @@ local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArm
 local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimeterStructuresMeshKit)
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
+local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
@@ -1296,6 +1297,24 @@ task.spawn(function()
             ~=nativeTowersReplaced then
             player:SetAttribute("LocalExteriorPrimitiveTowerPartsReplaced",
                 nativeTowersReplaced)
+        end
+        -- Four source-authored exterior corner sculptural ridges.
+        -- Each approved Model replaces three WedgeParts with real art,
+        -- sharing the existing LOD sampler and mobile pressure budget.
+        ApprovedExteriorRidgeMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local ridgesModels=ApprovedExteriorRidgeMeshKit.count()
+        if player:GetAttribute("LocalApprovedExteriorRidgeModelCount")
+            ~=ridgesModels then
+            player:SetAttribute("LocalApprovedExteriorRidgeModelCount",
+                ridgesModels)
+        end
+        local ridgesHidden=ApprovedExteriorRidgeMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalExteriorRidgePrimitivesReplaced")
+            ~=ridgesHidden then
+            player:SetAttribute("LocalExteriorRidgePrimitivesReplaced",
+                ridgesHidden)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
