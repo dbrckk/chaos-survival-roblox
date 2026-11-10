@@ -786,6 +786,22 @@
       "source": "tools/generate_original_variant_classic_broadcast_fin.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42866820903
+    },
+    {
+      "name": "variant_orbital_sculpted_node",
+      "asset_id": "104654294187035",
+      "moderation": "Approved",
+      "source": "tools/generate_original_variant_orbital_landmarks.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42869295978
+    },
+    {
+      "name": "variant_orbital_trussed_strut",
+      "asset_id": "138666009076890",
+      "moderation": "Approved",
+      "source": "tools/generate_original_variant_orbital_landmarks.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42869295978
     }
   ]
 }
