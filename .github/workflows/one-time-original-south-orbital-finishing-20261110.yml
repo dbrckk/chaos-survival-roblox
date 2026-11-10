@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/one-time-original-south-orbital-finishing-20261110.yml
+      - tools/generate_original_south_orbital_finishing.py
 permissions:
   contents: read
 concurrency:
