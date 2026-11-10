@@ -778,6 +778,14 @@
       "source": "tools/generate_original_variant_crossroads_gantry.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42864120791
+    },
+    {
+      "name": "variant_classic_sculpted_broadcast_fin",
+      "asset_id": "123049626693705",
+      "moderation": "Approved",
+      "source": "tools/generate_original_variant_classic_broadcast_fin.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42866820903
     }
   ]
 }

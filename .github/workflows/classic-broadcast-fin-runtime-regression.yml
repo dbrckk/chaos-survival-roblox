@@ -1,0 +1,35 @@
+name: Approved Classic broadcast fin runtime regression
+on:
+  pull_request:
+    paths:
+      - src/client/ApprovedClassicBroadcastFinMeshKit.lua
+      - src/server/PremiumClassicBroadcastFinAssets.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/server/MapBuilder.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/generate_original_variant_classic_broadcast_fin.py
+      - tools/verify_variant_classic_broadcast_fin_runtime.py
+      - .github/workflows/classic-broadcast-fin-runtime-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedClassicBroadcastFinMeshKit.lua
+      - src/server/PremiumClassicBroadcastFinAssets.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/server/MapBuilder.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/generate_original_variant_classic_broadcast_fin.py
+      - tools/verify_variant_classic_broadcast_fin_runtime.py
+      - .github/workflows/classic-broadcast-fin-runtime-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuine imported Classic source and safe reversible four-fin LOD
+        run: python3 tools/verify_variant_classic_broadcast_fin_runtime.py
