@@ -57,6 +57,7 @@ local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariant
 local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
+local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -224,6 +225,9 @@ if not isStudioE2E then
     -- Approved creator-owned true bridge sculpture for the nonphysical
     -- Towers horizon signature only; Skyrail remains gameplay-owned.
     task.defer(PremiumTowersSignatureBridgeAssets.start)
+    -- Original approved seven-material Crossroads interchange sculpture.
+    -- Optional delayed art; the switchyard and bot route remain physical.
+    task.defer(PremiumCrossroadsSignatureInterchangeAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

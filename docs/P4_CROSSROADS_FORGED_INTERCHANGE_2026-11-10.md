@@ -1,5 +1,8 @@
 # P4 — Échangeur à deux étages sculpté pour Crossroads
 
+**Actualisation intégrée — 10 novembre 2026.** L'action GitHub #42778699782 a validé l'OBJ/glTF original avec **4 356 triangles**, sept groupes de matériaux et limites source **47,68 × 11,73404 × 6,76 studs**. Roblox a réellement créé le Model `96622579843060` (**Moderation: Approved**). Le chargeur serveur et le kit client sont maintenant branchés en source pour un remplacement atomique des quatre primitives. Le texte ci-dessous présente aussi l'étape de fabrication antérieure ; aucun test moteur ni publication de Place n'est revendiqué.
+
+
 10 novembre 2026. La cible est **la mégastructure décorative au nord de Crossroads**, et non les passerelles, rails et sols jouables.
 
 Dans `src/server/MapBuilder.lua`, `addArenaSignatureMegastructure` instancie `LowerExchange` (Part 42 × 2 × 6 studs, position locale 0,29,0), `UpperExchange` (Part 48 × 1,3 × 5,4 ; 0,36,5,0), et `CantileverWest/East` (WedgePart 11 × 4 × 7 ; ±18,3,38,0). Les quatre masses forment encore une architecture trop rectangulaire. Les deux jambes de 34 studs, les longerons inclinés, le Switchboard et l'antenne SignalPylon/SignalCrown sont hors du lot afin de conserver identité et lisibilité.

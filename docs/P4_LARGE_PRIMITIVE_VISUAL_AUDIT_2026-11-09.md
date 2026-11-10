@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Crossroads — lot du 10 novembre 2026 :** `LowerExchange`, `UpperExchange`, `CantileverWest` et `CantileverEast` de la vraie `ArenaSignatureMegastructure` Crossroads sont désormais éligibles à **un unique modèle 3D authentique**, approuvé sous l'ID `96622579843060` (sept MeshParts, 4 356 triangles). L'échangeur ne touche ni les chemins jouables ni les signaux. Ce sont **quatre primitives-source conditionnellement remplaçables**, dans une famille séparée des stations périphériques et des tours extérieures. Aucun pourcentage global du jeu n'est déduit.
+
+
 **Nouveau lot Towers (10 novembre 2026) :** les deux grandes masses primitives `OverheadServiceBridge` et `LowerTruss` du `ArenaSignatureMegastructure` Towers disposent maintenant d'un remplacement source original sculpté, Model `126298311664881` et sept MeshParts réels. Le montage est conditionnel, réversible et ne concerne **pas les ponts Skyrail jouables**. Deux pièces-source supplémentaires sont ciblées dans **une autre famille que les stations périphériques** ; le pourcentage station 16/23 = 69,57 % n'est pas modifié et ne décrit toujours pas l'ensemble des décors.
 
 

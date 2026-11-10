@@ -634,6 +634,14 @@
       "source": "tools/generate_original_signature_towers_bridge.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42777274284
+    },
+    {
+      "name": "signature_crossroads_forged_interchange",
+      "asset_id": "96622579843060",
+      "moderation": "Approved",
+      "source": "tools/generate_original_signature_crossroads_interchange.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42778699782
     }
   ]
 }

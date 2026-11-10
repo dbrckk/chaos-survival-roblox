@@ -23,6 +23,7 @@ local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerime
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1323,6 +1324,26 @@ task.spawn(function()
             ~=nativeBridgeSlabs then
             player:SetAttribute("LocalTowersSignaturePrimitiveSlabsReplaced",
                 nativeBridgeSlabs)
+        end
+        -- Original approved Crossroads double-deck interchange: one truly
+        -- sculpted seven-MeshPart source replaces four nonphysical native
+        -- skyline slabs/cantilevers atomically. No extra client loop.
+        ApprovedCrossroadsSignatureInterchangeMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local genuineCrossroadsInterchanges=
+            ApprovedCrossroadsSignatureInterchangeMeshKit.count()
+        if player:GetAttribute("LocalApprovedCrossroadsInterchangeCount")
+            ~=genuineCrossroadsInterchanges then
+            player:SetAttribute("LocalApprovedCrossroadsInterchangeCount",
+                genuineCrossroadsInterchanges)
+        end
+        local crossroadsPrimitives=
+            ApprovedCrossroadsSignatureInterchangeMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalCrossroadsInterchangePrimitivePartsReplaced")
+            ~=crossroadsPrimitives then
+            player:SetAttribute("LocalCrossroadsInterchangePrimitivePartsReplaced",
+                crossroadsPrimitives)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
