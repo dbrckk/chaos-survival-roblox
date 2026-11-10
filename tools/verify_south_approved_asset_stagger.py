@@ -42,7 +42,9 @@ for filename,variant,model_id,early,fallback in ITEMS:
     assert f'ActiveSignatureSchedule.waitFor("{variant}",{early},{fallback})' in source
     assert 'task.wait(49)' not in source
     assert source.count('task.spawn(function()')==1
-    assert source.count('AssetService.LoadAssetAsync')==1
+    assert source.count('SouthImportGate.load')==1
+    assert 'require("./PremiumSouthApprovedImportGate")' in source
+    assert 'AssetService.LoadAssetAsync' not in source
     assert 'OriginalMeshScenery.sanitize(raw)' in source
     assert 'if count~=7 then return false end' in source
     assert 'for attempt=1,3 do' in source
