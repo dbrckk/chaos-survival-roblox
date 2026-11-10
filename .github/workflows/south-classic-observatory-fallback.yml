@@ -9,7 +9,7 @@ on:
       - src/client/scenery-lod.client.lua
       - src/shared/VisualBudgetRules.lua
       - assets/source/roblox-asset-registry.json
-      - tools/verify_south_harbor_drydock_fallback.py
+      - tools/verify_south_classic_observatory_fallback.py
       - .github/workflows/south-classic-observatory-fallback.yml
   pull_request:
     paths:
@@ -19,7 +19,7 @@ on:
       - src/client/scenery-lod.client.lua
       - src/shared/VisualBudgetRules.lua
       - assets/source/roblox-asset-registry.json
-      - tools/verify_south_harbor_drydock_fallback.py
+      - tools/verify_south_classic_observatory_fallback.py
       - .github/workflows/south-classic-observatory-fallback.yml
 permissions:
   contents: read
@@ -30,4 +30,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check all 14 Classic native targets and safe rollback
-        run: python3 tools/verify_south_harbor_drydock_fallback.py
+        run: python3 tools/verify_south_classic_observatory_fallback.py
