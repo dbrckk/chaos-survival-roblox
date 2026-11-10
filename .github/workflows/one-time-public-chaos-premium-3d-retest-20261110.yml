@@ -1,3 +1,8 @@
+# Owner-requested public Chaos Survival release (retry after genuine engine gates).
+# Source repairs on this exact candidate: README 85->86 actual specs and
+# real French Skyrail/Harbor instructions, matching the currently shipped
+# gameplay mechanics. Build + SEVEN real Roblox Cloud suites must both pass
+# before ANY existing public Place POST. Never bypass failure.
 # Owner-directed retry after the guarded release gate found and stopped on
 # (1) Luau 200-register overflow in the real round script, and
 # (2) a Harbor mechanic HUD hint exceeding its existing 96-char contract.
