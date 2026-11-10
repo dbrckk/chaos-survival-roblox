@@ -1,0 +1,208 @@
+# Owner-directed PUBLIC update of existing Chaos Survival.
+# Trigger ONLY on this workflow's addition to the main branch.
+# Exact-SHA full Build Validation AND seven-shard REAL Roblox Open Cloud
+# engine suite must complete successfully before existing safeguarded
+# production-target publisher is dispatched.
+# Engine release target: Universe 10771083668, Place 95351659174730.
+# No autonomous Place POST or release certificate attestation faked here.
+name: One-time Public Chaos Survival Premium 3D Update 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-public-chaos-premium-3d-20261110.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-public-premium-3d-release-20261110
+  cancel-in-progress: false
+
+jobs:
+  validate-and-publish:
+    if: github.repository == 'dbrckk/chaos-survival-roblox' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 135
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify full current premium 3D source and 86 registered real engine specs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/verify_premium_landmark_residency_pulse.py
+          python3 tools/verify_premium_approved_asset_import_queue.py
+          python3 tools/verify_premium_asset_import_observability.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          assert not Path('src/shared/VisualStagingStamp.lua').exists(), 'Staging source must never ship'
+          engine = {p.as_posix() for p in Path('tests/engine').glob('*.spec.luau')}
+          cloud = Path('.github/workflows/roblox-cloud-test.yml').read_text()
+          listed = re.findall(r'"(tests/engine/[^"*]+\.spec\.luau)"', cloud)
+          assert len(engine)>=86, ('Missing real engine specs',len(engine))
+          assert set(listed)==engine, ('Missing engine suites',sorted(engine-set(listed)),
+                                      'Extras',sorted(set(listed)-engine))
+          assert len(listed)==len(set(listed)), 'Duplicate cloud engine spec'
+          assert 'tests/engine/premium-import-diagnostics.spec.luau' in engine
+          assert 'tests/engine/game-analytics.spec.luau' in engine
+          print('Release source ready:',len(engine),'real engine specs assigned once')
+          PY
+      - name: Validate exact source and dispatch guarded existing workflows
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ['REPO']
+          sha = os.environ['CANDIDATE_SHA']
+          root = 'https://api.github.com/repos/' + repo
+          headers = {
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'chaos-v3-owner-public-update',
+          }
+
+          def api(path, payload=None):
+              data = json.dumps(payload).encode('utf-8') if payload is not None else None
+              request = urllib.request.Request(
+                  root + path,
+                  data=data,
+                  method='POST' if payload is not None else 'GET',
+                  headers={**headers, 'Content-Type': 'application/json'},
+              )
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(request, timeout=40) as response:
+                          if payload is not None:
+                              if response.status != 204:
+                                  raise RuntimeError('Invalid workflow dispatch HTTP ' + str(response.status))
+                              return {}
+                          return json.load(response)
+                  except (urllib.error.URLError, TimeoutError):
+                      if attempt == 3:
+                          raise
+                      time.sleep(3 * (attempt + 1))
+
+          def exact_main():
+              actual = api('/git/ref/heads/main')['object']['sha']
+              if actual != sha:
+                  raise SystemExit('Main SHA changed; refusing stale release ' + sha)
+
+          exact_main()
+          checks = {
+              'Build Validation': 'ci.yml',
+              'Roblox Open Cloud Engine Tests': 'roblox-cloud-test.yml',
+          }
+          for name, file in checks.items():
+              exact_main()
+              api('/actions/workflows/' + file + '/dispatches', {'ref': 'main'})
+              print('MILESTONE CHECK STARTED:', name, sha, flush=True)
+              time.sleep(3)
+
+          for attempt in range(420):
+              exact_main()
+              payload = api('/actions/runs?head_sha=' + sha + '&per_page=100')
+              observed = {}
+              for run in payload.get('workflow_runs', []):
+                  if (run.get('head_sha') != sha
+                      or run.get('head_branch') != 'main'
+                      or run.get('event') != 'workflow_dispatch'
+                      or run.get('name') not in checks):
+                      continue
+                  prior = observed.get(run['name'])
+                  if prior is None or run['id'] > prior['id']:
+                      observed[run['name']] = run
+              status = {
+                  name: (observed.get(name) or {}).get('status', 'waiting')
+                        + '/' + str((observed.get(name) or {}).get('conclusion'))
+                  for name in checks
+              }
+              if attempt % 4 == 0:
+                  print('P4 PUBLIC MILESTONE:', status, flush=True)
+              if any(
+                  observed.get(name, {}).get('status') == 'completed'
+                  and observed[name].get('conclusion') != 'success'
+                  for name in checks
+              ):
+                  raise SystemExit('Pre-publication validation failed: ' + str(status))
+              if all(
+                  observed.get(name, {}).get('status') == 'completed'
+                  and observed[name].get('conclusion') == 'success'
+                  for name in checks
+              ):
+                  print('Both real-engine and build validations GREEN for', sha, flush=True)
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit('Pre-publication tests timed out; NOT published.')
+
+          # Use the existing guarded public-playtest publisher, not a
+          # second copy of publication logic or an unguarded API call.
+          exact_main()
+          publisher = 'publish-existing-public-playtest.yml'
+          publisher_name = 'Publish Existing Chaos Survival (Public Playtest Update)'
+          previous_ids = {
+              run['id'] for run in api(
+                  '/actions/workflows/' + publisher + '/runs?per_page=40'
+              ).get('workflow_runs', [])
+          }
+          api('/actions/workflows/' + publisher + '/dispatches', {
+              'ref': 'main',
+              'inputs': {
+                  'confirm': 'PUBLISH_EXISTING_10771083668',
+                  'acknowledge_untested': 'true',
+              },
+          })
+          print('EXISTING PUBLIC PLAYTEST PUBLISHER dispatched for', sha, flush=True)
+
+          for attempt in range(96):
+              if attempt % 3 == 0:
+                  exact_main()
+              runs = api('/actions/workflows/' + publisher + '/runs?per_page=40')
+              fresh = [
+                  run for run in runs.get('workflow_runs', [])
+                  if run.get('id') not in previous_ids
+                  and run.get('head_sha') == sha
+                  and run.get('head_branch') == 'main'
+                  and run.get('name') == publisher_name
+                  and run.get('event') == 'workflow_dispatch'
+              ]
+              if fresh:
+                  run = max(fresh, key=lambda item: item['id'])
+                  if attempt % 3 == 0:
+                      print('PUBLISH STATUS:', run['html_url'],
+                            run['status'], run.get('conclusion'), flush=True)
+                  if run['status'] == 'completed':
+                      if run.get('conclusion') != 'success':
+                          raise SystemExit('Publisher failed: ' + run['html_url'])
+                      exact_main()
+                      print('PUBLIC PLACE UPDATED: Universe 10771083668',
+                            'Place 95351659174730', flush=True)
+                      print('SOURCE SHA:', sha, flush=True)
+                      print('PLAY:', 'https://www.roblox.com/games/95351659174730/Chaos-Survival', flush=True)
+                      print('EVIDENCE:', run['html_url'], flush=True)
+                      with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf8') as report:
+                          report.write('### Premium 3D public Chaos Survival update confirmed\n\n')
+                          report.write('- SHA: `' + sha + '`\n')
+                          report.write('- [Roblox game](https://www.roblox.com/games/95351659174730/Chaos-Survival)\n')
+                          report.write('- [Verified publisher run](' + run['html_url'] + ')\n')
+                          report.write('- **Android/Studio physical-device certification still pending.**\n')
+                      break
+              time.sleep(15)
+          else:
+              raise SystemExit('Publisher outcome unknown; inspect Actions before any retry.')
+          PY
