@@ -6,6 +6,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Kit = {}
 local ID = 95543769387033
@@ -56,7 +57,7 @@ function Kit.start()
         -- columns and the Harbor sea have loaded before this optional art.
         task.wait(104)
         for attempt=1,3 do
-            local ok,raw=pcall(AssetService.LoadAssetAsync,
+            local ok,raw=pcall(GlobalApprovedImportGate.load,
                 AssetService,ID)
             if ok and raw and raw:IsA("Model") then
                 local clean=OriginalMeshScenery.sanitize(raw)

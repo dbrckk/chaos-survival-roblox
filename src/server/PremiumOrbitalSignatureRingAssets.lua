@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Assets={}
 local APPROVED_ID=125070862497818
@@ -45,7 +46,7 @@ function Assets.start()
         task.wait(42)
         if folder:FindFirstChild("ReactorRing") then return end
         for attempt=1,3 do
-            local ok,raw=pcall(AssetService.LoadAssetAsync,
+            local ok,raw=pcall(GlobalApprovedImportGate.load,
                 AssetService,APPROVED_ID)
             if ok and raw and raw:IsA("Model") then
                 local clean=OriginalMeshScenery.sanitize(raw)

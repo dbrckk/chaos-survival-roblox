@@ -6,6 +6,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Kit = {}
 local ID = 73237902371094
@@ -67,7 +68,7 @@ function Kit.start()
         -- always load before this optional skyline landmark sculpture.
         task.wait(96)
         for attempt=1,3 do
-            local ok,raw=pcall(AssetService.LoadAssetAsync,AssetService,ID)
+            local ok,raw=pcall(GlobalApprovedImportGate.load,AssetService,ID)
             if ok and raw and raw:IsA("Model") then
                 local safe=OriginalMeshScenery.sanitize(raw)
                 raw:Destroy()

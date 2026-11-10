@@ -23,7 +23,8 @@ assert 'local LOAD_STAGGER = {36,36,36,36}' in LOADER
 assert 'for index, entry in ipairs(SOURCES) do' in LOADER
 assert 'task.wait(LOAD_STAGGER[index])' in LOADER
 assert 'task.wait(145)' not in LOADER
-assert LOADER.count('AssetService.LoadAssetAsync')==1
+assert LOADER.count('GlobalApprovedImportGate.load')==1
+assert 'require("./PremiumApprovedAssetImportGate")' in LOADER
 assert LOADER.count('task.spawn')==1
 assert 'task.wait(5)' in LOADER
 assert 'for attempt = 1, 3 do' in LOADER

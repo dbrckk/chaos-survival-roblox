@@ -20,7 +20,9 @@ assert len(set(items))==8
 assert "local busy=false" in gate
 assert "while busy do task.wait(.2) end" in gate
 assert "busy=true" in gate and "busy=false" in gate
-assert "local ok,result=pcall(service.LoadAssetAsync,service,assetId)" in gate
+assert 'require("./PremiumApprovedAssetImportGate")' in gate
+assert "local ok,result=pcall(GlobalApprovedImportGate.load,service,assetId)" in gate
+assert "pcall(service.LoadAssetAsync" not in gate
 assert gate.index("busy=false",gate.index("local ok,result=pcall"))<gate.index(
     "if not ok then error(result,0) end")
 assert "function Gate.snapshot()" in gate

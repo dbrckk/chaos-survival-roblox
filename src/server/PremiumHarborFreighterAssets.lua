@@ -5,6 +5,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 local Kit = {}
 local ASSET_ID = 128820723471019
 local started = false
@@ -25,7 +26,7 @@ function Kit.start()
         task.wait(66)
         for attempt = 1, 3 do
             local ok, imported = pcall(
-                AssetService.LoadAssetAsync, AssetService, ASSET_ID)
+                GlobalApprovedImportGate.load, AssetService, ASSET_ID)
             if ok and imported and imported:IsA("Model") then
                 local clean = OriginalMeshScenery.sanitize(imported)
                 imported:Destroy()

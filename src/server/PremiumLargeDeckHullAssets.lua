@@ -3,6 +3,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Kit = {}
 local APPROVED_HULL = 125929150866282
@@ -29,7 +30,7 @@ function Kit.start()
         task.wait(98)
         for attempt = 1, 3 do
             local ok, raw = pcall(
-                AssetService.LoadAssetAsync, AssetService, APPROVED_HULL)
+                GlobalApprovedImportGate.load, AssetService, APPROVED_HULL)
             if ok and raw and raw:IsA("Model") then
                 local safe = OriginalMeshScenery.sanitize(raw)
                 raw:Destroy()

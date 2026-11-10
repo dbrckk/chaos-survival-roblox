@@ -1,0 +1,29 @@
+name: Global premium 3D import queue and fallback regression
+on:
+  pull_request:
+    paths:
+      - src/server/PremiumApprovedAssetImportGate.lua
+      - src/server/PremiumSouthApprovedImportGate.lua
+      - src/server/Premium*Assets.lua
+      - tools/verify_premium_approved_asset_import_queue.py
+      - .github/workflows/premium-approved-global-import-gate-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/server/PremiumApprovedAssetImportGate.lua
+      - src/server/PremiumSouthApprovedImportGate.lua
+      - src/server/Premium*Assets.lua
+      - tools/verify_premium_approved_asset_import_queue.py
+      - .github/workflows/premium-approved-global-import-gate-regression.yml
+permissions:
+  contents: read
+jobs:
+  queue-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert all 46 premium loaders use one FIFO queue with two permits
+        run: python3 tools/verify_premium_approved_asset_import_queue.py
+      - name: Assert all eight South sources use nested one-permit gate
+        run: python3 tools/verify_south_approved_import_gate.py

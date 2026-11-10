@@ -33,7 +33,8 @@ assert 'if n~=7 then return nil end' in CLIENT
 assert '#meshParts~=7' in CLIENT
 assert 'task.wait(92)' in SERVER
 assert 'for attempt=1,3 do' in SERVER
-assert 'AssetService.LoadAssetAsync' in SERVER
+assert 'GlobalApprovedImportGate.load' in SERVER
+assert 'require("./PremiumApprovedAssetImportGate")' in SERVER
 assert 'source:GetAttribute("OriginalCrossroadsEntrancePortal3D")~=true' in CLIENT
 assert 'source:GetAttribute("Original3DAssetId")~=ID' in CLIENT
 assert 'source:GetAttribute("OwnerVerified")~=true' in CLIENT

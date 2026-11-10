@@ -7,6 +7,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Kit={}
 local ID=97498534364335
@@ -59,7 +60,7 @@ function Kit.start()
         -- second optional 3D skyline material model.
         task.wait(125)
         for attempt=1,3 do
-            local ok,raw=pcall(AssetService.LoadAssetAsync,
+            local ok,raw=pcall(GlobalApprovedImportGate.load,
                 AssetService,ID)
             if ok and raw and raw:IsA("Model") then
                 local clean=OriginalMeshScenery.sanitize(raw)
