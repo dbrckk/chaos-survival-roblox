@@ -227,7 +227,7 @@ describe("Core localization", function()
             "Four ascending routes • reach the bridges from the central hub"
         )
         expect(CoreLocalization.arenaMechanicHint("fr-fr", "Towers", "fallback")).toBe(
-            "Monte les paliers indiqués ; les pads cyan aident à prendre de la hauteur"
+            "Monte avec les pads cyan ; 3 ponts Skyrail différents donnent un élan bonus"
         )
         expect(CoreLocalization.arenaMechanicName("fr-fr", "Orbital", "fallback")).toBe(
             "BOOSTERS ORBITAUX"
@@ -257,7 +257,7 @@ describe("Core localization", function()
         expect(CoreLocalization.arenaMechanicHint(
             "fr-fr", "Harbor", "fallback"
         )).toBe(
-            "Les pads bleus relient les quais ; évite les balayages orange ou saute"
+            "2 pads bleus différents en 14 s donnent un transfert bonus ; évite le balayage"
         )
     end)
 
