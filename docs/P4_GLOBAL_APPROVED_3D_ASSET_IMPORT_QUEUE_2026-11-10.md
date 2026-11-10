@@ -43,3 +43,27 @@ de la file et l'absence de nouvel appel direct, mais ne prouvent
 pas le comportement réseau et le FPS en conditions réelles.
 Avant de qualifier le résultat, consulter les compteurs du serveur
 dans Studio et les mesures de FPS Android.
+
+## Mesures serveur et suppression du polling sud
+
+Le module `PremiumApprovedAssetImportGate` expose désormais des
+mesures **réelles de la file serveur** dans
+`ServerStorage.PremiumApprovedImportDiagnostics` : `InFlight`,
+`Waiting`, `PeakInFlight`, `Limit`, `Completed`, `Failed`,
+`TotalWaits`, `LastQueueWaitMs`, `MaxQueueWaitMs`,
+`LastRequestMs` et `MaxRequestMs`. Les durées utilisent
+`os.clock()`, sont arrondies en millisecondes, et ne sont pas
+transmises aux clients : elles sont consultables depuis le côté
+serveur dans Roblox Studio. Les attributs sont mis à jour lors
+d'une entrée, sortie et fin de requête sans nouvelle boucle de mesure.
+
+Le sous-verrou des huit imports sud est désormais également une file
+FIFO `BindableEvent` : les travailleurs sont réveillés quand le
+précédent leur transmet le permis. L'ancien `task.wait(.2)` en boucle
+n'est plus nécessaire. Les sauvegardes serveur, la physique, le
+système de LOD et les limites strictes (2 au total, 1 sud) sont
+inchangés.
+
+Ces compteurs mesurent la durée des appels API, pas les FPS ou la
+visibilité d'un MeshPart sur Android ; la mesure sur appareil reste
+distincte.
