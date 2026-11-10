@@ -118,6 +118,10 @@ VisualBudgetRules.LocalFolders = {
     -- genuine 3D MeshParts replacing four nonphysical Part/WedgeParts.
     -- Existing Android 440/680/900 visual census and GPU LOD govern it.
     "ApprovedCrossroadsSignatureInterchangeLocal",
+    -- Harbor creator-authenticated gantry: seven genuinely sculpted 3D
+    -- material MeshParts replace three large nonphysical primitive Parts.
+    -- Existing 440/680/900 census/pressure and LOD, no extra tick.
+    "ApprovedHarborSignatureGantryLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",

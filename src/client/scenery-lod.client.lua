@@ -24,6 +24,7 @@ local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTower
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
+local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1344,6 +1345,27 @@ task.spawn(function()
             ~=crossroadsPrimitives then
             player:SetAttribute("LocalCrossroadsInterchangePrimitivePartsReplaced",
                 crossroadsPrimitives)
+        end
+        -- P4 Harbor: authentic sculpted full-size 3D gantry replaces the
+        -- giant nonphysical beam, cab and counterweight only. Native hoists,
+        -- support legs, cargo stack and playable floor are preserved.
+        -- Existing LOD camera/pressure sampler; no new frame loop.
+        ApprovedHarborSignatureGantryMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local harborSignatureGantries=
+            ApprovedHarborSignatureGantryMeshKit.count()
+        if player:GetAttribute("LocalApprovedHarborSignatureGantryCount")
+            ~=harborSignatureGantries then
+            player:SetAttribute("LocalApprovedHarborSignatureGantryCount",
+                harborSignatureGantries)
+        end
+        local harborPrimitiveBlocks=
+            ApprovedHarborSignatureGantryMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalHarborSignaturePrimitiveBlocksReplaced")
+            ~=harborPrimitiveBlocks then
+            player:SetAttribute("LocalHarborSignaturePrimitiveBlocksReplaced",
+                harborPrimitiveBlocks)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

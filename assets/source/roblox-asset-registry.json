@@ -642,6 +642,14 @@
       "source": "tools/generate_original_signature_crossroads_interchange.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42778699782
+    },
+    {
+      "name": "signature_harbor_sculpted_gantry",
+      "asset_id": "124368710235343",
+      "moderation": "Approved",
+      "source": "tools/generate_original_signature_harbor_gantry.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42780163672
     }
   ]
 }

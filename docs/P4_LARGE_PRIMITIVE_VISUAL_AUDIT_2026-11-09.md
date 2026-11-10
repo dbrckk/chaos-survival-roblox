@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Harbor — lot du 10 novembre 2026 :** la grosse poutre `QuayCraneSpanningBeam`, le contrepoids `QuayCraneCounterweight` et la cabine `QuayControlCab` de la vraie `ArenaSignatureMegastructure` Harbor sont désormais éligibles à une **sculpture 3D originale unique** de 2 940 triangles et sept matériaux, Model Roblox créateur `124368710235343`, modération Approved. Le montage source local ne supprime aucune pièce du gameplay. Cela ajoute **trois autres primitives-source potentiellement remplacées** hors de la famille des stations périphériques. Il ne faut toujours pas présenter la couverture 16/23 des stations comme une couverture 3D de l'ensemble du jeu.
+
+
 **Crossroads — lot du 10 novembre 2026 :** `LowerExchange`, `UpperExchange`, `CantileverWest` et `CantileverEast` de la vraie `ArenaSignatureMegastructure` Crossroads sont désormais éligibles à **un unique modèle 3D authentique**, approuvé sous l'ID `96622579843060` (sept MeshParts, 4 356 triangles). L'échangeur ne touche ni les chemins jouables ni les signaux. Ce sont **quatre primitives-source conditionnellement remplaçables**, dans une famille séparée des stations périphériques et des tours extérieures. Aucun pourcentage global du jeu n'est déduit.
 
 
