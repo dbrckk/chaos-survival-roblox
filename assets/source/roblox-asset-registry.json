@@ -722,6 +722,14 @@
       "source": "tools/generate_original_south_harbor_drydock.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42847077638
+    },
+    {
+      "name": "south_classic_sculpted_observatory",
+      "asset_id": "105516749001927",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_classic_observatory.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42849092927
     }
   ]
 }

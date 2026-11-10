@@ -63,6 +63,7 @@ local PremiumSouthTowersFinishingAssets = require(script.PremiumSouthTowersFinis
 local PremiumSouthCrossroadsExchangeAssets = require(script.PremiumSouthCrossroadsExchangeAssets)
 local PremiumSouthOrbitalFinishingAssets = require(script.PremiumSouthOrbitalFinishingAssets)
 local PremiumSouthHarborDrydockAssets = require(script.PremiumSouthHarborDrydockAssets)
+local PremiumSouthClassicObservatoryAssets = require(script.PremiumSouthClassicObservatoryAssets)
 local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
 local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
 local PremiumHarborSignatureGantryAssets = require(script.PremiumHarborSignatureGantryAssets)
@@ -241,6 +242,7 @@ if not isStudioE2E then
     task.defer(PremiumSouthCrossroadsExchangeAssets.start)
     task.defer(PremiumSouthOrbitalFinishingAssets.start)
     task.defer(PremiumSouthHarborDrydockAssets.start)
+    task.defer(PremiumSouthClassicObservatoryAssets.start)
     -- Approved creator-owned true bridge sculpture for the nonphysical
     -- Towers horizon signature only; Skyrail remains gameplay-owned.
     task.defer(PremiumTowersSignatureBridgeAssets.start)
