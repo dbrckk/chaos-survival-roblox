@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local MODEL_ID=96622579843060
@@ -44,7 +45,7 @@ function Assets.start()
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
         -- Nonblocking: initial round, bots and core gameplay run first.
-        task.wait(77)
+        ActiveSignatureSchedule.waitFor("Crossroads",45,77)
         if folder:FindFirstChild("ForgedInterchange") then return end
         for attempt=1,3 do
             local ok,raw=pcall(AssetService.LoadAssetAsync,
