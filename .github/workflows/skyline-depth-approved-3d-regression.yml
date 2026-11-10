@@ -1,0 +1,31 @@
+name: Approved skyline depth sculpted mesh fallback regression
+on:
+  pull_request:
+    paths:
+      - src/client/ApprovedSkylineDepthMeshKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/MapBuilder.lua
+      - src/server/PremiumExteriorTowerAssets.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_skyline_depth_approved_fallback.py
+      - .github/workflows/skyline-depth-approved-3d-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedSkylineDepthMeshKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/MapBuilder.lua
+      - src/server/PremiumExteriorTowerAssets.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_skyline_depth_approved_fallback.py
+      - .github/workflows/skyline-depth-approved-3d-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify eight genuine source-roof candidates and Android rollback
+        run: python3 tools/verify_skyline_depth_approved_fallback.py
