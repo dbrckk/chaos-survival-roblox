@@ -40,8 +40,16 @@ for forbidden in ("task.spawn(", "Heartbeat:Connect","RenderStepped",
                                      for x in SCHEDULE.splitlines()),forbidden
 
 assert "MapBuilder.build(Config, \"Classic\", ArenaVariants)" in INIT
+# The 46 optional original 3D owners now live in a private
+# startPremiumAssets() scope to keep Luau's round-loop locals <200.
+# Their individual defers remain unchanged; the *call* to the scoped
+# bootstrap must occur strictly after the native playable map builds.
 assert INIT.index("MapBuilder.build(Config, \"Classic\", ArenaVariants)")<INIT.index(
+    "task.defer(startPremiumAssets)")
+assert INIT.index("local function startPremiumAssets()")<INIT.index(
     "task.defer(PremiumClassicSignatureObservatoryAssets.start)")
+assert INIT.index("task.defer(PremiumClassicSignatureObservatoryAssets.start)")<INIT.index(
+    "task.defer(startPremiumAssets)")
 for variant,(path,asset,early,normal) in SOURCES.items():
     source=(ROOT/"src/server"/path).read_text()
     assert asset in APPROVED,(variant,asset)
