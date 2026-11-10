@@ -1,0 +1,27 @@
+name: Original Classic forged broadcast fin 3D source regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_variant_classic_broadcast_fin.py
+      - tools/verify_variant_classic_broadcast_fin_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-classic-broadcast-fin-source-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_variant_classic_broadcast_fin.py
+      - tools/verify_variant_classic_broadcast_fin_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-classic-broadcast-fin-source-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuine source and seven UV/tangent glTF meshes
+        run: python3 tools/verify_variant_classic_broadcast_fin_source.py
