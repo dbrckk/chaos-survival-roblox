@@ -1,0 +1,27 @@
+name: Original Orbital node and strut 3D source regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_variant_orbital_landmarks.py
+      - tools/verify_variant_orbital_landmarks_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/orbital-landmarks-source-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_variant_orbital_landmarks.py
+      - tools/verify_variant_orbital_landmarks_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/orbital-landmarks-source-regression.yml
+permissions:
+  contents: read
+jobs:
+  verify-both-original-meshes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate two authentic seven-material OBJ/glTF Model sources
+        run: python3 tools/verify_variant_orbital_landmarks_source.py
