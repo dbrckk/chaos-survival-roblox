@@ -89,8 +89,8 @@ assert CLIENT.index("model.Parent=bucket")<CLIENT.index("native.Transparency=1")
 assert "source.DescendantRemoving:Connect" in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
 assert "RenderStepped" not in CLIENT and "Heartbeat" not in CLIENT
-assert "part.CanCollide=false" in CLIENT
-assert "part.CanTouch=false" in CLIENT and "part.CanQuery=false" in CLIENT
+assert "p.CanCollide=false" in CLIENT
+assert "p.CanTouch=false" in CLIENT and "p.CanQuery=false" in CLIENT
 assert "if n~=7 then return false end" in SERVER
 assert "OriginalMeshScenery.sanitize(raw)" in SERVER
 assert "OwnerVerified" in SERVER
