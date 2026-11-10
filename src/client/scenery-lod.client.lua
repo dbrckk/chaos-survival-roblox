@@ -26,6 +26,7 @@ local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTower
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
 local ApprovedClassicSignatureObservatoryMeshKit = require(script.Parent.ApprovedClassicSignatureObservatoryMeshKit)
+local ApprovedClassicForgedSupportsMeshKit = require(script.Parent.ApprovedClassicForgedSupportsMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1388,6 +1389,26 @@ task.spawn(function()
             ~=classicNativePartsReplaced then
             player:SetAttribute("LocalClassicSignaturePrimitivePartsReplaced",
                 classicNativePartsReplaced)
+        end
+        -- The seven source-authenticated Classic support MeshParts
+        -- atomically replace the five remaining massive native buttress,
+        -- inclined spar and telemetry-panel shapes. The independent
+        -- original twin-dish Model remains untouched. Existing LOD only.
+        ApprovedClassicForgedSupportsMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local classicSupports=ApprovedClassicForgedSupportsMeshKit.count()
+        if player:GetAttribute("LocalApprovedClassicForgedSupportsCount")
+            ~=classicSupports then
+            player:SetAttribute("LocalApprovedClassicForgedSupportsCount",
+                classicSupports)
+        end
+        local classicSupportNatives=
+            ApprovedClassicForgedSupportsMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalClassicSupportPrimitivePartsReplaced")
+            ~=classicSupportNatives then
+            player:SetAttribute("LocalClassicSupportPrimitivePartsReplaced",
+                classicSupportNatives)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
