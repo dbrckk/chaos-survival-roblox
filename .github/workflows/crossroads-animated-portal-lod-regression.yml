@@ -1,0 +1,27 @@
+name: Crossroads animated gate original 3D visibility regression
+on:
+  pull_request:
+    paths:
+      - src/client/ApprovedCrossroadsEntrancePortalMeshKit.lua
+      - src/client/arena-identity-motion.client.lua
+      - src/shared/ArenaIdentityMotionRules.lua
+      - tools/verify_animated_crossroads_portal_lod.py
+      - .github/workflows/crossroads-animated-portal-lod-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedCrossroadsEntrancePortalMeshKit.lua
+      - src/client/arena-identity-motion.client.lua
+      - src/shared/ArenaIdentityMotionRules.lua
+      - tools/verify_animated_crossroads_portal_lod.py
+      - .github/workflows/crossroads-animated-portal-lod-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify animated native gate does not defeat premium 3D LOD masking
+        run: python3 tools/verify_animated_crossroads_portal_lod.py
