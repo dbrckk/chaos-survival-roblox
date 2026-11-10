@@ -141,7 +141,7 @@ local function context(arena)
         end
         natives[index]=part
     end
-    return base,owner,natives,origin.Position+Vector3.new(0,22.9,0)
+    return base,owner,natives,origin.Position+Vector3.new(0,19.05,0)
 end
 
 local function fit(source,center)
