@@ -90,6 +90,7 @@ jobs:
             "tests/engine/data-session.spec.luau",
             "tests/engine/first-time-experience.spec.luau",
             "tests/engine/game-analytics.spec.luau",
+            "tests/engine/premium-import-diagnostics.spec.luau",
           ]
           backend = "cloud"
           default = false
