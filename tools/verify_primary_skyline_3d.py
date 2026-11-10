@@ -46,7 +46,7 @@ assert "index % 2" in BUILDER
 assert '"SkylineStructure" .. direction.id' in BUILDER
 for expression in ("11.4,3,8.8","8.5,h,7.4","2.2,5.4,8",
                    "base.Size.Z*.5+23","base.Size.X*.5+23",
-                   "part.CanCollide = false","part.CanTouch = false",
+                   "piece.CanCollide = false","piece.CanTouch = false",
                    "piece.CanQuery = false","source.DescendantRemoving:Connect",
                    "clone.DescendantRemoving:Connect",
                    "body.AncestryChanged"):
