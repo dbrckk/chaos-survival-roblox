@@ -41,3 +41,32 @@ Les attributs du client enregistrent les MeshParts effectivement montées
 et les primitives masquées. Ces compteurs ne prouvent pas le rendu final
 ni les FPS Android. Les tests Studio et la publication publique restent
 des opérations distinctes et non attestées par une simple fusion GitHub.
+
+## Correctif de stabilité : capot animé et plancher qui rétrécit
+
+Le module arena-identity-motion modifie la transparence et la position
+verticale de TowerMachineryCap (+/-0.18 stud) ; il anime aussi la
+transparence et l'orientation des quatre TowerAntenna.
+
+Le kit original acceptait seulement un capot immobile à 0.16 stud près
+et une transparence proche de 0.18, puis le masquait par
+Part.Transparency=1. Il pouvait échouer ou provoquer un clignotement
+à chaque cycle d'animation.
+
+Correction : le capot authentifié accepte son enveloppe de mouvement
+(0.28 stud) et sa plage de transparence active (0.05..0.68).
+Une fois sept MeshParts sculptées en place, il est masqué localement
+par LocalTransparencyModifier=1 et SceneryLodHidden=true. L'animation
+existante reconnaît le flag, restaure sa pose de base et ne lutte plus
+contre la visibilité LOD. À la suppression du 3D, la visibilité et le
+propriétaire LOD antérieurs sont restaurés, puis l'animation peut reprendre.
+
+La TowerAntenna reste native et animée ; les TowerBand des quatre
+fûts internes sont également conservés. Les positions des quatre
+machines d'angle utilisent désormais les attributs immuables
+OriginalSizeX/Z de MapBuilder plutôt que la taille instantanée de
+la plateforme qui rétrécit en pleine manche.
+
+Aucune source d'asset, collision, boucle RenderStepped, RPC ou
+publication Roblox Place n'est changée. Contrôles GitHub source ;
+mesure FPS et captures Studio/Android non attestées.
