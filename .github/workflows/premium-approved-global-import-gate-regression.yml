@@ -6,6 +6,7 @@ on:
       - src/server/PremiumSouthApprovedImportGate.lua
       - src/server/Premium*Assets.lua
       - tools/verify_premium_approved_asset_import_queue.py
+      - tools/verify_premium_asset_import_observability.py
       - .github/workflows/premium-approved-global-import-gate-regression.yml
   push:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - src/server/PremiumSouthApprovedImportGate.lua
       - src/server/Premium*Assets.lua
       - tools/verify_premium_approved_asset_import_queue.py
+      - tools/verify_premium_asset_import_observability.py
       - .github/workflows/premium-approved-global-import-gate-regression.yml
 permissions:
   contents: read
@@ -27,3 +29,5 @@ jobs:
         run: python3 tools/verify_premium_approved_asset_import_queue.py
       - name: Assert all eight South sources use nested one-permit gate
         run: python3 tools/verify_south_approved_import_gate.py
+      - name: Verify server-only metrics and FIFO no-poll South permit
+        run: python3 tools/verify_premium_asset_import_observability.py
