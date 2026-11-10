@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local OWNER_ID=124368710235343
@@ -45,7 +46,7 @@ function Assets.start()
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
         -- First playable round, bots, and core arena generation come first.
-        task.wait(91)
+        ActiveSignatureSchedule.waitFor("Harbor",46,91)
         if holder:FindFirstChild("SculptedGantry") then return end
         for attempt=1,3 do
             local ok,raw=pcall(AssetService.LoadAssetAsync,
