@@ -43,7 +43,6 @@ jobs:
           for required in (b'ContinuousFourteenFacetLowerFreightDeck',
                            b'SweptDualRailUpperExchangeDeck',
                            b'CastCantileverStructuralSaddle',
-                           b'OpenAngledUndercarriageWeb' if False else
                            b'LongOpenRailTruss',
                            b'ReverseCoredTruss',
                            b'RaisedCantileverHollowSpar',
