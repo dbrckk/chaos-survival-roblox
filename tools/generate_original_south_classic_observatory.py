@@ -145,9 +145,10 @@ def dish(a,side):
                 v=level*sectors+(i+1)%sectors
                 w=(level+1)*sectors+(i+1)%sectors
                 z=(level+1)*sectors+i
-                if level>0: faces.append((u,v,w))
-                if level>0: faces.append((u,w,z))
-                if level==0: faces.append((u,v,w))
+                if level==0:
+                    faces.append((u,z,w))
+                else:
+                    faces.extend(((u,v,w),(u,w,z)))
         a.add("%sClassicSouthTelescope%s"%(surface,side),
               material,verts,faces)
     # Genuinely curved segmented 3D rim, radial support ribs and wiring.
