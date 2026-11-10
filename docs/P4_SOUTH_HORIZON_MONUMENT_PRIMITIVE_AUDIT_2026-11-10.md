@@ -7,15 +7,15 @@
 | Orbital sud | 20 | **20** (anneau 14 + finitions 6) | **0** |
 | Towers sud | 13 | **13** (pont/cabine 2, tours/couronnes 4, finition 7) | **0** |
 | Crossroads sud | 13 | **13** (échangeur sculpté complet) | **0** |
-| Harbor sud | 14 | 0 | 14 |
+| Harbor sud | 14 | **14** (lightship et drydock originaux) | **0** |
 | Classic sud | 13 | 0 | 13 |
-| **Total** | **73** | **46 (63,0 %)** | **27** |
+| **Total** | **73** | **60 (82,2 %)** | **13** |
 
 **Périmètre exact : 73 occurrences-source de la famille `SouthHorizonMonument` sur les cinq variantes, pas toutes les primitives du jeu.** Un seul monument de variante est présent à la fois. Les remplacements sont actifs uniquement lorsque le modèle modéré est chargé et que le LOD Medium/High l'autorise ; les primitives natives sont restaurées sur Low ou sous pression GPU.
 
-Assets confirmés `Moderation: Approved` : Orbital anneau `124474310430876` et finition `96266711661930` ([Actions #42821753995](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42821753995)), Towers `120959181274080`, `114886409893890`, `79666240429608`, Crossroads `77870668100712` ([Actions #42842143479](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42842143479)). Les tests de régression source des modules Towers et Crossroads sont verts sur `main`. **Tests Roblox Studio, captures Android, FPS et publication publique non vérifiés.**
+Assets confirmés `Moderation: Approved` : Orbital anneau `124474310430876` et finition `96266711661930` ([Actions #42821753995](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42821753995)), Towers `120959181274080`, `114886409893890`, `79666240429608`, Crossroads `77870668100712` ([Actions #42842143479](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42842143479)), Harbor `125428569657840` ([Actions #42847077638](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42847077638)). Les tests de régression source des modules Towers et Crossroads sont verts sur `main`. **Tests Roblox Studio, captures Android, FPS et publication publique non vérifiés.**
 
-**Nouvelle priorité :** les 14 éléments Harbor et les 13 éléments Classic sud. Orbital, Towers et Crossroads sud disposent désormais d'un remplacement 3D original approuvé pour chacun de leurs éléments natifs. Les priorités initiales ci-dessous restent un historique d'audit, pas l'état actuel.
+**Nouvelle priorité :** les **13 éléments Classic sud**. Orbital, Towers, Crossroads et Harbor disposent désormais d'un remplacement 3D original approuvé pour chacun de leurs éléments natifs. Les priorités initiales ci-dessous restent un historique d'audit, pas l'état actuel.
 
 
 **Établi à partir de `src/server/MapBuilder.lua`, fonction `addSouthHorizonMonument`, sur le commit `3dc4e37aabf684a74ec071ef6fe30c501a9e26c6`.**
