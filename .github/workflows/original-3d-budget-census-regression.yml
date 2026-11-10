@@ -1,0 +1,29 @@
+name: Original 3D owners Android budget census regression
+on:
+  pull_request:
+    paths:
+      - src/shared/VisualBudgetRules.lua
+      - src/client/**MeshKit.lua
+      - src/client/**3DKit.lua
+      - src/client/visual-budget-pressure.client.lua
+      - tools/verify_original_3d_budget_census.py
+      - .github/workflows/original-3d-budget-census-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/shared/VisualBudgetRules.lua
+      - src/client/**MeshKit.lua
+      - src/client/**3DKit.lua
+      - src/client/visual-budget-pressure.client.lua
+      - tools/verify_original_3d_budget_census.py
+      - .github/workflows/original-3d-budget-census-regression.yml
+permissions:
+  contents: read
+jobs:
+  original-3d-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject direct-workspace MeshParts omitted from the visual budget
+        run: python3 tools/verify_original_3d_budget_census.py
