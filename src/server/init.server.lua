@@ -56,6 +56,7 @@ local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructur
 local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
 local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
+local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -220,6 +221,9 @@ if not isStudioE2E then
     -- A single genuine continuous Orbital megareactor torus, separate
     -- optional Model importer; never blocks rounds, human or AI spawn.
     task.defer(PremiumOrbitalSignatureRingAssets.start)
+    -- Approved creator-owned true bridge sculpture for the nonphysical
+    -- Towers horizon signature only; Skyrail remains gameplay-owned.
+    task.defer(PremiumTowersSignatureBridgeAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Nouveau lot Towers (10 novembre 2026) :** les deux grandes masses primitives `OverheadServiceBridge` et `LowerTruss` du `ArenaSignatureMegastructure` Towers disposent maintenant d'un remplacement source original sculpté, Model `126298311664881` et sept MeshParts réels. Le montage est conditionnel, réversible et ne concerne **pas les ponts Skyrail jouables**. Deux pièces-source supplémentaires sont ciblées dans **une autre famille que les stations périphériques** ; le pourcentage station 16/23 = 69,57 % n'est pas modifié et ne décrit toujours pas l'ensemble des décors.
+
+
 **Nouveau lot Orbital :** le modèle de monument `ArenaSignatureMegastructure` conserve ses structures physiques cosmétiques d'origine et son cœur, mais ses **16 ReactorArc** rectangulaires sont désormais éligibles à un remplacement atomique par un tore original 3D continu **vérifié, téléchargé et approuvé** (Model 125070862497818). Ces **16 éléments-source conditionnellement substituables** sont distincts des 23 éléments comptés par station, des 120 pièces de tours extérieures et ne constituent pas un pourcentage global. Le nombre réellement visible demeure dépendant du LOD et du chargement d'assets.
 
 

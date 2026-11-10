@@ -22,6 +22,7 @@ local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimet
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
+local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
@@ -1302,6 +1303,26 @@ task.spawn(function()
             ~=arcsReplaced then
             player:SetAttribute("LocalPrimitiveOrbitalSignatureArcsReplaced",
                 arcsReplaced)
+        end
+        -- P4 Towers signature: one original continuous sculpted service
+        -- span hides ONLY two distant, nonphysical primitive slabs. The
+        -- HangingSignal and playable Skyrail remain untouched. Existing
+        -- LOD camera cadence and optional GPU-pressure fallback apply.
+        ApprovedTowersSignatureBridgeMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local forgedBridges=ApprovedTowersSignatureBridgeMeshKit.count()
+        if player:GetAttribute("LocalApprovedTowersForgedBridgeCount")
+            ~=forgedBridges then
+            player:SetAttribute("LocalApprovedTowersForgedBridgeCount",
+                forgedBridges)
+        end
+        local nativeBridgeSlabs=
+            ApprovedTowersSignatureBridgeMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalTowersSignaturePrimitiveSlabsReplaced")
+            ~=nativeBridgeSlabs then
+            player:SetAttribute("LocalTowersSignaturePrimitiveSlabsReplaced",
+                nativeBridgeSlabs)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
