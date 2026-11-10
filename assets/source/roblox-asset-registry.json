@@ -666,6 +666,14 @@
       "source": "tools/generate_original_signature_classic_supports.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42809450851
+    },
+    {
+      "name": "south_orbital_observation_torus",
+      "asset_id": "124474310430876",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_orbital_observation_ring.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42821753995
     }
   ]
 }

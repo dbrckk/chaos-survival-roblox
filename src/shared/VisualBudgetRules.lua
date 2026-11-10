@@ -110,6 +110,10 @@ VisualBudgetRules.LocalFolders = {
     -- rectangular ReactorArcs in one visual swap. Shared existing
     -- Android 440/680/900 census. Low/pressure fallback retains natives.
     "ApprovedOrbitalSignatureTorusLocal",
+    -- Separate southern observation ring, 7 creator-owned 3D MeshParts
+    -- replace 14 nonphysical ObservationArc primitives, under SAME
+    -- shared mobile visual budget and camera-pressure gating.
+    "ApprovedSouthOrbitalObservationTorusLocal",
     -- One original Towers forged bridge Model (seven genuine MeshParts)
     -- replaces exactly two decorative native slabs in a nonphysical
     -- outboard monument. Existing 440/680/900 Android/PC census owns it.
