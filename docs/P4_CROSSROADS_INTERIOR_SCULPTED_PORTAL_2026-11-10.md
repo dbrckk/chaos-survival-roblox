@@ -36,3 +36,24 @@ Le serveur charge un unique Model sanitaire propriétaire via `PremiumCrossroads
 Les compteurs client `LocalCrossroadsEntrance3DCount` et `LocalCrossroadsEntranceNativePartsReplaced` quantifient le montage observé ; ils ne sont pas une mesure des FPS, du rendu réel ou du pourcentage global de primitives restant dans le jeu.
 
 **Roblox Studio/Android et publication de la Place** ne sont pas attestés par une fusion GitHub ni par des régressions source.
+
+## Correctif de conflit avec les animations d'identité
+
+Le module `arena-identity-motion.client.lua` réécrit en direct la
+transparence et l'orientation de `CrossroadGate1..4`. Un masquage 3D
+par `Part.Transparency = 1` était donc instable : les portails
+primitifs pouvaient réapparaître ou empêcher l'activation du kit si
+leur transparence n'était plus sa valeur de création.
+
+Le masque premium cible maintenant le **client local** :
+`LocalTransparencyModifier = 1` et
+`SceneryLodHidden = true`. Le moteur de mouvement existant connaît
+déjà ce flag ; il interrompt l'animation native sur ces portails tant
+que le modèle sculpté est visible et restaure leur pose de base.
+Les deux piliers (jamais animés) restent masqués par leur transparence
+native. Le kit vérifie et rétablit la valeur précédente du modificateur
+local ainsi que l'ancien propriétaire LOD dès que le 3D est supprimé.
+
+Une validation source automatisée croise explicitement le contrat
+d'animation et le kit de remplacement. Les mesures de FPS et les captures
+visuelles Roblox Studio/Android ne sont toujours pas attestées.
