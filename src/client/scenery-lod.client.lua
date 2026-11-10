@@ -23,6 +23,7 @@ local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerime
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
 local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
+local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
@@ -1316,6 +1317,23 @@ task.spawn(function()
             ~=ridgesHidden then
             player:SetAttribute("LocalExteriorRidgePrimitivesReplaced",
                 ridgesHidden)
+        end
+        -- Four real SkylineStructure cores/caps/rib pairs per arena.
+        -- Preserve their original foundation, insets, antennas and physics.
+        -- Reuse owner-approved seven-MeshPart source on existing LOD tick.
+        ApprovedPrimarySkylineMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local primaryMeshes=ApprovedPrimarySkylineMeshKit.count()
+        if player:GetAttribute("LocalPrimarySkylineMeshCount")
+            ~=primaryMeshes then
+            player:SetAttribute("LocalPrimarySkylineMeshCount",primaryMeshes)
+        end
+        local primaryNative=ApprovedPrimarySkylineMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPrimarySkylinePrimitivesReplaced")
+            ~=primaryNative then
+            player:SetAttribute("LocalPrimarySkylinePrimitivesReplaced",
+                primaryNative)
         end
         -- Eight distant wedge roofs per arena: original approved sculpted
         -- tower art, camera-ranked and pressure-budgeted; native aerials stay.
