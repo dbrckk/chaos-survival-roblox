@@ -32,6 +32,13 @@ local function restore(body)
             native.Transparency = alpha
         end
     end
+    -- TowerMachineryCap is animated by arena-identity-motion: restore
+    -- only its local visibility and previous LOD owner, never its
+    -- live Transparency or CFrame, which belong to the animator.
+    if entry.cap.Parent==entry.decor then
+        entry.cap.LocalTransparencyModifier=entry.capOriginalModifier
+        entry.cap:SetAttribute("SceneryLodHidden",entry.capOriginalHidden)
+    end
     entry.model:Destroy()
 end
 
@@ -82,15 +89,20 @@ local function genuine(arena,index)
         or arena.Parent ~= generated or arena:GetAttribute("VariantId") ~= "Towers"
         or not base or not base:IsA("BasePart") or base.Parent ~= arena
         or not base.Anchored or not base.CanCollide
-        or base.Size.X < 318 or base.Size.Z < 318
+        or typeof(base:GetAttribute("OriginalSizeX"))~="number"
+        or typeof(base:GetAttribute("OriginalSizeZ"))~="number"
+        or base:GetAttribute("OriginalSizeX")<318
+        or base:GetAttribute("OriginalSizeZ")<318
         or not decor or not decor:IsA("Folder") or decor.Parent ~= arena
         or index < 1 or index > 4 then
         return nil
     end
     local x=(index==1 or index==3) and -1 or 1
     local z=index <= 2 and -1 or 1
+    local originalX=base:GetAttribute("OriginalSizeX")
+    local originalZ=base:GetAttribute("OriginalSizeZ")
     local center=base.Position+Vector3.new(
-        x*(base.Size.X*.5+6),12,z*(base.Size.Z*.5+6))
+        x*(originalX*.5+6),12,z*(originalZ*.5+6))
     local body=decor:FindFirstChild("TowerMachinery"..index)
     local cap=decor:FindFirstChild("TowerMachineryCap"..index)
     local antenna=decor:FindFirstChild("TowerAntenna"..index)
@@ -110,15 +122,17 @@ local function genuine(arena,index)
         or (cap.Size-Vector3.new(7.4,1,7.4)).Magnitude > .10
         or (antenna.Size-Vector3.new(.55,9,.55)).Magnitude > .10
         or (body.Position-center).Magnitude > .16
-        or (cap.Position-(center+Vector3.new(0,12.4,0))).Magnitude > .16
+        or (cap.Position-(center+Vector3.new(0,12.4,0))).Magnitude > .28
         or (antenna.Position-(center+Vector3.new(0,17.2,0))).Magnitude > .16
         or body.CFrame.LookVector:Dot(Vector3.new(0,0,-1)) < .999
         or cap.CFrame.LookVector:Dot(Vector3.new(0,0,-1)) < .999
         or math.abs(body.Transparency-.04) > .035
             and body.Transparency ~= 1
-        or math.abs(cap.Transparency-.18) > .035
-            and cap.Transparency ~= 1
-        or math.abs(antenna.Transparency-.16) > .035 then
+        or not ((cap.Transparency>=.05 and cap.Transparency<=.68)
+            or cap.Transparency==1)
+        -- Antenna also pulses and tilts; preserve it as a live native.
+        or not (antenna.Transparency>=.05
+            and antenna.Transparency<=.68) then
         return nil
     end
     -- Current prefab is already outside the playable Base: new mesh width
@@ -149,6 +163,7 @@ local function mount(arena,index,body,cap,decor,base,source,holder)
     if mounted[body] then return end
     local originalBody,originalCap=genuine(arena,index)
     if originalBody ~= body or originalCap ~= cap then return end
+    if cap:GetAttribute("SceneryLodHidden")==true then return end
     local clone=source:Clone()
     local frame,bounds=clone:GetBoundingBox()
     if (bounds-BOUNDS).Magnitude > .55 then
@@ -182,8 +197,10 @@ local function mount(arena,index,body,cap,decor,base,source,holder)
         arena=arena,index=index,body=body,cap=cap,
         decor=decor,base=base,source=source,holder=holder,
         model=clone,pieces=pieces,natives={
-            [body]=body.Transparency,[cap]=cap.Transparency,
+            [body]=body.Transparency,
         },connections={},
+        capOriginalModifier=cap.LocalTransparencyModifier,
+        capOriginalHidden=cap:GetAttribute("SceneryLodHidden"),
     }
     clone.Name="TowersCornerSculpted3D_"..index
     clone:SetAttribute("CosmeticOnly",true)
@@ -192,7 +209,8 @@ local function mount(arena,index,body,cap,decor,base,source,holder)
     mounted[body]=entry
     if not valid(entry) then restore(body);return end
     body.Transparency=1
-    cap.Transparency=1
+    cap:SetAttribute("SceneryLodHidden",true)
+    cap.LocalTransparencyModifier=1
     local function check()
         if mounted[body]==entry and not valid(entry) then restore(body) end
     end
@@ -264,6 +282,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
             obsolete[#obsolete+1]=body
         else
             for part in pairs(entry.natives) do part.Transparency=1 end
+            entry.cap:SetAttribute("SceneryLodHidden",true)
+            entry.cap.LocalTransparencyModifier=1
         end
     end
     for _,body in ipairs(obsolete) do restore(body) end
@@ -292,6 +312,11 @@ function Kit.replacedNativeCount()
                 if native.Parent==entry.decor and native.Transparency==1 then
                     n+=1
                 end
+            end
+            if entry.cap.Parent==entry.decor
+                and entry.cap.LocalTransparencyModifier>=.99
+                and entry.cap:GetAttribute("SceneryLodHidden")==true then
+                n+=1
             end
         end
     end
