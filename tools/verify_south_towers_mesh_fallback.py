@@ -15,7 +15,10 @@ specs=[
 for filename,asset,names,count in specs:
     source=(root/"src/client"/filename).read_text()
     assert "local MODEL_ID="+asset in source,filename
-    assert 'part:IsA("BasePart")' in source.split("local function restore()",1)[1].split("local function clear()",1)[0],filename
+    restore=source.split("local function restore()",1)[1].split("local function clear()",1)[0]
+    # SkyTransfer uses only Parts; the lift-twin kit must also restore WedgeParts.
+    expected_class="BasePart" if count==4 else "Part"
+    assert 'part:IsA("'+expected_class+'")' in restore,filename
     assert 'part.Transparency=alpha' in source,filename
     assert 'native.Transparency=1' in source,filename
     assert 'model.Parent=bucket' in source,filename
