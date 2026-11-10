@@ -25,6 +25,7 @@ local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbita
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
 local ApprovedSouthTowersLiftTwinsMeshKit = require(script.Parent.ApprovedSouthTowersLiftTwinsMeshKit)
+local ApprovedSouthTowersFinishingMeshKit = require(script.Parent.ApprovedSouthTowersFinishingMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1461,6 +1462,24 @@ task.spawn(function()
         if player:GetAttribute("LocalSouthTowersLiftPrimitivesReplaced")
             ~=southLiftReplaced then
             player:SetAttribute("LocalSouthTowersLiftPrimitivesReplaced",southLiftReplaced)
+        end
+        -- Seven remaining South Towers cosmetic primitives:
+        -- foundation, deck inset, twin guides and suspensions, signal.
+        ApprovedSouthTowersFinishingMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local finishingCount=ApprovedSouthTowersFinishingMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthTowersFinishingCount")
+            ~=finishingCount then
+            player:SetAttribute("LocalApprovedSouthTowersFinishingCount",
+                finishingCount)
+        end
+        local finishingReplaced=
+            ApprovedSouthTowersFinishingMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthTowersFinishingPrimitivesReplaced")
+            ~=finishingReplaced then
+            player:SetAttribute("LocalSouthTowersFinishingPrimitivesReplaced",
+                finishingReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
