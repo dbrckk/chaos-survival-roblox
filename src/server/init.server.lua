@@ -60,6 +60,7 @@ local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignature
 local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
 local PremiumHarborSignatureGantryAssets = require(script.PremiumHarborSignatureGantryAssets)
 local PremiumClassicSignatureObservatoryAssets = require(script.PremiumClassicSignatureObservatoryAssets)
+local PremiumClassicForgedSupportsAssets = require(script.PremiumClassicForgedSupportsAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -236,6 +237,9 @@ if not isStudioE2E then
     -- Original creator-verified Classic mast and two true concave dishes.
     -- Source-authenticated optional art, never changes gameplay physics.
     task.defer(PremiumClassicSignatureObservatoryAssets.start)
+    -- Optional original five-support Classic load-frame art. Does NOT
+    -- alter the seven-piece dual-dish Model or any player collision.
+    task.defer(PremiumClassicForgedSupportsAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

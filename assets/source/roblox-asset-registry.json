@@ -658,6 +658,14 @@
       "source": "tools/generate_original_signature_classic_observatory.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42787663042
+    },
+    {
+      "name": "signature_classic_forged_supports",
+      "asset_id": "91717127334369",
+      "moderation": "Approved",
+      "source": "tools/generate_original_signature_classic_supports.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42809450851
     }
   ]
 }

@@ -1,5 +1,8 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+**Classic — supports originaux du 10 novembre 2026 :** `RelayButtressWest/East`, `RelaySparWest/East`, `ServicePanel` sont éligibles à l'unique modèle 3D source de **5 924 triangles et sept MeshParts**, asset Roblox réellement Approved `91717127334369`. Le kit Classic primaire du mât et des deux paraboles reste indépendant. **Sur les 14 Parts/WedgeParts natives créées par `addArenaSignatureMegastructure` en Classic, 12 sont éligibles à un masquage 3D sous LOD** (sept du primaire et cinq de ces supports) ; `Foundation` et `InsetBase` restent dans leur forme native. Le pourcentage 12/14 ne vaut que pour ce monument, ni pour toutes les arènes ni pour tout le jeu.
+
+
 **Classic — lot du 10 novembre 2026 :** les sept silhouettes `PrimaryRelayMast`, `RelayHead`, `DishBridge`, `ReceiverDishWest/East` et `ReceiverHubWest/East` du monument nord Classic possèdent désormais **un remplacement original commun** : 6 664 triangles, deux paraboles réellement creuses, sept MeshParts PBR, Model propriétaire `112493873850364` modéré Approved. Le kit intégré masque les sept natives en bloc, uniquement si la source et les éléments de la vraie carte sont validés. Cette étape ne modifie pas le dénominateur de 23 pièces des stations périphériques ; **ne pas présenter leur 69,57 % comme une amélioration du jeu entier**.
 
 

@@ -126,6 +126,10 @@ VisualBudgetRules.LocalFolders = {
     -- observatory replaces seven nonphysical native silhouettes.
     -- Uses existing Android 440/680/900 part budget and LOD pressure.
     "ApprovedClassicSignatureObservatoryLocal",
+    -- Seven actual approved 3D MeshParts replace five source-native
+    -- large Classic support Parts; budgeted alongside the twin-dish
+    -- primary original art in the existing Android parts census.
+    "ApprovedClassicForgedSupportsLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",
