@@ -25,6 +25,7 @@ local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidge
 local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
 local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVariantTowersLandmarkMeshKit)
 local ApprovedCrossroadsOpenGantryMeshKit = require(script.Parent.ApprovedCrossroadsOpenGantryMeshKit)
+local ApprovedClassicBroadcastFinMeshKit = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1389,6 +1390,20 @@ task.spawn(function()
             ~=gantryHidden then
             player:SetAttribute("LocalCrossroadsGantryPrimitivesReplaced",
                 gantryHidden)
+        end
+        -- Four original Classic forged broadcast fins: retain all native
+        -- neon strips and original gameplay geometry, reversible camera LOD.
+        ApprovedClassicBroadcastFinMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local finModels=ApprovedClassicBroadcastFinMeshKit.count()
+        if player:GetAttribute("LocalClassicFinMeshCount")~=finModels then
+            player:SetAttribute("LocalClassicFinMeshCount",finModels)
+        end
+        local finReplaced=ApprovedClassicBroadcastFinMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalClassicFinPrimitivesReplaced")
+            ~=finReplaced then
+            player:SetAttribute("LocalClassicFinPrimitivesReplaced",finReplaced)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
