@@ -39,7 +39,8 @@ assert 'OriginalMeshScenery.sanitize(raw)' in LOADER
 assert "parts ~= 7" in LOADER
 assert "n~=7" in CLIENT and "#parts~=7" in CLIENT
 assert "task.wait(98)" in LOADER
-assert "AssetService.LoadAssetAsync" in LOADER
+assert "GlobalApprovedImportGate.load" in LOADER
+assert 'require("./PremiumApprovedAssetImportGate")' in LOADER
 assert "game:GetService(\"AssetService\")" not in CLIENT
 assert "AssetService.LoadAssetAsync" not in CLIENT
 assert "task.defer(PremiumCrossroadsGantryAssets.start)" in INIT
