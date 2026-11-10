@@ -126,7 +126,7 @@ def strut_art() -> Sculpture:
             art.rod("ContinuousForgedReactorSpar%s_%s"%(signY,signZ),
                     "ARMOR",(-4.02,y,z),(4.02,y,z),.075,10)
     for i in range(9):
-        x=-3.73+i*.93
+        x=-3.73+i*.86
         for side in (-1,1):
             z=side*.39
             y0=.40 if i%2 else -.40
