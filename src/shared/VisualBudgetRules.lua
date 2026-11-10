@@ -117,6 +117,7 @@ VisualBudgetRules.LocalFolders = {
     "ApprovedSouthTowersSkytransferLocal",
     "ApprovedSouthTowersLiftTwinsLocal",
     "ApprovedSouthTowersFinishingLocal",
+    "ApprovedSouthCrossroadsExchangeLocal",
     -- One original Towers forged bridge Model (seven genuine MeshParts)
     -- replaces exactly two decorative native slabs in a nonphysical
     -- outboard monument. Existing 440/680/900 Android/PC census owns it.

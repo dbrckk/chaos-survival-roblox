@@ -26,6 +26,7 @@ local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.Approve
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
 local ApprovedSouthTowersLiftTwinsMeshKit = require(script.Parent.ApprovedSouthTowersLiftTwinsMeshKit)
 local ApprovedSouthTowersFinishingMeshKit = require(script.Parent.ApprovedSouthTowersFinishingMeshKit)
+local ApprovedSouthCrossroadsExchangeMeshKit = require(script.Parent.ApprovedSouthCrossroadsExchangeMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1480,6 +1481,24 @@ task.spawn(function()
             ~=finishingReplaced then
             player:SetAttribute("LocalSouthTowersFinishingPrimitivesReplaced",
                 finishingReplaced)
+        end
+        -- South Crossroads: one approved seven-material sculpture
+        -- covers all 13 nonphysical native freight/interchange parts.
+        ApprovedSouthCrossroadsExchangeMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local crossroadsSouthCount=ApprovedSouthCrossroadsExchangeMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthCrossroadsExchangeCount")
+            ~=crossroadsSouthCount then
+            player:SetAttribute("LocalApprovedSouthCrossroadsExchangeCount",
+                crossroadsSouthCount)
+        end
+        local crossroadsSouthReplaced=
+            ApprovedSouthCrossroadsExchangeMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthCrossroadsPrimitivesReplaced")
+            ~=crossroadsSouthReplaced then
+            player:SetAttribute("LocalSouthCrossroadsPrimitivesReplaced",
+                crossroadsSouthReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

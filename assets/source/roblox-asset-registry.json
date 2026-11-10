@@ -698,6 +698,14 @@
       "source": "tools/generate_original_south_towers_finishing.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42840287655
+    },
+    {
+      "name": "south_crossroads_forged_exchange",
+      "asset_id": "77870668100712",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_crossroads_exchange.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42842143479
     }
   ]
 }

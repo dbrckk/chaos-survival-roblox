@@ -1,0 +1,33 @@
+name: South Crossroads original 3D runtime regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedSouthCrossroadsExchangeMeshKit.lua
+      - src/server/PremiumSouthCrossroadsExchangeAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_crossroads_mesh_fallback.py
+      - .github/workflows/south-crossroads-mesh-fallback.yml
+  pull_request:
+    paths:
+      - src/client/ApprovedSouthCrossroadsExchangeMeshKit.lua
+      - src/server/PremiumSouthCrossroadsExchangeAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_crossroads_mesh_fallback.py
+      - .github/workflows/south-crossroads-mesh-fallback.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all 13 Crossroads native targets and safe rollback
+        run: python3 tools/verify_south_crossroads_mesh_fallback.py
