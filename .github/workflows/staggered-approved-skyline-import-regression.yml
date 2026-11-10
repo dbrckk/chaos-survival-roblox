@@ -1,0 +1,31 @@
+name: Early skyline source import serialization regression
+on:
+  pull_request:
+    paths:
+      - src/server/PremiumExteriorTowerAssets.lua
+      - src/server/PremiumVariantTowersLandmarkAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_staggered_approved_skyline_imports.py
+      - .github/workflows/staggered-approved-skyline-import-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/server/PremiumExteriorTowerAssets.lua
+      - src/server/PremiumVariantTowersLandmarkAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_staggered_approved_skyline_imports.py
+      - .github/workflows/staggered-approved-skyline-import-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no early parallel import spike, genuine assets and fallback
+        run: python3 tools/verify_staggered_approved_skyline_imports.py

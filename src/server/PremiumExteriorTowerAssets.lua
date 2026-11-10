@@ -12,6 +12,12 @@ local SOURCES = {
     {height = 27, id = 97864559770371},
     {height = 30, id = 112172520488996},
 }
+-- Four original Models already approved by the creator. Their previous
+-- first load at 145s prevented early rounds from seeing premium skyline.
+-- Spread FOUR existing API calls across the session (not parallel):
+-- first request after 36s, then ~77s, ~118s, ~159s on a fast API.
+-- Each request still retains the same three-attempt bounded retry path.
+local LOAD_STAGGER = {36,36,36,36}
 local started = false
 
 local function valid(model, entry)
@@ -48,8 +54,8 @@ function Assets.start()
     end
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        task.wait(145)
-        for _, entry in ipairs(SOURCES) do
+        for index, entry in ipairs(SOURCES) do
+            task.wait(LOAD_STAGGER[index])
             local name = "Tower"..tostring(entry.height)
             if not holder:FindFirstChild(name) then
                 for attempt = 1, 3 do
