@@ -22,6 +22,7 @@ local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimet
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
+local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
@@ -1315,6 +1316,23 @@ task.spawn(function()
             ~=ridgesHidden then
             player:SetAttribute("LocalExteriorRidgePrimitivesReplaced",
                 ridgesHidden)
+        end
+        -- Eight distant wedge roofs per arena: original approved sculpted
+        -- tower art, camera-ranked and pressure-budgeted; native aerials stay.
+        ApprovedSkylineDepthMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local depthModels=ApprovedSkylineDepthMeshKit.count()
+        if player:GetAttribute("LocalApprovedSkylineDepthModelCount")
+            ~=depthModels then
+            player:SetAttribute("LocalApprovedSkylineDepthModelCount",
+                depthModels)
+        end
+        local depthReplaced=ApprovedSkylineDepthMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSkylineDepthPrimitivesReplaced")
+            ~=depthReplaced then
+            player:SetAttribute("LocalSkylineDepthPrimitivesReplaced",
+                depthReplaced)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
