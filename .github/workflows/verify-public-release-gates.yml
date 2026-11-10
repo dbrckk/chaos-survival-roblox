@@ -1,0 +1,30 @@
+name: Public Roblox release source gates
+on:
+  pull_request:
+    paths:
+      - .github/workflows/ci.yml
+      - .github/workflows/roblox-cloud-test.yml
+      - .github/workflows/one-time-public-chaos-premium-3d-retest-20261110.yml
+      - assets/source/roblox-asset-registry.json
+      - tests/engine/premium-import-diagnostics.spec.luau
+      - tools/verify_public_release_registry.py
+      - .github/workflows/verify-public-release-gates.yml
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ci.yml
+      - .github/workflows/roblox-cloud-test.yml
+      - assets/source/roblox-asset-registry.json
+      - tests/engine/premium-import-diagnostics.spec.luau
+      - tools/verify_public_release_registry.py
+      - .github/workflows/verify-public-release-gates.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate complete owner registry and Roblox engine bundle contract
+        run: python3 tools/verify_public_release_registry.py

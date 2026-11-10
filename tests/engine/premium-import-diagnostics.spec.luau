@@ -52,3 +52,5 @@ describe("Premium 3D Model import diagnostics", function()
         expect(after.TotalWaits).toBe(before.TotalWaits)
     end)
 end)
+
+return nil
