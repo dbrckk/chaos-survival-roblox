@@ -1,0 +1,33 @@
+name: South Orbital approved finishing 3D regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedSouthOrbitalFinishingMeshKit.lua
+      - src/server/PremiumSouthOrbitalFinishingAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_orbital_finishing_fallback.py
+      - .github/workflows/south-orbital-finishing-fallback.yml
+  pull_request:
+    paths:
+      - src/client/ApprovedSouthOrbitalFinishingMeshKit.lua
+      - src/server/PremiumSouthOrbitalFinishingAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_orbital_finishing_fallback.py
+      - .github/workflows/south-orbital-finishing-fallback.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all 20 South Orbital targets and native rollback
+        run: python3 tools/verify_south_orbital_finishing_fallback.py

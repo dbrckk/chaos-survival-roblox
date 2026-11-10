@@ -706,6 +706,14 @@
       "source": "tools/generate_original_south_crossroads_exchange.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42842143479
+    },
+    {
+      "name": "south_orbital_forged_finishing",
+      "asset_id": "96266711661930",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_orbital_finishing.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42844551858
     }
   ]
 }
