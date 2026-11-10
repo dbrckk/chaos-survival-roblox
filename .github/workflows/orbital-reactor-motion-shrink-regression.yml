@@ -1,0 +1,31 @@
+name: Orbital reactor animated node and shrink LOD regression
+on:
+  pull_request:
+    paths:
+      - src/client/ApprovedOrbitalReactorLandmarkMeshKit.lua
+      - src/client/arena-identity-motion.client.lua
+      - src/shared/ArenaIdentityMotionRules.lua
+      - src/server/MapBuilder.lua
+      - tools/verify_orbital_reactor_motion_shrink_lod.py
+      - tools/verify_variant_orbital_landmarks_runtime.py
+      - .github/workflows/orbital-reactor-motion-shrink-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedOrbitalReactorLandmarkMeshKit.lua
+      - src/client/arena-identity-motion.client.lua
+      - src/shared/ArenaIdentityMotionRules.lua
+      - src/server/MapBuilder.lua
+      - tools/verify_orbital_reactor_motion_shrink_lod.py
+      - tools/verify_variant_orbital_landmarks_runtime.py
+      - .github/workflows/orbital-reactor-motion-shrink-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the animated reactor node and immutable arena radius
+        run: python3 tools/verify_orbital_reactor_motion_shrink_lod.py
