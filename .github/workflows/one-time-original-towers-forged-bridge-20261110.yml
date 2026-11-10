@@ -1,0 +1,70 @@
+# Authenticated original Model import; NOT a public Place publish.
+name: One-time Original Towers Forged Bridge 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-towers-forged-bridge-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-towers-forged-bridge-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate continuous 3D source bridge, seven PBR materials and true truss
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_signature_towers_bridge.py --output "$RUNNER_TEMP/original_towers_bridge.obj" > "$RUNNER_TEMP/original_towers_bridge.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/original_towers_bridge.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/original_towers_bridge.gltf" > "$RUNNER_TEMP/original_towers_bridge-gltf.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,hashlib,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          obj=(root/'original_towers_bridge.obj').read_bytes()
+          meta=json.loads((root/'original_towers_bridge.json').read_text())
+          gltf=json.loads((root/'original_towers_bridge.gltf').read_text())
+          assert meta['asset']=='signature_towers_forged_bridge'
+          assert hashlib.sha256(obj).hexdigest()==meta['sha256']
+          assert 35<=meta['groups']<=250 and 1400<=meta['triangles']<=9000
+          palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          assert set(meta['materials'])==palette
+          w,h,d=meta['bounds']
+          assert 40.3<=w<=40.9 and 4.45<=h<=5.15 and 6.30<=d<=6.90
+          for required in (b'ForgedContinuousSweptTransitDeck',
+                           b'OpenAngledUndercarriageWeb',
+                           b'BackOpposedStrut',
+                           b'RecessedLaneTractionModule',
+                           b'LongitudinalHollowSafetyHandrail',
+                           b'OriginalEndConnection',
+                           b'InsetOriginalServiceStatus'):
+              assert required in obj,required
+          assert gltf['asset']['version']=='2.0'
+          assert {m['name'] for m in gltf['materials']}==palette
+          primitives=gltf['meshes'][0]['primitives']
+          assert len(primitives)==7
+          assert sum(gltf['accessors'][p['attributes']['POSITION']]['count']//3 for p in primitives)==meta['triangles']
+          assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}<=set(p['attributes']) for p in primitives)
+          buffer=gltf['buffers'][0]
+          assert len(base64.b64decode(buffer['uri'].split(',',1)[1],validate=True))==buffer['byteLength']
+          print('SOURCE PASS original Towers signature bridge:',meta['triangles'],meta['bounds'],meta['sha256'])
+          print('NO PUBLIC ROBLOX PLACE UPDATE')
+          PY
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: signature_towers_forged_bridge
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
