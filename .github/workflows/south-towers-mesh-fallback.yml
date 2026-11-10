@@ -1,0 +1,31 @@
+name: South Towers approved mesh fallback regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedSouthTowersLiftTwinsMeshKit.lua
+      - src/client/ApprovedSouthTowersSkytransferMeshKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/shared/VisualBudgetRules.lua
+      - tools/verify_south_towers_mesh_fallback.py
+      - .github/workflows/south-towers-mesh-fallback.yml
+  pull_request:
+    paths:
+      - src/client/ApprovedSouthTowersLiftTwinsMeshKit.lua
+      - src/client/ApprovedSouthTowersSkytransferMeshKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/shared/VisualBudgetRules.lua
+      - tools/verify_south_towers_mesh_fallback.py
+      - .github/workflows/south-towers-mesh-fallback.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check native fallback and shared LOD wiring
+        run: python3 tools/verify_south_towers_mesh_fallback.py
