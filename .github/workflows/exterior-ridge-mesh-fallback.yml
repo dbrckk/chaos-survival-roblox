@@ -1,0 +1,35 @@
+name: Exterior original ridge mesh fallback regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_exterior_ridges.py
+      - tools/verify_exterior_ridges_fallback.py
+      - src/client/ApprovedExteriorRidgeMeshKit.lua
+      - src/server/PremiumExteriorRidgeAssets.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - .github/workflows/exterior-ridge-mesh-fallback.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_exterior_ridges.py
+      - tools/verify_exterior_ridges_fallback.py
+      - src/client/ApprovedExteriorRidgeMeshKit.lua
+      - src/server/PremiumExteriorRidgeAssets.lua
+      - src/client/scenery-lod.client.lua
+      - src/server/init.server.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - .github/workflows/exterior-ridge-mesh-fallback.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate and verify four authored ridge profiles and rollback
+        run: python3 tools/verify_exterior_ridges_fallback.py
