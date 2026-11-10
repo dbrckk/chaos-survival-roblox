@@ -34,7 +34,7 @@ jobs:
           g=json.loads((root/'harbor.gltf').read_text())
           assert m['asset']=='south_harbor_sculpted_drydock'
           assert hashlib.sha256(obj).hexdigest()==m['sha256']
-          assert 200<=m['groups']<=1450 and 4500<=m['triangles']<=27000
+          assert 200<=m['groups']<=512 and 4500<=m['triangles']<=16000
           palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
           assert set(m['materials'])==palette
           x,y,z=m['bounds']
