@@ -9,7 +9,7 @@ local QUALITIES={Low=0,Medium=1,High=1}
 local DISTANCE={Low=0,Medium=420,High=580}
 local RETENTION=26
 local bucket=Instance.new("Folder")
-bucket.Name="ApprovedSouthTowersForgedSkytransferLocal"
+bucket.Name="ApprovedSouthTowersSkytransferLocal"
 bucket:SetAttribute("CosmeticOnly",true)
 bucket.Parent=workspace
 
