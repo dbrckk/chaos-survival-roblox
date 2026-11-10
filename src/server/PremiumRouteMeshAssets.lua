@@ -6,6 +6,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local PremiumRouteMeshAssets = {}
 
@@ -51,7 +52,7 @@ function PremiumRouteMeshAssets.start()
         local assetId = APPROVED[name]
         for attempt = 1, 3 do
             local ok, raw = pcall(
-                AssetService.LoadAssetAsync, AssetService, assetId)
+                GlobalApprovedImportGate.load, AssetService, assetId)
             if ok and raw and raw:IsA("Model") then
                 local safe = OriginalMeshScenery.sanitize(raw)
                 raw:Destroy()
