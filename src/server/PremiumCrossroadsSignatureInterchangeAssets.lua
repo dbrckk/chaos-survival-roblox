@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
@@ -48,7 +49,7 @@ function Assets.start()
         ActiveSignatureSchedule.waitFor("Crossroads",45,77)
         if folder:FindFirstChild("ForgedInterchange") then return end
         for attempt=1,3 do
-            local ok,raw=pcall(AssetService.LoadAssetAsync,
+            local ok,raw=pcall(GlobalApprovedImportGate.load,
                 AssetService,MODEL_ID)
             if ok and raw and raw:IsA("Model") then
                 local clean=OriginalMeshScenery.sanitize(raw)
