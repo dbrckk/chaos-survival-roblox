@@ -122,6 +122,10 @@ VisualBudgetRules.LocalFolders = {
     -- material MeshParts replace three large nonphysical primitive Parts.
     -- Existing 440/680/900 census/pressure and LOD, no extra tick.
     "ApprovedHarborSignatureGantryLocal",
+    -- Classic: ONE source-authenticated seven-MeshPart dual-dish
+    -- observatory replaces seven nonphysical native silhouettes.
+    -- Uses existing Android 440/680/900 part budget and LOD pressure.
+    "ApprovedClassicSignatureObservatoryLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",

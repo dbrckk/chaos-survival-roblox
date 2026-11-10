@@ -59,6 +59,7 @@ local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignature
 local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
 local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
 local PremiumHarborSignatureGantryAssets = require(script.PremiumHarborSignatureGantryAssets)
+local PremiumClassicSignatureObservatoryAssets = require(script.PremiumClassicSignatureObservatoryAssets)
 local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
 local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
 local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
@@ -232,6 +233,9 @@ if not isStudioE2E then
     -- Genuine owner-verified Harbor industrial signature gantry source.
     -- Delayed cosmetic Model import, detached from real hoist/gameplay.
     task.defer(PremiumHarborSignatureGantryAssets.start)
+    -- Original creator-verified Classic mast and two true concave dishes.
+    -- Source-authenticated optional art, never changes gameplay physics.
+    task.defer(PremiumClassicSignatureObservatoryAssets.start)
     -- Optional creator-approved animated sky traffic; safely delayed and
     -- serialized so original model API calls never block an actual round.
     task.defer(PremiumAmbientMotionAssets.start)

@@ -650,6 +650,14 @@
       "source": "tools/generate_original_signature_harbor_gantry.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42780163672
+    },
+    {
+      "name": "signature_classic_sculpted_observatory",
+      "asset_id": "112493873850364",
+      "moderation": "Approved",
+      "source": "tools/generate_original_signature_classic_observatory.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42787663042
     }
   ]
 }
