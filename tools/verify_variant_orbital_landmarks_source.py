@@ -25,9 +25,13 @@ for source,expected in CHOICES.items():
     with tempfile.TemporaryDirectory(prefix="chaos-orbital-original-") as root:
         obj=Path(root)/(source+".obj")
         gltf=Path(root)/(source+".gltf")
-        run=subprocess.run([sys.executable,str(GEN),"--model",source,
-             "--output",str(obj)],cwd=ROOT,capture_output=True,
-             text=True,check=True)
+        try:
+            run=subprocess.run([sys.executable,str(GEN),"--model",source,
+                 "--output",str(obj)],cwd=ROOT,capture_output=True,
+                 text=True,check=True)
+        except subprocess.CalledProcessError as error:
+            print("SOURCE ERROR:",source,error.stderr,file=sys.stderr)
+            raise
         meta=json.loads(run.stdout)
         assert meta["asset"]==source,meta
         assert 900<=meta["triangles"]<=16000
