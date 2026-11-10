@@ -810,6 +810,22 @@
       "source": "tools/generate_original_variant_crossroads_entrance_portal.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42872132972
+    },
+    {
+      "name": "variant_classic_grid_marker_sculpt",
+      "asset_id": "105555650820011",
+      "moderation": "Approved",
+      "source": "tools/generate_original_variant_identity_spines.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42874906992
+    },
+    {
+      "name": "variant_towers_spine_sculpt",
+      "asset_id": "86423178125318",
+      "moderation": "Approved",
+      "source": "tools/generate_original_variant_identity_spines.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42874906992
     }
   ]
 }
