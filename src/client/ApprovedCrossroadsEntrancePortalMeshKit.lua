@@ -33,6 +33,14 @@ local function release(index)
             native.Transparency=alpha
         end
     end
+    -- This rail is actively animated by arena-identity-motion.
+    -- Restore its previous local visibility/LOD owner, never its live
+    -- Transparency or CFrame (the animation owns those properties).
+    local rail=entry.rail
+    if rail.Parent==entry.decor then
+        rail.LocalTransparencyModifier=entry.railOriginalModifier
+        rail:SetAttribute("SceneryLodHidden",entry.railOriginalHidden)
+    end
     entry.model:Destroy()
 end
 
@@ -79,7 +87,7 @@ local function sourceFor()
     return source,holder
 end
 
-local function exactPart(part,decor,name,size,frame,alpha)
+local function exactPart(part,decor,name,size,frame,alpha,animated)
     return part and part:IsA("Part") and part.Parent==decor
         and part.Name==name and part.Shape==Enum.PartType.Block
         and part.Anchored and not part.CanCollide
@@ -88,8 +96,12 @@ local function exactPart(part,decor,name,size,frame,alpha)
         and (part.Position-frame.Position).Magnitude<=.17
         and part.CFrame.LookVector:Dot(frame.LookVector)>=.999
         and part.CFrame.UpVector:Dot(frame.UpVector)>=.999
-        and (math.abs(part.Transparency-alpha)<=.035
-            or part.Transparency==1)
+        and ((animated and (
+            (part.Transparency>=.04 and part.Transparency<=.66)
+            or part.Transparency==1))
+            or (not animated and (
+                math.abs(part.Transparency-alpha)<=.035
+                or part.Transparency==1)))
 end
 
 local function genuine(arena,index)
@@ -126,7 +138,7 @@ local function genuine(arena,index)
     local frame=CFrame.new(base.Position+Vector3.new(x,6,z))
     local rail=decor:FindFirstChild("CrossroadGate"..index)
     if not exactPart(rail,decor,"CrossroadGate"..index,
-        railSize,frame,.18) then return nil end
+        railSize,frame,.18,true) then return nil end
     local posts={}
     for _,sign in ipairs({-1,1}) do
         local name="CrossroadPost"..index.."_"..tostring(sign)
@@ -168,6 +180,8 @@ end
 local function mount(arena,index,source,holder)
     local rail,posts,base,decor=genuine(arena,index)
     if not rail then return end
+    -- Do not steal a native already hidden by a different scenery LOD.
+    if rail:GetAttribute("SceneryLodHidden")==true then return end
     local model=source:Clone()
     local frame,size=model:GetBoundingBox()
     local sourceAlongX=size.X>=size.Z
@@ -205,7 +219,9 @@ local function mount(arena,index,source,holder)
         end
     end
     if #meshParts~=7 then model:Destroy();return end
-    local natives={[rail]=rail.Transparency}
+    -- Posts are static, so normal Transparency is safe. The rail is
+    -- animated and must instead use client-only LocalTransparencyModifier.
+    local natives={}
     for _,post in ipairs(posts) do natives[post]=post.Transparency end
     model.Name="OriginalCrossroadsSculptedPortal"..index
     model:SetAttribute("CosmeticOnly",true)
@@ -215,10 +231,14 @@ local function mount(arena,index,source,holder)
         arena=arena,index=index,rail=rail,posts=posts,base=base,
         decor=decor,source=source,holder=holder,model=model,
         parts=meshParts,nativeAlpha=natives,connections={},
+        railOriginalModifier=rail.LocalTransparencyModifier,
+        railOriginalHidden=rail:GetAttribute("SceneryLodHidden"),
     }
     mounted[index]=entry
     if not valid(entry) then release(index);return end
     for native in pairs(natives) do native.Transparency=1 end
+    rail:SetAttribute("SceneryLodHidden",true)
+    rail.LocalTransparencyModifier=1
     local function changed()
         if mounted[index]==entry and not valid(entry) then release(index) end
     end
@@ -291,6 +311,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
             for native in pairs(entry.nativeAlpha) do
                 native.Transparency=1
             end
+            -- Animation updates BasePart.Transparency every 0.09 seconds
+            -- while active. LTM and SceneryLodHidden safely own visibility.
+            entry.rail:SetAttribute("SceneryLodHidden",true)
+            entry.rail.LocalTransparencyModifier=1
         end
     end
     for _,index in ipairs(old) do release(index) end
@@ -315,6 +339,11 @@ function Kit.replacedNativeCount()
                 if part.Parent==entry.decor and part.Transparency==1 then
                     n+=1
                 end
+            end
+            if entry.rail.Parent==entry.decor
+                and entry.rail.LocalTransparencyModifier>=.99
+                and entry.rail:GetAttribute("SceneryLodHidden")==true then
+                n+=1
             end
         end
     end
