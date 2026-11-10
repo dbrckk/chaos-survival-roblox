@@ -28,6 +28,7 @@ local ApprovedCrossroadsOpenGantryMeshKit = require(script.Parent.ApprovedCrossr
 local ApprovedClassicBroadcastFinMeshKit = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local ApprovedOrbitalReactorLandmarkMeshKit = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local ApprovedCrossroadsEntrancePortalMeshKit = require(script.Parent.ApprovedCrossroadsEntrancePortalMeshKit)
+local ApprovedVariantIdentitySpineMeshKit = require(script.Parent.ApprovedVariantIdentitySpineMeshKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1443,6 +1444,24 @@ task.spawn(function()
             ~=entranceReplaced then
             player:SetAttribute("LocalCrossroadsEntranceNativePartsReplaced",
                 entranceReplaced)
+        end
+        -- Authentic Classic GridMarker / Towers Spine source meshes.
+        -- Never touch four GridMarkerGlow or twelve TowerBand parts:
+        -- their alpha/color/poses remain owned by identity-motion client.
+        ApprovedVariantIdentitySpineMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local identityMasts=ApprovedVariantIdentitySpineMeshKit.count()
+        if player:GetAttribute("LocalIdentitySpineMeshCount")
+            ~=identityMasts then
+            player:SetAttribute("LocalIdentitySpineMeshCount",identityMasts)
+        end
+        local identityHidden=
+            ApprovedVariantIdentitySpineMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalIdentitySpineNativePartsReplaced")
+            ~=identityHidden then
+            player:SetAttribute("LocalIdentitySpineNativePartsReplaced",
+                identityHidden)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
