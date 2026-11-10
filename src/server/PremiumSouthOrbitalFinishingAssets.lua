@@ -58,7 +58,7 @@ function Assets.start()
                 clean.Name="OrbitalFinishing"
                 clean:SetAttribute("OwnerVerified",true)
                 clean:SetAttribute("CosmeticOnly",true)
-                clean:SetAttribute("OriginalSouthOrbitalOrbitalFinishing3D",true)
+                clean:SetAttribute("OriginalSouthOrbitalForgedFinishing3D",true)
                 clean:SetAttribute("Original3DAssetId",APPROVED_ID)
                 clean.Parent=folder
                 folder:SetAttribute("OrbitalFinishingReady",true)
