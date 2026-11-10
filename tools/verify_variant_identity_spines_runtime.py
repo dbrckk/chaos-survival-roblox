@@ -55,8 +55,23 @@ assert 'OriginalMeshScenery.sanitize(raw)' in SERVER
 assert 'count~=7' in SERVER
 assert 'n~=7' in CLIENT
 assert '#meshes~=7' in CLIENT
-assert 'task.wait(97)' in SERVER
-assert 'task.wait(13)' in SERVER
+assert 'task.wait(51)' in SERVER
+assert 'task.wait(24)' in SERVER
+assert 'local active=arena and arena:GetAttribute("VariantId")' in SERVER
+assert 'if active=="Classic" or active=="Towers" then' in SERVER
+assert 'if spec.name==active then ordered[#ordered+1]=spec end' in SERVER
+assert 'if spec.name~=active then ordered[#ordered+1]=spec end' in SERVER
+assert 'for _,spec in ipairs(ordered) do' in SERVER
+assert 'for attempt=1,3 do' in SERVER
+# The source order is deterministic, complete and duplicate-free:
+for active in ("Classic","Towers","Crossroads","Harbor","Orbital",None):
+    order=([active] if active in ("Classic","Towers") else [])+[
+        x for x in ("Classic","Towers") if x!=active]
+    assert sorted(order)==["Classic","Towers"],(active,order)
+    assert len(set(order))==2,(active,order)
+# Earlier optional imports must not become blocking startup work.
+assert SERVER.index("task.spawn(function()")<SERVER.index("task.wait(51)")
+assert 'task.wait(97)' not in SERVER
 assert 'for attempt=1,3 do' in SERVER
 assert 'ApprovedVariantIdentitySpineTemplates' in CLIENT
 assert 'ApprovedVariantIdentitySpineTemplates' in SERVER

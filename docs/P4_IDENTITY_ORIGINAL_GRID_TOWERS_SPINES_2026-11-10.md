@@ -51,3 +51,14 @@ Chaque corps native n'est masqué qu'après montage sécurisé de 7 MeshParts. L
 Capacités maximum : Low 0, Medium Android 1/PC 2, High Android 2/PC 4 ; si pression graphique 2, aucun modèle complémentaire. Les attributs client mesurent les corps **réellement montés**, sans inventer de couverture totale.
 
 L'import d'assets et le merge GitHub ne prouvent pas le rendu dans Roblox Studio, les FPS Android ou la mise à jour de la Place publique.
+
+
+## P4 runtime improvement — active arena first (10 November)
+
+The actual source and runtime kits are **already implemented** on `main`; this follow-up does not count those eight masts a second time.
+
+The server previously waited **97 seconds** before attempting either source, then waited **13 seconds** between requests. During short rounds the Classic or Towers identity masts could therefore remain primitive despite their owner-approved Model assets being available.
+
+The optional server loader now waits **51 seconds**, reads `workspace.GeneratedMap.Arena.VariantId`, loads the relevant Classic or Towers model **first**, then waits **24 seconds** before loading the other one. If the current arena is another variant or unavailable, the deterministic Classic→Towers order remains. Both requests stay serial, bounded to three attempts, and remain inside a background `task.spawn`; the native masts are not hidden unless the existing seven-MeshPart client kit mounts successfully.
+
+This reduces the earliest possible relevant asset request from **97 seconds to 51 seconds** after loader start, subject to real Roblox API and replication latency. It does **not** prove the user will see a mesh at exactly 51 seconds, nor establish a real Android FPS improvement. Source CI checks the ordering and fallback; a Studio/Android round should still be inspected.
