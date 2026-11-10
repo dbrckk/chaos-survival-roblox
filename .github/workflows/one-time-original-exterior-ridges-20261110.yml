@@ -1,0 +1,114 @@
+# Four authentic creator-owned Roblox Models. Never publishes a Place.
+name: One-time Original Exterior Carved Ridges 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-exterior-ridges-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-exterior-ridges-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate all four original sculpted ridge models, OBJ/glTF
+        shell: bash
+        run: |
+          set -euo pipefail
+          for corner in nw ne sw se; do
+            python3 tools/generate_original_exterior_ridges.py --model "exterior_ridges_$corner" --output "$RUNNER_TEMP/exterior_ridges_$corner.obj" > "$RUNNER_TEMP/exterior_ridges_$corner.json"
+            python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/exterior_ridges_$corner.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/exterior_ridges_$corner.gltf" > "$RUNNER_TEMP/export_$corner.json"
+          done
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64, hashlib, json, sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          materials={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          expected={'nw':(-1,-1),'ne':(1,-1),'sw':(-1,1),'se':(1,1)}
+          for corner,(sx,sz) in expected.items():
+              name=f'exterior_ridges_{corner}'
+              blob=(root/f'{name}.obj').read_bytes()
+              meta=json.loads((root/f'{name}.json').read_text())
+              gltf=json.loads((root/f'{name}.gltf').read_text())
+              assert meta['asset']==name and meta['corner']==corner.upper()
+              assert meta['corner_signs']==[sx,sz]
+              assert meta['native_heights']==[
+                  9+((i*7+sx*3+sz*5+20)%11) for i in range(1,4)]
+              assert hashlib.sha256(blob).hexdigest()==meta['sha256']
+              assert 100<=meta['groups']<=900
+              assert 2000<=meta['triangles']<=18000
+              assert set(meta['materials'])==materials
+              x,y,z=meta['bounds']
+              assert 15<x<55 and 8<y<22 and 15<z<55
+              assert gltf['asset']['version']=='2.0'
+              assert {m['name'] for m in gltf['materials']}==materials
+              prim=gltf['meshes'][0]['primitives']
+              assert len(prim)==7
+              assert sum(gltf['accessors'][v['attributes']['POSITION']]['count']//3
+                         for v in prim)==meta['triangles']
+              assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}
+                         <=set(v['attributes']) for v in prim)
+              buf=gltf['buffers'][0]
+              assert len(base64.b64decode(buf['uri'].split(',',1)[1],validate=True))==buf['byteLength']
+              for text in (b'JaggedSculptedRidgeRock',b'BraidedSideRib',
+                           b'RecessedTitaniumStud',b'CarbonFracturePanel',
+                           b'SculptedCrystallineRidgeCrown'):
+                  assert text in blob,text
+              print('RIDGE SOURCE PASS',name,meta['native_heights'],
+                    meta['triangles'],meta['bounds'],
+                    meta['offset'],meta['sha256'])
+          src=Path('src/server/MapBuilder.lua').read_text()
+          for value in ('"ExteriorRidge"','"Ridge" .. index',
+                        'CFrame.Angles(0, yaw + (index - 2) * 0.32, 0)',
+                        'corner.sx * x','corner.sz * z'):
+              assert value in src,value
+          print('NO PLACE PUBLISH')
+          PY
+  import-nw:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: exterior_ridges_nw
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+  import-ne:
+    needs: import-nw
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: exterior_ridges_ne
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+  import-sw:
+    needs: import-ne
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: exterior_ridges_sw
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+  import-se:
+    needs: import-sw
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: exterior_ridges_se
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
