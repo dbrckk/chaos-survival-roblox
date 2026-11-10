@@ -24,3 +24,15 @@ sur streaming/LOD/erreur, sans collision et sans bloquer les traversées.
 
 Ne déclarer ni l'intégration gameplay ni la publication publique terminées
 avant réception de la modération Approved et du contrôle runtime.
+
+## Import et intégration validés dans le dépôt
+
+L'import d'asset propriétaire [GitHub Actions #42872132972](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42872132972) a créé le **Model Roblox Approved `127067628128103`**. L'asset original, avec **3 220 triangles**, **99 groupes géométriques** et **7 matériaux**, est enregistré dans le registre du jeu.
+
+Le serveur charge un unique Model sanitaire propriétaire via `PremiumCrossroadsEntrancePortalAssets`. Le kit client `ApprovedCrossroadsEntrancePortalMeshKit` valide chaque rail `CrossroadGate1..4` et ses deux `CrossroadPost`, y compris la position exacte et l'orientation, puis monte **7 MeshParts approuvées par portail** avant de masquer les trois natives.
+
+**12 Parts source éligibles uniquement sur Crossroads**, mais le budget est Low 0 ; Medium Android 1/PC 2 ; High Android 2/PC 4 portails simultanés. Sous pression graphique forte, les 12 Parts natives redeviennent visibles. La géométrie 3D ne porte aucune collision ni interception de commandes. Le système de réduction réelle de la surface jouable peut fonctionner indépendamment : les positions des portails sont calculées d'après les dimensions originales stockées par `MapBuilder`, sans lire la taille mobile de la plateforme.
+
+Les compteurs client `LocalCrossroadsEntrance3DCount` et `LocalCrossroadsEntranceNativePartsReplaced` quantifient le montage observé ; ils ne sont pas une mesure des FPS, du rendu réel ou du pourcentage global de primitives restant dans le jeu.
+
+**Roblox Studio/Android et publication de la Place** ne sont pas attestés par une fusion GitHub ni par des régressions source.
