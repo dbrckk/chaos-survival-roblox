@@ -1,0 +1,43 @@
+name: South original 3D asset request-herd regression
+on:
+  pull_request:
+    paths:
+      - src/server/PremiumActiveVariantImportSchedule.lua
+      - src/server/PremiumSouthClassicObservatoryAssets.lua
+      - src/server/PremiumSouthCrossroadsExchangeAssets.lua
+      - src/server/PremiumSouthHarborDrydockAssets.lua
+      - src/server/PremiumSouthOrbitalFinishingAssets.lua
+      - src/server/PremiumSouthTowersFinishingAssets.lua
+      - src/server/PremiumSouthTowersSkytransferAssets.lua
+      - src/server/PremiumSouthTowersLiftTwinsAssets.lua
+      - src/server/PremiumSouthOrbitalObservationRingAssets.lua
+      - src/server/init.server.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_approved_asset_stagger.py
+      - .github/workflows/south-approved-asset-stagger-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/server/PremiumActiveVariantImportSchedule.lua
+      - src/server/PremiumSouthClassicObservatoryAssets.lua
+      - src/server/PremiumSouthCrossroadsExchangeAssets.lua
+      - src/server/PremiumSouthHarborDrydockAssets.lua
+      - src/server/PremiumSouthOrbitalFinishingAssets.lua
+      - src/server/PremiumSouthTowersFinishingAssets.lua
+      - src/server/PremiumSouthTowersSkytransferAssets.lua
+      - src/server/PremiumSouthTowersLiftTwinsAssets.lua
+      - src/server/PremiumSouthOrbitalObservationRingAssets.lua
+      - src/server/init.server.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_approved_asset_stagger.py
+      - .github/workflows/south-approved-asset-stagger-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify all eight Approved IDs and no fixed South import herd
+        run: python3 tools/verify_south_approved_asset_stagger.py
