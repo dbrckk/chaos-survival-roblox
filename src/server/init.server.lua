@@ -59,6 +59,7 @@ local PremiumExteriorRidgeAssets = require(script.PremiumExteriorRidgeAssets)
 local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLandmarkAssets)
 local PremiumCrossroadsGantryAssets = require(script.PremiumCrossroadsGantryAssets)
 local PremiumClassicBroadcastFinAssets = require(script.PremiumClassicBroadcastFinAssets)
+local PremiumOrbitalReactorLandmarkAssets = require(script.PremiumOrbitalReactorLandmarkAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumSouthOrbitalObservationRingAssets = require(script.PremiumSouthOrbitalObservationRingAssets)
 local PremiumSouthTowersSkytransferAssets = require(script.PremiumSouthTowersSkytransferAssets)
@@ -241,6 +242,8 @@ if not isStudioE2E then
     task.defer(PremiumCrossroadsGantryAssets.start)
     -- Authentic approved Classic broadcast aerofoil, four decorative fins.
     task.defer(PremiumClassicBroadcastFinAssets.start)
+    -- Two original moderated Orbital reactor Models, one sequential source lane.
+    task.defer(PremiumOrbitalReactorLandmarkAssets.start)
     -- A single genuine continuous Orbital megareactor torus, separate
     -- optional Model importer; never blocks rounds, human or AI spawn.
     task.defer(PremiumOrbitalSignatureRingAssets.start)
