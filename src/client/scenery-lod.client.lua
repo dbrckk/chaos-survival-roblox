@@ -28,6 +28,7 @@ local ApprovedSouthTowersLiftTwinsMeshKit = require(script.Parent.ApprovedSouthT
 local ApprovedSouthTowersFinishingMeshKit = require(script.Parent.ApprovedSouthTowersFinishingMeshKit)
 local ApprovedSouthCrossroadsExchangeMeshKit = require(script.Parent.ApprovedSouthCrossroadsExchangeMeshKit)
 local ApprovedSouthOrbitalFinishingMeshKit = require(script.Parent.ApprovedSouthOrbitalFinishingMeshKit)
+local ApprovedSouthHarborDrydockMeshKit = require(script.Parent.ApprovedSouthHarborDrydockMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1519,6 +1520,24 @@ task.spawn(function()
             ~=orbitalFinishingReplaced then
             player:SetAttribute("LocalSouthOrbitalFinishingPrimitivesReplaced",
                 orbitalFinishingReplaced)
+        end
+        -- South Harbor: original approved drydock sculpture replaces
+        -- all 14 static, nonphysical southern skyline natives only.
+        ApprovedSouthHarborDrydockMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local southDrydockCount=ApprovedSouthHarborDrydockMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthHarborDrydockCount")
+            ~=southDrydockCount then
+            player:SetAttribute("LocalApprovedSouthHarborDrydockCount",
+                southDrydockCount)
+        end
+        local southDrydockReplaced=
+            ApprovedSouthHarborDrydockMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthHarborPrimitivePartsReplaced")
+            ~=southDrydockReplaced then
+            player:SetAttribute("LocalSouthHarborPrimitivePartsReplaced",
+                southDrydockReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship

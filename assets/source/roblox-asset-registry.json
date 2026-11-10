@@ -714,6 +714,14 @@
       "source": "tools/generate_original_south_orbital_finishing.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42844551858
+    },
+    {
+      "name": "south_harbor_sculpted_drydock",
+      "asset_id": "125428569657840",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_harbor_drydock.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42847077638
     }
   ]
 }

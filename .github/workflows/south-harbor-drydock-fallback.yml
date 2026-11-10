@@ -1,0 +1,33 @@
+name: South Harbor original 3D runtime regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/client/ApprovedSouthHarborDrydockMeshKit.lua
+      - src/server/PremiumSouthHarborDrydockAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_harbor_drydock_fallback.py
+      - .github/workflows/south-harbor-drydock-fallback.yml
+  pull_request:
+    paths:
+      - src/client/ApprovedSouthHarborDrydockMeshKit.lua
+      - src/server/PremiumSouthHarborDrydockAssets.lua
+      - src/server/init.server.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_south_harbor_drydock_fallback.py
+      - .github/workflows/south-harbor-drydock-fallback.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all 14 Harbor native targets and safe rollback
+        run: python3 tools/verify_south_harbor_drydock_fallback.py
