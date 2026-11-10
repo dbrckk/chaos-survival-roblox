@@ -42,7 +42,7 @@ jobs:
           assert not Path('src/shared/VisualStagingStamp.lua').exists(), 'Staging source must never ship'
           engine = {p.as_posix() for p in Path('tests/engine').glob('*.spec.luau')}
           cloud = Path('.github/workflows/roblox-cloud-test.yml').read_text()
-          listed = re.findall(r'"(tests/engine/[^"*]+\\.spec\\.luau)"', cloud)
+          listed = re.findall(r'"(tests/engine/[^"*]+\.spec\.luau)"', cloud)
           assert len(engine)>=86, ('Missing real engine specs',len(engine))
           assert set(listed)==engine, ('Missing engine suites',sorted(engine-set(listed)),
                                       'Extras',sorted(set(listed)-engine))
