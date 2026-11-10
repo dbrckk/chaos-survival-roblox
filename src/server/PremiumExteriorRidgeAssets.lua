@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Assets={}
 local PROFILES={
@@ -47,7 +48,7 @@ function Assets.start()
             local name="Ridges"..spec.name
             if not folder:FindFirstChild(name) then
                 for attempt=1,3 do
-                    local ok,raw=pcall(AssetService.LoadAssetAsync,
+                    local ok,raw=pcall(GlobalApprovedImportGate.load,
                         AssetService,spec.id)
                     if ok and raw and raw:IsA("Model") then
                         local clean=OriginalMeshScenery.sanitize(raw)
