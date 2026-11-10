@@ -1,0 +1,29 @@
+name: Original Classic and Towers identity mast source 3D regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_variant_identity_spines.py
+      - tools/verify_original_variant_identity_spines.py
+      - src/server/MapBuilder.lua
+      - src/client/arena-identity-motion.client.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-identity-spines-source-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_variant_identity_spines.py
+      - tools/verify_original_variant_identity_spines.py
+      - src/server/MapBuilder.lua
+      - src/client/arena-identity-motion.client.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-identity-spines-source-regression.yml
+permissions:
+  contents: read
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuine seven-material mast sources and animated-glow safety
+        run: python3 tools/verify_original_variant_identity_spines.py
