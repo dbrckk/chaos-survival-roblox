@@ -60,6 +60,7 @@ local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLa
 local PremiumCrossroadsGantryAssets = require(script.PremiumCrossroadsGantryAssets)
 local PremiumClassicBroadcastFinAssets = require(script.PremiumClassicBroadcastFinAssets)
 local PremiumOrbitalReactorLandmarkAssets = require(script.PremiumOrbitalReactorLandmarkAssets)
+local PremiumCrossroadsEntrancePortalAssets = require(script.PremiumCrossroadsEntrancePortalAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumSouthOrbitalObservationRingAssets = require(script.PremiumSouthOrbitalObservationRingAssets)
 local PremiumSouthTowersSkytransferAssets = require(script.PremiumSouthTowersSkytransferAssets)
@@ -244,6 +245,8 @@ if not isStudioE2E then
     task.defer(PremiumClassicBroadcastFinAssets.start)
     -- Two original moderated Orbital reactor Models, one sequential source lane.
     task.defer(PremiumOrbitalReactorLandmarkAssets.start)
+    -- Creator-approved four-entry portal Model, shared and nonphysical.
+    task.defer(PremiumCrossroadsEntrancePortalAssets.start)
     -- A single genuine continuous Orbital megareactor torus, separate
     -- optional Model importer; never blocks rounds, human or AI spawn.
     task.defer(PremiumOrbitalSignatureRingAssets.start)
