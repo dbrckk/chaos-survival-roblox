@@ -36,3 +36,32 @@ Budget de paires simultanées : Low 0 ; Medium Android 1/PC 3 ; High Android 3/P
 Il existe **16 pièces natives éligibles dans la variante Orbital**, et non 16 remplacements garantis simultanément. Les attributs `LocalOrbitalReactorSculptPairCount` et `LocalOrbitalReactorNativePartsReplaced` comptabilisent les montages observés sur chaque client.
 
 La CI source ne remplace pas une mesure de FPS Android, la validation in-engine ou la publication de la Place Roblox, qui reste un processus distinct.
+
+## Correctif d'animation et de rétrécissement — 10 novembre 2026
+
+Le modèle natif OrbitalReactorNode est une partie suivie par
+arena-identity-motion : translation verticale ±0.44 stud au maximum
+et rotation de 2,2°. Le kit précédemment installé supposait une pose
+fixe (tolérance 0.17 stud) et masquait la Part par Transparency=1 ;
+l'animation pouvait donc refuser le montage ou faire réapparaître
+la sphère native par-dessus les sept MeshParts.
+
+Le nouveau contrôle respecte l'amplitude des mouvements du nœud et
+monte la véritable sculpture à la **pose d'origine**. Une fois les
+deux Models approuvés montés, le nœud natif est masqué localement
+(LocalTransparencyModifier=1, SceneryLodHidden=true), ce que
+le système d'animation sait déjà traiter en restaurant une seule fois
+la pose d'origine. Le support Strut, jamais animé, reste masqué via
+sa transparence native. Sur changement de LOD, le propriétaire
+initial du modificateur local et l'état d'animation sont restaurés.
+
+Deuxième correctif : la plateforme de jeu peut rétrécir en cours
+de manche. Les huit nœuds extérieurs sont placés par MapBuilder
+en fonction des dimensions **OriginalSizeX/Z**, et pas de la
+taille physique instantanée du plancher ; le calcul client utilise
+désormais les mêmes dimensions immuables. La structure peut ainsi
+rester validable pendant les catastrophes.
+
+Ce correctif n'ajoute aucune physique, ni boucle de rendu.
+Contrôles source d'intégrité ; un test dans Roblox Studio/Android
+reste nécessaire pour mesurer la fluidité et confirmer le rendu.

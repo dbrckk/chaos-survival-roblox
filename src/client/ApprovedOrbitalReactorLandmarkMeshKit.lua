@@ -34,6 +34,12 @@ local function release(index)
             native.Transparency=alpha
         end
     end
+    -- The reactor Node is phase-animated. Its authored alpha/CFrame
+    -- belong to arena-identity-motion, not to this cosmetic mesh kit.
+    if entry.node.Parent==entry.decor then
+        entry.node.LocalTransparencyModifier=entry.nodeOriginalModifier
+        entry.node:SetAttribute("SceneryLodHidden",entry.nodeOriginalHidden)
+    end
     entry.model:Destroy()
 end
 
@@ -84,17 +90,22 @@ local function bothApproved()
     return node,strut,holder
 end
 
-local function authenticPart(native,name,size,where,kind,alpha)
+local function authenticPart(native,name,size,where,kind,alpha,animated)
     if not native or not native:IsA("Part") or native.Name~=name
         or not native.Anchored or native.CanCollide
         or native.CanTouch or native.CanQuery
         or native.Shape~=kind
         or (native.Size-size).Magnitude>.10
-        or (native.Position-where.Position).Magnitude>.17
+        or (native.Position-where.Position).Magnitude>
+            (animated and .65 or .17)
         or native.CFrame.LookVector:Dot(where.LookVector)<.999
         or native.CFrame.UpVector:Dot(where.UpVector)<.999
-        or (math.abs(native.Transparency-alpha)>.035
-            and native.Transparency~=1) then return false end
+        or ((animated and not (
+            (native.Transparency>=.06 and native.Transparency<=.56)
+            or native.Transparency==1))
+            or (not animated and
+                math.abs(native.Transparency-alpha)>.035
+                and native.Transparency~=1)) then return false end
     return true
 end
 
@@ -108,11 +119,18 @@ local function genuine(arena,index)
         or arena:GetAttribute("VariantId")~="Orbital"
         or not base or not base:IsA("BasePart")
         or base.Parent~=arena or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+        or typeof(base:GetAttribute("OriginalSizeX"))~="number"
+        or typeof(base:GetAttribute("OriginalSizeZ"))~="number"
+        or base:GetAttribute("OriginalSizeX")<318
+        or base:GetAttribute("OriginalSizeZ")<318
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena or index<1 or index>8 then return nil end
     local angle=(index-1)*math.pi/4
-    local radius=math.max(base.Size.X*.5,base.Size.Z*.5)+7
+    -- The playfield dynamically shrinks. Native exterior landmarks do
+    -- NOT move, so use immutable authored sizes, never live Base.Size.
+    local originalX=base:GetAttribute("OriginalSizeX")
+    local originalZ=base:GetAttribute("OriginalSizeZ")
+    local radius=math.max(originalX*.5,originalZ*.5)+7
     local cosine=math.cos(angle)
     local sine=math.sin(angle)
     local nodeAt=base.Position+Vector3.new(cosine*radius,
@@ -125,14 +143,14 @@ local function genuine(arena,index)
         or node.Parent~=decor or strut.Parent~=decor then return nil end
     if not authenticPart(node,"OrbitalReactorNode"..index,
         Vector3.new(4.4,4.4,4.4),CFrame.new(nodeAt),
-        Enum.PartType.Ball,.20) then return nil end
+        Enum.PartType.Ball,.20,true) then return nil end
     local frame=CFrame.new(strutAt)*CFrame.Angles(0,-angle,0)
     if not authenticPart(strut,"OrbitalReactorStrut"..index,
         Vector3.new(8.5,.55,.55),frame,
         Enum.PartType.Block,.10) then return nil end
     -- The source models are cosmetic and extend no further into the
     -- arena than the existing 8.5-stud native strut.
-    return node,strut,base,decor,frame
+    return node,strut,base,decor,frame,CFrame.new(nodeAt)
 end
 
 local function valid(entry)
@@ -197,10 +215,13 @@ local function positionClone(source,target,id,expected,isStrut)
 end
 
 local function mount(arena,index,nodeSource,strutSource,holder)
-    local node,strut,base,decor,strutFrame=genuine(arena,index)
+    local node,strut,base,decor,strutFrame,nodeFrame=genuine(arena,index)
     if not node then return end
+    -- The animation can offset the live node by ~0.44 studs. Mount
+    -- at the original authored frame, then pause the hidden native.
+    if node:GetAttribute("SceneryLodHidden")==true then return end
     local nodeModel,nodePieces=positionClone(nodeSource,
-        CFrame.new(node.Position),NODE_ID,NODE_BOUNDS,false)
+        nodeFrame,NODE_ID,NODE_BOUNDS,false)
     if not nodeModel then return end
     local strutModel,strutPieces=positionClone(strutSource,
         strutFrame,STRUT_ID,STRUT_BOUNDS,true)
@@ -219,14 +240,17 @@ local function mount(arena,index,nodeSource,strutSource,holder)
         nodeSource=nodeSource,strutSource=strutSource,
         nodePieces=nodePieces,strutPieces=strutPieces,
         model=wrapper,connections={},
-        natives={[node]=node.Transparency,[strut]=strut.Transparency},
+        natives={[strut]=strut.Transparency},
+        nodeOriginalModifier=node.LocalTransparencyModifier,
+        nodeOriginalHidden=node:GetAttribute("SceneryLodHidden"),
     }
     mounted[index]=entry
     if not valid(entry) then release(index);return end
     -- Atomic cosmetic swap. Do not hide either native before BOTH clones
     -- are placed, verified and parented.
-    node.Transparency=1
     strut.Transparency=1
+    node:SetAttribute("SceneryLodHidden",true)
+    node.LocalTransparencyModifier=1
     local function changed()
         if mounted[index]==entry and not valid(entry) then release(index) end
     end
@@ -306,8 +330,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
             or entry.strutSource~=strutSource then
             obsolete[#obsolete+1]=index
         else
-            entry.node.Transparency=1
             entry.strut.Transparency=1
+            entry.node:SetAttribute("SceneryLodHidden",true)
+            entry.node.LocalTransparencyModifier=1
         end
     end
     for _,index in ipairs(obsolete) do release(index) end
@@ -330,7 +355,10 @@ function Kit.replacedNativeCount()
     local n=0
     for _,entry in pairs(mounted) do
         if valid(entry) then
-            if entry.node.Transparency==1 then n+=1 end
+            if entry.node.LocalTransparencyModifier>=.99
+                and entry.node:GetAttribute("SceneryLodHidden")==true then
+                n+=1
+            end
             if entry.strut.Transparency==1 then n+=1 end
         end
     end

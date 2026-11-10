@@ -72,12 +72,12 @@ for snippet in (
     'Enum.PartType.Block,.10',
     'Vector3.new(4.4,4.4,4.4)',
     'Vector3.new(8.5,.55,.55)',
-    'math.max(base.Size.X*.5,base.Size.Z*.5)+7',
+    'math.max(originalX*.5,originalZ*.5)+7',
     '9+(index%2)*3',
     'cosine*(radius-4.4)',
     'sine*(radius-4.4)',
     'CFrame.Angles(0,-angle,0)',
-    'node.Transparency=1',
+    'node.LocalTransparencyModifier=1',
     'strut.Transparency=1',
     'native.Transparency=alpha',
     'source.DescendantRemoving:Connect',
@@ -88,8 +88,9 @@ for snippet in (
     'part.CastShadow=false',
 ):
     assert snippet in CLIENT,snippet
-assert CLIENT.index('wrapper.Parent=bucket')<CLIENT.index('node.Transparency=1')
-assert CLIENT.index('node.Transparency=1')<CLIENT.index('strut.Transparency=1')
+assert CLIENT.index('wrapper.Parent=bucket')<CLIENT.index('strut.Transparency=1')
+assert CLIENT.index('strut.Transparency=1')<CLIENT.index(
+    'node:SetAttribute("SceneryLodHidden",true)')
 assert 'Low=0,Medium=3,High=6' in CLIENT
 assert 'Low=0,Medium=340,High=460' in CLIENT
 assert 'math.min(cap,3)' in CLIENT and 'math.min(cap,1)' in CLIENT
