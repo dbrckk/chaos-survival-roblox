@@ -69,6 +69,20 @@ assert SRC.index("release()\n    -- The existing") > SRC.index(
     "totalRequestMs += lastRequestMs")
 assert "RemoteEvent" not in SRC and "HttpService" not in SRC
 
+# The Studio smoke spec must be part of the guarded engine suite,
+# not an orphan file that no release workflow actually invokes.
+CLOUD=(ROOT/".github/workflows/roblox-cloud-test.yml").read_text()
+ENGINE=(ROOT/"tests/engine/premium-import-diagnostics.spec.luau").read_text()
+assert '"tests/engine/premium-import-diagnostics.spec.luau"' in CLOUD
+assert 'workflow_dispatch:' in CLOUD
+assert 'on:\n  workflow_dispatch:' in CLOUD
+assert 'local Gate = require("../../src/server/PremiumApprovedAssetImportGate")' in ENGINE
+assert 'PremiumApprovedImportDiagnostics' in ENGINE
+assert 'Gate.snapshot()' in ENGINE
+assert 'pcall(Gate.load, nil, 1234)' in ENGINE
+assert 'expect(snapshot.Limit).toBe(2)' in ENGINE
+assert 'expect(snapshot.SlowThresholdMs).toBe(8000)' in ENGINE
+
 assert "task.spawn(" not in SRC and "task.wait(" not in SRC
 assert "RemoteEvent" not in SRC and "ReplicatedStorage" not in SRC
 
