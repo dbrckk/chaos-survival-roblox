@@ -382,13 +382,32 @@ jobs:
               "column_classic", "column_towers", "column_crossroads",
               "column_orbital", "column_harbor", "long_route_cradle",
           }
+          # Owner-Approved premium 3D models added after the original 62-source
+          # registry milestone. Keep this explicit, never silently trust any
+          # unregistered or invented asset ID in production.
+          premium_extension_names = {
+              "perimeter_rotor", "perimeter_wing", "perimeter_cap",
+              "perimeter_crossbrace", "perimeter_generator_shield", "perimeter_towers_apex",
+              "perimeter_orbital_apex", "perimeter_crossroads_apex", "perimeter_relay_apex",
+              "exterior_tower_21", "exterior_tower_24", "exterior_tower_27",
+              "exterior_tower_30", "signature_orbital_reactor_ring", "signature_towers_forged_bridge",
+              "signature_crossroads_forged_interchange", "signature_harbor_sculpted_gantry", "signature_classic_sculpted_observatory",
+              "signature_classic_forged_supports", "south_orbital_observation_torus", "south_towers_forged_skytransfer",
+              "south_towers_forged_lift_twins", "south_towers_forged_finishing", "south_crossroads_forged_exchange",
+              "south_orbital_forged_finishing", "south_harbor_sculpted_drydock", "south_classic_sculpted_observatory",
+              "exterior_ridges_nw", "exterior_ridges_ne", "exterior_ridges_sw",
+              "exterior_ridges_se", "variant_towers_sculpted_machinery", "variant_crossroads_forged_gantry",
+              "variant_classic_sculpted_broadcast_fin", "variant_orbital_sculpted_node", "variant_orbital_trussed_strut",
+              "variant_crossroads_sculpted_entrance_portal", "variant_classic_grid_marker_sculpt", "variant_towers_spine_sculpt",
+          }
+          assert len(premium_extension_names) == 39
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
               | ambient_names | relief_names | floor_hardware_names
               | platform_side_names | large_hull_names | large_support_names
-              | harbor_original_names)
+              | harbor_original_names | premium_extension_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
           for model in models:
@@ -473,6 +492,11 @@ jobs:
                           "towers_cooling_stack": "tools/generate_original_towers_cooling_stack.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
+                  elif attr == "source" and model["name"] in premium_extension_names:
+                      # Every new premium source must point to reproducible
+                      # real geometry authoring, never an arbitrary asset.
+                      assert path.is_file() and path.is_relative_to("tools")
+                      assert path.name.startswith("generate_original_")
                   else:
                       assert path.is_file() and path.is_relative_to("assets/source")
           # The runtime must use real approved MODEL package IDs from
@@ -532,7 +556,7 @@ jobs:
           gate_asset = re.search(r"local ASSET_ID = (\d+)", gate_source)
           assert gate_asset and gate_asset.group(1) == approved["lobby_gate"]
           assert "OriginalMeshScenery.sanitize(raw)" in gate_source
-          assert "AssetService.LoadAssetAsync" in gate_source
+          assert "GlobalApprovedImportGate.load" in gate_source
           assert 'local ASSET_ID = 136009650118642' in gate_client
           assert 'part.CanCollide = false' in gate_client
           assert 'part.CanTouch = false' in gate_client
@@ -603,7 +627,7 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 62
+          assert len(models) == 101
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
@@ -611,7 +635,7 @@ jobs:
           assert next(m["workflow_run_id"] for m in models
                       if m["name"]=="large_deck_hull")==41809088464
           for check in ("OriginalMeshScenery.sanitize(raw)",
-                        "AssetService.LoadAssetAsync",
+                        "GlobalApprovedImportGate.load",
                         "ApprovedLargeDeckHullTemplates",
                         "OriginalLargeDeckHull3D"):
               assert check in large_server, check
@@ -642,7 +666,7 @@ jobs:
               assert next(m["workflow_run_id"] for m in models
                           if m["name"] == source_name) == 41798024000
           for required in (
-              "AssetService.LoadAssetAsync",
+              "GlobalApprovedImportGate.load",
               "OriginalMeshScenery.sanitize(raw)",
               "ApprovedPlatformSideTemplates",
               "validModel(clean, name)",
@@ -711,7 +735,7 @@ jobs:
               assert next(m["workflow_run_id"] for m in models
                           if m["name"]==source)==41808940118
           for required in (
-              "AssetService.LoadAssetAsync",
+              "GlobalApprovedImportGate.load",
               "OriginalMeshScenery.sanitize(raw)",
               "ApprovedLargeStructureTemplates", "geometryAllowed(safe,name)",
           ):
@@ -829,7 +853,7 @@ jobs:
           for required in (
               "OriginalMeshScenery.sanitize(raw)",
               "ApprovedFloorReliefTemplates",
-              "AssetService.LoadAssetAsync",
+              "GlobalApprovedImportGate.load",
           ):
               assert required in relief_server
           for required in (
@@ -867,7 +891,7 @@ jobs:
           for required in (
               "OriginalMeshScenery.sanitize(raw)",
               "ApprovedAmbientMotionTemplates",
-              "AssetService.LoadAssetAsync",
+              "GlobalApprovedImportGate.load",
           ):
               assert required in ambient_source
           for required in (
@@ -970,7 +994,13 @@ jobs:
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
-          print("Verified 62 creator-owned Approved Model assets including two distinct sculpted Tower Run cooling profiles and Harbor sea, strict Android/hazard safety and provenance.")
+          # Verify the centralized two-permit authentic-asset import
+          # enforcement (all 46 Premium owner loaders) has not regressed.
+          import subprocess, sys
+          subprocess.run([sys.executable,
+              "tools/verify_premium_approved_asset_import_queue.py"],
+              check=True)
+          print("Verified 101 owner-Approved original Roblox Models (62 original plus 39 premium), source provenance, safe LOD and full Premium import concurrency.")
           PY
 
       - name: Install Rojo 7.7.0
