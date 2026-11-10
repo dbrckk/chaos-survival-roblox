@@ -56,6 +56,7 @@ local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructur
 local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
 local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
 local PremiumExteriorRidgeAssets = require(script.PremiumExteriorRidgeAssets)
+local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLandmarkAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumSouthOrbitalObservationRingAssets = require(script.PremiumSouthOrbitalObservationRingAssets)
 local PremiumSouthTowersSkytransferAssets = require(script.PremiumSouthTowersSkytransferAssets)
@@ -232,6 +233,8 @@ if not isStudioE2E then
     -- cosmetic imports delayed after critical round/AI startup.
     task.defer(PremiumExteriorTowerAssets.start)
     task.defer(PremiumExteriorRidgeAssets.start)
+    -- Creator-approved Towers corner machinery: one optional original source.
+    task.defer(PremiumVariantTowersLandmarkAssets.start)
     -- A single genuine continuous Orbital megareactor torus, separate
     -- optional Model importer; never blocks rounds, human or AI spawn.
     task.defer(PremiumOrbitalSignatureRingAssets.start)
