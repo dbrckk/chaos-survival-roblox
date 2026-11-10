@@ -1,0 +1,41 @@
+name: South 3D asset import concurrency gate regression
+on:
+  pull_request:
+    paths:
+      - src/server/PremiumSouthApprovedImportGate.lua
+      - src/server/PremiumSouthClassicObservatoryAssets.lua
+      - src/server/PremiumSouthCrossroadsExchangeAssets.lua
+      - src/server/PremiumSouthHarborDrydockAssets.lua
+      - src/server/PremiumSouthOrbitalFinishingAssets.lua
+      - src/server/PremiumSouthTowersFinishingAssets.lua
+      - src/server/PremiumSouthTowersSkytransferAssets.lua
+      - src/server/PremiumSouthTowersLiftTwinsAssets.lua
+      - src/server/PremiumSouthOrbitalObservationRingAssets.lua
+      - tools/verify_south_approved_asset_stagger.py
+      - tools/verify_south_approved_import_gate.py
+      - .github/workflows/south-approved-import-gate-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/server/PremiumSouthApprovedImportGate.lua
+      - src/server/PremiumSouthClassicObservatoryAssets.lua
+      - src/server/PremiumSouthCrossroadsExchangeAssets.lua
+      - src/server/PremiumSouthHarborDrydockAssets.lua
+      - src/server/PremiumSouthOrbitalFinishingAssets.lua
+      - src/server/PremiumSouthTowersFinishingAssets.lua
+      - src/server/PremiumSouthTowersSkytransferAssets.lua
+      - src/server/PremiumSouthTowersLiftTwinsAssets.lua
+      - src/server/PremiumSouthOrbitalObservationRingAssets.lua
+      - tools/verify_south_approved_asset_stagger.py
+      - tools/verify_south_approved_import_gate.py
+      - .github/workflows/south-approved-import-gate-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify one actual in-flight South importer and safe release
+        run: python3 tools/verify_south_approved_import_gate.py
