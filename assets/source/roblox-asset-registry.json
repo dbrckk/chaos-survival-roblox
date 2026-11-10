@@ -690,6 +690,14 @@
       "source": "tools/generate_original_south_towers_lift_twins.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42835512896
+    },
+    {
+      "name": "south_towers_forged_finishing",
+      "asset_id": "79666240429608",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_towers_finishing.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42840287655
     }
   ]
 }
