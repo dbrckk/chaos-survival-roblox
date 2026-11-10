@@ -1,0 +1,31 @@
+name: P4 premium landmark residency owner contract
+on:
+  pull_request:
+    paths:
+      - src/client/juice.client.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/PerformancePulseRules.lua
+      - src/server/init.server.lua
+      - tests/engine/game-analytics.spec.luau
+      - tools/verify_premium_landmark_residency_pulse.py
+      - .github/workflows/premium-landmark-residency-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/juice.client.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/PerformancePulseRules.lua
+      - src/server/init.server.lua
+      - tests/engine/game-analytics.spec.luau
+      - tools/verify_premium_landmark_residency_pulse.py
+      - .github/workflows/premium-landmark-residency-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify real six-family 3D mounts and exact native masks in pulse
+        run: python3 tools/verify_premium_landmark_residency_pulse.py
