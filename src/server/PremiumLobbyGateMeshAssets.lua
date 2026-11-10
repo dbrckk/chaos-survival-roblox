@@ -5,6 +5,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local PremiumLobbyGateMeshAssets = {}
 local ASSET_ID = 136009650118642
@@ -51,7 +52,7 @@ function PremiumLobbyGateMeshAssets.start()
     task.spawn(function()
         task.wait(9)
         for attempt = 1, 3 do
-            local ok, raw = pcall(AssetService.LoadAssetAsync,
+            local ok, raw = pcall(GlobalApprovedImportGate.load,
                 AssetService, ASSET_ID)
             if ok and raw and raw:IsA("Model") then
                 local clean = OriginalMeshScenery.sanitize(raw)
