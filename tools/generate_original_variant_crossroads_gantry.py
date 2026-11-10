@@ -82,7 +82,7 @@ def make() -> Sculpture:
     for face in (-1,1):
         z=face*1.14
         for i in range(8):
-            x=-12.3+i*3.50
+            x=-12.3+i*3.10
             art.rod("ForgedAlternatingWeb_%s_%02d"%(face,i),"GRIP",
                     (x,-.83,z),(x+2.7,.88,z),
                     .105,10)
