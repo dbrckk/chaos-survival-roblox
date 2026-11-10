@@ -24,6 +24,7 @@ local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTower
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
+local ApprovedSouthTowersLiftTwinsMeshKit = require(script.Parent.ApprovedSouthTowersLiftTwinsMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1445,6 +1446,21 @@ task.spawn(function()
         if player:GetAttribute("LocalSouthTowersPrimitiveBlocksReplaced")
             ~=towersSouthReplaced then
             player:SetAttribute("LocalSouthTowersPrimitiveBlocksReplaced",towersSouthReplaced)
+        end
+        -- South Towers: approved sculpted lift shafts and crown trusses.
+        ApprovedSouthTowersLiftTwinsMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local southLiftCount=ApprovedSouthTowersLiftTwinsMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthTowersLiftTwinsCount")
+            ~=southLiftCount then
+            player:SetAttribute("LocalApprovedSouthTowersLiftTwinsCount",southLiftCount)
+        end
+        local southLiftReplaced=
+            ApprovedSouthTowersLiftTwinsMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthTowersLiftPrimitivesReplaced")
+            ~=southLiftReplaced then
+            player:SetAttribute("LocalSouthTowersLiftPrimitivesReplaced",southLiftReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
