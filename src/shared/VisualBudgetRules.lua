@@ -114,6 +114,10 @@ VisualBudgetRules.LocalFolders = {
     -- replaces exactly two decorative native slabs in a nonphysical
     -- outboard monument. Existing 440/680/900 Android/PC census owns it.
     "ApprovedTowersSignatureBridgeLocal",
+    -- One creator-verified Crossroads forged double-deck sculpture, seven
+    -- genuine 3D MeshParts replacing four nonphysical Part/WedgeParts.
+    -- Existing Android 440/680/900 visual census and GPU LOD govern it.
+    "ApprovedCrossroadsSignatureInterchangeLocal",
     -- Four original corner monuments are also client MeshPart owners;
     -- they were previously absent from the persistent visual ledger.
     "ApprovedOriginalCornerMonumentsLocal",
