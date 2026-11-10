@@ -1,0 +1,43 @@
+# Two approved creator-owned source Models for Orbital, never Place publish.
+name: One-time Original Orbital Reactor Node and Strut 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-orbital-node-strut-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-orbital-reactor-node-strut-20261110
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate two physical source envelopes and glTF materials
+        run: python3 tools/verify_variant_orbital_landmarks_source.py
+  import-node:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: variant_orbital_sculpted_node
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
+  import-strut:
+    needs: import-node
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: variant_orbital_trussed_strut
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
