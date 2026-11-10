@@ -1,0 +1,72 @@
+# Source authentic original creator-owned 3D Model, NO Roblox Place publish.
+name: One-time Crossroads Forged Interchange 2026-11-10
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-crossroads-interchange-20261110.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-crossroads-interchange-20261110
+  cancel-in-progress: false
+
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify authentic two-level mesh geometry and seven true PBR glTF materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_signature_crossroads_interchange.py --output "$RUNNER_TEMP/original_crossroads_interchange.obj" > "$RUNNER_TEMP/original_crossroads_interchange.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/original_crossroads_interchange.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/original_crossroads_interchange.gltf" > "$RUNNER_TEMP/original_crossroads_interchange-gltf.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import base64,hashlib,json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          obj=(root/'original_crossroads_interchange.obj').read_bytes()
+          meta=json.loads((root/'original_crossroads_interchange.json').read_text())
+          gltf=json.loads((root/'original_crossroads_interchange.gltf').read_text())
+          assert meta['asset']=='signature_crossroads_forged_interchange'
+          assert hashlib.sha256(obj).hexdigest()==meta['sha256']
+          assert 55<=meta['groups']<=225 and 1800<=meta['triangles']<=11000
+          palette={'ARMOR','BRUSHED','CARBON','GRIP','ALLOY','CERAMIC','SIGNAL'}
+          assert set(meta['materials'])==palette
+          w,h,d=meta['bounds']
+          assert 47.4<=w<=48.0 and 11.4<=h<=12.2 and 6.65<=d<=7.1
+          for required in (b'ContinuousFourteenFacetLowerFreightDeck',
+                           b'SweptDualRailUpperExchangeDeck',
+                           b'CastCantileverStructuralSaddle',
+                           b'LongOpenRailTruss',
+                           b'ReverseCoredTruss',
+                           b'RaisedCantileverHollowSpar',
+                           b'TransitSignalRecess'):
+              assert required in obj,required
+          assert gltf['asset']['version']=='2.0'
+          assert {m['name'] for m in gltf['materials']}==palette
+          primitives=gltf['meshes'][0]['primitives']
+          assert len(primitives)==7
+          assert sum(gltf['accessors'][p['attributes']['POSITION']]['count']//3 for p in primitives)==meta['triangles']
+          assert all({'POSITION','NORMAL','TEXCOORD_0','TANGENT'}<=set(p['attributes']) for p in primitives)
+          buffer=gltf['buffers'][0]
+          assert len(base64.b64decode(buffer['uri'].split(',',1)[1],validate=True))==buffer['byteLength']
+          print('SOURCE PASS original Crossroads forged interchange:',meta['triangles'],meta['bounds'],meta['sha256'])
+          print('NO PUBLIC ROBLOX PLACE UPDATE')
+          PY
+
+  owner-import:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: signature_crossroads_forged_interchange
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
