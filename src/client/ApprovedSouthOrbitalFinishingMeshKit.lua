@@ -53,7 +53,7 @@ local function sourceFor()
     if not source or not source:IsA("Model") or source.Parent~=folder
         or source:GetAttribute("OwnerVerified")~=true
         or source:GetAttribute("CosmeticOnly")~=true
-        or source:GetAttribute("OriginalSouthOrbitalOrbitalFinishing3D")~=true
+        or source:GetAttribute("OriginalSouthOrbitalForgedFinishing3D")~=true
         or source:GetAttribute("Original3DAssetId")~=MODEL_ID then
         return nil
     end
@@ -183,7 +183,7 @@ local function fit(source,center)
         end
     end
     if #pieces~=7 then model:Destroy();return nil end
-    model.Name="OriginalSouthOrbitalOrbitalFinishing3D"
+    model.Name="OriginalSouthOrbitalForgedFinishing3D"
     model:SetAttribute("CosmeticOnly",true)
     model:SetAttribute("Original3DAssetId",MODEL_ID)
     return model,pieces
