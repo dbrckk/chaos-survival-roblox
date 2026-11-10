@@ -129,7 +129,7 @@ def profiled_supports(a):
             y=3.25+index*3.44
             for face in (-1,1):
                 rod(a,"PylonPowerLead%s_%s_%02d"%(side,face,index),
-                    (x+side*1.16,y,face*.79),
+                    "ALLOY", (x+side*1.16,y,face*.79),
                     (x+side*1.16,y+2.3,face*.79),.085,8)
             block(a,"PylonRetainedCeramicStatus%s_%02d"%(side,index),
                   "SIGNAL",x,y+.68,-1.44,.36,.28,.065,.025)
