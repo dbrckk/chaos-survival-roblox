@@ -1,5 +1,12 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+## Avancement vérifié au 10 novembre 2026 — nouvelles crêtes extérieures
+
+Les **12 `WedgePart`** `ExteriorRidgeNW/NE/SW/SE/Ridge1..3` ont désormais quatre modèles 3D originaux de **6 252 triangles chacun**, sept matériaux, avec leurs quatre importations Roblox **Moderation: Approved** : NW `123836720232695`, NE `83853948389204`, SW `108491064314671`, SE `83023096720529`. Le kit `ApprovedExteriorRidgeMeshKit.lua` valide les vrais angles/hauteurs/positions et les remplace sous LOD selon l'appareil ; sur Low, les 12 `WedgePart` restent visibles volontairement. [Import #42854203855](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42854203855) et [validation runtime statique #42855465813](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42855465813) réussis. **C'est la couverture source de 12 formes par carte (60 occurrences sur les cinq variantes), pas un pourcentage global ni un test de rendu Roblox.**
+
+Les monuments `SouthHorizonMonument` disposent de **73/73 cibles 3D approuvées** sur leurs cinq variantes, et restent séparés des crêtes extérieures. Prochaine famille visible à auditer : les `DistantRoofMass` de `SkylineDepth` et les supports primitifs de `addVariantLandmarks`. Avant d'annoncer un pourcentage général, il faut un recensement Roblox Studio/Android de toutes les familles, des éléments de collision et de l'activation LOD.
+
+
 **Horizon sud Orbital (10 novembre 2026) :** les **14** `ObservationArc1..14` du `SouthHorizonMonument` Orbital ont maintenant un remplacement 3D original, asset `124474310430876` approuvé (tore creux, sept MeshParts), chargé seulement sous conditions strictes de carte/LOD/streaming. Les supports, l'orbe et le clamp restent natifs. C'est **14 anciennes primitives-source éligibles** dans une famille différente des signatures nord et des stations périphériques ; **pas** un pourcentage global du jeu.
 
 
@@ -37,7 +44,7 @@ Les quatre ExteriorSilhouetteNorth/East/South/West par variante comportent SIX n
 | MapBuilder.addArenaSignatureMegastructure | Une ArenaSignatureMegastructure par carte, avec pièces assemblées en Parts et WedgeParts, notamment lift towers, plateformes d'échange, relais, terminal de fret ou anneau segmenté selon variante | Grandes formes de repère dominant l'horizon : meilleure cible AAA après les tours |
 | MapBuilder.addSouthHorizonMonument | Architecture sud construite en Parts/WedgeParts selon variante | Horizon opposé à l'architecture dominante |
 | MapBuilder.addVariantIdentity et addVariantLandmarks | GridMarker, TowerSpine, CrossroadGate, OrbitalCrown, ClassicBroadcastFin, TowerMachinery, CrossroadGantry, OrbitalReactorNode... en primitives directes | Signaux importants : maintenir leur lisibilité et leur gabarit |
-| MapBuilder.addExteriorCornerRidges | 4 ensembles de reliefs en WedgeParts | Les crêtes angulaires restent simplifiées |
+| MapBuilder.addExteriorCornerRidges | 4 × 3 = 12 WedgeParts extérieures par variante | **12/12 couvertes par quatre assets 3D originaux approuvés** (sous LOD) ; valider le rendu Android |
 
 Ce registre est une **liste vérifiée de cibles**, pas un comptage global des objets réellement affichés. Les fonctions créent des quantités variables selon arène/conditions et d'autres modules produisent des milliers de props client/serveur. Les nombres de sources Roblox Model dans le registre ne sont pas égaux au nombre d'instances ni de primitives supprimées.
 
