@@ -674,6 +674,14 @@
       "source": "tools/generate_original_south_orbital_observation_ring.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42821753995
+    },
+    {
+      "name": "south_towers_forged_skytransfer",
+      "asset_id": "120959181274080",
+      "moderation": "Approved",
+      "source": "tools/generate_original_south_towers_skytransfer.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42833322096
     }
   ]
 }
