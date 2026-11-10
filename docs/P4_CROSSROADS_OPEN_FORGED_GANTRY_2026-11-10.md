@@ -26,3 +26,24 @@ ne doit pas multiplier les appels AssetService.
 
 **Limite :** la validation géométrique par CI n'est pas une vérification
 du rendu ou du FPS dans Roblox Studio/Android.
+
+## Import Roblox réel et montage réversible
+
+L'import propriétaire original a produit le Model `90844491148907`,
+avec modération **Approved** et provenance vérifiable dans
+[GitHub Actions #42864120791](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42864120791).
+
+Le chargeur `PremiumCrossroadsGantryAssets` vérifie et assainit les
+**sept MeshParts** propriétaires. Un kit client utilise cette unique source
+pour les quatre `CrossroadGantry` authentiques. Il préserve les
+`CrossroadSignal`, les collisions et les dimensions du générateur.
+
+La disparition de la source, le changement de carte, une pièce modifiée
+ou la réduction du budget LOD déclenchent la restauration des natives.
+**Quatre poutres primitives éligibles, uniquement dans Crossroads**,
+mais au plus 2 mesh gantries simultanés sur High Android et 4 sur
+High PC ; Medium Android 1 / PC 2 ; Low 0.
+
+La compilation CI est un contrôle statique source. Une validation Roblox
+Studio/Android de l'ouverture centrale et du FPS reste nécessaire.
+Aucune nouvelle publication de la Place publique n'est revendiquée.
