@@ -762,6 +762,14 @@
       "source": "tools/generate_original_exterior_ridges.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42854203855
+    },
+    {
+      "name": "variant_towers_sculpted_machinery",
+      "asset_id": "72143366927826",
+      "moderation": "Approved",
+      "source": "tools/generate_original_variant_towers_machinery.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42861370182
     }
   ]
 }

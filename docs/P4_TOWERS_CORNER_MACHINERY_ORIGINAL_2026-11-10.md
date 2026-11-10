@@ -21,3 +21,23 @@ La suite du workflow est de lire l'ID du vrai Model modéré, de
 l'ajouter au registre et de monter le modèle à ses quatre positions
 via le LOD commun en conservant les Parts natives en fallback.
 **Ne pas déclarer cette famille remplacée avant le kit validé.**
+
+## Livraison source et montage runtime — 10 novembre 2026
+
+L'import réel via GitHub Actions [#42861370182](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42861370182) a abouti : propriétaire Roblox, Model **72143366927826**, **Moderation: Approved**.
+
+Le code de jeu peut désormais charger ce Model de manière différée et
+contrôlée via `PremiumVariantTowersLandmarkAssets`. Le kit client
+`ApprovedVariantTowersLandmarkMeshKit` contrôle les quatre vraies paires
+`TowerMachinery` + `TowerMachineryCap` et ne masque les deux natives
+qu'une fois **sept MeshParts réelles** montées. Chaque antenne reste
+visible. Couverture source de cette famille : **8/8 pièces éligibles**
+dans Towers. Les quatre machines existent sur une seule arène Towers
+active, pas sur chacune des cinq variantes.
+
+Budget de présence simultanée : Low 0 ; Medium Android 1 / PC 2 ;
+High Android 2 / PC 4, avec rétrogradation en fonction de la pression.
+Les attributs du client enregistrent les MeshParts effectivement montées
+et les primitives masquées. Ces compteurs ne prouvent pas le rendu final
+ni les FPS Android. Les tests Studio et la publication publique restent
+des opérations distinctes et non attestées par une simple fusion GitHub.

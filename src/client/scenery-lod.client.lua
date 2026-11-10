@@ -23,6 +23,7 @@ local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerime
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
 local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
+local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVariantTowersLandmarkMeshKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1351,6 +1352,25 @@ task.spawn(function()
             ~=depthReplaced then
             player:SetAttribute("LocalSkylineDepthPrimitivesReplaced",
                 depthReplaced)
+        end
+        -- Original Towers corner machines and sculpted cap: true
+        -- seven-material creator-approved mesh. Native antenna survives.
+        -- Same shared sampler, strict camera budget and reversible fallback.
+        ApprovedVariantTowersLandmarkMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local landmarkMeshes=ApprovedVariantTowersLandmarkMeshKit.count()
+        if player:GetAttribute("LocalTowersLandmarkMeshCount")
+            ~=landmarkMeshes then
+            player:SetAttribute("LocalTowersLandmarkMeshCount",
+                landmarkMeshes)
+        end
+        local landmarkHidden=
+            ApprovedVariantTowersLandmarkMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalTowersLandmarkPrimitivesReplaced")
+            ~=landmarkHidden then
+            player:SetAttribute("LocalTowersLandmarkPrimitivesReplaced",
+                landmarkHidden)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
