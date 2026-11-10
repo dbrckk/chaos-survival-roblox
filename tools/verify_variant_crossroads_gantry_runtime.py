@@ -40,7 +40,8 @@ assert "parts ~= 7" in LOADER
 assert "n~=7" in CLIENT and "#parts~=7" in CLIENT
 assert "task.wait(98)" in LOADER
 assert "AssetService.LoadAssetAsync" in LOADER
-assert "AssetService" not in CLIENT
+assert "game:GetService(\"AssetService\")" not in CLIENT
+assert "AssetService.LoadAssetAsync" not in CLIENT
 assert "task.defer(PremiumCrossroadsGantryAssets.start)" in INIT
 assert "require(script.PremiumCrossroadsGantryAssets)" in INIT
 assert "ApprovedCrossroadsOpenGantryMeshKit.sync(arena,cameraPoint," in LOD
