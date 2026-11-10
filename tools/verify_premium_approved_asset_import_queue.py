@@ -57,8 +57,12 @@ for forbidden in ("task.spawn", "task.wait", "RenderStepped",
         line.split("--",1)[0] for line in QUEUE.splitlines()),forbidden
 assert 'require("./PremiumApprovedAssetImportGate")' in SOUTH
 assert "pcall(GlobalApprovedImportGate.load,service,assetId)" in SOUTH
-assert "while busy do task.wait(.2) end" in SOUTH
-assert "busy=false\n    if not ok then error(result,0) end" in SOUTH
+assert "while busy do task.wait(.2) end" not in SOUTH
+assert 'Instance.new("BindableEvent")' in SOUTH
+assert 'signal.Event:Wait()' in SOUTH
+assert 'signal:Destroy()' in SOUTH
+assert 'nextWaiter:Fire()' in SOUTH
+assert "release()\n    if not ok then error(result,0) end" in SOUTH
 assert "pcall(service.LoadAssetAsync" not in SOUTH
 
 for source in SOURCES:
