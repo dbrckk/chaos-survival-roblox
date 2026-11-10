@@ -122,6 +122,20 @@ VisualBudgetRules.LocalFolders = {
     "ApprovedSouthOrbitalFinishingLocal",
     "ApprovedSouthHarborDrydockLocal",
     "ApprovedSouthClassicObservatoryLocal",
+    -- P4 audit: eight recently approved 3D cosmetic owners were absent
+    -- from the shared Parts/Lights/Effects census. Every actual seven-
+    -- MeshPart clone must count toward the same Android adaptive limits,
+    -- including the native-rollback skyline replacements. These are
+    -- DIRECT workspace folders, not embedded under existing owners.
+    -- The client LOD owns visibility; the census only observes it.
+    "ApprovedClassicBroadcastFinLocal",
+    "ApprovedCrossroadsEntrancePortalsLocal",
+    "ApprovedCrossroadsOpenGantryLocal",
+    "ApprovedOrbitalReactorLandmarksLocal",
+    "ApprovedPrimarySkylineLocal",
+    "ApprovedSkylineDepthLocal",
+    "ApprovedOriginalIdentitySpinesLocal",
+    "ApprovedTowersMachineryLocal",
     -- One original Towers forged bridge Model (seven genuine MeshParts)
     -- replaces exactly two decorative native slabs in a nonphysical
     -- outboard monument. Existing 440/680/900 Android/PC census owns it.
