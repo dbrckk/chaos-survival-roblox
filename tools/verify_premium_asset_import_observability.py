@@ -37,7 +37,7 @@ for name in ('InFlight','Waiting','PeakInFlight','Limit','Completed','Failed',
              'LastRequestMs','MaxRequestMs'):
     assert f'diagnostics:SetAttribute("{name}",' in SRC, name
     assert f'{name} =' in SRC, name
-assert SRC.index("local function publish()")<SRC.index("publish()\n\nlocal function reserve()")
+assert SRC.index("local function publish()")<SRC.index("publish()\n\nlocal function reserve(assetId)")
 assert SRC.index("publish()\n    signal.Event:Wait()")<SRC.index("signal.Event:Wait()")
 assert SRC.index("release()\n    -- The existing") > SRC.index(
     "local ok, result = pcall(service.LoadAssetAsync")
