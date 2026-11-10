@@ -4,6 +4,7 @@
 local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
+local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local APPROVED_ID=125428569657840
@@ -42,7 +43,9 @@ function Assets.start()
     end
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        task.wait(49)
+        -- Eight South Monument imports previously competed at t=49s.
+        -- Prioritize the current map only; stagger inactive art.
+        ActiveSignatureSchedule.waitFor("Harbor",59,129)
         if folder:FindFirstChild("SculptedDrydock") then return end
         for attempt=1,3 do
             local ok,raw=pcall(AssetService.LoadAssetAsync,
