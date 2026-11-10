@@ -1,5 +1,8 @@
 # P4 — Pont industriel sculpté pour la mégastructure Towers
 
+**Actualisation après import (10 novembre 2026) :** l'OBJ/glTF source a passé les contrôles de [l'action #42777274284](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42777274284) avec **3 042 triangles, sept matériaux et limites source 40,64 × 4,87784 × 6,77 studs**. Le Model Roblox original propriétaire `126298311664881` est **Moderation: Approved**. Le serveur et le client possèdent désormais le montage source du pont : [contrat runtime détaillé](P4_RUNTIME_TOWERS_SIGNATURE_BRIDGE_2026-11-10.md). Le texte d'import futur ci-dessous est historique. Il ne s'agit pas d'une publication du jeu ni d'une preuve de rendu Android.
+
+
 10 novembre 2026. Ce travail concerne les corps du pont décoratif lointain de ArenaSignatureMegastructure en variante Towers, et **pas** les ponts Skyrail jouables ou leur physique.
 
 ## Audit exact

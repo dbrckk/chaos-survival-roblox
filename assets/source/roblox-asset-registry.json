@@ -626,6 +626,14 @@
       "source": "tools/generate_original_signature_orbital_ring.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42711150534
+    },
+    {
+      "name": "signature_towers_forged_bridge",
+      "asset_id": "126298311664881",
+      "moderation": "Approved",
+      "source": "tools/generate_original_signature_towers_bridge.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 42777274284
     }
   ]
 }
