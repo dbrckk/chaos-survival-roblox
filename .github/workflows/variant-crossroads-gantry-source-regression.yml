@@ -1,0 +1,27 @@
+name: Original Crossroads open gantry 3D source regression
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_variant_crossroads_gantry.py
+      - tools/verify_variant_crossroads_gantry_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-crossroads-gantry-source-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_variant_crossroads_gantry.py
+      - tools/verify_variant_crossroads_gantry_source.py
+      - src/server/MapBuilder.lua
+      - .github/workflows/upload-original-3d-models.yml
+      - .github/workflows/variant-crossroads-gantry-source-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate genuine original seven-material OBJ glTF truss
+        run: python3 tools/verify_variant_crossroads_gantry_source.py
