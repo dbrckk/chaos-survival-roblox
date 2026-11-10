@@ -26,17 +26,49 @@ assert 'local queuedAt = os.clock()' in SRC
 assert 'local startedAt = os.clock()' in SRC
 assert 'math.floor((os.clock()-queuedAt)*1000+.5)' in SRC
 assert 'math.floor((os.clock()-startedAt)*1000+.5)' in SRC
-assert 'maxQueueWaitMs = math.max(maxQueueWaitMs, lastQueueWaitMs)' in SRC
-assert 'maxRequestMs = math.max(maxRequestMs, lastRequestMs)' in SRC
+assert 'if lastQueueWaitMs > maxQueueWaitMs then' in SRC
+assert 'maxQueueWaitMs = lastQueueWaitMs' in SRC
+assert 'slowestQueueAssetId = assetId' in SRC
+assert 'if lastRequestMs > maxRequestMs then' in SRC
+assert 'maxRequestMs = lastRequestMs' in SRC
+assert 'slowestRequestAssetId = assetId' in SRC
 for name in ('InFlight','Waiting','PeakInFlight','Limit','Completed','Failed',
              'TotalWaits','LastQueueWaitMs','MaxQueueWaitMs',
              'LastRequestMs','MaxRequestMs'):
     assert f'diagnostics:SetAttribute("{name}",' in SRC, name
     assert f'{name} =' in SRC, name
-assert SRC.index("local function publish()")<SRC.index("publish()\n\nlocal function reserve()")
+assert SRC.index("local function publish()")<SRC.index("publish()\n\nlocal function reserve(assetId)")
 assert SRC.index("publish()\n    signal.Event:Wait()")<SRC.index("signal.Event:Wait()")
 assert SRC.index("release()\n    -- The existing") > SRC.index(
     "local ok, result = pcall(service.LoadAssetAsync")
+# Slowest-source identifiers and aggregate diagnostics must be
+# observed after actual API completion and remain server-only. This
+# makes network bottlenecks attributable to a Model ID, not guessed.
+for name in (
+    "LastRequestAssetId","SlowestRequestAssetId","SlowestQueueAssetId",
+    "TotalRequestMs","TotalQueueWaitMs",
+    "SlowRequestCount","SlowQueueCount","SlowThresholdMs"
+):
+    assert f'diagnostics:SetAttribute("{name}",' in SRC,name
+    assert f'{name} =' in SRC,name
+assert "local SLOW_MS = 8000" in SRC
+assert "local function reserve(assetId)" in SRC
+assert "reserve(assetId)" in SRC
+assert "lastRequestAssetId = assetId" in SRC
+assert "slowestRequestAssetId = assetId" in SRC
+assert "slowestQueueAssetId = assetId" in SRC
+assert "if lastRequestMs > maxRequestMs then" in SRC
+assert "if lastQueueWaitMs > maxQueueWaitMs then" in SRC
+assert "totalRequestMs += lastRequestMs" in SRC
+assert "totalQueueWaitMs += lastQueueWaitMs" in SRC
+assert "if lastQueueWaitMs >= SLOW_MS then" in SRC
+assert "if lastRequestMs >= SLOW_MS then" in SRC
+assert SRC.index("if lastRequestMs > maxRequestMs then") < SRC.index(
+    "if ok then\n        completed += 1")
+assert SRC.index("release()\n    -- The existing") > SRC.index(
+    "totalRequestMs += lastRequestMs")
+assert "RemoteEvent" not in SRC and "HttpService" not in SRC
+
 assert "task.spawn(" not in SRC and "task.wait(" not in SRC
 assert "RemoteEvent" not in SRC and "ReplicatedStorage" not in SRC
 

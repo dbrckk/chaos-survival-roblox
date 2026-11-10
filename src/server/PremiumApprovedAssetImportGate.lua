@@ -28,6 +28,16 @@ local lastQueueWaitMs = 0
 local maxQueueWaitMs = 0
 local lastRequestMs = 0
 local maxRequestMs = 0
+local lastRequestAssetId = 0
+local slowestRequestAssetId = 0
+local slowestQueueAssetId = 0
+local totalRequestMs = 0
+local totalQueueWaitMs = 0
+local slowRequestCount = 0
+local slowQueueCount = 0
+-- Diagnostics threshold, not an execution timeout: do not cancel a
+-- yielding engine import and leave the loaded Model owner without fallback.
+local SLOW_MS = 8000
 
 local function publish()
     diagnostics:SetAttribute("InFlight", inFlight)
@@ -41,11 +51,19 @@ local function publish()
     diagnostics:SetAttribute("MaxQueueWaitMs", maxQueueWaitMs)
     diagnostics:SetAttribute("LastRequestMs", lastRequestMs)
     diagnostics:SetAttribute("MaxRequestMs", maxRequestMs)
+    diagnostics:SetAttribute("LastRequestAssetId", lastRequestAssetId)
+    diagnostics:SetAttribute("SlowestRequestAssetId", slowestRequestAssetId)
+    diagnostics:SetAttribute("SlowestQueueAssetId", slowestQueueAssetId)
+    diagnostics:SetAttribute("TotalRequestMs", totalRequestMs)
+    diagnostics:SetAttribute("TotalQueueWaitMs", totalQueueWaitMs)
+    diagnostics:SetAttribute("SlowRequestCount", slowRequestCount)
+    diagnostics:SetAttribute("SlowQueueCount", slowQueueCount)
+    diagnostics:SetAttribute("SlowThresholdMs", SLOW_MS)
 end
 
 publish()
 
-local function reserve()
+local function reserve(assetId)
     if inFlight < MAX_IN_FLIGHT and #waiting == 0 then
         inFlight += 1
         peakInFlight = math.max(peakInFlight, inFlight)
@@ -63,7 +81,14 @@ local function reserve()
     signal.Event:Wait()
     signal:Destroy()
     lastQueueWaitMs = math.max(0, math.floor((os.clock()-queuedAt)*1000+.5))
-    maxQueueWaitMs = math.max(maxQueueWaitMs, lastQueueWaitMs)
+    if lastQueueWaitMs > maxQueueWaitMs then
+        maxQueueWaitMs = lastQueueWaitMs
+        slowestQueueAssetId = assetId
+    end
+    totalQueueWaitMs += lastQueueWaitMs
+    if lastQueueWaitMs >= SLOW_MS then
+        slowQueueCount += 1
+    end
     publish()
 end
 
@@ -85,11 +110,19 @@ function Gate.load(service, assetId)
     assert(type(assetId) == "number" and assetId > 0,
         "Approved numeric Roblox Model ID required")
 
-    reserve()
+    reserve(assetId)
     local startedAt = os.clock()
     local ok, result = pcall(service.LoadAssetAsync, service, assetId)
     lastRequestMs = math.max(0, math.floor((os.clock()-startedAt)*1000+.5))
-    maxRequestMs = math.max(maxRequestMs, lastRequestMs)
+    lastRequestAssetId = assetId
+    if lastRequestMs > maxRequestMs then
+        maxRequestMs = lastRequestMs
+        slowestRequestAssetId = assetId
+    end
+    totalRequestMs += lastRequestMs
+    if lastRequestMs >= SLOW_MS then
+        slowRequestCount += 1
+    end
     if ok then
         completed += 1
     else
@@ -115,6 +148,14 @@ function Gate.snapshot()
         MaxQueueWaitMs = maxQueueWaitMs,
         LastRequestMs = lastRequestMs,
         MaxRequestMs = maxRequestMs,
+        LastRequestAssetId = lastRequestAssetId,
+        SlowestRequestAssetId = slowestRequestAssetId,
+        SlowestQueueAssetId = slowestQueueAssetId,
+        TotalRequestMs = totalRequestMs,
+        TotalQueueWaitMs = totalQueueWaitMs,
+        SlowRequestCount = slowRequestCount,
+        SlowQueueCount = slowQueueCount,
+        SlowThresholdMs = SLOW_MS,
     }
 end
 
