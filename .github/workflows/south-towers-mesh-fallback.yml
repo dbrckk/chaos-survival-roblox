@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - src/client/ApprovedSouthTowersLiftTwinsMeshKit.lua
+      - src/client/ApprovedSouthTowersFinishingMeshKit.lua
+      - src/server/PremiumSouthTowersFinishingAssets.lua
       - src/client/ApprovedSouthTowersSkytransferMeshKit.lua
       - src/client/scenery-lod.client.lua
       - src/server/init.server.lua
@@ -13,6 +15,8 @@ on:
   pull_request:
     paths:
       - src/client/ApprovedSouthTowersLiftTwinsMeshKit.lua
+      - src/client/ApprovedSouthTowersFinishingMeshKit.lua
+      - src/server/PremiumSouthTowersFinishingAssets.lua
       - src/client/ApprovedSouthTowersSkytransferMeshKit.lua
       - src/client/scenery-lod.client.lua
       - src/server/init.server.lua
