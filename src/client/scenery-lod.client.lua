@@ -23,6 +23,7 @@ local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerime
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
+local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
@@ -1428,6 +1429,22 @@ task.spawn(function()
             ~=southArcs then
             player:SetAttribute("LocalSouthOrbitalObservationArcsReplaced",
                 southArcs)
+        end
+        -- South Towers: approved forged bridge and hanging elevator,
+        -- two nonphysical primitives atomically replaced on valid LOD.
+        ApprovedSouthTowersSkytransferMeshKit.sync(
+            arena,cameraPoint,profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local towersSouthCount=ApprovedSouthTowersSkytransferMeshKit.count()
+        if player:GetAttribute("LocalApprovedSouthTowersSkytransferCount")
+            ~=towersSouthCount then
+            player:SetAttribute("LocalApprovedSouthTowersSkytransferCount",towersSouthCount)
+        end
+        local towersSouthReplaced=
+            ApprovedSouthTowersSkytransferMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalSouthTowersPrimitiveBlocksReplaced")
+            ~=towersSouthReplaced then
+            player:SetAttribute("LocalSouthTowersPrimitiveBlocksReplaced",towersSouthReplaced)
         end
         -- Use each exterior model pivot, including the full cargo vessel,
         -- for Medium proximity. On Low only server-marked essential ship
