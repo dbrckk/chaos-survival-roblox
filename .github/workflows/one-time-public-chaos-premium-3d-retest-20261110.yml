@@ -1,3 +1,8 @@
+# Owner-directed retry after the guarded release gate found and stopped on
+# (1) Luau 200-register overflow in the real round script, and
+# (2) a Harbor mechanic HUD hint exceeding its existing 96-char contract.
+# Run full Build Validation + REAL Roblox engine tests on the NEW main SHA.
+# Never publish or attest QA if either fails.
 # Owner-directed PUBLIC update RETEST, after correcting build's 62->101
 # approved-asset registry gate and Lest's explicit test return contract.
 # Owner-directed PUBLIC update of existing Chaos Survival.

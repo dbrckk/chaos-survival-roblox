@@ -46,52 +46,165 @@ if RunService:IsStudio() then
 end
 local MapBuilder = require(script.MapBuilder)
 local OriginalMeshScenery = require(script.OriginalMeshScenery)
-local PremiumRouteMeshAssets = require(script.PremiumRouteMeshAssets)
-local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
-local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
-local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
-local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
-local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
-local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructuresAssets)
-local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
-local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
-local PremiumExteriorRidgeAssets = require(script.PremiumExteriorRidgeAssets)
-local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLandmarkAssets)
-local PremiumCrossroadsGantryAssets = require(script.PremiumCrossroadsGantryAssets)
-local PremiumClassicBroadcastFinAssets = require(script.PremiumClassicBroadcastFinAssets)
-local PremiumOrbitalReactorLandmarkAssets = require(script.PremiumOrbitalReactorLandmarkAssets)
-local PremiumCrossroadsEntrancePortalAssets = require(script.PremiumCrossroadsEntrancePortalAssets)
-local PremiumVariantIdentitySpineAssets = require(script.PremiumVariantIdentitySpineAssets)
-local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
-local PremiumSouthOrbitalObservationRingAssets = require(script.PremiumSouthOrbitalObservationRingAssets)
-local PremiumSouthTowersSkytransferAssets = require(script.PremiumSouthTowersSkytransferAssets)
-local PremiumSouthTowersLiftTwinsAssets = require(script.PremiumSouthTowersLiftTwinsAssets)
-local PremiumSouthTowersFinishingAssets = require(script.PremiumSouthTowersFinishingAssets)
-local PremiumSouthCrossroadsExchangeAssets = require(script.PremiumSouthCrossroadsExchangeAssets)
-local PremiumSouthOrbitalFinishingAssets = require(script.PremiumSouthOrbitalFinishingAssets)
-local PremiumSouthHarborDrydockAssets = require(script.PremiumSouthHarborDrydockAssets)
-local PremiumSouthClassicObservatoryAssets = require(script.PremiumSouthClassicObservatoryAssets)
-local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
-local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
-local PremiumHarborSignatureGantryAssets = require(script.PremiumHarborSignatureGantryAssets)
-local PremiumClassicSignatureObservatoryAssets = require(script.PremiumClassicSignatureObservatoryAssets)
-local PremiumClassicForgedSupportsAssets = require(script.PremiumClassicForgedSupportsAssets)
-local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
-local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
-local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
-local PremiumLargeDeckHullAssets = require(script.PremiumLargeDeckHullAssets)
-local PremiumLargeStructureAssets = require(script.PremiumLargeStructureAssets)
-local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
-local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets)
-local PremiumHarborPromenadePortalAssets = require(script.PremiumHarborPromenadePortalAssets)
-local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAssets)
-local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets)
-local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
-local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAssets)
-local PremiumHarborMidgroundBargeAssets = require(script.PremiumHarborMidgroundBargeAssets)
-local PremiumHarborSeaAssets = require(script.PremiumHarborSeaAssets)
-local PremiumTowerCoolingSpireAssets = require(script.PremiumTowerCoolingSpireAssets)
-local PremiumTowersHollowStackAssets = require(script.PremiumTowersHollowStackAssets)
+-- Scope the 46 entirely optional source owners away from the main
+-- round loop. Keeping all 46 top-level locals alive pushed Luau beyond
+-- its 200-register limit in the round settlement block. Scheduling is
+-- unchanged per owner; moving requires into a deferred startup also
+-- avoids paying the heavy cosmetic module initialization on the server's
+-- critical gameplay-boot path.
+local function startPremiumAssets()
+    local PremiumRouteMeshAssets = require(script.PremiumRouteMeshAssets)
+    local PremiumDistrictFacadeAssets = require(script.PremiumDistrictFacadeAssets)
+    local PremiumSkyfleetMeshAssets = require(script.PremiumSkyfleetMeshAssets)
+    local PremiumServiceEquipmentAssets = require(script.PremiumServiceEquipmentAssets)
+    local PremiumPerimeterRotorAssets = require(script.PremiumPerimeterRotorAssets)
+    local PremiumPerimeterArmorAssets = require(script.PremiumPerimeterArmorAssets)
+    local PremiumPerimeterStructuresAssets = require(script.PremiumPerimeterStructuresAssets)
+    local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
+    local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
+    local PremiumExteriorRidgeAssets = require(script.PremiumExteriorRidgeAssets)
+    local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLandmarkAssets)
+    local PremiumCrossroadsGantryAssets = require(script.PremiumCrossroadsGantryAssets)
+    local PremiumClassicBroadcastFinAssets = require(script.PremiumClassicBroadcastFinAssets)
+    local PremiumOrbitalReactorLandmarkAssets = require(script.PremiumOrbitalReactorLandmarkAssets)
+    local PremiumCrossroadsEntrancePortalAssets = require(script.PremiumCrossroadsEntrancePortalAssets)
+    local PremiumVariantIdentitySpineAssets = require(script.PremiumVariantIdentitySpineAssets)
+    local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
+    local PremiumSouthOrbitalObservationRingAssets = require(script.PremiumSouthOrbitalObservationRingAssets)
+    local PremiumSouthTowersSkytransferAssets = require(script.PremiumSouthTowersSkytransferAssets)
+    local PremiumSouthTowersLiftTwinsAssets = require(script.PremiumSouthTowersLiftTwinsAssets)
+    local PremiumSouthTowersFinishingAssets = require(script.PremiumSouthTowersFinishingAssets)
+    local PremiumSouthCrossroadsExchangeAssets = require(script.PremiumSouthCrossroadsExchangeAssets)
+    local PremiumSouthOrbitalFinishingAssets = require(script.PremiumSouthOrbitalFinishingAssets)
+    local PremiumSouthHarborDrydockAssets = require(script.PremiumSouthHarborDrydockAssets)
+    local PremiumSouthClassicObservatoryAssets = require(script.PremiumSouthClassicObservatoryAssets)
+    local PremiumTowersSignatureBridgeAssets = require(script.PremiumTowersSignatureBridgeAssets)
+    local PremiumCrossroadsSignatureInterchangeAssets = require(script.PremiumCrossroadsSignatureInterchangeAssets)
+    local PremiumHarborSignatureGantryAssets = require(script.PremiumHarborSignatureGantryAssets)
+    local PremiumClassicSignatureObservatoryAssets = require(script.PremiumClassicSignatureObservatoryAssets)
+    local PremiumClassicForgedSupportsAssets = require(script.PremiumClassicForgedSupportsAssets)
+    local PremiumAmbientMotionAssets = require(script.PremiumAmbientMotionAssets)
+    local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
+    local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
+    local PremiumLargeDeckHullAssets = require(script.PremiumLargeDeckHullAssets)
+    local PremiumLargeStructureAssets = require(script.PremiumLargeStructureAssets)
+    local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
+    local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets)
+    local PremiumHarborPromenadePortalAssets = require(script.PremiumHarborPromenadePortalAssets)
+    local PremiumHarborDockCaissonAssets = require(script.PremiumHarborDockCaissonAssets)
+    local PremiumHarborFreighterAssets = require(script.PremiumHarborFreighterAssets)
+    local PremiumHarborGantryAssets = require(script.PremiumHarborGantryAssets)
+    local PremiumHarborHeroStationAssets = require(script.PremiumHarborHeroStationAssets)
+    local PremiumHarborMidgroundBargeAssets = require(script.PremiumHarborMidgroundBargeAssets)
+    local PremiumHarborSeaAssets = require(script.PremiumHarborSeaAssets)
+    local PremiumTowerCoolingSpireAssets = require(script.PremiumTowerCoolingSpireAssets)
+    local PremiumTowersHollowStackAssets = require(script.PremiumTowersHollowStackAssets)
+
+    -- Only approved, sanitized original MeshParts; load separately so
+    -- joining/AI/hazards never wait on extra optional 3D artwork.
+    task.defer(PremiumRouteMeshAssets.start)
+    task.defer(PremiumDistrictFacadeAssets.start)
+    -- Heavy original skyfleet art is purely optional and loads later to
+    -- avoid Roblox owner-wide AssetService throttling at player arrival.
+    task.defer(PremiumSkyfleetMeshAssets.start)
+    -- Five late-loading moderated miniature machines; never block a round.
+    task.defer(PremiumServiceEquipmentAssets.start)
+    -- Verified approved seven-material rotor Model; delayed separate
+    -- optional import, never blocking a human join, AI or disaster.
+    task.defer(PremiumPerimeterRotorAssets.start)
+    -- Original 3D forged wing and cap assets; deferred, optional, nonphysical.
+    task.defer(PremiumPerimeterArmorAssets.start)
+    -- Actual owner-approved 3D open truss and machined rotor guard.
+    -- Late optional load, no collision or round lifecycle change.
+    task.defer(PremiumPerimeterStructuresAssets.start)
+    -- Four authenticated 3D apex silhouettes, late-loaded as optional art.
+    -- One of four Model templates is selected per actual arena variant.
+    task.defer(PremiumPerimeterVariantApexAssets.start)
+    -- Four moderated full-height skyline Models, source-only, optional
+    -- cosmetic imports delayed after critical round/AI startup.
+    task.defer(PremiumExteriorTowerAssets.start)
+    task.defer(PremiumExteriorRidgeAssets.start)
+    -- Creator-approved Towers corner machinery: one optional original source.
+    task.defer(PremiumVariantTowersLandmarkAssets.start)
+    -- Verified owner-approved open-frame Crossroads gantries; no physics.
+    task.defer(PremiumCrossroadsGantryAssets.start)
+    -- Authentic approved Classic broadcast aerofoil, four decorative fins.
+    task.defer(PremiumClassicBroadcastFinAssets.start)
+    -- Two original moderated Orbital reactor Models, one sequential source lane.
+    task.defer(PremiumOrbitalReactorLandmarkAssets.start)
+    -- Creator-approved four-entry portal Model, shared and nonphysical.
+    task.defer(PremiumCrossroadsEntrancePortalAssets.start)
+    -- Two moderated source-authentic identity masts; animated lights native.
+    task.defer(PremiumVariantIdentitySpineAssets.start)
+    -- A single genuine continuous Orbital megareactor torus, separate
+    -- optional Model importer; never blocks rounds, human or AI spawn.
+    task.defer(PremiumOrbitalSignatureRingAssets.start)
+    -- Separate southern observation torus, actual owner approved asset.
+    -- Optional delayed art; never change the northern reactor/gameplay.
+    task.defer(PremiumSouthOrbitalObservationRingAssets.start)
+    task.defer(PremiumSouthTowersSkytransferAssets.start)
+    task.defer(PremiumSouthTowersLiftTwinsAssets.start)
+    task.defer(PremiumSouthTowersFinishingAssets.start)
+    task.defer(PremiumSouthCrossroadsExchangeAssets.start)
+    task.defer(PremiumSouthOrbitalFinishingAssets.start)
+    task.defer(PremiumSouthHarborDrydockAssets.start)
+    task.defer(PremiumSouthClassicObservatoryAssets.start)
+    -- Approved creator-owned true bridge sculpture for the nonphysical
+    -- Towers horizon signature only; Skyrail remains gameplay-owned.
+    task.defer(PremiumTowersSignatureBridgeAssets.start)
+    -- Original approved seven-material Crossroads interchange sculpture.
+    -- Optional delayed art; the switchyard and bot route remain physical.
+    task.defer(PremiumCrossroadsSignatureInterchangeAssets.start)
+    -- Genuine owner-verified Harbor industrial signature gantry source.
+    -- Delayed cosmetic Model import, detached from real hoist/gameplay.
+    task.defer(PremiumHarborSignatureGantryAssets.start)
+    -- Original creator-verified Classic mast and two true concave dishes.
+    -- Source-authenticated optional art, never changes gameplay physics.
+    task.defer(PremiumClassicSignatureObservatoryAssets.start)
+    -- Optional original five-support Classic load-frame art. Does NOT
+    -- alter the seven-piece dual-dish Model or any player collision.
+    task.defer(PremiumClassicForgedSupportsAssets.start)
+    -- Optional creator-approved animated sky traffic; safely delayed and
+    -- serialized so original model API calls never block an actual round.
+    task.defer(PremiumAmbientMotionAssets.start)
+    -- Six original, owner-approved shallow floor relief assets are cosmetic.
+    -- Late serialized loading must not block hazard timers, bots or joining.
+    task.defer(PremiumFloorReliefAssets.start)
+    task.defer(PremiumPlatformSideAssets.start)
+    task.defer(PremiumLargeDeckHullAssets.start)
+    task.defer(PremiumLargeStructureAssets.start)
+    task.defer(PremiumLobbyGateMeshAssets.start)
+    -- Owner-approved, closed 3D shells for the four physical lobby pylons.
+    -- Async and cosmetic only; native collision must never wait on art.
+    task.defer(PremiumLobbyPylonShellAssets.start)
+    -- Distinct real 3D cargo-gantry art over six already-collidable Harbor
+    -- promenades. Does not add a lane, support, hazard or server task loop.
+    task.defer(PremiumHarborPromenadePortalAssets.start)
+    -- Approved seven-material caissons skin Harbor's real jump decks.
+    -- Late-load; native walkable platforms and all danger cues stay intact.
+    task.defer(PremiumHarborDockCaissonAssets.start)
+    -- Approved original static Harbor freighter replaces distant primitive
+    -- silhouette locally; optional 66-second deferred cosmetic load.
+    task.defer(PremiumHarborFreighterAssets.start)
+    -- Four original distant industrial gantries: cargo and cable variants
+    -- have independently animated genuine mesh components. Optional.
+    task.defer(PremiumHarborGantryAssets.start)
+    -- Replace the client-only signal station with original 3D sculpture,
+    -- retaining its existing animated radar, lens, cable and weight.
+    task.defer(PremiumHarborHeroStationAssets.start)
+    -- Approved original chined cargo barges, after important first-screen
+    -- assets. Entirely cosmetic: do not delay lobby or disaster logic.
+    task.defer(PremiumHarborMidgroundBargeAssets.start)
+    -- Massive true ocean model: one original noncolliding coastal annulus,
+    -- zero triangles inside Harbor's authoritative survival floor.
+    task.defer(PremiumHarborSeaAssets.start)
+    -- Five original source-modeled 3D Tower Run cooling installations;
+    -- strictly nonphysical, optional, deferred after first-screen assets.
+    task.defer(PremiumTowerCoolingSpireAssets.start)
+    -- Second genuine Tower Run cooling sculpture. Its source/Moderation
+    -- is checked separately; no gameplay delay or extra physical Parts.
+    task.defer(PremiumTowersHollowStackAssets.start)
+end
 local SpawnSafety = require(script.SpawnSafety)
 local LobbySpawnSafety = require(script.LobbySpawnSafety)
 local LobbyReturnFormation = require(script.LobbyReturnFormation)
@@ -214,110 +327,8 @@ MapBuilder.build(Config, "Classic", ArenaVariants)
 -- Engine E2E suites exercise the generated native map deterministically.
 if not isStudioE2E then
     task.defer(OriginalMeshScenery.start)
-    -- Only approved, sanitized original MeshParts; load separately so
-    -- joining/AI/hazards never wait on extra optional 3D artwork.
-    task.defer(PremiumRouteMeshAssets.start)
-    task.defer(PremiumDistrictFacadeAssets.start)
-    -- Heavy original skyfleet art is purely optional and loads later to
-    -- avoid Roblox owner-wide AssetService throttling at player arrival.
-    task.defer(PremiumSkyfleetMeshAssets.start)
-    -- Five late-loading moderated miniature machines; never block a round.
-    task.defer(PremiumServiceEquipmentAssets.start)
-    -- Verified approved seven-material rotor Model; delayed separate
-    -- optional import, never blocking a human join, AI or disaster.
-    task.defer(PremiumPerimeterRotorAssets.start)
-    -- Original 3D forged wing and cap assets; deferred, optional, nonphysical.
-    task.defer(PremiumPerimeterArmorAssets.start)
-    -- Actual owner-approved 3D open truss and machined rotor guard.
-    -- Late optional load, no collision or round lifecycle change.
-    task.defer(PremiumPerimeterStructuresAssets.start)
-    -- Four authenticated 3D apex silhouettes, late-loaded as optional art.
-    -- One of four Model templates is selected per actual arena variant.
-    task.defer(PremiumPerimeterVariantApexAssets.start)
-    -- Four moderated full-height skyline Models, source-only, optional
-    -- cosmetic imports delayed after critical round/AI startup.
-    task.defer(PremiumExteriorTowerAssets.start)
-    task.defer(PremiumExteriorRidgeAssets.start)
-    -- Creator-approved Towers corner machinery: one optional original source.
-    task.defer(PremiumVariantTowersLandmarkAssets.start)
-    -- Verified owner-approved open-frame Crossroads gantries; no physics.
-    task.defer(PremiumCrossroadsGantryAssets.start)
-    -- Authentic approved Classic broadcast aerofoil, four decorative fins.
-    task.defer(PremiumClassicBroadcastFinAssets.start)
-    -- Two original moderated Orbital reactor Models, one sequential source lane.
-    task.defer(PremiumOrbitalReactorLandmarkAssets.start)
-    -- Creator-approved four-entry portal Model, shared and nonphysical.
-    task.defer(PremiumCrossroadsEntrancePortalAssets.start)
-    -- Two moderated source-authentic identity masts; animated lights native.
-    task.defer(PremiumVariantIdentitySpineAssets.start)
-    -- A single genuine continuous Orbital megareactor torus, separate
-    -- optional Model importer; never blocks rounds, human or AI spawn.
-    task.defer(PremiumOrbitalSignatureRingAssets.start)
-    -- Separate southern observation torus, actual owner approved asset.
-    -- Optional delayed art; never change the northern reactor/gameplay.
-    task.defer(PremiumSouthOrbitalObservationRingAssets.start)
-    task.defer(PremiumSouthTowersSkytransferAssets.start)
-    task.defer(PremiumSouthTowersLiftTwinsAssets.start)
-    task.defer(PremiumSouthTowersFinishingAssets.start)
-    task.defer(PremiumSouthCrossroadsExchangeAssets.start)
-    task.defer(PremiumSouthOrbitalFinishingAssets.start)
-    task.defer(PremiumSouthHarborDrydockAssets.start)
-    task.defer(PremiumSouthClassicObservatoryAssets.start)
-    -- Approved creator-owned true bridge sculpture for the nonphysical
-    -- Towers horizon signature only; Skyrail remains gameplay-owned.
-    task.defer(PremiumTowersSignatureBridgeAssets.start)
-    -- Original approved seven-material Crossroads interchange sculpture.
-    -- Optional delayed art; the switchyard and bot route remain physical.
-    task.defer(PremiumCrossroadsSignatureInterchangeAssets.start)
-    -- Genuine owner-verified Harbor industrial signature gantry source.
-    -- Delayed cosmetic Model import, detached from real hoist/gameplay.
-    task.defer(PremiumHarborSignatureGantryAssets.start)
-    -- Original creator-verified Classic mast and two true concave dishes.
-    -- Source-authenticated optional art, never changes gameplay physics.
-    task.defer(PremiumClassicSignatureObservatoryAssets.start)
-    -- Optional original five-support Classic load-frame art. Does NOT
-    -- alter the seven-piece dual-dish Model or any player collision.
-    task.defer(PremiumClassicForgedSupportsAssets.start)
-    -- Optional creator-approved animated sky traffic; safely delayed and
-    -- serialized so original model API calls never block an actual round.
-    task.defer(PremiumAmbientMotionAssets.start)
-    -- Six original, owner-approved shallow floor relief assets are cosmetic.
-    -- Late serialized loading must not block hazard timers, bots or joining.
-    task.defer(PremiumFloorReliefAssets.start)
-    task.defer(PremiumPlatformSideAssets.start)
-    task.defer(PremiumLargeDeckHullAssets.start)
-    task.defer(PremiumLargeStructureAssets.start)
-    task.defer(PremiumLobbyGateMeshAssets.start)
-    -- Owner-approved, closed 3D shells for the four physical lobby pylons.
-    -- Async and cosmetic only; native collision must never wait on art.
-    task.defer(PremiumLobbyPylonShellAssets.start)
-    -- Distinct real 3D cargo-gantry art over six already-collidable Harbor
-    -- promenades. Does not add a lane, support, hazard or server task loop.
-    task.defer(PremiumHarborPromenadePortalAssets.start)
-    -- Approved seven-material caissons skin Harbor's real jump decks.
-    -- Late-load; native walkable platforms and all danger cues stay intact.
-    task.defer(PremiumHarborDockCaissonAssets.start)
-    -- Approved original static Harbor freighter replaces distant primitive
-    -- silhouette locally; optional 66-second deferred cosmetic load.
-    task.defer(PremiumHarborFreighterAssets.start)
-    -- Four original distant industrial gantries: cargo and cable variants
-    -- have independently animated genuine mesh components. Optional.
-    task.defer(PremiumHarborGantryAssets.start)
-    -- Replace the client-only signal station with original 3D sculpture,
-    -- retaining its existing animated radar, lens, cable and weight.
-    task.defer(PremiumHarborHeroStationAssets.start)
-    -- Approved original chined cargo barges, after important first-screen
-    -- assets. Entirely cosmetic: do not delay lobby or disaster logic.
-    task.defer(PremiumHarborMidgroundBargeAssets.start)
-    -- Massive true ocean model: one original noncolliding coastal annulus,
-    -- zero triangles inside Harbor's authoritative survival floor.
-    task.defer(PremiumHarborSeaAssets.start)
-    -- Five original source-modeled 3D Tower Run cooling installations;
-    -- strictly nonphysical, optional, deferred after first-screen assets.
-    task.defer(PremiumTowerCoolingSpireAssets.start)
-    -- Second genuine Tower Run cooling sculpture. Its source/Moderation
-    -- is checked separately; no gameplay delay or extra physical Parts.
-    task.defer(PremiumTowersHollowStackAssets.start)
+    -- Cosmetic source imports are optional and never block AI/players.
+    task.defer(startPremiumAssets)
 end
 LobbySpawnSafety.start()
 local lobbyActivitiesOk, lobbyActivitiesError = pcall(LobbyActivities.start, Config)
