@@ -36,7 +36,7 @@ describe("Game analytics helpers", function()
         expect(count).toBe(25)
         expect(arena).toBe("Arena:Orbital")
         expect(tier).toBe("Device:Touch|VFX:Medium")
-        expect(flags).toBe("P1C1T0H1F0")
+        expect(flags).toBe("P1C1T0H1F0S0")
 
         -- Partial source replication or a stale fallback mask must be
         -- visible in telemetry, never silently classified as healthy.
@@ -46,7 +46,49 @@ describe("Game analytics helpers", function()
             originalTraffic = 2, originalHalo = 1,
             originalHorizonMasked = 0, originalHaloMasked = 0,
         })
-        expect(broken).toBe("P0C1T1H1F1")
+        expect(broken).toBe("P0C1T1H1F1S0")
+    end)
+
+    it("reports six actually resident P4 landmark families and their exact native masking ratios", function()
+        local rules = PerformancePulseRules
+        local reported = rules.sanitize({
+            arenaVariant = "Orbital", deviceClass = "Touch",
+            vfxTier = "High",
+            premiumTowers = 2, premiumTowersMasked = 4,
+            premiumGantry = 1, premiumGantryMasked = 1,
+            premiumClassicFin = 1, premiumClassicFinMasked = 1,
+            premiumOrbitalPair = 2, premiumOrbitalPairMasked = 4,
+            premiumEntrance = 1, premiumEntranceMasked = 3,
+            premiumIdentity = 1, premiumIdentityMasked = 1,
+        })
+        expect(reported.premiumTowers).toBe(2)
+        expect(reported.premiumOrbitalPair).toBe(2)
+        expect(reported.premiumEntranceMasked).toBe(3)
+        local groupCount, arena, device, flags =
+            rules.original3DAnalytics(reported)
+        expect(groupCount).toBe(8)
+        expect(arena).toBe("Arena:Orbital")
+        expect(device).toBe("Device:Touch|VFX:High")
+        expect(flags).toBe("P0C0T0H0F0S1")
+
+        -- A single missing hidden native among three Crossroads portal
+        -- Parts is enough to flag a cosmetic fallback mismatch.
+        local _, _, _, mismatch = rules.original3DAnalytics({
+            premiumEntrance = 1, premiumEntranceMasked = 2,
+            arenaVariant = "Crossroads",
+        })
+        expect(mismatch).toBe("P0C0T0H0F1S1")
+
+        -- A healthy Towers pair masks exactly two native machine parts.
+        local count, _, _, healthy = rules.original3DAnalytics({
+            premiumTowers = 2, premiumTowersMasked = 4,
+        })
+        expect(count).toBe(2)
+        expect(healthy).toBe("P0C0T0H0F0S1")
+        local _, _, _, wrong = rules.original3DAnalytics({
+            premiumTowers = 2, premiumTowersMasked = 3,
+        })
+        expect(wrong).toBe("P0C0T0H0F1S1")
     end)
 
     it("bounds untrusted visual residence samples and refuses injected analytics dimensions", function()
@@ -70,19 +112,40 @@ describe("Game analytics helpers", function()
         expect(dangerous.originalHalo).toBe(0)
         expect(dangerous.originalHorizonMasked).toBe(33)
         expect(dangerous.originalHaloMasked).toBe(0)
+        -- New counters also reject NaN, infinity, negatives and abuse.
+        local extra = rules.sanitize({
+            premiumTowers = math.huge, premiumTowersMasked = 9999,
+            premiumGantry = -99, premiumGantryMasked = 7.9,
+            premiumClassicFin = 0 / 0, premiumClassicFinMasked = 100,
+            premiumOrbitalPair = 100, premiumOrbitalPairMasked = 100,
+            premiumEntrance = 999, premiumEntranceMasked = math.huge,
+            premiumIdentity = "4.9", premiumIdentityMasked = {},
+        })
+        expect(extra.premiumTowers).toBe(0)
+        expect(extra.premiumTowersMasked).toBe(8)
+        expect(extra.premiumGantry).toBe(0)
+        expect(extra.premiumGantryMasked).toBe(4)
+        expect(extra.premiumClassicFin).toBe(0)
+        expect(extra.premiumClassicFinMasked).toBe(4)
+        expect(extra.premiumOrbitalPair).toBe(8)
+        expect(extra.premiumOrbitalPairMasked).toBe(16)
+        expect(extra.premiumEntrance).toBe(4)
+        expect(extra.premiumEntranceMasked).toBe(0)
+        expect(extra.premiumIdentity).toBe(4)
+        expect(extra.premiumIdentityMasked).toBe(0)
         expect(dangerous.optionalPressure).toBe(2)
         expect(dangerous.arenaVariant).toBe("Unknown")
         local count, arena, device, flags = rules.original3DAnalytics(dangerous)
         expect(count).toBe(15)
         expect(arena).toBe("Arena:Unknown")
         expect(device).toBe("Device:Unknown|VFX:Unknown")
-        expect(flags).toBe("P0C1T1H0F0")
+        expect(flags).toBe("P0C1T1H0F0S0")
         local emptyCount, emptyArena, emptyDevice, emptyFlags =
             rules.original3DAnalytics(nil)
         expect(emptyCount).toBe(0)
         expect(emptyArena).toBe("Arena:Unknown")
         expect(emptyDevice).toBe("Device:Unknown|VFX:Unknown")
-        expect(emptyFlags).toBe("P0C0T0H0F0")
+        expect(emptyFlags).toBe("P0C0T0H0F0S0")
     end)
 
 

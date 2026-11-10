@@ -897,6 +897,21 @@ local function queuePerformancePulse(snapshot)
                 originalHalo = player:GetAttribute("LocalOriginalOrbitalHalo3DCount"),
                 originalHorizonMasked = player:GetAttribute("LocalNativeCinematicHorizonPartsReplaced"),
                 originalHaloMasked = player:GetAttribute("LocalOriginalOrbitalHaloNativeReplaced"),
+                -- Six P4 premium landmark families: ACTUALLY mounted
+                -- groups and their genuine hidden native fallback Parts.
+                -- Use only the existing periodic rate-limited pulse.
+                premiumTowers = player:GetAttribute("LocalTowersLandmarkMeshCount"),
+                premiumTowersMasked = player:GetAttribute("LocalTowersLandmarkPrimitivesReplaced"),
+                premiumGantry = player:GetAttribute("LocalCrossroadsGantryMeshCount"),
+                premiumGantryMasked = player:GetAttribute("LocalCrossroadsGantryPrimitivesReplaced"),
+                premiumClassicFin = player:GetAttribute("LocalClassicFinMeshCount"),
+                premiumClassicFinMasked = player:GetAttribute("LocalClassicFinPrimitivesReplaced"),
+                premiumOrbitalPair = player:GetAttribute("LocalOrbitalReactorSculptPairCount"),
+                premiumOrbitalPairMasked = player:GetAttribute("LocalOrbitalReactorNativePartsReplaced"),
+                premiumEntrance = player:GetAttribute("LocalCrossroadsEntrance3DCount"),
+                premiumEntranceMasked = player:GetAttribute("LocalCrossroadsEntranceNativePartsReplaced"),
+                premiumIdentity = player:GetAttribute("LocalIdentitySpineMeshCount"),
+                premiumIdentityMasked = player:GetAttribute("LocalIdentitySpineNativePartsReplaced"),
                 optionalPressure = player:GetAttribute("OptionalVfxPressure"),
                 arenaVariant = (function()
                     local generated = workspace:FindFirstChild("GeneratedMap")

@@ -30,6 +30,20 @@ local LIMITS = {
     originalHalo = {5, true},
     originalHorizonMasked = {33, true},
     originalHaloMasked = {5, true},
+    -- Client-observed P4 premium landmark mounts and exact native masks.
+    -- These are cosmetic evidence only, never authoritative gameplay.
+    premiumTowers = {4, true},
+    premiumTowersMasked = {8, true},
+    premiumGantry = {4, true},
+    premiumGantryMasked = {4, true},
+    premiumClassicFin = {4, true},
+    premiumClassicFinMasked = {4, true},
+    premiumOrbitalPair = {8, true},
+    premiumOrbitalPairMasked = {16, true},
+    premiumEntrance = {4, true},
+    premiumEntranceMasked = {12, true},
+    premiumIdentity = {4, true},
+    premiumIdentityMasked = {4, true},
     optionalPressure = {2, true},
     totalMemoryMb = {65536, false},
     instanceCount = {250000, true},
@@ -92,7 +106,7 @@ end
 
 -- Roblox AnalyticsService accepts only 3 custom dimensions and caps their
 -- combined unique values. Presence flags (not raw counts) keep cardinality
--- small: <=6 arenas x 12 device/tier classes x 32 bit combinations.
+-- small: <=6 arenas x 12 device/tier classes x 64 bit combinations.
 -- A numeric total retains actual sampled residency in event aggregation.
 -- A model is considered RESIDENT by the source owner; this does NOT prove
 -- it was visible in a photographed frame on an Android device.
@@ -102,16 +116,36 @@ end
 
 function PerformancePulseRules.original3DAnalytics(sample)
     local s = PerformancePulseRules.sanitize(sample)
+    -- Each premium counter is a mounted decorative GROUP. Orbital's
+    -- count represents a pair of Models; never present this as a
+    -- number of distinct MeshParts or percentage of the entire map.
+    local premiumGroups = s.premiumTowers + s.premiumGantry
+        + s.premiumClassicFin + s.premiumOrbitalPair
+        + s.premiumEntrance + s.premiumIdentity
     local total = s.originalGround + s.originalRoutes
         + s.originalHorizon + s.originalTraffic + s.originalHalo
-    local fallbackMismatch = s.originalHorizon > 0
-        and s.originalHorizonMasked == 0
-        or s.originalHalo > 0 and s.originalHaloMasked == 0
+        + premiumGroups
+    -- Crossroad entrance hides THREE native Parts per mounted portal,
+    -- and Towers machinery / Orbital reactor pair each hide TWO.
+    -- Detect masking failures per family, not from a misleading
+    -- combined count that can conceal a failed group.
+    local premiumMismatch =
+        s.premiumTowersMasked < s.premiumTowers * 2
+        or s.premiumGantryMasked < s.premiumGantry
+        or s.premiumClassicFinMasked < s.premiumClassicFin
+        or s.premiumOrbitalPairMasked < s.premiumOrbitalPair * 2
+        or s.premiumEntranceMasked < s.premiumEntrance * 3
+        or s.premiumIdentityMasked < s.premiumIdentity
+    local fallbackMismatch = (s.originalHorizon > 0
+        and s.originalHorizonMasked == 0)
+        or (s.originalHalo > 0 and s.originalHaloMasked == 0)
+        or premiumMismatch
     local flags = "P" .. presence(s.originalGround + s.originalRoutes)
         .. "C" .. presence(s.originalHorizon)
         .. "T" .. presence(s.originalTraffic)
         .. "H" .. presence(s.originalHalo)
         .. "F" .. (fallbackMismatch and "1" or "0")
+        .. "S" .. presence(premiumGroups)
     return total, "Arena:" .. s.arenaVariant,
         "Device:" .. s.deviceClass .. "|VFX:" .. s.vfxTier,
         flags
