@@ -91,7 +91,7 @@ ArenaMechanics.Definitions = {
     },
     Harbor = {
         Name = "SQUALL TRANSFER PADS",
-        Hint = "Cross two different blue squall pads in 14s for a one-use stronger dock transfer; dodge the red cargo sweep",
+        Hint = "Cross two blue squall pads in 14s for a one-use dock boost; dodge the red cargo sweep",
         Color = Color3.fromRGB(78, 202, 222),
         Pads = {
             -- Clear of pier footprints and first eight spawn points.
