@@ -8,6 +8,7 @@ on:
       - tools/verify_premium_approved_asset_import_queue.py
       - tools/verify_premium_asset_import_observability.py
       - tests/engine/premium-import-diagnostics.spec.luau
+      - .github/workflows/roblox-cloud-test.yml
       - .github/workflows/premium-approved-global-import-gate-regression.yml
   push:
     branches: [main]
@@ -18,6 +19,7 @@ on:
       - tools/verify_premium_approved_asset_import_queue.py
       - tools/verify_premium_asset_import_observability.py
       - tests/engine/premium-import-diagnostics.spec.luau
+      - .github/workflows/roblox-cloud-test.yml
       - .github/workflows/premium-approved-global-import-gate-regression.yml
 permissions:
   contents: read
