@@ -1,0 +1,32 @@
+name: Actual Roblox public update translation and suite gate
+on:
+  pull_request:
+    paths:
+      - README.md
+      - src/shared/CoreLocalization.lua
+      - tests/engine/core-localization.spec.luau
+      - tests/engine/premium-import-diagnostics.spec.luau
+      - .github/workflows/roblox-cloud-test.yml
+      - .github/workflows/one-time-public-chaos-premium-3d-retest-20261110.yml
+      - tools/verify_public_release_localization.py
+      - .github/workflows/public-release-localization-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - README.md
+      - src/shared/CoreLocalization.lua
+      - tests/engine/core-localization.spec.luau
+      - tests/engine/premium-import-diagnostics.spec.luau
+      - .github/workflows/roblox-cloud-test.yml
+      - tools/verify_public_release_localization.py
+      - .github/workflows/public-release-localization-regression.yml
+permissions:
+  contents: read
+jobs:
+  check-public-qa-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify all actual engine specs and French game hints before dispatch
+        run: python3 tools/verify_public_release_localization.py
