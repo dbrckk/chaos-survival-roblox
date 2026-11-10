@@ -57,6 +57,7 @@ local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariant
 local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
 local PremiumExteriorRidgeAssets = require(script.PremiumExteriorRidgeAssets)
 local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLandmarkAssets)
+local PremiumCrossroadsGantryAssets = require(script.PremiumCrossroadsGantryAssets)
 local PremiumOrbitalSignatureRingAssets = require(script.PremiumOrbitalSignatureRingAssets)
 local PremiumSouthOrbitalObservationRingAssets = require(script.PremiumSouthOrbitalObservationRingAssets)
 local PremiumSouthTowersSkytransferAssets = require(script.PremiumSouthTowersSkytransferAssets)
@@ -235,6 +236,8 @@ if not isStudioE2E then
     task.defer(PremiumExteriorRidgeAssets.start)
     -- Creator-approved Towers corner machinery: one optional original source.
     task.defer(PremiumVariantTowersLandmarkAssets.start)
+    -- Verified owner-approved open-frame Crossroads gantries; no physics.
+    task.defer(PremiumCrossroadsGantryAssets.start)
     -- A single genuine continuous Orbital megareactor torus, separate
     -- optional Model importer; never blocks rounds, human or AI spawn.
     task.defer(PremiumOrbitalSignatureRingAssets.start)
