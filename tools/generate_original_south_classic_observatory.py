@@ -124,7 +124,7 @@ def dish(a,side):
     """Double-sided 36×7 triangulated PARABOLOID, not Cylinder/Wedge."""
     x=side*16
     radii=[0.0,.95,1.95,2.9,3.9,4.9,5.9]
-    sectors=36
+    sectors=28
     def zprofile(r):
         return .78-.058*r*r
     for surface,material,offset in (
