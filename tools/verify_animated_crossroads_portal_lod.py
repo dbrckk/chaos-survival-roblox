@@ -44,7 +44,13 @@ assert 'rail.Transparency=1' not in KIT
 assert 'entry.rail.Transparency=1' not in KIT
 assert 'rail.CFrame=' not in KIT
 assert 'if stress>=2 then cap=0 end' in KIT
-assert 'Low=0,Medium=2,High=4' in KIT
+# Android Low now permits ONE authentic nearby source on touchscreens.
+# The same animated-rail rollback is required when stress>=1.
+assert 'Low=1,Medium=2,High=4' in KIT
+assert 'Low=180,Medium=340,High=470' in KIT
+assert 'if touch and tier~="Low" then' in KIT
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in KIT
+assert 'if stress>=2 then cap=0 end' in KIT
 assert '127067628128103' in KIT
 assert '"OriginalCrossroadsEntrancePortal3D"' in KIT
 assert 'model.Parent=bucket' in KIT
