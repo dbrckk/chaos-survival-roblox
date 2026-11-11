@@ -361,6 +361,22 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         -- initially bound. Track only verified, welded source geometry.
         watchers[#watchers + 1] =
             meshFolder.ChildAdded:Connect(registerSourcePiece)
+        -- StreamingEnabled can replicate a MeshPart before its Weld
+        -- child. One folder-level listener retries only verified weld
+        -- arrivals; no per-MeshPart listener or polling is needed.
+        watchers[#watchers + 1] =
+            meshFolder.DescendantAdded:Connect(function(descendant)
+                if (descendant.Name ~= "ChaosPlatformTrimWeld"
+                        and descendant.Name ~= "OriginalSupportVisualWeld")
+                    or (not descendant:IsA("Weld")
+                        and not descendant:IsA("WeldConstraint")) then
+                    return
+                end
+                local piece = descendant.Parent
+                if piece and piece.Parent == meshFolder then
+                    registerSourcePiece(piece)
+                end
+            end)
         watchers[#watchers + 1] = meshFolder.ChildRemoved:Connect(
             function(piece)
                 local owner = sourceOwnerByPiece[piece]
