@@ -63,6 +63,7 @@ local function startPremiumAssets()
     local PremiumPerimeterVariantApexAssets = require(script.PremiumPerimeterVariantApexAssets)
     local PremiumExteriorTowerAssets = require(script.PremiumExteriorTowerAssets)
     local PremiumExteriorRidgeAssets = require(script.PremiumExteriorRidgeAssets)
+    local PremiumSkylineDepthSculptAssets = require(script.PremiumSkylineDepthSculptAssets)
     local PremiumVariantTowersLandmarkAssets = require(script.PremiumVariantTowersLandmarkAssets)
     local PremiumCrossroadsGantryAssets = require(script.PremiumCrossroadsGantryAssets)
     local PremiumClassicBroadcastFinAssets = require(script.PremiumClassicBroadcastFinAssets)
@@ -124,6 +125,7 @@ local function startPremiumAssets()
     -- cosmetic imports delayed after critical round/AI startup.
     task.defer(PremiumExteriorTowerAssets.start)
     task.defer(PremiumExteriorRidgeAssets.start)
+    task.defer(PremiumSkylineDepthSculptAssets.start)
     -- Creator-approved Towers corner machinery: one optional original source.
     task.defer(PremiumVariantTowersLandmarkAssets.start)
     -- Verified owner-approved open-frame Crossroads gantries; no physics.
