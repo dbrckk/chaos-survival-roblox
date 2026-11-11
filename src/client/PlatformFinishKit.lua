@@ -199,7 +199,8 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
         return {}
     end
     local count = PlatformFinishKit.sideRailCount(tier)
-    if count > 0 and PremiumPlatformSideMeshKit
+    if (count > 0 or (tier == "Low" and selectedBridge == true))
+        and PremiumPlatformSideMeshKit
         and platform:GetAttribute("ChaosSkybridge") == true then
         -- Real 7-material creator-owned truss modules occupy the same
         -- existing visual budget and shrink/collapse owner as native bars.
