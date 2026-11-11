@@ -1195,7 +1195,9 @@ task.spawn(function()
         end
         -- The SAME existing LOD pass replaces the three big native machine
         -- cuboids at each actual perimeter station only after all three
-        -- authentic equipment meshes are ready. No camera loop or physics.
+        -- authentic equipment meshes are ready. On Android Low its one
+        -- 21-MeshPart group takes priority over the optional rotor set.
+        -- No camera loop, new render pass or physics.
         ApprovedPerimeterMachineryMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, isTouch,
             player:GetAttribute("OptionalVfxPressure"))
@@ -1218,7 +1220,8 @@ task.spawn(function()
         -- station. Never alter MapBuilder, physics or disaster warnings.
         ApprovedPerimeterRotorMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, isTouch,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"),
+            profile.Name == "Low" and machineStations > 0)
         local rotorStations = ApprovedPerimeterRotorMeshKit.count()
         if player:GetAttribute("LocalApprovedPerimeterRotorStationCount")
             ~= rotorStations then

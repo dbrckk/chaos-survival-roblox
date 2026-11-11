@@ -1,3 +1,7 @@
+## P4 — Logements mécaniques 3D sur Android Low, sans cumul avec les turbines — 11 novembre 2026
+
+Le [lot de remplacement des trois logements mécaniques](docs/P4_LOW_PERIMETER_MACHINERY_EXCLUSIVE_ROTORS_2026-11-11.md) active **une station à 125 studs** sur Low avec de véritables modèles approuvés à **7 MeshParts par logement**, substituant **3 cubes** par **21 MeshParts**. La passe caméra existante **ne permet jamais de cumuler** ces 21 MeshParts avec les 21 rotors Low : les logements ont priorité lorsqu'ils sont montés, sinon les turbines conservent leur remplacement 3D. Au premier palier de pression, toutes les primitives sont restituées. Medium/High, assets, import réseau, collisions et budget Android restent inchangés. Publication Roblox distincte de ce code GitHub.
+
 ## P4 — Turbines forgées authentiques des stations sur Android Low — 11 novembre 2026
 
 Le [lot des trois rotors originaux](docs/P4_LOW_AUTHENTIC_PERIMETER_ROTORS_2026-11-11.md) autorise sur Android Low **une station proche à 130 studs** à remplacer ses **trois cylindres de turbine** par les vraies sculptures Roblox Approved (`133526819668194`), soit **21 MeshParts maximum**, déjà comptabilisées dans la limite globale de 440 Parts locales. Le premier palier de pression restitue les trois cylindres ; Medium/High, collisions, signaux et chargeur serveur sont inchangés. Ce correctif ne publie pas la Place et nécessite une validation Roblox Engine après fusion.
