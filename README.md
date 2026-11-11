@@ -1,3 +1,7 @@
+## P4 — Turbines forgées authentiques des stations sur Android Low — 11 novembre 2026
+
+Le [lot des trois rotors originaux](docs/P4_LOW_AUTHENTIC_PERIMETER_ROTORS_2026-11-11.md) autorise sur Android Low **une station proche à 130 studs** à remplacer ses **trois cylindres de turbine** par les vraies sculptures Roblox Approved (`133526819668194`), soit **21 MeshParts maximum**, déjà comptabilisées dans la limite globale de 440 Parts locales. Le premier palier de pression restitue les trois cylindres ; Medium/High, collisions, signaux et chargeur serveur sont inchangés. Ce correctif ne publie pas la Place et nécessite une validation Roblox Engine après fusion.
+
 ## P4 — Deux contreforts forgés en vraie 3D sur Android Low — 11 novembre 2026
 
 Le [lot des contreforts de stations](docs/P4_LOW_AUTHENTIC_PERIMETER_BUTTRESSES_2026-11-11.md) permet désormais à **une station proche (150 studs)** de remplacer atomiquement ses deux blocs `LeftButtress` / `RightButtress` par les modèles 3D originaux **déjà approuvés** et spécifiques aux cinq arènes. Les imports, les collisions, la limite globale Android et les profils Medium/High restent inchangés. Le premier palier de pression restitue automatiquement les blocs. Aucun asset nouveau ni test unitaire supplémentaire ; ce changement GitHub demande une validation Engine et publication Roblox ultérieures.

@@ -16,8 +16,13 @@ local SIZE = {
     IntakeTurbineR = Vector3.new(2.6, 0.8, 2.6),
     GeneratorRotor = Vector3.new(2.7, 0.9, 2.7),
 }
-local CAPS = {Low = 0, Medium = 1, High = 3}
-local RANGE = {Low = 0, Medium = 170, High = 245}
+-- Low may show ONE complete genuine station turbine set within a strict
+-- near-camera footprint. All three cylinder natives are restored at
+-- first graphics pressure (floor(1 * 0.5) = 0), including on touch.
+-- This reuses the same seven-MeshPart Approved source for all three:
+-- at most 21 optional MeshParts, in the existing Android local census.
+local CAPS = {Low = 1, Medium = 1, High = 3}
+local RANGE = {Low = 130, Medium = 170, High = 245}
 local HYSTERESIS = 16
 
 local bucket = Instance.new("Folder")
