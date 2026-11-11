@@ -284,13 +284,18 @@ assert 'if tier == "Low" then return {} end' in FINISH
 assert 'part.CanCollide = false' in FINISH
 assert 'part.CanTouch = false' in FINISH
 assert 'part.CanQuery = false' in FINISH
-# One shared Low visual chooser compares APPROVED real source holders
-# against camera distance, instead of prioritizing a distant bridge or
-# granting the first streamed 3D hatch a permanent premium slot.
+# A priority decision must not consume Android Low's scarce 7+7
+# genuine 3D source budget until a valid source is ACTUALLY MOUNTED.
+# Four finite attempts try the next approved family when a creator asset
+# fails ScaleTo, bridge staging, dimensions or mesh clone construction.
+# The winner is adopted in the existing platform owner without cloning it
+# twice. Medium/High and structural VFX budgets are unchanged.
 assert 'local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(' in OWNER
+assert 'local lowPreMounted = {}' in OWNER
 assert 'if tier.Name == "Low" then' in OWNER
 assert 'local function nearest(set)' in OWNER
 assert 'if platform.Parent == platforms then' in OWNER
+assert 'for _ = 1, 4 do' in OWNER
 assert 'local bridge, bridgeDistance = nearest(nearBridgeGirders)' in OWNER
 assert 'local carapace, carapaceDistance = nearest(nearCameraCarapaces)' in OWNER
 assert 'local hatch, hatchDistance = nearest(nearServiceHatches)' in OWNER
@@ -300,6 +305,21 @@ assert 'cameraLook.Y < -0.50' in OWNER
 assert 'if lowHubDeck and hullDistance <= math.min(' in OWNER
 assert 'elseif carapace and carapaceDistance <= hatchScore + 8 then' in OWNER
 assert 'elseif hatch then' in OWNER
+assert 'pieces = PremiumPlatformSideMeshKit.bridgeGirders(' in OWNER
+assert 'pieces = PremiumLargeDeckHullMeshKit.install(' in OWNER
+assert 'pieces = PremiumPlatformSideMeshKit.carapace(' in OWNER
+assert 'pieces = PlatformFinishKit.buildServiceHatch(' in OWNER
+assert 'local expected = choice == "bridge" and 14 or 7' in OWNER
+assert 'if pieces and #pieces == expected then' in OWNER
+assert 'lowPreMounted[target] = {kind = choice, parts = pieces}' in OWNER
+assert 'for _, piece in ipairs(pieces or {}) do' in OWNER
+assert 'piece:Destroy()' in OWNER
+assert 'if next(lowPreMounted) == nil then' in OWNER
+assert 'local staged = lowPreMounted[platform]' in OWNER
+assert 'staged.kind == "hull"' in OWNER
+assert 'staged.kind == "carapace"' in OWNER
+assert 'staged.kind == "bridge"' in OWNER
+assert 'staged.kind == "hatch"' in OWNER
 assert 'nearBridgeGirders = {}' in OWNER
 assert 'nearCameraCarapaces = {}' in OWNER
 assert 'nearServiceHatches = {}' in OWNER
@@ -314,7 +334,7 @@ assert '"ArenaPlatformIdentityLocal"' in ledger
 assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
 assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
-print("PASS Low visual distance arbitration, source-exclusive 7+7 budget and zero native hatch fallback")
+print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero native hatch fallback")
 
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
