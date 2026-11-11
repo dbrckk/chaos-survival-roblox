@@ -9,10 +9,20 @@ local Kit = {}
 -- MeshPart owner, not by scanning arbitrary descendants of Workspace.
 -- Harbor's existing dock structures keep their own PBR; this shared
 -- quota also covers the new approved near-camera atmospheric columns and
--- exterior tower silhouettes and four authentic jagged exterior ridges.
--- Same GPU budget and 16 approved texture IDs.
+-- exterior towers and ridges, plus authentic perimeter station hardware.
+-- No additional 2K images, imported models, rendering pass or GPU quota.
+-- All station sources are already separately owned and source-verified.
 local SOURCES = {
     Classic = {
+        {folder = "ApprovedPerimeterVariantApexLocal", id = 110237986522853},
+        {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
+        {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 108452611210970},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 113687802206554},
+        {folder = "ApprovedPerimeterRotorsLocal", id = 133526819668194},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 127295681925871},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 106083832432833},
+        {folder = "ApprovedPerimeterButtressesLocal", id = 91626128452597},
         {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
         {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
         {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
@@ -26,6 +36,15 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
     },
     Towers = {
+        {folder = "ApprovedPerimeterVariantApexLocal", id = 131413152501235},
+        {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
+        {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 108452611210970},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 113687802206554},
+        {folder = "ApprovedPerimeterRotorsLocal", id = 133526819668194},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 127295681925871},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 106083832432833},
+        {folder = "ApprovedPerimeterButtressesLocal", id = 107521411452905},
         {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
         {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
         {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
@@ -40,6 +59,15 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 86423178125318},
     },
     Crossroads = {
+        {folder = "ApprovedPerimeterVariantApexLocal", id = 134533469777794},
+        {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
+        {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 108452611210970},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 113687802206554},
+        {folder = "ApprovedPerimeterRotorsLocal", id = 133526819668194},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 127295681925871},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 106083832432833},
+        {folder = "ApprovedPerimeterButtressesLocal", id = 93993697329658},
         {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
         {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
         {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
@@ -53,6 +81,15 @@ local SOURCES = {
         {folder = "ApprovedCrossroadsOpenGantryLocal", id = 90844491148907},
     },
     Orbital = {
+        {folder = "ApprovedPerimeterVariantApexLocal", id = 131188899020391},
+        {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
+        {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 108452611210970},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 113687802206554},
+        {folder = "ApprovedPerimeterRotorsLocal", id = 133526819668194},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 127295681925871},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 106083832432833},
+        {folder = "ApprovedPerimeterButtressesLocal", id = 119010829781313},
         {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
         {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
         {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
@@ -66,6 +103,15 @@ local SOURCES = {
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 138666009076890},
     },
     Harbor = {
+        {folder = "ApprovedPerimeterVariantApexLocal", id = 110237986522853},
+        {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
+        {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 108452611210970},
+        {folder = "ApprovedPerimeterStructuresLocal", id = 113687802206554},
+        {folder = "ApprovedPerimeterRotorsLocal", id = 133526819668194},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 127295681925871},
+        {folder = "ApprovedPerimeterMachineryLocal", id = 106083832432833},
+        {folder = "ApprovedPerimeterButtressesLocal", id = 76194593490199},
         {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
         {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
         {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
@@ -261,8 +307,8 @@ function Kit.reconcile(arena, cameraPoint, cameraReady, tier, touch, pressure, d
                             -- inside the same bucket; only deduplicate a
                             -- model once its matching ID was verified.
                             scanned[model] = true
-                            local position = model:GetPivot().Position
-                            local distance = (position - cameraPoint).Magnitude
+                            local position = model:GetBoundingBox()
+                            local distance = (position.Position - cameraPoint).Magnitude
                             if distance <= (tier == "High" and 245 or 175) then
                                 candidates[#candidates + 1] = {
                                     model = model, pieces = pieces,

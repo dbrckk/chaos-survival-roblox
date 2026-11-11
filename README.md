@@ -1,3 +1,7 @@
+## P4 — Finitions PBR des stations authentiques et correction de proximité — 11 novembre 2026
+
+Le [nouveau lot de finitions des stations périphériques](docs/P4_PERIMETER_NEARFIELD_PBR_BOUNDS_2026-11-11.md) rend éligibles les modèles 3D authentiques des apex, armures, poutrelles, rotors, machines et contreforts à la finition **PBR 2K existante**, sans nouveau modèle, texture ni hausse de budget GPU. Le choix des sculptures proches se base désormais sur leur **géométrie réellement positionnée** au lieu d'un pivot potentiellement conservé à l'origine. Low conserve zéro overlay PBR ; les signaux d'alerte restent protégés. Cette évolution du code doit être publiée séparément sur Roblox après validation.
+
 ## P4 — Importation du tore partagé sur Towers dès la fenêtre prioritaire — 11 novembre 2026
 
 Le [correctif de chargement du véritable anneau](docs/P4_AUTHENTIC_ATMOSPHERE_RINGS_AND_CROWN_2026-11-11.md) autorise désormais le même modèle Roblox original `125070862497818` à être priorisé à **22 secondes sur Orbital comme sur Towers**, plutôt que d'attendre systématiquement 42 secondes sur Towers. Il n'ajoute aucune requête, aucun worker ni aucune ressource 3D : tous les chargements restent contrôlés par la file globale de deux appels au maximum. Le chargement effectif sur Android reste dépendant du serveur et n'est pas garanti à 22 secondes.
