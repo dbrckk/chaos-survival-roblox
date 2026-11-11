@@ -204,9 +204,12 @@ function Kit.reconcile(arena, cameraPoint, cameraReady, tier, touch, pressure, d
                 and folder:GetAttribute("CosmeticOnly") == true then
                 for _, model in ipairs(folder:GetChildren()) do
                     if not scanned[model] then
-                        scanned[model] = true
                         local pieces = piecesFor(model, folder, spec.id, variant)
                         if pieces then
+                            -- Orbital uses TWO distinct approved source IDs
+                            -- inside the same bucket; only deduplicate a
+                            -- model once its matching ID was verified.
+                            scanned[model] = true
                             local position = model:GetPivot().Position
                             local distance = (position - cameraPoint).Magnitude
                             if distance <= (tier == "High" and 245 or 175) then
