@@ -120,6 +120,9 @@ local function clear()
     if player:GetAttribute("LocalOriginalNearRouteCarapaceCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearRouteCarapaceCount", 0)
     end
+    if player:GetAttribute("LocalOriginalLowHubHullCount") ~= 0 then
+        player:SetAttribute("LocalOriginalLowHubHullCount", 0)
+    end
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearBridgeGirderCount", 0)
     end
@@ -502,6 +505,13 @@ local function rebuild()
         camera and camera.CFrame.Position or nil,
         camera and camera.CFrame.LookVector or nil,
         player:GetAttribute("OptionalVfxPressure"))
+    local lowHubDeck = tier.Name == "Low"
+        and PremiumLargeDeckHullMeshKit.selectLowDeck(
+            ordered, base, camera and camera.CFrame.Position or nil,
+            player:GetAttribute("OptionalVfxPressure")) or nil
+    -- The premium central full-size hull consumes the SAME one-slot
+    -- Low budget as a near-camera compact carapace, never both.
+    if lowHubDeck then nearCameraCarapaces = {} end
     local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
         ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
         camera and camera.CFrame.LookVector or nil)
@@ -511,6 +521,7 @@ local function rebuild()
         camera and camera.CFrame.LookVector or nil)
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
+    local mountedLowHubHulls = 0
     local mountedServiceHatches3D = 0
     local nearCradles,nearSupports =
         PremiumLargeStructureMeshKit.selectNearRouteStructures(
@@ -569,7 +580,11 @@ local function rebuild()
             -- original hull, not a tiny 10-stud carapace scaled up as a
             -- decorative sticker. Fallback remains the established kit.
             local largeHullPieces = PremiumLargeDeckHullMeshKit.install(
-                folder, platform, tier.Name, visualIndex)
+                folder, platform, tier.Name, visualIndex,
+                tier.Name == "Low" and platform == lowHubDeck)
+            if tier.Name == "Low" and largeHullPieces then
+                mountedLowHubHulls += 1
+            end
             local carapacePieces = largeHullPieces
                 or PlatformFinishKit.buildCarapace(
                     folder, platform, variant, tier.Name, theme, visualIndex,
@@ -832,6 +847,11 @@ local function rebuild()
         ~= mountedCameraCarapaces then
         player:SetAttribute("LocalOriginalNearRouteCarapaceCount",
             mountedCameraCarapaces)
+    end
+    if player:GetAttribute("LocalOriginalLowHubHullCount")
+        ~= mountedLowHubHulls then
+        player:SetAttribute("LocalOriginalLowHubHullCount",
+            mountedLowHubHulls)
     end
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount")
         ~= mountedBridgeGirders then
