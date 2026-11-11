@@ -500,7 +500,8 @@ local function rebuild()
     local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
         ordered, variant, tier.Name, base,
         camera and camera.CFrame.Position or nil,
-        camera and camera.CFrame.LookVector or nil)
+        camera and camera.CFrame.LookVector or nil,
+        player:GetAttribute("OptionalVfxPressure"))
     local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
         ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
         camera and camera.CFrame.LookVector or nil)
@@ -1227,6 +1228,15 @@ watchLargeStructureTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates"))
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+-- Exactly one optional Low authentic deck may be mounted in the
+-- existing platform owner. Remove it promptly when adaptive pressure
+-- rises, restoring the two native wedges; no extra render/camera loop.
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    if VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
+        UserInputService.TouchEnabled).Name == "Low" then
+        scheduleRebuild()
+    end
+end)
 -- The EXISTING scenery-LOD camera sampler requests a bounded retarget
 -- only after traversing 88 studs and a 12-second cooldown. No camera loop
 -- or premium source/model quota is added to this owner.
