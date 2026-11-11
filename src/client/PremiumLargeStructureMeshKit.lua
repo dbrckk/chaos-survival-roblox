@@ -121,15 +121,18 @@ end
 -- network calls or server-authoritative gameplay changes.
 function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint,cameraLook,pressure)
     local cradleSet,supportSet={},{}
-    -- Low can substitute ONE server-authored primitive support with an
-    -- approved seven-MeshPart column, but not the long promenade cradle.
-    -- All pressure removal uses the existing owner rebuild, no ticker.
+    -- Low spends exactly ONE approved seven-MeshPart source module:
+    -- a near-camera LongCradle OR one rectangular support replacement,
+    -- never both. Pressure restores all native geometry automatically.
     if type(platforms) ~= "table" or not base
         or not base:IsA("BasePart")
         or (tier == "Low" and (tonumber(pressure) or 0) > 0) then
         return cradleSet,supportSet
     end
-    local cradleSource=tier ~= "Low" and verified("LongCradle") or nil
+    local cradleSource,cradleBounds,cradleParts=verified("LongCradle")
+    if tier == "Low" and cradleParts ~= 7 then
+        cradleSource=nil
+    end
     local supportSource,supportBounds,supportParts=nil,nil,nil
     if decor and decor:IsA("Folder") then
         supportSource,supportBounds,supportParts=verified(variant)
@@ -222,7 +225,26 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             if cradleSource and (spine or promenade)
                 and long>=19.5 and long<=34
                 and short>=9 and short<=18 then
-                cradles[#cradles+1]={platform=platform,score=score}
+                local eligible=true
+                if tier == "Low" then
+                    -- Validate the EXACT approved source footprint before
+                    -- spending Low's sole seven-part structural budget.
+                    -- No fake small hull scaled across a 30-stud span.
+                    local sourceLong=math.max(cradleBounds.X,
+                        cradleBounds.Z)
+                    local sourceShort=math.min(cradleBounds.X,
+                        cradleBounds.Z)
+                    local scale=math.min(1.21,long*.95/sourceLong,
+                        short*.91/sourceShort)
+                    eligible=(platform.Position-cameraPoint).Magnitude<=125
+                        and scale>=.76
+                        and sourceLong*scale>=long*.87
+                        and sourceShort*scale>=short*.76
+                        and cradleBounds.Y*scale<=5
+                end
+                if eligible then
+                    cradles[#cradles+1]={platform=platform,score=score}
+                end
             end
             if supportSource and supportsAvailable[id]
                 and long>=7 and long<=36 and short>=7
@@ -281,12 +303,17 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         end
         return selected
     end
-    local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 0)
+    local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 1)
     local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)
     cradleSet=distribute(cradles,cradleLimit,
         tier=="High" and 2 or 1)
-    supportSet=distribute(supports,supportLimit,
-        tier=="High" and 5 or (tier=="Medium" and 2 or 1))
+    -- Low must NOT stack a seven-piece tall column behind a seven-piece
+    -- underframe: give the one sculpted long bridge source priority.
+    -- No compatible long bridge => retain the one real support candidate.
+    if tier ~= "Low" or next(cradleSet) == nil then
+        supportSet=distribute(supports,supportLimit,
+            tier=="High" and 5 or (tier=="Medium" and 2 or 1))
+    end
     return cradleSet,supportSet
 end
 
@@ -400,14 +427,27 @@ end
 -- must cover at least 87% of length and 76% of width BEFORE replacing the
 -- older low-slung rectangular underframe in the LOCAL renderer.
 function Kit.longCradle(parent,platform,tier,index,selected)
-    if selected == false then return nil end
-    if tier == "Low" or not parent or not platform
-        or not platform:IsA("BasePart") or not platform.Parent
+    if selected == false or (tier == "Low" and selected ~= true) then
+        return nil
+    end
+    if not parent or not platform or not platform:IsA("BasePart")
+        or not platform.Parent
         or platform:GetAttribute("ChaosSkybridge") == true then return nil end
+    if tier == "Low" then
+        -- Low's single source-backed chariot can only decorate a safe
+        -- actual collidable route. Medium/High retain legacy behavior.
+        local phase=platform:GetAttribute("CollapsePhase")
+        if not platform.Anchored or not platform.CanCollide
+            or platform.Transparency>=.75
+            or (phase ~= nil and phase ~= "Normal" and phase ~= "Safe")
+            or (platform:GetAttribute("BridgeShutterPhase") ~= nil
+                and platform:GetAttribute("BridgeShutterPhase") ~= "Idle")
+            then return nil end
+    end
     if platform:GetAttribute("PromenadeStep")==nil
         and platform:GetAttribute("SkySpineStep")==nil then return nil end
-    local source,box=verified("LongCradle")
-    if not source then return nil end
+    local source,box,count=verified("LongCradle")
+    if not source or (tier == "Low" and count ~= 7) then return nil end
     local sx,sy,sz=platform.Size.X,platform.Size.Y,platform.Size.Z
     local long=math.max(sx,sz)
     local short=math.min(sx,sz)
