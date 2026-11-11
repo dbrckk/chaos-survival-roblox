@@ -1,0 +1,33 @@
+name: P4 Harbor atmosphere identity and native fallback regression
+on:
+  pull_request:
+    paths:
+      - src/server/ArenaAtmosphere.server.lua
+      - src/server/ArenaAtmosphereStyle.lua
+      - src/shared/VisualTheme.lua
+      - src/client/arena-lighting.client.lua
+      - src/server/MapBuilder.lua
+      - tests/engine/arena-presentation.spec.luau
+      - tools/verify_harbor_maritime_atmosphere.py
+      - .github/workflows/harbor-maritime-atmosphere-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/server/ArenaAtmosphere.server.lua
+      - src/server/ArenaAtmosphereStyle.lua
+      - src/shared/VisualTheme.lua
+      - src/client/arena-lighting.client.lua
+      - src/server/MapBuilder.lua
+      - tests/engine/arena-presentation.spec.luau
+      - tools/verify_harbor_maritime_atmosphere.py
+      - .github/workflows/harbor-maritime-atmosphere-regression.yml
+permissions:
+  contents: read
+jobs:
+  harbor-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify five atmosphere palettes and Harbor native geometry budget
+        run: python3 tools/verify_harbor_maritime_atmosphere.py
