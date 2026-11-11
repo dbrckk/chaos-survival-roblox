@@ -217,7 +217,10 @@ assert 'suppressOverlays(entry)' in GROUND
 assert 'PremiumGroundPbrKit.tileBudget(' in GROUND
 assert 'if disabled == true or tier == "Low" then return 0 end' in GROUND_PBR
 assert '"OriginalPremiumGroundMeshesLocal"' in ledger
-assert 'RenderStepped' not in GROUND and 'Heartbeat' not in GROUND
+# Comments mention RenderStepped for documentation; disallow actual
+# callback registration or new frame owners, not harmless comments.
+assert '.RenderStepped:Connect(' not in GROUND
+assert '.Heartbeat:Connect(' not in GROUND
 assert 'AssetService' not in GROUND
 print("PASS 16 Medium original floor bays, 2 Low, 36 High, camera-forward ranking")
 print("PASS shared floor pressure and native fallback with unchanged 2K atlases")
