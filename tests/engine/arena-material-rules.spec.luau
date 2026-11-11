@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaMaterialRules = require("../../src/shared/ArenaMaterialRules")
 local PbrDistrictRules = require("../../src/shared/PbrDistrictRules")
+local DistrictMaterialFinishKit = require("../../src/client/DistrictMaterialFinishKit")
 
 describe("PBR protection for original Harbor timber", function()
     it("leaves wood and plank faces out of the metallic 2K candidate pool", function()
@@ -129,6 +130,104 @@ describe("Arena material rules", function()
             25,
             "Medium"
         )).toBe(Enum.Material.Metal)
+    end)
+end)
+
+describe("Five authored PBR-safe near-field industrial service door finishes", function()
+    it("creates unique bounded geometry-free door finish per arena", function()
+        local designs = {
+            {"Classic", "SURVEY / GRID", "SurveyGauge"},
+            {"Towers", "LIFT / LOAD", "HoistReinforcement"},
+            {"Crossroads", "ROUTE / XFER", "ExchangeRoute"},
+            {"Orbital", "REACTOR / SEAL", "ContainmentCollar"},
+            {"Harbor", "QUAY / HATCH", "QuayHatchRib"},
+        }
+        for _, design in ipairs(designs) do
+            local door = Instance.new("Part")
+            door.Name = "ServiceEntryDoor"
+            door.Size = Vector3.new(4.65, 4.68, 0.18)
+            door.Anchored = true
+            door.Material = Enum.Material.CorrodedMetal
+            door.Color = Color3.fromRGB(77, 93, 101)
+            local beforeMaterial, beforeColor, beforeSize =
+                door.Material, door.Color, door.Size
+            local gui = DistrictMaterialFinishKit.stencil(
+                door, "N-01 / CARGO",
+                Color3.fromRGB(70, 195, 211),
+                "High", "service-door", Enum.NormalId.Front, design[1])
+            expect(gui ~= nil).toBe(true)
+            if gui then
+                expect(gui.Parent == door).toBe(true)
+                expect(gui.MaxDistance).toBe(145)
+                expect(gui.PixelsPerStud).toBe(24)
+                expect(gui.AlwaysOnTop).toBe(false)
+                expect(gui:FindFirstChild("ForgedDoorRecess") ~= nil)
+                    .toBe(true)
+                expect(gui:FindFirstChild("DistrictTechnicalBand") ~= nil)
+                    .toBe(true)
+                expect(gui:FindFirstChild("ServiceDoorNumberPlate") ~= nil)
+                    .toBe(true)
+                local tag = gui:FindFirstChild("IndustrialFamilyMark", true)
+                expect(tag ~= nil).toBe(true)
+                if tag then
+                    expect(tag.Text).toBe(design[2])
+                end
+                local motif = gui:FindFirstChild(design[3] .. "1", true)
+                expect(motif ~= nil).toBe(true)
+                expect(gui:FindFirstChild("ForgedFastener4", true) ~= nil)
+                    .toBe(true)
+                -- The finish owns only GUI nodes; true geometry and
+                -- approved image maps remain untouched.
+                expect(#gui:GetDescendants() <= 55).toBe(true)
+                for _, child in ipairs(gui:GetDescendants()) do
+                    expect(child:IsA("BasePart")).toBe(false)
+                    expect(child:IsA("LuaSourceContainer")).toBe(false)
+                end
+            end
+            expect(door.Material).toBe(beforeMaterial)
+            expect(door.Color).toBe(beforeColor)
+            expect(door.Size).toBe(beforeSize)
+            door:Destroy()
+        end
+    end)
+
+    it("keeps Android Low off and Medium stencil significantly cheaper", function()
+        local door = Instance.new("Part")
+        door.Name = "ServiceEntryDoor"
+        local low = DistrictMaterialFinishKit.stencil(
+            door, "H-02", Color3.fromRGB(70, 195, 211),
+            "Low", "service-door", Enum.NormalId.Front, "Harbor")
+        expect(low).toBe(nil)
+        expect(#door:GetChildren()).toBe(0)
+        local medium = DistrictMaterialFinishKit.stencil(
+            door, "H-02", Color3.fromRGB(70, 195, 211),
+            "Medium", "service-door", Enum.NormalId.Front, "Harbor")
+        expect(medium ~= nil).toBe(true)
+        if medium then
+            expect(medium.MaxDistance).toBe(115)
+            expect(medium.PixelsPerStud).toBe(16)
+            expect(medium:FindFirstChild("ForgedFastener2", true) ~= nil)
+                .toBe(true)
+            expect(medium:FindFirstChild("ForgedFastener3", true)).toBe(nil)
+            expect(medium:FindFirstChild("QuayHatchRib3", true) ~= nil)
+                .toBe(true)
+            expect(medium:FindFirstChild("QuayHatchRib4", true)).toBe(nil)
+        end
+        door:Destroy()
+    end)
+
+    it("preserves preexisting simple style callers and fallback identity", function()
+        local door = Instance.new("Part")
+        local old = DistrictMaterialFinishKit.stencil(
+            door, "LEGACY", Color3.fromRGB(72, 185, 255),
+            "Medium", "service-door", Enum.NormalId.Front)
+        expect(old ~= nil).toBe(true)
+        if old then
+            local tag = old:FindFirstChild("IndustrialFamilyMark", true)
+            expect(tag ~= nil).toBe(true)
+            if tag then expect(tag.Text).toBe("SURVEY / GRID") end
+        end
+        door:Destroy()
     end)
 end)
 
