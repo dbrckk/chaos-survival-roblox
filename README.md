@@ -1,3 +1,7 @@
+## P4 — Treillis 3D d'une passerelle Towers sur Android Low — 11 novembre 2026
+
+Le [lot de remplacement du treillis de Skybridge](docs/P4_LOW_TOWERS_APPROVED_3D_SKYBRIDGE_TRUSS_2026-11-11.md) permet, sur une seule **Skybridge Towers réelle** à ≤125 studs de la caméra et hors pression GPU, de substituer les anciennes nervures rectangulaires par **deux modèles 3D originaux approuvés, soit 14 MeshParts**. La provenance, la taille, les soudures, les shutters et les avertissements restent vérifiés. **Ces 14 MeshParts occupent exclusivement les deux budgets Low précédents de 7+7 pièces** : ils ne s'ajoutent pas aux carapaces/hubs ni aux grandes colonnes/LongCradle de la même arène Low. Retour aux natives dès pression 1 ; Medium/High inchangés. Tests Roblox Engine, FPS Android et publication de Place non encore effectués.
+
 ## P4 — Vrai châssis ajouré 3D sur une grande passerelle Android Low — 11 novembre 2026
 
 Le [lot de remplacement des sous-structures Sky Spine / Promenade](docs/P4_LOW_ORIGINAL_SKY_SPINE_UNDERCRADLE_2026-11-11.md) autorise un **vrai Model créateur LongCradle (128914328933863), de sept MeshParts**, sur une plateforme physique proche de la caméra (≤125 studs), si la provenance, l'échelle et l'empreinte sont validées. Il **partage l'unique quota Low de grande structure avec la colonne 3D** précédente : pas de cumul. Dès pression graphique Low 1/2, retour aux châssis et piliers natifs. Medium/High inchangés. **Il reste à valider dans Roblox Engine/Android et à publier sur la Place.**
