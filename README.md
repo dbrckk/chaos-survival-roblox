@@ -1,3 +1,7 @@
+## P4 — Deux contreforts forgés en vraie 3D sur Android Low — 11 novembre 2026
+
+Le [lot des contreforts de stations](docs/P4_LOW_AUTHENTIC_PERIMETER_BUTTRESSES_2026-11-11.md) permet désormais à **une station proche (150 studs)** de remplacer atomiquement ses deux blocs `LeftButtress` / `RightButtress` par les modèles 3D originaux **déjà approuvés** et spécifiques aux cinq arènes. Les imports, les collisions, la limite globale Android et les profils Medium/High restent inchangés. Le premier palier de pression restitue automatiquement les blocs. Aucun asset nouveau ni test unitaire supplémentaire ; ce changement GitHub demande une validation Engine et publication Roblox ultérieures.
+
 ## P4 — Deux vrais portiques Crossroads sur Android Low — 11 novembre 2026
 
 Le [nouveau lot Crossroads](docs/P4_CROSSROADS_AUTHENTIC_LOW_GATES_GANTRIES_2026-11-11.md) rend visibles sur Low **un portail intérieur approuvé** (remplacement de trois primitives) et **un portique extérieur approuvé** (remplacement d'une poutre), dans un rayon de 180 studs, même sur écran tactile. Le signal extérieur et les animations intérieures restent intacts ; chaque modèle ne compte que sept MeshParts non physiques dans le budget Android global. Les deux charges sont priorisées à **44/46 secondes sur la carte Crossroads active** (92/98 secondes ailleurs) et la pression graphique rétablit les natives. Cette modification GitHub n'actualise pas la Place Roblox publique.

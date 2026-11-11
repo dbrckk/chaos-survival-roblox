@@ -69,6 +69,35 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# The existing authenticated structure owner can replace exactly TWO
+# static perimeter cuboids on the ONE nearest Low-tier station.
+# It must remain in the global Android Part census and return natives
+# at first optional-VFX pressure tier, without AssetService client calls.
+BUTTRESS=(CLIENT/"ApprovedPerimeterButtressMeshKit.lua").read_text()
+assert 'local LIMITS = {Low = 1, Medium = 1, High = 4}' in BUTTRESS
+assert 'local RANGE = {Low = 150, Medium = 185, High = 275}' in BUTTRESS
+assert 'if stress == 1 then cap = math.floor(cap * .5) end' in BUTTRESS
+assert 'if stress >= 2 then cap = 0 end' in BUTTRESS
+assert 'local first, firstParts = fittedClone(source, left, APPROVED[variant])' in BUTTRESS
+assert 'if not second then first:Destroy(); return end' in BUTTRESS
+assert 'first.Parent = bucket' in BUTTRESS
+assert 'second.Parent = bucket' in BUTTRESS
+assert BUTTRESS.index('second.Parent = bucket') < BUTTRESS.index(
+    'left.Transparency = 1')
+assert 'right.Transparency = 1' in BUTTRESS
+assert 'native.Transparency = alpha' in BUTTRESS
+assert 'item.CastShadow = false' in BUTTRESS
+assert 'item.CanCollide = false' in BUTTRESS
+assert 'item.CanTouch = false' in BUTTRESS
+assert 'item.CanQuery = false' in BUTTRESS
+assert 'source:GetAttribute("Original3DAssetId") ~= approvedId' in BUTTRESS
+assert 'source:GetAttribute("OwnerVerified") ~= true' in BUTTRESS
+assert 'source:GetAttribute("OriginalLargeStructure3D") ~= true' in BUTTRESS
+assert 'bucket.Name = "ApprovedPerimeterButtressesLocal"' in BUTTRESS
+assert '"ApprovedPerimeterButtressesLocal"' in ledger
+assert 'RenderStepped' not in BUTTRESS and 'Heartbeat' not in BUTTRESS
+assert 'AssetService' not in BUTTRESS
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
