@@ -19,9 +19,17 @@ for height,asset in ids:
     assert f"height = {height}, id = {asset}" in LOADER
     assert rows[f"exterior_tower_{height}"]["asset_id"]==asset
     assert rows[f"exterior_tower_{height}"]["moderation"]=="Approved"
-assert 'local LOAD_STAGGER = {36,36,36,36}' in LOADER
-assert 'for index, entry in ipairs(SOURCES) do' in LOADER
-assert 'task.wait(LOAD_STAGGER[index])' in LOADER
+assert 'local PRIORITY_BY_VARIANT = {' in LOADER
+for variant, heights in {"Classic":"{21}", "Harbor":"{21}",
+                         "Crossroads":"{21,24}", "Orbital":"{24,27}",
+                         "Towers":"{27,30}"}.items():
+    assert f"{variant} = {heights}" in LOADER
+assert 'local ordered, activeCount = prioritizedSources()' in LOADER
+assert 'for index, entry in ipairs(ordered) do' in LOADER
+assert 'task.wait(26)' in LOADER
+assert 'task.wait(index <= activeCount and 10 or 34)' in LOADER
+assert 'selected[entry.height]' in LOADER
+assert 'generated.Parent == workspace' in LOADER
 assert 'task.wait(145)' not in LOADER
 assert LOADER.count('GlobalApprovedImportGate.load')==1
 assert 'require("./PremiumApprovedAssetImportGate")' in LOADER
@@ -39,5 +47,5 @@ assert 'ApprovedPrimarySkylineMeshKit.sync(arena,cameraPoint,' in SCENERY
 assert 'ApprovedSkylineDepthMeshKit.sync(arena,cameraPoint,' in SCENERY
 assert 'task.wait(62)' in (ROOT/"src/server/PremiumVariantTowersLandmarkAssets.lua").read_text()
 print("PASS four original verified Models, same 1 serialized AssetService lane")
-print("PASS staged early request after 36s, exact source provenance and retry")
+print("PASS active variant imported first after 26s; inactive sources staggered")
 print("NOTE actual start times include network latency and retry waits")

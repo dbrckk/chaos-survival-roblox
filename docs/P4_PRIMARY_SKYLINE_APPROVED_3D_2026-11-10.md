@@ -57,3 +57,15 @@ publication Roblox Place attestée par ce lot.
 **Suite du plan :** inventaire et remplacement des `addVariantLandmarks`
 et formes de signal les moins lisibles, puis test visuel in-engine
 avec seuils de performance Android.
+
+
+### Correctif complémentaire du 11 novembre — ordre de chargement
+
+Le chargeur PremiumExteriorTowerAssets trie désormais ses quatre
+imports approuvés suivant la variante réellement active, après
+26 secondes. En particulier, Towers demande les sources 27/30
+avant les modèles inutiles dans son premier décor, et Orbital
+demande 24/27 avant la tour 21. Le nombre de requêtes ne change pas,
+les chargements restent strictement séquentiels et le fallback
+natif demeure disponible. Ceci ne constitue pas une garantie de
+résidence 3D ou de FPS Android sans test moteur.
