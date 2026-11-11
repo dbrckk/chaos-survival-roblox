@@ -2,6 +2,8 @@
 -- Per tower, four rectangular native bodies disappear ONLY after one
 -- source-approved seven-MeshPart sculpt is fully mounted; signal and antenna
 -- stay. Existing scenery LOD timer only; zero physics or network calls.
+-- On Low, show ONE nearest approved seven-piece forged tower at normal
+-- pressure; restore native silhouettes immediately at pressure level 1/2.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
@@ -14,8 +16,8 @@ local IDS = {
     [30] = 112172520488996,
 }
 local NAMES = {"ReactorShell","RoofCanopy","LeftRib","RightRib"}
-local QUALITIES = {Low=0,Medium=2,High=4}
-local DISTANCE = {Low=0,Medium=330,High=450}
+local QUALITIES = {Low=1,Medium=2,High=4}
+local DISTANCE = {Low=275,Medium=330,High=450}
 local RETAIN = 24
 local VARIANTS = {
     Classic=true,Towers=true,Crossroads=true,Orbital=true,Harbor=true,
