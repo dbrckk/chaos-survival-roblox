@@ -209,24 +209,43 @@ local function valid(entry)
     return true
 end
 
+-- Reject camera-nearest candidates which cannot physically hold the
+-- source sculpt BEFORE claiming one of the scarce Low/Medium slots.
+-- This uses only dimensions of the already owner-verified source and the
+-- exact server-authored native. It never stretches or shrinks a mesh axis.
+local function candidateFit(sourceSize, kind, variant, height)
+    if typeof(sourceSize) ~= "Vector3" or sourceSize.Y <= 0 then
+        return nil
+    end
+    local scale = height / sourceSize.Y
+    if scale < .54 or scale > 1.75 then return nil end
+    local nativeWidth = kind == "AtmospherePillar"
+        and (variant == "Harbor" and 1.65 or 1.25) or 2.4
+    local maxWidth = math.max(2.4, nativeWidth * 2.1)
+    -- A small allowance avoids rounding-related false rejection; final
+    -- mounted GetBoundingBox still enforces the strict actual width.
+    if sourceSize.X * scale > maxWidth + .08
+        or sourceSize.Z * scale > maxWidth + .08 then
+        return nil
+    end
+    return scale, maxWidth
+end
+
 local function mount(arena, item, source, holder, id, sourceSize)
     local native, folder, height = originalAt(
         arena, item.kind, item.index)
     if not native or native ~= item.native then return end
+    local scale, maxWidth = candidateFit(
+        sourceSize, item.kind, arena:GetAttribute("VariantId"), height)
+    if not scale then return end
     local clone = source:Clone()
-    local scale = height / sourceSize.Y
-    if scale < .54 or scale > 1.75
-        or not pcall(function() clone:ScaleTo(scale) end) then
+    if not pcall(function() clone:ScaleTo(scale) end) then
         clone:Destroy()
         return
     end
     local frame, bounds = clone:GetBoundingBox()
-    local originalWidth = item.kind == "AtmospherePillar"
-        and (arena:GetAttribute("VariantId") == "Harbor" and 1.65 or 1.25)
-        or 2.4
-    -- Atmospheric silhouettes remain slender and cannot occlude a
-    -- platform. Tall Towers pylons that would get too fat simply fall back.
-    local maxWidth = math.max(2.4, originalWidth * 2.1)
+    -- The actual scaled clone remains the final authority: if it grows
+    -- too fat for the original footprint, native visuals remain visible.
     if math.abs(bounds.Y - height) > .13
         or bounds.X > maxWidth or bounds.Z > maxWidth then
         clone:Destroy()
@@ -311,16 +330,18 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
     if tier == "Low" and stress >= 1 then cap = 0 end
     if stress >= 2 then cap = 0 end
     if not cameraReady or typeof(cameraPoint) ~= "Vector3" then cap = 0 end
-    local source, holder, id, size = sourceFor(
-        arena and arena:GetAttribute("VariantId"))
+    local variant = arena and arena:GetAttribute("VariantId")
+    local source, holder, id, size = sourceFor(variant)
     if not source then cap = 0 end
 
     local candidates = {}
     if cap > 0 then
+        -- Both families compete for the same cap, but only shapes that
+        -- can actually fit this source should consume a ranked slot.
         for _, kind in ipairs({"AtmospherePillar", "SilhouetteSpine"}) do
             for index = 1, 4 do
-                local native = originalAt(arena, kind, index)
-                if native then
+                local native, _, height = originalAt(arena, kind, index)
+                if native and candidateFit(size, kind, variant, height) then
                     local held = mounted[native] ~= nil
                     local distance = (native.Position - cameraPoint).Magnitude
                     if distance <= spec.distance + (held and 22 or 0) then

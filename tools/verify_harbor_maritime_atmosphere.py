@@ -8,6 +8,7 @@ import json
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = (ROOT / "src/server/ArenaAtmosphere.server.lua").read_text()
+COLUMNS = (ROOT / "src/client/ApprovedAtmosphereColumnsMeshKit.lua").read_text()
 STYLE = (ROOT / "src/server/ArenaAtmosphereStyle.lua").read_text()
 THEME = (ROOT / "src/shared/VisualTheme.lua").read_text()
 MAP = (ROOT / "src/server/MapBuilder.lua").read_text()
@@ -15,6 +16,20 @@ CLIENT = (ROOT / "src/client/arena-lighting.client.lua").read_text()
 ENGINE = (ROOT / "tests/engine/arena-presentation.spec.luau").read_text()
 CLOUD = (ROOT / ".github/workflows/roblox-cloud-test.yml").read_text()
 REGISTRY = json.loads((ROOT / "assets/source/roblox-asset-registry.json").read_text())
+
+# Existing source regression: only compatible real sculptures are ranked.
+# A too-wide near pillar must not prevent a farther, valid spine from
+# occupying the sole Android Low mount slot.
+assert 'local function candidateFit(sourceSize, kind, variant, height)' in COLUMNS
+assert 'sourceSize.X * scale > maxWidth + .08' in COLUMNS
+assert 'sourceSize.Z * scale > maxWidth + .08' in COLUMNS
+assert 'if native and candidateFit(size, kind, variant, height) then' in COLUMNS
+assert 'local scale, maxWidth = candidateFit(' in COLUMNS
+assert 'if not scale then return end' in COLUMNS
+assert 'math.abs(bounds.Y - height) > .13' in COLUMNS
+assert 'bounds.X > maxWidth or bounds.Z > maxWidth' in COLUMNS
+assert 'Low = {cap = 1, distance = 175}' in COLUMNS
+assert 'if tier == "Low" and stress >= 1 then cap = 0 end' in COLUMNS
 
 assert 'local ArenaAtmosphereStyle = require("./ArenaAtmosphereStyle")' in SRC
 assert 'ArenaAtmosphereStyle.profileFor(variantId)' in SRC
