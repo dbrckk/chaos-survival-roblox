@@ -5,6 +5,7 @@ local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule=require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local APPROVED_ID=125070862497818
@@ -43,7 +44,7 @@ function Assets.start()
     end
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        task.wait(42)
+        ActiveSignatureSchedule.waitFor("Orbital",22,42)
         if folder:FindFirstChild("ReactorRing") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,
