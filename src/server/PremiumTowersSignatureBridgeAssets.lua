@@ -45,7 +45,7 @@ function Assets.start()
     task.spawn(function()
         -- Art lane: allow first round, player spawn and existing sources
         -- to initialize. Model absence never delays a disaster.
-        ActiveSignatureSchedule.waitFor("Towers",47,62)
+        ActiveSignatureSchedule.waitFor("Towers",21,62)
         if holder:FindFirstChild("ForgedBridge") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,
