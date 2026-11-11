@@ -5,6 +5,8 @@ on:
       - src/shared/VisualBudgetRules.lua
       - src/client/**MeshKit.lua
       - src/client/**3DKit.lua
+      - src/client/PlatformFinishKit.lua
+      - src/client/arena-platform-identity.client.lua
       - src/client/visual-budget-pressure.client.lua
       - tools/verify_original_3d_budget_census.py
       - .github/workflows/original-3d-budget-census-regression.yml
@@ -14,6 +16,8 @@ on:
       - src/shared/VisualBudgetRules.lua
       - src/client/**MeshKit.lua
       - src/client/**3DKit.lua
+      - src/client/PlatformFinishKit.lua
+      - src/client/arena-platform-identity.client.lua
       - src/client/visual-budget-pressure.client.lua
       - tools/verify_original_3d_budget_census.py
       - .github/workflows/original-3d-budget-census-regression.yml
