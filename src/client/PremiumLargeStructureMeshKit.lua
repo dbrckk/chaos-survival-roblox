@@ -45,7 +45,7 @@ local function verified(kind)
     elseif not (size.Y >= 13.4 and size.Y <= 15.1
         and xzLong >= 1.6 and xzLong <= 2.8
         and xzShort >= 1.5 and xzShort <= 2.7) then return nil end
-    return source,size
+    return source,size,count
 end
 
 local function prepare(source,scale,at,native,kind,adjustable)
@@ -119,19 +119,24 @@ end
 -- sampling or the first two PlatformN in a large streamed arena.
 -- One snapshot per EXISTING map/tier/asset arrival rebuild. No camera loop,
 -- network calls or server-authoritative gameplay changes.
-function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint,cameraLook)
+function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint,cameraLook,pressure)
     local cradleSet,supportSet={},{}
-    -- The REAL Platforms folder can stream before Arena.Decor. The
-    -- full-length 3D LongCradle needs only verified walkable decks and
-    -- a source Model: do not block all five worlds' major Sky Spine/
-    -- promenade understructures on unrelated late cosmetic replication.
-    if tier == "Low" or type(platforms) ~= "table" or not base
-        or not base:IsA("BasePart") then
+    -- Low can substitute ONE server-authored primitive support with an
+    -- approved seven-MeshPart column, but not the long promenade cradle.
+    -- All pressure removal uses the existing owner rebuild, no ticker.
+    if type(platforms) ~= "table" or not base
+        or not base:IsA("BasePart")
+        or (tier == "Low" and (tonumber(pressure) or 0) > 0) then
         return cradleSet,supportSet
     end
-    local cradleSource=verified("LongCradle")
-    local supportSource=decor and decor:IsA("Folder")
-        and verified(variant) or nil
+    local cradleSource=tier ~= "Low" and verified("LongCradle") or nil
+    local supportSource,supportBounds,supportParts=nil,nil,nil
+    if decor and decor:IsA("Folder") then
+        supportSource,supportBounds,supportParts=verified(variant)
+    end
+    if tier == "Low" and supportParts ~= 7 then
+        supportSource=nil
+    end
     if not cradleSource and not supportSource then
         return cradleSet,supportSet
     end
@@ -142,19 +147,31 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         for _,part in ipairs(decor:GetChildren()) do
             local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
             local id=tonumber(suffix)
-            if id and validNativeSupport(part,id) then
+            if id and validNativeSupport(part,id)
+                and (tier ~= "Low"
+                    or (part.Size.Y <= 16
+                        and part.Size.Y / supportBounds.Y >= .34)) then
+                -- One Low source module cannot replace two or three
+                -- tall-support segments. Check viability BEFORE selection.
                 supportsAvailable[id]=true
             end
         end
     end
     local focus=base.Position
+    local cameraReady=false
     if typeof(cameraPoint) == "Vector3" then
         local point=base.CFrame:PointToObjectSpace(cameraPoint)
         if math.abs(point.X)<=base.Size.X*.5+16
             and math.abs(point.Z)<=base.Size.Z*.5+16
             and math.abs(point.Y)<=130 then
             focus=cameraPoint
+            cameraReady=true
         end
+    end
+    -- Never mount extra Low geometry while the camera is still in lobby
+    -- or a streamed-in arena is not yet a valid viewer frame.
+    if tier == "Low" and not cameraReady then
+        return cradleSet,supportSet
     end
     -- Favor genuine creator-owned columns / long cradles in the live
     -- third-person view without changing High/Medium source quotas or
@@ -198,7 +215,9 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                 cradles[#cradles+1]={platform=platform,score=score}
             end
             if supportSource and supportsAvailable[id]
-                and long>=7 and long<=36 and short>=7 then
+                and long>=7 and long<=36 and short>=7
+                and (tier ~= "Low" or (platform.Position-cameraPoint).Magnitude
+                    <= 125) then
                 supports[#supports+1]={platform=platform,score=score}
             end
         end
@@ -252,12 +271,12 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         end
         return selected
     end
-    local cradleLimit=tier=="High" and 4 or 2
-    local supportLimit=tier=="High" and 8 or 4
+    local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 0)
+    local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)
     cradleSet=distribute(cradles,cradleLimit,
         tier=="High" and 2 or 1)
     supportSet=distribute(supports,supportLimit,
-        tier=="High" and 5 or 2)
+        tier=="High" and 5 or (tier=="Medium" and 2 or 1))
     return cradleSet,supportSet
 end
 
@@ -267,11 +286,13 @@ end
 -- Shrink changes the ORIGINAL Part.Size; the only connection is event-based,
 -- and scales the imported art X/Z while preserving its full vertical length.
 function Kit.supports(parent,decor,platform,variant,tier,index,available,selected)
-    if tier == "Low" or available <= 0 or not parent
+    if available <= 0 or not parent
         or not decor or not decor:IsA("Folder") or not platform
-        or platform:GetAttribute("ChaosSkybridge") == true then return nil end
-    local source,box = verified(variant)
-    if not source or not platform.Parent
+        or platform:GetAttribute("ChaosSkybridge") == true
+        or (tier == "Low" and selected ~= true) then return nil end
+    local source,box,sourceParts = verified(variant)
+    if not source or (tier == "Low" and sourceParts ~= 7)
+        or not platform.Parent
         or not platform:IsA("BasePart") then return nil end
     if type(index) ~= "number" or index < 1 then return nil end
     -- Sample enough real supports to use the EXISTING hard module budget.
@@ -290,6 +311,7 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
     end
     table.sort(natives,function(a,b) return a.Name<b.Name end)
     local maxSupports = tier=="High" and 2 or 1
+    -- Low has exactly ONE seven-piece source module (not per-platform).
     local output = {parts={},covered={},disconnects={},modules=0}
     for _,support in ipairs(natives) do
         if #output.covered >= maxSupports or output.modules >= available then break end
