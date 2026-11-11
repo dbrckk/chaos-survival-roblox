@@ -1,3 +1,5 @@
+> **Actualisation du 11 novembre 2026 — code source P4 :** la base `InlaidStationBase` bénéficie maintenant d'un véritable insert approuvé (`ApprovedPerimeterStationDeckInlayMeshKit`) par réutilisation de l'asset 3D du sol. La couverture statique potentielle des stations passe de **16/23 (69,57 %)** à **17/23 (73,91 %)**. Les six voyants/repères lumineux restent volontairement natifs. Ce ratio ne reflète pas les modèles réellement rendus en jeu et les chiffres ci-dessous décrivent l'audit historique du 9 novembre. Détails : [lot de socles 3D](P4_APPROVED_STATION_DECK_INLAYS_2026-11-11.md).
+
 # Inventaire précis de couverture 3D — stations périphériques
 
 **9 novembre 2026 — audit statique du code de src/server/MapBuilder.lua, fonction addPerimeterStations.**

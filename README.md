@@ -1,3 +1,7 @@
+## P4 — Socle de station authentique, navigation préservée — 11 novembre 2026
+
+Le [lot de socles forgés 3D](docs/P4_APPROVED_STATION_DECK_INLAYS_2026-11-11.md) ajoute à la base décorative de chaque station un **vrai insert triangulé de sept MeshParts**, réutilisé depuis le modèle original de sol **déjà approuvé** `72507987666671`. Les **six voyants, lentilles et repères de navigation** restent natifs. Les coûts sont limités par proximité : 1 station Low, 2 Medium, 2 High tactile ou 4 High PC. Au premier palier de pression Low, l'insert disparaît et la base native revient. Aucun nouvel asset, texture, collision, VFX ou render loop.
+
 ## P4 — Plus de sol sculpté au premier plan sur Medium — 11 novembre 2026
 
 Le [lot d'amélioration des dalles 3D originales](docs/P4_MEDIUM_GROUND_FOREGROUND_VISIBILITY_2026-11-11.md) augmente la couverture **Medium de 12 à 16 vraies dalles 3D approuvées** parmi les 36 sols natifs de chaque arène, tout en gardant **Low=2**, **High=36** et les plafonds PBR 2K inchangés. Le classement privilégie légèrement les dalles devant la caméra sans retirer la priorité aux dalles sous les pieds ; les budgets Medium redescendent à **10 puis 4** lorsque la pression monte. Aucun nouveau modèle, lumière, collision, texture, RenderStepped ou publication Roblox.

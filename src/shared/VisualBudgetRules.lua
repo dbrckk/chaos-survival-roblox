@@ -78,6 +78,11 @@ VisualBudgetRules.LocalFolders = {
     -- tall steel MeshParts. All mounted clones count in 440/680/900 local
     -- Part census; severe Android VFX pressure removes them first.
     "ApprovedPerimeterButtressesLocal",
+    -- Reuse the existing Approved original 7-MeshPart arena-floor tile
+    -- as one station deck engraving on Low, two Medium and High touch,
+    -- four PC High. This is NOT a new 3D asset, nor a new PBR atlas.
+    -- The six neon/glass/navigation cues stay native. Same Parts census.
+    "ApprovedPerimeterStationDeckInlaysLocal",
     -- Three authentic MeshPart mechanical housings per selected real
     -- perimeter station, counted inside 440/680/900 local Part census.
     -- Low one near station (125 studs), strictly 7 MeshParts per source
