@@ -6,17 +6,21 @@ local APPROVED = 125929150866282
 -- The full-size original hull is a better 18-stud focal silhouette
 -- than enlarging the much smaller five-arena compact carapaces.
 -- The single selected Low mount SHARES its slot with Low carapaces.
-local function physicalFit(deck, index)
+local function physicalFit(deck, index, strictSafe)
     local n = tonumber(index)
     if not n or n < 1 or n > 24 or not deck
         or not deck:IsA("BasePart") or not deck.Parent
-        or not deck.Anchored or not deck.CanCollide
-        or deck.Transparency >= .75
+        or not deck.CanCollide or deck.Transparency >= .75
         or deck:GetAttribute("ChaosSkybridge") == true then return false end
-    local phase = deck:GetAttribute("CollapsePhase")
-    local shutter = deck:GetAttribute("BridgeShutterPhase")
-    if (phase ~= nil and phase ~= "Normal" and phase ~= "Safe")
-        or (shutter ~= nil and shutter ~= "Idle") then return false end
+    -- Preserve Medium/High historical eligibility. Low's optional
+    -- flagship must not mount onto a collapsing or unanchored deck.
+    if strictSafe then
+        if not deck.Anchored then return false end
+        local phase = deck:GetAttribute("CollapsePhase")
+        local shutter = deck:GetAttribute("BridgeShutterPhase")
+        if (phase ~= nil and phase ~= "Normal" and phase ~= "Safe")
+            or (shutter ~= nil and shutter ~= "Idle") then return false end
+    end
     local sx,sz = deck.Size.X,deck.Size.Z
     return math.min(sx,sz)>=16.3 and math.max(sx,sz)<=20
         and math.max(sx,sz)/math.min(sx,sz)<=1.15
@@ -64,7 +68,7 @@ function Kit.selectLowDeck(platforms, base, cameraPoint, pressure)
     for _,deck in ipairs(platforms) do
         local id = deck:IsA("BasePart")
             and tonumber(deck.Name:match("^Platform(%d+)$")) or nil
-        if id and id%8==1 and physicalFit(deck,id) then
+        if id and id%8==1 and physicalFit(deck,id,true) then
             local scale = math.min(1.08,
                 deck.Size.X*.94/size.X,deck.Size.Z*.94/size.Z)
             if scale >= .77 then
@@ -81,9 +85,12 @@ function Kit.selectLowDeck(platforms, base, cameraPoint, pressure)
 end
 
 function Kit.install(parent, deck, tier, index, selectedLow)
+    local n = tonumber(index)
     if tier == "Low" and (selectedLow ~= true
-        or tonumber(index)%8 ~= 1) then return nil end
-    if not parent or not physicalFit(deck, index) then return nil end
+        or not n or n%8 ~= 1) then return nil end
+    if not parent or not physicalFit(deck, index, tier == "Low") then
+        return nil
+    end
     local source,count,size = verifiedSource()
     if not source or (tier == "Low" and count ~= 7) then return nil end
     local sx,sy,sz=deck.Size.X,deck.Size.Y,deck.Size.Z
