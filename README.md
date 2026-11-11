@@ -1,3 +1,7 @@
+## P4 — Sommets 3D de stations importés plus tôt sur l'arène active — 11 novembre 2026
+
+Le [correctif du chargeur de sommets propriétaires](docs/P4_ACTIVE_PERIMETER_APEX_EARLY_IMPORT_2026-11-11.md) demande dès **60 secondes** la source 3D approuvée de l'arène effectivement active (Classic/Harbor partagent Relay). Les trois autres sources conservent leur calendrier à 132 secondes. Le **même** chargeur série, le quota AssetService global de deux requêtes, les trois essais maximum par modèle et les repli natifs sont conservés. Aucun nouvel asset, aucune boucle ni publication Roblox n'est impliqué.
+
 ## P4 — Colonnes et silhouettes 3D : sélectionner les candidats réellement montables — 11 novembre 2026
 
 Le [correctif de sélection atmosphérique](docs/P4_ATMOSPHERE_COLUMN_ELIGIBLE_LOD_2026-11-11.md) évite qu'un pilier trop large une fois agrandi monopolise le seul emplacement 3D **Android Low** alors qu'une silhouette compatible pourrait être affichée. Les huit cibles sont désormais préfiltrées par les dimensions du véritable modèle propriétaire **avant** leur classement caméra, et `mount()` conserve un contrôle final de géométrie stricte. Même quota, même patrimoine d'assets approuvés, aucun import ni boucle supplémentaire, aucune modification des collisions.
