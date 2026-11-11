@@ -1,0 +1,41 @@
+name: Original P4 nearfield approved PBR source regression
+on:
+  pull_request:
+    paths:
+      - src/client/PremiumNearfieldPbrKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/client/ApprovedClassicBroadcastFinMeshKit.lua
+      - src/client/ApprovedVariantTowersLandmarkMeshKit.lua
+      - src/client/ApprovedCrossroadsEntrancePortalMeshKit.lua
+      - src/client/ApprovedCrossroadsOpenGantryMeshKit.lua
+      - src/client/ApprovedOrbitalReactorLandmarkMeshKit.lua
+      - src/client/ApprovedVariantIdentitySpineMeshKit.lua
+      - tests/engine/arena-material-rules.spec.luau
+      - tools/verify_premium_nearfield_pbr.py
+      - .github/workflows/original-nearfield-pbr-source.yml
+      - default.project.json
+  push:
+    branches: [main]
+    paths:
+      - src/client/PremiumNearfieldPbrKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/client/ApprovedClassicBroadcastFinMeshKit.lua
+      - src/client/ApprovedVariantTowersLandmarkMeshKit.lua
+      - src/client/ApprovedCrossroadsEntrancePortalMeshKit.lua
+      - src/client/ApprovedCrossroadsOpenGantryMeshKit.lua
+      - src/client/ApprovedOrbitalReactorLandmarkMeshKit.lua
+      - src/client/ApprovedVariantIdentitySpineMeshKit.lua
+      - tests/engine/arena-material-rules.spec.luau
+      - tools/verify_premium_nearfield_pbr.py
+      - .github/workflows/original-nearfield-pbr-source.yml
+      - default.project.json
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify signed P4 source families, 2K atlas and bounded rollback
+        run: python3 tools/verify_premium_nearfield_pbr.py
