@@ -5,7 +5,8 @@ on:
       - src/client/ApprovedSkylineDepthMeshKit.lua
       - src/client/scenery-lod.client.lua
       - src/server/MapBuilder.lua
-      - src/server/PremiumExteriorTowerAssets.lua
+      - src/server/PremiumSkylineDepthSculptAssets.lua
+      - src/server/init.server.lua
       - assets/source/roblox-asset-registry.json
       - tools/verify_skyline_depth_approved_fallback.py
       - .github/workflows/skyline-depth-approved-3d-regression.yml
@@ -15,7 +16,8 @@ on:
       - src/client/ApprovedSkylineDepthMeshKit.lua
       - src/client/scenery-lod.client.lua
       - src/server/MapBuilder.lua
-      - src/server/PremiumExteriorTowerAssets.lua
+      - src/server/PremiumSkylineDepthSculptAssets.lua
+      - src/server/init.server.lua
       - assets/source/roblox-asset-registry.json
       - tools/verify_skyline_depth_approved_fallback.py
       - .github/workflows/skyline-depth-approved-3d-regression.yml
