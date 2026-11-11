@@ -247,22 +247,34 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
 end
 
 -- The previous modulo 3/6 index gate could give no real truss to a
--- nearby physically walkable Towers bridge. Choose ONE verified source
--- mount in Medium/High instead (14/28 MeshParts maximum), zero in Low.
-function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint,cameraLook)
+-- nearby physically walkable Towers bridge. Low may reserve the SAME
+-- 14 actual source MeshParts already allowed in its small+large structural
+-- buckets, but only for one camera-near approved original at pressure 0.
+-- Medium/High retain their previous 14/28 source bounds.
+function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint,cameraLook,pressure)
     local chosen={}
-    if tier=="Low" or type(platforms)~="table"
-        or not base or not base:IsA("BasePart") then return chosen end
-    local source,bounds=verified("Bridge")
-    if not source then return chosen end
+    if type(platforms)~="table"
+        or not base or not base:IsA("BasePart")
+        or (tier=="Low" and (tonumber(pressure) or 0)>0)
+        then return chosen end
+    local source,bounds,partCount=verified("Bridge")
+    if not source or (tier=="Low" and partCount~=7) then
+        return chosen
+    end
     local sourceLength=math.max(bounds.X,bounds.Z)
+    local sourceShort=math.min(bounds.X,bounds.Z)
     local focus=base.Position
+    local cameraReady=false
     if typeof(cameraPoint)=="Vector3" then
         local localPoint=base.CFrame:PointToObjectSpace(cameraPoint)
         if math.abs(localPoint.X)<=base.Size.X*.5+16
             and math.abs(localPoint.Z)<=base.Size.Z*.5+16
-            and math.abs(localPoint.Y)<=130 then focus=cameraPoint end
+            and math.abs(localPoint.Y)<=130 then
+            focus=cameraPoint
+            cameraReady=true
+        end
     end
+    if tier=="Low" and not cameraReady then return chosen end
     local best,bestScore=nil,math.huge
     for _,platform in ipairs(platforms) do
         if platform:IsA("BasePart") and platform.Parent
@@ -279,7 +291,15 @@ function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint,cameraLook)
             if (collapse==nil or collapse=="Normal" or collapse=="Safe")
                 and (shutter==nil or shutter=="Idle")
                 and length>=14 and length<=125 and width>=4.0
-                and scale>=.75 then
+                and scale>=.75
+                -- Low rejects geometry that the final imported
+                -- bridge stage would refuse anyway. No useless reservation
+                -- of the one 14-MeshPart visual slot on a narrow deck.
+                and (tier~="Low" or (sourceLength*scale<=length*.40
+                    and sourceShort*scale<=width*.35
+                    and bounds.Y*scale<=3.1
+                    and (platform.Position-cameraPoint).Magnitude<=125))
+                then
                 local delta=platform.Position-focus
                 local score=Vector3.new(delta.X,delta.Y*.6,delta.Z).Magnitude
                 if focus == cameraPoint then
@@ -368,7 +388,7 @@ end
 -- Two pieces (Medium) or four pieces (High), on two real bridge flanks.
 -- Route shrink adjusts individual MeshPart Weld.C1/Size in existing owner.
 function Kit.bridgeGirders(parent, platform, tier, index, selected)
-    if tier == "Low" or selected == false
+    if selected == false or (tier=="Low" and selected~=true)
         or platform:GetAttribute("ChaosSkybridge") ~= true then
         return nil
     end
@@ -378,8 +398,9 @@ function Kit.bridgeGirders(parent, platform, tier, index, selected)
             and id % (tier == "High" and 3 or 6) ~= 0) then
         return nil
     end
-    local source, original = verified("Bridge")
-    if not source or not parent or not platform or not platform:IsA("BasePart")
+    local source, original, partCount = verified("Bridge")
+    if not source or (tier=="Low" and partCount~=7)
+        or not parent or not platform or not platform:IsA("BasePart")
         or not platform.Parent or not platform.CanCollide
         or platform.Transparency >= .75 then return nil end
 
@@ -387,6 +408,13 @@ function Kit.bridgeGirders(parent, platform, tier, index, selected)
     local length = math.max(sx, sz)
     local width = math.min(sx, sz)
     if length < 14 or length > 125 or width < 4.0 then return nil end
+    if tier=="Low" then
+        local phase=platform:GetAttribute("CollapsePhase")
+        local shutter=platform:GetAttribute("BridgeShutterPhase")
+        if not platform.Anchored
+            or (phase~=nil and phase~="Normal" and phase~="Safe")
+            or (shutter~=nil and shutter~="Idle") then return nil end
+    end
     local sourceLength = math.max(original.X, original.Z)
     local scale = math.min(1.1, width*.24, length*.32/sourceLength)
     if scale < .75 then return nil end
