@@ -1,8 +1,14 @@
 # P4 — Priorité au sommet 3D de l'arène active
 
 **11 novembre 2026 — modification du chargeur de modèles propriétaires.**
-Le commit public de référence est `e7995187d2bde737da54112c4e1fb34a60c8a029`. Ce document
-n'affirme ni une nouvelle publication Roblox ni un rendu mesuré sur Android.
+Le commit GitHub servant de base à cette modification est
+`e7995187d2bde737da54112c4e1fb34a60c8a029` : **il n'était pas
+publié sur Roblox**. La dernière publication publique confirmée
+avant ce lot correspond à `7c1f89efabc4a6142cc46c21a9e645e27333dd6f`.
+Le changement P4 de ce document a ensuite été fusionné dans `main`
+au commit `f3e3f1355a84e5ff4c2de5a75cc23109fa366e20`, sans nouvelle
+publication. Les contrôles source ne constituent ni une preuve de
+publication Roblox ni une validation de rendu ou de FPS Android.
 
 ## Problème identifié dans le code
 
