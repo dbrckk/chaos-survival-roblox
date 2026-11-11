@@ -27,8 +27,12 @@ ITEMS=[
 ("PremiumSouthOrbitalObservationRingAssets","Orbital","124474310430876",75,199),
 ]
 assert 'task.wait(earlySeconds)' in HELPER
-assert 'task.wait(fallbackSeconds-earlySeconds)' in HELPER
-assert 'arena:GetAttribute("VariantId")==variant' in HELPER
+assert 'task.delay(remaining' in HELPER
+assert 'fallbackSeconds - earlySeconds' in HELPER
+assert 'arena:GetAttribute("VariantId") == variant' in HELPER
+assert 'arena:GetAttributeChangedSignal("VariantId")' in HELPER
+assert 'wake.Event:Wait()' in HELPER
+assert 'wake:Destroy()' in HELPER
 assert len(ITEMS)==8
 assert len({x[2] for x in ITEMS})==8
 assert len({x[4] for x in ITEMS})==8
