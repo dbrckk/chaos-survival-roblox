@@ -1,3 +1,7 @@
+## P4 — Pilier de plateforme sculpté authentique sur Android Low — 11 novembre 2026
+
+Le [lot de remplacement d'une colonne structurale primitive](docs/P4_LOW_AUTHENTIC_NEAR_SUPPORT_COLUMN_2026-11-11.md) autorise **un vrai Model créateur de sept MeshParts pour un seul pilier `PlatformSupportN_K`**, à 125 studs de la caméra et uniquement sans pression graphique. Sur Low, un support de **5–16 studs** n'est substitué qu'après vérification de la provenance, de la largeur, du nombre de pièces et de la vraie plateforme porteuse. Le repli natif est automatique sous pression 1/2. Medium/High et la géométrie LongCradle ne changent pas ; **aucun upload du jeu n'est revendiqué**, mesures Roblox Engine/Android encore nécessaires.
+
 ## P4 — Grand carénage 3D authentique du hub Crossroads sur Android Low — 11 novembre 2026
 
 Le [lot du véritable dessous de plateforme centrale](docs/P4_LOW_CROSSROADS_AUTHENTIC_HUB_HULL_2026-11-11.md) réutilise le Model créateur approuvé **125929150866282** sur les decks compatibles 18×18, en premier lieu le vrai **Platform1 central Crossroads**. Low consacre le **même unique emplacement** au grand carénage **ou** à la carapace compacte de la précédente évolution, jamais aux deux ; 7 MeshParts authentiques remplacent les 2 wedges natifs sous conditions strictes de provenance, distance caméra ≤125 studs et pression graphique zéro. Aucun nouveau modèle, physique, PBR ni boucle. La publication publique Roblox et les mesures Engine/Android restent à effectuer.
