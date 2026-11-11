@@ -1,3 +1,7 @@
+## P4 — Colonnes et silhouettes 3D : sélectionner les candidats réellement montables — 11 novembre 2026
+
+Le [correctif de sélection atmosphérique](docs/P4_ATMOSPHERE_COLUMN_ELIGIBLE_LOD_2026-11-11.md) évite qu'un pilier trop large une fois agrandi monopolise le seul emplacement 3D **Android Low** alors qu'une silhouette compatible pourrait être affichée. Les huit cibles sont désormais préfiltrées par les dimensions du véritable modèle propriétaire **avant** leur classement caméra, et `mount()` conserve un contrôle final de géométrie stricte. Même quota, même patrimoine d'assets approuvés, aucun import ni boucle supplémentaire, aucune modification des collisions.
+
 ## P4 — Sommets 3D propres aux arènes sur Android Low — 11 novembre 2026
 
 Le [lot des sommets de stations périphériques](docs/P4_ANDROID_LOW_AUTHENTIC_VARIANT_APEX_2026-11-11.md) autorise **un sommet original à sept MeshParts** à proximité de la caméra sur Low (150 studs), remplaçant éventuellement **deux formes primitives**. Selon l'arène, il s'agit de l'antenne Orbital, de la couronne Towers, de l'aiguillage Crossroads ou du relais Classic/Harbor. Le quota revient immédiatement à zéro dès le premier palier de pression. Les sources sont les **quatre Models propriétaires déjà approuvés** ; aucun import, collision, boucle ou atlas graphique supplémentaire n'est ajouté. **À publier séparément sur Roblox après validation exacte du commit.**
