@@ -84,3 +84,24 @@ ce sont des éléments de lecture de gameplay, pas encore des modèles 3D.
 **Le nombre 40 est un inventaire de définitions sur les cinq
 variantes, pas un nombre de formes remplacées à l'écran et pas un
 pourcentage de couverture globale du jeu.**
+
+## Finition matière du premier plan
+
+Les sculptures atmosphériques vérifiées des **cinq** arènes entrent
+également dans la liste des sources autorisées de
+`PremiumNearfieldPbrKit`. Les groupes industriels `ARMOR`,
+`BRUSHED`, `ALLOY` et `CERAMIC` peuvent récupérer les
+quatre atlas **2K déjà approuvés**. Pour les métaux Harbor et
+Crossroads, l'acier oxydé est préféré au diamant industriel.
+Les parties `SIGNAL`, `CARBON`, `GRIP` et `GLASS`
+conservent leurs couleurs/finitions pour la lisibilité.
+
+Les colonnes **partagent** le budget PBR préexistant (Medium
+Android 2 modèles, High Android 4 modèles, avant pression),
+sans l'augmenter. L'apparence est restaurée quand le modèle
+sort du champ, que la pression monte, que le joueur désactive
+PBR ou que la source disparaît. Réutilisation des mêmes
+16 images de textures validées, sans téléchargement externe.
+Cette finition ne garantit pas la qualité visuelle sans capture
+in-engine : la géométrie UV réellement importée doit être évaluée
+sur la Place et sur Android.

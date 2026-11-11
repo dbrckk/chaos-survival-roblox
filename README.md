@@ -1,6 +1,6 @@
 ## P4 — Sculptures 3D des colonnes atmosphériques — 11 novembre 2026
 
-Le [lot P4 des colonnes atmosphériques](docs/P4_AUTHENTIC_ATMOSPHERE_COLUMNS_2026-11-11.md) ajoute une substitution locale de **huit corps primitifs par arène** (4 piliers et 4 silhouettes) par les **cinq modèles de colonnes 3D originaux déjà approuvés**. Les signaux, anneaux, lumières, bandes et collisions restent natifs. Budget instantané : **Low 0, Medium 2, High Android 3 et High PC 4**, réduit sous pression. Le serveur charge désormais la colonne propre à l'arène active en premier, sans nouvelle requête, modèle ou boucle. **Statut : code sur PR #809, non fusionné, sans test Engine/Android ou publication de Place.**
+Le [lot P4 des colonnes atmosphériques](docs/P4_AUTHENTIC_ATMOSPHERE_COLUMNS_2026-11-11.md) ajoute une substitution locale de **huit corps primitifs par arène** (4 piliers et 4 silhouettes) par les **cinq modèles de colonnes 3D originaux déjà approuvés**. Les signaux, anneaux, lumières, bandes et collisions restent natifs. Budget instantané : **Low 0, Medium 2, High Android 3 et High PC 4**, réduit sous pression. Le serveur charge désormais la colonne propre à l'arène active en premier. Les colonnes proches réutilisent aussi les **16 cartes PBR 2K déjà approuvées** via le quota partagé, sans nouveau modèle, texture, requête ou boucle. **Statut : code sur PR #809, non fusionné, sans test Engine/Android ou publication de Place.**
 
 ## Refonte P4 : piliers 3D des stations périphériques — 9 novembre 2026
 
