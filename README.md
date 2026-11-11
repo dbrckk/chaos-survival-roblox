@@ -1,3 +1,7 @@
+## P4 — Importation du tore partagé sur Towers dès la fenêtre prioritaire — 11 novembre 2026
+
+Le [correctif de chargement du véritable anneau](docs/P4_AUTHENTIC_ATMOSPHERE_RINGS_AND_CROWN_2026-11-11.md) autorise désormais le même modèle Roblox original `125070862497818` à être priorisé à **22 secondes sur Orbital comme sur Towers**, plutôt que d'attendre systématiquement 42 secondes sur Towers. Il n'ajoute aucune requête, aucun worker ni aucune ressource 3D : tous les chargements restent contrôlés par la file globale de deux appels au maximum. Le chargement effectif sur Android reste dépendant du serveur et n'est pas garanti à 22 secondes.
+
 ## P4 — Crêtes extérieures authentiques 3D sur Low et PBR — 11 novembre 2026
 
 Le [lot de crêtes sculptées](docs/P4_AUTHENTIC_EXTERIOR_RIDGES_LOW_PBR_2026-11-11.md) autorise sur Android Low **une véritable crête 3D originale à sept MeshParts** à moins de 290 studs, remplaçant potentiellement trois `WedgeParts` primitives. Le repli natif est immédiat sous pression. Medium/High peuvent appliquer les quatre atlas PBR 2K déjà approuvés sur les quatre modèles de crêtes, **dans le quota partagé existant**, sans nouveaux assets, collisions ni requêtes Roblox. La disponibilité des modèles et le rendu réel sur Android restent à confirmer.

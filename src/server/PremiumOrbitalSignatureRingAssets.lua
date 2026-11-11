@@ -44,7 +44,10 @@ function Assets.start()
     end
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        ActiveSignatureSchedule.waitFor("Orbital",22,42)
+        -- The SAME original torus also powers Towers' horizontal crown.
+        -- Prioritize either actual consumer at the 22s opportunity;
+        -- retain the 42s fallback and global two-slot import gate.
+        ActiveSignatureSchedule.waitFor("Orbital",22,42,"Towers")
         if folder:FindFirstChild("ReactorRing") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,

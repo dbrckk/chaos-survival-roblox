@@ -71,9 +71,13 @@ sous réserve de présence de sources, de LOD et de visibilité.
 
 Le tore nord étant déjà importé pour Orbital par
 `PremiumOrbitalSignatureRingAssets`, réutiliser le même
-template pour Towers n'ajoute ni requête ni parallelisme ; sur Towers
-l'asset peut toutefois n'arriver qu'à son délai optionnel
-de 42 secondes et être concurrencé par la file globale.
+template pour Towers n'ajoute ni requête ni parallélisme.
+**Correctif du 11 novembre 2026 :** le même chargeur accepte désormais
+`Orbital` **ou** `Towers` comme arène prioritaire à **22 secondes**
+(auparavant Towers attendait le délai de secours de **42 secondes**).
+Le plafond de deux requêtes globales reste inchangé. Sous charge ou
+réseau lent, le modèle approuvé peut toujours arriver plus tard.
+Sur les trois autres variantes, le délai de secours reste 42 secondes.
 
 Le halo de balisage `PerimeterPulse1..12`, les huit nœuds Orbital
 `OrbitalNode`, le cœur `OrbitalCore`, les bandes et balises

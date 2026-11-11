@@ -24,17 +24,21 @@ SOURCES={
     "Orbital":("PremiumOrbitalSignatureRingAssets.lua",
                "125070862497818",22,42),
 }
-assert "function Schedule.waitFor(variant, earlySeconds, fallbackSeconds)" in SCHEDULE
+assert "function Schedule.waitFor(variant, earlySeconds, fallbackSeconds, alsoVariant)" in SCHEDULE
+assert 'assert(alsoVariant == nil or (type(alsoVariant) == "string"' in SCHEDULE
+assert 'alsoVariant ~= nil and id == alsoVariant' in SCHEDULE
+assert 'local function isTarget(arena)' in SCHEDULE
 assert "task.wait(earlySeconds)" in SCHEDULE
 assert "task.delay(remaining" in SCHEDULE
 assert "fallbackSeconds - earlySeconds" in SCHEDULE
 assert 'workspace:FindFirstChild("GeneratedMap")' in SCHEDULE
 assert 'generated:FindFirstChild("Arena")' in SCHEDULE
-assert 'arena:GetAttribute("VariantId") == variant' in SCHEDULE
+assert 'local id = arena:GetAttribute("VariantId")' in SCHEDULE
+assert 'return id == variant or (alsoVariant ~= nil and id == alsoVariant)' in SCHEDULE
 assert "arena.Parent == generated" in SCHEDULE
-assert "if initial and initial:GetAttribute" in SCHEDULE
+assert "if initial and isTarget(initial) then" in SCHEDULE
 assert SCHEDULE.index("task.wait(earlySeconds)") < SCHEDULE.index(
-    "if initial and initial:GetAttribute")
+    "if initial and isTarget(initial) then")
 # No polling: a future active arena wakes its pending source.
 assert 'arena:GetAttributeChangedSignal("VariantId")' in SCHEDULE
 assert 'workspace.ChildAdded:Connect' in SCHEDULE
@@ -74,7 +78,9 @@ for variant,(path,asset,early,normal) in SOURCES.items():
     assert asset in APPROVED,(variant,asset)
     assert asset in source
     assert "PremiumActiveVariantImportSchedule" in source
-    assert f'ActiveSignatureSchedule.waitFor("{variant}",{early},{normal})' in source
+    expected = (f'ActiveSignatureSchedule.waitFor("{variant}",{early},'
+                f'{normal}' + (',"Towers")' if variant == "Orbital" else ')'))
+    assert expected in source,(variant,expected)
     assert f"task.wait({normal})" not in source
     assert source.count("GlobalApprovedImportGate.load")==1
     assert 'require("./PremiumApprovedAssetImportGate")' in source
@@ -89,16 +95,22 @@ for variant,(path,asset,early,normal) in SOURCES.items():
     assert 18<=early<=22<normal<=120
     print(f"PASS {variant}: real Approved {asset}, {normal}s -> {early}s when active")
 
-# For a stable arena, only its matching signature can be accelerated.
-# A rotation can wake another pending signature; FIFO limits concurrency.
+# The shared Orbital torus is Towers' central crown too. Stable Towers
+# legitimately prioritizes TWO existing loads, never an extra worker.
+# Other maps still prioritize only their matching signature.
 for active in (*SOURCES,None,""):
     actual={}
     for variant,(_,_,early,normal) in SOURCES.items():
-        actual[variant]=early if active==variant else normal
-    if active in SOURCES:
+        match = active==variant or (variant=="Orbital" and active=="Towers")
+        actual[variant]=early if match else normal
+    if active=="Towers":
+        assert actual["Towers"]==21 and actual["Orbital"]==22
+        assert sum(actual[v]<SOURCES[v][3] for v in SOURCES)==2
+    elif active in SOURCES:
         assert sum(actual[v]<SOURCES[v][3] for v in SOURCES)==1
     else:
         assert all(actual[v]==SOURCES[v][3] for v in SOURCES)
     assert actual.get("Classic",0)>0
 print("PASS five arena and missing-map combinations preserve five total imports")
+print("PASS Towers shares the ONE original Orbital source at the active window")
 print("NOTE source CI does not measure concurrent network load or actual FPS")

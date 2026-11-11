@@ -1,7 +1,8 @@
 -- Optional creator-approved hero art is never a dependency of the playable map.
 -- Give the current arena's signature one bounded first-round opportunity.
 -- A second arena selected during the wait may also become eligible immediately.
--- Inactive variants retain their original fallback deadline; all actual imports
+-- Inactive variants retain their fallback deadline; an optional shared-source
+-- alias can prioritize a second real consumer. All actual imports
 -- still pass through PremiumApprovedAssetImportGate (two in flight maximum).
 local Schedule = {}
 
@@ -16,17 +17,27 @@ local function currentArena()
     return nil, nil
 end
 
-function Schedule.waitFor(variant, earlySeconds, fallbackSeconds)
+function Schedule.waitFor(variant, earlySeconds, fallbackSeconds, alsoVariant)
     assert(type(variant) == "string" and variant ~= "")
+    assert(alsoVariant == nil or (type(alsoVariant) == "string"
+        and alsoVariant ~= "" and alsoVariant ~= variant))
     assert(type(earlySeconds) == "number" and earlySeconds > 0)
     assert(type(fallbackSeconds) == "number"
         and fallbackSeconds >= earlySeconds)
+
+    -- One original approved source can serve two real variants.
+    -- No extra worker, request or dependency on the playable map.
+    local function isTarget(arena)
+        if not arena then return false end
+        local id = arena:GetAttribute("VariantId")
+        return id == variant or (alsoVariant ~= nil and id == alsoVariant)
+    end
 
     -- This runs inside each owner's existing task.spawn, after MapBuilder.
     -- Do not delay first join, round logic, bots, or native fallback art.
     task.wait(earlySeconds)
     local _, initial = currentArena()
-    if initial and initial:GetAttribute("VariantId") == variant then
+    if initial and isTarget(initial) then
         return true
     end
     local remaining = fallbackSeconds - earlySeconds
@@ -53,7 +64,7 @@ function Schedule.waitFor(variant, earlySeconds, fallbackSeconds)
 
     local function checkActive()
         local _, arena = currentArena()
-        if arena and arena:GetAttribute("VariantId") == variant then
+        if arena and isTarget(arena) then
             finish(true)
         end
     end
