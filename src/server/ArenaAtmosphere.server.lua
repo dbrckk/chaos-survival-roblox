@@ -1,31 +1,6 @@
 local Workspace = game:GetService("Workspace")
 
-local THEMES = {
-    Classic = {
-        accent = Color3.fromRGB(90, 180, 255),
-        secondary = Color3.fromRGB(150, 95, 255),
-        pillarHeight = 8,
-        ringRadius = 43,
-    },
-    Towers = {
-        accent = Color3.fromRGB(65, 220, 255),
-        secondary = Color3.fromRGB(255, 185, 70),
-        pillarHeight = 18,
-        ringRadius = 40,
-    },
-    Crossroads = {
-        accent = Color3.fromRGB(205, 105, 255),
-        secondary = Color3.fromRGB(255, 95, 155),
-        pillarHeight = 11,
-        ringRadius = 44,
-    },
-    Orbital = {
-        accent = Color3.fromRGB(65, 255, 205),
-        secondary = Color3.fromRGB(95, 135, 255),
-        pillarHeight = 13,
-        ringRadius = 42,
-    },
-}
+local ArenaAtmosphereStyle = require("./ArenaAtmosphereStyle")
 
 local function makePart(parent, name, size, cframe, color, material)
     local object = Instance.new("Part")
@@ -75,7 +50,7 @@ local function addRing(folder, center, theme)
     end
 end
 
-local function addTowers(folder, center, theme)
+local function addTowers(folder, center, theme, variantId)
     local offsets = {
         Vector3.new(-41, 0, -41),
         Vector3.new(41, 0, -41),
@@ -83,26 +58,39 @@ local function addTowers(folder, center, theme)
         Vector3.new(41, 0, 41),
     }
 
+    local harbor = variantId == "Harbor"
+    local verticalCylinder = CFrame.Angles(0, 0, math.pi * 0.5)
     for index, offset in ipairs(offsets) do
         local height = theme.pillarHeight + ((index % 2) * 3)
+        local pillarOrigin = CFrame.new(
+            center + offset + Vector3.new(0, height * 0.5 + 1, 0))
+        -- Maritime low-cost fallback: rounded, salt-worn mooring poles,
+        -- instead of Classic's four square, dark survey pylons.
+        -- Exactly two Parts and one PointLight per existing station.
         local pillar = makePart(
             folder,
             "AtmospherePillar" .. tostring(index),
-            Vector3.new(1.25, height, 1.25),
-            CFrame.new(center + offset + Vector3.new(0, height * 0.5 + 1, 0)),
-            Color3.fromRGB(42, 48, 62),
-            Enum.Material.Metal
+            harbor and Vector3.new(height, 1.65, 1.65)
+                or Vector3.new(1.25, height, 1.25),
+            harbor and pillarOrigin * verticalCylinder or pillarOrigin,
+            harbor and theme.structure or Color3.fromRGB(42, 48, 62),
+            harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal
         )
+        if harbor then pillar.Shape = Enum.PartType.Cylinder end
         pillar.Transparency = 0.08
 
+        local capOrigin = CFrame.new(
+            pillar.Position + Vector3.new(0, height * 0.5, 0))
         local cap = makePart(
             folder,
             "AtmosphereBeacon" .. tostring(index),
-            Vector3.new(2.1, 0.45, 2.1),
-            CFrame.new(pillar.Position + Vector3.new(0, height * 0.5, 0)),
+            harbor and Vector3.new(0.45, 2.1, 2.1)
+                or Vector3.new(2.1, 0.45, 2.1),
+            harbor and capOrigin * verticalCylinder or capOrigin,
             index % 2 == 0 and theme.accent or theme.secondary,
             Enum.Material.Neon
         )
+        if harbor then cap.Shape = Enum.PartType.Cylinder end
         addLight(cap, cap.Color, 0.65, 12)
     end
 end
@@ -175,44 +163,57 @@ local function addDistantSilhouette(folder, center, theme, variantId, base)
         Vector3.new(-extentX, 0, extentZ),
         Vector3.new(extentX, 0, extentZ),
     }
+    local harbor = variantId == "Harbor"
+    local verticalCylinder = CFrame.Angles(0, 0, math.pi * 0.5)
     for index, offset in ipairs(locations) do
         local height = (variantId == "Towers" and 23)
             or (variantId == "Orbital" and 17)
             or (variantId == "Crossroads" and 13)
+            or (harbor and 15)
             or 11
         local origin = center + offset + Vector3.new(0, height * 0.5, 0)
         local spine = makePart(
             folder,
             "SilhouetteSpine" .. index,
-            Vector3.new(2.4, height, 2.4),
-            CFrame.new(origin),
-            Color3.fromRGB(29, 37, 53),
-            Enum.Material.Metal
+            harbor and Vector3.new(height, 2.4, 2.4)
+                or Vector3.new(2.4, height, 2.4),
+            CFrame.new(origin) * (harbor and verticalCylinder or CFrame.identity),
+            harbor and theme.structure or Color3.fromRGB(29, 37, 53),
+            harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal
         )
+        if harbor then spine.Shape = Enum.PartType.Cylinder end
         spine.Transparency = 0.04
 
-        -- Two separated metal bands read as fabricated structure even
-        -- on low-end Android, without an expensive emissive surface.
+        -- Harbor's beacon poles use circular plated collars, unlike
+        -- the square survey-grid tower bands. Same 16 scenery Parts.
         for level = 1, 2 do
+            local bandOrigin = CFrame.new(
+                origin + Vector3.new(0, -height * 0.3 + level * height * 0.2, 0))
             local band = makePart(
                 folder,
                 "SilhouetteBand" .. index .. "_" .. level,
-                Vector3.new(3.1, 0.32, 3.1),
-                CFrame.new(origin + Vector3.new(0, -height * 0.3 + level * height * 0.2, 0)),
+                harbor and Vector3.new(0.32, 3.1, 3.1)
+                    or Vector3.new(3.1, 0.32, 3.1),
+                harbor and bandOrigin * verticalCylinder or bandOrigin,
                 theme.secondary,
-                Enum.Material.Metal
+                harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal
             )
+            if harbor then band.Shape = Enum.PartType.Cylinder end
             band.Transparency = 0.14
         end
 
+        local capOrigin = CFrame.new(
+            origin + Vector3.new(0, height * 0.5 + 0.2, 0))
         local cap = makePart(
             folder,
             "SilhouetteCap" .. index,
-            Vector3.new(3.7, 0.5, 3.7),
-            CFrame.new(origin + Vector3.new(0, height * 0.5 + 0.2, 0)),
+            harbor and Vector3.new(0.5, 3.7, 3.7)
+                or Vector3.new(3.7, 0.5, 3.7),
+            harbor and capOrigin * verticalCylinder or capOrigin,
             index % 2 == 0 and theme.accent or theme.secondary,
             Enum.Material.Neon
         )
+        if harbor then cap.Shape = Enum.PartType.Cylinder end
         cap.Transparency = 0.25
     end
 end
@@ -227,7 +228,7 @@ local function enhanceArena(arena)
     end
 
     local variantId = arena:GetAttribute("VariantId") or "Classic"
-    local theme = THEMES[variantId] or THEMES.Classic
+    local theme = ArenaAtmosphereStyle.profileFor(variantId)
     local base = arena:FindFirstChild("Base")
     if not base or not base:IsA("BasePart") then
         return
@@ -241,7 +242,7 @@ local function enhanceArena(arena)
 
     local center = base.Position
     addRing(folder, center, theme)
-    addTowers(folder, center, theme)
+    addTowers(folder, center, theme, variantId)
     addDistantSilhouette(folder, center, theme, variantId, base)
 
     if variantId == "Orbital" then
@@ -258,7 +259,9 @@ local function enhanceArena(arena)
             Enum.Material.Neon
         )
         crown.Transparency = 0.42
-    else
+    elseif variantId == "Classic" then
+        -- Harbor already uses genuine quay inlays and real dock geometry;
+        -- never place Classic's central neon survey panel over its deck.
         local hub = makePart(
             folder,
             "ClassicHubGlow",
