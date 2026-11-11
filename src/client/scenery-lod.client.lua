@@ -824,9 +824,10 @@ task.spawn(function()
         lodRouteTotalMs += (os.clock() - routeSyncStartedAt) * 1000
         -- Five-arena original 2,976-triangle sculpted floor: healthy
         -- High can now replace all 36 genuine 49-stud native floor bays,
-        -- Medium 12 and Low 2. The EXISTING GPU/instance backpressure
-        -- automatically demotes to 24/16 High or 8/4 Medium if Android
-        -- frame pacing suffers. No new loop; danger decals stay on top.
+        -- Medium 16 and Low 2. The EXISTING GPU/instance backpressure
+        -- automatically demotes to 24/16 High or 10/4 Medium if Android
+        -- frame pacing suffers. Foreground ground has a modest ranking
+        -- bias; no added mesh on Low or loop; hazard decals stay on top.
         -- Shrink/streaming already restore native geometry immediately.
         local groundSyncStartedAt = os.clock()
         PremiumGroundMeshKit.sync(arena, cameraPoint, profile.Name,

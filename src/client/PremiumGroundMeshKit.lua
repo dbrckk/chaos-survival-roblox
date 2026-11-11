@@ -25,19 +25,21 @@ local TEMPLATE_NAME = "PremiumGroundTile"
 -- The arena has 36 legitimate, author-marked 49-stud floor modules.
 -- On healthy High clients, cover ALL 36 with the owner's real Approved
 -- UV/tangent 3D tile instead of leaving a 12-tile sea of flat Roblox
--- native geometry. Medium covers 12 of 36; Low remains at 2.
--- An existing local frame/instance-pressure signal can rapidly reclaim
--- the expensive optional copies without a new polling loop or profiler.
--- Imported mesh ceilings (2,976 tris per tile): Low 5,952, Medium
--- 35,712, High 107,136. The server-authoritative Base never changes.
+-- native geometry. Healthy Medium now covers 16 of 36 (instead of 12);
+-- Low stays at 2, and High retains its 36 legitimate floor bays.
+-- Medium pressure 1 reclaims 6 of the extra tiles, and pressure 2
+-- returns to the existing conservative four. No new poll/render loop.
+-- Imported mesh ceilings (2,976 tris/tile): Low 5,952, Medium
+-- 47,616 (demoted to 29,760 / 11,904), High 107,136.
+-- The server-authoritative collision Base never changes.
 local BUDGET = {
     Low = {count = 2, distance = 125, retention = 18},
-    Medium = {count = 12, distance = 195, retention = 24},
+    Medium = {count = 16, distance = 195, retention = 24},
     High = {count = 36, distance = 260, retention = 28},
 }
 local PRESSURE_COUNTS = {
     Low = {2, 2, 1},
-    Medium = {12, 8, 4},
+    Medium = {16, 10, 4},
     High = {36, 24, 16},
 }
 
@@ -409,9 +411,20 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady,
                 local priority = distance
                     - (resident and budget.retention * 0.55 or 0)
                 local horizontal = Vector3.new(toTile.X, 0, toTile.Z)
-                if hasFacing and horizontal.Magnitude > 54
-                    and horizontal.Unit:Dot(look) < -0.15 then
-                    priority += 72
+                if hasFacing and horizontal.Magnitude > 24 then
+                    local facing = horizontal.Unit:Dot(look)
+                    if horizontal.Magnitude > 54 and facing < -0.15 then
+                        -- Preserve the established far-behind penalty.
+                        priority += 72
+                    elseif facing > 0.18 then
+                        -- Spend scarce approved meshes on ground actually
+                        -- AHEAD of a third-person player. A small capped
+                        -- discount cannot outweigh a much closer
+                        -- underfoot tile, and needs no camera raycasts.
+                        local ahead = math.clamp(
+                            (horizontal.Magnitude - 24) / 80, 0, 1)
+                        priority -= 18 * ahead * facing
+                    end
                 end
                 candidates[#candidates + 1] = {
                     part = part,

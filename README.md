@@ -1,3 +1,7 @@
+## P4 — Plus de sol sculpté au premier plan sur Medium — 11 novembre 2026
+
+Le [lot d'amélioration des dalles 3D originales](docs/P4_MEDIUM_GROUND_FOREGROUND_VISIBILITY_2026-11-11.md) augmente la couverture **Medium de 12 à 16 vraies dalles 3D approuvées** parmi les 36 sols natifs de chaque arène, tout en gardant **Low=2**, **High=36** et les plafonds PBR 2K inchangés. Le classement privilégie légèrement les dalles devant la caméra sans retirer la priorité aux dalles sous les pieds ; les budgets Medium redescendent à **10 puis 4** lorsque la pression monte. Aucun nouveau modèle, lumière, collision, texture, RenderStepped ou publication Roblox.
+
 ## P4 — Logements mécaniques 3D sur Android Low, sans cumul avec les turbines — 11 novembre 2026
 
 Le [lot de remplacement des trois logements mécaniques](docs/P4_LOW_PERIMETER_MACHINERY_EXCLUSIVE_ROTORS_2026-11-11.md) active **une station à 125 studs** sur Low avec de véritables modèles approuvés à **7 MeshParts par logement**, substituant **3 cubes** par **21 MeshParts**. La passe caméra existante **ne permet jamais de cumuler** ces 21 MeshParts avec les 21 rotors Low : les logements ont priorité lorsqu'ils sont montés, sinon les turbines conservent leur remplacement 3D. Au premier palier de pression, toutes les primitives sont restituées. Medium/High, assets, import réseau, collisions et budget Android restent inchangés. Publication Roblox distincte de ce code GitHub.
