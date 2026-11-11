@@ -1,5 +1,7 @@
 # P4 — Disponibilité plus rapide des quatre sources 3D d'horizon
 
+## Historique du 10 novembre, remplacé par la priorité du 11 novembre
+
 Le chargeur serveur des quatre modèles approuvés
 `exterior_tower_21/24/27/30` attendait **145 secondes** avant
 la première requête. Or trois clients (structures principales,
@@ -34,7 +36,7 @@ attendaient la troisième et quatrième importation, vers 118 et
 deuxième tour, vers 77 secondes. Cette séquence ne répondait pas
 à l'objectif de skyline premium visible dès le début.
 
-Le même chargeur et les **quatre mêmes requêtes au maximum** sont
+Le même chargeur et les **quatre mêmes modèles source** sont
 conservés, mais à 26 secondes il relève la véritable variante de la
 carte serveur et trie les modèles par utilité immédiate :
 
