@@ -172,8 +172,10 @@ local function mount(arena,decor,base,owner,body,original,source,
     -- Preserve a single sculpt's proportions across all 27..47 stud
     -- native heights; bounded uniform scaling prevents a cheap stretched
     -- tower. No procedural Parts, renderer loops or physical effects.
+    local rawWidth = yaw == 0 and bounds.X or bounds.Z
+    local rawDepth = yaw == 0 and bounds.Z or bounds.X
     local scale = math.min(body.Size.Y/bounds.Y,
-        body.Size.X*1.35/bounds.X,body.Size.Z*2/bounds.Z)
+        body.Size.X*1.15/rawWidth,body.Size.Z*1.28/rawDepth)
     if scale < .72 or scale > 1.55
         or not pcall(function() clone:ScaleTo(scale) end) then
         clone:Destroy()
