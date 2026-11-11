@@ -1,3 +1,7 @@
+## P4 — Une carapace de plateforme en vraie 3D sur Android Low — 11 novembre 2026
+
+Le [lot de remplacement des carapaces au premier plan](docs/P4_LOW_CAMERA_AUTHENTIC_DECK_CARAPACE_2026-11-11.md) autorise **une seule sculpture 3D originale Approved de 7 MeshParts à moins de 125 studs** sur Low, pour remplacer les **2 WedgeParts natives** d'une plateforme réellement jouable déjà décorée. Sur pression graphique 1/2, les primitives reviennent via le propriétaire visuel existant ; le budget High 16 / Medium 8 ne change pas. Le nouveau coût maximal sur Low est de **+5 BaseParts**, déjà compris dans le recensement adaptatif global. Aucun asset, PBR 2K ou boucle supplémentaire. Le code doit encore être testé dans Roblox Engine/Android, puis publié sur la Place.
+
 ## P4 — Les sculptures 3D se montent après leurs attributs de provenance — 11 novembre 2026
 
 Le [correctif de streaming des Models approuvés](docs/P4_STREAMED_AUTHENTIC_DECK_READINESS_2026-11-11.md) reconnecte les vrais MeshParts des trappes de maintenance, carapaces, grands dessous et supports lorsqu'un Model arrive **avant ses attributs OwnerVerified / Original3DAssetId**. Les trois événements `RouteTier` / `HarborSpokeRoute/Step` utilisent désormais le batch de rebuild existant au lieu de lancer des reconstructions individuelles. Il n'y a aucune nouvelle requête d'asset, Part, boucle ou augmentation de budget Android ; les fallbacks natifs sont conservés jusqu'à provenance complète. Cette modification doit encore être validée en Engine/Android et publiée sur Roblox séparément.

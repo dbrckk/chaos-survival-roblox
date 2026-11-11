@@ -41,7 +41,7 @@ local function verified(name)
     elseif long < 10.6 or long > 12.3
         or short < 7.8 or short > 9.6
         or size.Y < 2.0 or size.Y > 4.1 then return nil end
-    return model, size
+    return model, size, pieces
 end
 
 local function preparedParts(copy, sourceFrame, target, platform, name)
@@ -127,9 +127,14 @@ end
 -- This is a snapshot (not live camera tracking); PremiumRouteMeshKit already
 -- owns continuous camera-LOD for upper deck paint and bridge covers.
 -- The server keeps all colliders, collapse cues and source fallbacks.
-function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, cameraLook)
+function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, cameraLook, pressure)
     local chosen = {}
-    local limit = tier == "High" and 16 or (tier == "Medium" and 8 or 0)
+    -- Low gets ONE authentic sculpt in place of its existing 2-WedgePart
+    -- underside, never an extra platform. Demote to the native source
+    -- immediately on pressure 1/2. Medium/High budgets are unchanged.
+    local lowReady = tier == "Low" and (tonumber(pressure) or 0) == 0
+    local limit = tier == "High" and 16
+        or (tier == "Medium" and 8 or (lowReady and 1 or 0))
     if limit == 0 or type(platforms) ~= "table"
         or not base or not base:IsA("BasePart") then
         return chosen
@@ -137,19 +142,27 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
     -- Do not reserve slots until the actual seven-material model has
     -- replicated and passed the same OwnerVerified/provenance/size gate
     -- that the mount itself requires.
-    local approved, bounds = verified(variant)
-    if not approved then return chosen end
+    local approved, bounds, sourceParts = verified(variant)
+    -- Never spend a low-end slot on an unverified oversized mesh bundle.
+    if not approved or (tier == "Low" and sourceParts ~= 7) then
+        return chosen
+    end
     local sourceLong = math.max(bounds.X,bounds.Z)
     local sourceShort = math.min(bounds.X,bounds.Z)
     local focus = base.Position
+    local cameraReady = false
     if typeof(cameraPoint) == "Vector3" then
         local localCamera = base.CFrame:PointToObjectSpace(cameraPoint)
         if math.abs(localCamera.X) <= base.Size.X*.5 + 16
             and math.abs(localCamera.Z) <= base.Size.Z*.5 + 16
             and math.abs(localCamera.Y) <= 130 then
             focus = cameraPoint
+            cameraReady = true
         end
     end
+    -- On Low, never spend a seven-piece source behind the initial camera
+    -- or when the real playable arena is not yet replicated.
+    if tier == "Low" and not cameraReady then return chosen end
     local candidates = {}
     for _, platform in ipairs(platforms) do
         if platform:IsA("BasePart") and platform.Parent
@@ -166,11 +179,17 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
             -- native deck footprint before its full-width underframe may
             -- be hidden. Long 26-stud promenades require the different
             -- certified 22-stud LongCradle, not half a carapace.
+            local sourceIndex = tonumber(platform.Name:match("^Platform(%d+)$"))
             if (phase == nil or phase == "Normal" or phase == "Safe")
                 and short >= 7.1 and long <= 36
                 and long / short <= 2.6 and scale >= .62
                 and sourceLong*scale >= long*.78
-                and sourceShort*scale >= short*.72 then
+                and sourceShort*scale >= short*.72
+                -- Low only replaces TWO wedges that were ALREADY mounted
+                -- under this source platform, instead of creating a new
+                -- visual slot on an otherwise undecorated deck.
+                and (tier ~= "Low" or (sourceIndex
+                    and sourceIndex % 8 == 1)) then
                 local delta=platform.Position-focus
                 -- Upper decks remain attractive but distant unused edge
                 -- platforms must not consume the scarce true-mesh budget.
@@ -181,7 +200,9 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
                 if platform:GetAttribute("ChaosPermanentRoute") == true then
                     score-=6
                 end
-                candidates[#candidates+1]={part=platform,score=score}
+                if tier ~= "Low" or delta.Magnitude <= 125 then
+                    candidates[#candidates+1]={part=platform,score=score}
+                end
             end
         end
     end
@@ -278,23 +299,31 @@ end
 
 -- Genuine whole-underside skins replace native wedges,
 -- bars and fake keel blocks on a selected subset of existing platforms.
--- High 1/6, Medium 1/12, Low 0. Original assets replace native
+-- High 16 / Medium 8, Low ONE camera-near, pressure-free original
+-- on a deck that would already have 2 native wedges. Originals replace native
 -- wedge/rail/brace clusters instead of simply stacking extra primitives.
 -- Candidate only: real Android GPU and silhouette QA still required.
 function Kit.carapace(parent, platform, variant, tier, index, selected)
-    if tier == "Low" or platform:GetAttribute("ChaosSkybridge") == true then
+    if platform:GetAttribute("ChaosSkybridge") == true then
         return nil
     end
     local id = tonumber(index)
     if not id or id < 1 then return nil end
+    -- Low must NEVER fall back to the legacy modulo 6/12 selection.
+    -- One camera-selected mount replaces only an existing Low 2-wedge
+    -- shell (index 1 modulo 8), and requires an explicit true selector.
+    if tier == "Low" and (selected ~= true or id % 8 ~= 1) then
+        return nil
+    end
     -- Explicit TRUE only for one of the 16/8 nearest genuine safe decks.
     -- FALSE never mounts an extra model; nil preserves the old 1/6/1/12
     -- legacy API for independent consumers / test harnesses.
     if selected == false then return nil end
     local step = tier == "High" and 6 or 12
     if selected ~= true and id % step ~= 1 then return nil end
-    local source, original = verified(variant)
-    if not source or not parent or not platform or not platform:IsA("BasePart")
+    local source, original, sourceParts = verified(variant)
+    if (tier == "Low" and sourceParts ~= 7)
+        or not source or not parent or not platform or not platform:IsA("BasePart")
         or not platform.Parent or not platform.CanCollide
         or platform.Transparency >= .75 then return nil end
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
