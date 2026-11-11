@@ -42,6 +42,35 @@ describe("Five-arena physically readable environment lighting", function()
             expect(roundDark).toBe(false)
             expect(roundDiffuse > 0.34).toBe(true)
         end
+        -- Existing engine case: verify all five authentic material
+        -- directions, and check that low/medium/high get subtle bounded
+        -- metal highlights, not additional lights or post-processing.
+        local finishes = {
+            Classic = {diffuse=0.018,specular=0.042},
+            Towers = {diffuse=0.012,specular=0.050},
+            Crossroads = {diffuse=0.024,specular=0.036},
+            Orbital = {diffuse=0.010,specular=0.060},
+            Harbor = {diffuse=0.026,specular=0.032},
+        }
+        for variant, boost in pairs(finishes) do
+            for tier, values in pairs(expected) do
+                local _, diffuse, specular, dark =
+                    ArenaLightingReadabilityRules.disasterLighting(
+                        "round", tier, false, {"Meteors"}, variant)
+                expect(dark).toBe(false)
+                expect(math.abs(diffuse - (values.round + boost.diffuse))
+                    < 0.0001).toBe(true)
+                expect(math.abs(specular - (values.specular + boost.specular))
+                    < 0.0001).toBe(true)
+                expect(diffuse <= 0.60).toBe(true)
+                expect(specular <= 0.78).toBe(true)
+            end
+        end
+        local _, unchangedDiffuse, unchangedSpecular =
+            ArenaLightingReadabilityRules.disasterLighting(
+                "round", "Medium", false, {"Meteors"}, "UnknownVariant")
+        expect(unchangedDiffuse).toBe(expected.Medium.round)
+        expect(unchangedSpecular).toBe(expected.Medium.specular)
     end)
 
     it("preserves Darkness even when it is secondary in Double Chaos", function()
@@ -61,6 +90,24 @@ describe("Five-arena physically readable environment lighting", function()
             expect(primaryExposure).toBe(0.02)
             expect(primaryDiffuse).toBe(limit)
             expect(primaryDark).toBe(true)
+            -- Both Darkness positions must bypass ALL five finishes.
+            for _, variant in ipairs({
+                "Classic","Towers","Crossroads","Orbital","Harbor",
+            }) do
+                local roundExposure, hiddenDiffuse, hiddenSpecular, hidden =
+                    ArenaLightingReadabilityRules.disasterLighting(
+                        "round", tier, true, {"Meteors","Darkness"}, variant)
+                expect(roundExposure).toBe(-0.04)
+                expect(hidden).toBe(true)
+                expect(hiddenDiffuse).toBe(limit)
+                expect(hiddenSpecular < 0.50).toBe(true)
+                local _, firstDiffuse, firstSpecular, firstDark =
+                    ArenaLightingReadabilityRules.disasterLighting(
+                        "round", tier, false, {"Darkness"}, variant)
+                expect(firstDark).toBe(true)
+                expect(firstDiffuse).toBe(limit)
+                expect(firstSpecular).toBe(hiddenSpecular)
+            end
         end
         expect(ArenaLightingReadabilityRules.hasDarkness({"Darkness"})).toBe(true)
         expect(ArenaLightingReadabilityRules.hasDarkness({"Tornado", "Darkness"})).toBe(true)
