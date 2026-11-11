@@ -45,7 +45,7 @@ for guard in ('"OwnerVerified"','"OriginalSkylineDepthSculpt3D"',
 for guard in ('PremiumApprovedAssetImportGate','GlobalApprovedImportGate.load',
               'OriginalMeshScenery.sanitize','OriginalSkylineDepthSculpt3D',
               'ApprovedSkylineDepthSculptTemplates',
-              'task.wait(34)','validated(clean)',
+              'task.wait(24)','validated(clean)',
               '"LuaSourceContainer"', 'pieces ~= 7',
               'math.abs(size.Y - EXPECTED.Y) <= .45'):
     assert guard in SERVER,guard
@@ -64,7 +64,7 @@ assert "AssetService" not in KIT
 for forbidden in ("RenderStepped","Heartbeat","LoadAssetAsync",
                   "RemoteEvent","RemoteFunction","CanCollide = true"):
     assert forbidden not in KIT,forbidden
-assert "Low={cap=0,distance=0}" in KIT
+assert "Low={cap=1,distance=315}" in KIT
 assert "Medium={cap=2,distance=425}" in KIT
 assert "High={cap=4,distance=570}" in KIT
 assert "if stress >= 2 then cap = 0 end" in KIT
@@ -75,7 +75,8 @@ assert "aerial.Transparency" not in KIT
 
 # Compute all 8 possible owner silhouettes in each of the 5 variants,
 # including 27-stud Classic roofs and 47-stud Towers roofs. Only nearby
-# sources are mounted, capped at 2/3/4; Low retains the native wedges.
+# sources are mounted, capped at 1/2/3/4; Low returns native wedges
+# on visual pressure, failed imports or missing streaming sources.
 for variant in ("Classic","Towers","Crossroads","Orbital","Harbor"):
     count=0
     for direction in range(1,5):
@@ -94,5 +95,5 @@ for variant in ("Classic","Towers","Crossroads","Orbital","Harbor"):
     print("PASS",variant,"8 approved skyline candidates; LOD cap unchanged")
 
 print("PASS approved original asset, map provenance, no physics or external client fetch")
-print("PASS native rollback, 7-MeshPart integrity, camera and Android pressure budgets")
+print("PASS native rollback, 7-MeshPart integrity, one Low mesh and Android pressure budgets")
 print("LIMIT rendering, streaming, frame times and moderation are engine/device-dependent")

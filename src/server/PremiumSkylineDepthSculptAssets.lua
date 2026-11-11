@@ -48,7 +48,10 @@ function Assets.start()
     -- One creator-owned Model for all five variants. Stagger behind the
     -- near-field hero signatures, before the long-distance prop queues.
     task.spawn(function()
-        task.wait(34)
+        -- Queue after first-round arena signatures (18-21s) but before
+        -- a 30-second solo round can finish if import latency permits.
+        -- Same approved asset and global two-in-flight import gate.
+        task.wait(24)
         if holder:FindFirstChild("Roof") then return end
         for attempt = 1, 3 do
             local ok, raw = pcall(GlobalApprovedImportGate.load, AssetService, ID)

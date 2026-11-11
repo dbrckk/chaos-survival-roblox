@@ -35,8 +35,10 @@ les props supplémentaires ou le nombre rendu à un instant donné.
   du modèle : restauration des natives, suppression des 3D locales.
 - Les modèles sont sélectionnés à partir de l'échantillonnage LOD
   partagé ; aucun nouveau `RenderStepped` ni requête côté client.
-- Budget simultané : Low 0 ; Medium Android 1 et PC 2 ;
-  High Android 2 et PC 4. La pression visuelle réduit le budget de
+- Budget simultané : Low Android/PC 1 à 315 studs ; Medium Android 1 et PC 2 ;
+  High Android 2 et PC 4. Sur Low, ce seul modèle à sept MeshParts
+  ne monte que si la source approuvée est prête et proche de la caméra.
+  La pression visuelle réduit le budget de
   moitié puis à zéro. Les montages ne changent jamais la physique.
 - Les attributs `LocalPrimarySkylineMeshCount` et
   `LocalPrimarySkylinePrimitivesReplaced` comptent les instances

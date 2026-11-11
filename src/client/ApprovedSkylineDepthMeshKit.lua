@@ -1,5 +1,7 @@
 -- Replaces camera-selected nonphysical SkylineDepth roof wedges with the
 -- genuine creator-approved original 2156-triangle skyline roof sculpture.
+-- On Low, one nearest verified sculpt replaces a native wedge; when
+-- quality pressure rises, every fallback native roof returns.
 -- Never alters DistantAerial cues,
 -- gameplay collision, server map generation, or the Roblox asset registry.
 -- Shared scenery LOD sampler owns this module: NO new frame loop / asset load.
@@ -17,7 +19,7 @@ local DIRECTIONS = {
 local VARIANTS = {Classic=true,Towers=true,Crossroads=true,
     Orbital=true,Harbor=true}
 local BUDGET = {
-    Low={cap=0,distance=0},
+    Low={cap=1,distance=315},
     Medium={cap=2,distance=425},
     High={cap=4,distance=570},
 }
