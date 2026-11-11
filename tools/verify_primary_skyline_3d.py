@@ -84,11 +84,12 @@ for variant,height0 in variants.items():
     print(f"PASS {variant}: four certified skyline transforms and scale limits")
 assert count==20
 
-assert "Low={count=0,distance=0}" in CLIENT
+assert "Low={count=1,distance=315}" in CLIENT
 assert "Medium={count=2,distance=390}" in CLIENT
 assert "High={count=4,distance=510}" in CLIENT
 assert 'tier == "High" and math.min(cap,2)' in CLIENT
 assert 'tier == "Medium" and math.min(cap,1)' in CLIENT
+assert 'tier == "Low" and math.min(cap,1)' in CLIENT
 assert "if stress >= 2 then cap = 0 end" in CLIENT
 assert CLIENT.index("clone.Parent = bucket") < CLIENT.index(
     "for _,part in ipairs(native) do part.Transparency = 1 end")

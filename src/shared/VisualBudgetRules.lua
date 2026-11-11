@@ -106,6 +106,11 @@ VisualBudgetRules.LocalFolders = {
     -- each), controlled by existing LOD and pressure on shared Android
     -- 440/680/900 Part census. Low 0, Medium 2, High touch 3 / PC 4.
     "ApprovedExteriorTowerMeshesLocal",
+    -- P4 atmospheric pillars and horizon spines are direct Workspace
+    -- seven-MeshPart owners. Count ALL clones in the shared cooperative
+    -- Android 440/680/900 Parts census; Low 0 / Medium 2 / High touch 3
+    -- / High desktop 4, with pressure-driven rollback to native bodies.
+    "ApprovedAtmosphereColumnsLocal",
     "ApprovedExteriorRidgesLocal",
     -- Seven genuine toroidal MeshParts replace SIXTEEN Orbital native
     -- rectangular ReactorArcs in one visual swap. Shared existing

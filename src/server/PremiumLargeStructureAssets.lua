@@ -16,6 +16,29 @@ local APPROVED = {
     LongCradle = 128914328933863,
 }
 local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle"}
+
+-- The original fixed order left the non-Classic columns waiting through
+-- several optional imports. Prioritize ONLY the current server arena.
+-- Preserve all six original imports, the retry sequence and the global
+-- two-slot AssetService gate.
+local function prioritizedOrder()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local variant = nil
+    if generated and generated:IsA("Folder")
+        and generated.Parent == workspace
+        and arena and arena:IsA("Folder") and arena.Parent == generated then
+        variant = arena:GetAttribute("VariantId")
+    end
+    if not APPROVED[variant] or variant == "LongCradle" then
+        return ORDER
+    end
+    local ordered = {variant}
+    for _, name in ipairs(ORDER) do
+        if name ~= variant then ordered[#ordered + 1] = name end
+    end
+    return ordered
+end
 local started = false
 
 function Kit.approvedId(name)
@@ -61,8 +84,10 @@ function Kit.start()
     -- Deferred, serialized, optional Roblox asset loading. A missing or
     -- rate-limited package never touches any server-owned route Part.
     task.spawn(function()
-        task.wait(35)
-        for _, name in ipairs(ORDER) do
+        -- Start after active hero signature requests (18-21s), without
+        -- blocking bots or adding any extra concurrent import workers.
+        task.wait(29)
+        for _, name in ipairs(prioritizedOrder()) do
             if not holder:FindFirstChild(name) then
                 for attempt = 1, 3 do
                     local ok, raw = pcall(

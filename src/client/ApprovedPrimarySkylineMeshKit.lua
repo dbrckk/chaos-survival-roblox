@@ -2,6 +2,8 @@
 -- Reuses creator-approved seven-MeshPart exterior tower art; no new asset IDs.
 -- Only nonphysical StructuralCore, TopCap, OuterRibL/R are hidden. Keep the
 -- foundation, inset navigation accents and each variant's antenna native.
+-- Low keeps exactly one nearby original skyline silhouette on
+-- Android/PC at normal pressure; pressure restores native geometry.
 -- One existing scenery LOD sampler owns all mount/rollback decisions.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -26,7 +28,7 @@ local DIRECTIONS = {
     {x=-1,z=22,yaw=-math.pi*.5},
 }
 local BUDGET = {
-    Low={count=0,distance=0},
+    Low={count=1,distance=315},
     Medium={count=2,distance=390},
     High={count=4,distance=510},
 }
@@ -326,7 +328,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     local cap = spec.count
     if touch then
         cap = tier == "High" and math.min(cap,2)
-            or tier == "Medium" and math.min(cap,1) or 0
+            or tier == "Medium" and math.min(cap,1)
+            or tier == "Low" and math.min(cap,1) or 0
     end
     if stress == 1 then cap = math.floor(cap*.5) end
     if stress >= 2 then cap = 0 end

@@ -71,11 +71,32 @@ It reuses the existing `scenery-lod.client.lua` timer and exact
 
 All **8 per-arena native roofs** are eligible in the generator/source, but
 the live client only mounts up to **2 on Medium, 4 on High PC, 3 on High
-Android, and 0 on Low**, with lower caps under adaptive VFX pressure and
+Android, and 1 on Low (Android/PC, à 315 studs et pression normale)**, with lower caps under adaptive VFX pressure and
 camera-distance culling. The `DistantAerial` markers remain native, and
 gameplay Base/platform collision is never touched. On failure, missing
 streamed sources, or LOD reduction, the native WedgeParts remain visible.
 No runtime frame benchmark or rendered comparison is claimed.
+
+### Suite du 11 novembre — visibilité Low et première manche
+
+Le client n'exclut plus automatiquement toutes les sculptures de toit
+sur Low : il autorise **un modèle à sept MeshParts**, limité à la source
+approuvée, au propriétaire réel et à 315 studs de la caméra. Avec le kit
+`ApprovedPrimarySkylineMeshKit`, le Low peut monter **deux modèles 3D au
+maximum** pour les deux familles de skyline (14 MeshParts), soit jusqu'à
+**cinq formes natives masquées simultanément** (quatre corps du primaire et
+une toiture). La pression graphique de niveau 1 ou 2 ramène les deux caps
+à zéro ; l'absence d'asset, le streaming et les changements de carte
+restaurent les éléments natifs sans toucher à la navigation ni aux collisions.
+
+L'import serveur de cette unique sculpture de toiture commence désormais
+à **24 secondes** au lieu de 34 après le démarrage du chargeur, après les
+signatures prioritaires (18–21 s). Le garde-fou FIFO global conserve
+ses deux requêtes Roblox simultanées maximum. Ce délai avancé est une
+**opportunité** de visibilité dès la première manche, pas une garantie :
+le chargement réseau et la modération peuvent encore retarder ou empêcher
+l'affichage. Aucune mesure FPS Android, capture d'écran ni publication
+de l'expérience n'est revendiquée dans cette modification.
 
 Verification: the amended `verify_skyline_depth_approved_fallback.py`
 checks all five variants × eight heights/positions, genuine registry

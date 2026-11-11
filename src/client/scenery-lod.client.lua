@@ -21,6 +21,7 @@ local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArm
 local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimeterStructuresMeshKit)
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
+local ApprovedAtmosphereColumnsMeshKit = require(script.Parent.ApprovedAtmosphereColumnsMeshKit)
 local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
 local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
 local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVariantTowersLandmarkMeshKit)
@@ -1306,6 +1307,26 @@ task.spawn(function()
             ~=nativeTowersReplaced then
             player:SetAttribute("LocalExteriorPrimitiveTowerPartsReplaced",
                 nativeTowersReplaced)
+        end
+        -- P4: source-approved 3D forged columns for the eight real
+        -- atmosphere pillars and outboard spines. Each cosmetic native
+        -- body is masked ONLY once the seven-MeshPart sculpt has mounted.
+        -- Four hazard beacons and eight skyline signal caps/bands stay.
+        -- The shared camera/pressure LOD timer also owns their rollback.
+        ApprovedAtmosphereColumnsMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local atmosphereModels=ApprovedAtmosphereColumnsMeshKit.count()
+        if player:GetAttribute("LocalAtmosphereApprovedColumnCount")
+            ~=atmosphereModels then
+            player:SetAttribute("LocalAtmosphereApprovedColumnCount",
+                atmosphereModels)
+        end
+        local atmosphereNatives=ApprovedAtmosphereColumnsMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalAtmospherePrimitiveColumnsReplaced")
+            ~=atmosphereNatives then
+            player:SetAttribute("LocalAtmospherePrimitiveColumnsReplaced",
+                atmosphereNatives)
         end
         -- Four source-authored exterior corner sculptural ridges.
         -- Each approved Model replaces three WedgeParts with real art,

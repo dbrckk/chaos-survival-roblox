@@ -13,13 +13,49 @@ local SOURCES = {
     {height = 27, id = 97864559770371},
     {height = 30, id = 112172520488996},
 }
--- Four original Models already approved by the creator. Their previous
--- first load at 145s prevented early rounds from seeing premium skyline.
--- Spread FOUR existing API calls across the session (not parallel):
--- first request after 36s, then ~77s, ~118s, ~159s on a fast API.
--- Each request still retains the same three-attempt bounded retry path.
-local LOAD_STAGGER = {36,36,36,36}
+-- Four original Models already approved by the creator. In the
+-- previous fixed 21/24/27/30 order, Orbital and Towers could not see
+-- their FIRST usable skyline source until 77-159s. At 26s, reorder the
+-- SAME four serialized source loads for the current real arena.
+-- Non-active sources remain spaced across the session. GlobalApproved
+-- ImportGate preserves <=2 AssetService calls in flight; this worker
+-- itself still issues only ONE sequential request at a time.
+local PRIORITY_BY_VARIANT = {
+    Classic = {21},
+    Harbor = {21},
+    Crossroads = {21,24},
+    Orbital = {24,27},
+    Towers = {27,30},
+}
 local started = false
+
+local function prioritizedSources()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    local preferred = nil
+    if generated and generated:IsA("Folder")
+        and generated.Parent == workspace and arena
+        and arena:IsA("Folder") and arena.Parent == generated then
+        preferred = PRIORITY_BY_VARIANT[arena:GetAttribute("VariantId")]
+    end
+    local ordered, selected = {}, {}
+    for _, height in ipairs(preferred or {}) do
+        for _, entry in ipairs(SOURCES) do
+            if entry.height == height then
+                ordered[#ordered + 1] = entry
+                selected[height] = true
+                break
+            end
+        end
+    end
+    local activeCount = #ordered
+    for _, entry in ipairs(SOURCES) do
+        if not selected[entry.height] then
+            ordered[#ordered + 1] = entry
+        end
+    end
+    return ordered, activeCount
+end
 
 local function valid(model, entry)
     local n = 0
@@ -55,8 +91,16 @@ function Assets.start()
     end
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        for index, entry in ipairs(SOURCES) do
-            task.wait(LOAD_STAGGER[index])
+        -- Active signature uploads begin at 18-21s; wait until 26s to
+        -- leave the two-slot shared gate clear for those hero landmarks.
+        task.wait(26)
+        local ordered, activeCount = prioritizedSources()
+        for index, entry in ipairs(ordered) do
+            if index > 1 then
+                -- Active-variant second height gets first-round priority.
+                -- All inactive models retain a 34s stagger (+5s gap).
+                task.wait(index <= activeCount and 10 or 34)
+            end
             local name = "Tower"..tostring(entry.height)
             if not holder:FindFirstChild(name) then
                 for attempt = 1, 3 do

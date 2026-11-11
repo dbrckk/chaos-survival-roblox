@@ -17,22 +17,32 @@ REGISTRY = json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_tex
 ids = {int(model["asset_id"]) for model in REGISTRY["models"]
        if model["moderation"] == "Approved"}
 BUCKETS = {
-    "Classic": [("ApprovedClassicBroadcastFinLocal",123049626693705,
+    "Classic": [("ApprovedAtmosphereColumnsLocal",91626128452597,
+                 "ApprovedAtmosphereColumnsMeshKit.lua"),
+                ("ApprovedClassicBroadcastFinLocal",123049626693705,
                  "ApprovedClassicBroadcastFinMeshKit.lua"),
                 ("ApprovedOriginalIdentitySpinesLocal",105555650820011,
                  "ApprovedVariantIdentitySpineMeshKit.lua")],
-    "Towers": [("ApprovedTowersMachineryLocal",72143366927826,
+    "Towers": [("ApprovedAtmosphereColumnsLocal",107521411452905,
+                "ApprovedAtmosphereColumnsMeshKit.lua"),
+               ("ApprovedTowersMachineryLocal",72143366927826,
                 "ApprovedVariantTowersLandmarkMeshKit.lua"),
                ("ApprovedOriginalIdentitySpinesLocal",86423178125318,
                 "ApprovedVariantIdentitySpineMeshKit.lua")],
-    "Crossroads": [("ApprovedCrossroadsEntrancePortalsLocal",127067628128103,
+    "Crossroads": [("ApprovedAtmosphereColumnsLocal",93993697329658,
+                   "ApprovedAtmosphereColumnsMeshKit.lua"),
+                  ("ApprovedCrossroadsEntrancePortalsLocal",127067628128103,
                    "ApprovedCrossroadsEntrancePortalMeshKit.lua"),
                    ("ApprovedCrossroadsOpenGantryLocal",90844491148907,
                     "ApprovedCrossroadsOpenGantryMeshKit.lua")],
-    "Orbital": [("ApprovedOrbitalReactorLandmarksLocal",104654294187035,
+    "Orbital": [("ApprovedAtmosphereColumnsLocal",119010829781313,
+                "ApprovedAtmosphereColumnsMeshKit.lua"),
+               ("ApprovedOrbitalReactorLandmarksLocal",104654294187035,
                  "ApprovedOrbitalReactorLandmarkMeshKit.lua"),
                 ("ApprovedOrbitalReactorLandmarksLocal",138666009076890,
                  "ApprovedOrbitalReactorLandmarkMeshKit.lua")],
+    "Harbor": [("ApprovedAtmosphereColumnsLocal",76194593490199,
+                "ApprovedAtmosphereColumnsMeshKit.lua")],
 }
 for variant, pairs in BUCKETS.items():
     assert f"{variant} = {{" in KIT
