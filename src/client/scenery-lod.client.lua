@@ -22,6 +22,7 @@ local ApprovedPerimeterStructuresMeshKit = require(script.Parent.ApprovedPerimet
 local ApprovedPerimeterVariantApexMeshKit = require(script.Parent.ApprovedPerimeterVariantApexMeshKit)
 local ApprovedExteriorTowerMeshKit = require(script.Parent.ApprovedExteriorTowerMeshKit)
 local ApprovedAtmosphereColumnsMeshKit = require(script.Parent.ApprovedAtmosphereColumnsMeshKit)
+local ApprovedAtmosphereCrownMeshKit = require(script.Parent.ApprovedAtmosphereCrownMeshKit)
 local ApprovedExteriorRidgeMeshKit = require(script.Parent.ApprovedExteriorRidgeMeshKit)
 local ApprovedSkylineDepthMeshKit = require(script.Parent.ApprovedSkylineDepthMeshKit)
 local ApprovedVariantTowersLandmarkMeshKit = require(script.Parent.ApprovedVariantTowersLandmarkMeshKit)
@@ -1539,6 +1540,25 @@ task.spawn(function()
             ~= nearfieldSurfaces then
             player:SetAttribute("LocalPremiumNearfieldPbrSurfaceCount",
                 nearfieldSurfaces)
+        end
+        -- Original 72-sided forged toroidal ceiling art replaces the
+        -- single giant 20x20 native neon slab above the real Towers hub.
+        -- Source Model is the already creator-approved Orbital ring kit,
+        -- never an invented ID or a new AssetService load. Same LOD loop.
+        ApprovedAtmosphereCrownMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
+        local crownModels=ApprovedAtmosphereCrownMeshKit.count()
+        if player:GetAttribute("LocalOriginalAtmosphereCrown3DCount")
+            ~=crownModels then
+            player:SetAttribute("LocalOriginalAtmosphereCrown3DCount",
+                crownModels)
+        end
+        local crownNative=ApprovedAtmosphereCrownMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalPrimitiveTowersCrownReplaced")
+            ~=crownNative then
+            player:SetAttribute("LocalPrimitiveTowersCrownReplaced",
+                crownNative)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,

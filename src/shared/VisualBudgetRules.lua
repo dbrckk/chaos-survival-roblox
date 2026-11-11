@@ -111,6 +111,10 @@ VisualBudgetRules.LocalFolders = {
     -- Android 440/680/900 Parts census; Low 0 / Medium 2 / High touch 3
     -- / High desktop 4, with pressure-driven rollback to native bodies.
     "ApprovedAtmosphereColumnsLocal",
+    -- One authentic 7-MeshPart Towers crown torus is mounted locally only
+    -- after a real 20x20 cosmetic slab is verified; count its entire
+    -- geometry against the SAME adaptive Android 440/680/900 part census.
+    "ApprovedAtmosphereCrownLocal",
     "ApprovedExteriorRidgesLocal",
     -- Seven genuine toroidal MeshParts replace SIXTEEN Orbital native
     -- rectangular ReactorArcs in one visual swap. Shared existing

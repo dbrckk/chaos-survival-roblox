@@ -9,8 +9,11 @@ local RADIUS=20
 local SEGMENTS=16
 local CHORD=2*RADIUS*math.sin(math.pi/SEGMENTS)+.10
 local LEVEL=29
-local QUALITIES={Low=0,Medium=1,High=1}
-local DISTANCE={Low=0,Medium=410,High=575}
+-- One genuine torus (7 MeshParts) can replace 16 native rectangular arcs
+-- even on Low when the source arrives. Stress level 1 restores all 16
+-- immediately; this spends zero extra server instances or imports.
+local QUALITIES={Low=1,Medium=1,High=1}
+local DISTANCE={Low=340,Medium=410,High=575}
 local RETENTION=28
 
 local bucket=Instance.new("Folder")
