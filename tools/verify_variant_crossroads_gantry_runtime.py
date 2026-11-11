@@ -38,7 +38,11 @@ assert '"Original3DAssetId"' in CLIENT and '"Original3DAssetId"' in LOADER
 assert 'OriginalMeshScenery.sanitize(raw)' in LOADER
 assert "parts ~= 7" in LOADER
 assert "n~=7" in CLIENT and "#parts~=7" in CLIENT
-assert "task.wait(98)" in LOADER
+assert 'ActiveSignatureSchedule.waitFor("Crossroads",46,98)' in LOADER
+assert 'require("./PremiumActiveVariantImportSchedule")' in LOADER
+assert 'task.wait(98)' not in LOADER
+assert LOADER.count('task.spawn(function()') == 1
+assert LOADER.count('GlobalApprovedImportGate.load') == 1
 assert "GlobalApprovedImportGate.load" in LOADER
 assert 'require("./PremiumApprovedAssetImportGate")' in LOADER
 assert "game:GetService(\"AssetService\")" not in CLIENT
@@ -75,9 +79,11 @@ for native in ('"CrossroadGantry" .. i','"CrossroadSignal" .. i',
 assert 'signal.Transparency=1' not in CLIENT
 assert 'signal:Destroy()' not in CLIENT
 assert 'if tier=="High" and touch then' not in CLIENT
-assert 'Low=0,Medium=2,High=4' in CLIENT
-assert 'Low=0,Medium=290,High=410' in CLIENT
+assert 'Low=1,Medium=2,High=4' in CLIENT
+assert 'Low=180,Medium=290,High=410' in CLIENT
 assert 'math.min(cap,2)' in CLIENT and 'math.min(cap,1)' in CLIENT
+assert 'if touch and tier~="Low" then' in CLIENT
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in CLIENT
 assert 'if stress>=2 then cap=0 end' in CLIENT
 assert CLIENT.index("clone.Parent=folder")<CLIENT.index("body.Transparency=1")
 for forbidden in ("RenderStepped","Heartbeat","LoadAssetAsync",

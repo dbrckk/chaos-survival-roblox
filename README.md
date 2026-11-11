@@ -1,3 +1,7 @@
+## P4 — Deux vrais portiques Crossroads sur Android Low — 11 novembre 2026
+
+Le [nouveau lot Crossroads](docs/P4_CROSSROADS_AUTHENTIC_LOW_GATES_GANTRIES_2026-11-11.md) rend visibles sur Low **un portail intérieur approuvé** (remplacement de trois primitives) et **un portique extérieur approuvé** (remplacement d'une poutre), dans un rayon de 180 studs, même sur écran tactile. Le signal extérieur et les animations intérieures restent intacts ; chaque modèle ne compte que sept MeshParts non physiques dans le budget Android global. Les deux charges sont priorisées à **44/46 secondes sur la carte Crossroads active** (92/98 secondes ailleurs) et la pression graphique rétablit les natives. Cette modification GitHub n'actualise pas la Place Roblox publique.
+
 ## P4 — Grandes signatures sculptées Classic et Crossroads sur Low — 11 novembre 2026
 
 Le [lot des silhouettes d'arènes authentiques sur Android Low](docs/P4_LOW_AUTHENTIC_CLASSIC_CROSSROADS_SIGNATURES_2026-11-11.md) autorise un vrai modèle original de **sept MeshParts** à remplacer **cinq formes primitives Classic** ou **quatre formes Crossroads** à moins de 320 studs. Le premier palier de pression rétablit les natives. Les IDs créateur approuvés, le budget GPU partagé et les collisions sont conservés. Le modèle complémentaire Classic est demandé dès 56 secondes uniquement lorsque cette carte est active, contre 119 secondes de repli sur les autres variantes. Cette modification GitHub ne publie pas le jeu.

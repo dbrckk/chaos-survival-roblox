@@ -6,6 +6,7 @@ local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local ID=127067628128103
@@ -49,7 +50,9 @@ function Assets.start()
     task.spawn(function()
         -- Optional server-only decorative import, one source for 4 instances.
         -- Staggered after essential round and character initialization.
-        task.wait(92)
+        -- Active Crossroads can request its portal during round one.
+        -- Other maps retain the 92-second fallback and approved FIFO.
+        ActiveSignatureSchedule.waitFor("Crossroads",44,92)
         if holder:FindFirstChild("EntrancePortal") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,AssetService,ID)

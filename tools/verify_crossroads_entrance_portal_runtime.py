@@ -31,7 +31,11 @@ assert 'OriginalMeshScenery.sanitize(raw)' in SERVER
 assert 'if n~=7 then return false end' in SERVER
 assert 'if n~=7 then return nil end' in CLIENT
 assert '#meshParts~=7' in CLIENT
-assert 'task.wait(92)' in SERVER
+assert 'ActiveSignatureSchedule.waitFor("Crossroads",44,92)' in SERVER
+assert 'require("./PremiumActiveVariantImportSchedule")' in SERVER
+assert 'task.wait(92)' not in SERVER
+assert SERVER.count('task.spawn(function()') == 1
+assert SERVER.count('GlobalApprovedImportGate.load') == 1
 assert 'for attempt=1,3 do' in SERVER
 assert 'GlobalApprovedImportGate.load' in SERVER
 assert 'require("./PremiumApprovedAssetImportGate")' in SERVER
@@ -92,9 +96,11 @@ for marker in (
     assert marker in CLIENT,marker
 assert CLIENT.index('model.Parent=bucket')<CLIENT.index(
     'for native in pairs(natives) do native.Transparency=1 end')
-assert 'Low=0,Medium=2,High=4' in CLIENT
-assert 'Low=0,Medium=340,High=470' in CLIENT
+assert 'Low=1,Medium=2,High=4' in CLIENT
+assert 'Low=180,Medium=340,High=470' in CLIENT
 assert 'math.min(cap,2)' in CLIENT and 'math.min(cap,1)' in CLIENT
+assert 'if touch and tier~="Low" then' in CLIENT
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in CLIENT
 assert 'if stress>=2 then cap=0 end' in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
 # Comments documenting the absence of a loop are not executable Lua.
