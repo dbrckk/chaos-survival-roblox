@@ -5,6 +5,7 @@ local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 
 local Assets = {}
 local ID = 90844491148907
@@ -48,7 +49,9 @@ function Assets.start()
     task.spawn(function()
         -- Avoid a new owner-wide asset API burst at first player spawn.
         -- One source feeds four native gantries, no per-player network fetch.
-        task.wait(98)
+        -- Earlier optional request only on a real Crossroads arena;
+        -- elsewhere retain 98 seconds behind the global two-slot FIFO.
+        ActiveSignatureSchedule.waitFor("Crossroads",46,98)
         if holder:FindFirstChild("Gantry") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,AssetService,ID)

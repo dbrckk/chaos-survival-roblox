@@ -8,8 +8,10 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Kit={}
 local ID=127067628128103
 local BOUNDS=Vector3.new(19.2,10.59,1.755)
-local LIMIT={Low=0,Medium=2,High=4}
-local DISTANCE={Low=0,Medium=340,High=470}
+-- Low allows one authentic seven-MeshPart entrance replacing the three
+-- approved native Parts; stress 1/2 restores the native passage.
+local LIMIT={Low=1,Medium=2,High=4}
+local DISTANCE={Low=180,Medium=340,High=470}
 local RETAIN=28
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedCrossroadsEntrancePortalsLocal"
@@ -269,7 +271,9 @@ end
 function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if arena~=activeArena then clear();activeArena=arena end
     local cap=LIMIT[tier] or 0
-    if touch then
+    -- Preserve the single Low sculpture on real Android touchscreens.
+    -- Medium/High keep their previous touch demotion.
+    if touch and tier~="Low" then
         cap=tier=="High" and math.min(cap,2)
             or tier=="Medium" and math.min(cap,1) or 0
     end

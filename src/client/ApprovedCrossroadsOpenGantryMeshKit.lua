@@ -6,8 +6,10 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local ASSET_ID=90844491148907
-local QUALITIES={Low=0,Medium=2,High=4}
-local DISTANCE={Low=0,Medium=290,High=410}
+-- Low allows one approved seven-MeshPart gantry; stress 1 restores
+-- its original primitive. The warning signal remains server-authored.
+local QUALITIES={Low=1,Medium=2,High=4}
+local DISTANCE={Low=180,Medium=290,High=410}
 local RETAIN=26
 local SIZE=Vector3.new(27.92,3.6,2.74)
 local folder=Instance.new("Folder")
@@ -212,7 +214,9 @@ end
 function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if arena~=activeArena then clear();activeArena=arena end
     local cap=QUALITIES[tier] or 0
-    if touch then
+    -- Preserve the single Low sculpture on real Android touchscreens.
+    -- Medium/High keep their previous touch demotion.
+    if touch and tier~="Low" then
         cap=tier=="High" and math.min(cap,2)
             or tier=="Medium" and math.min(cap,1) or 0
     end
