@@ -1,3 +1,9 @@
+> Mise à jour du 11 novembre 2026 : la version Low décrite ci-dessous
+> a été améliorée par le [lot d'un sommet 3D proche](P4_ANDROID_LOW_AUTHENTIC_VARIANT_APEX_2026-11-11.md).
+> Le tableau historique ci-dessous (Low = 0) reflète uniquement le
+> comportement antérieur à ce correctif et ne représente plus le code
+> actuel.
+
 # P4 — Intégration des sommets 3D propres aux variantes
 
 **9 novembre 2026 — code source uniquement, pas de nouvelle publication Roblox Place.**
