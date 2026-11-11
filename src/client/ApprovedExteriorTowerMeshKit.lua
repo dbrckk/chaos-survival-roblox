@@ -5,6 +5,7 @@
 -- On Low, show ONE nearest approved seven-piece forged tower at normal
 -- pressure; restore native silhouettes immediately at pressure level 1/2.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local Kit = {}
 local STATIONS = {"North","East","South","West"}
@@ -269,7 +270,7 @@ bucket.ChildRemoved:Connect(function(child)
     end
 end)
 
-function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
+function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure,cameraLook)
     if arena~=activeArena then clear();activeArena=arena end
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     local cap=QUALITIES[tier] or 0
@@ -317,7 +318,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
             if distance<=(DISTANCE[tier] or 0)+(held and RETAIN or 0) then
                 ranked[#ranked+1]={
                     owner=owner,index=index,source=source,
-                    score=distance-(held and RETAIN*.5 or 0),
+                    score=SceneryLodRules.skylineViewScore(
+                        distance-(held and RETAIN*.5 or 0),
+                        natives[1].Position-cameraPoint,cameraLook),
                 }
             end
         end

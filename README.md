@@ -1,3 +1,7 @@
+## P4 — Architecture 3D de l'horizon priorisée face caméra — 11 novembre 2026
+
+Le [lot de sélection visuelle](docs/P4_CAMERA_FACING_AUTHENTIC_SKYLINE_2026-11-11.md) privilégie, dans les quotas 3D déjà limités, les **vraies sculptures situées devant la caméra** : quatre tours extérieures, quatre silhouettes principales et huit masses de toitures lointaines par arène. Auparavant, une sculpture derrière le joueur pouvait occuper l'unique emplacement 3D Android Low tandis que l'architecture regardée devant restait en `Part`/`WedgePart` primitive. Les assets originaux approuvés, quotas de pression, rayons de chargement, collisions et signaux ne changent pas. Aucun modèle, texture, nouvelle boucle ni publication Place n'est ajouté.
+
 ## P4 — Reflets métalliques différenciés en pleine manche — 11 novembre 2026
 
 Le [lot d'éclairage des métaux sculptés](docs/P4_ROUND_METAL_RELIEF_LIGHTING_2026-11-11.md) donne à chacune des cinq arènes une petite signature de **reflet spéculaire et diffusion** pendant les phases ready/round, sur les propriétés Lighting déjà pilotées par `juice.client.lua`. Les gains sont bornés à **0,60 de diffus / 0,78 de spéculaire**, sans aucune nouvelle lumière, texture PBR ni boucle ; **Darkness**, y compris en deuxième catastrophe Double Chaos, est intégralement exclu. Les trois profils GPU et les contrôles Engine existants sont conservés.

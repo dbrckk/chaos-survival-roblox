@@ -6,6 +6,7 @@
 -- gameplay collision, server map generation, or the Roblox asset registry.
 -- Shared scenery LOD sampler owns this module: NO new frame loop / asset load.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local Kit = {}
 local SOURCE_ID = 80692067525256
@@ -250,7 +251,7 @@ local function mount(arena,decor,base,owner,body,original,source,
         end)
 end
 
-function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch)
+function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -295,7 +296,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch)
                     ranked[#ranked+1] = {
                         owner=owner,body=body,original=original,
                         source=source,holder=holder,id=id,yaw=yaw,
-                        score=distance-(held and RETENTION*.55 or 0),
+                        score=SceneryLodRules.skylineViewScore(
+                            distance-(held and RETENTION*.55 or 0),
+                            body.Position-cameraPoint,cameraLook),
                         index=(index-1)*2+layer,
                     }
                 end

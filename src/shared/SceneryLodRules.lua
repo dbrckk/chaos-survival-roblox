@@ -155,4 +155,21 @@ function SceneryLodRules.original3DAudit(arena)
         arena:GetAttribute("Original3DSceneryComplete") == true
 end
 
+-- Spend scarce genuine skyline mesh slots on structures facing the camera.
+-- Eligibility by real distance, original 3D budget and native fallback stay
+-- untouched. No raycasts, new frame loops or model requests.
+function SceneryLodRules.skylineViewScore(baseScore, toTarget, cameraLook)
+    if type(baseScore) ~= "number"
+        or typeof(toTarget) ~= "Vector3"
+        or typeof(cameraLook) ~= "Vector3" then
+        return baseScore
+    end
+    local toward = Vector3.new(toTarget.X, 0, toTarget.Z)
+    local forward = Vector3.new(cameraLook.X, 0, cameraLook.Z)
+    if toward.Magnitude <= 36 or forward.Magnitude < 0.2 then
+        return baseScore
+    end
+    return baseScore - 60 * toward.Unit:Dot(forward.Unit)
+end
+
 return SceneryLodRules

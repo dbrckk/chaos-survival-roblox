@@ -6,6 +6,7 @@
 -- Android/PC at normal pressure; pressure restores native geometry.
 -- One existing scenery LOD sampler owns all mount/rollback decisions.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local Kit = {}
 local NAMES = {"North","East","South","West"}
@@ -318,7 +319,7 @@ local function mount(arena,owner,index,source,holder,id)
     end
 end
 
-function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
+function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure,cameraLook)
     if arena ~= activeArena then
         releaseAll()
         activeArena = arena
@@ -355,7 +356,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
             if distance <= spec.distance+(held and RETENTION or 0) then
                 ranked[#ranked+1] = {
                     owner=owner,index=index,source=source,holder=holder,
-                    id=id,score=distance-(held and RETENTION*.5 or 0),
+                    id=id,score=SceneryLodRules.skylineViewScore(
+                        distance-(held and RETENTION*.5 or 0),
+                        native[1].Position-cameraPoint,cameraLook),
                 }
             end
         end

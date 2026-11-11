@@ -1318,7 +1318,7 @@ task.spawn(function()
         -- controls proximity, quality, pressure and fallback; no new loop.
         ApprovedExteriorTowerMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,isTouch,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"),cameraLook)
         local exteriorTowers=ApprovedExteriorTowerMeshKit.count()
         if player:GetAttribute("LocalApprovedExteriorTowerCount")
             ~=exteriorTowers then
@@ -1374,7 +1374,7 @@ task.spawn(function()
         -- Reuse owner-approved seven-MeshPart source on existing LOD tick.
         ApprovedPrimarySkylineMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,isTouch,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"),cameraLook)
         local primaryMeshes=ApprovedPrimarySkylineMeshKit.count()
         if player:GetAttribute("LocalPrimarySkylineMeshCount")
             ~=primaryMeshes then
@@ -1390,7 +1390,7 @@ task.spawn(function()
         -- tower art, camera-ranked and pressure-budgeted; native aerials stay.
         ApprovedSkylineDepthMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,
-            player:GetAttribute("OptionalVfxPressure"),isTouch)
+            player:GetAttribute("OptionalVfxPressure"),isTouch,cameraLook)
         local depthModels=ApprovedSkylineDepthMeshKit.count()
         if player:GetAttribute("LocalApprovedSkylineDepthModelCount")
             ~=depthModels then
