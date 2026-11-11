@@ -493,7 +493,9 @@ local function rebuild()
     -- limit source-authenticated modules, not "platform" count, to
     -- prevent a single 40-stud pillar silently spending the whole budget.
     local supportBudget = tier.Name == "High" and 16
-        or (tier.Name == "Medium" and 8 or 0)
+        or (tier.Name == "Medium" and 8
+            or ((tonumber(player:GetAttribute("OptionalVfxPressure")) or 0)
+                == 0 and 1 or 0))
     local longCradleBudget = tier.Name == "High" and 4
         or (tier.Name == "Medium" and 2 or 0)
     local originalLargeCount = 0
@@ -527,7 +529,8 @@ local function rebuild()
         PremiumLargeStructureMeshKit.selectNearRouteStructures(
             ordered,decor,variant,tier.Name,base,
             camera and camera.CFrame.Position or nil,
-            camera and camera.CFrame.LookVector or nil)
+            camera and camera.CFrame.LookVector or nil,
+            player:GetAttribute("OptionalVfxPressure"))
     local mountedRouteCradles = 0
     local mountedCloseSupports = 0
 
