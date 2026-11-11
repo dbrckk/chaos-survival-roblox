@@ -311,6 +311,11 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     if meshFolder and meshFolder:IsA("Folder") then
         local sourceOwnerByPiece = {}
         local livePiecesByOwner = {}
+        -- Keep the original verified authorization separately: streaming
+        -- out the last piece must restore native trim, but a later genuine
+        -- source must be able to reinstate the premium silhouette.
+        local approvedKinds = table.clone(active)
+        local approvedSupports = table.clone(verifiedSupports)
         local function registerSourcePiece(piece)
             if sourceOwnerByPiece[piece] ~= nil then return end
             if not piece:IsA("MeshPart")
@@ -326,10 +331,12 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local owner = joint.Part1
             if not owner or not owner:IsA("BasePart") then return end
 
-            if verifiedSupports[owner] == true then
+            if approvedSupports[owner] == true then
+                verifiedSupports[owner] = true
                 -- One verified support, not every support in the district.
                 sourceOwnerByPiece[piece] = owner
                 livePiecesByOwner[owner] = (livePiecesByOwner[owner] or 0) + 1
+                reconcile()
                 return
             end
             if owner.Parent ~= activePlatforms then return end
@@ -337,10 +344,14 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local bridgeId = owner.Name:match("^Skybridge(%d+)$")
             local id = platformId or bridgeId
             if id and ((platformId
-                    and (active[id] == "carapace" or active[id] == "cradle"))
-                or (bridgeId and active[id] == "bridge")) then
+                    and (approvedKinds[id] == "carapace"
+                        or approvedKinds[id] == "cradle"))
+                or (bridgeId and approvedKinds[id] == "bridge")) then
                 sourceOwnerByPiece[piece] = id
                 livePiecesByOwner[id] = (livePiecesByOwner[id] or 0) + 1
+                active[id] = approvedKinds[id]
+                watchOwner(owner)
+                reconcile()
             end
         end
         for _, piece in ipairs(meshFolder:GetChildren()) do
