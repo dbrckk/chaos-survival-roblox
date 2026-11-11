@@ -1,0 +1,31 @@
+name: P4 five-arena service door finish and streaming regression
+on:
+  pull_request:
+    paths:
+      - src/client/DistrictMaterialFinishKit.lua
+      - src/client/district-architecture-materials.client.lua
+      - src/server/ArenaDistrictArchitecture.lua
+      - src/shared/PbrDistrictRules.lua
+      - tests/engine/arena-material-rules.spec.luau
+      - tools/verify_premium_district_door_finish.py
+      - .github/workflows/premium-district-door-finish-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/DistrictMaterialFinishKit.lua
+      - src/client/district-architecture-materials.client.lua
+      - src/server/ArenaDistrictArchitecture.lua
+      - src/shared/PbrDistrictRules.lua
+      - tests/engine/arena-material-rules.spec.luau
+      - tools/verify_premium_district_door_finish.py
+      - .github/workflows/premium-district-door-finish-regression.yml
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify five existing facades and no new asset/render/physics cost
+        run: python3 tools/verify_premium_district_door_finish.py
