@@ -5,7 +5,6 @@ Static contract only: the final in-engine look still needs honest captures.
 """
 from pathlib import Path
 import json
-import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = (ROOT / "src/server/ArenaAtmosphere.server.lua").read_text()
@@ -69,7 +68,7 @@ for key in ("Accent", "Secondary", "Structure", "Detail"):
 assert "pillarHeight = 11" in STYLE
 assert "ringRadius = 43" in STYLE
 for name in ("Classic", "Towers", "Crossroads", "Orbital"):
-    assert re.search(rf"\\b{name} = \\{{", STYLE),name
+    assert f"{name} = {{" in STYLE,name
 assert 'return PREVIOUS[variantId] or PREVIOUS.Classic' in STYLE
 assert 'Harbor = {' in THEME and 'Harbor = {' in CLIENT
 assert 'HarborQuayInlay' in MAP
