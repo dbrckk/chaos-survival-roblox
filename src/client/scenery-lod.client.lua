@@ -15,6 +15,7 @@ local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonume
 local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
 local ApprovedPerimeterButtressMeshKit = require(script.Parent.ApprovedPerimeterButtressMeshKit)
+local ApprovedPerimeterStationDeckInlayMeshKit = require(script.Parent.ApprovedPerimeterStationDeckInlayMeshKit)
 local ApprovedPerimeterMachineryMeshKit = require(script.Parent.ApprovedPerimeterMachineryMeshKit)
 local ApprovedPerimeterRotorMeshKit = require(script.Parent.ApprovedPerimeterRotorMeshKit)
 local ApprovedPerimeterArmorMeshKit = require(script.Parent.ApprovedPerimeterArmorMeshKit)
@@ -1172,6 +1173,23 @@ task.spawn(function()
             ~= foundationMeshes then
             player:SetAttribute("LocalApprovedFoundationChassis3DCount",
                 foundationMeshes)
+        end
+        -- Reuse the already approved original 7-MeshPart floor model for
+        -- ONE true sculpted station deck inlay, leaving the six neon/glass
+        -- navigation parts untouched. Reversible even under streaming.
+        ApprovedPerimeterStationDeckInlayMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
+        local stationDeckInlays = ApprovedPerimeterStationDeckInlayMeshKit.count()
+        if player:GetAttribute("LocalApprovedStationDeckInlay3DCount")
+            ~= stationDeckInlays then
+            player:SetAttribute("LocalApprovedStationDeckInlay3DCount",
+                stationDeckInlays)
+        end
+        if player:GetAttribute("LocalPerimeterPrimitiveBasesReplaced")
+            ~= stationDeckInlays then
+            player:SetAttribute("LocalPerimeterPrimitiveBasesReplaced",
+                stationDeckInlays)
         end
         -- Replace the most visible raw rectangular station buttresses
         -- with two owner-approved vertical structural meshes per real

@@ -225,6 +225,46 @@ assert 'AssetService' not in GROUND
 print("PASS 16 Medium original floor bays, 2 Low, 36 High, camera-forward ranking")
 print("PASS shared floor pressure and native fallback with unchanged 2K atlases")
 
+# One true original station base replacement; reuse the already
+# approved seven-MeshPart ground tile without modifying six neon/glass
+# warning and navigation cues or adding a renderer/collision owner.
+INLAY=(CLIENT/"ApprovedPerimeterStationDeckInlayMeshKit.lua").read_text()
+LOD=(CLIENT/"scenery-lod.client.lua").read_text()
+MAP=(ROOT/"src/server/MapBuilder.lua").read_text()
+assert 'local SOURCE_ID = 72507987666671' in INLAY
+assert 'local CAPS = {Low=1,Medium=2,High=4}' in INLAY
+assert 'local RANGE = {Low=95,Medium=165,High=225}' in INLAY
+assert 'if tier=="High" and touch then cap=2 end' in INLAY
+assert 'if p==1 then cap=math.floor(cap*.5) end' in INLAY
+assert 'if p>=2 then cap=0 end' in INLAY
+assert 'model:GetAttribute("Original3DAssetId")~=SOURCE_ID' in INLAY
+assert 'model:GetAttribute("OwnerVerified")~=true' in INLAY
+assert 'holder:GetAttribute("OwnerVerified") ~= true' in INLAY
+assert 'if count~=7 then return nil end' in INLAY
+assert 'source:Clone()' in INLAY and 'clone:ScaleTo(scale)' in INLAY
+assert '0,.162-actual.Y*.5,.90' in INLAY
+assert INLAY.index('clone.Parent=bucket') < INLAY.index('native.Transparency=1')
+assert 'state.native.Transparency = state.alpha' in INLAY
+assert 'clone.DescendantRemoving:Connect(' in INLAY
+assert 'base:GetPropertyChangedSignal("Size"):Connect(invalid)' in INLAY
+assert 'part.CanCollide=false' in INLAY
+assert 'part.CanTouch=false' in INLAY
+assert 'part.CanQuery=false' in INLAY
+assert 'part.CastShadow=false' in INLAY
+assert 'bucket.Name = "ApprovedPerimeterStationDeckInlaysLocal"' in INLAY
+assert '"ApprovedPerimeterStationDeckInlaysLocal"' in ledger
+assert 'ApprovedPerimeterStationDeckInlayMeshKit.sync(arena, cameraPoint,' in LOD
+assert 'LocalApprovedStationDeckInlay3DCount' in LOD
+assert 'LocalPerimeterPrimitiveBasesReplaced' in LOD
+assert 'InlaidStationBase' in MAP and 'WayfindingInset' in INLAY
+for label in ('LeftLightNotch','RightLightNotch','CoreLens',
+              'WayfindingInset','PodDataRailL','PodDataRailR'):
+    assert label in MAP
+assert '.RenderStepped:Connect(' not in INLAY
+assert '.Heartbeat:Connect(' not in INLAY
+assert 'AssetService' not in INLAY
+print("PASS authentic original station deck 3D and six protected cues")
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
