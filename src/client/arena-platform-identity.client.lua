@@ -504,21 +504,28 @@ local function rebuild()
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
     local camera = workspace.CurrentCamera
-    local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
-        ordered, variant, tier.Name, base,
-        camera and camera.CFrame.Position or nil,
+    local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
+        ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
         camera and camera.CFrame.LookVector or nil,
         player:GetAttribute("OptionalVfxPressure"))
-    local lowHubDeck = tier.Name == "Low"
+    local lowBridgeChosen = tier.Name == "Low"
+        and next(nearBridgeGirders) ~= nil
+    -- One approved Low bridge uses exactly 2x7 authentic MeshParts,
+    -- instead of the other optional nearfield 7+7 source slots.
+    -- Medium/High keep every original candidate and existing cap.
+    local nearCameraCarapaces = not lowBridgeChosen
+        and PremiumPlatformSideMeshKit.selectCarapaceDecks(
+            ordered, variant, tier.Name, base,
+            camera and camera.CFrame.Position or nil,
+            camera and camera.CFrame.LookVector or nil,
+            player:GetAttribute("OptionalVfxPressure")) or {}
+    local lowHubDeck = tier.Name == "Low" and not lowBridgeChosen
         and PremiumLargeDeckHullMeshKit.selectLowDeck(
             ordered, base, camera and camera.CFrame.Position or nil,
             player:GetAttribute("OptionalVfxPressure")) or nil
-    -- The premium central full-size hull consumes the SAME one-slot
-    -- Low budget as a near-camera compact carapace, never both.
+    -- Low's full-size approved hub and compact carapace remain mutually
+    -- exclusive, including when a premium Skybridge is selected.
     if lowHubDeck then nearCameraCarapaces = {} end
-    local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
-        ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
-        camera and camera.CFrame.LookVector or nil)
     local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
         ordered, variant, tier.Name, base,
         camera and camera.CFrame.Position or nil,
@@ -527,16 +534,21 @@ local function rebuild()
     local mountedCameraCarapaces = 0
     local mountedLowHubHulls = 0
     local mountedServiceHatches3D = 0
-    local nearCradles,nearSupports =
-        PremiumLargeStructureMeshKit.selectNearRouteStructures(
-            ordered,decor,variant,tier.Name,base,
-            camera and camera.CFrame.Position or nil,
-            camera and camera.CFrame.LookVector or nil,
-            player:GetAttribute("OptionalVfxPressure"))
-    -- One source Model on Android Low, not a new independent
-    -- allowance for the new LongCradle and the existing seven-MeshPart
-    -- support column. Medium/High budgets stay exactly as before.
-    if tier.Name == "Low" and next(nearCradles) ~= nil then
+    local nearCradles,nearSupports={},{}
+    if not lowBridgeChosen then
+        nearCradles,nearSupports =
+            PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                ordered,decor,variant,tier.Name,base,
+                camera and camera.CFrame.Position or nil,
+                camera and camera.CFrame.LookVector or nil,
+                player:GetAttribute("OptionalVfxPressure"))
+    end
+    -- One 14-piece bridge OR two 7-piece Low structural slots,
+    -- never both. Medium/High unchanged.
+    if lowBridgeChosen then
+        longCradleBudget = 0
+        supportBudget = 0
+    elseif tier.Name == "Low" and next(nearCradles) ~= nil then
         supportBudget = 0
     end
     local mountedRouteCradles = 0
@@ -576,11 +588,17 @@ local function rebuild()
             end
             -- Low tier keeps its existing half-density surface ornaments,
             -- but EVERY verified takeoff gets a small gameplay route cue.
+            if tier.Name ~= "Low" or visualIndex % 2 ~= 0
+                or nearBridgeGirders[platform] == true then
+            -- A camera-selected Low skybridge may have an EVEN index.
+            -- Mount genuine bridge trusses without reintroducing the
+            -- native surface ornament that Low already omitted.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
-            for _, piece in ipairs(PlatformFinishKit.build(
-                folder, platform, variant, tier.Name, theme
-            )) do
-                registerVisual(platform, piece)
+                for _, piece in ipairs(PlatformFinishKit.build(
+                    folder, platform, variant, tier.Name, theme
+                )) do
+                    registerVisual(platform, piece)
+                end
             end
             -- Build authentic 3D structural art first. If it succeeds,
             -- completely avoid the native WedgePart armor/brace/rail layers
