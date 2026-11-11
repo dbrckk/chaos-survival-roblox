@@ -9,8 +9,10 @@ local RADIUS=17
 local SEGMENTS=14
 local CHORD=2*RADIUS*math.sin(math.pi/SEGMENTS)+.08
 local LEVEL=23
-local QUALITIES={Low=0,Medium=1,High=1}
-local DISTANCE={Low=0,Medium=420,High=580}
+-- Approved 7-piece torus replaces FOURTEEN native arc Parts on Low too.
+-- The existing stress-1 low-tier branch keeps its full native fallback.
+local QUALITIES={Low=1,Medium=1,High=1}
+local DISTANCE={Low=340,Medium=420,High=580}
 local RETENTION=26
 
 local bucket=Instance.new("Folder")

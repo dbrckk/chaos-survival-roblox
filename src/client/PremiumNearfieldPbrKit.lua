@@ -21,6 +21,7 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
     },
     Towers = {
+        {folder = "ApprovedAtmosphereCrownLocal", id = 125070862497818},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
