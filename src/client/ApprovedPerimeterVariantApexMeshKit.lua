@@ -48,8 +48,12 @@ local VARIANTS = {
     Crossroads = SPECS.Crossroads,
 }
 local STATIONS = {"North","East","South","West"}
-local CAPS = {Low=0,Medium=1,High=3}
-local RANGE = {Low=0,Medium=170,High=245}
+-- Android Low: at most ONE seven-MeshPart approved apex replaces the
+-- two native cosmetic blocks of the nearest verified perimeter station.
+-- Under the first graphics pressure tier, floor(1*.5) restores both
+-- originals before any second sculpture may be mounted.
+local CAPS = {Low=1,Medium=1,High=3}
+local RANGE = {Low=150,Medium=170,High=245}
 local RETENTION = 16
 
 local bucket = Instance.new("Folder")

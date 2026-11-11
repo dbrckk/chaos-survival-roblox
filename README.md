@@ -1,3 +1,7 @@
+## P4 — Sommets 3D propres aux arènes sur Android Low — 11 novembre 2026
+
+Le [lot des sommets de stations périphériques](docs/P4_ANDROID_LOW_AUTHENTIC_VARIANT_APEX_2026-11-11.md) autorise **un sommet original à sept MeshParts** à proximité de la caméra sur Low (150 studs), remplaçant éventuellement **deux formes primitives**. Selon l'arène, il s'agit de l'antenne Orbital, de la couronne Towers, de l'aiguillage Crossroads ou du relais Classic/Harbor. Le quota revient immédiatement à zéro dès le premier palier de pression. Les sources sont les **quatre Models propriétaires déjà approuvés** ; aucun import, collision, boucle ou atlas graphique supplémentaire n'est ajouté. **À publier séparément sur Roblox après validation exacte du commit.**
+
 ## P4 — Finitions PBR des stations authentiques et correction de proximité — 11 novembre 2026
 
 Le [nouveau lot de finitions des stations périphériques](docs/P4_PERIMETER_NEARFIELD_PBR_BOUNDS_2026-11-11.md) rend éligibles les modèles 3D authentiques des apex, armures, poutrelles, rotors, machines et contreforts à la finition **PBR 2K existante**, sans nouveau modèle, texture ni hausse de budget GPU. Le choix des sculptures proches se base désormais sur leur **géométrie réellement positionnée** au lieu d'un pivot potentiellement conservé à l'origine. Low conserve zéro overlay PBR ; les signaux d'alerte restent protégés. Cette évolution du code doit être publiée séparément sur Roblox après validation.
