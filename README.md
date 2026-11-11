@@ -1,3 +1,7 @@
+## P4 — Trappes de maintenance 3D désormais aux vrais points de vue — 11 novembre 2026
+
+Le [lot de remplacement des trappes de maintenance](docs/P4_CAMERA_SELECTED_AUTHENTIC_SERVICE_HATCHES_2026-11-11.md) réaffecte les créneaux existants de vrais reliefs métalliques 3D (cinq assets créateur approuvés), autrefois réservés à un indice de plateforme sur 9 en High et sur 18 en Medium. Ils remplacent désormais les trappes primitives à **trois pièces sur les plateformes visibles proches du joueur**, dans la même enveloppe de modèles originaux et sans nouvelles formes natives. Les collisions, les phases de disparition, les éléments de navigation et le suivi des plateformes mobiles restent inchangés. Android Low reste sur l'art natif. Cette modification GitHub n'est pas une publication Roblox.
+
 ## P4 — Finitions PBR 2K orientées vers les structures visibles — 11 novembre 2026
 
 Le [correctif de priorité PBR](docs/P4_CAMERA_FACING_NEARFIELD_PBR_2026-11-11.md) applique le même principe de visibilité aux **sculptures métalliques et céramiques proches** des cinq arènes : à budget identique, les matériaux 2K sont réservés en priorité aux modèles devant la caméra, avec une rétention des finitions déjà montées pour limiter les changements de textures. Android Low conserve zéro surcouche, Medium 2 et High tactile 4 au maximum sans pression. Les 16 images existantes et les protections des matériaux SIGNAL/CARBON/GRIP/GLASS ne changent pas ; aucune publication Roblox automatique.

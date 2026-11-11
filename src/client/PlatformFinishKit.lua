@@ -365,51 +365,148 @@ end
 -- service-hatch detail on actual moving decks. The native three-layer hatch
 -- below remains a fallback until the approved source has replicated.
 -- No new asset upload, physics, render loop or server-side platform change.
-local function originalServiceHatch(parent, platform, variant, tier, width, depth, upper, index)
-    -- Large original mesh imports are reserved for a sparse selection of
-    -- real jump decks, not all 100+ platforms. Remaining hatches keep the
-    -- existing three-piece cheap fallback. High 1/9, Medium 1/18.
-    local step = tier == "High" and 9 or 18
-    if math.floor(tonumber(index) or 0) % step ~= 1 then return nil end
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local holder = ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates")
+-- The same five creator-approved reliefs are used for both legacy
+-- source mounting and the near-camera selection. Never reserve a scarce
+-- 3D slot for a missing/invalid model (StreamingEnabled can deliver it late).
+local SERVICE_HATCH_ASSETS = {
+    Classic = 102746904688141,
+    Towers = 74708751016233,
+    Crossroads = 84038993323581,
+    Orbital = 123089585720736,
+    Harbor = 94830155055482,
+}
+
+local function serviceHatchSource(variant)
+    local assetId = SERVICE_HATCH_ASSETS[variant]
+    if not assetId then return nil end
+    local holder = game:GetService("ReplicatedStorage")
+        :FindFirstChild("ApprovedFloorReliefTemplates")
     local source = holder and holder:FindFirstChild(variant)
-    local ids = {
-        Classic = 102746904688141,
-        Towers = 74708751016233,
-        Crossroads = 84038993323581,
-        Orbital = 123089585720736,
-        Harbor = 94830155055482,
-    }
-    if not source or not source:IsA("Model")
-        or not holder:IsA("Folder")
+    if not holder or not holder:IsA("Folder")
         or holder:GetAttribute("OwnerVerified") ~= true
-        or source:GetAttribute("Original3DAssetId") ~= ids[variant]
+        or not source or not source:IsA("Model") or source.Parent ~= holder
+        or source:GetAttribute("Original3DAssetId") ~= assetId
         or source:GetAttribute("OwnerVerified") ~= true
         or source:GetAttribute("CosmeticOnly") ~= true
         or source:GetAttribute("OriginalFloorRelief3D") ~= true then
         return nil
     end
-    -- A real imported mesh family has seven material MeshParts. Guard
-    -- against loading arbitrary scripts/parts through an altered template.
-    local pieces = {}
+    local count = 0
     for _, part in ipairs(source:GetDescendants()) do
         if part:IsA("BasePart") then
-            if not part:IsA("MeshPart") then return nil end
-            pieces[#pieces + 1] = part
+            if not part:IsA("MeshPart")
+                or part.CanCollide or part.CanTouch or part.CanQuery then
+                return nil
+            end
+            count += 1
         elseif part:IsA("LuaSourceContainer") then
             return nil
         end
     end
-    if #pieces < 1 or #pieces > 12 then return nil end
-    local copy = source:Clone()
-    local _, original = copy:GetBoundingBox()
-    local long = math.max(original.X, original.Z)
-    local short = math.min(original.X, original.Z)
-    if long < 2.7 or short < .45 or original.Y > .75 then
-        copy:Destroy()
+    if count < 1 or count > 12 then return nil end
+    local _, dimensions = source:GetBoundingBox()
+    if math.max(dimensions.X, dimensions.Z) < 2.7
+        or math.min(dimensions.X, dimensions.Z) < .45
+        or dimensions.Y <= 0 or dimensions.Y > .75 then
         return nil
     end
+    return source, dimensions, assetId
+end
+
+-- The ORIGINAL 1-in-9 High / 1-in-18 Medium authentic mesh budget is
+-- counted from currently safe legacy-eligible decks. Move those same slots
+-- onto the in-view platforms that ALREADY owned native 3-piece hatches,
+-- replacing rather than stacking their simple forms. No new visual owner.
+function PlatformFinishKit.selectOriginalServiceHatches(
+        ordered, variant, tier, base, cameraPoint, cameraLook)
+    local chosen = {}
+    if (tier ~= "High" and tier ~= "Medium")
+        or type(ordered) ~= "table"
+        or not base or not base:IsA("BasePart") then return chosen end
+    local source, sourceSize = serviceHatchSource(variant)
+    if not source then return chosen end
+    local sourceLong = math.max(sourceSize.X, sourceSize.Z)
+    local sourceShort = math.min(sourceSize.X, sourceSize.Z)
+    local legacyStep = tier == "High" and 9 or 18
+    local focus = base.Position
+    local hasCamera = false
+    if typeof(cameraPoint) == "Vector3" then
+        local localCamera = base.CFrame:PointToObjectSpace(cameraPoint)
+        if math.abs(localCamera.X) <= base.Size.X * .5 + 16
+            and math.abs(localCamera.Z) <= base.Size.Z * .5 + 16
+            and math.abs(localCamera.Y) <= 130 then
+            focus = cameraPoint
+            hasCamera = true
+        end
+    end
+    local look = typeof(cameraLook) == "Vector3"
+        and Vector3.new(cameraLook.X, 0, cameraLook.Z) or Vector3.zero
+    if look.Magnitude > .2 then look = look.Unit
+    else look = Vector3.zero end
+    local quota = 0
+    local candidates = {}
+    for index, platform in ipairs(ordered) do
+        if platform:IsA("BasePart") and platform.Parent
+            and platform.Name:match("^Platform%d+$")
+            and platform.Anchored and platform.CanCollide
+            and platform.Transparency < .75 then
+            local id = PlatformFinishKit.visualIndex(platform, index)
+            local phase = platform:GetAttribute("CollapsePhase")
+            local shutter = platform:GetAttribute("BridgeShutterPhase")
+            local sx, sz = platform.Size.X, platform.Size.Z
+            if id % 3 == 1 and math.min(sx, sz) >= 8
+                and math.max(sx, sz) <= 36
+                and (phase == nil or phase == "Normal" or phase == "Safe")
+                and (shutter == nil or shutter == "Idle") then
+                local width = math.min(sx * .55, 6.2)
+                local depth = math.min(sz * .42, 4.2)
+                local scale = math.min(1,
+                    width * .96 / sourceLong,
+                    depth * .90 / sourceShort)
+                if scale >= .45 then
+                    -- Count only source-bearing platforms that the OLD
+                    -- index gate would actually have been able to mount.
+                    if id % legacyStep == 1 then quota += 1 end
+                    local delta = platform.Position - focus
+                    local distance = Vector3.new(
+                        delta.X, delta.Y * .6, delta.Z).Magnitude
+                    local score = distance
+                    local flat = Vector3.new(delta.X, 0, delta.Z)
+                    if hasCamera and flat.Magnitude > 30
+                        and look.Magnitude > .2 then
+                        score -= flat.Unit:Dot(look)
+                            * math.min(36, flat.Magnitude * .18)
+                    end
+                    candidates[#candidates + 1] = {
+                        part = platform, id = id, score = score,
+                    }
+                end
+            end
+        end
+    end
+    table.sort(candidates, function(a, b)
+        if a.score ~= b.score then return a.score < b.score end
+        return a.id < b.id
+    end)
+    for i = 1, math.min(quota, #candidates) do
+        chosen[candidates[i].part] = true
+    end
+    return chosen
+end
+
+local function originalServiceHatch(parent, platform, variant, tier,
+        width, depth, upper, index, selected)
+    -- FALSE: this owner already allocated its finite mesh slots.
+    -- NIL: preserve legacy use in independent engine helper callers.
+    local step = tier == "High" and 9 or 18
+    if selected == false
+        or (selected ~= true
+            and math.floor(tonumber(index) or 0) % step ~= 1) then
+        return nil
+    end
+    local source, original, assetId = serviceHatchSource(variant)
+    if not source then return nil end
+    local copy = source:Clone()
     -- Preserve the entire original relief, no non-uniform mesh distortion.
     local scale = math.min(1, width * .96 / long, depth * .90 / short)
     if scale < .45 or not pcall(function() copy:ScaleTo(scale) end) then
@@ -434,7 +531,7 @@ local function originalServiceHatch(parent, platform, variant, tier, width, dept
             part:SetAttribute("ChaosBaseTransparency", part.Transparency)
             part:SetAttribute("ChaosPlatformTrim", true)
             part:SetAttribute("OriginalServiceHatch3D", true)
-            part:SetAttribute("Original3DAssetId", ids[variant])
+            part:SetAttribute("Original3DAssetId", assetId)
             made[#made + 1] = part
         end
     end
@@ -458,7 +555,8 @@ local function originalServiceHatch(parent, platform, variant, tier, width, dept
     return made
 end
 
-function PlatformFinishKit.buildServiceHatch(parent, platform, variant, tier, theme, index)
+function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
+        tier, theme, index, selected)
     if not parent or not platform or not platform:IsA("BasePart")
         or tier == "Low" or not NAMES[variant] or not theme
         or (math.floor(tonumber(index) or 0) % 3 ~= 1)
@@ -470,7 +568,8 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant, tier, th
     local hatchWidth = math.min(sx * 0.55, 6.2)
     local hatchDepth = math.min(sz * 0.42, 4.2)
     local original = originalServiceHatch(
-        parent, platform, variant, tier, hatchWidth, hatchDepth, upper, index)
+        parent, platform, variant, tier, hatchWidth, hatchDepth, upper, index,
+        selected)
     if original then return original end
     local materials = {
         Classic = Enum.Material.DiamondPlate,

@@ -499,6 +499,10 @@ local function rebuild()
     local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
         ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
         camera and camera.CFrame.LookVector or nil)
+    local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
+        ordered, variant, tier.Name, base,
+        camera and camera.CFrame.Position or nil,
+        camera and camera.CFrame.LookVector or nil)
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
     local nearCradles,nearSupports =
@@ -606,7 +610,8 @@ local function rebuild()
             -- bounded subset of actual jump decks. Shares this existing
             -- platform's weld, collapse visibility and shrinking footprint.
             for _, piece in ipairs(PlatformFinishKit.buildServiceHatch(
-                folder, platform, variant, tier.Name, theme, visualIndex
+                folder, platform, variant, tier.Name, theme, visualIndex,
+                nearServiceHatches[platform] == true
             )) do
                 registerVisual(platform, piece)
             end
