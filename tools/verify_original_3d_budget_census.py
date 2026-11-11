@@ -284,18 +284,37 @@ assert 'if tier == "Low" then return {} end' in FINISH
 assert 'part.CanCollide = false' in FINISH
 assert 'part.CanTouch = false' in FINISH
 assert 'part.CanQuery = false' in FINISH
-assert 'local nearServiceHatches = not lowBridgeChosen' in OWNER
-assert 'local lowServiceHatchChosen = tier.Name == "Low"' in OWNER
-assert 'if lowServiceHatchChosen then' in OWNER
+# One shared Low visual chooser compares APPROVED real source holders
+# against camera distance, instead of prioritizing a distant bridge or
+# granting the first streamed 3D hatch a permanent premium slot.
+assert 'local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(' in OWNER
+assert 'if tier.Name == "Low" then' in OWNER
+assert 'local function nearest(set)' in OWNER
+assert 'if platform.Parent == platforms then' in OWNER
+assert 'local bridge, bridgeDistance = nearest(nearBridgeGirders)' in OWNER
+assert 'local carapace, carapaceDistance = nearest(nearCameraCarapaces)' in OWNER
+assert 'local hatch, hatchDistance = nearest(nearServiceHatches)' in OWNER
+assert 'local foregroundDistance = math.min(' in OWNER
+assert 'bridgeDistance <= foregroundDistance + 16' in OWNER
+assert 'cameraLook.Y < -0.50' in OWNER
+assert 'if lowHubDeck and hullDistance <= math.min(' in OWNER
+assert 'elseif carapace and carapaceDistance <= hatchScore + 8 then' in OWNER
+assert 'elseif hatch then' in OWNER
+assert 'nearBridgeGirders = {}' in OWNER
 assert 'nearCameraCarapaces = {}' in OWNER
+assert 'nearServiceHatches = {}' in OWNER
 assert 'lowHubDeck = nil' in OWNER
+assert 'local lowBridgeChosen = tier.Name == "Low"' in OWNER
+assert 'if lowBridgeChosen then' in OWNER
+assert 'longCradleBudget = 0' in OWNER
+assert 'supportBudget = 0' in OWNER
 assert 'or nearServiceHatches[platform] == true' in OWNER
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger
 assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
 assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
-print("PASS one original seven-mesh Low top hatch with shared budget and no primitive fallback")
+print("PASS Low visual distance arbitration, source-exclusive 7+7 budget and zero native hatch fallback")
 
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
