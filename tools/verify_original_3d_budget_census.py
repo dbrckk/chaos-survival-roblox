@@ -98,6 +98,47 @@ assert '"ApprovedPerimeterButtressesLocal"' in ledger
 assert 'RenderStepped' not in BUTTRESS and 'Heartbeat' not in BUTTRESS
 assert 'AssetService' not in BUTTRESS
 
+# Original rotor sculpt: a single near-camera Low station may
+# replace exactly THREE inert cylinder Parts with THREE owner-approved
+# seven-MeshPart models (21 optional local MeshParts maximum). On Low,
+# the first GPU pressure tier must restore ALL three native cylinders.
+# No source import, new render-step or physics/collision owner is added.
+ROTOR=(CLIENT/"ApprovedPerimeterRotorMeshKit.lua").read_text()
+ROTOR_LOADER=(ROOT/"src/server/PremiumPerimeterRotorAssets.lua").read_text()
+assert 'local CAPS = {Low = 1, Medium = 1, High = 3}' in ROTOR
+assert 'local RANGE = {Low = 130, Medium = 170, High = 245}' in ROTOR
+assert 'local APPROVED = 133526819668194' in ROTOR
+assert 'local ID = 133526819668194' in ROTOR_LOADER
+assert 'local NAMES = {"IntakeTurbineL", "IntakeTurbineR", "GeneratorRotor"}' in ROTOR
+assert 'if count ~= 7 then return nil end' in ROTOR
+assert 'if #parts ~= 7 then' in ROTOR
+assert 'for _, native in ipairs(natives) do' in ROTOR
+assert 'local model, pieces = fit(source, native)' in ROTOR
+assert 'for _, old in ipairs(models) do old:Destroy() end' in ROTOR
+assert 'if not genuineStation(arena, station, index) or not source.Parent then' in ROTOR
+assert 'for _, model in ipairs(models) do model.Parent = bucket end' in ROTOR
+assert 'for _, native in ipairs(natives) do native.Transparency = 1 end' in ROTOR
+assert ROTOR.index('for _, model in ipairs(models) do model.Parent = bucket end') < ROTOR.index(
+    'for _, native in ipairs(natives) do native.Transparency = 1 end')
+assert 'if stress == 1 then cap = math.floor(cap * .5) end' in ROTOR
+assert 'if stress >= 2 then cap = 0 end' in ROTOR
+assert 'native.Transparency = alpha' in ROTOR
+assert 'bucket.ChildRemoved:Connect' in ROTOR
+assert 'part.CastShadow = false' in ROTOR
+assert 'part.CanCollide = false' in ROTOR
+assert 'part.CanTouch = false' in ROTOR
+assert 'part.CanQuery = false' in ROTOR
+assert 'source:GetAttribute("OwnerVerified") ~= true' in ROTOR
+assert 'source:GetAttribute("Original3DAssetId") ~= APPROVED' in ROTOR
+assert 'source:GetAttribute("OriginalPerimeterRotor3D") ~= true' in ROTOR
+assert '"ApprovedPerimeterRotorsLocal"' in ledger
+assert 'RenderStepped' not in ROTOR and 'Heartbeat' not in ROTOR
+assert 'AssetService' not in ROTOR
+assert 'GlobalApprovedImportGate.load, AssetService, ID' in ROTOR_LOADER
+assert ROTOR_LOADER.count('task.spawn(function()') == 1
+assert ROTOR_LOADER.count('GlobalApprovedImportGate.load') == 1
+print("PASS Android Low: genuine owner-approved 3-rotor sculpt with atomic rollback")
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,

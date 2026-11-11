@@ -86,7 +86,9 @@ VisualBudgetRules.LocalFolders = {
     -- Each verified original Rotor Model is SEVEN real UV/tangent MeshParts.
     -- Exactly three rotors per selected perimeter station. All twenty-one
     -- MeshParts per station are in the existing Android 440/680/900 census.
-    -- Low 0, Medium one station, High touch two / PC three, stress demotes.
+    -- Low ONE near-camera station (130 studs), Medium one station,
+    -- High touch two / PC three; first graphics pressure removes Low.
+    -- All 21 optional Low MeshParts share the same 440-Part census.
     "ApprovedPerimeterRotorsLocal",
     -- Four exact existing native angled wedges per original station are
     -- masked behind two Wing plus two Cap approved 3D Model clones only
