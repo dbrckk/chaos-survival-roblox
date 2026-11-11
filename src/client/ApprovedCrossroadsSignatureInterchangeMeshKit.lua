@@ -6,9 +6,11 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=96622579843060
-local RANGE={Low=0,Medium=405,High=580}
+local RANGE={Low=320,Medium=405,High=580}
 local RETENTION=25
-local QUALITY={Low=0,Medium=1,High=1}
+-- At Low one approved seven-MeshPart interchange replaces FOUR native
+-- wedges/slabs; the existing pressure 1/2 fallback remains authoritative.
+local QUALITY={Low=1,Medium=1,High=1}
 local NAMES={"LowerExchange","UpperExchange","CantileverWest","CantileverEast"}
 local SIZES={
     Vector3.new(42,2,6),Vector3.new(48,1.3,5.4),

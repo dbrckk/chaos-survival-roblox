@@ -5,8 +5,10 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=91717127334369
-local QUALITY={Low=0,Medium=1,High=1}
-local RANGE={Low=0,Medium=440,High=610}
+-- At Low one approved seven-MeshPart sculpture replaces FIVE verified
+-- nonphysical primitive supports; pressure 1 restores natives immediately.
+local QUALITY={Low=1,Medium=1,High=1}
+local RANGE={Low=320,Medium=440,High=610}
 local RETENTION=26
 local NAMES={
     "RelayButtressWest","RelayButtressEast",

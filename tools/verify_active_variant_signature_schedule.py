@@ -24,6 +24,38 @@ SOURCES={
     "Orbital":("PremiumOrbitalSignatureRingAssets.lua",
                "125070862497818",22,42),
 }
+# Original, owner-approved Classic/Crossroads signature 3D must be
+# mountable on Low without changing collisions, other tiers or fallbacks.
+FORGE=(ROOT/"src/client/ApprovedClassicForgedSupportsMeshKit.lua").read_text()
+INTERCHANGE=(ROOT/"src/client/ApprovedCrossroadsSignatureInterchangeMeshKit.lua").read_text()
+FORGE_ASSETS=(ROOT/"src/server/PremiumClassicForgedSupportsAssets.lua").read_text()
+assert 'local QUALITY={Low=1,Medium=1,High=1}' in FORGE
+assert 'local RANGE={Low=320,Medium=440,High=610}' in FORGE
+assert 'local QUALITY={Low=1,Medium=1,High=1}' in INTERCHANGE
+assert 'local RANGE={Low=320,Medium=405,High=580}' in INTERCHANGE
+for client in (FORGE,INTERCHANGE):
+    assert 'if stress>=2 or (stress==1 and tier~="High") then' in client
+    assert 'native.Transparency=alpha' in client
+    assert 'bucket.ChildRemoved:Connect' in client
+    assert 'if count~=7 then return nil end' in client
+    assert 'Original3DAssetId' in client
+    assert 'part.CanCollide=false' in client
+    assert 'part.CanTouch=false' in client
+    assert 'part.CanQuery=false' in client
+    assert 'RenderStepped' not in client and 'Heartbeat' not in client
+assert 'local MODEL_ID=91717127334369' in FORGE
+assert 'local MODEL_ID=96622579843060' in INTERCHANGE
+assert '91717127334369' in APPROVED
+assert '96622579843060' in APPROVED
+assert 'require("./PremiumActiveVariantImportSchedule")' in FORGE_ASSETS
+assert 'ActiveSignatureSchedule.waitFor("Classic",56,119)' in FORGE_ASSETS
+assert 'task.wait(119)' not in FORGE_ASSETS
+assert FORGE_ASSETS.count('task.spawn(function()')==1
+assert FORGE_ASSETS.count('GlobalApprovedImportGate.load')==1
+assert 'OriginalMeshScenery.sanitize(raw)' in FORGE_ASSETS
+print("PASS Low native swaps Classic 5->7 and Crossroads 4->7 with fallback")
+print("PASS Classic forge source active-only at 56s, otherwise 119s")
+
 assert "function Schedule.waitFor(variant, earlySeconds, fallbackSeconds, alsoVariant)" in SCHEDULE
 assert 'assert(alsoVariant == nil or (type(alsoVariant) == "string"' in SCHEDULE
 assert 'alsoVariant ~= nil and id == alsoVariant' in SCHEDULE
