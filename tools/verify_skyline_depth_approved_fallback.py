@@ -42,7 +42,7 @@ for guard in ('"OwnerVerified"','"OriginalSkylineDepthSculpt3D"',
               'if scale < .72 or scale > 1.55'):
     assert guard in KIT,guard
 
-for guard in ('PremiumApprovedAssetImportGate','ImportGate.load',
+for guard in ('PremiumApprovedAssetImportGate','GlobalApprovedImportGate.load',
               'OriginalMeshScenery.sanitize','OriginalSkylineDepthSculpt3D',
               'ApprovedSkylineDepthSculptTemplates',
               'task.wait(34)','validated(clean)',
