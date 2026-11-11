@@ -1,3 +1,7 @@
+## P4 — Grand carénage 3D authentique du hub Crossroads sur Android Low — 11 novembre 2026
+
+Le [lot du véritable dessous de plateforme centrale](docs/P4_LOW_CROSSROADS_AUTHENTIC_HUB_HULL_2026-11-11.md) réutilise le Model créateur approuvé **125929150866282** sur les decks compatibles 18×18, en premier lieu le vrai **Platform1 central Crossroads**. Low consacre le **même unique emplacement** au grand carénage **ou** à la carapace compacte de la précédente évolution, jamais aux deux ; 7 MeshParts authentiques remplacent les 2 wedges natifs sous conditions strictes de provenance, distance caméra ≤125 studs et pression graphique zéro. Aucun nouveau modèle, physique, PBR ni boucle. La publication publique Roblox et les mesures Engine/Android restent à effectuer.
+
 ## P4 — Une carapace de plateforme en vraie 3D sur Android Low — 11 novembre 2026
 
 Le [lot de remplacement des carapaces au premier plan](docs/P4_LOW_CAMERA_AUTHENTIC_DECK_CARAPACE_2026-11-11.md) autorise **une seule sculpture 3D originale Approved de 7 MeshParts à moins de 125 studs** sur Low, pour remplacer les **2 WedgeParts natives** d'une plateforme réellement jouable déjà décorée. Sur pression graphique 1/2, les primitives reviennent via le propriétaire visuel existant ; le budget High 16 / Medium 8 ne change pas. Le nouveau coût maximal sur Low est de **+5 BaseParts**, déjà compris dans le recensement adaptatif global. Aucun asset, PBR 2K ou boucle supplémentaire. Le code doit encore être testé dans Roblox Engine/Android, puis publié sur la Place.
