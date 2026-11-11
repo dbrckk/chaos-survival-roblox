@@ -467,6 +467,8 @@ local function syncTakeoff(platform, center, variant)
     end
 end
 
+local scheduleRebuild
+
 local function rebuild()
     clear()
 
@@ -530,7 +532,7 @@ local function rebuild()
                 and tonumber(platform:GetAttribute("RouteTier")) == nil then
                 routeAttributeConnections[platform] =
                     platform:GetAttributeChangedSignal("RouteTier"):Connect(function()
-                        task.defer(rebuild)
+                        scheduleRebuild()
                     end)
             end
             -- The 16 appended Harbor terminals can stream in with their
@@ -544,9 +546,9 @@ local function rebuild()
                     or platform:GetAttribute("HarborSpokeStep") == nil) then
                 outpostAttributeConnections[platform] = {
                     platform:GetAttributeChangedSignal("HarborSpokeRoute")
-                        :Connect(function() task.defer(rebuild) end),
+                        :Connect(function() scheduleRebuild() end),
                     platform:GetAttributeChangedSignal("HarborSpokeStep")
-                        :Connect(function() task.defer(rebuild) end),
+                        :Connect(function() scheduleRebuild() end),
                 }
             end
             -- Low tier keeps its existing half-density surface ornaments,
@@ -882,7 +884,7 @@ local rebuildPending = false
 local decorRebuildPending = false
 local decorGeneration = 0
 
-local function scheduleRebuild()
+scheduleRebuild = function()
     if rebuildPending then return end
     rebuildPending = true
     -- The 320x320 arena can replicate hundreds of Platforms in separate
@@ -1038,6 +1040,38 @@ roundEvent.OnClientEvent:Connect(function(packet)
     end
 end)
 
+-- Replication may deliver a Model before its owner/asset verification
+-- attributes. ChildAdded alone leaves genuine 3D in primitive fallback
+-- until a new map or camera sector arrives. Observe only the existing
+-- approved template metadata, on the same bounded rebuild scheduler.
+-- This is an event-driven recovery path, not a new polling/render loop.
+local approvedTemplateNames = {
+    Classic = true, Towers = true, Crossroads = true,
+    Orbital = true, Harbor = true, Bridge = true,
+    LongCradle = true, LargeDeckHull = true,
+}
+local function watchVerifiedTemplateReadiness(holder, connections, marker)
+    if not holder or not holder:IsA("Folder") then return end
+    connections[#connections + 1] = holder:GetAttributeChangedSignal(
+        "OwnerVerified"):Connect(scheduleRebuild)
+    local observed = {}
+    local function attach(model)
+        if not model:IsA("Model") or not approvedTemplateNames[model.Name]
+            or observed[model] then return end
+        observed[model] = true
+        for _, attribute in ipairs({
+            "OwnerVerified", "Original3DAssetId", "CosmeticOnly", marker,
+        }) do
+            connections[#connections + 1] =
+                model:GetAttributeChangedSignal(attribute):Connect(function()
+                    if model.Parent == holder then scheduleRebuild() end
+                end)
+        end
+    end
+    for _, model in ipairs(holder:GetChildren()) do attach(model) end
+    connections[#connections + 1] = holder.ChildAdded:Connect(attach)
+end
+
 -- Original service hatches are loaded in a late server asset lane.
 -- Rebuild the existing platform visual owner once the current arena's
 -- approved model becomes available; otherwise first-join players would
@@ -1053,6 +1087,8 @@ local function watchPlatformReliefTemplates(holder)
     table.clear(platformReliefTemplateConnections)
     currentPlatformReliefTemplates = holder
     if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            platformReliefTemplateConnections, "OriginalFloorRelief3D")
         local function changed(child)
             local generated = workspace:FindFirstChild("GeneratedMap")
             local arena = generated and generated:FindFirstChild("Arena")
@@ -1080,6 +1116,8 @@ local function watchSideTemplates(holder)
     table.clear(sideTemplateConnections)
     watchedSideTemplates = holder
     if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            sideTemplateConnections, "OriginalStructuralSide3D")
         local function changed(child)
             local generated = workspace:FindFirstChild("GeneratedMap")
             local arena = generated and generated:FindFirstChild("Arena")
@@ -1109,6 +1147,8 @@ local function watchHullTemplates(holder)
     table.clear(hullTemplateConnections)
     watchedHullTemplates = holder
     if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            hullTemplateConnections, "OriginalLargeDeckHull3D")
         local function onHullChanged(child)
             if child.Name == "LargeDeckHull" then scheduleRebuild() end
         end
@@ -1132,6 +1172,8 @@ local function watchLargeStructureTemplates(holder)
     table.clear(largeStructureTemplateConnections)
     watchedLargeStructureTemplates = holder
     if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            largeStructureTemplateConnections, "OriginalLargeStructure3D")
         local function changed(child)
             local generated = workspace:FindFirstChild("GeneratedMap")
             local arena = generated and generated:FindFirstChild("Arena")
