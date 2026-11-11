@@ -9,9 +9,14 @@ local Kit = {}
 -- MeshPart owner, not by scanning arbitrary descendants of Workspace.
 -- Harbor's existing dock structures keep their own PBR; this shared
 -- quota also covers the new approved near-camera atmospheric columns and
--- exterior tower silhouettes. Same GPU budget and 16 approved texture IDs.
+-- exterior tower silhouettes and four authentic jagged exterior ridges.
+-- Same GPU budget and 16 approved texture IDs.
 local SOURCES = {
     Classic = {
+        {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
+        {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83023096720529},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
@@ -21,6 +26,10 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
     },
     Towers = {
+        {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
+        {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83023096720529},
         {folder = "ApprovedAtmosphereCrownLocal", id = 125070862497818},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
@@ -31,6 +40,10 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 86423178125318},
     },
     Crossroads = {
+        {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
+        {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83023096720529},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
@@ -40,6 +53,10 @@ local SOURCES = {
         {folder = "ApprovedCrossroadsOpenGantryLocal", id = 90844491148907},
     },
     Orbital = {
+        {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
+        {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83023096720529},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
@@ -49,6 +66,10 @@ local SOURCES = {
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 138666009076890},
     },
     Harbor = {
+        {folder = "ApprovedExteriorRidgesLocal", id = 123836720232695},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83853948389204},
+        {folder = "ApprovedExteriorRidgesLocal", id = 108491064314671},
+        {folder = "ApprovedExteriorRidgesLocal", id = 83023096720529},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},

@@ -1,3 +1,7 @@
+## P4 — Crêtes extérieures authentiques 3D sur Low et PBR — 11 novembre 2026
+
+Le [lot de crêtes sculptées](docs/P4_AUTHENTIC_EXTERIOR_RIDGES_LOW_PBR_2026-11-11.md) autorise sur Android Low **une véritable crête 3D originale à sept MeshParts** à moins de 290 studs, remplaçant potentiellement trois `WedgeParts` primitives. Le repli natif est immédiat sous pression. Medium/High peuvent appliquer les quatre atlas PBR 2K déjà approuvés sur les quatre modèles de crêtes, **dans le quota partagé existant**, sans nouveaux assets, collisions ni requêtes Roblox. La disponibilité des modèles et le rendu réel sur Android restent à confirmer.
+
 ## P4 — Colonne atmosphérique 3D proche sur Android Low — 11 novembre 2026
 
 Le [lot des colonnes atmosphériques Low](docs/P4_LOW_AUTHENTIC_ATMOSPHERE_COLUMNS_2026-11-11.md) autorise **une seule sculpture 3D originale et approuvée** à 175 studs maximum, contre zéro auparavant. Les huit corps candidats par carte restent non physiques et leurs balises sont conservées. Dès la pression graphique 1, la Part primitive revient ; si un clone disparaît entre deux passages LOD, la restauration est immédiate. Pas de nouvelle requête AssetService, texture, boucle ni budget graphique. Les FPS Android et la publication Roblox restent à vérifier.

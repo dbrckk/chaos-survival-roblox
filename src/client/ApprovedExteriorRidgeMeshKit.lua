@@ -21,8 +21,11 @@ local PROFILES={
 }
 local VARIANTS={Classic=true,Towers=true,Crossroads=true,
     Orbital=true,Harbor=true}
-local QUALITIES={Low=0,Medium=2,High=4}
-local DISTANCE={Low=0,Medium=410,High=530}
+-- A single authentic seven-part far-field ridge can now replace
+-- three large WedgeParts even at Low tier when the approved model exists.
+-- Stress 1 floors the Low cap to zero, restoring native silhouettes.
+local QUALITIES={Low=1,Medium=2,High=4}
+local DISTANCE={Low=290,Medium=410,High=530}
 local RETENTION=26
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedExteriorRidgesLocal"
