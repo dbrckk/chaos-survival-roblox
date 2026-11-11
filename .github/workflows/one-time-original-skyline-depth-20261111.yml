@@ -1,0 +1,49 @@
+# Deliberately uploads only one own-created Model after source verification.
+# This NEVER changes the published Roblox game or approved registry.
+name: One-time Original Skyline Depth Sculpt 2026-11-11
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-original-skyline-depth-20261111.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-skyline-depth-20261111
+  cancel-in-progress: false
+jobs:
+  source-gate:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify geometry and glTF before any external API call
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_skyline_depth.py --output "$RUNNER_TEMP/chaos_skyline_depth_sculpt.obj" > "$RUNNER_TEMP/skyline.json"
+          python3 tools/obj_to_gltf.py --source "$RUNNER_TEMP/chaos_skyline_depth_sculpt.obj" --materials assets/source/chaos_route_kit.mtl --output "$RUNNER_TEMP/chaos_skyline_depth_sculpt.gltf" > "$RUNNER_TEMP/export.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          import json,pathlib,sys
+          root=pathlib.Path(sys.argv[1])
+          info=json.loads((root/'skyline.json').read_text())
+          g=json.loads((root/'chaos_skyline_depth_sculpt.gltf').read_text())
+          assert info['asset']=='skyline_depth_sculpt'
+          assert 450<=info['triangles']<=3200
+          assert 35<=info['groups']<=150
+          assert len(g['meshes'][0]['primitives'])==7
+          assert {m['name'] for m in g['materials']}==set(info['materials'])
+          print('Source verified; asset import can begin.',info['sha256'])
+          PY
+  upload-skyline:
+    needs: source-gate
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: skyline_depth_sculpt
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
