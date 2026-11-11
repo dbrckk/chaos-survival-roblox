@@ -29,7 +29,11 @@ ITEMS=[
 assert 'task.wait(earlySeconds)' in HELPER
 assert 'task.delay(remaining' in HELPER
 assert 'fallbackSeconds - earlySeconds' in HELPER
-assert 'arena:GetAttribute("VariantId") == variant' in HELPER
+assert 'local id = arena:GetAttribute("VariantId")' in HELPER
+assert 'return id == variant or (alsoVariant ~= nil and id == alsoVariant)' in HELPER
+assert 'if arena and isTarget(arena) then' in HELPER
+# South modules must continue using the single-variant, three-argument call.
+assert 'alsoVariant ~= nil' in HELPER
 assert 'arena:GetAttributeChangedSignal("VariantId")' in HELPER
 assert 'wake.Event:Wait()' in HELPER
 assert 'wake:Destroy()' in HELPER
