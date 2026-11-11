@@ -4,6 +4,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local ArenaPresentation = require("../../src/shared/ArenaPresentation")
 local VisualTheme = require("../../src/shared/VisualTheme")
+local ArenaAtmosphereStyle = require("../../src/server/ArenaAtmosphereStyle")
 local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
@@ -27,6 +28,32 @@ local function planarUnit(vector)
 end
 
 describe("Arena presentation", function()
+    it("keeps Harbor atmosphere's port identity independent of Classic survey lights", function()
+        local harbor = ArenaAtmosphereStyle.profileFor("Harbor")
+        local art = VisualTheme.arena("Harbor")
+        local classic = ArenaAtmosphereStyle.profileFor("Classic")
+        expect(harbor.accent == art.Accent).toBe(true)
+        expect(harbor.secondary == art.Secondary).toBe(true)
+        expect(harbor.structure == art.Structure).toBe(true)
+        expect(harbor.detail == art.Detail).toBe(true)
+        expect(harbor.accent == classic.accent).toBe(false)
+        expect(harbor.secondary == classic.secondary).toBe(false)
+        expect(harbor.pillarHeight).toBe(11)
+        expect(harbor.ringRadius).toBe(43)
+        -- Unknown maps have the same conservative fallback as before.
+        expect(ArenaAtmosphereStyle.profileFor("Unsupported")).toBe(classic)
+
+        -- The other four identities must not be recolored by this fix.
+        local towers = ArenaAtmosphereStyle.profileFor("Towers")
+        local crossroads = ArenaAtmosphereStyle.profileFor("Crossroads")
+        local orbital = ArenaAtmosphereStyle.profileFor("Orbital")
+        expect(classic.accent == Color3.fromRGB(90, 180, 255)).toBe(true)
+        expect(towers.secondary == Color3.fromRGB(255, 185, 70)).toBe(true)
+        expect(crossroads.accent == Color3.fromRGB(205, 105, 255)).toBe(true)
+        expect(orbital.accent == Color3.fromRGB(65, 255, 205)).toBe(true)
+    end)
+
+
     it("keeps the owner-approved 3D skyfleet safe across all five maps and tiers", function()
         -- The actual Model was approved by Roblox Assets (#41634338244).
         -- An absent/late template must always retain a fully playable
