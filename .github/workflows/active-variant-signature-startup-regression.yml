@@ -7,6 +7,7 @@ on:
       - src/server/PremiumCrossroadsSignatureInterchangeAssets.lua
       - src/server/PremiumHarborSignatureGantryAssets.lua
       - src/server/PremiumTowersSignatureBridgeAssets.lua
+      - src/server/PremiumOrbitalSignatureRingAssets.lua
       - src/server/init.server.lua
       - assets/source/roblox-asset-registry.json
       - tools/verify_active_variant_signature_schedule.py
@@ -19,6 +20,7 @@ on:
       - src/server/PremiumCrossroadsSignatureInterchangeAssets.lua
       - src/server/PremiumHarborSignatureGantryAssets.lua
       - src/server/PremiumTowersSignatureBridgeAssets.lua
+      - src/server/PremiumOrbitalSignatureRingAssets.lua
       - src/server/init.server.lua
       - assets/source/roblox-asset-registry.json
       - tools/verify_active_variant_signature_schedule.py

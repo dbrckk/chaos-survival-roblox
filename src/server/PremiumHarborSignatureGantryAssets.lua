@@ -47,7 +47,7 @@ function Assets.start()
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
         -- First playable round, bots, and core arena generation come first.
-        ActiveSignatureSchedule.waitFor("Harbor",46,91)
+        ActiveSignatureSchedule.waitFor("Harbor",20,91)
         if holder:FindFirstChild("SculptedGantry") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,

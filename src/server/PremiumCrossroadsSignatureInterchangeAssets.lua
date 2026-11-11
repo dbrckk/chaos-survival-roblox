@@ -46,7 +46,7 @@ function Assets.start()
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
         -- Nonblocking: initial round, bots and core gameplay run first.
-        ActiveSignatureSchedule.waitFor("Crossroads",45,77)
+        ActiveSignatureSchedule.waitFor("Crossroads",19,77)
         if folder:FindFirstChild("ForgedInterchange") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,
