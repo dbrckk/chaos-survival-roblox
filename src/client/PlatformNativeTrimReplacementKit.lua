@@ -310,7 +310,9 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     -- one ChildRemoved subscription and no per-part render/heartbeat loop.
     if meshFolder and meshFolder:IsA("Folder") then
         local sourceOwnerByPiece = {}
+        local livePiecesByOwner = {}
         local function registerSourcePiece(piece)
+            if sourceOwnerByPiece[piece] ~= nil then return end
             if not piece:IsA("MeshPart")
                 or not (piece:GetAttribute("Original3DStructuralSide") == true
                     or piece:GetAttribute("OriginalLargeStructure3D") == true
@@ -327,6 +329,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             if verifiedSupports[owner] == true then
                 -- One verified support, not every support in the district.
                 sourceOwnerByPiece[piece] = owner
+                livePiecesByOwner[owner] = (livePiecesByOwner[owner] or 0) + 1
                 return
             end
             if owner.Parent ~= activePlatforms then return end
@@ -337,11 +340,16 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     and (active[id] == "carapace" or active[id] == "cradle"))
                 or (bridgeId and active[id] == "bridge")) then
                 sourceOwnerByPiece[piece] = id
+                livePiecesByOwner[id] = (livePiecesByOwner[id] or 0) + 1
             end
         end
         for _, piece in ipairs(meshFolder:GetChildren()) do
             registerSourcePiece(piece)
         end
+        -- Streaming may add the remaining MeshParts after the folder is
+        -- initially bound. Track only verified, welded source geometry.
+        watchers[#watchers + 1] =
+            meshFolder.ChildAdded:Connect(registerSourcePiece)
         watchers[#watchers + 1] = meshFolder.ChildRemoved:Connect(
             function(piece)
                 local owner = sourceOwnerByPiece[piece]
@@ -350,6 +358,12 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                 -- premium replacements; only a tracked, source-authored
                 -- mesh bound to an actual server native owner can do so.
                 if owner == nil then return end
+                local remaining = (livePiecesByOwner[owner] or 1) - 1
+                if remaining > 0 then
+                    livePiecesByOwner[owner] = remaining
+                    return
+                end
+                livePiecesByOwner[owner] = nil
                 if type(owner) == "string" then
                     active[owner] = nil
                 else
