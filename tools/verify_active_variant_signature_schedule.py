@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression: active visual signature loads earlier; inactive imports do not.
+"""Regression: five active hero signatures get a bounded first-round import.
 
 Source contract only. Does not claim measured Studio/Android startup time,
 runtime AssetService concurrency, FPS improvement or Place publication.
@@ -14,25 +14,44 @@ REG=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())
 APPROVED={m["asset_id"]:m for m in REG["models"] if m.get("moderation")=="Approved"}
 SOURCES={
     "Classic":("PremiumClassicSignatureObservatoryAssets.lua",
-               "112493873850364",44,104),
+               "112493873850364",18,104),
     "Crossroads":("PremiumCrossroadsSignatureInterchangeAssets.lua",
-                  "96622579843060",45,77),
+                  "96622579843060",19,77),
     "Harbor":("PremiumHarborSignatureGantryAssets.lua",
-              "124368710235343",46,91),
+              "124368710235343",20,91),
     "Towers":("PremiumTowersSignatureBridgeAssets.lua",
-              "126298311664881",47,62),
+              "126298311664881",21,62),
+    "Orbital":("PremiumOrbitalSignatureRingAssets.lua",
+               "125070862497818",22,42),
 }
 assert "function Schedule.waitFor(variant, earlySeconds, fallbackSeconds)" in SCHEDULE
 assert "task.wait(earlySeconds)" in SCHEDULE
-assert "task.wait(fallbackSeconds-earlySeconds)" in SCHEDULE
-assert "local generated=workspace:FindFirstChild(\"GeneratedMap\")" in SCHEDULE
-assert 'local arena=generated and generated:FindFirstChild("Arena")' in SCHEDULE
-assert 'arena:GetAttribute("VariantId")==variant' in SCHEDULE
-assert "arena.Parent==generated" in SCHEDULE
-assert "if isActive then return true end" in SCHEDULE
-assert SCHEDULE.index("task.wait(earlySeconds)")<SCHEDULE.index("if isActive then")
-assert SCHEDULE.index("if isActive then")<SCHEDULE.index(
-    "task.wait(fallbackSeconds-earlySeconds)")
+assert "task.delay(remaining" in SCHEDULE
+assert "fallbackSeconds - earlySeconds" in SCHEDULE
+assert 'workspace:FindFirstChild("GeneratedMap")' in SCHEDULE
+assert 'generated:FindFirstChild("Arena")' in SCHEDULE
+assert 'arena:GetAttribute("VariantId") == variant' in SCHEDULE
+assert "arena.Parent == generated" in SCHEDULE
+assert "if initial and initial:GetAttribute" in SCHEDULE
+assert SCHEDULE.index("task.wait(earlySeconds)") < SCHEDULE.index(
+    "if initial and initial:GetAttribute")
+# No polling: a future active arena wakes its pending source.
+assert 'arena:GetAttributeChangedSignal("VariantId")' in SCHEDULE
+assert 'workspace.ChildAdded:Connect' in SCHEDULE
+assert 'workspace.ChildRemoved:Connect' in SCHEDULE
+assert 'map.ChildAdded:Connect' in SCHEDULE
+assert 'map.ChildRemoved:Connect' in SCHEDULE
+assert 'wake.Event:Wait()' in SCHEDULE
+assert 'connection:Disconnect()' in SCHEDULE
+assert 'wake:Destroy()' in SCHEDULE
+assert 'return active' in SCHEDULE
+assert 'while ' not in "\n".join(
+    line.split("--",1)[0] for line in SCHEDULE.splitlines())
+assert "local function currentArena()" in SCHEDULE
+assert "local function watchMap(map)" in SCHEDULE
+assert "local function watchArena(arena)" in SCHEDULE
+assert 'local function checkActive()' in SCHEDULE
+assert 'local function finish(wasActive)' in SCHEDULE
 for forbidden in ("task.spawn(", "Heartbeat:Connect","RenderStepped",
                   "AssetService","LoadAssetAsync","RemoteEvent",
                   "GetAsync","HttpService"):
@@ -67,12 +86,12 @@ for variant,(path,asset,early,normal) in SOURCES.items():
     assert "for attempt=1,3 do" in source
     assert "task.wait(attempt*5)" in source
     assert "task.defer("+path.removesuffix(".lua")+".start)" in INIT
-    assert 30<=early<normal<=120
+    assert 18<=early<=22<normal<=120
     print(f"PASS {variant}: real Approved {asset}, {normal}s -> {early}s when active")
 
-# Only ONE of the four big signature importers is accelerated. Startup
-# with no map, or other active arena, retains existing original schedule.
-for active in (*SOURCES,"Orbital",None,""):
+# For a stable arena, only its matching signature can be accelerated.
+# A rotation can wake another pending signature; FIFO limits concurrency.
+for active in (*SOURCES,None,""):
     actual={}
     for variant,(_,_,early,normal) in SOURCES.items():
         actual[variant]=early if active==variant else normal
@@ -81,5 +100,5 @@ for active in (*SOURCES,"Orbital",None,""):
     else:
         assert all(actual[v]==SOURCES[v][3] for v in SOURCES)
     assert actual.get("Classic",0)>0
-print("PASS all active/missing/other arena combinations preserve 4 total imports")
+print("PASS five arena and missing-map combinations preserve five total imports")
 print("NOTE source CI does not measure concurrent network load or actual FPS")
