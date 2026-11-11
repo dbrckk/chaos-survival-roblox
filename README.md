@@ -1,3 +1,7 @@
+## P4 — Grandes signatures sculptées Classic et Crossroads sur Low — 11 novembre 2026
+
+Le [lot des silhouettes d'arènes authentiques sur Android Low](docs/P4_LOW_AUTHENTIC_CLASSIC_CROSSROADS_SIGNATURES_2026-11-11.md) autorise un vrai modèle original de **sept MeshParts** à remplacer **cinq formes primitives Classic** ou **quatre formes Crossroads** à moins de 320 studs. Le premier palier de pression rétablit les natives. Les IDs créateur approuvés, le budget GPU partagé et les collisions sont conservés. Le modèle complémentaire Classic est demandé dès 56 secondes uniquement lorsque cette carte est active, contre 119 secondes de repli sur les autres variantes. Cette modification GitHub ne publie pas le jeu.
+
 ## P4 — Sommets 3D de stations importés plus tôt sur l'arène active — 11 novembre 2026
 
 Le [correctif du chargeur de sommets propriétaires](docs/P4_ACTIVE_PERIMETER_APEX_EARLY_IMPORT_2026-11-11.md) demande dès **60 secondes** la source 3D approuvée de l'arène effectivement active (Classic/Harbor partagent Relay). Les trois autres sources conservent leur calendrier à 132 secondes. Le **même** chargeur série, le quota AssetService global de deux requêtes, les trois essais maximum par modèle et les repli natifs sont conservés. Aucun nouvel asset, aucune boucle ni publication Roblox n'est impliqué.

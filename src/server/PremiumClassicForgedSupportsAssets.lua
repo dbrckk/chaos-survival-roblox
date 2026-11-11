@@ -6,6 +6,7 @@ local AssetService=game:GetService("AssetService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local OriginalMeshScenery=require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 
 local Assets={}
 local MODEL_ID=91717127334369
@@ -45,9 +46,11 @@ function Assets.start()
     end
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        -- Do not compete with initial avatar/bot spawn or the original
-        -- approved two-dish observatory source import on join.
-        task.wait(119)
+        -- The original twin-dish source keeps its earlier slot. Only
+        -- real active Classic gets this complementary forged sculpture
+        -- at 56s; all other worlds retain the old 119s fallback.
+        -- Imports stay optional behind the global two-slot FIFO.
+        ActiveSignatureSchedule.waitFor("Classic",56,119)
         if holder:FindFirstChild("ForgedSupports") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,
