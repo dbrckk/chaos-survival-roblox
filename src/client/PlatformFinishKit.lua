@@ -410,7 +410,7 @@ local function serviceHatchSource(variant)
         or dimensions.Y <= 0 or dimensions.Y > .75 then
         return nil
     end
-    return source, dimensions, assetId
+    return source, dimensions, assetId, count
 end
 
 -- The ORIGINAL 1-in-9 High / 1-in-18 Medium authentic mesh budget is
@@ -504,9 +504,12 @@ local function originalServiceHatch(parent, platform, variant, tier,
             and math.floor(tonumber(index) or 0) % step ~= 1) then
         return nil
     end
-    local source, original, assetId = serviceHatchSource(variant)
+    local source, original, assetId, expectedPieces =
+        serviceHatchSource(variant)
     if not source then return nil end
     local copy = source:Clone()
+    local long = math.max(original.X, original.Z)
+    local short = math.min(original.X, original.Z)
     -- Preserve the entire original relief, no non-uniform mesh distortion.
     local scale = math.min(1, width * .96 / long, depth * .90 / short)
     if scale < .45 or not pcall(function() copy:ScaleTo(scale) end) then
@@ -535,7 +538,7 @@ local function originalServiceHatch(parent, platform, variant, tier,
             made[#made + 1] = part
         end
     end
-    if #made ~= #pieces then copy:Destroy(); return nil end
+    if #made ~= expectedPieces then copy:Destroy(); return nil end
     local adjustable = platform:GetAttribute("ChaosSkybridge") == true
         or tonumber(platform:GetAttribute("RouteTier")) ~= nil
     for i, part in ipairs(made) do
