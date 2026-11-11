@@ -1380,6 +1380,42 @@ task.spawn(function()
             player:SetAttribute("LocalSkylineDepthPrimitivesReplaced",
                 depthReplaced)
         end
+        -- P4 targeted source-slot replacement ratio, NOT global game
+        -- mesh coverage or a guarantee of resident rendered geometry.
+        -- These five disjoint generator families define 60 nonphysical
+        -- native visual bodies per variant: exterior towers 16,
+        -- skyline primary 16, skyline depth 8, outboard ridges 12,
+        -- and atmospheric columns 8. Use already sampled owner counts,
+        -- no Workspace traversal or extra loop on Android.
+        local generatedSkyline = workspace:FindFirstChild("GeneratedMap")
+        local skylineActive = arena and arena:IsA("Folder")
+            and arena.Name == "Arena" and arena.Parent == generatedSkyline
+            and arena:FindFirstChild("Base")
+            and arena:FindFirstChild("Decor")
+            and arena:FindFirstChild("Atmosphere")
+        local skylineTargetSlots = skylineActive and 60 or 0
+        local skylineSourceReplaced = skylineTargetSlots > 0
+            and math.clamp(nativeTowersReplaced + ridgesHidden
+                + primaryNative + depthReplaced + atmosphereNatives,
+                0, skylineTargetSlots) or 0
+        local skylineSourcePercent = skylineTargetSlots > 0
+            and math.floor(skylineSourceReplaced
+                / skylineTargetSlots * 1000 + 0.5) / 10 or 0
+        if player:GetAttribute("LocalP4LandscapeTargetSourceSlots")
+            ~= skylineTargetSlots then
+            player:SetAttribute("LocalP4LandscapeTargetSourceSlots",
+                skylineTargetSlots)
+        end
+        if player:GetAttribute("LocalP4LandscapeReplacedSourceSlots")
+            ~= skylineSourceReplaced then
+            player:SetAttribute("LocalP4LandscapeReplacedSourceSlots",
+                skylineSourceReplaced)
+        end
+        if player:GetAttribute("LocalP4LandscapeSourceReplacementPct")
+            ~= skylineSourcePercent then
+            player:SetAttribute("LocalP4LandscapeSourceReplacementPct",
+                skylineSourcePercent)
+        end
         -- Original Towers corner machines and sculpted cap: true
         -- seven-material creator-approved mesh. Native antenna survives.
         -- Same shared sampler, strict camera budget and reversible fallback.

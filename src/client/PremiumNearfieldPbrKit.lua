@@ -8,29 +8,50 @@ local Kit = {}
 -- Each permitted bucket is made by an existing validated original
 -- MeshPart owner, not by scanning arbitrary descendants of Workspace.
 -- Harbor's existing dock structures keep their own PBR; this shared
--- quota also covers the new approved near-camera atmospheric columns.
+-- quota also covers the new approved near-camera atmospheric columns and
+-- exterior tower silhouettes. Same GPU budget and 16 approved texture IDs.
 local SOURCES = {
     Classic = {
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 112172520488996},
         {folder = "ApprovedAtmosphereColumnsLocal", id = 91626128452597},
         {folder = "ApprovedClassicBroadcastFinLocal", id = 123049626693705},
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
     },
     Towers = {
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 112172520488996},
         {folder = "ApprovedAtmosphereColumnsLocal", id = 107521411452905},
         {folder = "ApprovedTowersMachineryLocal", id = 72143366927826},
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 86423178125318},
     },
     Crossroads = {
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 112172520488996},
         {folder = "ApprovedAtmosphereColumnsLocal", id = 93993697329658},
         {folder = "ApprovedCrossroadsEntrancePortalsLocal", id = 127067628128103},
         {folder = "ApprovedCrossroadsOpenGantryLocal", id = 90844491148907},
     },
     Orbital = {
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 112172520488996},
         {folder = "ApprovedAtmosphereColumnsLocal", id = 119010829781313},
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 104654294187035},
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 138666009076890},
     },
     Harbor = {
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 137744886537150},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 74958476744494},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
+        {folder = "ApprovedExteriorTowerMeshesLocal", id = 112172520488996},
         {folder = "ApprovedAtmosphereColumnsLocal", id = 76194593490199},
     },
 }
