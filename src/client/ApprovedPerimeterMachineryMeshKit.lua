@@ -13,8 +13,12 @@ local VARIANTS = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true,
 }
-local CAPS = {Low = 0, Medium = 1, High = 3}
-local DISTANCE = {Low = 0, Medium = 170, High = 245}
+-- Android Low: one near-camera station may replace all three cuboids,
+-- ONLY if both approved originals contain exactly seven MeshParts.
+-- The first pressure tier restores the natives. The existing LOD
+-- coordinator makes this exclusive with the Low 21-part turbine set.
+local CAPS = {Low = 1, Medium = 1, High = 3}
+local DISTANCE = {Low = 125, Medium = 170, High = 245}
 local RETAIN = 16
 local EXPECTED = {
     CoreHousing = Vector3.new(3.2, 3.7, 2.8),
@@ -63,7 +67,7 @@ local function removeAll()
     end
 end
 
-local function sourceFor(kind)
+local function sourceFor(kind, strictSeven)
     local holder = ReplicatedStorage:FindFirstChild(
         "ApprovedServiceEquipmentTemplates")
     if not holder or not holder:IsA("Folder")
@@ -87,7 +91,11 @@ local function sourceFor(kind)
             return nil
         end
     end
-    if count < 1 or count > 12 then return nil end
+    -- Approved glTF originals have seven material MeshParts. Restrict
+    -- Low to that exact footprint: three clones => at most 21 MeshParts.
+    -- Medium/High retain their original broad source tolerance.
+    if count < 1 or count > 12
+        or (strictSeven and count ~= 7) then return nil end
     local _, bounds = source:GetBoundingBox()
     if math.min(bounds.X, bounds.Y, bounds.Z) < 0.65
         or math.max(bounds.X, bounds.Y, bounds.Z) > 6 then return nil end
@@ -261,7 +269,9 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
         removeAll()
         return
     end
-    local core, pod = sourceFor("Core"), sourceFor("Pod")
+    local strictSeven = tier == "Low"
+    local core = sourceFor("Core", strictSeven)
+    local pod = sourceFor("Pod", strictSeven)
     if not core or not pod then
         removeAll()
         return

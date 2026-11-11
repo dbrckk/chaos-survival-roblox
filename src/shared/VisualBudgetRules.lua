@@ -80,8 +80,11 @@ VisualBudgetRules.LocalFolders = {
     "ApprovedPerimeterButtressesLocal",
     -- Three authentic MeshPart mechanical housings per selected real
     -- perimeter station, counted inside 440/680/900 local Part census.
-    -- Low 0; Medium one station; High touch two / desktop three;
-    -- optional pressure demotes and native cuboids safely restore.
+    -- Low one near station (125 studs), strictly 7 MeshParts per source
+    -- or native fallback. The Low machinery group is mutually exclusive
+    -- with the 21-MeshPart Low rotor group in the existing LOD sampler.
+    -- Medium one station, High touch two / desktop three as before;
+    -- pressure demotes and native cuboids safely restore.
     "ApprovedPerimeterMachineryLocal",
     -- Each verified original Rotor Model is SEVEN real UV/tangent MeshParts.
     -- Exactly three rotors per selected perimeter station. All twenty-one
@@ -89,6 +92,7 @@ VisualBudgetRules.LocalFolders = {
     -- Low ONE near-camera station (130 studs), Medium one station,
     -- High touch two / PC three; first graphics pressure removes Low.
     -- All 21 optional Low MeshParts share the same 440-Part census.
+    -- Low turbines are suspended only while Low machinery is mounted.
     "ApprovedPerimeterRotorsLocal",
     -- Four exact existing native angled wedges per original station are
     -- masked behind two Wing plus two Cap approved 3D Model clones only

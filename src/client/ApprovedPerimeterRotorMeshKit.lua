@@ -281,13 +281,17 @@ bucket.ChildRemoved:Connect(function(child)
     end
 end)
 
-function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
+-- The scenery LOD coordinator passes true only while a complete
+-- Low-tier machinery sculpt is already mounted. Do not add a second
+-- 21-MeshPart family on the same Android Low frame.
+function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, suppressLow)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
     local cap = CAPS[tier] or 0
+    if tier == "Low" and suppressLow == true then cap = 0 end
     if tier == "High" and touch then cap = 2 end
     if stress == 1 then cap = math.floor(cap * .5) end
     if stress >= 2 then cap = 0 end

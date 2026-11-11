@@ -139,6 +139,56 @@ assert ROTOR_LOADER.count('task.spawn(function()') == 1
 assert ROTOR_LOADER.count('GlobalApprovedImportGate.load') == 1
 print("PASS Android Low: genuine owner-approved 3-rotor sculpt with atomic rollback")
 
+# Android Low allows ONE source-authenticated service-machinery set,
+# replacing three cuboids atomically with 3x7 approved MeshParts. The
+# same camera pass makes the three approved turbine clones exclusive:
+# there must never be 42 machinery + rotor MeshParts on Low.
+MACHINE=(CLIENT/"ApprovedPerimeterMachineryMeshKit.lua").read_text()
+SERVICE=(ROOT/"src/server/PremiumServiceEquipmentAssets.lua").read_text()
+LOD=(CLIENT/"scenery-lod.client.lua").read_text()
+assert 'local CAPS = {Low = 1, Medium = 1, High = 3}' in MACHINE
+assert 'local DISTANCE = {Low = 125, Medium = 170, High = 245}' in MACHINE
+assert 'local IDS = {Core = 127295681925871, Pod = 106083832432833}' in MACHINE
+assert 'local function sourceFor(kind, strictSeven)' in MACHINE
+assert 'or (strictSeven and count ~= 7) then return nil end' in MACHINE
+assert 'local strictSeven = tier == "Low"' in MACHINE
+assert 'local core = sourceFor("Core", strictSeven)' in MACHINE
+assert 'local pod = sourceFor("Pod", strictSeven)' in MACHINE
+assert 'local model, pieces = fit(sources[kind], native, kind)' in MACHINE
+assert 'if not model then' in MACHINE
+assert 'for _, prior in ipairs(models) do prior:Destroy() end' in MACHINE
+assert 'for _, model in ipairs(models) do model.Parent = bucket end' in MACHINE
+assert 'for _, native in ipairs(natives) do native.Transparency = 1 end' in MACHINE
+assert MACHINE.index('for _, model in ipairs(models) do model.Parent = bucket end') < MACHINE.index(
+    'for _, native in ipairs(natives) do native.Transparency = 1 end')
+assert 'if stress == 1 then cap = math.floor(cap * 0.5) end' in MACHINE
+assert 'native.Transparency = originalAlpha' in MACHINE
+assert 'item.CanCollide = false' in MACHINE
+assert 'item.CanTouch = false' in MACHINE
+assert 'item.CanQuery = false' in MACHINE
+assert 'item.CastShadow = false' in MACHINE
+assert 'source:GetAttribute("OwnerVerified") ~= true' in MACHINE
+assert 'source:GetAttribute("Original3DAssetId") ~= IDS[kind]' in MACHINE
+assert 'source:GetAttribute("OriginalService3D") ~= true' in MACHINE
+assert 'bucket.Name = "ApprovedPerimeterMachineryLocal"' in MACHINE
+assert '"ApprovedPerimeterMachineryLocal"' in ledger
+assert 'ApprovedPerimeterMachineryMeshKit.sync(arena, cameraPoint,' in LOD
+assert 'local machineStations = ApprovedPerimeterMachineryMeshKit.count()' in LOD
+assert 'profile.Name == "Low" and machineStations > 0)' in LOD
+assert 'function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, suppressLow)' in ROTOR
+assert 'if tier == "Low" and suppressLow == true then cap = 0 end' in ROTOR
+assert LOD.index('local machineStations = ApprovedPerimeterMachineryMeshKit.count()') < LOD.index(
+    'ApprovedPerimeterRotorMeshKit.sync(arena, cameraPoint,')
+assert 'if stress == 1 then cap = math.floor(cap * .5) end' in ROTOR
+assert 'local APPROVED = 133526819668194' in ROTOR
+assert 'Towers = 106083832432833' in SERVICE
+assert 'Orbital = 127295681925871' in SERVICE
+assert 'GlobalApprovedImportGate.load' in SERVICE
+assert 'RenderStepped' not in MACHINE and 'Heartbeat' not in MACHINE
+assert 'RenderStepped' not in ROTOR and 'Heartbeat' not in ROTOR
+assert 'AssetService' not in MACHINE and 'AssetService' not in ROTOR
+print("PASS Low machinery/rotor exclusive 21-mesh slot and atomic native fallback")
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
