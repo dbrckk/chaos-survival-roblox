@@ -1,3 +1,7 @@
+## P4 — Finitions métalliques PBR 2K sur les vrais socles de station — 11 novembre 2026
+
+Le [lot de finition PBR des inserts de stations](docs/P4_APPROVED_STATION_DECK_NEARFIELD_PBR_2026-11-11.md) relie les **vraies dalles triangulées originales** de socles à la whitelist existante des **quatre familles de textures PBR 2K déjà approuvées**, sur les cinq arènes. Aucun nouveau téléchargement ni quota GPU : la surcouche partage **2/3 modèles Medium ou 4/6 High**, reste désactivée sur Low et est supprimée sous pression. Les six voyants et repères natifs restent inchangés ; la finition est optionnelle et ne garantit pas un rendu permanent à l'écran. Aucune publication Roblox dans cette PR.
+
 ## P4 — Socle de station authentique, navigation préservée — 11 novembre 2026
 
 Le [lot de socles forgés 3D](docs/P4_APPROVED_STATION_DECK_INLAYS_2026-11-11.md) ajoute à la base décorative de chaque station un **vrai insert triangulé de sept MeshParts**, réutilisé depuis le modèle original de sol **déjà approuvé** `72507987666671`. Les **six voyants, lentilles et repères de navigation** restent natifs. Les coûts sont limités par proximité : 1 station Low, 2 Medium, 2 High tactile ou 4 High PC. Au premier palier de pression Low, l'insert disparaît et la base native revient. Aucun nouvel asset, texture, collision, VFX ou render loop.
