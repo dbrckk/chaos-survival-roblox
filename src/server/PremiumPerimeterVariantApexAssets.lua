@@ -17,6 +17,24 @@ local APPROVED = {
 local ORDER = {"Towers", "Orbital", "Crossroads", "Relay"}
 local started = false
 
+-- Use the server-authored arena, never a client-selected variant.
+-- Classic and Harbor intentionally share the same creator-owned Relay.
+local function activeSourceKind()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not generated or not generated:IsA("Folder")
+        or generated.Parent ~= workspace
+        or not arena or not arena:IsA("Folder")
+        or arena.Name ~= "Arena" or arena.Parent ~= generated then
+        return nil
+    end
+    local variant = arena:GetAttribute("VariantId")
+    if variant == "Classic" or variant == "Harbor" then
+        return "Relay"
+    end
+    return APPROVED[variant] and variant or nil
+end
+
 local function geometryOK(model, spec)
     local count = 0
     for _, child in ipairs(model:GetDescendants()) do
@@ -53,42 +71,65 @@ function Assets.start()
     end
     folder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
-        -- Queue late, AFTER first playable round and primary hero sources.
-        -- This optional loader may not block real players or disaster logic.
-        task.wait(132)
-        for _, kind in ipairs(ORDER) do
+        local startedAt = time()
+        local attempted = {}
+
+        -- Exactly one serialized importer for the same four approved IDs.
+        -- Never multiply the maximum three attempts for an early failure.
+        local function tryImport(kind)
+            if attempted[kind] then return end
             local spec = APPROVED[kind]
-            if not folder:FindFirstChild(kind) then
-                for attempt = 1, 3 do
-                    local ok, raw = pcall(GlobalApprovedImportGate.load,
-                        AssetService, spec.id)
-                    if ok and raw and raw:IsA("Model") then
-                        local clean = OriginalMeshScenery.sanitize(raw)
-                        raw:Destroy()
-                        if not clean or not geometryOK(clean,spec) then
-                            if clean then clean:Destroy() end
-                            warn("Approved original apex rejected on geometry",
-                                kind)
-                            break
-                        end
-                        clean.Name = kind
-                        clean:SetAttribute("OwnerVerified",true)
-                        clean:SetAttribute("CosmeticOnly",true)
-                        clean:SetAttribute("OriginalPerimeterVariantApex3D",true)
-                        clean:SetAttribute("Original3DAssetId",spec.id)
-                        clean.Parent = folder
-                        folder:SetAttribute(kind.."Ready",true)
+            if not spec then return end
+            attempted[kind] = true
+            if folder:FindFirstChild(kind) then return end
+            for attempt = 1, 3 do
+                local ok, raw = pcall(GlobalApprovedImportGate.load,
+                    AssetService, spec.id)
+                if ok and raw and raw:IsA("Model") then
+                    local clean = OriginalMeshScenery.sanitize(raw)
+                    raw:Destroy()
+                    if not clean or not geometryOK(clean, spec) then
+                        if clean then clean:Destroy() end
+                        warn("Approved original apex rejected on geometry",
+                            kind)
                         break
                     end
-                    if typeof(raw)=="Instance" then raw:Destroy() end
-                    if attempt==3 then
-                        warn("Original 3D station apex unavailable",kind,
-                            tostring(raw))
-                    else
-                        task.wait(attempt*5)
-                    end
+                    clean.Name = kind
+                    clean:SetAttribute("OwnerVerified", true)
+                    clean:SetAttribute("CosmeticOnly", true)
+                    clean:SetAttribute("OriginalPerimeterVariantApex3D", true)
+                    clean:SetAttribute("Original3DAssetId", spec.id)
+                    clean.Parent = folder
+                    folder:SetAttribute(kind.."Ready", true)
+                    break
+                end
+                if typeof(raw) == "Instance" then raw:Destroy() end
+                if attempt == 3 then
+                    warn("Original 3D station apex unavailable", kind,
+                        tostring(raw))
+                else
+                    task.wait(attempt*5)
                 end
             end
+        end
+
+        -- Request ONE first-round model for the real current arena.
+        -- All imports retain the shared FIFO cap of two in flight.
+        task.wait(60)
+        local earlyKind = activeSourceKind()
+        if earlyKind then tryImport(earlyKind) end
+
+        -- The rest of the catalog keeps its original 132s deadline,
+        -- measured from start(), not after the network round-trip.
+        local remaining = 132 - (time() - startedAt)
+        if remaining > 0 then task.wait(remaining) end
+
+        -- A rotated arena may need a second model. An early attempt is
+        -- never repeated, whether it succeeded or failed.
+        local currentKind = activeSourceKind()
+        if currentKind then tryImport(currentKind) end
+        for _, kind in ipairs(ORDER) do
+            tryImport(kind)
             task.wait(5)
         end
     end)

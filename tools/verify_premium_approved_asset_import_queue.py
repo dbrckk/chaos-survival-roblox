@@ -65,6 +65,34 @@ assert 'nextWaiter:Fire()' in SOUTH
 assert "release()\n    if not ok then error(result,0) end" in SOUTH
 assert "pcall(service.LoadAssetAsync" not in SOUTH
 
+# The original 3D station apex source now favors the verified arena
+# at 60 seconds while preserving the 132s background sweep and 3 retries.
+# This is a source contract, not an asserted real-network latency.
+APEX=(SERVER/"PremiumPerimeterVariantApexAssets.lua").read_text()
+assert 'local function activeSourceKind()' in APEX
+assert 'generated.Parent ~= workspace' in APEX
+assert 'arena.Parent ~= generated' in APEX
+assert 'if variant == "Classic" or variant == "Harbor" then' in APEX
+assert 'return "Relay"' in APEX
+assert 'return APPROVED[variant] and variant or nil' in APEX
+assert 'task.wait(60)' in APEX
+assert 'local earlyKind = activeSourceKind()' in APEX
+assert 'if earlyKind then tryImport(earlyKind) end' in APEX
+assert 'local remaining = 132 - (time() - startedAt)' in APEX
+assert 'if remaining > 0 then task.wait(remaining) end' in APEX
+assert 'local currentKind = activeSourceKind()' in APEX
+assert 'if currentKind then tryImport(currentKind) end' in APEX
+assert 'if attempted[kind] then return end' in APEX
+assert 'attempted[kind] = true' in APEX
+assert APEX.index('attempted[kind] = true') < APEX.index(
+    'pcall(GlobalApprovedImportGate.load,')
+assert 'for _, kind in ipairs(ORDER) do' in APEX
+assert APEX.count('task.spawn(function()') == 1
+assert APEX.count('GlobalApprovedImportGate.load') == 1
+assert APEX.count('for attempt = 1, 3 do') == 1
+assert 'OriginalMeshScenery.sanitize(raw)' in APEX
+assert 'geometryOK(clean, spec)' in APEX
+
 for source in SOURCES:
     s=source.read_text()
     assert "OriginalMeshScenery.sanitize(" in s,source
@@ -80,6 +108,7 @@ for source in SOURCES:
     assert "AssetService.LoadAssetAsync" not in s,source
     assert "service.LoadAssetAsync" not in s,source
 
+print("PASS 60s authentic active apex priority, 132s background sweep, no duplicate import")
 print("PASS 47 Premium original 3D loaders use the global 2-import FIFO queue")
 print("PASS 8 South imports retain a stricter shared 1-import sub-gate")
 print("PASS no direct calls outside queue; no new server/client frame loops")
