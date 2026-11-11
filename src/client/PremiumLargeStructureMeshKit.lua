@@ -147,13 +147,23 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         for _,part in ipairs(decor:GetChildren()) do
             local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
             local id=tonumber(suffix)
-            if id and validNativeSupport(part,id)
-                and (tier ~= "Low"
-                    or (part.Size.Y <= 16
-                        and part.Size.Y / supportBounds.Y >= .34)) then
-                -- One Low source module cannot replace two or three
-                -- tall-support segments. Check viability BEFORE selection.
-                supportsAvailable[id]=true
+            if id and validNativeSupport(part,id) then
+                local eligible=true
+                if tier == "Low" then
+                    -- Only ONE source module is budgeted. Validate all
+                    -- actual stage-fit constraints BEFORE reserving it,
+                    -- so a too-tall/wide column does not consume the
+                    -- only Android Low replacement candidate.
+                    local scale=part.Size.Y/supportBounds.Y
+                    local width=math.max(supportBounds.X,
+                        supportBounds.Z)*scale
+                    eligible=part.Size.Y <= 16
+                        and scale >= .34 and scale <= 1.25
+                        and width <= 3.2
+                        and width <= math.max(part.Size.X,
+                            part.Size.Z)*2.5
+                end
+                if eligible then supportsAvailable[id]=true end
             end
         end
     end
