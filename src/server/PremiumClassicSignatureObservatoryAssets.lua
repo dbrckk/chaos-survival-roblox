@@ -49,7 +49,7 @@ function Assets.start()
     holder:SetAttribute("OwnerVerified",true)
     task.spawn(function()
         -- Main spawn and bot scheduler must never wait for optional art.
-        ActiveSignatureSchedule.waitFor("Classic",44,104)
+        ActiveSignatureSchedule.waitFor("Classic",18,104)
         if holder:FindFirstChild("DualDishObservatory") then return end
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,
