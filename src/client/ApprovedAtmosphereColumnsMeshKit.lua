@@ -20,7 +20,9 @@ local SPINE_HEIGHT = {
     Harbor = 15,
 }
 local BUDGET = {
-    Low = {cap = 0, distance = 0},
+    -- One near-camera authored column on Low. Native bodies are always
+    -- retained and restored as soon as visual pressure reaches level 1.
+    Low = {cap = 1, distance = 175},
     Medium = {cap = 2, distance = 230},
     High = {cap = 4, distance = 390},
 }
@@ -38,6 +40,10 @@ bucket.Parent = workspace
 local mounted = {}
 local activeArena = nil
 
+-- If another local budget owner destroys an approved clone between
+-- camera samples, restore the native body immediately, not one LOD
+-- interval later. One event on the existing local folder only.
+
 local function remove(native)
     local entry = mounted[native]
     if not entry then return end
@@ -50,6 +56,16 @@ local function remove(native)
     end
     entry.model:Destroy()
 end
+
+bucket.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for native, entry in pairs(mounted) do
+        if entry.model == child then
+            remove(native)
+            break
+        end
+    end
+end)
 
 local function removeAll()
     local items = {}
@@ -290,6 +306,9 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
     local cap = spec.cap
     if tier == "High" and touch then cap = 3 end
     if stress == 1 then cap = math.floor(cap / 2) end
+    -- Low has no optional reserve under pressure; keep only the native
+    -- one-Part body instead of the seven-piece authored sculpture.
+    if tier == "Low" and stress >= 1 then cap = 0 end
     if stress >= 2 then cap = 0 end
     if not cameraReady or typeof(cameraPoint) ~= "Vector3" then cap = 0 end
     local source, holder, id, size = sourceFor(

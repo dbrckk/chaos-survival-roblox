@@ -1,3 +1,7 @@
+## P4 — Colonne atmosphérique 3D proche sur Android Low — 11 novembre 2026
+
+Le [lot des colonnes atmosphériques Low](docs/P4_LOW_AUTHENTIC_ATMOSPHERE_COLUMNS_2026-11-11.md) autorise **une seule sculpture 3D originale et approuvée** à 175 studs maximum, contre zéro auparavant. Les huit corps candidats par carte restent non physiques et leurs balises sont conservées. Dès la pression graphique 1, la Part primitive revient ; si un clone disparaît entre deux passages LOD, la restauration est immédiate. Pas de nouvelle requête AssetService, texture, boucle ni budget graphique. Les FPS Android et la publication Roblox restent à vérifier.
+
 ## P4 — Anneaux Orbital Low et couronne Towers 3D — 11 novembre 2026
 
 Le [lot des grands anneaux et couronnes premium](docs/P4_AUTHENTIC_ATMOSPHERE_RINGS_AND_CROWN_2026-11-11.md) active sur Low les deux vrais tores Orbital créateur-approuvés, éligibles à remplacer **16 + 14 segments rectangulaires** avec **7 + 7 MeshParts** quand les sources sont disponibles. Towers peut remplacer sa grande `TowerCrown` Neon primitive par un tore horizontal 3D à sept MeshParts, utilisant **le Model existant `125070862497818`**, avec le signal natif, sans nouvelle requête Roblox. Les trois kits restaurent les éléments originaux sous pression ou absence de source. La couronne compte dans la censure adaptative Android et le budget PBR 2K partagé. **L'intégration GitHub et les contrôles source ne valent pas publication sur Roblox ni validation visuelle Android.**
