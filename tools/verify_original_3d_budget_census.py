@@ -189,6 +189,39 @@ assert 'RenderStepped' not in ROTOR and 'Heartbeat' not in ROTOR
 assert 'AssetService' not in MACHINE and 'AssetService' not in ROTOR
 print("PASS Low machinery/rotor exclusive 21-mesh slot and atomic native fallback")
 
+# Visible original 3D FLOOR: four more sculpted Medium tiles, but
+# no change to Low or High resident ceilings and no new 2K PBR textures.
+# The existing camera sampler selects foreground before equally distant
+# off-screen tiles, preserves the original far-behind penalty and nearby
+# underfoot stability. Pressure 1/2 must be able to reclaim added tiles.
+GROUND=(CLIENT/"PremiumGroundMeshKit.lua").read_text()
+GROUND_PBR=(CLIENT/"PremiumGroundPbrKit.lua").read_text()
+assert 'local APPROVED_GROUND_ID = 72507987666671' in GROUND
+assert 'Low = {count = 2, distance = 125, retention = 18}' in GROUND
+assert 'Medium = {count = 16, distance = 195, retention = 24}' in GROUND
+assert 'High = {count = 36, distance = 260, retention = 28}' in GROUND
+assert 'Low = {2, 2, 1}' in GROUND
+assert 'Medium = {16, 10, 4}' in GROUND
+assert 'High = {36, 24, 16}' in GROUND
+assert 'if hasFacing and horizontal.Magnitude > 24 then' in GROUND
+assert 'if horizontal.Magnitude > 54 and facing < -0.15 then' in GROUND
+assert 'priority += 72' in GROUND
+assert 'elseif facing > 0.18 then' in GROUND
+assert 'priority -= 18 * ahead * facing' in GROUND
+assert 'if distance <= budget.distance' in GROUND
+assert 'residentLimit = PremiumGroundMeshKit.residencyCount(tier, pressure)' in GROUND
+assert 'math.min(budget.count, residentLimit, #candidates)' in GROUND
+assert 'if not entry or not wanted[ground]' in GROUND
+assert 'or not safeAfterMount(entry, base)' in GROUND
+assert 'suppressOverlays(entry)' in GROUND
+assert 'PremiumGroundPbrKit.tileBudget(' in GROUND
+assert 'if disabled == true or tier == "Low" then return 0 end' in GROUND_PBR
+assert '"OriginalPremiumGroundMeshesLocal"' in ledger
+assert 'RenderStepped' not in GROUND and 'Heartbeat' not in GROUND
+assert 'AssetService' not in GROUND
+print("PASS 16 Medium original floor bays, 2 Low, 36 High, camera-forward ranking")
+print("PASS shared floor pressure and native fallback with unchanged 2K atlases")
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
