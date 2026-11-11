@@ -359,9 +359,10 @@ end
 
 -- Real near-camera structural depth, not more glowing rectangles:
 -- inset ribbed service hatches and a two-level metal casing are welded to
--- actual collidable decks. Existing collapse/shrink owners register these
--- three nonblocking meshes. Tight budget: 1 out of 3 physical platforms,
--- Medium/High only; zero extra lights, textures or update loops.
+-- actual collidable decks. Existing collapse/shrink owners register them.
+-- Low may mount ONE genuine source only INSTEAD of its existing seven-part
+-- carapace/hub slot; never add the native hatch geometry on Low.
+-- No extra lights, textures, gameplay collision or update loops.
 -- Use already approved five-arena floor sculptures for genuine welded
 -- service-hatch detail on actual moving decks. The native three-layer hatch
 -- below remains a fallback until the approved source has replicated.
@@ -419,13 +420,14 @@ end
 -- onto the in-view platforms that ALREADY owned native 3-piece hatches,
 -- replacing rather than stacking their simple forms. No new visual owner.
 function PlatformFinishKit.selectOriginalServiceHatches(
-        ordered, variant, tier, base, cameraPoint, cameraLook)
+        ordered, variant, tier, base, cameraPoint, cameraLook, pressure)
     local chosen = {}
-    if (tier ~= "High" and tier ~= "Medium")
+    local lowReady = tier == "Low" and (tonumber(pressure) or 0) == 0
+    if (tier ~= "High" and tier ~= "Medium" and not lowReady)
         or type(ordered) ~= "table"
         or not base or not base:IsA("BasePart") then return chosen end
-    local source, sourceSize = serviceHatchSource(variant)
-    if not source then return chosen end
+    local source, sourceSize, _, sourceParts = serviceHatchSource(variant)
+    if not source or (lowReady and sourceParts ~= 7) then return chosen end
     local sourceLong = math.max(sourceSize.X, sourceSize.Z)
     local sourceShort = math.min(sourceSize.X, sourceSize.Z)
     local legacyStep = tier == "High" and 9 or 18
@@ -440,6 +442,10 @@ function PlatformFinishKit.selectOriginalServiceHatches(
             hasCamera = true
         end
     end
+    -- Low is an optional near-camera-only asset. A lobby view,
+    -- stale camera, or stream-in without an arena viewpoint must not
+    -- spend its one authentic top-surface slot.
+    if lowReady and not hasCamera then return chosen end
     local look = typeof(cameraLook) == "Vector3"
         and Vector3.new(cameraLook.X, 0, cameraLook.Z) or Vector3.zero
     if look.Magnitude > .2 then look = look.Unit
@@ -464,10 +470,18 @@ function PlatformFinishKit.selectOriginalServiceHatches(
                 local scale = math.min(1,
                     width * .96 / sourceLong,
                     depth * .90 / sourceShort)
-                if scale >= .45 then
-                    -- Count only source-bearing platforms that the OLD
-                    -- index gate would actually have been able to mount.
-                    if id % legacyStep == 1 then quota += 1 end
+                if scale >= .45 and
+                    (not lowReady or (platform.Position-cameraPoint).Magnitude
+                        <= 100) then
+                    if lowReady then
+                        -- One source-authenticated 7-MeshPart service hatch
+                        -- shares the existing Low near-route shell budget.
+                        -- No native 3-Part Low hatch existed to replace.
+                        quota = 1
+                    elseif id % legacyStep == 1 then
+                        -- Preserve the exact High/Medium quota as before.
+                        quota += 1
+                    end
                     local delta = platform.Position - focus
                     local distance = Vector3.new(
                         delta.X, delta.Y * .6, delta.Z).Magnitude
@@ -507,7 +521,9 @@ local function originalServiceHatch(parent, platform, variant, tier,
     end
     local source, original, assetId, expectedPieces =
         serviceHatchSource(variant)
-    if not source then return nil end
+    if not source or (tier == "Low" and expectedPieces ~= 7) then
+        return nil
+    end
     local copy = source:Clone()
     local long = math.max(original.X, original.Z)
     local short = math.min(original.X, original.Z)
@@ -562,7 +578,8 @@ end
 function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
         tier, theme, index, selected)
     if not parent or not platform or not platform:IsA("BasePart")
-        or tier == "Low" or not NAMES[variant] or not theme
+        or (tier == "Low" and selected ~= true)
+        or not NAMES[variant] or not theme
         or (math.floor(tonumber(index) or 0) % 3 ~= 1)
         or platform:GetAttribute("ChaosSkybridge") == true
     then return {} end
@@ -575,6 +592,9 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
         parent, platform, variant, tier, hatchWidth, hatchDepth, upper, index,
         selected)
     if original then return original end
+    -- The old Low route had NO hatch. Never add three primitive Parts if
+    -- the approved source is unavailable, rejected or fails mid-mount.
+    if tier == "Low" then return {} end
     local materials = {
         Classic = Enum.Material.DiamondPlate,
         Towers = Enum.Material.CorrodedMetal,
