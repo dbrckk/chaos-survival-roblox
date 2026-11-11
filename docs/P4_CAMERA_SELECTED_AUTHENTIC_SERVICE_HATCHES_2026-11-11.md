@@ -43,3 +43,12 @@ des plateformes effectivement répliquées au client.
 
 **Non vérifié pour publication :** Build Validation sur SHA exact,
 Roblox Engine, rendu d'une vraie carte sur Android et cadence mémoire/GPU.
+
+## Compteur runtime de vérification
+
+`LocalOriginalServiceHatch3DCount` compte **uniquement** les trappes
+dont le véritable Model propriétaire a réussi à installer tous ses
+MeshParts sur une plateforme physique lors du dernier rebuild. Les
+trappes natives de secours ne sont pas comptabilisées. La valeur
+repasse à zéro au nettoyage/changement de carte. Ce compteur n'affirme
+pas un rendu réel ou une cadence FPS.

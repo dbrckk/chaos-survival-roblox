@@ -123,6 +123,9 @@ local function clear()
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearBridgeGirderCount", 0)
     end
+    if player:GetAttribute("LocalOriginalServiceHatch3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalServiceHatch3DCount", 0)
+    end
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
     end
@@ -505,6 +508,7 @@ local function rebuild()
         camera and camera.CFrame.LookVector or nil)
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
+    local mountedServiceHatches3D = 0
     local nearCradles,nearSupports =
         PremiumLargeStructureMeshKit.selectNearRouteStructures(
             ordered,decor,variant,tier.Name,base,
@@ -609,10 +613,17 @@ local function rebuild()
             -- Textured-looking three-layer native hardware on a strictly
             -- bounded subset of actual jump decks. Shares this existing
             -- platform's weld, collapse visibility and shrinking footprint.
-            for _, piece in ipairs(PlatformFinishKit.buildServiceHatch(
+            local hatchPieces = PlatformFinishKit.buildServiceHatch(
                 folder, platform, variant, tier.Name, theme, visualIndex,
-                nearServiceHatches[platform] == true
-            )) do
+                nearServiceHatches[platform] == true)
+            -- Only count a COMPLETE, actually mounted verified 3D source;
+            -- three-piece native fallback does not count as imported art.
+            if hatchPieces[1] and hatchPieces[1]:IsA("MeshPart")
+                and hatchPieces[1]:GetAttribute("OriginalServiceHatch3D")
+                    == true then
+                mountedServiceHatches3D += 1
+            end
+            for _, piece in ipairs(hatchPieces) do
                 registerVisual(platform, piece)
             end
 
@@ -823,6 +834,11 @@ local function rebuild()
         ~= mountedBridgeGirders then
         player:SetAttribute("LocalOriginalNearBridgeGirderCount",
             mountedBridgeGirders)
+    end
+    if player:GetAttribute("LocalOriginalServiceHatch3DCount")
+        ~= mountedServiceHatches3D then
+        player:SetAttribute("LocalOriginalServiceHatch3DCount",
+            mountedServiceHatches3D)
     end
     PlatformNativeTrimReplacementKit.bind(
         arena, replacements, function(nativeCount)
