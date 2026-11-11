@@ -15,6 +15,11 @@ local player = Players.LocalPlayer
 local details = {}
 local folderAddedConnection = nil
 local folderRemovedConnection = nil
+-- Streamed door Parts can arrive AFTER their Model's ChildAdded event.
+-- One folder-level watcher repairs missing finishes without per-Part
+-- listeners, polling, or reapplying all 16 facades.
+local lateDoorConnection = nil
+local removedDoorConnection = nil
 local watchedFolder = nil
 local rebuildPending = false
 
@@ -26,6 +31,14 @@ local function clear()
     if folderRemovedConnection then
         folderRemovedConnection:Disconnect()
         folderRemovedConnection = nil
+    end
+    if lateDoorConnection then
+        lateDoorConnection:Disconnect()
+        lateDoorConnection = nil
+    end
+    if removedDoorConnection then
+        removedDoorConnection:Disconnect()
+        removedDoorConnection = nil
     end
     for part, entry in pairs(details) do
         entry.connection:Disconnect()
@@ -85,7 +98,7 @@ local function attach(model, variant, tier)
         plate,
         side:sub(1, 1) .. "-" .. string.format("%02d", index)
             .. " / " .. (functions[profile] or "SERVICE"),
-        accent, tier, "service-door", Enum.NormalId.Front
+        accent, tier, "service-door", Enum.NormalId.Front, variant
     )
     if not gui then return end
 
@@ -123,6 +136,32 @@ local function rebuild()
     for _, model in ipairs(folder:GetChildren()) do register(model) end
     folderAddedConnection = folder.ChildAdded:Connect(register)
     folderRemovedConnection = folder.ChildRemoved:Connect(retire)
+
+    -- StreamingEnabled can replicate the Model first, and its actual
+    -- ServiceEntryDoor several scheduler turns later. The original
+    -- one-time defer would permanently miss that visible finish.
+    -- Filter only the exact canonical door; do not scan every streamed
+    -- part, and ignore anything outside the current active folder.
+    lateDoorConnection = folder.DescendantAdded:Connect(function(part)
+        if part.Name ~= "ServiceEntryDoor"
+            or not part:IsA("BasePart") then
+            return
+        end
+        local model = part.Parent
+        task.defer(function()
+            if watchedFolder == folder and model
+                and model.Parent == folder and part.Parent == model then
+                attach(model, variant, tier)
+            end
+        end)
+    end)
+    removedDoorConnection = folder.DescendantRemoving:Connect(function(part)
+        local entry = details[part]
+        if not entry then return end
+        entry.connection:Disconnect()
+        if entry.gui.Parent then entry.gui:Destroy() end
+        details[part] = nil
+    end)
 end
 
 local function schedule()
