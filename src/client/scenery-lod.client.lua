@@ -29,6 +29,7 @@ local ApprovedClassicBroadcastFinMeshKit = require(script.Parent.ApprovedClassic
 local ApprovedOrbitalReactorLandmarkMeshKit = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local ApprovedCrossroadsEntrancePortalMeshKit = require(script.Parent.ApprovedCrossroadsEntrancePortalMeshKit)
 local ApprovedVariantIdentitySpineMeshKit = require(script.Parent.ApprovedVariantIdentitySpineMeshKit)
+local PremiumNearfieldPbrKit = require(script.Parent.PremiumNearfieldPbrKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
@@ -1462,6 +1463,25 @@ task.spawn(function()
             ~=identityHidden then
             player:SetAttribute("LocalIdentitySpineNativePartsReplaced",
                 identityHidden)
+        end
+        -- P4 genuine normal/roughness/metal maps on the nearest authored
+        -- 3D nearfield sculptures. Reuses existing four audited 2K maps,
+        -- never imports a new source, creates a render loop or touches
+        -- collision, signals, or a native fallback. Owner kits sync first.
+        local nearfieldModels, nearfieldSurfaces =
+            PremiumNearfieldPbrKit.reconcile(
+                arena, cameraPoint, cameraReady, profile.Name, isTouch,
+                player:GetAttribute("OptionalVfxPressure"),
+                player:GetAttribute("PbrMaterialsDisabled"))
+        if player:GetAttribute("LocalPremiumNearfieldPbrModelCount")
+            ~= nearfieldModels then
+            player:SetAttribute("LocalPremiumNearfieldPbrModelCount",
+                nearfieldModels)
+        end
+        if player:GetAttribute("LocalPremiumNearfieldPbrSurfaceCount")
+            ~= nearfieldSurfaces then
+            player:SetAttribute("LocalPremiumNearfieldPbrSurfaceCount",
+                nearfieldSurfaces)
         end
         -- P4: sixteen rectangular native Orbital ReactorArc segments are
         -- swapped for one TRUE source-approved continuous hollow 3D torus,
