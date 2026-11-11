@@ -4,7 +4,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
-local ImportGate = require("./PremiumApprovedAssetImportGate")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Assets = {}
 local ID = 80692067525256
@@ -51,7 +51,7 @@ function Assets.start()
         task.wait(34)
         if holder:FindFirstChild("Roof") then return end
         for attempt = 1, 3 do
-            local ok, raw = pcall(ImportGate.load, AssetService, ID)
+            local ok, raw = pcall(GlobalApprovedImportGate.load, AssetService, ID)
             if ok and raw and raw:IsA("Model") then
                 local clean = OriginalMeshScenery.sanitize(raw)
                 raw:Destroy()
