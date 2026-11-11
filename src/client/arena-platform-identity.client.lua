@@ -504,43 +504,95 @@ local function rebuild()
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
     local camera = workspace.CurrentCamera
+    local cameraPoint = camera and camera.CFrame.Position or nil
+    local cameraLook = camera and camera.CFrame.LookVector or nil
+    -- Collect already provenance-checked candidates BEFORE spending the
+    -- fixed Low 3D budget. An eligible bridge 120 studs away must not
+    -- suppress a genuine relief/hull directly under the player's feet.
     local nearBridgeGirders = PremiumPlatformSideMeshKit.selectBridgeGirders(
-        ordered, tier.Name, base, camera and camera.CFrame.Position or nil,
-        camera and camera.CFrame.LookVector or nil,
+        ordered, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
+    local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
+        ordered, variant, tier.Name, base, cameraPoint, cameraLook,
+        player:GetAttribute("OptionalVfxPressure"))
+    local lowHubDeck = tier.Name == "Low"
+        and PremiumLargeDeckHullMeshKit.selectLowDeck(
+            ordered, base, cameraPoint,
+            player:GetAttribute("OptionalVfxPressure")) or nil
+    local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
+        ordered, variant, tier.Name, base, cameraPoint, cameraLook,
+        player:GetAttribute("OptionalVfxPressure"))
+
+    if tier.Name == "Low" then
+        -- This arbitration runs only on the EXISTING map/pressure/camera-
+        -- epoch rebuild. It adds neither a frame loop nor any extra
+        -- source clones: one pair of bridge 7-part Models OR one 7-part
+        -- foreground Model (plus the existing structural 7-part slot).
+        local function nearest(set)
+            local chosen, distance = nil, math.huge
+            if typeof(cameraPoint) ~= "Vector3" then
+                return chosen, distance
+            end
+            for platform in pairs(set) do
+                if platform.Parent == platforms then
+                    local d = (platform.Position - cameraPoint).Magnitude
+                    if d < distance or (d == distance
+                        and chosen and platform.Name < chosen.Name) then
+                        chosen, distance = platform, d
+                    end
+                end
+            end
+            return chosen, distance
+        end
+        local bridge, bridgeDistance = nearest(nearBridgeGirders)
+        local carapace, carapaceDistance = nearest(nearCameraCarapaces)
+        local hatch, hatchDistance = nearest(nearServiceHatches)
+        local hullDistance = lowHubDeck
+            and typeof(cameraPoint) == "Vector3"
+            and (lowHubDeck.Position-cameraPoint).Magnitude or math.huge
+        local foregroundDistance = math.min(
+            carapaceDistance, hatchDistance, hullDistance)
+        -- A real, very large bridge wins when it is comparably near.
+        -- Do not hide nearby above-deck or structural artwork simply
+        -- because some distant Towers bridge is technically in range.
+        if bridge and (foregroundDistance == math.huge
+            or bridgeDistance <= foregroundDistance + 16) then
+            nearBridgeGirders = {[bridge] = true}
+            nearCameraCarapaces = {}
+            nearServiceHatches = {}
+            lowHubDeck = nil
+        else
+            nearBridgeGirders = {}
+            -- The top relief becomes visually more important when the
+            -- third-person camera looks steeply down onto the deck.
+            -- Preserve the 18x18 creator hub silhouette for equal-range
+            -- candidates; choose a hatch only if clearly more visible.
+            local hatchScore = hatchDistance
+            if typeof(cameraLook) == "Vector3"
+                and cameraLook.Y < -0.50 then
+                hatchScore -= 12
+            end
+            if lowHubDeck and hullDistance <= math.min(
+                carapaceDistance + 12, hatchScore + 12) then
+                nearCameraCarapaces = {}
+                nearServiceHatches = {}
+            elseif carapace and carapaceDistance <= hatchScore + 8 then
+                lowHubDeck = nil
+                nearServiceHatches = {}
+                nearCameraCarapaces = {[carapace] = true}
+            elseif hatch then
+                lowHubDeck = nil
+                nearCameraCarapaces = {}
+                nearServiceHatches = {[hatch] = true}
+            else
+                nearCameraCarapaces = {}
+                nearServiceHatches = {}
+                lowHubDeck = nil
+            end
+        end
+    end
     local lowBridgeChosen = tier.Name == "Low"
         and next(nearBridgeGirders) ~= nil
-    -- One approved Low bridge uses exactly 2x7 authentic MeshParts,
-    -- instead of the other optional nearfield 7+7 source slots.
-    -- Medium/High keep every original candidate and existing cap.
-    local nearCameraCarapaces = not lowBridgeChosen
-        and PremiumPlatformSideMeshKit.selectCarapaceDecks(
-            ordered, variant, tier.Name, base,
-            camera and camera.CFrame.Position or nil,
-            camera and camera.CFrame.LookVector or nil,
-            player:GetAttribute("OptionalVfxPressure")) or {}
-    local lowHubDeck = tier.Name == "Low" and not lowBridgeChosen
-        and PremiumLargeDeckHullMeshKit.selectLowDeck(
-            ordered, base, camera and camera.CFrame.Position or nil,
-            player:GetAttribute("OptionalVfxPressure")) or nil
-    -- Low's full-size approved hub and compact carapace remain mutually
-    -- exclusive, including when a premium Skybridge is selected.
-    if lowHubDeck then nearCameraCarapaces = {} end
-    local nearServiceHatches = not lowBridgeChosen
-        and PlatformFinishKit.selectOriginalServiceHatches(
-            ordered, variant, tier.Name, base,
-            camera and camera.CFrame.Position or nil,
-            camera and camera.CFrame.LookVector or nil,
-            player:GetAttribute("OptionalVfxPressure")) or {}
-    local lowServiceHatchChosen = tier.Name == "Low"
-        and next(nearServiceHatches) ~= nil
-    -- The newly approved seven-MeshPart top surface uses the SAME one
-    -- Low foreground slot as the original shell/hub, not an additive
-    -- seventh-plus-seventh garnish. Towers bridge already takes both.
-    if lowServiceHatchChosen then
-        nearCameraCarapaces = {}
-        lowHubDeck = nil
-    end
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
     local mountedLowHubHulls = 0
