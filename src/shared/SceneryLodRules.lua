@@ -158,7 +158,7 @@ end
 -- Spend scarce genuine skyline mesh slots on structures facing the camera.
 -- Eligibility by real distance, original 3D budget and native fallback stay
 -- untouched. No raycasts, new frame loops or model requests.
-function SceneryLodRules.skylineViewScore(baseScore, toTarget, cameraLook)
+function SceneryLodRules.sceneryViewScore(baseScore, toTarget, cameraLook, maxBias)
     if type(baseScore) ~= "number"
         or typeof(toTarget) ~= "Vector3"
         or typeof(cameraLook) ~= "Vector3" then
@@ -169,7 +169,8 @@ function SceneryLodRules.skylineViewScore(baseScore, toTarget, cameraLook)
     if toward.Magnitude <= 36 or forward.Magnitude < 0.2 then
         return baseScore
     end
-    return baseScore - 60 * toward.Unit:Dot(forward.Unit)
+    return baseScore - math.clamp(tonumber(maxBias) or 60, 0, 60)
+        * toward.Unit:Dot(forward.Unit)
 end
 
 return SceneryLodRules

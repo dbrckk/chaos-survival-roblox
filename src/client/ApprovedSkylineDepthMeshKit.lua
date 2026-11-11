@@ -296,7 +296,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
                     ranked[#ranked+1] = {
                         owner=owner,body=body,original=original,
                         source=source,holder=holder,id=id,yaw=yaw,
-                        score=SceneryLodRules.skylineViewScore(
+                        score=SceneryLodRules.sceneryViewScore(
                             distance-(held and RETENTION*.55 or 0),
                             body.Position-cameraPoint,cameraLook),
                         index=(index-1)*2+layer,

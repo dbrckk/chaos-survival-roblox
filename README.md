@@ -1,3 +1,7 @@
+## P4 — Finitions PBR 2K orientées vers les structures visibles — 11 novembre 2026
+
+Le [correctif de priorité PBR](docs/P4_CAMERA_FACING_NEARFIELD_PBR_2026-11-11.md) applique le même principe de visibilité aux **sculptures métalliques et céramiques proches** des cinq arènes : à budget identique, les matériaux 2K sont réservés en priorité aux modèles devant la caméra, avec une rétention des finitions déjà montées pour limiter les changements de textures. Android Low conserve zéro surcouche, Medium 2 et High tactile 4 au maximum sans pression. Les 16 images existantes et les protections des matériaux SIGNAL/CARBON/GRIP/GLASS ne changent pas ; aucune publication Roblox automatique.
+
 ## P4 — Architecture 3D de l'horizon priorisée face caméra — 11 novembre 2026
 
 Le [lot de sélection visuelle](docs/P4_CAMERA_FACING_AUTHENTIC_SKYLINE_2026-11-11.md) privilégie, dans les quotas 3D déjà limités, les **vraies sculptures situées devant la caméra** : quatre tours extérieures, quatre silhouettes principales et huit masses de toitures lointaines par arène. Auparavant, une sculpture derrière le joueur pouvait occuper l'unique emplacement 3D Android Low tandis que l'architecture regardée devant restait en `Part`/`WedgePart` primitive. Les assets originaux approuvés, quotas de pression, rayons de chargement, collisions et signaux ne changent pas. Aucun modèle, texture, nouvelle boucle ni publication Place n'est ajouté.

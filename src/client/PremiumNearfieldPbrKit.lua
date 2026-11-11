@@ -3,6 +3,7 @@
 -- four audited creator-owned SurfaceAppearance maps already serialized
 -- in default.project.json. Scenery LOD owns the only periodic call.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 
 local Kit = {}
 -- Each permitted bucket is made by an existing validated original
@@ -304,7 +305,7 @@ local function install(model, pieces, variant)
     return true
 end
 
-function Kit.reconcile(arena, cameraPoint, cameraReady, tier, touch, pressure, disabled)
+function Kit.reconcile(arena, cameraPoint, cameraReady, tier, touch, pressure, disabled, cameraLook)
     local variant = arena and arena:GetAttribute("VariantId")
     local permitted = SOURCES[variant]
     local budget = Kit.budget(tier, pressure, touch, disabled)
@@ -332,11 +333,21 @@ function Kit.reconcile(arena, cameraPoint, cameraReady, tier, touch, pressure, d
                             -- model once its matching ID was verified.
                             scanned[model] = true
                             local position = model:GetBoundingBox()
-                            local distance = (position.Position - cameraPoint).Magnitude
+                            local offset = position.Position - cameraPoint
+                            local distance = offset.Magnitude
                             if distance <= (tier == "High" and 245 or 175) then
+                                -- Only a few seven-MeshPart models can carry
+                                -- extra 2K overlays. Favor those in view,
+                                -- but retain a modest bias for an installed
+                                -- overlay to avoid camera-turn GPU churn.
+                                -- No change to actual distance eligibility.
+                                local held = states[model] ~= nil
+                                local priority = SceneryLodRules.sceneryViewScore(
+                                    distance - (held and 12 or 0),
+                                    offset, cameraLook, 28)
                                 candidates[#candidates + 1] = {
                                     model = model, pieces = pieces,
-                                    distance = distance,
+                                    distance = distance, priority = priority,
                                 }
                             end
                         end
@@ -345,7 +356,7 @@ function Kit.reconcile(arena, cameraPoint, cameraReady, tier, touch, pressure, d
             end
         end
         table.sort(candidates, function(a, b)
-            if a.distance ~= b.distance then return a.distance < b.distance end
+            if a.priority ~= b.priority then return a.priority < b.priority end
             return a.model:GetFullName() < b.model:GetFullName()
         end)
     end

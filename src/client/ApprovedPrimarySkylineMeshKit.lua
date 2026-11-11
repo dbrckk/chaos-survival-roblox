@@ -356,7 +356,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure,cameraLook)
             if distance <= spec.distance+(held and RETENTION or 0) then
                 ranked[#ranked+1] = {
                     owner=owner,index=index,source=source,holder=holder,
-                    id=id,score=SceneryLodRules.skylineViewScore(
+                    id=id,score=SceneryLodRules.sceneryViewScore(
                         distance-(held and RETENTION*.5 or 0),
                         native[1].Position-cameraPoint,cameraLook),
                 }

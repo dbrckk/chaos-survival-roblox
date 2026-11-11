@@ -1552,7 +1552,7 @@ task.spawn(function()
             PremiumNearfieldPbrKit.reconcile(
                 arena, cameraPoint, cameraReady, profile.Name, isTouch,
                 player:GetAttribute("OptionalVfxPressure"),
-                player:GetAttribute("PbrMaterialsDisabled"))
+                player:GetAttribute("PbrMaterialsDisabled"),cameraLook)
         if player:GetAttribute("LocalPremiumNearfieldPbrModelCount")
             ~= nearfieldModels then
             player:SetAttribute("LocalPremiumNearfieldPbrModelCount",
