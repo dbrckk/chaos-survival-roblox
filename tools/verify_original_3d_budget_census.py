@@ -265,6 +265,38 @@ assert '.Heartbeat:Connect(' not in INLAY
 assert 'AssetService' not in INLAY
 print("PASS authentic original station deck 3D and six protected cues")
 
+# The five existing creator-approved service-hatch models can replace
+# ONE foreground Low route surface, not add another seven-piece source
+# family on top of carapace/hub or a two-sided Towers Skybridge.
+# Catch budget, provenance and native-fallback regressions on every
+# change to the actual platform visual owner.
+FINISH=(CLIENT/"PlatformFinishKit.lua").read_text(encoding="utf8")
+OWNER=(CLIENT/"arena-platform-identity.client.lua").read_text(encoding="utf8")
+assert 'local lowReady = tier == "Low" and (tonumber(pressure) or 0) == 0' in FINISH
+assert 'if not source or (lowReady and sourceParts ~= 7) then return chosen end' in FINISH
+assert 'if lowReady and not hasCamera then return chosen end' in FINISH
+assert '(platform.Position-cameraPoint).Magnitude' in FINISH
+assert '<= 100' in FINISH
+assert 'quota = 1' in FINISH
+assert 'or (tier == "Low" and expectedPieces ~= 7)' in FINISH
+assert 'or (tier == "Low" and selected ~= true)' in FINISH
+assert 'if tier == "Low" then return {} end' in FINISH
+assert 'part.CanCollide = false' in FINISH
+assert 'part.CanTouch = false' in FINISH
+assert 'part.CanQuery = false' in FINISH
+assert 'local nearServiceHatches = not lowBridgeChosen' in OWNER
+assert 'local lowServiceHatchChosen = tier.Name == "Low"' in OWNER
+assert 'if lowServiceHatchChosen then' in OWNER
+assert 'nearCameraCarapaces = {}' in OWNER
+assert 'lowHubDeck = nil' in OWNER
+assert 'or nearServiceHatches[platform] == true' in OWNER
+assert 'LocalOriginalServiceHatch3DCount' in OWNER
+assert '"ArenaPlatformIdentityLocal"' in ledger
+assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
+assert '.RenderStepped:Connect(' not in FINISH
+assert 'AssetService' not in FINISH
+print("PASS one original seven-mesh Low top hatch with shared budget and no primitive fallback")
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
