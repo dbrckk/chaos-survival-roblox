@@ -523,11 +523,15 @@ local function rebuild()
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
 
+    -- Low visual source reservation is an actual successful MODEL mount,
+    -- never a speculative source/size check. A missing or malformed clone
+    -- must release its exclusive budget for the next approved art family
+    -- rather than leaving the player's hero deck with only native blocks.
+    -- Staged pieces enter the SAME folder, registrar and shrink/collapse
+    -- owner below. One foreground model OR one two-sided bridge model;
+    -- no second owner, retained hidden duplicates or new frame sampler.
+    local lowPreMounted = {}
     if tier.Name == "Low" then
-        -- This arbitration runs only on the EXISTING map/pressure/camera-
-        -- epoch rebuild. It adds neither a frame loop nor any extra
-        -- source clones: one pair of bridge 7-part Models OR one 7-part
-        -- foreground Model (plus the existing structural 7-part slot).
         local function nearest(set)
             local chosen, distance = nil, math.huge
             if typeof(cameraPoint) ~= "Vector3" then
@@ -544,51 +548,90 @@ local function rebuild()
             end
             return chosen, distance
         end
-        local bridge, bridgeDistance = nearest(nearBridgeGirders)
-        local carapace, carapaceDistance = nearest(nearCameraCarapaces)
-        local hatch, hatchDistance = nearest(nearServiceHatches)
-        local hullDistance = lowHubDeck
-            and typeof(cameraPoint) == "Vector3"
-            and (lowHubDeck.Position-cameraPoint).Magnitude or math.huge
-        local foregroundDistance = math.min(
-            carapaceDistance, hatchDistance, hullDistance)
-        -- A real, very large bridge wins when it is comparably near.
-        -- Do not hide nearby above-deck or structural artwork simply
-        -- because some distant Towers bridge is technically in range.
-        if bridge and (foregroundDistance == math.huge
-            or bridgeDistance <= foregroundDistance + 16) then
-            nearBridgeGirders = {[bridge] = true}
+        -- Only four mutually exclusive genuine original families exist.
+        -- At most four bounded attempts on a map/tier/pressure rebuild.
+        for _ = 1, 4 do
+            local bridge, bridgeDistance = nearest(nearBridgeGirders)
+            local carapace, carapaceDistance = nearest(nearCameraCarapaces)
+            local hatch, hatchDistance = nearest(nearServiceHatches)
+            local hullDistance = lowHubDeck
+                and typeof(cameraPoint) == "Vector3"
+                and (lowHubDeck.Position-cameraPoint).Magnitude or math.huge
+            local foregroundDistance = math.min(
+                carapaceDistance, hatchDistance, hullDistance)
+            local choice, target = nil, nil
+            if bridge and (foregroundDistance == math.huge
+                or bridgeDistance <= foregroundDistance + 16) then
+                choice, target = "bridge", bridge
+            else
+                local hatchScore = hatchDistance
+                if typeof(cameraLook) == "Vector3"
+                    and cameraLook.Y < -0.50 then
+                    hatchScore -= 12
+                end
+                -- The full 18x18 sculpted hub remains the important
+                -- silhouette at equal distance. A strongly top-down
+                -- near hatch gets its previously selected visibility bias.
+                if lowHubDeck and hullDistance <= math.min(
+                    carapaceDistance + 12, hatchScore + 12) then
+                    choice, target = "hull", lowHubDeck
+                elseif carapace and carapaceDistance <= hatchScore + 8 then
+                    choice, target = "carapace", carapace
+                elseif hatch then
+                    choice, target = "hatch", hatch
+                end
+            end
+            if not target then break end
+            local id = PlatformFinishKit.visualIndex(target, 1)
+            local pieces = nil
+            if choice == "bridge" then
+                pieces = PremiumPlatformSideMeshKit.bridgeGirders(
+                    folder, target, tier.Name, id, true)
+            elseif choice == "hull" then
+                pieces = PremiumLargeDeckHullMeshKit.install(
+                    folder, target, tier.Name, id, true)
+            elseif choice == "carapace" then
+                pieces = PremiumPlatformSideMeshKit.carapace(
+                    folder, target, variant, tier.Name, id, true)
+            else
+                pieces = PlatformFinishKit.buildServiceHatch(
+                    folder, target, variant, tier.Name, theme, id, true)
+            end
+            local expected = choice == "bridge" and 14 or 7
+            if pieces and #pieces == expected then
+                -- Exactly one successful source family was published.
+                -- These are not throwaway tests: later platform traversal
+                -- adopts the ALREADY-MOUNTED parts without cloning again.
+                lowPreMounted[target] = {kind = choice, parts = pieces}
+                nearBridgeGirders = choice == "bridge"
+                    and {[target] = true} or {}
+                nearCameraCarapaces = choice == "carapace"
+                    and {[target] = true} or {}
+                nearServiceHatches = choice == "hatch"
+                    and {[target] = true} or {}
+                lowHubDeck = choice == "hull" and target or nil
+                break
+            end
+            -- A successful full source must be atomic; never retain
+            -- partial 3D bundles or spent budget from a failed mount.
+            for _, piece in ipairs(pieces or {}) do
+                piece:Destroy()
+            end
+            if choice == "bridge" then
+                nearBridgeGirders = {}
+            elseif choice == "hull" then
+                lowHubDeck = nil
+            elseif choice == "carapace" then
+                nearCameraCarapaces = {}
+            else
+                nearServiceHatches = {}
+            end
+        end
+        if next(lowPreMounted) == nil then
+            nearBridgeGirders = {}
             nearCameraCarapaces = {}
             nearServiceHatches = {}
             lowHubDeck = nil
-        else
-            nearBridgeGirders = {}
-            -- The top relief becomes visually more important when the
-            -- third-person camera looks steeply down onto the deck.
-            -- Preserve the 18x18 creator hub silhouette for equal-range
-            -- candidates; choose a hatch only if clearly more visible.
-            local hatchScore = hatchDistance
-            if typeof(cameraLook) == "Vector3"
-                and cameraLook.Y < -0.50 then
-                hatchScore -= 12
-            end
-            if lowHubDeck and hullDistance <= math.min(
-                carapaceDistance + 12, hatchScore + 12) then
-                nearCameraCarapaces = {}
-                nearServiceHatches = {}
-            elseif carapace and carapaceDistance <= hatchScore + 8 then
-                lowHubDeck = nil
-                nearServiceHatches = {}
-                nearCameraCarapaces = {[carapace] = true}
-            elseif hatch then
-                lowHubDeck = nil
-                nearCameraCarapaces = {}
-                nearServiceHatches = {[hatch] = true}
-            else
-                nearCameraCarapaces = {}
-                nearServiceHatches = {}
-                lowHubDeck = nil
-            end
         end
     end
     local lowBridgeChosen = tier.Name == "Low"
@@ -672,13 +715,16 @@ local function rebuild()
             -- The authored 18x18 central hub needs its own full-size
             -- original hull, not a tiny 10-stud carapace scaled up as a
             -- decorative sticker. Fallback remains the established kit.
-            local largeHullPieces = PremiumLargeDeckHullMeshKit.install(
-                folder, platform, tier.Name, visualIndex,
-                tier.Name == "Low" and platform == lowHubDeck)
+            local staged = lowPreMounted[platform]
+            local largeHullPieces = (staged and staged.kind == "hull"
+                and staged.parts) or PremiumLargeDeckHullMeshKit.install(
+                    folder, platform, tier.Name, visualIndex,
+                    tier.Name == "Low" and platform == lowHubDeck)
             if tier.Name == "Low" and largeHullPieces then
                 mountedLowHubHulls += 1
             end
             local carapacePieces = largeHullPieces
+                or (staged and staged.kind == "carapace" and staged.parts)
                 or PlatformFinishKit.buildCarapace(
                     folder, platform, variant, tier.Name, theme, visualIndex,
                     nearCameraCarapaces[platform] == true)
@@ -691,7 +737,8 @@ local function rebuild()
                     "Original3DStructuralSide") == true
             local sidePieces = {}
             if not authenticCarapace then
-                sidePieces = PlatformFinishKit.buildSideRails(
+                sidePieces = (staged and staged.kind == "bridge"
+                    and staged.parts) or PlatformFinishKit.buildSideRails(
                     folder, platform, tier.Name, theme, variant, visualIndex,
                     nearBridgeGirders[platform] == true)
             end
@@ -724,7 +771,8 @@ local function rebuild()
             -- Textured-looking three-layer native hardware on a strictly
             -- bounded subset of actual jump decks. Shares this existing
             -- platform's weld, collapse visibility and shrinking footprint.
-            local hatchPieces = PlatformFinishKit.buildServiceHatch(
+            local hatchPieces = (staged and staged.kind == "hatch"
+                and staged.parts) or PlatformFinishKit.buildServiceHatch(
                 folder, platform, variant, tier.Name, theme, visualIndex,
                 nearServiceHatches[platform] == true)
             -- Only count a COMPLETE, actually mounted verified 3D source;
