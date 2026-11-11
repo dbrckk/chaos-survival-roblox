@@ -21,16 +21,16 @@ named={}
 for group,body in groups:
     named[group]=set(re.findall(r'"([^"]+)"',body))
 assert "premium_extension_names" in named
-assert len(named["premium_extension_names"])==39
+assert len(named["premium_extension_names"])==40
 assert len(named)==17,(len(named),sorted(named))
 expected=set().union(*named.values())
 models=registry["models"]
 actual={x["name"] for x in models}
-assert len(models)==101,(len(models),"approved source count")
+assert len(models)==102,(len(models),"approved source count")
 assert len(expected)==len(models)==len(actual),(len(expected),len(models),len(actual))
 assert expected==actual,("Missing",sorted(actual-expected),"Phantom",sorted(expected-actual))
 ids=[x["asset_id"] for x in models]
-assert len(set(ids))==101
+assert len(set(ids))==102
 for model in models:
     assert model["moderation"]=="Approved"
     assert model["asset_id"].isdecimal() and int(model["asset_id"])>0
@@ -67,7 +67,7 @@ for model in models:
             assert path.name.startswith("generate_original_")
         if attr=="source_materials":
             assert path.is_relative_to("assets/source")
-assert "assert len(models) == 101" in section
+assert "assert len(models) == 102" in section
 assert '| harbor_original_names | premium_extension_names)' in section
 assert 'model["name"] in premium_extension_names' in section
 assert 'tools/verify_premium_approved_asset_import_queue.py' in section
@@ -85,6 +85,6 @@ listed=re.findall(r'"(tests/engine/[^"*]+\.spec\.luau)"',cloud)
 assert len(all_specs)==86,(len(all_specs),"unexpected engine spec count")
 assert len(set(listed))==86 and len(listed)==86
 assert set(listed)==all_specs,("Missing",all_specs-set(listed))
-print("PASS 101 real Approved original Models and all 39 new reproducible sources")
+print("PASS 102 real Approved original Models and all 40 new reproducible sources")
 print("PASS release Build Validation uses current 2-permit global importer contract")
 print("PASS all 86 engine specs listed exactly once; Lest diagnostic test is valid")
