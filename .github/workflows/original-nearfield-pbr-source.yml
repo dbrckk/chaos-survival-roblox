@@ -12,6 +12,9 @@ on:
       - src/client/ApprovedOrbitalReactorLandmarkMeshKit.lua
       - src/client/ApprovedVariantIdentitySpineMeshKit.lua
       - tests/engine/arena-material-rules.spec.luau
+      - src/shared/ArenaLightingReadabilityRules.lua
+      - src/client/juice.client.lua
+      - tests/engine/arena-focal-lighting-rules.spec.luau
       - tools/verify_premium_nearfield_pbr.py
       - .github/workflows/original-nearfield-pbr-source.yml
       - default.project.json
@@ -28,6 +31,9 @@ on:
       - src/client/ApprovedOrbitalReactorLandmarkMeshKit.lua
       - src/client/ApprovedVariantIdentitySpineMeshKit.lua
       - tests/engine/arena-material-rules.spec.luau
+      - src/shared/ArenaLightingReadabilityRules.lua
+      - src/client/juice.client.lua
+      - tests/engine/arena-focal-lighting-rules.spec.luau
       - tools/verify_premium_nearfield_pbr.py
       - .github/workflows/original-nearfield-pbr-source.yml
       - default.project.json

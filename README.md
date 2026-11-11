@@ -1,3 +1,7 @@
+## P4 — Reflets métalliques différenciés en pleine manche — 11 novembre 2026
+
+Le [lot d'éclairage des métaux sculptés](docs/P4_ROUND_METAL_RELIEF_LIGHTING_2026-11-11.md) donne à chacune des cinq arènes une petite signature de **reflet spéculaire et diffusion** pendant les phases ready/round, sur les propriétés Lighting déjà pilotées par `juice.client.lua`. Les gains sont bornés à **0,60 de diffus / 0,78 de spéculaire**, sans aucune nouvelle lumière, texture PBR ni boucle ; **Darkness**, y compris en deuxième catastrophe Double Chaos, est intégralement exclu. Les trois profils GPU et les contrôles Engine existants sont conservés.
+
 ## P4 — Finitions métalliques PBR 2K sur les vrais socles de station — 11 novembre 2026
 
 Le [lot de finition PBR des inserts de stations](docs/P4_APPROVED_STATION_DECK_NEARFIELD_PBR_2026-11-11.md) relie les **vraies dalles triangulées originales** de socles à la whitelist existante des **quatre familles de textures PBR 2K déjà approuvées**, sur les cinq arènes. Aucun nouveau téléchargement ni quota GPU : la surcouche partage **2/3 modèles Medium ou 4/6 High**, reste désactivée sur Low et est supprimée sous pression. Les six voyants et repères natifs restent inchangés ; la finition est optionnelle et ne garantit pas un rendu permanent à l'écran. Aucune publication Roblox dans cette PR.

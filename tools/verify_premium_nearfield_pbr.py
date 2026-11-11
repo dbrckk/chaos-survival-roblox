@@ -273,6 +273,44 @@ assert 'if disabled == true or tier == "Low" then return 0 end' in KIT
 assert '"SIGNAL", "CARBON", "GRIP", "GLASS"' in KIT
 print("PASS authentic deck-inlay UV meshes reuse the original capped 2K nearfield PBR")
 
+# Metal relief is authored through the SAME Lighting diffuse/specular
+# scales already owned by juice during ready/round. Keep the event owner
+# and exact Darkness blackout contract; never add local lights, 2K maps,
+# post-process layers, timers, or per-frame visual loops.
+LIGHT=(ROOT/"src/shared/ArenaLightingReadabilityRules.lua").read_text()
+JUICE=(ROOT/"src/client/juice.client.lua").read_text()
+ENG_LIGHT=(ROOT/"tests/engine/arena-focal-lighting-rules.spec.luau").read_text()
+assert 'local ROUND_METAL_BOUNCE = {' in LIGHT
+for variant, diffuse, spec in (
+    ("Classic","0.018","0.042"),
+    ("Towers","0.012","0.050"),
+    ("Crossroads","0.024","0.036"),
+    ("Orbital","0.010","0.060"),
+    ("Harbor","0.026","0.032"),
+):
+    assert f'{variant} = {{diffuse = {diffuse}, specular = {spec}}}' in LIGHT
+assert 'function Rules.disasterLighting(phase, qualityName, doubleChaos, disasterIds, variant)' in LIGHT
+assert 'local finish = ROUND_METAL_BOUNCE[variant]' in LIGHT
+assert LIGHT.index('local finish = ROUND_METAL_BOUNCE[variant]') > LIGHT.index(
+    '    if darkness then')
+assert 'diffuse = math.min(0.60, diffuse + finish.diffuse)' in LIGHT
+assert 'specular = math.min(0.78, specular + finish.specular)' in LIGHT
+assert 'if doubleChaos == true and round then' in LIGHT
+assert 'diffuse -= 0.025' in LIGHT
+assert 'if disasterIds[index] == "Darkness" then return true end' in LIGHT
+assert 'local function activeRoundArenaVariant()' in JUICE
+assert 'arena.Parent ~= generated' in JUICE
+assert 'activeRoundArenaVariant())' in JUICE
+assert 'Lighting.EnvironmentDiffuseScale = diffuse' in JUICE
+assert 'Lighting.EnvironmentSpecularScale = specular' in JUICE
+assert 'LocalRoundSpecularTarget' in JUICE
+assert 'setHazardBrightness(targetBrightness, blackoutWindow)' in JUICE
+assert 'for variant, boost in pairs(finishes) do' in ENG_LIGHT
+assert 'hiddenDiffuse' in ENG_LIGHT and 'hiddenSpecular' in ENG_LIGHT
+assert 'Instance.new("PointLight")' not in LIGHT
+assert 'RenderStepped:Connect(' not in LIGHT
+print("PASS five arena metal relief curves, no new lights, Darkness isolation")
+
 pbr = PROJECT["tree"]["ReplicatedStorage"]["OriginalGroundPbrTemplates"]
 needed = ("BrushedTitanium","OxidizedSteel","DiamondArmor","ReactorCeramic")
 unique_images=set()

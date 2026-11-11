@@ -468,6 +468,20 @@ player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     end
 end)
 
+-- Never infer the PBR finish from a player-controlled field. Read only
+-- the currently generated server arena; a missing/streamed map retains
+-- the previous neutral material curve in shared lighting rules.
+local function activeRoundArenaVariant()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not generated or generated.Parent ~= workspace
+        or not arena or not arena:IsA("Folder")
+        or arena.Name ~= "Arena" or arena.Parent ~= generated then
+        return nil
+    end
+    return arena:GetAttribute("VariantId")
+end
+
 local function setMood(state)
     local phase = state.phase
     local doubleChaos = state.doubleChaos == true
@@ -514,7 +528,8 @@ local function setMood(state)
     -- its negative hazard ColorCorrection brightness is NOT modified.
     local exposure, diffuse, specular, darkness =
         ArenaLightingReadabilityRules.disasterLighting(
-            phase, vfxTier.Name, doubleChaos, ids)
+            phase, vfxTier.Name, doubleChaos, ids,
+            activeRoundArenaVariant())
     if exposure then
         if Lighting.ExposureCompensation ~= exposure then
             Lighting.ExposureCompensation = exposure
@@ -528,6 +543,10 @@ local function setMood(state)
         -- Values describe the authored target, not a screenshot/measurement.
         if player:GetAttribute("LocalRoundDiffuseTarget") ~= diffuse then
             player:SetAttribute("LocalRoundDiffuseTarget", diffuse)
+        end
+        -- Authored target for visual QA; not a measured luminance/FPS.
+        if player:GetAttribute("LocalRoundSpecularTarget") ~= specular then
+            player:SetAttribute("LocalRoundSpecularTarget", specular)
         end
         if player:GetAttribute("LocalDarknessLightGuard") ~= darkness then
             player:SetAttribute("LocalDarknessLightGuard", darkness)

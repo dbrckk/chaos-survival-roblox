@@ -27,6 +27,19 @@ local TIERS = {
         darknessSpecular = 0.48,
     },
 }
+-- Sculpted brushed metals need a controlled reflection response during
+-- real gameplay, not only in the lobby. Per-arena offsets preserve each
+-- world's authored steel/ceramic identity without new lights or textures.
+-- Their shared ceiling prevents washed-out hazard decals or lava cues.
+-- Do NOT apply any offset to Darkness, primary OR secondary.
+local ROUND_METAL_BOUNCE = {
+    Classic = {diffuse = 0.018, specular = 0.042},
+    Towers = {diffuse = 0.012, specular = 0.050},
+    Crossroads = {diffuse = 0.024, specular = 0.036},
+    Orbital = {diffuse = 0.010, specular = 0.060},
+    Harbor = {diffuse = 0.026, specular = 0.032},
+}
+
 local function tier(name)
     return TIERS[name] or TIERS.Medium
 end
@@ -53,7 +66,7 @@ end
 -- authored daylight profiles while the player was actually trying to
 -- navigate. This is a single shared Lighting property, not an extra lamp.
 -- Returns nil outside ready/round so the identity controller owns rest.
-function Rules.disasterLighting(phase, qualityName, doubleChaos, disasterIds)
+function Rules.disasterLighting(phase, qualityName, doubleChaos, disasterIds, variant)
     if phase ~= "ready" and phase ~= "round" then return nil end
     local config = tier(qualityName)
     local darkness = Rules.hasDarkness(disasterIds)
@@ -70,6 +83,15 @@ function Rules.disasterLighting(phase, qualityName, doubleChaos, disasterIds)
             -- Slightly darker two-hazard material response without
             -- forcing every steel face back to almost-black.
             diffuse -= 0.025
+        end
+        -- Only five server-authored variants opt in. An untrusted or
+        -- missing ID retains historical material lighting unchanged.
+        -- Boost specular relief more than diffuse fill: metals gain
+        -- visible edges, while warnings and safe ground stay distinct.
+        local finish = ROUND_METAL_BOUNCE[variant]
+        if finish then
+            diffuse = math.min(0.60, diffuse + finish.diffuse)
+            specular = math.min(0.78, specular + finish.specular)
         end
     end
 
