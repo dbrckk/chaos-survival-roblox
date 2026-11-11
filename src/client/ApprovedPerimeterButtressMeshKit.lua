@@ -13,8 +13,11 @@ local APPROVED = {
     Harbor = 76194593490199,
 }
 local STATIONS = {"North", "East", "South", "West"}
-local LIMITS = {Low = 0, Medium = 1, High = 4}
-local RANGE = {Low = 0, Medium = 185, High = 275}
+-- One nearest authentic two-pillar pair at Android Low. The original
+-- two native cuboids are hidden only after both owner-verified Models
+-- mount. The first pressure tier floors the cap to zero and restores them.
+local LIMITS = {Low = 1, Medium = 1, High = 4}
+local RANGE = {Low = 150, Medium = 185, High = 275}
 local RETENTION = 18
 
 local bucket = Instance.new("Folder")
