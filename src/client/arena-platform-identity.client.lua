@@ -497,7 +497,9 @@ local function rebuild()
             or ((tonumber(player:GetAttribute("OptionalVfxPressure")) or 0)
                 == 0 and 1 or 0))
     local longCradleBudget = tier.Name == "High" and 4
-        or (tier.Name == "Medium" and 2 or 0)
+        or (tier.Name == "Medium" and 2
+            or ((tonumber(player:GetAttribute("OptionalVfxPressure")) or 0)
+                == 0 and 1 or 0))
     local originalLargeCount = 0
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
@@ -531,6 +533,12 @@ local function rebuild()
             camera and camera.CFrame.Position or nil,
             camera and camera.CFrame.LookVector or nil,
             player:GetAttribute("OptionalVfxPressure"))
+    -- One source Model on Android Low, not a new independent
+    -- allowance for the new LongCradle and the existing seven-MeshPart
+    -- support column. Medium/High budgets stay exactly as before.
+    if tier.Name == "Low" and next(nearCradles) ~= nil then
+        supportBudget = 0
+    end
     local mountedRouteCradles = 0
     local mountedCloseSupports = 0
 

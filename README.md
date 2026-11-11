@@ -1,3 +1,7 @@
+## P4 — Vrai châssis ajouré 3D sur une grande passerelle Android Low — 11 novembre 2026
+
+Le [lot de remplacement des sous-structures Sky Spine / Promenade](docs/P4_LOW_ORIGINAL_SKY_SPINE_UNDERCRADLE_2026-11-11.md) autorise un **vrai Model créateur LongCradle (128914328933863), de sept MeshParts**, sur une plateforme physique proche de la caméra (≤125 studs), si la provenance, l'échelle et l'empreinte sont validées. Il **partage l'unique quota Low de grande structure avec la colonne 3D** précédente : pas de cumul. Dès pression graphique Low 1/2, retour aux châssis et piliers natifs. Medium/High inchangés. **Il reste à valider dans Roblox Engine/Android et à publier sur la Place.**
+
 ## P4 — Pilier de plateforme sculpté authentique sur Android Low — 11 novembre 2026
 
 Le [lot de remplacement d'une colonne structurale primitive](docs/P4_LOW_AUTHENTIC_NEAR_SUPPORT_COLUMN_2026-11-11.md) autorise **un vrai Model créateur de sept MeshParts pour un seul pilier `PlatformSupportN_K`**, à 125 studs de la caméra et uniquement sans pression graphique. Sur Low, un support de **5–16 studs** n'est substitué qu'après vérification de la provenance, de la largeur, du nombre de pièces et de la vraie plateforme porteuse. Le repli natif est automatique sous pression 1/2. Medium/High et la géométrie LongCradle ne changent pas ; **aucun upload du jeu n'est revendiqué**, mesures Roblox Engine/Android encore nécessaires.
