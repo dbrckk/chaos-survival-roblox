@@ -92,7 +92,11 @@ assert 'HarborQuayInlay' in MAP
 assert "AssetService" not in SRC and "LoadAssetAsync" not in SRC
 assert "RenderStepped" not in SRC and "Heartbeat" not in SRC
 assert "RemoteEvent" not in SRC and "RemoteFunction" not in SRC
-assert len(REGISTRY["models"]) == 101
+# The approved source catalog is append-only; an exact 101 entries
+# became stale after the next legitimate owner-approved model import.
+# Keep a lower bound and reject duplicate Roblox asset IDs instead.
+assert len(REGISTRY["models"]) >= 101
+assert len({m["asset_id"] for m in REGISTRY["models"]}) == len(REGISTRY["models"])
 assert all(m.get("moderation") == "Approved" for m in REGISTRY["models"])
 assert 'local ArenaAtmosphereStyle = require("../../src/server/ArenaAtmosphereStyle")' in ENGINE
 assert 'keeps Harbor atmosphere' in ENGINE
