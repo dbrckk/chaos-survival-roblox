@@ -526,10 +526,21 @@ local function rebuild()
     -- Low's full-size approved hub and compact carapace remain mutually
     -- exclusive, including when a premium Skybridge is selected.
     if lowHubDeck then nearCameraCarapaces = {} end
-    local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
-        ordered, variant, tier.Name, base,
-        camera and camera.CFrame.Position or nil,
-        camera and camera.CFrame.LookVector or nil)
+    local nearServiceHatches = not lowBridgeChosen
+        and PlatformFinishKit.selectOriginalServiceHatches(
+            ordered, variant, tier.Name, base,
+            camera and camera.CFrame.Position or nil,
+            camera and camera.CFrame.LookVector or nil,
+            player:GetAttribute("OptionalVfxPressure")) or {}
+    local lowServiceHatchChosen = tier.Name == "Low"
+        and next(nearServiceHatches) ~= nil
+    -- The newly approved seven-MeshPart top surface uses the SAME one
+    -- Low foreground slot as the original shell/hub, not an additive
+    -- seventh-plus-seventh garnish. Towers bridge already takes both.
+    if lowServiceHatchChosen then
+        nearCameraCarapaces = {}
+        lowHubDeck = nil
+    end
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
     local mountedLowHubHulls = 0
@@ -589,10 +600,11 @@ local function rebuild()
             -- Low tier keeps its existing half-density surface ornaments,
             -- but EVERY verified takeoff gets a small gameplay route cue.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0
-                or nearBridgeGirders[platform] == true then
-            -- A camera-selected Low skybridge may have an EVEN index.
-            -- Mount genuine bridge trusses without reintroducing the
-            -- native surface ornament that Low already omitted.
+                or nearBridgeGirders[platform] == true
+                or nearServiceHatches[platform] == true then
+            -- A camera-selected Low skybridge or true-service-hatch
+            -- platform may have an EVEN index. Mount the imported art
+            -- without reintroducing native paint Low already omitted.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme
