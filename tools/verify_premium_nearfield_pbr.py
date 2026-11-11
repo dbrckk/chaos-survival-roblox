@@ -17,7 +17,9 @@ REGISTRY = json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_tex
 ids = {int(model["asset_id"]) for model in REGISTRY["models"]
        if model["moderation"] == "Approved"}
 BUCKETS = {
-    "Classic": [("ApprovedPerimeterVariantApexLocal",110237986522853,
+    "Classic": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
+                   "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
+("ApprovedPerimeterVariantApexLocal",110237986522853,
                    "ApprovedPerimeterVariantApexMeshKit.lua"),
                 ("ApprovedPerimeterArmorLocal",88962643359267,
                    "ApprovedPerimeterArmorMeshKit.lua"),
@@ -57,7 +59,9 @@ BUCKETS = {
                  "ApprovedClassicBroadcastFinMeshKit.lua"),
                 ("ApprovedOriginalIdentitySpinesLocal",105555650820011,
                  "ApprovedVariantIdentitySpineMeshKit.lua")],
-    "Towers": [("ApprovedPerimeterVariantApexLocal",131413152501235,
+    "Towers": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
+                   "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
+("ApprovedPerimeterVariantApexLocal",131413152501235,
                    "ApprovedPerimeterVariantApexMeshKit.lua"),
                 ("ApprovedPerimeterArmorLocal",88962643359267,
                    "ApprovedPerimeterArmorMeshKit.lua"),
@@ -99,7 +103,9 @@ BUCKETS = {
                 "ApprovedVariantTowersLandmarkMeshKit.lua"),
                ("ApprovedOriginalIdentitySpinesLocal",86423178125318,
                 "ApprovedVariantIdentitySpineMeshKit.lua")],
-    "Crossroads": [("ApprovedPerimeterVariantApexLocal",134533469777794,
+    "Crossroads": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
+                   "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
+("ApprovedPerimeterVariantApexLocal",134533469777794,
                    "ApprovedPerimeterVariantApexMeshKit.lua"),
                 ("ApprovedPerimeterArmorLocal",88962643359267,
                    "ApprovedPerimeterArmorMeshKit.lua"),
@@ -139,7 +145,9 @@ BUCKETS = {
                    "ApprovedCrossroadsEntrancePortalMeshKit.lua"),
                    ("ApprovedCrossroadsOpenGantryLocal",90844491148907,
                     "ApprovedCrossroadsOpenGantryMeshKit.lua")],
-    "Orbital": [("ApprovedPerimeterVariantApexLocal",131188899020391,
+    "Orbital": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
+                   "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
+("ApprovedPerimeterVariantApexLocal",131188899020391,
                    "ApprovedPerimeterVariantApexMeshKit.lua"),
                 ("ApprovedPerimeterArmorLocal",88962643359267,
                    "ApprovedPerimeterArmorMeshKit.lua"),
@@ -179,7 +187,9 @@ BUCKETS = {
                  "ApprovedOrbitalReactorLandmarkMeshKit.lua"),
                 ("ApprovedOrbitalReactorLandmarksLocal",138666009076890,
                  "ApprovedOrbitalReactorLandmarkMeshKit.lua")],
-    "Harbor": [("ApprovedPerimeterVariantApexLocal",110237986522853,
+    "Harbor": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
+                   "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
+("ApprovedPerimeterVariantApexLocal",110237986522853,
                    "ApprovedPerimeterVariantApexMeshKit.lua"),
                 ("ApprovedPerimeterArmorLocal",88962643359267,
                    "ApprovedPerimeterArmorMeshKit.lua"),
@@ -226,6 +236,42 @@ for variant, pairs in BUCKETS.items():
         assert f'{asset_id}' in src,(asset_id,owner)
         assert 'Original3DAssetId' in src and '"CosmeticOnly"' in src
         print("PASS approved owner",variant,folder,asset_id)
+
+# The approved floor tile is reused as a 3D station inlay, so only its
+# existing seven MeshParts may enter the ALREADY capped nearfield PBR
+# system. Do not PBR-coat the six native warning/identity parts.
+INLAY=(ROOT/"src/client/ApprovedPerimeterStationDeckInlayMeshKit.lua").read_text()
+MAP=(ROOT/"src/server/MapBuilder.lua").read_text()
+assert 'local SOURCE_ID = 72507987666671' in INLAY
+assert 'bucket.Name = "ApprovedPerimeterStationDeckInlaysLocal"' in INLAY
+assert 'bucket:SetAttribute("CosmeticOnly",true)' in INLAY
+assert 'clone:SetAttribute("Original3DAssetId",SOURCE_ID)' in INLAY
+assert 'clone:SetAttribute("CosmeticOnly",true)' in INLAY
+assert 'model:GetAttribute("OwnerVerified")~=true' in INLAY
+assert 'if count~=7 then return nil end' in INLAY
+assert 'part.CanCollide=false' in INLAY
+assert 'part.CanTouch=false' in INLAY
+assert 'part.CanQuery=false' in INLAY
+assert 'part.CastShadow=false' in INLAY
+assert 'clone.Parent=bucket' in INLAY
+assert 'native.Transparency=1' in INLAY
+assert 'state.native.Transparency = state.alpha' in INLAY
+assert 'clone.DescendantRemoving:Connect(' in INLAY
+assert 'ApprovedPerimeterStationDeckInlayMeshKit.sync(arena, cameraPoint,' in LOD
+assert 'PremiumNearfieldPbrKit.reconcile(' in LOD
+assert LOD.index('ApprovedPerimeterStationDeckInlayMeshKit.sync(') < LOD.index(
+    'PremiumNearfieldPbrKit.reconcile(')
+for marker in ("LeftLightNotch","RightLightNotch","CoreLens",
+               "WayfindingInset","PodDataRailL","PodDataRailR"):
+    assert marker in MAP
+    assert f'FindFirstChild("{marker}")' not in KIT
+assert KIT.count('id = 72507987666671') == 5
+assert KIT.count('folder = "ApprovedPerimeterStationDeckInlaysLocal"') == 5
+assert KIT.count('task.wait(') == 0
+assert 'Kit.budget(tier, pressure, touch, disabled)' in KIT
+assert 'if disabled == true or tier == "Low" then return 0 end' in KIT
+assert '"SIGNAL", "CARBON", "GRIP", "GLASS"' in KIT
+print("PASS authentic deck-inlay UV meshes reuse the original capped 2K nearfield PBR")
 
 pbr = PROJECT["tree"]["ReplicatedStorage"]["OriginalGroundPbrTemplates"]
 needed = ("BrushedTitanium","OxidizedSteel","DiamondArmor","ReactorCeramic")

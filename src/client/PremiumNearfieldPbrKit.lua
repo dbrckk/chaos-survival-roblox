@@ -12,8 +12,16 @@ local Kit = {}
 -- exterior towers and ridges, plus authentic perimeter station hardware.
 -- No additional 2K images, imported models, rendering pass or GPU quota.
 -- All station sources are already separately owned and source-verified.
+-- The new forged station deck inlay is the SAME Approved premium floor
+-- model (72507987666671) already present in the replicated templates.
+-- Adding it here does NOT raise nearfield PBR slots, import any image,
+-- run a new timer, or coat protected SIGNAL/CARBON/GRIP/GLASS surfaces.
 local SOURCES = {
     Classic = {
+        -- The existing authentic floor Model is a seven-MeshPart
+        -- station engraving after the native InlaidStationBase mounts.
+        -- PBR uses the SAME global nearfield quota and 16 audited images.
+        {folder = "ApprovedPerimeterStationDeckInlaysLocal", id = 72507987666671},
         {folder = "ApprovedPerimeterVariantApexLocal", id = 110237986522853},
         {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
         {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
@@ -36,6 +44,10 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
     },
     Towers = {
+        -- The existing authentic floor Model is a seven-MeshPart
+        -- station engraving after the native InlaidStationBase mounts.
+        -- PBR uses the SAME global nearfield quota and 16 audited images.
+        {folder = "ApprovedPerimeterStationDeckInlaysLocal", id = 72507987666671},
         {folder = "ApprovedPerimeterVariantApexLocal", id = 131413152501235},
         {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
         {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
@@ -59,6 +71,10 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 86423178125318},
     },
     Crossroads = {
+        -- The existing authentic floor Model is a seven-MeshPart
+        -- station engraving after the native InlaidStationBase mounts.
+        -- PBR uses the SAME global nearfield quota and 16 audited images.
+        {folder = "ApprovedPerimeterStationDeckInlaysLocal", id = 72507987666671},
         {folder = "ApprovedPerimeterVariantApexLocal", id = 134533469777794},
         {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
         {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
@@ -81,6 +97,10 @@ local SOURCES = {
         {folder = "ApprovedCrossroadsOpenGantryLocal", id = 90844491148907},
     },
     Orbital = {
+        -- The existing authentic floor Model is a seven-MeshPart
+        -- station engraving after the native InlaidStationBase mounts.
+        -- PBR uses the SAME global nearfield quota and 16 audited images.
+        {folder = "ApprovedPerimeterStationDeckInlaysLocal", id = 72507987666671},
         {folder = "ApprovedPerimeterVariantApexLocal", id = 131188899020391},
         {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
         {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},
@@ -103,6 +123,10 @@ local SOURCES = {
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 138666009076890},
     },
     Harbor = {
+        -- The existing authentic floor Model is a seven-MeshPart
+        -- station engraving after the native InlaidStationBase mounts.
+        -- PBR uses the SAME global nearfield quota and 16 audited images.
+        {folder = "ApprovedPerimeterStationDeckInlaysLocal", id = 72507987666671},
         {folder = "ApprovedPerimeterVariantApexLocal", id = 110237986522853},
         {folder = "ApprovedPerimeterArmorLocal", id = 88962643359267},
         {folder = "ApprovedPerimeterArmorLocal", id = 138096293972093},

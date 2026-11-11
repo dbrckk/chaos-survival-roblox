@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - src/client/PremiumNearfieldPbrKit.lua
+      - src/client/ApprovedPerimeterStationDeckInlayMeshKit.lua
       - src/client/scenery-lod.client.lua
       - src/client/ApprovedClassicBroadcastFinMeshKit.lua
       - src/client/ApprovedVariantTowersLandmarkMeshKit.lua
@@ -18,6 +19,7 @@ on:
     branches: [main]
     paths:
       - src/client/PremiumNearfieldPbrKit.lua
+      - src/client/ApprovedPerimeterStationDeckInlayMeshKit.lua
       - src/client/scenery-lod.client.lua
       - src/client/ApprovedClassicBroadcastFinMeshKit.lua
       - src/client/ApprovedVariantTowersLandmarkMeshKit.lua
