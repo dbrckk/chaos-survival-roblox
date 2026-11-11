@@ -48,3 +48,37 @@ verified. Retain `DistantAerial` as navigation identity until explicitly
 reviewed; gameplay parts and collision stay unchanged.
 
 No GitHub change alone updates the public Roblox Place.
+
+## Ownership approved and actual runtime integration
+
+The guarded GitHub import [run #42994003806](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42994003806)
+returned authentic Roblox Model asset **80692067525256**, moderation
+**Approved**, with owner ID 9774173158. The source verified in Actions
+contains **2,156 triangles**, **81 sculpted groups**, **7 material glTF
+primitives** and bounding box **11.4 × 33.95 × 7.19**. These are validated
+source dimensions, not an Android screenshot or certification of normal-map
+textures.
+
+The second change registers this proven ID in
+`assets/source/roblox-asset-registry.json`, loads it through
+`PremiumApprovedAssetImportGate` (two concurrent AssetService calls maximum),
+sanitizes the Model on the server, verifies exactly seven noncolliding
+MeshParts and checks the model's dimensions before replication. The client
+`ApprovedSkylineDepthMeshKit` **now prefers this actual, specially carved
+roof sculpt instead of borrowing the generic exterior tower templates**.
+It reuses the existing `scenery-lod.client.lua` timer and exact
+`SkylineDepth...` provenance checks.
+
+All **8 per-arena native roofs** are eligible in the generator/source, but
+the live client only mounts up to **2 on Medium, 4 on High PC, 3 on High
+Android, and 0 on Low**, with lower caps under adaptive VFX pressure and
+camera-distance culling. The `DistantAerial` markers remain native, and
+gameplay Base/platform collision is never touched. On failure, missing
+streamed sources, or LOD reduction, the native WedgeParts remain visible.
+No runtime frame benchmark or rendered comparison is claimed.
+
+Verification: the amended `verify_skyline_depth_approved_fallback.py`
+checks all five variants × eight heights/positions, genuine registry
+provenance, 3D bounds, fallback behavior and strict client import
+separation. Actual Model residency still requires Roblox engine QA and
+Android snapshots **before public publication**.

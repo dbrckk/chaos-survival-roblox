@@ -399,8 +399,9 @@ jobs:
               "exterior_ridges_se", "variant_towers_sculpted_machinery", "variant_crossroads_forged_gantry",
               "variant_classic_sculpted_broadcast_fin", "variant_orbital_sculpted_node", "variant_orbital_trussed_strut",
               "variant_crossroads_sculpted_entrance_portal", "variant_classic_grid_marker_sculpt", "variant_towers_spine_sculpt",
+              "skyline_depth_sculpt",
           }
-          assert len(premium_extension_names) == 39
+          assert len(premium_extension_names) == 40
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
@@ -627,7 +628,7 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 101
+          assert len(models) == 102
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()

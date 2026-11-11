@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-"""Source-level regression for approved SkylineDepth wedges (not Studio QA).
+"""Static regression: actual approved original skyline roofs and safe fallbacks.
 
-The eight 3D placements on each five-variant map must use creator-approved
-sculptures already loaded by the existing server import, never invented IDs.
+Models are only eligible after their owner-approved Roblox Model is available,
+a genuine 7-MeshPart source has been validated and camera/quality allows it.
+This is NOT a substitute for Studio / Android visual and FPS tests.
 """
 import json
-import math
-import re
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 KIT=(ROOT/"src/client/ApprovedSkylineDepthMeshKit.lua").read_text()
 LOD=(ROOT/"src/client/scenery-lod.client.lua").read_text()
 BUILDER=(ROOT/"src/server/MapBuilder.lua").read_text()
-SERVER=(ROOT/"src/server/PremiumExteriorTowerAssets.lua").read_text()
+SERVER=(ROOT/"src/server/PremiumSkylineDepthSculptAssets.lua").read_text()
+INIT=(ROOT/"src/server/init.server.lua").read_text()
 REG=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())
-MODELS={m["name"]:m for m in REG["models"]}
-ASSETS={27:"97864559770371",30:"112172520488996"}
+MODELS={model["name"]:model for model in REG["models"]}
+SOURCE=MODELS["skyline_depth_sculpt"]
+ASSET_ID="80692067525256"
+assert SOURCE["asset_id"]==ASSET_ID
+assert SOURCE["moderation"]=="Approved"
+assert SOURCE["source"]=="tools/generate_original_skyline_depth.py"
+assert SOURCE["workflow_run_id"]==42994003806
+assert "local SOURCE_ID = "+ASSET_ID in KIT
+assert "local ID = "+ASSET_ID in SERVER
 
-for height,asset in ASSETS.items():
-    row=MODELS[f"exterior_tower_{height}"]
-    assert row["asset_id"]==asset and row["moderation"]=="Approved",row
-    assert f"[{height}] = {asset}" in KIT
-    assert f"height = {height}, id = {asset}" in SERVER
-assert "ApprovedExteriorTowerTemplates" in KIT
-for guard in ('"OwnerVerified"','"OriginalExteriorTower3D"',
+for guard in ('"OwnerVerified"','"OriginalSkylineDepthSculpt3D"',
               '"Original3DAssetId"','"CosmeticOnly"',
               'part:IsA("MeshPart")','count ~= 7',
               'body:IsA("WedgePart")','body.Anchored',
@@ -35,8 +36,21 @@ for guard in ('"OwnerVerified"','"OriginalExteriorTower3D"',
               'part.CanQuery = false','body.Transparency = 1',
               'body.Transparency = entry.original',
               'owner:GetAttribute("ChaosDistantScenery")',
-              'variant == "Towers" and 31 or 22'):
+              'variant == "Towers" and 31 or 22',
+              'SOURCE_SIZE = Vector3.new(11.4,33.95,7.19)',
+              'CFrame.Angles(0,yaw,0)',
+              'if scale < .72 or scale > 1.55'):
     assert guard in KIT,guard
+
+for guard in ('PremiumApprovedAssetImportGate','GlobalApprovedImportGate.load',
+              'OriginalMeshScenery.sanitize','OriginalSkylineDepthSculpt3D',
+              'ApprovedSkylineDepthSculptTemplates',
+              'task.wait(34)','validated(clean)',
+              '"LuaSourceContainer"', 'pieces ~= 7',
+              'math.abs(size.Y - EXPECTED.Y) <= .45'):
+    assert guard in SERVER,guard
+assert "require(script.PremiumSkylineDepthSculptAssets)" in INIT
+assert "task.defer(PremiumSkylineDepthSculptAssets.start)" in INIT
 for line in ('SkylineDepth','DistantRoofMass','DistantAerial',
              'local height = (variant.Id == "Towers" and 31 or 22)',
              '16 + layer * 10','layer == 1 and -17 or 19'):
@@ -46,6 +60,7 @@ assert 'ApprovedSkylineDepthMeshKit.sync(arena,cameraPoint,' in LOD
 assert 'LocalApprovedSkylineDepthModelCount' in LOD
 assert 'LocalSkylineDepthPrimitivesReplaced' in LOD
 assert "AssetService" not in KIT
+
 for forbidden in ("RenderStepped","Heartbeat","LoadAssetAsync",
                   "RemoteEvent","RemoteFunction","CanCollide = true"):
     assert forbidden not in KIT,forbidden
@@ -53,31 +68,31 @@ assert "Low={cap=0,distance=0}" in KIT
 assert "Medium={cap=2,distance=425}" in KIT
 assert "High={cap=4,distance=570}" in KIT
 assert "if stress >= 2 then cap = 0 end" in KIT
-assert "if tier == \"High\" and touch then cap = 3 end" in KIT
+assert 'if tier == "High" and touch then cap = 3 end' in KIT
 assert KIT.index("clone.Parent = bucket")<KIT.index("body.Transparency = 1")
 assert "DistantAerial.Transparency" not in KIT
 assert "aerial.Transparency" not in KIT
 
-# All eight exterior depth positions must be eligible for a genuine,
-# undistorted uniform scale within the stated Android-safe bounding budget.
+# Compute all 8 possible owner silhouettes in each of the 5 variants,
+# including 27-stud Classic roofs and 47-stud Towers roofs. Only nearby
+# sources are mounted, capped at 2/3/4; Low retains the native wedges.
 for variant in ("Classic","Towers","Crossroads","Orbital","Harbor"):
     count=0
     for direction in range(1,5):
         for layer in (1,2):
             height=(31 if variant=="Towers" else 22)+5*layer+3*((direction+layer)%3)
-            source=27 if height<=30 else 30
-            sizeX=10+3*layer
-            scale=min(height/(source+1.2),
-                      sizeX*1.35/11.84,8*2/9.84)
-            fittedY=(source+1.2)*scale
-            assert .80<=scale<=1.60,(variant,direction,layer,scale)
-            assert fittedY>=height*.80,(variant,direction,layer,fittedY)
-            assert fittedY<=height*1.07
-            assert 11.84*scale<=sizeX*1.37
-            assert 9.84*scale<=8*2.03
+            width=10+3*layer
+            scale=min(height/33.95,width*1.35/11.4,8*2/7.19)
+            fitted_y=33.95*scale
+            assert .72<=scale<=1.55,(variant,direction,layer,scale)
+            assert fitted_y>=height*.79,(variant,direction,layer,fitted_y)
+            assert fitted_y<=height*1.07
+            assert 11.4*scale<=width*1.15
+            assert 7.19*scale<=8*1.28
             count+=1
     assert count==8
-    print(f"PASS {variant}: 8 authentic SkylineDepth candidates; LOD remains capped")
+    print("PASS",variant,"8 approved skyline candidates; LOD cap unchanged")
 
-print("PASS approved IDs, exact native guards, safe rollback, budgets,")
-print("PASS old aerial signals untouched, no new assets or frame sampler")
+print("PASS approved original asset, map provenance, no physics or external client fetch")
+print("PASS native rollback, 7-MeshPart integrity, camera and Android pressure budgets")
+print("LIMIT rendering, streaming, frame times and moderation are engine/device-dependent")

@@ -1,14 +1,13 @@
--- Replaces camera-selected nonphysical SkylineDepth roof wedges with genuine
--- owner-approved exterior tower sculptures. Never alters DistantAerial cues,
+-- Replaces camera-selected nonphysical SkylineDepth roof wedges with the
+-- genuine creator-approved original 2156-triangle skyline roof sculpture.
+-- Never alters DistantAerial cues,
 -- gameplay collision, server map generation, or the Roblox asset registry.
 -- Shared scenery LOD sampler owns this module: NO new frame loop / asset load.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
-local SOURCE = {
-    [27] = 97864559770371,
-    [30] = 112172520488996,
-}
+local SOURCE_ID = 80692067525256
+local SOURCE_SIZE = Vector3.new(11.4,33.95,7.19)
 local DIRECTIONS = {
     {id="North",x=-22,z=-1,yaw=0},
     {id="East",x=1,z=-22,yaw=math.pi*.5},
@@ -50,29 +49,33 @@ local function clear()
     for _,owner in ipairs(owners) do restore(owner) end
 end
 
-local function approved(height)
-    local id = SOURCE[height]
-    if not id then return nil end
-    local holder = ReplicatedStorage:FindFirstChild("ApprovedExteriorTowerTemplates")
+local function approved()
+    -- No trust in a guessed ID, a local model with the same name, or
+    -- replicated partial geometry: this must be the exact server-sanitized
+    -- 11-Nov owner-approved original sculpture (workflow #42994003806).
+    local holder = ReplicatedStorage:FindFirstChild(
+        "ApprovedSkylineDepthSculptTemplates")
     if not holder or not holder:IsA("Folder")
         or holder.Parent ~= ReplicatedStorage
         or holder:GetAttribute("OwnerVerified") ~= true then
         return nil
     end
-    local template = holder:FindFirstChild("Tower"..height)
+    local template = holder:FindFirstChild("Roof")
     if not template or not template:IsA("Model")
         or template.Parent ~= holder
         or template:GetAttribute("OwnerVerified") ~= true
         or template:GetAttribute("CosmeticOnly") ~= true
-        or template:GetAttribute("OriginalExteriorTower3D") ~= true
-        or template:GetAttribute("Original3DAssetId") ~= id then
+        or template:GetAttribute("OriginalSkylineDepthSculpt3D") ~= true
+        or template:GetAttribute("Original3DAssetId") ~= SOURCE_ID then
         return nil
     end
     local count = 0
     for _,part in ipairs(template:GetDescendants()) do
         if part:IsA("BasePart") then
-            if not part:IsA("MeshPart") or part.CanCollide
-                or part.CanTouch or part.CanQuery then return nil end
+            if not part:IsA("MeshPart")
+                or part.CanCollide or part.CanTouch or part.CanQuery then
+                return nil
+            end
             count += 1
         elseif part:IsA("LuaSourceContainer") then
             return nil
@@ -80,12 +83,14 @@ local function approved(height)
     end
     if count ~= 7 then return nil end
     local _,bounds = template:GetBoundingBox()
-    if math.abs(bounds.X-11.84) > .40
-        or math.abs(bounds.Y-(height+1.2)) > .45
-        or math.abs(bounds.Z-9.84) > .40 then
-        return nil
-    end
-    return template,holder,id
+    if math.abs(bounds.Y - SOURCE_SIZE.Y) > .45 then return nil end
+    local direct = math.abs(bounds.X-SOURCE_SIZE.X)
+        + math.abs(bounds.Z-SOURCE_SIZE.Z)
+    local swapped = math.abs(bounds.Z-SOURCE_SIZE.X)
+        + math.abs(bounds.X-SOURCE_SIZE.Z)
+    local yaw = direct <= swapped and 0 or math.pi*.5
+    if math.min(direct,swapped) > .86 then return nil end
+    return template,holder,SOURCE_ID,yaw
 end
 
 local function realOwner(arena,decor,base,direction,index,layer)
@@ -161,28 +166,34 @@ local function valid(entry)
 end
 
 local function mount(arena,decor,base,owner,body,original,source,
-        holder,id)
+        holder,id,yaw)
     local clone = source:Clone()
     local _,bounds = clone:GetBoundingBox()
-    -- Fit height without stretching native geometry. Distant buildings
-    -- may overhang their old box by up to 35% but remain outside play.
+    -- Preserve a single sculpt's proportions across all 27..47 stud
+    -- native heights; bounded uniform scaling prevents a cheap stretched
+    -- tower. No procedural Parts, renderer loops or physical effects.
+    local rawWidth = yaw == 0 and bounds.X or bounds.Z
+    local rawDepth = yaw == 0 and bounds.Z or bounds.X
     local scale = math.min(body.Size.Y/bounds.Y,
-        body.Size.X*1.35/bounds.X,body.Size.Z*2/bounds.Z)
-    if scale < .80 or scale > 1.60
+        body.Size.X*1.15/rawWidth,body.Size.Z*1.28/rawDepth)
+    if scale < .72 or scale > 1.55
         or not pcall(function() clone:ScaleTo(scale) end) then
         clone:Destroy()
         return
     end
     local frame,scaled = clone:GetBoundingBox()
-    if scaled.Y < body.Size.Y*.80
+    local width = yaw == 0 and scaled.X or scaled.Z
+    local depth = yaw == 0 and scaled.Z or scaled.X
+    if scaled.Y < body.Size.Y*.79
         or scaled.Y > body.Size.Y*1.07
-        or scaled.X > body.Size.X*1.37
-        or scaled.Z > body.Size.Z*2.03 then
+        or width > body.Size.X*1.15
+        or depth > body.Size.Z*1.28 then
         clone:Destroy()
         return
     end
     local target = body.CFrame
         * CFrame.new(0,(scaled.Y-body.Size.Y)*.5,0)
+        * CFrame.Angles(0,yaw,0)
     local pieces = {}
     for _,part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -267,20 +278,21 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch)
         return
     end
     local ranked = {}
+    local source,holder,id,yaw = approved()
     for index,direction in ipairs(DIRECTIONS) do
         for layer=1,2 do
             local owner,body,height,original =
                 realOwner(arena,decor,base,direction,index,layer)
             if owner then
-                local sourceHeight = height <= 30 and 27 or 30
-                local source,holder,id = approved(sourceHeight)
+                -- Exactly one approved model across all eight heights.
+                -- The original native roof remains as visual fallback.
                 local held = mounted[owner] ~= nil
                 local distance = (cameraPoint-body.Position).Magnitude
                 if source and distance <= spec.distance
                     +(held and RETENTION or 0) then
                     ranked[#ranked+1] = {
                         owner=owner,body=body,original=original,
-                        source=source,holder=holder,id=id,
+                        source=source,holder=holder,id=id,yaw=yaw,
                         score=distance-(held and RETENTION*.55 or 0),
                         index=(index-1)*2+layer,
                     }
@@ -311,7 +323,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch)
         if not mounted[owner] then
             mount(arena,decor,base,owner,candidate.body,
                 candidate.original,candidate.source,candidate.holder,
-                candidate.id)
+                candidate.id,candidate.yaw)
         end
     end
 end
