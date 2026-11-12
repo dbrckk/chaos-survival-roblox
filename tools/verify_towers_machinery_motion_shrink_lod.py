@@ -38,7 +38,11 @@ for term in (
     '[body]=body.Transparency',
     'native.Transparency = alpha',
     'LocalTransparencyModifier>=.99',
-    'Low=0,Medium=2,High=4',
+    'Low=1,Medium=2,High=4',
+    'Low=205,Medium=290,High=410',
+    'or tier=="Low" and math.min(cap,1) or 0',
+    'bucket.ChildRemoved:Connect(function(child)',
+    'if entry.model==child then',
     'if stress>=2 then cap=0 end',
     '72143366927826',
 ):
