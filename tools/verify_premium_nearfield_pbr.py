@@ -58,7 +58,9 @@ BUCKETS = {
                 ("ApprovedClassicBroadcastFinLocal",123049626693705,
                  "ApprovedClassicBroadcastFinMeshKit.lua"),
                 ("ApprovedOriginalIdentitySpinesLocal",105555650820011,
-                 "ApprovedVariantIdentitySpineMeshKit.lua")],
+                 "ApprovedVariantIdentitySpineMeshKit.lua"),
+                 ("ApprovedClassicSignatureObservatoryLocal",112493873850364,
+                  "ApprovedClassicSignatureObservatoryMeshKit.lua")],
     "Towers": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",131413152501235,
@@ -102,7 +104,9 @@ BUCKETS = {
                ("ApprovedTowersMachineryLocal",72143366927826,
                 "ApprovedVariantTowersLandmarkMeshKit.lua"),
                ("ApprovedOriginalIdentitySpinesLocal",86423178125318,
-                "ApprovedVariantIdentitySpineMeshKit.lua")],
+                "ApprovedVariantIdentitySpineMeshKit.lua"),
+                 ("ApprovedTowersSignatureBridgeLocal",126298311664881,
+                  "ApprovedTowersSignatureBridgeMeshKit.lua")],
     "Crossroads": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",134533469777794,
@@ -144,7 +148,9 @@ BUCKETS = {
                   ("ApprovedCrossroadsEntrancePortalsLocal",127067628128103,
                    "ApprovedCrossroadsEntrancePortalMeshKit.lua"),
                    ("ApprovedCrossroadsOpenGantryLocal",90844491148907,
-                    "ApprovedCrossroadsOpenGantryMeshKit.lua")],
+                    "ApprovedCrossroadsOpenGantryMeshKit.lua"),
+                 ("ApprovedCrossroadsSignatureInterchangeLocal",96622579843060,
+                  "ApprovedCrossroadsSignatureInterchangeMeshKit.lua")],
     "Orbital": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",131188899020391,
@@ -186,7 +192,9 @@ BUCKETS = {
                ("ApprovedOrbitalReactorLandmarksLocal",104654294187035,
                  "ApprovedOrbitalReactorLandmarkMeshKit.lua"),
                 ("ApprovedOrbitalReactorLandmarksLocal",138666009076890,
-                 "ApprovedOrbitalReactorLandmarkMeshKit.lua")],
+                 "ApprovedOrbitalReactorLandmarkMeshKit.lua"),
+                 ("ApprovedOrbitalSignatureTorusLocal",125070862497818,
+                  "ApprovedOrbitalSignatureRingMeshKit.lua")],
     "Harbor": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",110237986522853,
@@ -230,7 +238,9 @@ BUCKETS = {
                 ("OriginalHarborKineticGantryLocal",75684193304551,
                  "HarborGantryKineticMeshKit.lua"),
                 ("OriginalHarborKineticGantryLocal",98809955094422,
-                 "HarborGantryKineticMeshKit.lua")],
+                 "HarborGantryKineticMeshKit.lua"),
+                 ("ApprovedHarborSignatureGantryLocal",124368710235343,
+                  "ApprovedHarborSignatureGantryMeshKit.lua")],
 }
 for variant, pairs in BUCKETS.items():
     assert f"{variant} = {{" in KIT
@@ -242,6 +252,33 @@ for variant, pairs in BUCKETS.items():
         assert f'{asset_id}' in src,(asset_id,owner)
         assert 'Original3DAssetId' in src and '"CosmeticOnly"' in src
         print("PASS approved owner",variant,folder,asset_id)
+
+# All five mutually exclusive signature monuments are actual owner-verified
+# seven-part Models. Source IDs, local bucket ownership and nonphysical
+# parts are required before they may join the existing 2K candidate pool.
+SIGNATURES = {
+    "Classic": ("ApprovedClassicSignatureObservatoryLocal",
+                112493873850364, "ApprovedClassicSignatureObservatoryMeshKit.lua"),
+    "Towers": ("ApprovedTowersSignatureBridgeLocal",
+               126298311664881, "ApprovedTowersSignatureBridgeMeshKit.lua"),
+    "Crossroads": ("ApprovedCrossroadsSignatureInterchangeLocal",
+                   96622579843060, "ApprovedCrossroadsSignatureInterchangeMeshKit.lua"),
+    "Orbital": ("ApprovedOrbitalSignatureTorusLocal",
+                125070862497818, "ApprovedOrbitalSignatureRingMeshKit.lua"),
+    "Harbor": ("ApprovedHarborSignatureGantryLocal",
+               124368710235343, "ApprovedHarborSignatureGantryMeshKit.lua"),
+}
+for variant, (folder, asset, owner) in SIGNATURES.items():
+    assert asset in ids
+    assert f'folder = "{folder}", id = {asset}' in KIT
+    src=(ROOT/"src/client"/owner).read_text()
+    assert f'"{folder}"' in src
+    assert str(asset) in src
+    assert 'Original3DAssetId' in src and '"CosmeticOnly"' in src
+    assert any(all(f'{variable}.{prop}=false' in src
+                   for prop in ("CanCollide","CanQuery","CanTouch"))
+               for variable in ("part","item"))
+    print("PASS genuine signature PBR owner",variant,asset)
 
 # Source-approved 7-MeshPart Harbor station/cranes now share existing
 # Medium/High 2K GPU capacity; their real moving actors are NEVER coated

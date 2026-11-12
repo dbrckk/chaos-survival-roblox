@@ -43,6 +43,8 @@ local SOURCES = {
         {folder = "ApprovedAtmosphereColumnsLocal", id = 91626128452597},
         {folder = "ApprovedClassicBroadcastFinLocal", id = 123049626693705},
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
+        -- Actual Classic north observatory: owner-approved 7-part source.
+        {folder = "ApprovedClassicSignatureObservatoryLocal", id = 112493873850364},
     },
     Towers = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -70,6 +72,8 @@ local SOURCES = {
         {folder = "ApprovedAtmosphereColumnsLocal", id = 107521411452905},
         {folder = "ApprovedTowersMachineryLocal", id = 72143366927826},
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 86423178125318},
+        -- Actual Towers steel skybridge (never the walkable Skyrail).
+        {folder = "ApprovedTowersSignatureBridgeLocal", id = 126298311664881},
     },
     Crossroads = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -96,6 +100,8 @@ local SOURCES = {
         {folder = "ApprovedAtmosphereColumnsLocal", id = 93993697329658},
         {folder = "ApprovedCrossroadsEntrancePortalsLocal", id = 127067628128103},
         {folder = "ApprovedCrossroadsOpenGantryLocal", id = 90844491148907},
+        -- Actual Crossroads signature elevated interchange geometry.
+        {folder = "ApprovedCrossroadsSignatureInterchangeLocal", id = 96622579843060},
     },
     Orbital = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -122,6 +128,8 @@ local SOURCES = {
         {folder = "ApprovedAtmosphereColumnsLocal", id = 119010829781313},
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 104654294187035},
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 138666009076890},
+        -- Real orbital 7-part toroidal signature, no native arc PBR.
+        {folder = "ApprovedOrbitalSignatureTorusLocal", id = 125070862497818},
     },
     Harbor = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -152,6 +160,8 @@ local SOURCES = {
         {folder = "OriginalHarborHeroStationLocal", id = 73237902371094},
         {folder = "OriginalHarborKineticGantryLocal", id = 75684193304551},
         {folder = "OriginalHarborKineticGantryLocal", id = 98809955094422},
+        -- Distinct static Harbor mega-gantry over the authored quay.
+        {folder = "ApprovedHarborSignatureGantryLocal", id = 124368710235343},
     },
 }
 local KNOWN_FINISHES = {
