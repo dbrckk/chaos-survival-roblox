@@ -18,8 +18,11 @@ local SOURCE_BOUNDS = {
 local STATIONS = {"North", "East", "South", "West"}
 local VARIANTS = {Classic=true,Towers=true,Crossroads=true,
     Orbital=true,Harbor=true}
-local CAPS = {Low=0,Medium=1,High=3}
-local RANGE = {Low=0,Medium=170,High=245}
+-- Low: one near-camera REAL perimeter station, with TWO authenticated
+-- source sculptures of exactly seven MeshParts each. Both must mount
+-- before either native block is masked. GPU pressure 1 removes all 14.
+local CAPS = {Low=1,Medium=1,High=3}
+local RANGE = {Low=112,Medium=170,High=245}
 local RETENTION = 16
 
 local bucket = Instance.new("Folder")

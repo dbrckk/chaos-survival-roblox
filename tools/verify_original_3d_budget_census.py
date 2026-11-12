@@ -69,6 +69,61 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# One authenticated creator-original perimeter CrossBrace + GeneratorShield
+# pair can replace TWO primitive native blocks on a camera-near Low station.
+# Each material-split model contains 7 MeshParts: exactly 14 across BOTH
+# models in the only permitted resident station. Pressure 1 restores both.
+PERIM=(CLIENT/"ApprovedPerimeterStructuresMeshKit.lua").read_text(
+    encoding="utf8")
+PERIM_SERVER=(ROOT/"src/server/PremiumPerimeterStructuresAssets.lua").read_text(
+    encoding="utf8")
+PERIM_MAP=(ROOT/"src/server/MapBuilder.lua").read_text(
+    encoding="utf8")
+assert 'local CAPS = {Low=1,Medium=1,High=3}' in PERIM
+assert 'local RANGE = {Low=112,Medium=170,High=245}' in PERIM
+assert 'local RETENTION = 16' in PERIM
+assert 'if tier=="High" and touch then cap=2 end' in PERIM
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in PERIM
+assert 'if stress>=2 then cap=0 end' in PERIM
+assert 'if cap==0 or not cameraReady' in PERIM
+assert 'Brace = 108452611210970' in PERIM
+assert 'Shield = 113687802206554' in PERIM
+assert 'id=108452611210970' in PERIM_SERVER
+assert 'id=113687802206554' in PERIM_SERVER
+assert 'if parts~=7 then return false end' in PERIM_SERVER
+assert 'if count ~= 7 then return nil end' in PERIM
+assert 'if #parts~=7 then clone:Destroy();return nil end' in PERIM
+assert 'holder:GetAttribute("OwnerVerified") ~= true' in PERIM
+assert 'source:GetAttribute("CosmeticOnly") ~= true' in PERIM
+assert 'source:GetAttribute("OriginalPerimeterStructure3D") ~= true' in PERIM
+assert 'source:GetAttribute("Original3DAssetId") ~= IDS[kind]' in PERIM
+assert 'if not model then' in PERIM and 'for _,old in ipairs(models) do old:Destroy() end' in PERIM
+assert PERIM.index('for _,model in ipairs(models) do model.Parent=bucket end') < (
+    PERIM.index('for _,native in ipairs(natives) do native.Transparency=1 end'))
+assert 'if table.find(entry.models,child) then' in PERIM
+assert 'native.Transparency = alpha' in PERIM
+assert 'local NATIVE_NAMES = {"CrossBrace", "GeneratorShield"}' in PERIM
+for name in ('CrossBrace','GeneratorShield','CoreLens',
+             'WayfindingInset','LeftLightNotch','RightLightNotch'):
+    assert '"'+name+'"' in PERIM_MAP
+for fragment in ('piece.CanCollide=false','piece.CanTouch=false',
+                 'piece.CanQuery=false','piece.CastShadow=false'):
+    assert fragment in PERIM
+assert 'station:GetAttribute("ChaosPerimeterStation") ~= true' in PERIM
+assert 'station:GetAttribute("StationIndex") ~= index' in PERIM
+assert 'OriginalPerimeterStructure3D_' in PERIM
+assert 'bucket.Name = "ApprovedPerimeterStructuresLocal"' in PERIM
+assert '"ApprovedPerimeterStructuresLocal"' in ledger
+assert counts['ApprovedPerimeterStructuresLocal']==1
+assert 'ApprovedPerimeterStructuresMeshKit.sync(arena, cameraPoint,' in (
+    CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+assert 'LocalPerimeterPrimitiveStructuralBlocksReplaced' in (
+    CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+assert 'RenderStepped' not in PERIM and 'Heartbeat' not in PERIM
+assert 'AssetService' not in PERIM
+print("PASS original two seven-MeshPart station structures on healthy Low",
+      "one 112-stud station, pressure 1 atomic native restore")
+
 # Two creator-approved 12/20-stud identity spines previously had a
 # double Low OFF switch: CAP.Low=0 plus touch-branch forced zero.
 # Ensure a single actual 7-MeshPart original can replace ONE rigid body
