@@ -74,12 +74,31 @@ for check in (
 assert 'glow.Transparency=1' not in CLIENT
 assert 'glow:Destroy()' not in CLIENT
 assert CLIENT.index("clone.Parent=bucket") < CLIENT.index("fin.Transparency=1")
-assert 'Low=0,Medium=2,High=4' in CLIENT
-assert 'Low=0,Medium=285,High=415' in CLIENT
-assert 'math.min(cap,2)' in CLIENT
-assert 'math.min(cap,1)' in CLIENT
+# Two independent disables prevented any approved Classic source in
+# Android Low: CAP.Low=0 and the Touch branch's fallback "or 0".
+# Only ONE real 7-MeshPart fin at 195 studs is allowed on healthy Low.
+# Pressure 1 floors 1 * .5 to ZERO, revealing its native original.
+assert 'local CAP = {Low=1,Medium=2,High=4}' in CLIENT
+assert 'local RANGE = {Low=195,Medium=285,High=415}' in CLIENT
+assert 'tier=="High" and math.min(cap,2)' in CLIENT
+assert 'tier=="Medium" and math.min(cap,1)' in CLIENT
+assert 'or tier=="Low" and math.min(cap,1) or 0' in CLIENT
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in CLIENT
 assert 'if stress>=2 then cap=0 end' in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
+assert 'local RETENTION = 26' in CLIENT
+# Eviction of the local model by the cooperative Android visual-budget
+# owner restores the real native fin without waiting for a camera tick.
+assert 'bucket.ChildRemoved:Connect(function(child)' in CLIENT
+assert 'if entry.model==child then' in CLIENT
+assert 'unmount(native)' in CLIENT
+assert CLIENT.index('mounted[native]=nil') < CLIENT.index('entry.model:Destroy()')
+assert 'native.Transparency=entry.original' in CLIENT
+assert 'glow.Transparency=1' not in CLIENT
+assert 'glow:Destroy()' not in CLIENT
+assert 'fin.Transparency=1' in CLIENT
+assert 'for index=1,4 do' in CLIENT
+assert 'for i=1,math.min(cap,#ranked) do' in CLIENT
 for forbidden in ('game:GetService("AssetService")',
                   'AssetService.LoadAssetAsync',
                   'RenderStepped','Heartbeat:Connect',

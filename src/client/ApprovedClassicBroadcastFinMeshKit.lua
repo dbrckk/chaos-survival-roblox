@@ -7,8 +7,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local ASSET_ID = 123049626693705
 local SIZE = Vector3.new(5.46,15.92,1.76)
-local CAP = {Low=0,Medium=2,High=4}
-local RANGE = {Low=0,Medium=285,High=415}
+-- One real 7-MeshPart original at camera range in healthy Low.
+-- At the first GPU-pressure level, floor(1 * .5) restores its native.
+local CAP = {Low=1,Medium=2,High=4}
+local RANGE = {Low=195,Medium=285,High=415}
 local RETENTION = 26
 local bucket = Instance.new("Folder")
 bucket.Name = "ApprovedClassicBroadcastFinLocal"
@@ -32,6 +34,19 @@ local function unmount(native)
     end
     entry.model:Destroy()
 end
+
+-- The cooperative Android ledger may evict optional 3D between
+-- LOD samples. Restore the exact 16-stud native fin immediately, rather
+-- than leaving its original body transparent for another 0.65/0.90s.
+bucket.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for native,entry in pairs(mounted) do
+        if entry.model==child then
+            unmount(native)
+            break
+        end
+    end
+end)
 
 local function clear()
     local all={}
@@ -228,8 +243,11 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if arena~=activeArena then clear();activeArena=arena end
     local cap=CAP[tier] or 0
     if touch then
+        -- Touch formerly forced ALL Low models back to zero even if
+        -- CAP.Low were enabled. Keep exactly one original on Android Low.
         cap=tier=="High" and math.min(cap,2)
-            or tier=="Medium" and math.min(cap,1) or 0
+            or tier=="Medium" and math.min(cap,1)
+            or tier=="Low" and math.min(cap,1) or 0
     end
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     if stress==1 then cap=math.floor(cap*.5) end
