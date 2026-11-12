@@ -28,6 +28,7 @@ local activeArena = nil
 local mounted = {}
 local watchedBase = nil
 local baseChanged = nil
+local RESIDENT_MARKER = "LocalApprovedDistrictFacadeMounted"
 
 -- The playable Base SHRINKS during an actual survival round, but its
 -- original creator-authored district landmarks stay in fixed world space.
@@ -79,6 +80,18 @@ local PROFILE_ROOF = {
     },
 }
 
+-- The marker belongs exclusively to this local approved MeshPart owner.
+-- The door/wayfinding/structural fallback remains intact on every tier.
+local function markResident(entry, present)
+    local model = entry.building
+    if model and model.Parent then
+        local target = present and true or nil
+        if model:GetAttribute(RESIDENT_MARKER) ~= target then
+            model:SetAttribute(RESIDENT_MARKER, target)
+        end
+    end
+end
+
 local function restoreNative(entry)
     for part, alpha in pairs(entry.replaced) do
         -- Never overwrite another system's newer transparency choice.
@@ -94,6 +107,12 @@ end
 local function suppressNative(entry)
     local roof = PROFILE_ROOF[entry.slot]
     if not roof then return end
+    -- A local Medium/High optional Part can have been destroyed by the
+    -- detail kit after its genuine mesh replacement became resident.
+    -- Drop those stale references; the native server Parts stay tracked.
+    for part in pairs(entry.replaced) do
+        if part.Parent ~= entry.building then entry.replaced[part] = nil end
+    end
     for _, part in ipairs(entry.building:GetChildren()) do
         if part:IsA("BasePart") and part.Parent == entry.building
             and part.Anchored and not part.CanCollide
@@ -110,11 +129,18 @@ local function suppressNative(entry)
 end
 
 local function dispose(entry)
+    if entry.disposed then return end
+    entry.disposed = true
+    -- A clone/source ancestry callback may fire synchronously while the
+    -- model is destroyed. Clear the mounted identity BEFORE destroying it.
+    if mounted[entry.building] == entry then
+        mounted[entry.building] = nil
+    end
     for _, connection in ipairs(entry.connections or {}) do
         connection:Disconnect()
     end
-    -- Restore the native art FIRST so LOD exits cannot leave holes in
-    -- streamed buildings even if the imported model is removed this tick.
+    markResident(entry, false)
+    -- Restore native geometry BEFORE its genuine 3D source disappears.
     restoreNative(entry)
     entry.model:Destroy()
 end
@@ -194,6 +220,17 @@ local function eligible(building, district)
 end
 
 local function valid(entry, district, base)
+    if entry.disposed or entry.model.Parent ~= holder
+        or entry.source.Parent ~= entry.sourceFolder
+        or entry.sourceFolder.Parent ~= ReplicatedStorage
+        or entry.sourceFolder.Name ~= "ApprovedDistrictFacadeTemplates"
+        or entry.source:GetAttribute("Original3DAssetId") ~= IDS[entry.slot]
+        or #entry.pieces < 1 or #entry.pieces > 24 then
+        return false
+    end
+    for _, part in ipairs(entry.pieces) do
+        if not part:IsDescendantOf(entry.model) then return false end
+    end
     local slot, door = eligible(entry.building, district)
     return authenticBase(base, activeArena)
         and slot == entry.slot and door == entry.door
@@ -243,13 +280,16 @@ local function mount(building, district, base, slot, door, source)
     local entry = {
         model = clone, building = building, door = door,
         doorFrame = door.CFrame, doorSize = door.Size,
-        slot = slot, pieces = pieces, connections = {}, replaced = {},
+        slot = slot, pieces = pieces, source = source,
+        sourceFolder = source.Parent, connections = {}, replaced = {},
     }
     local function immediatelyHideUnsafe()
+        if entry.disposed then return end
         -- Shrink/stream-out or door motion can occur BEFORE the next LOD
         -- tick. Immediately reveal every native roofline and hide imported
         -- art, without ever revealing a non-authoritative walkable surface.
         if not valid(entry, district, base) then
+            markResident(entry, false)
             restoreNative(entry)
             for _, mesh in ipairs(entry.pieces) do
                 if mesh.Parent and mesh.LocalTransparencyModifier ~= 1 then
@@ -263,6 +303,7 @@ local function mount(building, district, base, slot, door, source)
                 end
             end
             suppressNative(entry)
+            markResident(entry, true)
         end
     end
     entry.reconcile = immediatelyHideUnsafe
@@ -274,6 +315,30 @@ local function mount(building, district, base, slot, door, source)
         door.AncestryChanged:Connect(immediatelyHideUnsafe)
     entry.connections[#entry.connections + 1] =
         building.AncestryChanged:Connect(immediatelyHideUnsafe)
+    -- A local visual budget eviction or streamed-out imported MeshPart
+    -- must reveal native geometry now, not after an unrelated camera move.
+    local function revokeIfMounted()
+        if mounted[building] == entry then dispose(entry) end
+    end
+    entry.connections[#entry.connections + 1] =
+        clone.AncestryChanged:Connect(function()
+            if clone.Parent ~= holder then revokeIfMounted() end
+        end)
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantRemoving:Connect(function(part)
+            if part:IsA("MeshPart") then revokeIfMounted() end
+        end)
+    entry.connections[#entry.connections + 1] =
+        source.AncestryChanged:Connect(function()
+            if source.Parent ~= entry.sourceFolder
+                or entry.sourceFolder.Parent ~= ReplicatedStorage then
+                revokeIfMounted()
+            end
+        end)
+    entry.connections[#entry.connections + 1] =
+        source.DescendantRemoving:Connect(function(part)
+            if part:IsA("MeshPart") then revokeIfMounted() end
+        end)
     immediatelyHideUnsafe()
     return entry
 end

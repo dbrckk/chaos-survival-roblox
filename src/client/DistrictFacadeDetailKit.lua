@@ -188,6 +188,17 @@ function DistrictFacadeDetailKit.sync(model, tierName, visible, distance,
         return 0
     end
 
+    -- An owner-verified source mesh replaces these six exact OPTIONAL
+    -- doorway/roofline parts. Never instantiate and immediately hide
+    -- 4/6 redundant Parts every scenery pass while its real 3D lives.
+    -- The mesh owner clears this client-only marker BEFORE restoring
+    -- native art on eviction/stream-out; the next LOD pass recreates
+    -- the details normally, with the authoritative door always present.
+    if model:GetAttribute("LocalApprovedDistrictFacadeMounted") == true then
+        clearOwned(model, slot)
+        return 0
+    end
+
     -- Android keeps the near-field 175/230-stud budgets, avoiding
     -- needless parts on distant buildings. PC High must NOT inherit
     -- that mobile-only distance cap: before local ownership, all six
