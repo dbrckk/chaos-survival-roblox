@@ -412,14 +412,18 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     for i=1,math.min(maxModels,#ranked) do
         selected[ranked[i].crane]=ranked[i]
     end
+    local obsolete={}
     for crane,e in pairs(mounted) do
         local choose=selected[crane]
         if not choose or e.source~=choose.source or not valid(e) then
-            unmount(crane)
+            obsolete[#obsolete+1]=crane
         else
             if visibility(e) then followNativeMotion(e) end
         end
     end
+    -- Never mutate a Luau pairs iterator while cleanup callbacks remove
+    -- the budget-owned clone. All mounts are bounded (Low1/Med2/High4).
+    for _,crane in ipairs(obsolete) do unmount(crane) end
     for crane,selection in pairs(selected) do
         if not mounted[crane] then
             mounted[crane]=mount(arena,base,fleet,crane,
