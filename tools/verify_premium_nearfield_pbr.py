@@ -275,9 +275,9 @@ for variant, (folder, asset, owner) in SIGNATURES.items():
     assert f'"{folder}"' in src
     assert str(asset) in src
     assert 'Original3DAssetId' in src and '"CosmeticOnly"' in src
-    assert 'part.CanCollide=false' in src
-    assert 'part.CanQuery=false' in src
-    assert 'part.CanTouch=false' in src
+    assert any(all(f'{variable}.{prop}=false' in src
+                   for prop in ("CanCollide","CanQuery","CanTouch"))
+               for variable in ("part","item"))
     print("PASS genuine signature PBR owner",variant,asset)
 
 # Source-approved 7-MeshPart Harbor station/cranes now share existing
