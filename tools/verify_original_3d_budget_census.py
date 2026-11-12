@@ -69,6 +69,99 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# Gameplay-safe improvement for real promenade / Sky Spine undercarriages.
+# Previously Low had only ONE 3D bridge segment and ZERO actual approved
+# underdeck chassis models. A 22-23 stud REAL crossing rarely fitted one
+# short imported module. Low now allows two imported top segments plus ONE
+# source-verified 7-MeshPart lower sculpt when the actual route geometry
+# fits, and never behind Harbor caissons, square hulls or LongCradles.
+ROUTE=(CLIENT/"PremiumRouteMeshKit.lua").read_text(encoding="utf8")
+BEAMS=(CLIENT/"UnderstructureBeamMeshKit.lua").read_text(encoding="utf8")
+LOD=(CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+VARIANTS=(ROOT/"src/server/ArenaVariants.lua").read_text(encoding="utf8")
+assert 'OriginalUnderdeckChassis = 84582262145054' in ROUTE
+assert 'local BUDGET = {' in ROUTE
+assert 'Low = {decks = 2, bridges = 1, segments = 2, underdecks = 1,' in ROUTE
+assert 'Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,' in ROUTE
+assert 'High = {decks = 12, bridges = 5, segments = 4, underdecks = 4,' in ROUTE
+assert 'if stress == 1 then' in ROUTE
+assert 'underdeckCap = math.floor(underdeckCap*.50)' in ROUTE
+assert 'underdeckCap = 0' in ROUTE
+assert 'if quality == "Low" then' in ROUTE
+assert 'if stress > 0 or arena:GetAttribute("VariantId") == "Harbor"' in ROUTE
+assert 'underdeckTemplate:GetAttribute("PremiumUnderdeck3D") ~= true' in ROUTE
+assert 'underdeckTemplate:GetDescendants()' in ROUTE
+assert 'if authentic~=7 then underdeckSlots=0 end' in ROUTE
+assert 'or child.CanCollide or child.CanTouch' in ROUTE
+assert 'elseif child:IsA("LuaSourceContainer") then' in ROUTE
+assert 'if entry.strictLowUnderdeck then' in ROUTE
+assert 'if parts ~= 7 then return false end' in ROUTE
+assert '(entry.strictLowUnderdeck and #pieces ~= 7)' in ROUTE
+assert 'if platform:GetAttribute("LocalOriginalLongCradleMounted") == true then' in ROUTE
+assert 'platform:GetAttributeChangedSignal(' in ROUTE
+assert '"LocalOriginalLongCradleMounted"):Connect(function()' in ROUTE
+assert 'restore(entry)' in ROUTE
+assert 'if mounted[platform] == entry then' in ROUTE
+assert 'mounted[platform] = nil' in ROUTE
+assert 'length >= (quality == "Low" and 19.5 or 17)' in ROUTE
+assert 'length/width >= 1.35' in ROUTE
+assert 'item.platform:GetAttribute("ChaosSkybridge") ~= true' in ROUTE
+assert 'local actualScale=boundsOK and math.min(' in ROUTE
+assert 'if actualScale>=.56' in ROUTE
+assert 'desired.underdeck, quality == "Low")' in ROUTE
+assert 'model:SetAttribute("OriginalUnderdeckArt", true)' not in ROUTE
+assert 'clone:SetAttribute("OriginalUnderdeckArt", true)' in ROUTE
+assert 'PremiumRouteMeshKit.underdeckCount()' in LOD
+assert '"PremiumRouteMeshLocal"' in ledger
+assert counts["PremiumRouteMeshLocal"] == 1
+# Both sky routes are 100% real server colliders, not new phantom bridges.
+assert 'variant.PromenadePlatforms = promenades' in VARIANTS
+assert 'variant.SkySpinePlatforms = spine' in VARIANTS
+assert 'size = Vector3.new(laneSpacing - 2.4, 2, 12)' in VARIANTS
+assert 'size = Vector3.new(12, 2, interval - 2.4)' in VARIANTS
+# Example genuine Classic promenade: left/right service lookouts are
+# 202 studs apart, eight 25.25-stud centers -> real deck 22.85 x 12.
+length,width=202/8-2.4,12
+scale=min(length*.88/24,width*.88/10,1.06)
+assert length>19.5 and length/width>1.35 and scale>=.56
+print("PASS authentic healthy Low Sky Promenade undercarriage: 2 bridge",
+      "segments + 1 optional 7-MeshPart underdeck, no stacking")
+
+# Previously the independent understructure-beam owner ignored GPU
+# pressure even on Low. No visual-only clone may survive a stressed phone
+# or remain floating if its source/native/clone streams away.
+assert 'Low = {count = 1, distance = 140, retention = 14}' in BEAMS
+assert 'Medium = {count = 4, distance = 225, retention = 22}' in BEAMS
+assert 'High = {count = 12, distance = 290, retention = 25}' in BEAMS
+assert 'function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure)' in BEAMS
+assert 'if tier=="Low" and stress>=1 then cap=0 end' in BEAMS
+assert 'if not source or (tier=="Low" and pieces~=7) then' in BEAMS
+assert 'for i = 1, math.min(#ranked, cap) do' in BEAMS
+assert 'bucket.Name = "OriginalUnderstructureBeamsLocal"' in BEAMS
+assert '"OriginalUnderstructureBeamsLocal"' in ledger
+assert counts["OriginalUnderstructureBeamsLocal"] == 1
+assert 'bucket.ChildRemoved:Connect(function(child)' in BEAMS
+assert 'local function release(name)' in BEAMS
+assert 'mounted[name]=nil' in BEAMS
+assert 'entry.native.Transparency == 1' in BEAMS
+assert 'source.AncestryChanged:Connect' in BEAMS
+assert 'source.DescendantRemoving:Connect' in BEAMS
+assert 'clone.DescendantRemoving:Connect' in BEAMS
+assert 'native.AncestryChanged:Connect' in BEAMS
+assert 'if mounted[name]==entry' in BEAMS
+assert 'if entry.model then entry.model:Destroy() end' in BEAMS
+assert 'for _,name in ipairs(evicted) do release(name) end' in BEAMS
+assert 'UnderstructureBeamMeshKit.sync(arena, cameraPoint,' in LOD
+beam_call=LOD.split('UnderstructureBeamMeshKit.sync(',1)[1].split(
+    'local beamMeshes',1)[0]
+assert 'player:GetAttribute("OptionalVfxPressure"))' in beam_call
+assert 'CanCollide = false' in BEAMS
+assert 'CanTouch = false' in BEAMS and 'CanQuery = false' in BEAMS
+assert "RenderStepped" not in BEAMS and "Heartbeat" not in BEAMS
+assert "RenderStepped" not in ROUTE and "Heartbeat:Connect" not in ROUTE
+print("PASS original understructure beams pressure-one rollback and",
+      "streaming/budget immediate native restoration")
+
 # A truly visible exterior industrial foundation in Android Low must be
 # an approved SEVEN-MeshPart original, not a partial/repeated Part stack.
 # The parent of Low clones is a *workspace-local* Folder in the SAME 440
