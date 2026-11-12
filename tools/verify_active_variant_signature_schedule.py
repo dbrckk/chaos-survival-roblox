@@ -166,7 +166,8 @@ for path, source_id, early, normal in HARBOR_LANDMARKS:
     assert 'OriginalMeshScenery.sanitize(raw)' in source
     assert 'holder:SetAttribute("OwnerVerified",true)' in source or (
         'holder:SetAttribute("OwnerVerified", true)' in source)
-    assert "for attempt=1,3 do" in source
+    assert ("for attempt=1,3 do" in source
+        or "for attempt = 1, 3 do" in source)
     assert early < normal
     print(f"PASS Harbor source {source_id}: {normal}s -> {early}s active")
 gantries=(ROOT/"src/server/PremiumHarborGantryAssets.lua").read_text()
