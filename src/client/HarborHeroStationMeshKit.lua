@@ -12,7 +12,7 @@ local SOURCE_SCALE=.74
 local SOURCE_SHIFT_Y=20
 local SOURCE_CENTER=Vector3.new(5.05801,-.60865,0)
 local BUDGET={
-    Low={count=0,distance=0,retain=0},
+    Low={count=1,distance=170,retain=22},
     Medium={count=1,distance=215,retain=26},
     High={count=1,distance=345,retain=42},
 }
@@ -171,6 +171,15 @@ local function dismount()
     old.model:Destroy()
 end
 
+-- The cooperative visual-budget owner may evict the complete original
+-- station between two LOD samples. Restore all 19 nonphysical natives
+-- immediately, while keeping the original storm lens and motion owner.
+localFolder.ChildRemoved:Connect(function(child)
+    if entry and entry.model==child then
+        dismount()
+    end
+end)
+
 local function mount(arena,scene,source)
     local clone=source:Clone()
     local before,b=clone:GetBoundingBox()
@@ -291,7 +300,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
     local budget=BUDGET[tier] or BUDGET.Low
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     if not arena or not cameraReady or budget.count==0
-        or stress>=2 or (tier=="Medium" and stress>=1)
+        or stress>=2 or ((tier=="Medium" or tier=="Low") and stress>=1)
         or typeof(cameraPoint)~="Vector3" then
         dismount();return
     end
