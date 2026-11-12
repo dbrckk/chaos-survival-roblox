@@ -5,8 +5,11 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=124368710235343
-local QUALITY={Low=0,Medium=1,High=1}
-local RANGE={Low=0,Medium=440,High=610}
+-- Android Low: one authenticated seven-MeshPart landmark instead of
+-- 3 distant primitive silhouette Parts, only at VFX pressure zero.
+-- These three variants are mutually exclusive on the same active arena.
+local QUALITY={Low=1,Medium=1,High=1}
+local RANGE={Low=290,Medium=440,High=610}
 local RETENTION=26
 local NAMES={
     "QuayCraneSpanningBeam","QuayCraneCounterweight","QuayControlCab",
