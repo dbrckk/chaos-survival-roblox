@@ -84,28 +84,6 @@ local function approved()
     return source, folder
 end
 
-local function nativeOf(building, origin)
-    local parts = {}
-    for _, spec in ipairs(REQUIRED) do
-        local part = building:FindFirstChild(spec.name)
-        local target = origin * spec.offset
-        if not part or not part:IsA("Part") or part.Parent ~= building
-            or not part.Anchored or part.CanCollide or part.CanTouch
-            or part.CanQuery or (part.Size - spec.size).Magnitude > .08
-            or (part.Position - target.Position).Magnitude > .12
-            or part.CFrame.LookVector:Dot(target.LookVector) < .999
-            or part.CFrame.UpVector:Dot(target.UpVector) < .999
-            or (part.Transparency >= 1
-                and part:GetAttribute("SceneryLodHidden") ~= true) then
-            -- A native can be hidden only by THIS kit (tracked in
-            -- the mounted entry); do not trust an unrelated masked Part.
-            return nil
-        end
-        parts[#parts + 1] = part
-    end
-    return parts
-end
-
 local function eligible(building, district)
     if not building:IsA("Model") or building.Parent ~= district
         or building:GetAttribute("ArenaDistrictArchitecture") ~= true
