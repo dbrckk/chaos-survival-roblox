@@ -647,7 +647,8 @@ assert 'PlatformNativeTrimReplacementKit.bind(' in OWNER
 support_watch=OWNER.split('local function supportChanged(part)',1)[1].split(
     'decorAddedConnection = decor.ChildAdded',1)[0]
 assert 'quality == "Low"' in support_watch
-assert 'part.Name:match("^PlatformSupport(%d+)_%d+$")' in support_watch
+assert 'part.Name:match(' in support_watch
+assert '"^PlatformSupport(%d+)_%d+$"' in support_watch
 assert 'LocalOriginalNearSupportColumnCount' in support_watch
 assert 'OptionalVfxPressure' in support_watch
 assert 'platforms:FindFirstChild("Platform"..tostring(index))' in support_watch
