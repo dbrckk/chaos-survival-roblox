@@ -591,8 +591,12 @@ jobs:
           assert "OriginalUnderdeckChassis = 84582262145054" in client
           assert "OriginalUnderdeckArt" in client
           assert "function PremiumRouteMeshKit.underdeckCount()" in client
-          assert "underdecks = 0" in client and "underdecks = 2" in client
-          assert "underdecks = 4" in client
+          # Real published Low now budgets ONE approved underdeck chassis
+          # (released at VFX pressure >=1). Do not reject that deliberate
+          # mobile quality improvement with the obsolete zero-source gate.
+          assert "Low = {decks = 2, bridges = 1, segments = 2, underdecks = 1" in client
+          assert "Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2" in client
+          assert "High = {decks = 12, bridges = 5, segments = 4, underdecks = 4" in client
           assert "part.CanCollide = false" in client
           assert "part.CanQuery = false" in client
           assert "part.CanTouch = false" in client
