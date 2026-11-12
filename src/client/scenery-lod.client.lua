@@ -1551,25 +1551,6 @@ task.spawn(function()
             player:SetAttribute("LocalIdentitySpineNativePartsReplaced",
                 identityHidden)
         end
-        -- P4 genuine normal/roughness/metal maps on the nearest authored
-        -- 3D nearfield sculptures. Reuses existing four audited 2K maps,
-        -- never imports a new source, creates a render loop or touches
-        -- collision, signals, or a native fallback. Owner kits sync first.
-        local nearfieldModels, nearfieldSurfaces =
-            PremiumNearfieldPbrKit.reconcile(
-                arena, cameraPoint, cameraReady, profile.Name, isTouch,
-                player:GetAttribute("OptionalVfxPressure"),
-                player:GetAttribute("PbrMaterialsDisabled"),cameraLook)
-        if player:GetAttribute("LocalPremiumNearfieldPbrModelCount")
-            ~= nearfieldModels then
-            player:SetAttribute("LocalPremiumNearfieldPbrModelCount",
-                nearfieldModels)
-        end
-        if player:GetAttribute("LocalPremiumNearfieldPbrSurfaceCount")
-            ~= nearfieldSurfaces then
-            player:SetAttribute("LocalPremiumNearfieldPbrSurfaceCount",
-                nearfieldSurfaces)
-        end
         -- Original 72-sided forged toroidal ceiling art replaces the
         -- single giant 20x20 native neon slab above the real Towers hub.
         -- Source Model is the already creator-approved Orbital ring kit,
@@ -2018,6 +1999,26 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalHeroPartsReplaced", nativeHeroPieces)
         end
 
+        -- Run AFTER every authoritative MeshPart owner has synced this
+        -- camera pass, including the five signature landmarks and Harbor
+        -- moving cranes. Previously PBR ran before these owners, wasting
+        -- a pass on newly mounted models and on already culled surfaces.
+        -- Still the SAME LOD timer and exact global 2K material quota.
+        local nearfieldModels, nearfieldSurfaces =
+            PremiumNearfieldPbrKit.reconcile(
+                arena, cameraPoint, cameraReady, profile.Name, isTouch,
+                player:GetAttribute("OptionalVfxPressure"),
+                player:GetAttribute("PbrMaterialsDisabled"),cameraLook)
+        if player:GetAttribute("LocalPremiumNearfieldPbrModelCount")
+            ~= nearfieldModels then
+            player:SetAttribute("LocalPremiumNearfieldPbrModelCount",
+                nearfieldModels)
+        end
+        if player:GetAttribute("LocalPremiumNearfieldPbrSurfaceCount")
+            ~= nearfieldSurfaces then
+            player:SetAttribute("LocalPremiumNearfieldPbrSurfaceCount",
+                nearfieldSurfaces)
+        end
         -- A pad's Highlight and particle emitter have separate parents.
         -- Apply LOD to just these two client-owned containers; applying it
         -- to the pad would wrongly hide the server-owned pad and light.
