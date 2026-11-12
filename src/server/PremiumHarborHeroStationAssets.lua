@@ -7,6 +7,7 @@ local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 
 local Kit = {}
 local ID = 73237902371094
@@ -64,9 +65,11 @@ function Kit.start()
     holder:SetAttribute("OwnerVerified",true)
     if holder:FindFirstChild("SignalStation") then return end
     task.spawn(function()
-        -- The player, gameplay, arena and important near-camera routes
-        -- always load before this optional skyline landmark sculpture.
-        task.wait(96)
+        -- Prefer the genuine Harbor hero station during the first rounds
+        -- when Harbor is actually active. Keep the old 96s deadline for
+        -- other variants. One existing global gate still limits concurrent
+        -- AssetService imports to two; native animation always survives.
+        ActiveSignatureSchedule.waitFor("Harbor",33,96)
         for attempt=1,3 do
             local ok,raw=pcall(GlobalApprovedImportGate.load,AssetService,ID)
             if ok and raw and raw:IsA("Model") then
