@@ -8,6 +8,7 @@ local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 
 local Assets = {}
 local started = false
@@ -78,9 +79,11 @@ function Assets.start()
     end
     holder:SetAttribute("OwnerVerified", true)
     task.spawn(function()
-        -- Gameplay and first-screen assets load first. These *distant*
-        -- sculpted cranes never compete with the first playable round.
-        task.wait(76)
+        -- Harbor has two real crane sculptures behind its first-screen
+        -- station. When Harbor is active, begin their existing sequential
+        -- imports at 58s rather than 76s; keep 76s for other variants.
+        -- Never add a worker or bypass the two-slot approved import gate.
+        ActiveSignatureSchedule.waitFor("Harbor",58,76)
         for _, spec in ipairs(SOURCES) do
             local name, id = spec[1], spec[2]
             if holder:FindFirstChild(name) then continue end

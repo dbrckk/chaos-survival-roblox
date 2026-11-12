@@ -145,4 +145,37 @@ for active in (*SOURCES,None,""):
     assert actual.get("Classic",0)>0
 print("PASS five arena and missing-map combinations preserve five total imports")
 print("PASS Towers shares the ONE original Orbital source at the active window")
+# Harbor's animated hero station and two actual gantry Models used to
+# start loading at 96s/76s even when Harbor was the current 30-45s arena.
+# Verify that only their start times change, not the source security gate,
+# original assets, sequential crane imports or fallback for other variants.
+HARBOR_LANDMARKS = (
+    ("PremiumHarborHeroStationAssets.lua", "73237902371094", 33, 96),
+    ("PremiumHarborGantryAssets.lua", "75684193304551", 58, 76),
+)
+for path, source_id, early, normal in HARBOR_LANDMARKS:
+    source=(ROOT/"src/server"/path).read_text()
+    assert source_id in APPROVED,(path,source_id)
+    assert 'require("./PremiumActiveVariantImportSchedule")' in source
+    assert 'require("./PremiumApprovedAssetImportGate")' in source
+    assert f'ActiveSignatureSchedule.waitFor("Harbor",{early},{normal})' in source
+    assert f"task.wait({normal})" not in source
+    assert source.count("ActiveSignatureSchedule.waitFor")==1
+    assert source.count("GlobalApprovedImportGate.load")==1
+    assert source.count("task.spawn(function()")==1
+    assert 'OriginalMeshScenery.sanitize(raw)' in source
+    assert 'holder:SetAttribute("OwnerVerified",true)' in source or (
+        'holder:SetAttribute("OwnerVerified", true)' in source)
+    assert ("for attempt=1,3 do" in source
+        or "for attempt = 1, 3 do" in source)
+    assert early < normal
+    print(f"PASS Harbor source {source_id}: {normal}s -> {early}s active")
+gantries=(ROOT/"src/server/PremiumHarborGantryAssets.lua").read_text()
+assert "98809955094422" in gantries and "98809955094422" in APPROVED
+assert 'for _, spec in ipairs(SOURCES) do' in gantries
+assert 'task.wait(4)' in gantries
+assert 'counts.Static ~= 4 or counts.Trolley ~= 1' in gantries
+assert 'counts.Cable ~= 1 or counts.Load ~= 1' in gantries
+print("PASS two real Harbor cranes remain sequential, validated and reversible")
+
 print("NOTE source CI does not measure concurrent network load or actual FPS")
