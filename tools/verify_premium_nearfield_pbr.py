@@ -300,7 +300,8 @@ assert 'part:GetAttribute("OriginalHarborHeroMotionRole")' in KIT
 assert 'part:GetAttribute("OriginalHarborGantryKineticRole")' in KIT
 assert 'heroMotion ~= nil and heroMotion ~= "Static"' in KIT
 assert 'craneMotion ~= nil and craneMotion ~= "Static"' in KIT
-assert KIT.count('finishForPart(part, variant)') == 4
+assert KIT.count('finishForPart(part, variant)') == 3
+assert 'return finishForPart(part, variant) ~= nil' in KIT
 assert KIT.count('OriginalHarborHeroStationLocal') == 1
 assert KIT.count('OriginalHarborKineticGantryLocal') == 2
 for asset in (73237902371094,75684193304551,98809955094422):
