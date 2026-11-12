@@ -179,8 +179,16 @@ local function mount(native, source, bounds)
     -- connection, immediate safe fallback when streaming removes geometry.
     entry.connections[#entry.connections+1]=
         native.AncestryChanged:Connect(function()
-            if mounted[name]==entry and not safeCandidate(
-                native,workspace:FindFirstChild("ArenaUnderstructureLocal")) then
+            local sourceFolder=workspace:FindFirstChild("ArenaUnderstructureLocal")
+            if mounted[name]==entry
+                and (native.Parent==nil or not sourceFolder
+                    or not safeCandidate(native,sourceFolder)) then
+                release(name)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
+        source.AncestryChanged:Connect(function()
+            if mounted[name]==entry and not source.Parent then
                 release(name)
             end
         end)
