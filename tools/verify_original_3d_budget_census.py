@@ -163,8 +163,15 @@ for variant,spec in SIGNATURES.items():
     assert spec["masked"] in kit,(variant,"full source before mask")
     assert 'native.Transparency=alpha' in kit or (
         'part.Transparency=original' in kit or 'part.Transparency=alpha' in kit)
-    assert kit.index('Parent=bucket')<kit.index(spec["masked"]) or (
-        'Parent=folder' in kit and kit.index('Parent=folder')<kit.index(spec["masked"]))
+    # Each kit publishes its Model under a differently named owner.
+    # Test the precise publish statement, not a missing generic token
+    # (str.index raises ValueError before an 'or' expression can retry).
+    publish={
+        "Classic":"model.Parent=folder",
+        "Towers":"clone.Parent=bucket",
+        "Harbor":"model.Parent=bucket",
+    }[variant]
+    assert kit.index(publish)<kit.index(spec["masked"]),(variant,"atomic mask")
     assert spec["owner"] in kit and counts[spec["owner"]]==1
     assert '.RenderStepped:Connect(' not in kit
     assert '.Heartbeat:Connect(' not in kit
