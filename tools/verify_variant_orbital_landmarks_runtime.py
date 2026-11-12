@@ -91,11 +91,28 @@ for snippet in (
 assert CLIENT.index('wrapper.Parent=bucket')<CLIENT.index('strut.Transparency=1')
 assert CLIENT.index('strut.Transparency=1')<CLIENT.index(
     'node:SetAttribute("SceneryLodHidden",true)')
-assert 'Low=0,Medium=3,High=6' in CLIENT
-assert 'Low=0,Medium=340,High=460' in CLIENT
-assert 'math.min(cap,3)' in CLIENT and 'math.min(cap,1)' in CLIENT
+# Healthy Android Low now accepts ONLY ONE atomic seven+seven-mesh
+# original reactor with its open radial strut. Both source packages
+# and both original nonphysical natives must be valid before masking.
+assert 'local LIMITS={Low=1,Medium=3,High=6}' in CLIENT
+assert 'local RANGE={Low=210,Medium=340,High=460}' in CLIENT
+assert 'or tier=="Low" and math.min(cap,1) or 0' in CLIENT
+assert 'tier=="High" and math.min(cap,3)' in CLIENT
+assert 'tier=="Medium" and math.min(cap,1)' in CLIENT
+assert 'if pressureLevel==1 then cap=math.floor(cap*.5) end' in CLIENT
 assert 'if pressureLevel>=2 then cap=0 end' in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
+assert 'bucket.ChildRemoved:Connect(function(child)' in CLIENT
+assert 'if entry.model==child then' in CLIENT
+assert 'release(index)' in CLIENT
+assert CLIENT.index('mounted[index]=nil') < CLIENT.index('entry.model:Destroy()')
+assert 'nodeOriginalModifier=node.LocalTransparencyModifier' in CLIENT
+assert 'nodeOriginalHidden=node:GetAttribute("SceneryLodHidden")' in CLIENT
+assert 'entry.node.LocalTransparencyModifier=entry.nodeOriginalModifier' in CLIENT
+assert 'entry.node:SetAttribute("SceneryLodHidden",entry.nodeOriginalHidden)' in CLIENT
+assert 'node.Transparency=1' not in CLIENT
+assert 'entry.node.Transparency=1' not in CLIENT
+assert 'local RETENTION=26' in CLIENT
 for forbidden in ('game:GetService("AssetService")',
                   'AssetService.LoadAssetAsync',
                   'RenderStepped','Heartbeat:Connect',
