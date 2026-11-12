@@ -60,7 +60,15 @@ BUCKETS = {
                 ("ApprovedOriginalIdentitySpinesLocal",105555650820011,
                  "ApprovedVariantIdentitySpineMeshKit.lua"),
                  ("ApprovedClassicSignatureObservatoryLocal",112493873850364,
-                  "ApprovedClassicSignatureObservatoryMeshKit.lua")],
+                  "ApprovedClassicSignatureObservatoryMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",132020956214241,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",88725004643299,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",84217436280282,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",135791763112202,
+                  "PremiumDistrictFacadeMeshKit.lua")],
     "Towers": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",131413152501235,
@@ -106,7 +114,15 @@ BUCKETS = {
                ("ApprovedOriginalIdentitySpinesLocal",86423178125318,
                 "ApprovedVariantIdentitySpineMeshKit.lua"),
                  ("ApprovedTowersSignatureBridgeLocal",126298311664881,
-                  "ApprovedTowersSignatureBridgeMeshKit.lua")],
+                  "ApprovedTowersSignatureBridgeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",132020956214241,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",88725004643299,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",84217436280282,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",135791763112202,
+                  "PremiumDistrictFacadeMeshKit.lua")],
     "Crossroads": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",134533469777794,
@@ -150,7 +166,15 @@ BUCKETS = {
                    ("ApprovedCrossroadsOpenGantryLocal",90844491148907,
                     "ApprovedCrossroadsOpenGantryMeshKit.lua"),
                  ("ApprovedCrossroadsSignatureInterchangeLocal",96622579843060,
-                  "ApprovedCrossroadsSignatureInterchangeMeshKit.lua")],
+                  "ApprovedCrossroadsSignatureInterchangeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",132020956214241,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",88725004643299,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",84217436280282,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",135791763112202,
+                  "PremiumDistrictFacadeMeshKit.lua")],
     "Orbital": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",131188899020391,
@@ -194,7 +218,15 @@ BUCKETS = {
                 ("ApprovedOrbitalReactorLandmarksLocal",138666009076890,
                  "ApprovedOrbitalReactorLandmarkMeshKit.lua"),
                  ("ApprovedOrbitalSignatureTorusLocal",125070862497818,
-                  "ApprovedOrbitalSignatureRingMeshKit.lua")],
+                  "ApprovedOrbitalSignatureRingMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",132020956214241,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",88725004643299,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",84217436280282,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",135791763112202,
+                  "PremiumDistrictFacadeMeshKit.lua")],
     "Harbor": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",110237986522853,
@@ -240,7 +272,15 @@ BUCKETS = {
                 ("OriginalHarborKineticGantryLocal",98809955094422,
                  "HarborGantryKineticMeshKit.lua"),
                  ("ApprovedHarborSignatureGantryLocal",124368710235343,
-                  "ApprovedHarborSignatureGantryMeshKit.lua")],
+                  "ApprovedHarborSignatureGantryMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",132020956214241,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",88725004643299,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",84217436280282,
+                  "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictFacadesLocal",135791763112202,
+                  "PremiumDistrictFacadeMeshKit.lua")],
 }
 for variant, pairs in BUCKETS.items():
     assert f"{variant} = {{" in KIT
@@ -279,6 +319,48 @@ for variant, (folder, asset, owner) in SIGNATURES.items():
                    for prop in ("CanCollide","CanQuery","CanTouch"))
                for variable in ("part","item"))
     print("PASS genuine signature PBR owner",variant,asset)
+
+# The four source-approved district facade families are 6/7 MeshPart
+# material primitives, NOT additional seven-group skyline monuments.
+# They must be safely mounted by their original kit before finishing.
+DISTRICT=(ROOT/"src/client/PremiumDistrictFacadeMeshKit.lua").read_text()
+DISTRICT_LOADER=(ROOT/"src/server/PremiumDistrictFacadeAssets.lua").read_text()
+assert 'holder.Name = "ApprovedDistrictFacadesLocal"' in DISTRICT
+assert 'holder:SetAttribute("CosmeticOnly", true)' in DISTRICT
+assert 'clone.Name = "ApprovedOriginalDistrictFacade3D"' in DISTRICT
+for marker in (
+    'clone:SetAttribute("Original3DAssetId", IDS[slot])',
+    'clone:SetAttribute("CosmeticOnly", true)',
+    'clone:SetAttribute("OwnerVerified", true)',
+    'clone:SetAttribute("DistrictFacade3D", true)',
+    'clone:SetAttribute("DistrictIndex"',
+    'item.CanCollide = false', 'item.CanTouch = false',
+    'item.CanQuery = false', 'item.CastShadow = false',
+    'clone.Parent = holder',
+):
+    assert marker in DISTRICT, marker
+assert 'PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,' in LOD
+assert LOD.index('PremiumDistrictFacadeMeshKit.sync(') < LOD.index(
+    'PremiumNearfieldPbrKit.reconcile(')
+assert 'local DISTRICT_FACADE_IDS = {' in KIT
+assert 'local districtFacade = DISTRICT_FACADE_IDS[id] == true' in KIT
+for marker in (
+    'folder.Name ~= "ApprovedDistrictFacadesLocal"',
+    'model.Name ~= "ApprovedOriginalDistrictFacade3D"',
+    'model:GetAttribute("OwnerVerified") ~= true',
+    'model:GetAttribute("DistrictFacade3D") ~= true',
+    'or index < 1 or index > 16',
+    'if #pieces < 6 or #pieces > 7 then return nil end',
+    'elseif #pieces ~= 7 then',
+):
+    assert marker in KIT, marker
+for id in (132020956214241,88725004643299,
+           84217436280282,135791763112202):
+    assert id in ids
+    assert f'[{id}] = true' in KIT
+    assert str(id) in DISTRICT and str(id) in DISTRICT_LOADER
+    assert KIT.count(f'folder = "ApprovedDistrictFacadesLocal", id = {id}') == 5
+print("PASS 4 authentic district facade families: bounded 2K visible structural finishes")
 
 # Source-approved 7-MeshPart Harbor station/cranes now share existing
 # Medium/High 2K GPU capacity; their real moving actors are NEVER coated
@@ -443,7 +525,7 @@ assert 'local distance = offset.Magnitude' in KIT
 assert 'SceneryLodRules.sceneryViewScore(' in KIT
 assert 'distance - (held and 12 or 0)' in KIT
 assert 'model:GetPivot().Position' not in KIT
-assert 'if #pieces ~= 7 then return nil end' in KIT
+assert 'elseif #pieces ~= 7 then' in KIT
 assert 'model:GetAttribute("Original3DAssetId") ~= id' in KIT
 assert 'model:GetAttribute("CosmeticOnly") ~= true' in KIT
 assert 'folder:GetAttribute("CosmeticOnly") == true' in KIT
