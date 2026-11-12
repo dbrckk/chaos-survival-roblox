@@ -301,6 +301,30 @@ end
 -- Long X source is rotated with an equally real Z-oriented walkway.
 -- The same mesh-owner entry, hazard event listeners, weld cleanup and
 -- existing camera sampler control this entire extra underdeck model.
+-- Roblox's approved importer may exchange X/Z on the SAME seven-piece
+-- original, just as it can for the route/bridge top meshes. Match the real
+-- source long/short axes to the actual collidable platform, never assume
+-- the approved chassis is 24 studs on X. Keep its full bounds below deck.
+local function fitUnderdeck(platform, sourceSize)
+    if not platform or not platform:IsA("BasePart")
+        or typeof(sourceSize) ~= "Vector3" then return nil end
+    local sourceLong=math.max(sourceSize.X,sourceSize.Z)
+    local sourceShort=math.min(sourceSize.X,sourceSize.Z)
+    local length=math.max(platform.Size.X,platform.Size.Z)
+    local width=math.min(platform.Size.X,platform.Size.Z)
+    if sourceLong<20 or sourceLong>26
+        or sourceShort<8 or sourceShort>13
+        or sourceSize.Y<3 or sourceSize.Y>8
+        or length<17 or width<9.5 then return nil end
+    local scale=math.min(length*.88/sourceLong,
+        width*.88/sourceShort,1.06)
+    if scale<.56 then return nil end
+    local sourceAlongZ=sourceSize.Z>sourceSize.X
+    local platformAlongZ=platform.Size.Z>platform.Size.X
+    local yaw=sourceAlongZ==platformAlongZ and 0 or math.pi*.5
+    return {scale=scale,yaw=yaw}
+end
+
 local function addUnderdeckModel(entry, platform, template)
     if not template then return false end
     -- Low only permits the approved seven-material 3K-triangle Model.
@@ -325,33 +349,23 @@ local function addUnderdeckModel(entry, platform, template)
         return false
     end
     local _, sourceSize = template:GetBoundingBox()
-    if sourceSize.X < 20 or sourceSize.X > 26
-        or sourceSize.Y < 3 or sourceSize.Y > 8
-        or sourceSize.Z < 8 or sourceSize.Z > 13 then
-        return false
-    end
-    local length = math.max(platform.Size.X, platform.Size.Z)
-    local width = math.min(platform.Size.X, platform.Size.Z)
-    -- Small square jump tiles need no invisible 3K-triangle machinery.
-    if length < 17 or width < 9.5 then return false end
-    local scale = math.min(
-        length * 0.88 / sourceSize.X,
-        width * 0.88 / sourceSize.Z,
-        1.06)
-    if scale < 0.56 then return false end
+    local fit=fitUnderdeck(platform,sourceSize)
+    if not fit then return false end
+    local scale=fit.scale
     local clone = template:Clone()
     local ok = pcall(function() clone:ScaleTo(scale) end)
     if not ok then clone:Destroy(); return false end
 
     local frame, size = clone:GetBoundingBox()
     if size.X <= 0 or size.Y <= 0 or size.Z <= 0
-        or size.X > 32 or size.Z > 18 or size.Y > 9 then
+        or math.max(size.X,size.Z)>32
+        or math.min(size.X,size.Z)>18 or size.Y > 9 then
         clone:Destroy()
         return false
     end
     -- Source model center must be at or below the true platform's lower
     -- face. A small air gap lets the edge cast a visible real 3D profile.
-    local yaw = platform.Size.Z > platform.Size.X and math.pi * 0.5 or 0
+    local yaw=fit.yaw
     local target = platform.CFrame
         * CFrame.new(0, -platform.Size.Y * 0.5 - 0.06 - size.Y * 0.5, 0)
         * CFrame.Angles(0, yaw, 0)
@@ -445,7 +459,11 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         bridge = isBridge,
         panel = nil,
         originalPanelAlpha = 0,
-        underdeck = underdeckTemplate ~= nil,
+        -- Requested source and actually mounted geometry are different:
+        -- if the optional source fails, don't report a phantom underdeck
+        -- or rebuild the expensive route top every LOD sample.
+        underdeckRequested = underdeckTemplate ~= nil,
+        underdeck = false,
         strictLowUnderdeck = strictLowUnderdeck == true,
         -- The native landing paint is masked ONLY when the owner-approved
         -- model's actual bounding box covers both walkable axes.
@@ -473,7 +491,8 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     if underdeckTemplate then
         -- Source outside bounds or an unavailable owner Model is simply a
         -- safe optional fallback: never invalidate the real route art.
-        addUnderdeckModel(entry, platform, underdeckTemplate)
+        entry.underdeck=addUnderdeckModel(
+            entry, platform, underdeckTemplate)
     end
 
     -- A Model can remain resident while an internal MeshPart streams
@@ -618,7 +637,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         entry.connections[#entry.connections + 1] =
             platform:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
-    if underdeckTemplate then
+    if entry.underdeck then
         -- The event-driven true LongCradle owner can mount AFTER the
         -- camera LOD sampler. Tear down our entire optional route skin
         -- immediately rather than stacking two 3K-triangle chassis; the
@@ -1016,21 +1035,13 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         end
         table.sort(ranked, byDistance)
         local _,underdeckBounds=underdeckTemplate:GetBoundingBox()
-        local boundsOK=underdeckBounds.X>=20
-            and underdeckBounds.X<=26
-            and underdeckBounds.Y>=3
-            and underdeckBounds.Y<=8
-            and underdeckBounds.Z>=8
-            and underdeckBounds.Z<=13
         for _, item in ipairs(ranked) do
             if underdeckSlots <= 0 then break end
             local size = item.platform.Size
             local length=math.max(size.X,size.Z)
             local width=math.min(size.X,size.Z)
-            local actualScale=boundsOK and math.min(
-                length*.88/underdeckBounds.X,
-                width*.88/underdeckBounds.Z,1.06) or 0
-            if actualScale>=.56
+            local underdeckFit=fitUnderdeck(item.platform,underdeckBounds)
+            if underdeckFit
                 and length >= (quality == "Low" and 19.5 or 17)
                 and width >= 9.5
                 and (quality ~= "Low"
@@ -1050,7 +1061,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     for platform, entry in pairs(mounted) do
         local desired = wanted[platform]
         if not desired or desired.count ~= entry.count
-            or (desired.underdeck ~= nil) ~= entry.underdeck
+            or (desired.underdeck ~= nil) ~= entry.underdeckRequested
             or not modelsIntact(entry) then
             restore(entry)
             mounted[platform] = nil
@@ -1139,6 +1150,10 @@ end
 -- pretended on-device screenshot or guessed complete texture residency).
 -- Pure footprint contract, also exercised in real Roblox Engine on actual
 -- Part / Vector3 instances at the major graphical milestone.
+-- Pure bound-fit check for in-engine real-axis/orientation regression.
+-- No object creation or game physics authority.
+PremiumRouteMeshKit.underdeckFit = fitUnderdeck
+
 function PremiumRouteMeshKit.sourceFit(platform, sourceBounds, count, bridge)
     return fitSourceToDeck(platform, sourceBounds, count, bridge)
 end
