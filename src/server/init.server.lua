@@ -105,6 +105,11 @@ local function startPremiumAssets()
     -- joining/AI/hazards never wait on extra optional 3D artwork.
     task.defer(PremiumRouteMeshAssets.start)
     task.defer(PremiumDistrictFacadeAssets.start)
+    -- Original owner-approved six-material sidewall shell; required only
+    -- after import approval, independent of player join and round startup.
+    task.defer(function()
+        require(script.PremiumDistrictSidewallAssets).start()
+    end)
     -- Heavy original skyfleet art is purely optional and loads later to
     -- avoid Roblox owner-wide AssetService throttling at player arrival.
     task.defer(PremiumSkyfleetMeshAssets.start)
