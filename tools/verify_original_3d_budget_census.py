@@ -108,6 +108,85 @@ assert '.Heartbeat:Connect(' not in HARBOR
 assert 'AssetService' not in HARBOR
 print("PASS Harbor Low original seven-mesh cargo gantry, nine native block fallback and pressure 1 demotion")
 
+# Each arena has ONE exterior "hero" signature (never three at once).
+# On Android Low one source-approved 7-MeshPart sculpture replaces only
+# its own exact native nonphysical geometry. Other map variants have
+# different active Arena folders, so they do not accumulate these models.
+# First optional VFX pressure must restore original source silhouettes.
+SIGNATURES={
+    "Classic": {
+        "file":"ApprovedClassicSignatureObservatoryMeshKit.lua",
+        "owner":"ApprovedClassicSignatureObservatoryLocal",
+        "asset":112493873850364,"range":290,
+        "sourceFlag":"OriginalClassicDualDishObservatory3D",
+        "originals":7,"high":615,
+        "masked":"for _,part in ipairs(originals) do part.Transparency=1 end",
+        "sourceKey":"OWNER_ID",
+    },
+    "Towers": {
+        "file":"ApprovedTowersSignatureBridgeMeshKit.lua",
+        "owner":"ApprovedTowersSignatureBridgeLocal",
+        "asset":126298311664881,"range":290,
+        "sourceFlag":"OriginalTowersSignatureBridge3D",
+        "originals":2,"high":575,
+        "masked":"bridge.Transparency=1",
+        "sourceKey":"MODEL_ID",
+    },
+    "Harbor": {
+        "file":"ApprovedHarborSignatureGantryMeshKit.lua",
+        "owner":"ApprovedHarborSignatureGantryLocal",
+        "asset":124368710235343,"range":290,
+        "sourceFlag":"OriginalHarborSignatureGantry3D",
+        "originals":3,"high":610,
+        "masked":"for _,native in ipairs(natives) do native.Transparency=1 end",
+        "sourceKey":"MODEL_ID",
+    },
+}
+assert len(SIGNATURES)==3
+for variant,spec in SIGNATURES.items():
+    kit=(CLIENT/spec["file"]).read_text(encoding="utf8")
+    assert f'local {spec["sourceKey"]}={spec["asset"]}' in kit,(variant,"asset")
+    assert 'local QUALITY={Low=1,Medium=1,High=1}' in kit,(variant,"quality")
+    assert f'local RANGE={{Low={spec["range"]},Medium=' in kit,(variant,"range")
+    assert f',High={spec["high"]}}}' in kit,(variant,"high unchanged")
+    demotion={
+        "Classic":'if stress>=2 or (stress==1 and tier~="High") then cap=0 end',
+        "Towers":'if load>=2 or (load==1 and tier~="High") then cap=0 end',
+        "Harbor":'if stress>=2 or (stress==1 and tier~="High") then count=0 end',
+    }[variant]
+    assert demotion in kit,(variant,"pressure one native fallback")
+    assert spec["sourceFlag"] in kit,(variant,"signature provenance")
+    assert 'OwnerVerified' in kit and 'CosmeticOnly' in kit
+    assert 'Original3DAssetId' in kit
+    assert 'if count~=7 then return nil end' in kit or (
+        'if meshes~=7 then return nil end'),(variant,"true 7 pieces")
+    assert 'LuaSourceContainer' in kit
+    assert 'part.CanCollide=false' in kit or 'item.CanCollide=false' in kit
+    assert 'part.CanTouch=false' in kit or 'item.CanTouch=false' in kit
+    assert 'part.CanQuery=false' in kit or 'item.CanQuery=false' in kit
+    assert spec["masked"] in kit,(variant,"full source before mask")
+    restoreNative={
+        "Classic":"native.Transparency=alpha",
+        "Towers":"native.Transparency=original",
+        "Harbor":"native.Transparency=alpha",
+    }[variant]
+    assert restoreNative in kit,(variant,"native restore")
+    # Each kit publishes its Model under a differently named owner.
+    # Test the precise publish statement, not a missing generic token
+    # (str.index raises ValueError before an 'or' expression can retry).
+    publish={
+        "Classic":"model.Parent=folder",
+        "Towers":"clone.Parent=bucket",
+        "Harbor":"model.Parent=bucket",
+    }[variant]
+    assert kit.index(publish)<kit.index(spec["masked"]),(variant,"atomic mask")
+    assert spec["owner"] in kit and counts[spec["owner"]]==1
+    assert '.RenderStepped:Connect(' not in kit
+    assert '.Heartbeat:Connect(' not in kit
+    assert 'AssetService' not in kit
+    print("PASS seven-piece original Android Low signature:",variant,
+          "replaces",spec["originals"],"nonphysical primitives at <=290 studs")
+
 # The existing authenticated structure owner can replace exactly TWO
 # static perimeter cuboids on the ONE nearest Low-tier station.
 # It must remain in the global Android Part census and return natives

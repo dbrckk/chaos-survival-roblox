@@ -5,8 +5,11 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=126298311664881
-local QUALITY={Low=0,Medium=1,High=1}
-local RANGE={Low=0,Medium=390,High=575}
+-- Android Low: one authenticated seven-MeshPart landmark instead of
+-- 2 distant primitive silhouette Parts, only at VFX pressure zero.
+-- These three variants are mutually exclusive on the same active arena.
+local QUALITY={Low=1,Medium=1,High=1}
+local RANGE={Low=290,Medium=390,High=575}
 local RETENTION=24
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedTowersSignatureBridgeLocal"
