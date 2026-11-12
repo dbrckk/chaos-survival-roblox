@@ -143,11 +143,32 @@ assert 'signal.Transparency=' not in CLIENT
 assert 'band.Transparency=' not in CLIENT
 assert 'glow.Transparency=' not in CLIENT
 assert CLIENT.index("model.Parent=bucket") < CLIENT.index("native.Transparency=1")
-assert "Low=0,Medium=2,High=4" in CLIENT
-assert "Low=0,Medium=295,High=425" in CLIENT
-assert 'math.min(budget,1)' in CLIENT and 'math.min(budget,2)' in CLIENT
+# Low previously had TWO independent disablers: the tier cap zero
+# and the touch-specific branch forcibly returned zero even if tier
+# caps were changed. Both must enable ONE true approved source on healthy
+# Android, while pressure 1/2 immediately restores the native.
+assert "local CAP={Low=1,Medium=2,High=4}" in CLIENT
+assert "local RANGE={Low=165,Medium=295,High=425}" in CLIENT
+assert 'or tier=="Low" and math.min(budget,1) or 0' in CLIENT
+assert 'tier=="High" and math.min(budget,2)' in CLIENT
+assert 'tier=="Medium" and math.min(budget,1)' in CLIENT
+assert 'if stress==1 then budget=math.floor(budget*.5) end' in CLIENT
 assert 'if stress>=2 then budget=0 end' in CLIENT
 assert 'if budget==0 or not cameraReady' in CLIENT
+assert 'native.Transparency=entry.original' in CLIENT
+assert 'entry.native.Transparency=1' in CLIENT
+# The only client-owned source module is exactly seven MeshParts per
+# active arena. All existing neon/hazard glow Pieces continue to animate.
+assert 'if n~=7 then return nil end' in CLIENT
+assert 'if #meshes~=7 then model:Destroy();return end' in CLIENT
+assert 'if touch then' in CLIENT and 'if stress==1' in CLIENT
+assert 'bucket.ChildRemoved:Connect(function(child)' in CLIENT
+assert 'if entry.model==child then' in CLIENT
+assert 'release(index)' in CLIENT
+assert CLIENT.index('model.Parent=bucket') < CLIENT.index('native.Transparency=1')
+print("PASS original seven-mesh Classic/Towers mast on Low touch",
+      "with 165-stud cap and pressure-1 native fallback")
+
 
 executable="\n".join(line.split("--",1)[0] for line in CLIENT.splitlines())
 for forbidden in (
