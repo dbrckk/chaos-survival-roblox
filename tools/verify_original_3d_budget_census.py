@@ -69,6 +69,45 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# A real 20-stud Harbor cargo gantry imported by the existing server
+# can replace NINE native structural blocks on ONE nearby Low skywalk.
+# Strictly seven verified MeshParts, no extra texture on Low, no extra
+# sampler: first optional VFX pressure must reinstate native primitives.
+HARBOR=(CLIENT/"HarborPromenadePortalMeshKit.lua").read_text(encoding="utf8")
+HARBOR_SERVER=(ROOT/"src/server/PremiumHarborPromenadePortalAssets.lua").read_text(encoding="utf8")
+SCENERY=(CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+assert 'local ID = 134157110756659' in HARBOR
+assert 'local ID = 134157110756659' in HARBOR_SERVER
+assert 'Low = {count = 1, distance = 118, retention = 14}' in HARBOR
+assert 'Medium = {count = 2, distance = 205, retention = 25}' in HARBOR
+assert 'High = {count = 6, distance = 280, retention = 34}' in HARBOR
+assert 'elseif tier=="Low" and stress>0 then' in HARBOR
+assert 'maximum=0' in HARBOR
+assert '(tier=="Low" and partCount~=7)' in HARBOR
+assert 'holder:GetAttribute("OwnerVerified") ~= true' in HARBOR
+assert 'source:GetAttribute("OwnerVerified") ~= true' in HARBOR
+assert 'source:GetAttribute("Original3DAssetId") ~= ID' in HARBOR
+assert 'source:GetAttribute("OriginalHarborPromenadePortal3D") ~= true' in HARBOR
+assert 'if not piece:IsA("MeshPart") then return nil end' in HARBOR
+assert 'part:IsA("LuaSourceContainer")' in HARBOR or 'piece:IsA("LuaSourceContainer")' in HARBOR
+assert 'if #pieces ~= expected then copy:Destroy(); return nil end' in HARBOR
+for name in ('LoadPylon-1','LoadPylon1','DiagonalStay-1','DiagonalStay1',
+    'MonumentalCrosshead','UnderdeckTruss','FreightHoistArm',
+    'SuspendedCrate','CargoChain'):
+    assert name in HARBOR,name
+assert 'native.part.LocalTransparencyModifier =' in HARBOR
+assert 'visible and 1 or native.original' in HARBOR
+assert 'decor.ChildAdded:Connect(watchNative)' in HARBOR
+assert 'PremiumRoutePbrKit.entryBudget(' in HARBOR
+assert 'if stress > 0 then slots = 0 end' in HARBOR
+assert 'HarborPromenadePortalMeshKit.sync(arena,cameraPoint,profile.Name,' in SCENERY
+assert '"OriginalHarborPromenadePortalsLocal"' in ledger
+assert 'folder.Name = "OriginalHarborPromenadePortalsLocal"' in HARBOR
+assert '.RenderStepped:Connect(' not in HARBOR
+assert '.Heartbeat:Connect(' not in HARBOR
+assert 'AssetService' not in HARBOR
+print("PASS Harbor Low original seven-mesh cargo gantry, nine native block fallback and pressure 1 demotion")
+
 # The existing authenticated structure owner can replace exactly TWO
 # static perimeter cuboids on the ONE nearest Low-tier station.
 # It must remain in the global Android Part census and return natives

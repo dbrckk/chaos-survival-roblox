@@ -340,7 +340,13 @@ assert 'Instance.new(' not in KIT
 # Source model pivots may remain at export coordinates after seven
 # MeshParts have been positioned individually at actual stations.
 assert 'local position = model:GetBoundingBox()' in KIT
-assert 'local distance = (position.Position - cameraPoint).Magnitude' in KIT
+# The renderer derives its camera offset once and applies
+# view-facing priority without changing the real distance eligibility.
+# Do not require the obsolete single-expression distance implementation.
+assert 'local offset = position.Position - cameraPoint' in KIT
+assert 'local distance = offset.Magnitude' in KIT
+assert 'SceneryLodRules.sceneryViewScore(' in KIT
+assert 'distance - (held and 12 or 0)' in KIT
 assert 'model:GetPivot().Position' not in KIT
 assert 'if #pieces ~= 7 then return nil end' in KIT
 assert 'model:GetAttribute("Original3DAssetId") ~= id' in KIT

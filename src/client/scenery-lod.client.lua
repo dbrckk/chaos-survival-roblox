@@ -928,8 +928,10 @@ task.spawn(function()
         -- True original 3D harbor freight gantries over the SIX existing
         -- two-lane promenade arch sockets. No additional scanning loop:
         -- these share this exact camera-distance and Android tier pass.
-        -- High up to six, Medium two, Low zero, pressure demotes optional
-        -- detail but NEVER hides an actual platform or danger cue.
+        -- High six, Medium two, Low ONE original seven-piece gantry
+        -- at <=118 studs while optional pressure is zero. Each fully
+        -- mounted model retires nine native cuboid ornaments, never
+        -- a physical walkway, rail or danger cue.
         HarborPromenadePortalMeshKit.sync(arena,cameraPoint,profile.Name,
             cameraReady,cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch,
