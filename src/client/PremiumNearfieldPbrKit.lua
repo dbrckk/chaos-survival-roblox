@@ -45,6 +45,13 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 105555650820011},
         -- Actual Classic north observatory: owner-approved 7-part source.
         {folder = "ApprovedClassicSignatureObservatoryLocal", id = 112493873850364},
+        -- Four original UV/tangent-ready district facades, mounted only
+        -- over authentic visible nonphysical buildings. All five arenas
+        -- use the SAME four approved source IDs and shared global quota.
+        {folder = "ApprovedDistrictFacadesLocal", id = 132020956214241},
+        {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
+        {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
+        {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
     },
     Towers = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -74,6 +81,13 @@ local SOURCES = {
         {folder = "ApprovedOriginalIdentitySpinesLocal", id = 86423178125318},
         -- Actual Towers steel skybridge (never the walkable Skyrail).
         {folder = "ApprovedTowersSignatureBridgeLocal", id = 126298311664881},
+        -- Four original UV/tangent-ready district facades, mounted only
+        -- over authentic visible nonphysical buildings. All five arenas
+        -- use the SAME four approved source IDs and shared global quota.
+        {folder = "ApprovedDistrictFacadesLocal", id = 132020956214241},
+        {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
+        {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
+        {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
     },
     Crossroads = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -102,6 +116,13 @@ local SOURCES = {
         {folder = "ApprovedCrossroadsOpenGantryLocal", id = 90844491148907},
         -- Actual Crossroads signature elevated interchange geometry.
         {folder = "ApprovedCrossroadsSignatureInterchangeLocal", id = 96622579843060},
+        -- Four original UV/tangent-ready district facades, mounted only
+        -- over authentic visible nonphysical buildings. All five arenas
+        -- use the SAME four approved source IDs and shared global quota.
+        {folder = "ApprovedDistrictFacadesLocal", id = 132020956214241},
+        {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
+        {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
+        {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
     },
     Orbital = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -130,6 +151,13 @@ local SOURCES = {
         {folder = "ApprovedOrbitalReactorLandmarksLocal", id = 138666009076890},
         -- Real orbital 7-part toroidal signature, no native arc PBR.
         {folder = "ApprovedOrbitalSignatureTorusLocal", id = 125070862497818},
+        -- Four original UV/tangent-ready district facades, mounted only
+        -- over authentic visible nonphysical buildings. All five arenas
+        -- use the SAME four approved source IDs and shared global quota.
+        {folder = "ApprovedDistrictFacadesLocal", id = 132020956214241},
+        {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
+        {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
+        {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
     },
     Harbor = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -162,7 +190,23 @@ local SOURCES = {
         {folder = "OriginalHarborKineticGantryLocal", id = 98809955094422},
         -- Distinct static Harbor mega-gantry over the authored quay.
         {folder = "ApprovedHarborSignatureGantryLocal", id = 124368710235343},
+        -- Four original UV/tangent-ready district facades, mounted only
+        -- over authentic visible nonphysical buildings. All five arenas
+        -- use the SAME four approved source IDs and shared global quota.
+        {folder = "ApprovedDistrictFacadesLocal", id = 132020956214241},
+        {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
+        {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
+        {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
     },
+}
+-- The district's FOUR true creator-approved facades have six or seven
+-- glTF material primitives (unlike the seven-piece monument sculptures).
+-- Permit that exact different source shape ONLY inside its trusted bucket.
+local DISTRICT_FACADE_IDS = {
+    [132020956214241] = true, -- Observatory
+    [88725004643299] = true,  -- Freight
+    [84217436280282] = true,  -- Turbine
+    [135791763112202] = true, -- Aerial
 }
 local KNOWN_FINISHES = {
     DiamondArmor = true,
@@ -244,6 +288,19 @@ local function piecesFor(model, folder, id, variant)
     if not model:IsA("Model") or model.Parent ~= folder
         or model:GetAttribute("Original3DAssetId") ~= id
         or model:GetAttribute("CosmeticOnly") ~= true then return nil end
+    local districtFacade = DISTRICT_FACADE_IDS[id] == true
+    if districtFacade then
+        -- A copied decoration tagged with an approved asset ID must not
+        -- gain high-resolution material ownership. Only the real facade
+        -- kit's sanitized source clones under its exact owner are eligible.
+        local index = model:GetAttribute("DistrictIndex")
+        if folder.Name ~= "ApprovedDistrictFacadesLocal"
+            or model.Name ~= "ApprovedOriginalDistrictFacade3D"
+            or model:GetAttribute("OwnerVerified") ~= true
+            or model:GetAttribute("DistrictFacade3D") ~= true
+            or type(index) ~= "number" or index % 1 ~= 0
+            or index < 1 or index > 16 then return nil end
+    end
     local pieces = {}
     for _, part in ipairs(model:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -254,7 +311,11 @@ local function piecesFor(model, folder, id, variant)
             return nil
         end
     end
-    if #pieces ~= 7 then return nil end
+    if districtFacade then
+        if #pieces < 6 or #pieces > 7 then return nil end
+    elseif #pieces ~= 7 then
+        return nil
+    end
     local any = false
     for _, part in ipairs(pieces) do
         if visibleFinish(part, variant) then any = true end
