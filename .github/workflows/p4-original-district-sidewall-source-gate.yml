@@ -1,0 +1,103 @@
+# Original, real-triangle 3D source gate. No Roblox token, upload or publish.
+name: P4 Authored District Sidewall Source 3D Geometry Gate
+on:
+  pull_request:
+    paths:
+      - tools/generate_original_district_sidewall_shell.py
+      - tools/generate_district_profile_meshes.py
+      - tools/obj_to_gltf.py
+      - assets/source/chaos_route_kit.mtl
+      - .github/workflows/p4-original-district-sidewall-source-gate.yml
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_district_sidewall_shell.py
+      - .github/workflows/p4-original-district-sidewall-source-gate.yml
+permissions:
+  contents: read
+jobs:
+  authored-sidewall:
+    name: Generate/validate actual solid 3D walls, native fit and PBR UVs
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate original solid side/back wall source without API access
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/authored-district-sidewall
+          python3 tools/generate_original_district_sidewall_shell.py \
+            --output build/authored-district-sidewall/chaos_district_sidewall_shell.obj \
+            | tee build/authored-district-sidewall/metrics.json
+          python3 tools/obj_to_gltf.py \
+            --source build/authored-district-sidewall/chaos_district_sidewall_shell.obj \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output build/authored-district-sidewall/chaos_district_sidewall_shell.gltf \
+            | tee build/authored-district-sidewall/gltf-metrics.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import json
+          import math
+          root=Path("build/authored-district-sidewall")
+          m=json.loads((root/"metrics.json").read_text())["district_sidewall_original"]
+          g=json.loads((root/"chaos_district_sidewall_shell.gltf").read_text())
+          stats=json.loads((root/"gltf-metrics.json").read_text())
+          assert m["asset_id"] is None
+          assert m["door_preserved"] is True
+          assert m["side_glass_preserved"] is True
+          assert tuple(m["replaces_native_only"])==(
+              "ServiceCore","ArmoredSupportL","ArmoredSupportR",
+              "SideCassette-1","SideCassette1")
+          assert 480<=m["triangles"]<=5200
+          assert 30<=m["groups"]<=180
+          assert g["asset"]["version"]=="2.0"
+          assert g["buffers"][0]["uri"].startswith("data:application/octet-stream;base64,")
+          raw=base64.b64decode(g["buffers"][0]["uri"].split(",",1)[1])
+          assert len(raw)==g["buffers"][0]["byteLength"]
+          assert all(v["byteOffset"]+v["byteLength"]<=len(raw)
+                     for v in g["bufferViews"])
+          primitives=g["meshes"][0]["primitives"]
+          assert 5<=len(primitives)<=7
+          names={x["name"] for x in g["materials"]}
+          assert {"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC"}<=names
+          assert all(p["mode"]==4 and
+                     {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}
+                     <=set(p["attributes"]) for p in primitives)
+          triangles=sum(g["accessors"][p["attributes"]["POSITION"]]["count"]//3
+                        for p in primitives)
+          assert triangles==m["triangles"]==stats["triangles"]
+          assert stats["materials"]==len(primitives)
+          positions=[g["accessors"][p["attributes"]["POSITION"]]
+                     for p in primitives]
+          minima=[min(a["min"][i] for a in positions) for i in range(3)]
+          maxima=[max(a["max"][i] for a in positions) for i in range(3)]
+          # Ground-contact Y=0 is CRITICAL: our existing approved model
+          # mounting aligns source bounding-box bottom to arena origin.
+          assert abs(minima[1])<.005,(minima,maxima)
+          assert 13<=maxima[1]<=14.1
+          assert -6<=minima[0]< -5 and 5<maxima[0]<=6
+          assert -4<=minima[2]<=-3.2 and 3.4<=maxima[2]<=5
+          assert all(math.isfinite(c) for c in minima+maxima)
+          # No new opaque source meshes in the 4.65-stud-wide door-front
+          # clearance z<-3.8; the native wayfinding, glass and doors stay.
+          verts=[]
+          for line in (root/"chaos_district_sidewall_shell.obj").read_text().splitlines():
+              if line.startswith("v "):
+                  verts.append(tuple(float(x) for x in line.split()[1:4]))
+          assert len(verts)>300
+          assert all(not (z < -3.8 and abs(x)<2.85 and y<7)
+                     for x,y,z in verts)
+          print("PASS ORIGINAL REAL 3D:",triangles,"triangles,",
+                m["groups"],"objects,",len(primitives),"UV/PBR materials")
+          print("PASS source ground/door/side-glass envelope, bounded low-GPU geometry")
+          print("SOURCE PREVIEW ONLY: NO Roblox Model ID / upload / public publish")
+          PY
+      - name: Preserve inspectable real triangulated OBJ and glTF previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-district-sidewall-solid-source
+          path: build/authored-district-sidewall/
+          retention-days: 14
+          if-no-files-found: error

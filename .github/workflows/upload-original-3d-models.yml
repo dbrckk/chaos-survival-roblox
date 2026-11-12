@@ -50,6 +50,7 @@ on:
           - district_freight
           - district_turbine
           - district_aerial
+          - district_sidewall_shell
           - skyfleet_carrier
           - underdeck_chassis
           - lobby_gate
@@ -195,7 +196,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$CHOICE" in
-            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel|service_camera|service_maintenance|service_wayfinder|service_orbital|service_mooring|ambient_drone|ambient_lift|ambient_transit|ambient_satellite|ambient_cargo|relief_essential|relief_classic|relief_towers|relief_crossroads|relief_orbital|relief_harbor|floor_corner_guard|floor_anchor_bolt|floor_anchor_bolt_large|floor_harbor_tie|deck_carapace_classic|deck_carapace_towers|deck_carapace_crossroads|deck_carapace_orbital|deck_carapace_harbor|bridge_side_girder|column_classic|column_towers|column_crossroads|column_orbital|column_harbor|long_route_cradle|large_deck_hull|lobby_pylon_shell|harbor_promenade_portal|harbor_dock_caisson|harbor_freighter|harbor_gantry_container|harbor_gantry_drum|harbor_gantry_kinetic_container|harbor_gantry_kinetic_drum|harbor_hero_station|harbor_midground_barge|harbor_sea_apron|towers_cooling_spire|towers_cooling_stack|perimeter_rotor|perimeter_wing|perimeter_cap|perimeter_crossbrace|perimeter_generator_shield|perimeter_towers_apex|perimeter_orbital_apex|perimeter_crossroads_apex|perimeter_relay_apex|exterior_tower_21|exterior_tower_24|exterior_tower_27|exterior_tower_30|signature_orbital_reactor_ring|signature_towers_forged_bridge|signature_crossroads_forged_interchange|signature_harbor_sculpted_gantry|signature_classic_sculpted_observatory|signature_classic_forged_supports|south_orbital_observation_torus|south_towers_forged_skytransfer|south_towers_forged_lift_twins|south_towers_forged_finishing|south_crossroads_forged_exchange|south_orbital_forged_finishing|south_harbor_sculpted_drydock|south_classic_sculpted_observatory|exterior_ridges_nw|exterior_ridges_ne|exterior_ridges_sw|exterior_ridges_se|variant_towers_sculpted_machinery|variant_crossroads_forged_gantry|variant_classic_sculpted_broadcast_fin|variant_orbital_sculpted_node|variant_orbital_trussed_strut|variant_crossroads_sculpted_entrance_portal|variant_classic_grid_marker_sculpt|variant_towers_spine_sculpt|skyline_depth_sculpt) ;;
+            reactor_spire|service_crane|perimeter_gate|plasma_foundry|sky_transit_exchange|orbital_halo_array|premium_jump_deck|premium_skybridge_module|premium_ground_tile|district_observatory|district_freight|district_turbine|district_aerial|district_sidewall_shell|skyfleet_carrier|underdeck_chassis|lobby_gate|sky_spine_crown|arena_keel|service_camera|service_maintenance|service_wayfinder|service_orbital|service_mooring|ambient_drone|ambient_lift|ambient_transit|ambient_satellite|ambient_cargo|relief_essential|relief_classic|relief_towers|relief_crossroads|relief_orbital|relief_harbor|floor_corner_guard|floor_anchor_bolt|floor_anchor_bolt_large|floor_harbor_tie|deck_carapace_classic|deck_carapace_towers|deck_carapace_crossroads|deck_carapace_orbital|deck_carapace_harbor|bridge_side_girder|column_classic|column_towers|column_crossroads|column_orbital|column_harbor|long_route_cradle|large_deck_hull|lobby_pylon_shell|harbor_promenade_portal|harbor_dock_caisson|harbor_freighter|harbor_gantry_container|harbor_gantry_drum|harbor_gantry_kinetic_container|harbor_gantry_kinetic_drum|harbor_hero_station|harbor_midground_barge|harbor_sea_apron|towers_cooling_spire|towers_cooling_stack|perimeter_rotor|perimeter_wing|perimeter_cap|perimeter_crossbrace|perimeter_generator_shield|perimeter_towers_apex|perimeter_orbital_apex|perimeter_crossroads_apex|perimeter_relay_apex|exterior_tower_21|exterior_tower_24|exterior_tower_27|exterior_tower_30|signature_orbital_reactor_ring|signature_towers_forged_bridge|signature_crossroads_forged_interchange|signature_harbor_sculpted_gantry|signature_classic_sculpted_observatory|signature_classic_forged_supports|south_orbital_observation_torus|south_towers_forged_skytransfer|south_towers_forged_lift_twins|south_towers_forged_finishing|south_crossroads_forged_exchange|south_orbital_forged_finishing|south_harbor_sculpted_drydock|south_classic_sculpted_observatory|exterior_ridges_nw|exterior_ridges_ne|exterior_ridges_sw|exterior_ridges_se|variant_towers_sculpted_machinery|variant_crossroads_forged_gantry|variant_classic_sculpted_broadcast_fin|variant_orbital_sculpted_node|variant_orbital_trussed_strut|variant_crossroads_sculpted_entrance_portal|variant_classic_grid_marker_sculpt|variant_towers_spine_sculpt|skyline_depth_sculpt) ;;
             *) echo "::error::Unknown model"; exit 1 ;;
           esac
           case "$CREATOR_KIND" in
@@ -360,6 +361,10 @@ jobs:
             # never accept an uploaded arbitrary OBJ from a workflow input.
             python3 tools/generate_original_skyfleet_carrier.py \
               --output assets/source/chaos_skyfleet_carrier.obj
+          elif [ "$CHOICE" = "district_sidewall_shell" ]; then
+            # Real solid/back wall, under source CI gate; no client imports.
+            python3 tools/generate_original_district_sidewall_shell.py \
+              --output assets/source/chaos_district_sidewall_shell.obj
           elif [[ "$CHOICE" == district_* ]]; then
             # Generate the FOUR deterministic profile meshes from our single
             # original and source-gated stdlib generator. No binary inputs.
@@ -429,6 +434,7 @@ jobs:
                    "district_freight": "Chaos Original District Freight 3D",
                    "district_turbine": "Chaos Original District Turbine 3D",
                    "district_aerial": "Chaos Original District Aerial 3D",
+                   "district_sidewall_shell": "Chaos Original District Sidewall Shell 3D",
                    "skyfleet_carrier": "Chaos Original Colossal 3D Skyfleet Carrier",
                    "underdeck_chassis": "Chaos Original 3D Underslung Engineering Chassis",
                    "lobby_gate": "Chaos Original Sculpted Arena Lobby Gate 3D",

@@ -1,0 +1,29 @@
+# One authorized, exact-source original 3D Model import. This workflow
+# NEVER publishes the game, edits a Place, assigns a fake ID, or accepts
+# arbitrary geometry. It runs once on the initial main push adding THIS file.
+# The reusable uploader verifies source, creator ID, API key and moderation.
+name: One-time Import Original District Sidewall Shell 2026-11-12
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-district-sidewall-shell-20261112.yml
+permissions:
+  contents: read
+concurrency:
+  group: chaos-original-district-sidewall-import-once-20261112
+  cancel-in-progress: false
+jobs:
+  import-original-sidewall:
+    name: Upload one authentic solid district sidewall asset, never the Place
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox' &&
+      github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: district_sidewall_shell
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
