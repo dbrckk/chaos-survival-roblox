@@ -32,6 +32,24 @@ bucket.Parent = workspace
 local activeArena = nil
 local mounted = {}
 
+-- The eight SkylineDepth source roof masses are stationary OUTBOARD
+-- sculptures authored at the unshrunk 320-stud playfield perimeter.
+-- Size changes of the playable Base must not retarget those originals.
+local function authenticFootprint(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx < 318 or sz < 318
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + 0.2 or base.Size.Z > sz + 0.2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local function restore(owner)
     local entry = mounted[owner]
     if not entry then return end
@@ -97,6 +115,8 @@ local function approved()
 end
 
 local function realOwner(arena,decor,base,direction,index,layer)
+    local originalX, originalZ = authenticFootprint(base, arena)
+    if not originalX or not originalZ then return nil end
     local owner = decor:FindFirstChild("SkylineDepth"..direction.id..layer)
     if not owner or not owner:IsA("Model") or owner.Parent ~= decor
         or owner:GetAttribute("ChaosDistantScenery") ~= true then
@@ -110,9 +130,9 @@ local function realOwner(arena,decor,base,direction,index,layer)
     local x = direction.x
     local z = direction.z
     if direction.id == "North" or direction.id == "South" then
-        z = z*(base.Size.Z*.5+23)
+        z = z*(originalZ*.5+23)
     else
-        x = x*(base.Size.X*.5+23)
+        x = x*(originalX*.5+23)
     end
     local side = Vector3.new(math.cos(direction.yaw),0,
         -math.sin(direction.yaw))
@@ -152,7 +172,7 @@ local function valid(entry)
         or entry.owner.Parent ~= entry.decor
         or entry.decor.Parent ~= entry.arena
         or entry.arena.Parent ~= workspace:FindFirstChild("GeneratedMap")
-        or entry.base.Parent ~= entry.arena
+        or not authenticFootprint(entry.base, entry.arena)
         or entry.source.Parent ~= entry.holder
         or entry.holder.Parent ~= ReplicatedStorage
         or entry.body.Parent ~= entry.owner
@@ -271,10 +291,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
     local base = arena and arena:FindFirstChild("Base")
     local decor = arena and arena:FindFirstChild("Decor")
     if not arena or not arena:IsA("Folder") or not generated
-        or arena.Parent ~= generated or not base
-        or not base:IsA("BasePart") or not base.Anchored
-        or not base.CanCollide or base.Size.X < 318
-        or base.Size.Z < 318 or not decor
+        or arena.Parent ~= generated
+        or not authenticFootprint(base, arena) or not decor
         or not decor:IsA("Folder") or decor.Parent ~= arena
         or not VARIANTS[arena:GetAttribute("VariantId")] then
         clear()

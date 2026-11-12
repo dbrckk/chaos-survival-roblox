@@ -45,7 +45,7 @@ assert "height = (variant.Id == \"Towers\" and 25" in BUILDER
 assert "index % 2" in BUILDER
 assert '"SkylineStructure" .. direction.id' in BUILDER
 for expression in ("11.4,3,8.8","8.5,h,7.4","2.2,5.4,8",
-                   "base.Size.Z*.5+23","base.Size.X*.5+23",
+                   "originalZ*.5+23","originalX*.5+23",
                    "piece.CanCollide = false","piece.CanTouch = false",
                    "piece.CanQuery = false","source.DescendantRemoving:Connect",
                    "clone.DescendantRemoving:Connect",
@@ -83,6 +83,29 @@ for variant,height0 in variants.items():
         count+=1
     print(f"PASS {variant}: four certified skyline transforms and scale limits")
 assert count==20
+
+# Skyline towers remain stationary when the playable 320-stud Base
+# shrinks. Their expected positions must use the source-authored
+# OriginalSizeX/Z, not the actively collapsing gameplay floor size.
+for guard in (
+    'local function authenticFootprint(base, arena)',
+    'base.Parent ~= arena',
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    'or sx < 318 or sz < 318',
+    'base.Size.X > sx + 0.2 or base.Size.Z > sz + 0.2',
+    'local originalX, originalZ = authenticFootprint(base, arena)',
+    'z *= originalZ*.5+23',
+    'x *= originalX*.5+23',
+    'math.min(originalX,originalZ)*.5',
+    'or not originalX or not originalZ',
+):
+    assert guard in CLIENT,guard
+assert 'base.Size.X < 318' not in CLIENT
+assert 'base.Size.Z < 318' not in CLIENT
+assert 'base:SetAttribute("OriginalSizeX", base.Size.X)' in BUILDER
+assert 'base:SetAttribute("OriginalSizeZ", base.Size.Z)' in BUILDER
+print("PASS four genuine skyline sculptures preserve original rim in shrinking rounds")
 
 assert "Low={count=1,distance=315}" in CLIENT
 assert "Medium={count=2,distance=390}" in CLIENT

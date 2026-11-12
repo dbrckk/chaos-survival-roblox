@@ -61,6 +61,28 @@ assert 'LocalApprovedSkylineDepthModelCount' in LOD
 assert 'LocalSkylineDepthPrimitivesReplaced' in LOD
 assert "AssetService" not in KIT
 
+# World-space exterior roof sculptures are fixed relative to the
+# original builder perimeter, not the shrinking playable floor.
+for guard in (
+    'local function authenticFootprint(base, arena)',
+    'base.Parent ~= arena',
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    'or sx < 318 or sz < 318',
+    'base.Size.X > sx + 0.2 or base.Size.Z > sz + 0.2',
+    'local originalX, originalZ = authenticFootprint(base, arena)',
+    'z = z*(originalZ*.5+23)',
+    'x = x*(originalX*.5+23)',
+    'or not authenticFootprint(entry.base, entry.arena)',
+    'or not authenticFootprint(base, arena)',
+):
+    assert guard in KIT,guard
+assert 'base.Size.X < 318' not in KIT
+assert 'base.Size.Z < 318' not in KIT
+assert 'base:SetAttribute("OriginalSizeX", base.Size.X)' in BUILDER
+assert 'base:SetAttribute("OriginalSizeZ", base.Size.Z)' in BUILDER
+print("PASS original fixed skyline roof outlines survive normal floor shrink")
+
 for forbidden in ("RenderStepped","Heartbeat","LoadAssetAsync",
                   "RemoteEvent","RemoteFunction","CanCollide = true"):
     assert forbidden not in KIT,forbidden

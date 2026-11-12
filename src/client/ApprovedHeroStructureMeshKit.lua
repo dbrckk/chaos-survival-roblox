@@ -42,6 +42,24 @@ local mounted = nil
 local watchedBase = nil
 local baseConnection = nil
 
+-- The hero lives OUTSIDE the unchanged original arena. The playable
+-- Base shrinks during survival; authenticate its immutable footprint
+-- rather than dropping verified skyline art mid-round.
+local function authenticFootprint(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx < 318 or sz < 318
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + 0.2 or base.Size.Z > sz + 0.2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local function restoreNative(entry)
     for part, originalAlpha in pairs(entry.replaced) do
         if part.Parent == entry.native and part.Transparency == 1
@@ -111,6 +129,8 @@ local function verifiedTemplate(variant)
 end
 
 local function nativeOrigin(arena, base, variant)
+    local originalX = authenticFootprint(base, arena)
+    if not originalX then return nil end
     local decor = arena:FindFirstChild("Decor")
     local native = decor and decor:FindFirstChild("ArenaHeroArchitecture3D")
     if not native or not native:IsA("Model") or native.Parent ~= decor
@@ -140,15 +160,14 @@ local function nativeOrigin(arena, base, variant)
     -- The entire hero must sit well OUTSIDE the playable 320-stud floor.
     -- Even a 42-stud imported package then cannot create a ghost safe route.
     if frame.Position.X - base.Position.X
-        < base.Size.X * .5 + size.X * .5 + 15 then
+        < originalX * .5 + size.X * .5 + 15 then
         return nil
     end
     return native, frame, size
 end
 
 local function valid(entry, base, arena, variant)
-    if not base or not base.Parent or not arena or not arena.Parent
-        or base.Size.X < 318 or base.Size.Z < 318
+    if not authenticFootprint(base, arena) or not arena.Parent
         or entry.variant ~= variant or entry.native.Parent ~= entry.decor then
         return false
     end
@@ -269,10 +288,9 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
     local base = arena:FindFirstChild("Base")
     local decor = arena:FindFirstChild("Decor")
     local variant = arena:GetAttribute("VariantId")
-    if not base or not base:IsA("BasePart")
+    if not authenticFootprint(base, arena)
         or not decor or not decor:IsA("Folder")
-        or not PROFILE[variant]
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        or not PROFILE[variant] then
         dispose()
         return
     end
@@ -280,7 +298,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
         if baseConnection then baseConnection:Disconnect() end
         watchedBase = base
         baseConnection = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then dispose() end
+            -- Ordinary shrinking never invalidates an exterior authored hero.
+            if not authenticFootprint(base, activeArena) then dispose() end
         end)
     end
     local native, frame, size = nativeOrigin(arena, base, variant)
