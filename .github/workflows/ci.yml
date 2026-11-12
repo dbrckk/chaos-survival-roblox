@@ -1242,7 +1242,9 @@ jobs:
               "cameraLook",
           )
           assert all(text in route for text in must_have)
-          assert "decks = 2, bridges = 1, segments = 1" in route
+          # Approved low-tier connector now uses two real MeshPart
+          # segments, preserving the real server-owned walking platform.
+          assert "decks = 2, bridges = 1, segments = 2" in route
           # Current authenticated near-camera skybridge counts: three
           # Medium / five High, still finite and subject to VFX pressure.
           assert "decks = 8, bridges = 3, segments = 3" in route
