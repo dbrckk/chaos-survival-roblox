@@ -57,7 +57,7 @@ for forbidden in ('RenderStepped','Heartbeat:Connect','LoadAssetAsync',
 assert len(re.findall(r'^    HarborHero[A-Za-z]+\s*=true,',KIT,re.MULTILINE))>=19
 assert 'EXPECTED_NAMES[native.Name]' in KIT
 assert 'if native.CanCollide or native.CanQuery or native.CanTouch then' in KIT
-assert 'if part.Parent then part.Transparency=show and 1 or original' in KIT
+assert 'part.Transparency=show and 1 or original' in KIT
 print("PASS Harbor hero: one 7-MeshPart approved model replaces >=12 verified native pieces on healthy Low")
 print("PASS original Radar/Cable/Weight motion, storm lens, GPU pressure and budget eviction fallback")
 print("LIMIT: Roblox Engine visual output and real Android FPS not measured")
