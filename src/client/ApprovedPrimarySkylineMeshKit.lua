@@ -43,6 +43,24 @@ bucket.Parent = workspace
 local activeArena = nil
 local mounted = {}
 
+-- The four SkylineStructure anchors were placed relative to the ORIGINAL
+-- 320-stud playfield. Never recompute their location from a shrinking
+-- floor or replace authentic source sculptures with native boxes mid-round.
+local function authenticFootprint(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx < 318 or sz < 318
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + 0.2 or base.Size.Z > sz + 0.2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local function release(owner)
     local entry = mounted[owner]
     if not entry then return end
@@ -127,13 +145,12 @@ local function genuine(arena,owner,index)
     local generated = workspace:FindFirstChild("GeneratedMap")
     local decor = arena and arena:FindFirstChild("Decor")
     local base = arena and arena:FindFirstChild("Base")
+    local originalX, originalZ = authenticFootprint(base, arena)
     if not arena or not arena:IsA("Folder") or not generated
         or not generated:IsA("Folder") or arena.Name ~= "Arena"
         or arena.Parent ~= generated
         or not decor or not decor:IsA("Folder") or decor.Parent ~= arena
-        or not base or not base:IsA("BasePart") or base.Parent ~= arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X < 318 or base.Size.Z < 318
+        or not originalX or not originalZ
         or not owner or not owner:IsA("Model") or owner.Parent ~= decor
         or owner.Name ~= "SkylineStructure"..NAMES[index]
         or owner:GetAttribute("ChaosDistantScenery") ~= true
@@ -144,9 +161,9 @@ local function genuine(arena,owner,index)
     local direction = DIRECTIONS[index]
     local x,z = direction.x,direction.z
     if index == 1 or index == 3 then
-        z *= base.Size.Z*.5+23
+        z *= originalZ*.5+23
     else
-        x *= base.Size.X*.5+23
+        x *= originalX*.5+23
     end
     local origin = CFrame.new(base.Position+Vector3.new(
         x,base.Size.Y*.5,z))*CFrame.Angles(0,direction.yaw,0)
@@ -197,7 +214,7 @@ local function genuine(arena,owner,index)
     -- well beyond the playable base, not a similarly named arena prop.
     if math.max(math.abs(core.Position.X-base.Position.X),
         math.abs(core.Position.Z-base.Position.Z))
-        < math.min(base.Size.X,base.Size.Z)*.5 then
+        < math.min(originalX,originalZ)*.5 then
         return nil
     end
     return {core,cap,l,r},origin,h,base,decor
