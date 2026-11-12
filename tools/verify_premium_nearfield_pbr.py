@@ -224,7 +224,13 @@ BUCKETS = {
                 ("ApprovedExteriorTowerMeshesLocal",112172520488996,
                    "ApprovedExteriorTowerMeshKit.lua"),
                 ("ApprovedAtmosphereColumnsLocal",76194593490199,
-                "ApprovedAtmosphereColumnsMeshKit.lua")],
+                "ApprovedAtmosphereColumnsMeshKit.lua"),
+                ("OriginalHarborHeroStationLocal",73237902371094,
+                 "HarborHeroStationMeshKit.lua"),
+                ("OriginalHarborKineticGantryLocal",75684193304551,
+                 "HarborGantryKineticMeshKit.lua"),
+                ("OriginalHarborKineticGantryLocal",98809955094422,
+                 "HarborGantryKineticMeshKit.lua")],
 }
 for variant, pairs in BUCKETS.items():
     assert f"{variant} = {{" in KIT
@@ -236,6 +242,33 @@ for variant, pairs in BUCKETS.items():
         assert f'{asset_id}' in src,(asset_id,owner)
         assert 'Original3DAssetId' in src and '"CosmeticOnly"' in src
         print("PASS approved owner",variant,folder,asset_id)
+
+# Source-approved 7-MeshPart Harbor station/cranes now share existing
+# Medium/High 2K GPU capacity; their real moving actors are NEVER coated
+# by the static-metal atlas. This is a LIVE runtime source contract, not
+# an assertion about captured pixels or the Roblox CDN.
+HERO=(ROOT/"src/client/HarborHeroStationMeshKit.lua").read_text()
+CRANE=(ROOT/"src/client/HarborGantryKineticMeshKit.lua").read_text()
+for src in (HERO,CRANE):
+    assert 'localFolder.Name="OriginalHarborHeroStationLocal"' in HERO
+    assert 'folder.Name = "OriginalHarborKineticGantryLocal"' in CRANE
+    assert 'clone.Parent=localFolder' in HERO
+    assert 'clone.Parent=folder' in CRANE
+    assert 'clone:SetAttribute("Original3DAssetId"' in src
+    assert 'clone:SetAttribute("CosmeticOnly",true)' in src
+assert 'OriginalHarborHeroMotionRole' in HERO
+assert 'OriginalHarborGantryKineticRole' in CRANE
+assert 'local function finishForPart(part, variant)' in KIT
+assert 'part:GetAttribute("OriginalHarborHeroMotionRole")' in KIT
+assert 'part:GetAttribute("OriginalHarborGantryKineticRole")' in KIT
+assert 'heroMotion ~= nil and heroMotion ~= "Static"' in KIT
+assert 'craneMotion ~= nil and craneMotion ~= "Static"' in KIT
+assert KIT.count('finishForPart(part, variant)') == 4
+assert KIT.count('OriginalHarborHeroStationLocal') == 1
+assert KIT.count('OriginalHarborKineticGantryLocal') == 2
+for asset in (73237902371094,75684193304551,98809955094422):
+    assert asset in ids
+print("PASS Harbor hero + two cranes: approved PBR on static 3D, live motion uncoated")
 
 # The approved floor tile is reused as a 3D station inlay, so only its
 # existing seven MeshParts may enter the ALREADY capped nearfield PBR

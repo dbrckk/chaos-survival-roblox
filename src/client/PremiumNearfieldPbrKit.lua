@@ -146,6 +146,12 @@ local SOURCES = {
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 97864559770371},
         {folder = "ApprovedExteriorTowerMeshesLocal", id = 112172520488996},
         {folder = "ApprovedAtmosphereColumnsLocal", id = 76194593490199},
+        -- Real source-approved Storm Harbor station and animated cranes.
+        -- Coat only their STATIC machined material groups: motion pieces,
+        -- luminous hazard signals and native gameplay remain untouched.
+        {folder = "OriginalHarborHeroStationLocal", id = 73237902371094},
+        {folder = "OriginalHarborKineticGantryLocal", id = 75684193304551},
+        {folder = "OriginalHarborKineticGantryLocal", id = 98809955094422},
     },
 }
 local KNOWN_FINISHES = {
@@ -189,6 +195,20 @@ function Kit.finishFor(partName, variant)
     return nil
 end
 
+-- Preserve real Harbor moving groups (radar, hoist, trolley and load)
+-- as imported by their verified original asset owners. The existing
+-- four atlas families are reserved for STATIC UV-machined structural
+-- surfaces; no extra light, texture or frame-loop is introduced.
+local function finishForPart(part, variant)
+    local heroMotion = part:GetAttribute("OriginalHarborHeroMotionRole")
+    local craneMotion = part:GetAttribute("OriginalHarborGantryKineticRole")
+    if (heroMotion ~= nil and heroMotion ~= "Static")
+        or (craneMotion ~= nil and craneMotion ~= "Static") then
+        return nil
+    end
+    return Kit.finishFor(part.Name, variant)
+end
+
 local function sourceAppearance(family)
     if not KNOWN_FINISHES[family] then return nil end
     local holder = ReplicatedStorage:FindFirstChild("OriginalGroundPbrTemplates")
@@ -217,7 +237,7 @@ local function piecesFor(model, folder, id, variant)
     if #pieces ~= 7 then return nil end
     local any = false
     for _, part in ipairs(pieces) do
-        if Kit.finishFor(part.Name, variant) then any = true end
+        if finishForPart(part, variant) then any = true end
     end
     return any and pieces or nil
 end
@@ -265,7 +285,7 @@ local function intact(model, state, pieces, variant)
         covered[parent] = true
     end
     for _, part in ipairs(pieces) do
-        if Kit.finishFor(part.Name, variant) and not covered[part] then
+        if finishForPart(part, variant) and not covered[part] then
             return false
         end
     end
@@ -279,7 +299,7 @@ local function install(model, pieces, variant)
     -- Never keep a half-finished 3D sculpture with arbitrary mixed maps.
     local success = pcall(function()
         for _, part in ipairs(pieces) do
-            local family = Kit.finishFor(part.Name, variant)
+            local family = finishForPart(part, variant)
             if family then
                 local template = sourceAppearance(family)
                 if not template then error("Approved nearfield PBR template missing") end
