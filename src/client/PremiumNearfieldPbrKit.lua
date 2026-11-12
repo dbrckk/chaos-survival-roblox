@@ -52,6 +52,9 @@ local SOURCES = {
         {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
         {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
         {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
+        -- One verified 6-MeshPart solid side/back shell, only when the
+        -- creator-approved local owner is visible and GPU quota permits.
+        {folder = "ApprovedDistrictSidewallsLocal", id = 77387019170428},
     },
     Towers = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -88,6 +91,9 @@ local SOURCES = {
         {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
         {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
         {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
+        -- One verified 6-MeshPart solid side/back shell, only when the
+        -- creator-approved local owner is visible and GPU quota permits.
+        {folder = "ApprovedDistrictSidewallsLocal", id = 77387019170428},
     },
     Crossroads = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -123,6 +129,9 @@ local SOURCES = {
         {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
         {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
         {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
+        -- One verified 6-MeshPart solid side/back shell, only when the
+        -- creator-approved local owner is visible and GPU quota permits.
+        {folder = "ApprovedDistrictSidewallsLocal", id = 77387019170428},
     },
     Orbital = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -158,6 +167,9 @@ local SOURCES = {
         {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
         {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
         {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
+        -- One verified 6-MeshPart solid side/back shell, only when the
+        -- creator-approved local owner is visible and GPU quota permits.
+        {folder = "ApprovedDistrictSidewallsLocal", id = 77387019170428},
     },
     Harbor = {
         -- The existing authentic floor Model is a seven-MeshPart
@@ -197,6 +209,9 @@ local SOURCES = {
         {folder = "ApprovedDistrictFacadesLocal", id = 88725004643299},
         {folder = "ApprovedDistrictFacadesLocal", id = 84217436280282},
         {folder = "ApprovedDistrictFacadesLocal", id = 135791763112202},
+        -- One verified 6-MeshPart solid side/back shell, only when the
+        -- creator-approved local owner is visible and GPU quota permits.
+        {folder = "ApprovedDistrictSidewallsLocal", id = 77387019170428},
     },
 }
 -- The district's FOUR true creator-approved facades have six or seven
@@ -208,6 +223,7 @@ local DISTRICT_FACADE_IDS = {
     [84217436280282] = true,  -- Turbine
     [135791763112202] = true, -- Aerial
 }
+local DISTRICT_SIDEWALL_ID = 77387019170428
 local KNOWN_FINISHES = {
     DiamondArmor = true,
     OxidizedSteel = true,
@@ -289,6 +305,16 @@ local function piecesFor(model, folder, id, variant)
         or model:GetAttribute("Original3DAssetId") ~= id
         or model:GetAttribute("CosmeticOnly") ~= true then return nil end
     local districtFacade = DISTRICT_FACADE_IDS[id] == true
+    local districtSidewall = id == DISTRICT_SIDEWALL_ID
+    if districtSidewall then
+        local index = model:GetAttribute("DistrictIndex")
+        if folder.Name ~= "ApprovedDistrictSidewallsLocal"
+            or model.Name ~= "ApprovedOriginalDistrictSidewall3D"
+            or model:GetAttribute("OwnerVerified") ~= true
+            or model:GetAttribute("OriginalDistrictSidewallShell3D") ~= true
+            or type(index) ~= "number" or index % 1 ~= 0
+            or index < 1 or index > 16 then return nil end
+    end
     if districtFacade then
         -- A copied decoration tagged with an approved asset ID must not
         -- gain high-resolution material ownership. Only the real facade
@@ -313,6 +339,10 @@ local function piecesFor(model, folder, id, variant)
     end
     if districtFacade then
         if #pieces < 6 or #pieces > 7 then return nil end
+    elseif districtSidewall then
+        -- The original, source-gated sidewall glTF has precisely six
+        -- separate metal/ceramic/non-slip material MeshParts.
+        if #pieces ~= 6 then return nil end
     elseif #pieces ~= 7 then
         return nil
     end
