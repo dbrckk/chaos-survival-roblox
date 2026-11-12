@@ -985,6 +985,25 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
             or not underdeckTemplate or
             underdeckTemplate:GetAttribute("PremiumUnderdeck3D") ~= true then
             underdeckSlots = 0
+        else
+            -- Source preflight BEFORE consuming the one mobile slot.
+            -- No partial import, non-mesh surrogate or embedded script.
+            local authentic=0
+            for _,child in ipairs(underdeckTemplate:GetDescendants()) do
+                if child:IsA("BasePart") then
+                    if not child:IsA("MeshPart")
+                        or child.CanCollide or child.CanTouch
+                        or child.CanQuery then
+                        authentic=-100
+                        break
+                    end
+                    authentic+=1
+                elseif child:IsA("LuaSourceContainer") then
+                    authentic=-100
+                    break
+                end
+            end
+            if authentic~=7 then underdeckSlots=0 end
         end
     end
     if underdeckTemplate and underdeckSlots > 0 then
@@ -996,12 +1015,23 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
             if wanted[item.platform] then ranked[#ranked + 1] = item end
         end
         table.sort(ranked, byDistance)
+        local _,underdeckBounds=underdeckTemplate:GetBoundingBox()
+        local boundsOK=underdeckBounds.X>=20
+            and underdeckBounds.X<=26
+            and underdeckBounds.Y>=3
+            and underdeckBounds.Y<=8
+            and underdeckBounds.Z>=8
+            and underdeckBounds.Z<=13
         for _, item in ipairs(ranked) do
             if underdeckSlots <= 0 then break end
             local size = item.platform.Size
             local length=math.max(size.X,size.Z)
             local width=math.min(size.X,size.Z)
-            if length >= (quality == "Low" and 19.5 or 17)
+            local actualScale=boundsOK and math.min(
+                length*.88/underdeckBounds.X,
+                width*.88/underdeckBounds.Z,1.06) or 0
+            if actualScale>=.56
+                and length >= (quality == "Low" and 19.5 or 17)
                 and width >= 9.5
                 and (quality ~= "Low"
                     or (length/width >= 1.35
