@@ -404,6 +404,30 @@ assert 'Low=1,Medium=2,High=4' in (ROOT/'src/client/ApprovedExteriorRidgeMeshKit
 assert 'ApprovedExteriorTowerMeshesLocal' in KIT
 assert 'Low=1,Medium=2,High=4' in (ROOT/'src/client/ApprovedExteriorTowerMeshKit.lua').read_text()
 assert KIT.count('task.wait(')==0
+# Source inspection of the real renderer: selection now happens after
+# every owner created its MeshParts AND made its current LOD visibility
+# decision. Do not spend 2K quota on LocalTransparencyModifier=1 clones.
+for source_sync in (
+    'HarborHeroStationMeshKit.sync(',
+    'ApprovedOrbitalSignatureRingMeshKit.sync(',
+    'ApprovedTowersSignatureBridgeMeshKit.sync(',
+    'ApprovedCrossroadsSignatureInterchangeMeshKit.sync(',
+    'ApprovedHarborSignatureGantryMeshKit.sync(',
+    'ApprovedClassicSignatureObservatoryMeshKit.sync(',
+    'HarborGantryKineticMeshKit.sync(',
+    'ApprovedHeroStructureMeshKit.sync(',
+):
+    assert source_sync in LOD
+    assert LOD.index(source_sync) < LOD.index('PremiumNearfieldPbrKit.reconcile('), source_sync
+assert LOD.index('PremiumNearfieldPbrKit.reconcile(') < LOD.index('local lodPassMs =')
+assert 'local function visibleFinish(part, variant)' in KIT
+assert 'part.Transparency < 0.98' in KIT
+assert 'part.LocalTransparencyModifier < 0.98' in KIT
+assert 'if visibleFinish(part, variant) then any = true end' in KIT
+assert 'if visibleFinish(part, variant) and not covered[part] then' in KIT
+assert 'or covered[parent] or not visibleFinish(parent, variant)' in KIT
+assert 'local family = visibleFinish(part, variant)' in KIT
+print("PASS PBR follows all source owners and excludes culled meshes/surfaces")
 assert 'RenderStepped' not in KIT and 'Heartbeat' not in KIT
 assert 'LoadAssetAsync' not in KIT and 'HttpService' not in KIT
 assert 'Instance.new(' not in KIT
