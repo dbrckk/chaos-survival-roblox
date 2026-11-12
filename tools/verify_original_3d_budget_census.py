@@ -647,6 +647,14 @@ assert 'PlatformNativeTrimReplacementKit.bind(' in OWNER
 support_watch=OWNER.split('local function supportChanged(part)',1)[1].split(
     'decorAddedConnection = decor.ChildAdded',1)[0]
 assert 'quality == "Low"' in support_watch
+assert 'local mountedSupportNatives = {}' in OWNER
+assert 'table.clear(mountedSupportNatives)' in OWNER
+assert 'mountedSupportNatives[support] = true' in OWNER
+assert 'if part.Parent ~= decor then' in support_watch
+assert 'if mountedSupportNatives[part] == true then' in support_watch
+assert support_watch.index('if part.Parent ~= decor then') < (
+    support_watch.index('LocalOriginalNearSupportColumnCount'))
+
 assert 'part.Name:match(' in support_watch
 assert '"^PlatformSupport(%d+)_%d+$"' in support_watch
 assert 'LocalOriginalNearSupportColumnCount' in support_watch
