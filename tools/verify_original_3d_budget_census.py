@@ -69,6 +69,56 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# Source-authenticated 3D undersides replace the visibly blocky side
+# surfaces of ONE near-camera Harbor cargo landing on healthy Android Low.
+# This never hides the server's walkable top, native collision or dangers.
+# A seven-material original is accepted on Low only if the imported
+# source contains EXACTLY seven real MeshParts, with pressure rollback.
+DOCK=(CLIENT/"HarborDockCaissonMeshKit.lua").read_text(encoding="utf8")
+DOCK_SERVER=(ROOT/"src/server/PremiumHarborDockCaissonAssets.lua").read_text(encoding="utf8")
+DOCK_SOURCE=(ROOT/"tools/generate_original_harbor_dock_caisson.py").read_text(
+    encoding="utf8")
+assert 'local ASSET_ID = 101457508594609' in DOCK
+assert 'local ID = 101457508594609' in DOCK_SERVER
+assert 'Low = {models = 1, distance = 108, retention = 14}' in DOCK
+assert 'Medium = {models = 5, distance = 150, retention = 24}' in DOCK
+assert 'High = {models = 12, distance = 215, retention = 34}' in DOCK
+assert 'elseif quality == "Low" and stress > 0 then' in DOCK
+assert 'maximum = 0' in DOCK
+assert '(quality == "Low" and expected ~= 7)' in DOCK
+assert 'if not item:IsA("MeshPart") then return nil end' in DOCK
+assert 'item:IsA("LuaSourceContainer")' in DOCK
+assert 'holder:GetAttribute("OwnerVerified") ~= true' in DOCK
+assert 'source:GetAttribute("OwnerVerified") ~= true' in DOCK
+assert 'source:GetAttribute("CosmeticOnly") ~= true' in DOCK
+assert 'source:GetAttribute("OriginalHarborDockCaisson3D") ~= true' in DOCK
+assert 'source:GetAttribute("Original3DAssetId") ~= ASSET_ID' in DOCK
+assert 'deck.Name:match("^Platform%d+$")' in DOCK
+assert 'or not deck.CanCollide or deck.Transparency >= .75' in DOCK
+assert 'or deck:GetAttribute("ChaosSkybridge") == true' in DOCK
+assert 'if collapse ~= nil and collapse ~= "Normal" and collapse ~= "Safe"' in DOCK
+assert 'if shutter ~= nil and shutter ~= "Idle" then return false end' in DOCK
+assert '0, deck.Size.Y * .5 - .14 - box.Y * .5, 0' in DOCK
+assert 'part.CanCollide = false' in DOCK
+assert 'part.CanTouch = false' in DOCK
+assert 'part.CanQuery = false' in DOCK
+assert 'part.CastShadow = false' in DOCK
+assert 'joint.Part0 = deck' in DOCK and 'joint.Part1 = piece' in DOCK
+assert 'if #pieces ~= expected then clone:Destroy(); return nil end' in DOCK
+assert 'part.LocalTransparencyModifier = show and 0 or 1' in DOCK
+assert 'deck:GetAttributeChangedSignal(attr):Connect(changed)' in DOCK
+assert 'clone.DescendantRemoving:Connect' in DOCK
+assert 'HarborDockCaissonMeshKit.sync(arena,cameraPoint,profile.Name,' in (CLIENT/"scenery-lod.client.lua").read_text()
+assert '"OriginalHarborDockCaissonsLocal"' in ledger
+assert 'folder.Name = "OriginalHarborDockCaissonsLocal"' in DOCK
+assert 'Seven forged material families' in DOCK_SOURCE
+assert 'under_top_limit' in DOCK_SOURCE
+assert 'if pieces < 1 or pieces > 12 then return false end' in DOCK_SERVER
+assert 'RenderStepped' not in DOCK and 'Heartbeat' not in DOCK
+assert 'AssetService' not in DOCK
+print("PASS one authentic seven-MeshPart Harbor dock underside on healthy Low,",
+      "108-stud camera range, safe original collision and GPU rollback")
+
 # A real 20-stud Harbor cargo gantry imported by the existing server
 # can replace NINE native structural blocks on ONE nearby Low skywalk.
 # Strictly seven verified MeshParts, no extra texture on Low, no extra
