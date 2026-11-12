@@ -1,0 +1,371 @@
+-- True 1,764-triangle, 6-material creator-approved 3D side/back wall shell.
+-- Replaces ONLY five real nonphysical native district volumes, never the
+-- service door, original glass, route signs, foundation or physics.
+-- One existing scenery LOD camera pass owns all residency and GPU backoff.
+-- Original Roblox Model 77387019170428 Approved by run #43302925840.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Kit = {}
+local ID = 77387019170428
+local BUDGET = {
+    Low = {count = 0, distance = 140, retention = 16},
+    Medium = {count = 4, distance = 205, retention = 20},
+    High = {count = 10, distance = 275, retention = 28},
+}
+-- Android shares the existing 440/680/900 Parts census with all original
+-- monuments. Medium touch 3 and High touch 8 models max (six MeshParts
+-- each); no new real sidewall mesh on Low or under severe GPU pressure.
+local TOUCH_CAP = {Low = 0, Medium = 3, High = 8}
+local SOURCE_FOLDER = "ApprovedDistrictSidewallShellTemplates"
+local REQUIRED = {
+    {name = "ServiceCore", size = Vector3.new(6.8, 7.3, 6.8),
+        offset = CFrame.new(0, 8.4, 0)},
+    {name = "ArmoredSupportL", size = Vector3.new(1.4, 12.6, 2.3),
+        offset = CFrame.new(-4.4, 7.1, 1.8)},
+    {name = "ArmoredSupportR", size = Vector3.new(1.4, 12.6, 2.3),
+        offset = CFrame.new(4.4, 7.1, 1.8)},
+    {name = "SideCassette-1", size = Vector3.new(.85, 4.8, 4.6),
+        offset = CFrame.new(-3.68, 7.6, .48)},
+    {name = "SideCassette1", size = Vector3.new(.85, 4.8, 4.6),
+        offset = CFrame.new(3.68, 7.6, .48)},
+}
+
+local bucket = Instance.new("Folder")
+bucket.Name = "ApprovedDistrictSidewallsLocal"
+bucket:SetAttribute("CosmeticOnly", true)
+bucket.Parent = workspace
+local activeArena = nil
+local mounted = {}
+local watchedBase = nil
+local baseConnection = nil
+
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
+
+local function approved()
+    local folder = ReplicatedStorage:FindFirstChild(SOURCE_FOLDER)
+    if not folder or not folder:IsA("Folder")
+        or folder.Parent ~= ReplicatedStorage
+        or folder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local source = folder:FindFirstChild("Sidewall")
+    if not source or not source:IsA("Model") or source.Parent ~= folder
+        or source:GetAttribute("OwnerVerified") ~= true
+        or source:GetAttribute("CosmeticOnly") ~= true
+        or source:GetAttribute("OriginalDistrictSidewallShell3D") ~= true
+        or source:GetAttribute("Original3DAssetId") ~= ID then return nil end
+    local pieces = 0
+    for _, item in ipairs(source:GetDescendants()) do
+        if item:IsA("BasePart") then
+            if not item:IsA("MeshPart") or item.CanCollide
+                or item.CanTouch or item.CanQuery then return nil end
+            pieces += 1
+        elseif item:IsA("LuaSourceContainer") then
+            return nil
+        end
+    end
+    if pieces ~= 6 then return nil end
+    local _, size = source:GetBoundingBox()
+    local major, minor = math.max(size.X, size.Z),
+        math.min(size.X, size.Z)
+    if major < 9.7 or major > 11.3 or minor < 6.8
+        or minor > 8.1 or size.Y < 12.5 or size.Y > 14 then
+        return nil
+    end
+    return source, folder
+end
+
+local function eligible(building, district)
+    if not building:IsA("Model") or building.Parent ~= district
+        or building:GetAttribute("ArenaDistrictArchitecture") ~= true
+        or building:GetAttribute("SourceIsOriginal") ~= true
+        or building:GetAttribute("CosmeticOnly") ~= true
+        or building:GetAttribute("FacadeVisualVersion") ~= 1 then return nil end
+    local index = building:GetAttribute("DistrictIndex")
+    local profile = building:GetAttribute("DistrictProfile")
+    if type(index) ~= "number" or index % 1 ~= 0
+        or index < 1 or index > 16
+        or type(profile) ~= "number" or profile % 1 ~= 0
+        or profile < 1 or profile > 4 then return nil end
+    local door = building:FindFirstChild("ServiceEntryDoor")
+    if not door or not door:IsA("Part") or door.Parent ~= building
+        or not door.Anchored or door.CanCollide or door.CanTouch
+        or door.CanQuery or door.Size.X < 4 or door.Size.X > 5.5
+        or door.Size.Y < 4 or door.Size.Y > 5.5
+        or door.Transparency >= .7
+        or door.LocalTransparencyModifier >= .95
+        or door:GetAttribute("SceneryLodHidden") == true then return nil end
+    local origin = door.CFrame * CFrame.new(.35, -4, 4.36)
+    -- All FIVE server-authored native massing pieces must be available
+    -- before mounting; otherwise leave a complete original fallback.
+    local resident = mounted[building]
+    local natives = {}
+    for _, spec in ipairs(REQUIRED) do
+        local part = building:FindFirstChild(spec.name)
+        local target = origin * spec.offset
+        if not part or not part:IsA("Part") or part.Parent ~= building
+            or not part.Anchored or part.CanCollide or part.CanTouch
+            or part.CanQuery or (part.Size - spec.size).Magnitude > .08
+            or (part.Position - target.Position).Magnitude > .12
+            or part.CFrame.LookVector:Dot(target.LookVector) < .999
+            or part.CFrame.UpVector:Dot(target.UpVector) < .999
+            or (part.Transparency >= 1
+                and (not resident or not resident.originals[part])) then
+            return nil
+        end
+        natives[#natives + 1] = part
+    end
+    return door, origin, natives
+end
+
+local function restore(entry)
+    for native, alpha in pairs(entry.originals) do
+        if native.Parent == entry.building and native.Transparency == 1
+            and native.Anchored and not native.CanCollide
+            and not native.CanTouch and not native.CanQuery then
+            native.Transparency = alpha
+        end
+        entry.originals[native] = nil
+    end
+end
+
+local function release(building)
+    local entry = mounted[building]
+    if not entry then return end
+    -- Removing a source MeshPart may synchronously fire multiple callbacks.
+    mounted[building] = nil
+    for _, conn in ipairs(entry.connections) do conn:Disconnect() end
+    restore(entry)
+    entry.model:Destroy()
+end
+
+local function clear()
+    local buildings = {}
+    for building in pairs(mounted) do buildings[#buildings+1] = building end
+    for _, building in ipairs(buildings) do release(building) end
+end
+
+local function valid(entry, arena, district, base)
+    if entry.arena ~= arena or entry.model.Parent ~= bucket
+        or entry.source.Parent ~= entry.folder
+        or entry.folder.Parent ~= ReplicatedStorage
+        or entry.source:GetAttribute("Original3DAssetId") ~= ID
+        or #entry.pieces ~= 6
+        or not authenticBase(base, arena) then return false end
+    local door, origin, natives = eligible(entry.building, district)
+    if door ~= entry.door or not origin or not natives
+        or (door.CFrame.Position - entry.doorFrame.Position).Magnitude > .10
+        or door.CFrame.LookVector:Dot(entry.doorFrame.LookVector) < .999
+        or door.CFrame.UpVector:Dot(entry.doorFrame.UpVector) < .999 then
+        return false
+    end
+    for _, part in ipairs(entry.pieces) do
+        if not part:IsDescendantOf(entry.model) then return false end
+    end
+    for _, part in ipairs(natives) do
+        if entry.originals[part] == nil then return false end
+    end
+    return true
+end
+
+local function mount(arena, district, base, building, door,
+        origin, natives, source, folder)
+    local clone = source:Clone()
+    local frame, size = clone:GetBoundingBox()
+    -- Roblox may swap horizontal glTF axes. Keep uniform original source
+    -- scale (none) and rotate only the complete model into the district
+    -- building's existing door-derived local coordinate system.
+    local yaw = size.X >= size.Z and 0 or math.pi * .5
+    local target = origin * CFrame.new(0, size.Y * .5, 0)
+        * CFrame.Angles(0, yaw, 0)
+    local pieces = {}
+    for _, part in ipairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not part:IsA("MeshPart") then clone:Destroy();return end
+            part.CFrame = target * frame:ToObjectSpace(part.CFrame)
+            part.Anchored = true
+            part.Massless = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = false
+            pieces[#pieces + 1] = part
+        end
+    end
+    if #pieces ~= 6 then clone:Destroy();return end
+    clone.Name = "ApprovedOriginalDistrictSidewall3D"
+    clone:SetAttribute("CosmeticOnly", true)
+    clone:SetAttribute("OwnerVerified", true)
+    clone:SetAttribute("OriginalDistrictSidewallShell3D", true)
+    clone:SetAttribute("Original3DAssetId", ID)
+    clone:SetAttribute("DistrictIndex", building:GetAttribute("DistrictIndex"))
+    clone.Parent = bucket
+    local entry = {
+        arena = arena, building = building, model = clone,
+        source = source, folder = folder, pieces = pieces,
+        door = door, doorFrame = door.CFrame,
+        originals = {}, connections = {},
+    }
+    for _, part in ipairs(natives) do
+        entry.originals[part] = part.Transparency
+    end
+    mounted[building] = entry
+    local function reconcile()
+        if mounted[building] ~= entry then return end
+        if not valid(entry, arena, district, base) then
+            release(building)
+            return
+        end
+        -- Native Parts must only disappear AFTER all 6 source meshes
+        -- are fully mounted and geometry/provenance was just verified.
+        for _, part in ipairs(natives) do
+            if part.Parent == building then part.Transparency = 1 end
+        end
+    end
+    for _, owner in ipairs({clone, source, building, door, base}) do
+        entry.connections[#entry.connections + 1] =
+            owner.AncestryChanged:Connect(reconcile)
+    end
+    for _, property in ipairs({"CFrame", "Size", "Transparency"}) do
+        entry.connections[#entry.connections + 1] =
+            door:GetPropertyChangedSignal(property):Connect(reconcile)
+    end
+    entry.connections[#entry.connections + 1] =
+        base:GetPropertyChangedSignal("Size"):Connect(reconcile)
+    entry.connections[#entry.connections + 1] =
+        source.DescendantRemoving:Connect(function(part)
+            if part:IsA("MeshPart") then release(building) end
+        end)
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantRemoving:Connect(function(part)
+            if part:IsA("MeshPart") then release(building) end
+        end)
+    reconcile()
+end
+
+function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
+    if arena ~= activeArena then
+        clear()
+        activeArena = arena
+    end
+    local spec = BUDGET[tier] or BUDGET.Low
+    local cap = spec.count
+    if touch == true then cap = math.min(cap, TOUCH_CAP[tier] or 0) end
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
+    if stress == 1 then cap = math.floor(cap * .5) end
+    if stress >= 2 then cap = 0 end
+    if cap == 0 or not arena or not cameraReady
+        or typeof(cameraPoint) ~= "Vector3" then
+        clear()
+        return
+    end
+    local base = arena:FindFirstChild("Base")
+    local decor = arena:FindFirstChild("Decor")
+    local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
+    if not authenticBase(base, arena)
+        or not district or not district:IsA("Folder") then
+        clear()
+        return
+    end
+    if base ~= watchedBase then
+        if baseConnection then baseConnection:Disconnect() end
+        watchedBase = base
+        baseConnection = base:GetPropertyChangedSignal("Size"):Connect(function()
+            if not authenticBase(base, activeArena) then clear() end
+        end)
+    end
+    local source, folder = approved()
+    if not source then clear();return end
+    local horizontal = typeof(look) == "Vector3"
+        and Vector3.new(look.X, 0, look.Z) or Vector3.zero
+    local facing = horizontal.Magnitude > .2
+    if facing then horizontal = horizontal.Unit end
+    local candidates = {}
+    for _, building in ipairs(district:GetChildren()) do
+        local door, origin, natives = eligible(building, district)
+        if door and natives then
+            local offset = door.Position-cameraPoint
+            local distance = offset.Magnitude
+            local held = mounted[building] ~= nil
+            if distance <= spec.distance+(held and spec.retention or 0) then
+                local priority = distance
+                    -(held and spec.retention*.55 or 0)
+                local planar = Vector3.new(offset.X,0,offset.Z)
+                if facing and planar.Magnitude > 42
+                    and planar.Unit:Dot(horizontal) < -.15 then
+                    priority += 80
+                end
+                candidates[#candidates+1] = {
+                    building=building,door=door,origin=origin,natives=natives,
+                    priority=priority,distance=distance,
+                }
+            end
+        end
+    end
+    table.sort(candidates,function(a,b)
+        if a.priority ~= b.priority then return a.priority < b.priority end
+        if a.distance ~= b.distance then return a.distance < b.distance end
+        return a.building.Name < b.building.Name
+    end)
+    local wanted={}
+    for i=1,math.min(cap,#candidates) do
+        wanted[candidates[i].building]=candidates[i]
+    end
+    local obsolete={}
+    for building,entry in pairs(mounted) do
+        if not wanted[building]
+            or entry.source ~= source
+            or not valid(entry,arena,district,base) then
+            obsolete[#obsolete+1]=building
+        end
+    end
+    for _,building in ipairs(obsolete) do release(building) end
+    for _,chosen in ipairs(candidates) do
+        if wanted[chosen.building] then
+            local entry=mounted[chosen.building]
+            if entry then
+                -- Keep the five native volumes hidden only while their
+                -- six genuine MeshParts remain alive and camera-resident.
+                for native in pairs(entry.originals) do
+                    if native.Parent==chosen.building then
+                        native.Transparency=1
+                    end
+                end
+            else
+                mount(arena,district,base,chosen.building,chosen.door,
+                    chosen.origin,chosen.natives,source,folder)
+            end
+        end
+    end
+end
+
+function Kit.count()
+    local n=0
+    for _,entry in pairs(mounted) do
+        if entry.model.Parent==bucket then n+=1 end
+    end
+    return n
+end
+
+function Kit.replacedNativeCount()
+    local n=0
+    for _,entry in pairs(mounted) do
+        if entry.model.Parent==bucket then
+            for native in pairs(entry.originals) do
+                if native.Parent==entry.building
+                    and native.Transparency==1 then n+=1 end
+            end
+        end
+    end
+    return n
+end
+
+return Kit

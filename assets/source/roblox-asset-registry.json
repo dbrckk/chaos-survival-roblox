@@ -124,6 +124,14 @@
       "workflow_run_id": 41629861517
     },
     {
+      "name": "district_sidewall_shell",
+      "asset_id": "77387019170428",
+      "moderation": "Approved",
+      "source": "tools/generate_original_district_sidewall_shell.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 43302925840
+    },
+    {
       "name": "skyfleet_carrier",
       "asset_id": "84239592388200",
       "source": "assets/source/chaos_skyfleet_carrier.obj",
