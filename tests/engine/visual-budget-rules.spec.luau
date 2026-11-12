@@ -22,8 +22,150 @@ local SpatialMidgroundSelectionRules = require("../../src/shared/SpatialMidgroun
 local MidgroundOutboardLodRules = require("../../src/shared/MidgroundOutboardLodRules")
 local PlatformIdentityLodRules = require("../../src/shared/PlatformIdentityLodRules")
 local OrbitalStationLayoutRules = require("../../src/shared/OrbitalStationLayoutRules")
+local ArenaDistrictArchitecture = require("../../src/server/ArenaDistrictArchitecture")
+local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFacadeMeshKit")
+local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
 
 describe("visual budget rules", function()
+    it("shows one complete verified district 3D envelope on healthy Low and restores all five native masses on budget or facade loss", function()
+        -- Exercise the actual 16-building server-authored district and BOTH
+        -- existing client 3D owners. Genuine IDs and six authored material
+        -- MeshParts are source-proven separately in the release registry.
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local facadeTemplates = Instance.new("Folder")
+        facadeTemplates.Name = "ApprovedDistrictFacadeTemplates"
+        facadeTemplates:SetAttribute("OwnerVerified", true)
+        facadeTemplates.Parent = ReplicatedStorage
+        local facadeSource = Instance.new("Model")
+        facadeSource.Name = "Observatory"
+        facadeSource:SetAttribute("OwnerVerified", true)
+        facadeSource:SetAttribute("CosmeticOnly", true)
+        facadeSource:SetAttribute("DistrictFacade3D", true)
+        facadeSource:SetAttribute("Original3DAssetId", 132020956214241)
+        local facadeMesh = Instance.new("MeshPart")
+        facadeMesh.Size = Vector3.new(12, 20, 8)
+        facadeMesh.Anchored = true
+        facadeMesh.CanCollide = false
+        facadeMesh.CanTouch = false
+        facadeMesh.CanQuery = false
+        facadeMesh.Parent = facadeSource
+        facadeSource.Parent = facadeTemplates
+
+        local sidewallTemplates = Instance.new("Folder")
+        sidewallTemplates.Name = "ApprovedDistrictSidewallShellTemplates"
+        sidewallTemplates:SetAttribute("OwnerVerified", true)
+        sidewallTemplates.Parent = ReplicatedStorage
+        local sidewallSource = Instance.new("Model")
+        sidewallSource.Name = "Sidewall"
+        sidewallSource:SetAttribute("OwnerVerified", true)
+        sidewallSource:SetAttribute("CosmeticOnly", true)
+        sidewallSource:SetAttribute("OriginalDistrictSidewallShell3D", true)
+        sidewallSource:SetAttribute("Original3DAssetId", 77387019170428)
+        for index, material in ipairs({
+            "ARMOR", "BRUSHED", "CARBON", "GRIP",
+            "ALLOY", "CERAMIC",
+        }) do
+            local piece = Instance.new("MeshPart")
+            piece.Name = "ApprovedMaterial_" .. material
+            piece.Size = if index == 1
+                then Vector3.new(10.5, 13.1, 7.4)
+                else Vector3.new(1.1, 1.1, 1.1)
+            piece.CFrame = CFrame.new(0, 6.55, 0)
+            piece.Anchored = true
+            piece.CanCollide = false
+            piece.CanTouch = false
+            piece.CanQuery = false
+            piece.Parent = sidewallSource
+        end
+        sidewallSource.Parent = sidewallTemplates
+
+        local arena = Instance.new("Folder")
+        arena.Name = "LowDistrict3DVerifiedArena"
+        arena.Parent = workspace
+        local base = Instance.new("Part")
+        base.Name = "Base"
+        base.Size = Vector3.new(320, 2, 320)
+        base.CFrame = CFrame.new(0, 10, 0)
+        base.Anchored = true
+        base.CanCollide = true
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
+        base.Parent = arena
+        local decor = Instance.new("Folder")
+        decor.Name = "Decor"
+        decor.Parent = arena
+        local district = ArenaDistrictArchitecture.build(
+            decor, base, "Classic", VisualTheme.Arenas.Classic)
+        expect(district ~= nil).toBe(true)
+        local building = district:FindFirstChild("DistrictNorth1")
+        local door = building:FindFirstChild("ServiceEntryDoor")
+        local camera = door.Position + Vector3.new(0, 7, 0)
+        local look = door.CFrame.LookVector
+        local service = building:FindFirstChild("ServiceCore")
+        local beam = building:FindFirstChild("ArmoredSupportL")
+        local alpha = service.Transparency
+
+        -- A real, locally owned approved FACADE must mount FIRST.
+        PremiumDistrictFacadeMeshKit.sync(arena, camera, "Low", true, look)
+        expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+        expect(building:GetAttribute(
+            "LocalApprovedDistrictFacadeMounted")).toBe(true)
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Low", true, true, 0, look)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
+        expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(5)
+        expect(service.Transparency).toBe(1)
+        expect(beam.Transparency).toBe(1)
+        expect(base.CanCollide).toBe(true)
+
+        local originals = workspace:FindFirstChild(
+            "ApprovedDistrictSidewallsLocal")
+        local shell = originals:FindFirstChild("ApprovedOriginalDistrictSidewall3D")
+        expect(shell ~= nil and shell:IsA("Model")).toBe(true)
+        local pieces = 0
+        for _, item in ipairs(shell:GetDescendants()) do
+            if item:IsA("BasePart") then
+                pieces += 1
+                expect(item:IsA("MeshPart")).toBe(true)
+                expect(item.CanCollide).toBe(false)
+                expect(item.CanTouch).toBe(false)
+                expect(item.CanQuery).toBe(false)
+                expect(item.CastShadow).toBe(false)
+            end
+        end
+        expect(pieces).toBe(6)
+
+        -- Existing Low GPU pressure releases the optional 1,764-triangle
+        -- rear/side shell immediately, never the genuine playable Base.
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Low", true, true, 1, look)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+        expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(0)
+        expect(service.Transparency).toBe(alpha)
+        expect(beam.Transparency).toBe(0)
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Low", true, true, 0, look)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
+
+        -- A disaster does not relocate the outboard building. The
+        -- immutable authenticated 320-stud Base signature survives shrink.
+        base.Size = Vector3.new(230, 2, 230)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
+        -- Revoke the authenticated facade: the paired Low shell must
+        -- instantly restore its native pieces, without another camera tick.
+        PremiumDistrictFacadeMeshKit.sync(nil, Vector3.zero, "Low", false)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+        expect(service.Transparency).toBe(alpha)
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Low", true, true, 0, look)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+
+        ApprovedDistrictSidewallMeshKit.sync(
+            nil, Vector3.zero, "Low", false, true, 0, look)
+        sidewallTemplates:Destroy()
+        facadeTemplates:Destroy()
+        arena:Destroy()
+    end)
     it("keeps six orbital station source identities in fixed sectors across Android quality changes", function()
         local layout = OrbitalStationLayoutRules
         local native = Vector3.new(320, 12, 320)
