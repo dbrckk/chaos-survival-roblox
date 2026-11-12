@@ -5,8 +5,11 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local OWNER_ID=112493873850364
-local QUALITY={Low=0,Medium=1,High=1}
-local RANGE={Low=0,Medium=440,High=615}
+-- Android Low: one authenticated seven-MeshPart landmark instead of
+-- 7 distant primitive silhouette Parts, only at VFX pressure zero.
+-- These three variants are mutually exclusive on the same active arena.
+local QUALITY={Low=1,Medium=1,High=1}
+local RANGE={Low=290,Medium=440,High=615}
 local RETAIN=26
 local NAMES={
     "PrimaryRelayMast","RelayHead","DishBridge",
