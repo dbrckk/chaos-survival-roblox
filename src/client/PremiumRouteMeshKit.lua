@@ -27,7 +27,7 @@ local ASSETS = {
 -- them and existing VFX pressure reduces or disables expensive meshes.
 -- No additional source assets, work loops or new physical platforms.
 local BUDGET = {
-    Low = {decks = 2, bridges = 1, segments = 1, underdecks = 1,
+    Low = {decks = 2, bridges = 1, segments = 2, underdecks = 1,
         distance = 100, retention = 18},
     Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,
         distance = 195, retention = 22},
