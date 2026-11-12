@@ -38,8 +38,13 @@ for term in (
     '[body]=body.Transparency',
     'native.Transparency = alpha',
     'LocalTransparencyModifier>=.99',
-    'Low=0,Medium=2,High=4',
+    'Low=1,Medium=2,High=4',
+    'Low=220,Medium=290,High=410',
+    'or tier=="Low" and math.min(cap,1) or 0',
+    'if stress==1 then cap=math.floor(cap*.5) end',
     'if stress>=2 then cap=0 end',
+    'bucket.ChildRemoved:Connect(function(child)',
+    'if entry.model==child then',
     '72143366927826',
 ):
     assert term in KIT,term

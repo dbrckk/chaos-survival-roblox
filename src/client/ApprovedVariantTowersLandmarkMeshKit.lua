@@ -7,8 +7,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local ID = 72143366927826
 local BOUNDS = Vector3.new(7.36,24.9,7.36)
-local CAP = {Low=0,Medium=2,High=4}
-local RANGE = {Low=0,Medium=290,High=410}
+-- One owner-approved seven-MeshPart 24.9-stud corner sculpture on
+-- healthy Android Low. GPU pressure one immediately returns the native
+-- 24-stud machinery body and independently animated cap.
+local CAP = {Low=1,Medium=2,High=4}
+local RANGE = {Low=220,Medium=290,High=410}
 local RETENTION = 24
 local bucket = Instance.new("Folder")
 bucket.Name = "ApprovedTowersMachineryLocal"
@@ -41,6 +44,20 @@ local function restore(body)
     end
     entry.model:Destroy()
 end
+
+-- The cooperative Android Parts census may evict a local mesh between
+-- two camera samples. Release its exact native owner immediately:
+-- the tower body must not remain invisible, and the animated cap must
+-- regain its prior independent LOD state without touching the antenna.
+bucket.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for body,entry in pairs(mounted) do
+        if entry.model==child then
+            restore(body)
+            break
+        end
+    end
+end)
 
 local function clear()
     local owners = {}
@@ -242,8 +259,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if arena ~= activeArena then clear();activeArena=arena end
     local cap=CAP[tier] or 0
     if touch then
+        -- Previously Low was also switched OFF inside the touch branch,
+        -- even if its quality cap was nonzero. Keep exactly one original
+        -- on a healthy Android phone, never two or four.
         cap=tier=="High" and math.min(cap,2)
-            or tier=="Medium" and math.min(cap,1) or 0
+            or tier=="Medium" and math.min(cap,1)
+            or tier=="Low" and math.min(cap,1) or 0
     end
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     if stress==1 then cap=math.floor(cap*.5) end

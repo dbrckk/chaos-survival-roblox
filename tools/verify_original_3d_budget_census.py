@@ -69,6 +69,64 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# The four 24-stud Towers corner machinery cubes have ONE approved,
+# seven-material original source 72143366927826. Two independent guards
+# previously forced Android touch Low to zero. One 7-MeshPart sculpture
+# can now replace an actual 24-stud body and its animated cap, without
+# hiding the independently animated 9-stud TowerAntenna. The exact
+# local 3D folder already participates in the cooperative Parts budget.
+TOWERS_CORNER=(CLIENT/"ApprovedVariantTowersLandmarkMeshKit.lua").read_text(
+    encoding="utf8")
+TOWERS_CORNER_SERVER=(ROOT/"src/server/PremiumVariantTowersLandmarkAssets.lua").read_text(
+    encoding="utf8")
+TOWERS_LOD=(CLIENT/"scenery-lod.client.lua").read_text(
+    encoding="utf8")
+TOWERS_MAP=(ROOT/"src/server/MapBuilder.lua").read_text(
+    encoding="utf8")
+assert 'local ID = 72143366927826' in TOWERS_CORNER
+assert 'local ASSET_ID = 72143366927826' in TOWERS_CORNER_SERVER
+assert 'local BOUNDS = Vector3.new(7.36,24.9,7.36)' in TOWERS_CORNER
+assert 'local CAP = {Low=1,Medium=2,High=4}' in TOWERS_CORNER
+assert 'local RANGE = {Low=220,Medium=290,High=410}' in TOWERS_CORNER
+assert 'local RETENTION = 24' in TOWERS_CORNER
+assert 'or tier=="Low" and math.min(cap,1) or 0' in TOWERS_CORNER
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in TOWERS_CORNER
+assert 'if stress>=2 then cap=0 end' in TOWERS_CORNER
+assert 'if count ~= 7 then return nil end' in TOWERS_CORNER
+assert 'if #pieces ~= 7 then clone:Destroy();return end' in TOWERS_CORNER
+assert 'source:GetAttribute("OwnerVerified") ~= true' in TOWERS_CORNER
+assert 'source:GetAttribute("CosmeticOnly") ~= true' in TOWERS_CORNER
+assert 'source:GetAttribute("OriginalTowersMachinery3D") ~= true' in TOWERS_CORNER
+assert 'source:GetAttribute("Original3DAssetId") ~= ID' in TOWERS_CORNER
+assert 'clone.Parent=bucket' in TOWERS_CORNER
+assert TOWERS_CORNER.index('clone.Parent=bucket') < TOWERS_CORNER.index('body.Transparency=1')
+assert 'bucket.ChildRemoved:Connect(function(child)' in TOWERS_CORNER
+assert 'if entry.model==child then' in TOWERS_CORNER
+assert 'restore(body)' in TOWERS_CORNER
+assert 'entry.cap.LocalTransparencyModifier=entry.capOriginalModifier' in TOWERS_CORNER
+assert 'entry.cap:SetAttribute("SceneryLodHidden",entry.capOriginalHidden)' in TOWERS_CORNER
+assert 'source.DescendantRemoving:Connect' in TOWERS_CORNER
+assert 'clone.DescendantRemoving:Connect' in TOWERS_CORNER
+for untouched in ('antenna.Transparency=1','antenna.CFrame=','antenna:Destroy()'):
+    assert untouched not in TOWERS_CORNER
+for part in ('"TowerMachinery" .. i','"TowerMachineryCap" .. i',
+             '"TowerAntenna" .. i'):
+    assert part in TOWERS_MAP
+for flag in ('piece.CanCollide=false','piece.CanTouch=false',
+             'piece.CanQuery=false','piece.CastShadow=false'):
+    assert flag in TOWERS_CORNER
+assert 'bucket.Name = "ApprovedTowersMachineryLocal"' in TOWERS_CORNER
+assert '"ApprovedTowersMachineryLocal"' in ledger
+assert counts["ApprovedTowersMachineryLocal"] == 1
+assert 'ApprovedVariantTowersLandmarkMeshKit.sync(arena,cameraPoint,' in TOWERS_LOD
+assert 'LocalTowersLandmarkMeshCount' in TOWERS_LOD
+assert 'LocalTowersLandmarkPrimitivesReplaced' in TOWERS_LOD
+assert "RenderStepped" not in TOWERS_CORNER
+assert "Heartbeat:Connect" not in TOWERS_CORNER
+assert "AssetService" not in TOWERS_CORNER
+print("PASS one approved 7-MeshPart 24-stud Towers corner source on",
+      "healthy touch Low, cap animation intact, source and GPU fallback")
+
 # Classic exterior broadcast fins are four 16-stud native Part
 # rectangles with distinct glowing guide strips. Two independent Low
 # off-switches previously blocked the genuine seven-piece source on touch:
