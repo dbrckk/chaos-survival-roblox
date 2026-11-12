@@ -108,6 +108,68 @@ assert '.Heartbeat:Connect(' not in HARBOR
 assert 'AssetService' not in HARBOR
 print("PASS Harbor Low original seven-mesh cargo gantry, nine native block fallback and pressure 1 demotion")
 
+# The four SOUTH skyline monuments have source-verified seven-piece
+# sculptures already approved on Medium/High. Promote exactly one per
+# active arena to Low only when camera-near and optional GPU pressure 0.
+# Their native 2/13/13/14 geometric sources remain available atomically.
+SOUTH_SIGNATURES={
+    "Classic": (
+        "ApprovedSouthClassicObservatoryMeshKit.lua",
+        "ApprovedSouthClassicObservatoryLocal",
+        105516749001927,"OriginalSouthClassicSculptedObservatory3D",13
+    ),
+    "Towers": (
+        "ApprovedSouthTowersSkytransferMeshKit.lua",
+        "ApprovedSouthTowersSkytransferLocal",
+        120959181274080,"OriginalSouthTowersForgedSkytransfer3D",2
+    ),
+    "Crossroads": (
+        "ApprovedSouthCrossroadsExchangeMeshKit.lua",
+        "ApprovedSouthCrossroadsExchangeLocal",
+        77870668100712,"OriginalSouthCrossroadsForgedExchange3D",13
+    ),
+    "Harbor": (
+        "ApprovedSouthHarborDrydockMeshKit.lua",
+        "ApprovedSouthHarborDrydockLocal",
+        125428569657840,"OriginalSouthHarborSculptedDrydock3D",14
+    ),
+}
+assert len(SOUTH_SIGNATURES)==4
+assert len({record[2] for record in SOUTH_SIGNATURES.values()})==4
+for variant,(filename,owner,asset,flag,native_count) in SOUTH_SIGNATURES.items():
+    kit=(CLIENT/filename).read_text(encoding="utf8")
+    assert f'local MODEL_ID={asset}' in kit,(variant,"actual approved asset")
+    assert 'local QUALITIES={Low=1,Medium=1,High=1}' in kit,(variant,"Low cap")
+    assert 'local DISTANCE={Low=290,Medium=420,High=580}' in kit,(
+        variant,"Low near-camera visibility")
+    assert 'if stress==1 and tier~="High" then cap=0 end' in kit
+    assert 'if stress>=2 then cap=0 end' in kit
+    assert f'arena:GetAttribute("VariantId")~="{variant}"' in kit
+    assert f'owner:GetAttribute("SignatureVariant")~="{variant}"' in kit
+    assert f'source:GetAttribute("{flag}")~=true' in kit
+    assert 'source:GetAttribute("Original3DAssetId")~=MODEL_ID' in kit
+    assert 'source:GetAttribute("OwnerVerified")~=true' in kit
+    assert 'source:GetAttribute("CosmeticOnly")~=true' in kit
+    assert 'if not p:IsA("MeshPart") or p.CanCollide' in kit
+    assert 'if n~=7 then return nil end' in kit
+    assert 'if #pieces~=7 then' in kit
+    assert f'#currentNatives~={native_count}' in kit,(variant,"native count")
+    assert 'part.CanCollide=false' in kit
+    assert 'part.CanTouch=false' in kit and 'part.CanQuery=false' in kit
+    assert 'model.Parent=bucket' in kit
+    assert kit.index('model.Parent=bucket')<kit.index('native.Transparency=1'),(
+        variant,"mount before hiding natives")
+    assert 'part.Transparency=alpha' in kit
+    assert 'source.DescendantRemoving:Connect' in kit
+    assert 'model.DescendantRemoving:Connect' in kit
+    assert 'if cap==0 or not cameraReady' in kit
+    assert f'bucket.Name="{owner}"' in kit
+    assert counts[owner]==1,(variant,"Android visual census")
+    assert 'RenderStepped' not in kit and 'Heartbeat' not in kit
+    assert 'AssetService' not in kit
+    print("PASS original southern Low",variant,
+          "seven approved MeshParts for",native_count,"nonphysical primitives")
+
 # Each arena has ONE exterior "hero" signature (never three at once).
 # On Android Low one source-approved 7-MeshPart sculpture replaces only
 # its own exact native nonphysical geometry. Other map variants have
