@@ -70,6 +70,11 @@ VisualBudgetRules.LocalFolders = {
     -- fixes the actual failed Build Validation #41630960261 and ensures
     -- genuine meshes cannot silently bypass adaptive quality pressure.
     "ApprovedDistrictFacadesLocal",
+    -- Exactly one authenticated, creator-owned 1,764-triangle original
+    -- sidewall shell source, six MeshParts per visible district building.
+    -- Existing Android 440/680/900 Parts ledger, Low 0, Medium touch 3,
+    -- High touch 8; no independent GPU quota or hidden untracked models.
+    "ApprovedDistrictSidewallsLocal",
     -- Five genuine creator-approved hero skyline MeshParts replace native
     -- silhouettes and must count in the existing Android Parts budget.
     "ApprovedOriginalHeroStructuresLocal",
