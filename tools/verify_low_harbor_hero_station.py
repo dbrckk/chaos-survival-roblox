@@ -47,7 +47,6 @@ assert KIT.index('clone.Parent=localFolder') < KIT.index('if visibility(e) then 
 assert 'HarborHeroStormLens' in KIT
 assert 'native:GetPropertyChangedSignal("CFrame")' in KIT
 assert 'native:GetPropertyChangedSignal("Transparency")' in KIT
-assert 'part.CanCollide=false' not in KIT or True  # actual loop uses p
 for flag in ('p.CanCollide=false','p.CanTouch=false',
              'p.CanQuery=false','p.CastShadow=false'):
     assert flag in KIT,flag
