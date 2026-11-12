@@ -69,6 +69,88 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# Two mutually exclusive arena variants gain an authentic silhouette
+# on healthy Android Low. Towers: ONE 24.9-stud original 7-MeshPart
+# machine, replacing exactly its native body and animated cap but NEVER
+# its independently animated antenna. Orbital: ONE original 7+7 node and
+# radial support pair (14 MeshParts), with the node's live phase motion
+# retained under SceneryLodHidden. They cannot coexist in one active arena.
+TOWERS_MACHINE=(CLIENT/"ApprovedVariantTowersLandmarkMeshKit.lua").read_text(
+    encoding="utf8")
+ORBITAL_REACTOR=(CLIENT/"ApprovedOrbitalReactorLandmarkMeshKit.lua").read_text(
+    encoding="utf8")
+TOWERS_SERVER=(ROOT/"src/server/PremiumVariantTowersLandmarkAssets.lua").read_text(
+    encoding="utf8")
+ORBITAL_SERVER=(ROOT/"src/server/PremiumOrbitalReactorLandmarkAssets.lua").read_text(
+    encoding="utf8")
+LOD_SILHOUETTES=(CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+MAP_SILHOUETTES=(ROOT/"src/server/MapBuilder.lua").read_text(encoding="utf8")
+assert 'local ID = 72143366927826' in TOWERS_MACHINE
+assert 'local CAP = {Low=1,Medium=2,High=4}' in TOWERS_MACHINE
+assert 'local RANGE = {Low=205,Medium=290,High=410}' in TOWERS_MACHINE
+assert 'or tier=="Low" and math.min(cap,1) or 0' in TOWERS_MACHINE
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in TOWERS_MACHINE
+assert 'if stress>=2 then cap=0 end' in TOWERS_MACHINE
+assert 'if count ~= 7 then return nil end' in TOWERS_MACHINE
+assert 'if #pieces ~= 7 then clone:Destroy();return end' in TOWERS_MACHINE
+assert 'source:GetAttribute("OriginalTowersMachinery3D") ~= true' in TOWERS_MACHINE
+assert 'source:GetAttribute("Original3DAssetId") ~= ID' in TOWERS_MACHINE
+assert 'bucket.ChildRemoved:Connect(function(child)' in TOWERS_MACHINE
+assert 'if entry.model==child then' in TOWERS_MACHINE
+assert 'restore(body)' in TOWERS_MACHINE
+assert TOWERS_MACHINE.index('mounted[body] = nil') < (
+    TOWERS_MACHINE.index('entry.model:Destroy()'))
+assert 'entry.cap.LocalTransparencyModifier=entry.capOriginalModifier' in TOWERS_MACHINE
+assert 'entry.cap:SetAttribute("SceneryLodHidden",entry.capOriginalHidden)' in TOWERS_MACHINE
+assert 'antenna.Transparency=1' not in TOWERS_MACHINE
+assert 'antenna:Destroy()' not in TOWERS_MACHINE
+assert 'bucket.Name = "ApprovedTowersMachineryLocal"' in TOWERS_MACHINE
+assert '"ApprovedTowersMachineryLocal"' in ledger
+assert counts["ApprovedTowersMachineryLocal"]==1
+assert '72143366927826' in TOWERS_SERVER
+assert '"TowerMachinery" .. i' in MAP_SILHOUETTES
+assert '"TowerMachineryCap" .. i' in MAP_SILHOUETTES
+assert '"TowerAntenna" .. i' in MAP_SILHOUETTES
+assert 'ApprovedVariantTowersLandmarkMeshKit.sync(arena,cameraPoint,' in LOD_SILHOUETTES
+assert 'LocalTowersLandmarkMeshCount' in LOD_SILHOUETTES
+
+assert 'local NODE_ID=104654294187035' in ORBITAL_REACTOR
+assert 'local STRUT_ID=138666009076890' in ORBITAL_REACTOR
+assert 'local LIMITS={Low=1,Medium=3,High=6}' in ORBITAL_REACTOR
+assert 'local RANGE={Low=210,Medium=340,High=460}' in ORBITAL_REACTOR
+assert 'or tier=="Low" and math.min(cap,1) or 0' in ORBITAL_REACTOR
+assert 'if pressureLevel==1 then cap=math.floor(cap*.5) end' in ORBITAL_REACTOR
+assert 'if pressureLevel>=2 then cap=0 end' in ORBITAL_REACTOR
+assert 'if count~=7 then return nil end' in ORBITAL_REACTOR
+assert '#entry.nodePieces~=7 or #entry.strutPieces~=7' in ORBITAL_REACTOR
+assert 'if not nodeModel then return end' in ORBITAL_REACTOR
+assert 'if not strutModel then nodeModel:Destroy();return end' in ORBITAL_REACTOR
+assert ORBITAL_REACTOR.index('wrapper.Parent=bucket') < (
+    ORBITAL_REACTOR.index('strut.Transparency=1'))
+assert 'bucket.ChildRemoved:Connect(function(child)' in ORBITAL_REACTOR
+assert 'if entry.model==child then' in ORBITAL_REACTOR
+assert 'release(index)' in ORBITAL_REACTOR
+assert ORBITAL_REACTOR.index('mounted[index]=nil') < (
+    ORBITAL_REACTOR.index('entry.model:Destroy()'))
+assert 'entry.node.LocalTransparencyModifier=entry.nodeOriginalModifier' in ORBITAL_REACTOR
+assert 'entry.node:SetAttribute("SceneryLodHidden",entry.nodeOriginalHidden)' in ORBITAL_REACTOR
+assert 'node.Transparency=1' not in ORBITAL_REACTOR
+assert 'bucket.Name="ApprovedOrbitalReactorLandmarksLocal"' in ORBITAL_REACTOR
+assert '"ApprovedOrbitalReactorLandmarksLocal"' in ledger
+assert counts["ApprovedOrbitalReactorLandmarksLocal"]==1
+assert '104654294187035' in ORBITAL_SERVER
+assert '138666009076890' in ORBITAL_SERVER
+assert '"OrbitalReactorNode" .. i' in MAP_SILHOUETTES
+assert '"OrbitalReactorStrut" .. i' in MAP_SILHOUETTES
+assert 'ApprovedOrbitalReactorLandmarkMeshKit.sync(arena,cameraPoint,' in LOD_SILHOUETTES
+assert 'LocalOrbitalReactorSculptPairCount' in LOD_SILHOUETTES
+for kit in (TOWERS_MACHINE,ORBITAL_REACTOR):
+    assert 'RenderStepped' not in kit
+    assert 'Heartbeat:Connect' not in kit
+    assert 'AssetService' not in kit
+print("PASS Towers 7-MeshPart / Orbital atomic 7+7 silhouettes on healthy Low",
+      "mutually exclusive arenas, pressure-1 and budget-eviction fallback")
+
 # Classic exterior broadcast fins are four 16-stud native Part
 # rectangles with distinct glowing guide strips. Two independent Low
 # off-switches previously blocked the genuine seven-piece source on touch:
