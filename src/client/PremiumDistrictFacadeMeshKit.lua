@@ -29,6 +29,23 @@ local mounted = {}
 local watchedBase = nil
 local baseChanged = nil
 
+-- The playable Base SHRINKS during an actual survival round, but its
+-- original creator-authored district landmarks stay in fixed world space.
+-- Check the immutable MapBuilder footprint instead of live floor width.
+-- The part must still belong to this exact live arena, remain physical,
+-- and never expand beyond its originally signed dimensions.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + 0.2 and base.Size.Z <= sz + 0.2
+end
+
 -- These are EXACT server-authored primitive roof/facade duplicates that
 -- genuine approved meshes replace. DO NOT hide core volumetric load-bearing
 -- silhouettes, foundation/LOD anchors, doors or actual sector signage.
@@ -178,8 +195,7 @@ end
 
 local function valid(entry, district, base)
     local slot, door = eligible(entry.building, district)
-    return base and base.Parent and base:IsA("BasePart")
-        and base.Size.X >= 318 and base.Size.Z >= 318
+    return authenticBase(base, activeArena)
         and slot == entry.slot and door == entry.door
         and (door.CFrame.Position - entry.doorFrame.Position).Magnitude < 0.08
         and (door.Size - entry.doorSize).Magnitude < 0.08
@@ -275,9 +291,8 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
     local base = arena:FindFirstChild("Base")
     local decor = arena:FindFirstChild("Decor")
     local district = decor and decor:FindFirstChild("ArenaDistrictArchitecture3D")
-    if not base or not base:IsA("BasePart")
-        or not district or not district:IsA("Folder")
-        or base.Size.X < 318 or base.Size.Z < 318 then
+    if not authenticBase(base, arena)
+        or not district or not district:IsA("Folder") then
         clear()
         return
     end
@@ -285,7 +300,9 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
         if baseChanged then baseChanged:Disconnect() end
         watchedBase = base
         baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then
+            -- A smaller survival ring does not move its original buildings.
+            -- Unmount only when the real builder-authored Base is invalid.
+            if not authenticBase(base, activeArena) then
                 clearMounted()
             end
         end)
