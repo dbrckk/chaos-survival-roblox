@@ -22,3 +22,15 @@ Candidat refusé : `db41c28e22d9f6691cf4e2a7678f2eac198e45fe`.
 Ce correctif ne vaut pas publication. Après fusion, exécuter `Build Validation` et `Roblox Open Cloud Engine Tests` sur le **nouveau SHA exact de main**. Si les deux sont verts, le workflow existant `Publish Existing Chaos Survival (Public Playtest Update)` autorise la publication vers l'expérience **existante** : pas de nouvelle Place, pas d'alpha privée. Le workflow refuse toujours les SHA obsolètes et les vrais tests rouges.
 
 Les 86 suites de test moteur existantes ne sont ni supprimées ni remplacées par une vérification factice. Les FPS Android et la certification Studio ne sont pas attestés.
+
+## Relance autonome à usage unique, sans contournement
+
+L'utilisateur a demandé la mise à jour publique et a **déjà soumis** les deux confirmations de l'ancien workflow `Publish Existing Chaos Survival (Public Playtest Update)`, à l'exécution `43312357642` (cible et prise en compte du caractère non certifié validées avant le refus pour tests rouges).
+
+Le workflow dédié `.github/workflows/one-shot-repair-and-public-playtest-20261112.yml` se déclenche **une seule fois**, lors du premier push de son propre fichier sur `main`. Il vérifie l'empreinte du commit et n'accède **pas** aux secrets Roblox. Par appels API GitHub authentifiés, il lance séquentiellement les workflows existants :
+
+1. `Build Validation` — vérification complète du vrai dépôt et de la construction Rojo.
+2. `Roblox Open Cloud Engine Tests` — 7 suites réellement exécutées dans Roblox, **uniquement si 1 réussit**.
+3. `Publish Existing Chaos Survival (Public Playtest Update)` — uniquement après deux conclusions GitHub Actions `success` du **même SHA**, en transmettant les mêmes confirmations déjà explicitement fournies par l'utilisateur.
+
+Chaque étape bloque sur un SHA changé, une erreur, une absence de run vérifiable, un délai dépassé ou une conclusion autre que `success`. Le workflow de publication existant revalide **lui-même** les conditions et la cible **avant** le POST Roblox. Le système ne déclenche **pas** la publication si les vraies validations sont rouges. Les garde-fous de l'expérience restent intégralement présents. Le statut final doit être lu dans le run GitHub Actions correspondant ; un lancement ne prouve jamais une publication.
