@@ -133,8 +133,10 @@ assert 'mounted[owner] = nil' in FOUNDATION
 assert 'or entry.mesh.Parent ~= entry.parent or entry.source ~= source' in FOUNDATION
 assert 'entry and entry.mesh.Parent == entry.parent' in FOUNDATION
 assert 'ApprovedFoundationChassisMeshKit.sync(arena, imported, cameraPoint,' in FOUNDATION_LOD
-assert 'player:GetAttribute("OptionalVfxPressure"))' in FOUNDATION_LOD.split(
-    'ApprovedFoundationChassisMeshKit.sync(',1)[1].split(')',1)[0]+')'
+foundation_call=FOUNDATION_LOD.split(
+    'ApprovedFoundationChassisMeshKit.sync(',1)[1].split(
+    'local foundationMeshes',1)[0]
+assert 'player:GetAttribute("OptionalVfxPressure"))' in foundation_call
 assert 'LocalApprovedFoundationChassis3DCount' in FOUNDATION_LOD
 assert 'RenderStepped' not in FOUNDATION and 'Heartbeat' not in FOUNDATION
 assert 'AssetService' not in FOUNDATION
