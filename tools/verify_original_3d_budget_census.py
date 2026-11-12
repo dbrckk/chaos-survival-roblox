@@ -174,8 +174,9 @@ assert '"OriginalHarborKineticGantryLocal"' in ledger
 assert counts["OriginalHarborKineticGantryLocal"]==1
 assert 'HarborGantryKineticMeshKit.sync(arena,cameraPoint,' in HARBOR_LOD
 assert 'LocalOriginalHarborKineticGantryCount' in HARBOR_LOD
-assert 'RenderStepped' not in HARBOR_CRANE
-assert 'Heartbeat:Connect' not in HARBOR_CRANE
+# Comments are permitted to document why RenderStepped is unnecessary.
+assert '.RenderStepped:Connect(' not in HARBOR_CRANE
+assert '.Heartbeat:Connect(' not in HARBOR_CRANE
 print("PASS one authentic 7-MeshPart Harbor low-detail crane near camera",
       "without motion cost; authored perimeter survives round shrink")
 
