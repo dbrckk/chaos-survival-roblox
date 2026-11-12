@@ -17,7 +17,6 @@ local BUDGET = {
 -- each); no new real sidewall mesh on Low or under severe GPU pressure.
 local TOUCH_CAP = {Low = 0, Medium = 3, High = 8}
 local SOURCE_FOLDER = "ApprovedDistrictSidewallShellTemplates"
-local BUCKET = "ApprovedDistrictSidewallsLocal"
 local REQUIRED = {
     {name = "ServiceCore", size = Vector3.new(6.8, 7.3, 6.8),
         offset = CFrame.new(0, 8.4, 0)},
@@ -32,7 +31,7 @@ local REQUIRED = {
 }
 
 local bucket = Instance.new("Folder")
-bucket.Name = BUCKET
+bucket.Name = "ApprovedDistrictSidewallsLocal"
 bucket:SetAttribute("CosmeticOnly", true)
 bucket.Parent = workspace
 local activeArena = nil
