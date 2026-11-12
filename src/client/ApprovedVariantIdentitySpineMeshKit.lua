@@ -20,8 +20,11 @@ local SPECS={
         prefix="TowerSpine",alpha=.04,
     },
 }
-local CAP={Low=0,Medium=2,High=4}
-local RANGE={Low=0,Medium=295,High=425}
+-- Low can show one creator-authenticated seven-piece mast near the camera,
+-- including on touch phones. Its native block remains the immediate
+-- fallback under pressure 1/2; animated glow/bands are never masked.
+local CAP={Low=1,Medium=2,High=4}
+local RANGE={Low=165,Medium=295,High=425}
 local RETAIN=25
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedOriginalIdentitySpinesLocal"
@@ -45,6 +48,18 @@ local function release(index)
     end
     entry.model:Destroy()
 end
+
+-- If the global Android visual-budget owner evicts an optional model,
+-- restore its native mast NOW rather than waiting for the next scenery tick.
+bucket.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for index,entry in pairs(mounted) do
+        if entry.model==child then
+            release(index)
+            break
+        end
+    end
+end)
 
 local function clear()
     local indices={}
@@ -262,8 +277,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     end
     local budget=CAP[tier] or 0
     if touch then
+        -- Previously any Low budget would STILL be set to zero here on
+        -- Android: keep one near-camera source on healthy Low touch,
+        -- preserving the existing tighter Medium/High touch caps.
         budget=tier=="High" and math.min(budget,2)
-            or tier=="Medium" and math.min(budget,1) or 0
+            or tier=="Medium" and math.min(budget,1)
+            or tier=="Low" and math.min(budget,1) or 0
     end
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     if stress==1 then budget=math.floor(budget*.5) end
