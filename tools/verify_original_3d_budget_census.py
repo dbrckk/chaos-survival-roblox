@@ -159,9 +159,8 @@ assert 'if meshCount ~= 6 then return false end' in SIDE_SERVER
 assert 'if pieces ~= 6 then return nil end' in SIDE
 assert 'if #pieces ~= 6 then clone:Destroy();return end' in SIDE
 assert 'if #pieces ~= 6 then clone:Destroy();return end' in SIDE
-for filename in ("ApprovedDistrictSidewallMeshKit.lua",
-                 "PremiumDistrictSidewallAssets.lua"):
-    assert filename in SIDE_LOD+SIDE_INIT
+assert "ApprovedDistrictSidewallMeshKit" in SIDE_LOD
+assert "PremiumDistrictSidewallAssets" in SIDE_INIT
 for guard in (
     'OriginalSizeX','OriginalSizeZ',
     'base.Parent ~= arena',
@@ -173,7 +172,7 @@ for guard in (
     'part.CanQuery = false','part.CastShadow = false',
     'source.DescendantRemoving:Connect',
     'clone.DescendantRemoving:Connect',
-    'source.AncestryChanged',
+    'owner.AncestryChanged:Connect(reconcile)',
     'source:GetAttribute("Original3DAssetId") ~= ID',
     'if not valid(entry, arena, district, base)',
     'entry.originals[part] = part.Transparency',
