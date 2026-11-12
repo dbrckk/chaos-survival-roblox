@@ -1163,13 +1163,16 @@ task.spawn(function()
                     or ORIGINAL_MESH_HIDDEN,
                 profile, model:GetPivot().Position, cameraPoint)
         end
-        -- The closest genuine imported exterior structures still sit on
-        -- 4-11 primitive Roblox foundation blocks. Replace the native
-        -- cosmetics with a source-approved 3,072-triangle sculpted chassis;
-        -- Low 0 / Medium 1 / High 2, reversible on shrink/stream/LOD loss.
-        -- Parent under the existing imported owner to share its LOD census.
+        -- The closest genuine exterior originals still sit on eleven
+        -- server-authored blocky cosmetic foundation pieces. Low now
+        -- replaces ONE true near-camera, shape-verified 11-piece base
+        -- with the existing 7-MeshPart forged underdeck chassis. Its
+        -- clone is under ApprovedFoundationChassisLocal (shared Android
+        -- Parts census), not uncounted inside a server-owned Model.
+        -- Pressure 1/2 restores natives; Medium 1 / High 2 unchanged.
         ApprovedFoundationChassisMeshKit.sync(arena, imported, cameraPoint,
-            profile.Name, cameraReady)
+            profile.Name, cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
         local foundationMeshes = ApprovedFoundationChassisMeshKit.count()
         if player:GetAttribute("LocalApprovedFoundationChassis3DCount")
             ~= foundationMeshes then
