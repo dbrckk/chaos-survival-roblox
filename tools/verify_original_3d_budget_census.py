@@ -69,6 +69,60 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# Classic exterior broadcast fins are four 16-stud native Part
+# rectangles with distinct glowing guide strips. Two independent Low
+# off-switches previously blocked the genuine seven-piece source on touch:
+# CAP.Low=0 and the "if touch" branch's unconditional Low=0 fallback.
+# Only one camera-near original can be mounted in healthy Android Low;
+# GPU pressure one, source loss and cooperative folder eviction MUST
+# restore its server-authored nonphysical body without hiding light strips.
+CLASSIC_FIN=(CLIENT/"ApprovedClassicBroadcastFinMeshKit.lua").read_text(
+    encoding="utf8")
+CLASSIC_FIN_SERVER=(ROOT/"src/server/PremiumClassicBroadcastFinAssets.lua").read_text(
+    encoding="utf8")
+CLASSIC_FIN_MAP=(ROOT/"src/server/MapBuilder.lua").read_text(
+    encoding="utf8")
+assert 'local ASSET_ID = 123049626693705' in CLASSIC_FIN
+assert 'local ID = 123049626693705' in CLASSIC_FIN_SERVER
+assert 'local CAP = {Low=1,Medium=2,High=4}' in CLASSIC_FIN
+assert 'local RANGE = {Low=195,Medium=285,High=415}' in CLASSIC_FIN
+assert 'local RETENTION = 26' in CLASSIC_FIN
+assert 'or tier=="Low" and math.min(cap,1) or 0' in CLASSIC_FIN
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in CLASSIC_FIN
+assert 'if stress>=2 then cap=0 end' in CLASSIC_FIN
+assert 'if count~=7 then return nil end' in CLASSIC_FIN
+assert 'if #pieces~=7 or not genuine(arena,index) then' in CLASSIC_FIN
+assert 'source:GetAttribute("OwnerVerified")~=true' in CLASSIC_FIN
+assert 'source:GetAttribute("CosmeticOnly")~=true' in CLASSIC_FIN
+assert 'source:GetAttribute("OriginalClassicBroadcastFin3D")~=true' in CLASSIC_FIN
+assert 'source:GetAttribute("Original3DAssetId")~=ASSET_ID' in CLASSIC_FIN
+assert 'source.DescendantRemoving:Connect' in CLASSIC_FIN
+assert 'clone.DescendantRemoving:Connect' in CLASSIC_FIN
+assert 'bucket.ChildRemoved:Connect(function(child)' in CLASSIC_FIN
+assert 'if entry.model==child then' in CLASSIC_FIN
+assert 'unmount(native)' in CLASSIC_FIN
+assert 'native.Transparency=entry.original' in CLASSIC_FIN
+assert CLASSIC_FIN.index('clone.Parent=bucket') < CLASSIC_FIN.index('fin.Transparency=1')
+assert 'glow.Transparency=1' not in CLASSIC_FIN
+assert 'glow:Destroy()' not in CLASSIC_FIN
+assert 'piece.CanCollide=false' in CLASSIC_FIN
+assert 'piece.CanTouch=false' in CLASSIC_FIN
+assert 'piece.CanQuery=false' in CLASSIC_FIN
+assert 'piece.CastShadow=false' in CLASSIC_FIN
+assert 'bucket.Name = "ApprovedClassicBroadcastFinLocal"' in CLASSIC_FIN
+assert '"ApprovedClassicBroadcastFinLocal"' in ledger
+assert counts["ApprovedClassicBroadcastFinLocal"] == 1
+assert '"ClassicBroadcastFin" .. i' in CLASSIC_FIN_MAP
+assert '"ClassicBroadcastGlow" .. i' in CLASSIC_FIN_MAP
+assert 'ApprovedClassicBroadcastFinMeshKit.sync(arena,cameraPoint,' in LOD
+assert 'LocalClassicFinMeshCount' in LOD
+assert 'LocalClassicFinPrimitivesReplaced' in LOD
+assert 'RenderStepped' not in CLASSIC_FIN
+assert 'Heartbeat:Connect' not in CLASSIC_FIN
+assert 'AssetService' not in CLASSIC_FIN
+print("PASS one seven-MeshPart original Classic exterior broadcast fin",
+      "on healthy Low touch, glow intact, pressure-one/eviction fallback")
+
 # Gameplay-safe improvement for real promenade / Sky Spine undercarriages.
 # Previously Low had only ONE 3D bridge segment and ZERO actual approved
 # underdeck chassis models. A 22-23 stud REAL crossing rarely fitted one
