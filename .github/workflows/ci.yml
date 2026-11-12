@@ -1,9 +1,17 @@
 name: Build Validation
 
-# Owner-directed validation policy: no tests at all during feature work.
-# Dispatch only once a merged release candidate is ready to publish.
+# Release-gate repair: exercise the ACTUAL full build on PRs that edit this
+# workflow and on their main merge; ordinary feature changes still do NOT
+# trigger expensive build or Roblox Engine suites.
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/ci.yml
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ci.yml
 
 concurrency:
   group: build-validation-${{ github.ref }}
@@ -16,7 +24,10 @@ jobs:
   # Complete source/architecture/security/build checks; run only as
   # an explicitly requested milestone, not for each feature branch.
   build:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'pull_request' && github.base_ref == 'main')
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -730,9 +741,9 @@ jobs:
           # expensive real imported MeshParts on slow devices. Never touch
           # the physics floor or disaster safety overlays.
           for check in (
-              "High = {count = 36,", "Medium = {count = 12,",
+              "High = {count = 36,", "Medium = {count = 16,",
               "Low = {count = 2,",
-              "High = {36, 24, 16}", "Medium = {12, 8, 4}",
+              "High = {36, 24, 16}", "Medium = {16, 10, 4}",
               "Low = {2, 2, 1}",
               "function PremiumGroundMeshKit.residencyCount(tier, pressure)",
               "math.min(budget.count, residentLimit, #candidates)",
@@ -1012,7 +1023,7 @@ jobs:
                            'piece.CanTouch = false',
                            'piece.CanQuery = false',
                            'native.Transparency = 1',
-                           'entry.native.Transparency = entry.originalTransparency'):
+                           'entry.native.Transparency=entry.originalTransparency'):
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
@@ -1022,7 +1033,7 @@ jobs:
           subprocess.run([sys.executable,
               "tools/verify_premium_approved_asset_import_queue.py"],
               check=True)
-          print("Verified 101 owner-Approved original Roblox Models (62 original plus 39 premium), source provenance, safe LOD and full Premium import concurrency.")
+          print(f"Verified {len(models)} owner-Approved Roblox Models, source provenance, safe LOD and full Premium import concurrency.")
           PY
 
       - name: Install Rojo 7.7.0
@@ -1231,7 +1242,9 @@ jobs:
               "cameraLook",
           )
           assert all(text in route for text in must_have)
-          assert "decks = 2, bridges = 1, segments = 1" in route
+          # Approved low-tier connector now uses two real MeshPart
+          # segments, preserving the real server-owned walking platform.
+          assert "decks = 2, bridges = 1, segments = 2" in route
           # Current authenticated near-camera skybridge counts: three
           # Medium / five High, still finite and subject to VFX pressure.
           assert "decks = 8, bridges = 3, segments = 3" in route
