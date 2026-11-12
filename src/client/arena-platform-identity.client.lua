@@ -692,14 +692,22 @@ local function rebuild()
                         :Connect(function() scheduleRebuild() end),
                 }
             end
-            -- Low tier keeps its existing half-density surface ornaments,
-            -- but EVERY verified takeoff gets a small gameplay route cue.
+            -- Low keeps half-density native surface paint, but a real
+            -- selected original undercradle or support MUST be allowed
+            -- through this guard even on an EVEN-index physical PlatformN.
+            -- Previously selection happened above but this gate silently
+            -- skipped the genuine 7-MeshPart install (and its native trim
+            -- masking), wasting Low's one scarce structural source slot.
+            -- The native PlatformFinishKit.build remains independently
+            -- half-density below; gameplay takeoff cues are unaffected.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0
                 or nearBridgeGirders[platform] == true
-                or nearServiceHatches[platform] == true then
-            -- A camera-selected Low skybridge or true-service-hatch
-            -- platform may have an EVEN index. Mount the imported art
-            -- without reintroducing native paint Low already omitted.
+                or nearServiceHatches[platform] == true
+                or nearCradles[platform] == true
+                or nearSupports[platform] == true then
+            -- A camera-selected original bridge, hatch, undercradle or
+            -- support can sit on an EVEN-index physical deck. Register the
+            -- true art without reintroducing omitted native Low paint.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme
@@ -1087,14 +1095,13 @@ local function watchDecor(generated)
     decorRebuildPending = false
     if decor and decor:IsA("Folder") then
         local function supportChanged(part)
-            -- No expensive owner rebuild for native support arrivals if
-            -- Low quality or an original 3D column source isn't loaded.
-            -- The approved-template watcher already covers late uploads.
+            -- Low used to ignore ALL late native support arrivals.
+            -- If the 7-MeshPart approved model had already streamed in,
+            -- first-join could remain rectangular forever. Recover only
+            -- one camera-near, genuine support on healthy Low; no global
+            -- rebuild for hundreds of faraway streamed posts.
             if not part:IsA("BasePart")
-                or not part.Name:match("^PlatformSupport%d+_%d+$")
-                or VfxQuality.deviceTier(
-                    player:GetAttribute("VfxQualityTier"),
-                    UserInputService.TouchEnabled).Name == "Low" then
+                or not part.Name:match("^PlatformSupport%d+_%d+$") then
                 return
             end
             local templates = ReplicatedStorage:FindFirstChild(
@@ -1103,9 +1110,33 @@ local function watchDecor(generated)
             activeArena = activeArena and activeArena:FindFirstChild("Arena")
             local variant = activeArena and tostring(
                 activeArena:GetAttribute("VariantId") or "Classic")
-            if templates and variant and templates:FindFirstChild(variant) then
-                queueSupportRebuild()
+            if not templates or not variant
+                or not templates:FindFirstChild(variant) then return end
+            local quality = VfxQuality.deviceTier(
+                player:GetAttribute("VfxQualityTier"),
+                UserInputService.TouchEnabled).Name
+            if quality == "Low" then
+                -- No churn while pressure has already demoted optional 3D,
+                -- or when this owner has spent its one Low support slot.
+                if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) > 0
+                    or (tonumber(player:GetAttribute(
+                        "LocalOriginalNearSupportColumnCount")) or 0) > 0 then
+                    return
+                end
+                local index = part.Name:match(
+                    "^PlatformSupport(%d+)_%d+$")
+                local platforms = activeArena and
+                    activeArena:FindFirstChild("Platforms")
+                local deck = platforms and
+                    platforms:FindFirstChild("Platform"..tostring(index))
+                local camera = workspace.CurrentCamera
+                if not deck or not deck:IsA("BasePart")
+                    or not deck.CanCollide or not camera
+                    or (deck.Position-camera.CFrame.Position).Magnitude > 125 then
+                    return
+                end
             end
+            queueSupportRebuild()
         end
         decorAddedConnection = decor.ChildAdded:Connect(supportChanged)
         decorRemovedConnection = decor.ChildRemoved:Connect(supportChanged)
