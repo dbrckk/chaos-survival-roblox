@@ -11,6 +11,7 @@ local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdenti
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
+local ApprovedDistrictSidewallMeshKit = require(script.Parent.ApprovedDistrictSidewallMeshKit)
 local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonumentMeshKit)
 local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
@@ -1908,6 +1909,28 @@ task.spawn(function()
             ~= facadeMeshCount then
             player:SetAttribute("LocalOriginalDistrictFacadeMeshCount",
                 facadeMeshCount)
+        end
+        -- The new creator-owned 1,764-triangle real back/sidewall shell
+        -- covers FIVE native core/support/side cassette Part volumes in
+        -- each verified building. Same camera, same visual GPU pressure,
+        -- no extra render loop. Native doors and windows remain readable.
+        local sidewallSyncStartedAt = os.clock()
+        ApprovedDistrictSidewallMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch,
+            player:GetAttribute("OptionalVfxPressure"), cameraLook)
+        lodDistrictTotalMs += (os.clock() - sidewallSyncStartedAt) * 1000
+        local sidewallMeshCount = ApprovedDistrictSidewallMeshKit.count()
+        if player:GetAttribute("LocalOriginalDistrictSidewallMeshCount")
+            ~= sidewallMeshCount then
+            player:SetAttribute("LocalOriginalDistrictSidewallMeshCount",
+                sidewallMeshCount)
+        end
+        local sidewallPartsReplaced =
+            ApprovedDistrictSidewallMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalDistrictSidewallPartsReplaced")
+            ~= sidewallPartsReplaced then
+            player:SetAttribute("LocalOriginalDistrictSidewallPartsReplaced",
+                sidewallPartsReplaced)
         end
         -- Count the ACTUAL native facade/roofline pieces displaced by
         -- genuine approved MeshParts, not just imported models rendered
