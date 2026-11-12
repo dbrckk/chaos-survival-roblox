@@ -69,6 +69,50 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# Two creator-approved 12/20-stud identity spines previously had a
+# double Low OFF switch: CAP.Low=0 plus touch-branch forced zero.
+# Ensure a single actual 7-MeshPart original can replace ONE rigid body
+# on Android touch Low without hiding its animated glow/bands. An
+# evicted local clone must release its original Part immediately.
+MAST=(CLIENT/"ApprovedVariantIdentitySpineMeshKit.lua").read_text(
+    encoding="utf8")
+MAST_SERVER=(ROOT/"src/server/PremiumVariantIdentitySpineAssets.lua").read_text(
+    encoding="utf8")
+for asset in ("105555650820011","86423178125318"):
+    assert f'id={asset}' in MAST
+    assert f'id={asset}' in MAST_SERVER
+assert 'local CAP={Low=1,Medium=2,High=4}' in MAST
+assert 'local RANGE={Low=165,Medium=295,High=425}' in MAST
+assert 'or tier=="Low" and math.min(budget,1) or 0' in MAST
+assert 'if stress==1 then budget=math.floor(budget*.5) end' in MAST
+assert 'if stress>=2 then budget=0 end' in MAST
+assert 'if n~=7 then return nil end' in MAST
+assert 'if #meshes~=7 then model:Destroy();return end' in MAST
+assert 'source:GetAttribute("OriginalVariantIdentitySpine3D")~=true' in MAST
+assert 'source:GetAttribute("Original3DAssetId")~=spec.id' in MAST
+assert 'source:GetAttribute("OwnerVerified")~=true' in MAST
+assert 'model.Parent=bucket' in MAST
+assert MAST.index('model.Parent=bucket') < MAST.index('native.Transparency=1')
+assert 'bucket.ChildRemoved:Connect(function(child)' in MAST
+assert 'if entry.model==child then' in MAST
+assert 'native.Transparency=entry.original' in MAST
+assert 'part.CanCollide=false' in MAST
+assert 'part.CanTouch=false' in MAST
+assert 'part.CanQuery=false' in MAST
+assert 'part.CastShadow=false' in MAST
+for lighting in ("GridMarkerGlow","TowerBand"):
+    assert lighting in MAST
+for prohibited in ("signal.Transparency=","signal.CFrame=","signal.Color="):
+    assert prohibited not in MAST
+assert '"ApprovedOriginalIdentitySpinesLocal"' in ledger
+assert 'bucket.Name="ApprovedOriginalIdentitySpinesLocal"' in MAST
+assert 'ApprovedVariantIdentitySpineMeshKit.sync(arena,cameraPoint,' in (
+    CLIENT/"scenery-lod.client.lua").read_text()
+assert "RenderStepped" not in MAST and "Heartbeat" not in MAST
+assert "AssetService" not in MAST
+print("PASS one approved 7-MeshPart Classic/Towers original identity mast",
+      "on healthy touch Low, 165-stud camera limit and immediate fallback")
+
 # Source-authenticated 3D undersides replace the visibly blocky side
 # surfaces of ONE near-camera Harbor cargo landing on healthy Android Low.
 # This never hides the server's walkable top, native collision or dangers.
