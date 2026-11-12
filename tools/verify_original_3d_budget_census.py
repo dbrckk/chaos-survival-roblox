@@ -127,6 +127,56 @@ assert "AssetService" not in TOWERS_CORNER
 print("PASS one approved 7-MeshPart 24-stud Towers corner source on",
       "healthy touch Low, cap animation intact, source and GPU fallback")
 
+# Orbital is the other exclusive arena variant: one original reactor
+# node plus its genuinely open radial strut may replace the 8th-part
+# native sphere/box pair only when BOTH seven-MeshPart approved sources
+# mount atomically. No fake collision, no loss of animated node motion.
+ORBITAL_REACTOR=(CLIENT/"ApprovedOrbitalReactorLandmarkMeshKit.lua").read_text(
+    encoding="utf8")
+ORBITAL_SERVER=(ROOT/"src/server/PremiumOrbitalReactorLandmarkAssets.lua").read_text(
+    encoding="utf8")
+ORBITAL_LOD=(CLIENT/"scenery-lod.client.lua").read_text(
+    encoding="utf8")
+ORBITAL_MAP=(ROOT/"src/server/MapBuilder.lua").read_text(
+    encoding="utf8")
+assert 'local NODE_ID=104654294187035' in ORBITAL_REACTOR
+assert 'local STRUT_ID=138666009076890' in ORBITAL_REACTOR
+assert 'local LIMITS={Low=1,Medium=3,High=6}' in ORBITAL_REACTOR
+assert 'local RANGE={Low=210,Medium=340,High=460}' in ORBITAL_REACTOR
+assert 'local RETENTION=26' in ORBITAL_REACTOR
+assert 'or tier=="Low" and math.min(cap,1) or 0' in ORBITAL_REACTOR
+assert 'if pressureLevel==1 then cap=math.floor(cap*.5) end' in ORBITAL_REACTOR
+assert 'if pressureLevel>=2 then cap=0 end' in ORBITAL_REACTOR
+assert 'if count~=7 then return nil end' in ORBITAL_REACTOR
+assert '#entry.nodePieces~=7 or #entry.strutPieces~=7' in ORBITAL_REACTOR
+assert 'if not nodeModel then return end' in ORBITAL_REACTOR
+assert 'if not strutModel then nodeModel:Destroy();return end' in ORBITAL_REACTOR
+assert ORBITAL_REACTOR.index('wrapper.Parent=bucket') < (
+    ORBITAL_REACTOR.index('strut.Transparency=1'))
+assert 'bucket.ChildRemoved:Connect(function(child)' in ORBITAL_REACTOR
+assert 'if entry.model==child then' in ORBITAL_REACTOR
+assert 'release(index)' in ORBITAL_REACTOR
+assert ORBITAL_REACTOR.index('mounted[index]=nil') < (
+    ORBITAL_REACTOR.index('entry.model:Destroy()'))
+assert 'entry.node.LocalTransparencyModifier=entry.nodeOriginalModifier' in ORBITAL_REACTOR
+assert 'entry.node:SetAttribute("SceneryLodHidden",entry.nodeOriginalHidden)' in ORBITAL_REACTOR
+assert 'node.Transparency=1' not in ORBITAL_REACTOR
+assert 'bucket.Name="ApprovedOrbitalReactorLandmarksLocal"' in ORBITAL_REACTOR
+assert '"ApprovedOrbitalReactorLandmarksLocal"' in ledger
+assert counts["ApprovedOrbitalReactorLandmarksLocal"]==1
+assert '104654294187035' in ORBITAL_SERVER
+assert '138666009076890' in ORBITAL_SERVER
+assert '"OrbitalReactorNode" .. i' in ORBITAL_MAP
+assert '"OrbitalReactorStrut" .. i' in ORBITAL_MAP
+assert 'ApprovedOrbitalReactorLandmarkMeshKit.sync(arena,cameraPoint,' in ORBITAL_LOD
+assert 'LocalOrbitalReactorSculptPairCount' in ORBITAL_LOD
+assert 'LocalOrbitalReactorNativePartsReplaced' in ORBITAL_LOD
+assert "RenderStepped" not in ORBITAL_REACTOR
+assert "Heartbeat:Connect" not in ORBITAL_REACTOR
+assert "AssetService" not in ORBITAL_REACTOR
+print("PASS Orbital one atomic approved 7+7 MeshPart reactor/strut pair",
+      "on healthy touch Low, true animated node and native fallback")
+
 # Classic exterior broadcast fins are four 16-stud native Part
 # rectangles with distinct glowing guide strips. Two independent Low
 # off-switches previously blocked the genuine seven-piece source on touch:
