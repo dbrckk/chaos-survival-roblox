@@ -20,6 +20,9 @@ local BUDGET = {
 }
 local holder = Instance.new("Folder")
 holder.Name = "ApprovedDistrictFacadesLocal"
+-- Verified local owner for the shared, bounded, 2K nearfield finish.
+-- This folder contains only the four creator-approved facade clones.
+holder:SetAttribute("CosmeticOnly", true)
 holder.Parent = workspace
 local activeArena = nil
 local mounted = {}
@@ -213,6 +216,10 @@ local function mount(building, district, base, slot, door, source)
         return nil
     end
     clone.Name = "ApprovedOriginalDistrictFacade3D"
+    -- Source was OwnerVerified/ DistrictFacade3D and passed template()
+    -- validation; preserve that provenance on the actual mounted clone.
+    clone:SetAttribute("OwnerVerified", true)
+    clone:SetAttribute("DistrictFacade3D", true)
     clone:SetAttribute("Original3DAssetId", IDS[slot])
     clone:SetAttribute("DistrictIndex", building:GetAttribute("DistrictIndex"))
     clone:SetAttribute("CosmeticOnly", true)
