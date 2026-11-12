@@ -157,7 +157,9 @@ assert 'underdeck = false,' in ROUTE
 assert 'entry.underdeck=addUnderdeckModel(' in ROUTE
 assert 'if entry.underdeck then' in ROUTE
 assert 'or (desired.underdeck ~= nil) ~= entry.underdeckRequested' in ROUTE
-assert 'or (desired.underdeck ~= nil) ~= entry.underdeck' not in ROUTE
+# Match the complete old expression, not the intentional new
+# entry.underdeckRequested suffix that starts with the same characters.
+assert 'or (desired.underdeck ~= nil) ~= entry.underdeck\n' not in ROUTE
 assert 'clone:SetAttribute("OriginalUnderdeckArt", true)' in ROUTE
 
 assert 'model:SetAttribute("OriginalUnderdeckArt", true)' not in ROUTE
