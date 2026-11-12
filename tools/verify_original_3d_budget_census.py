@@ -149,8 +149,12 @@ for variant,spec in SIGNATURES.items():
     assert 'local QUALITY={Low=1,Medium=1,High=1}' in kit,(variant,"quality")
     assert f'local RANGE={{Low={spec["range"]},Medium=' in kit,(variant,"range")
     assert f',High={spec["high"]}}}' in kit,(variant,"high unchanged")
-    assert 'if stress>=2 or (stress==1 and tier~="High") then cap=0 end' in kit or (
-        'if load>=2 or (load==1 and tier~="High") then cap=0 end' in kit)
+    demotion={
+        "Classic":'if stress>=2 or (stress==1 and tier~="High") then cap=0 end',
+        "Towers":'if load>=2 or (load==1 and tier~="High") then cap=0 end',
+        "Harbor":'if stress>=2 or (stress==1 and tier~="High") then count=0 end',
+    }[variant]
+    assert demotion in kit,(variant,"pressure one native fallback")
     assert spec["sourceFlag"] in kit,(variant,"signature provenance")
     assert 'OwnerVerified' in kit and 'CosmeticOnly' in kit
     assert 'Original3DAssetId' in kit
