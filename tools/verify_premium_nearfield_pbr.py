@@ -68,7 +68,9 @@ BUCKETS = {
                 ("ApprovedDistrictFacadesLocal",84217436280282,
                   "PremiumDistrictFacadeMeshKit.lua"),
                 ("ApprovedDistrictFacadesLocal",135791763112202,
-                  "PremiumDistrictFacadeMeshKit.lua")],
+                   "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictSidewallsLocal",77387019170428,
+                   "ApprovedDistrictSidewallMeshKit.lua")],
     "Towers": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",131413152501235,
@@ -122,7 +124,9 @@ BUCKETS = {
                 ("ApprovedDistrictFacadesLocal",84217436280282,
                   "PremiumDistrictFacadeMeshKit.lua"),
                 ("ApprovedDistrictFacadesLocal",135791763112202,
-                  "PremiumDistrictFacadeMeshKit.lua")],
+                   "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictSidewallsLocal",77387019170428,
+                   "ApprovedDistrictSidewallMeshKit.lua")],
     "Crossroads": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",134533469777794,
@@ -174,7 +178,9 @@ BUCKETS = {
                 ("ApprovedDistrictFacadesLocal",84217436280282,
                   "PremiumDistrictFacadeMeshKit.lua"),
                 ("ApprovedDistrictFacadesLocal",135791763112202,
-                  "PremiumDistrictFacadeMeshKit.lua")],
+                   "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictSidewallsLocal",77387019170428,
+                   "ApprovedDistrictSidewallMeshKit.lua")],
     "Orbital": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",131188899020391,
@@ -226,7 +232,9 @@ BUCKETS = {
                 ("ApprovedDistrictFacadesLocal",84217436280282,
                   "PremiumDistrictFacadeMeshKit.lua"),
                 ("ApprovedDistrictFacadesLocal",135791763112202,
-                  "PremiumDistrictFacadeMeshKit.lua")],
+                   "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictSidewallsLocal",77387019170428,
+                   "ApprovedDistrictSidewallMeshKit.lua")],
     "Harbor": [("ApprovedPerimeterStationDeckInlaysLocal",72507987666671,
                    "ApprovedPerimeterStationDeckInlayMeshKit.lua"),
 ("ApprovedPerimeterVariantApexLocal",110237986522853,
@@ -280,7 +288,9 @@ BUCKETS = {
                 ("ApprovedDistrictFacadesLocal",84217436280282,
                   "PremiumDistrictFacadeMeshKit.lua"),
                 ("ApprovedDistrictFacadesLocal",135791763112202,
-                  "PremiumDistrictFacadeMeshKit.lua")],
+                   "PremiumDistrictFacadeMeshKit.lua"),
+                ("ApprovedDistrictSidewallsLocal",77387019170428,
+                   "ApprovedDistrictSidewallMeshKit.lua")],
 }
 for variant, pairs in BUCKETS.items():
     assert f"{variant} = {{" in KIT
@@ -361,6 +371,47 @@ for id in (132020956214241,88725004643299,
     assert str(id) in DISTRICT and str(id) in DISTRICT_LOADER
     assert KIT.count(f'folder = "ApprovedDistrictFacadesLocal", id = {id}') == 5
 print("PASS 4 authentic district facade families: bounded 2K visible structural finishes")
+
+# The new REAL six-material original district sidewall shell has been
+# uploaded and Officially Approved, not invented locally or made of Parts.
+# It reuses the same 16 owner-approved normal/roughness/metal/albedo images
+# and complete-model global GPU quota; signals/carbon/grip remain authored.
+SIDE=(ROOT/"src/client/ApprovedDistrictSidewallMeshKit.lua").read_text()
+SIDE_LOADER=(ROOT/"src/server/PremiumDistrictSidewallAssets.lua").read_text()
+SIDE_ASSET=next(x for x in REGISTRY["models"]
+                if x["name"]=="district_sidewall_shell")
+assert SIDE_ASSET["asset_id"]=="77387019170428"
+assert SIDE_ASSET["moderation"]=="Approved"
+assert SIDE_ASSET["workflow_run_id"]==43302925840
+assert "local DISTRICT_SIDEWALL_ID = 77387019170428" in KIT
+assert KIT.count('folder = "ApprovedDistrictSidewallsLocal", id = 77387019170428')==5
+for marker in (
+    'local districtSidewall = id == DISTRICT_SIDEWALL_ID',
+    'folder.Name ~= "ApprovedDistrictSidewallsLocal"',
+    'model.Name ~= "ApprovedOriginalDistrictSidewall3D"',
+    'model:GetAttribute("OriginalDistrictSidewallShell3D") ~= true',
+    'model:GetAttribute("OwnerVerified") ~= true',
+    'or index < 1 or index > 16',
+    'elseif districtSidewall then',
+    'if #pieces ~= 6 then return nil end',
+):
+    assert marker in KIT,marker
+assert 'bucket.Name = "ApprovedDistrictSidewallsLocal"' in SIDE
+assert 'clone.Name = "ApprovedOriginalDistrictSidewall3D"' in SIDE
+assert 'clone:SetAttribute("OriginalDistrictSidewallShell3D", true)' in SIDE
+assert 'clone:SetAttribute("Original3DAssetId", ID)' in SIDE
+assert 'OriginalMeshScenery.sanitize(raw)' in SIDE_LOADER
+assert 'if meshCount ~= 6 then return false end' in SIDE_LOADER
+assert 'ApprovedDistrictSidewallMeshKit.sync(arena, cameraPoint,' in LOD
+assert LOD.index('ApprovedDistrictSidewallMeshKit.sync(') < LOD.index(
+    'PremiumNearfieldPbrKit.reconcile(')
+assert 'if disabled == true or tier == "Low" then return 0 end' in KIT
+assert 'if level >= 2 then return 0 end' in KIT
+assert 'local function visibleFinish(part, variant)' in KIT
+assert '"SIGNAL", "CARBON", "GRIP", "GLASS"' in KIT
+assert 'OriginalGroundPbrTemplates' in KIT
+print("PASS genuine Approved six-MeshPart original sidewalls share existing",
+      "2K PBR quota, no new textures, no PBR on Low/hidden safety surfaces")
 
 # Source-approved 7-MeshPart Harbor station/cranes now share existing
 # Medium/High 2K GPU capacity; their real moving actors are NEVER coated
