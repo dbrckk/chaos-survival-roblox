@@ -259,19 +259,19 @@ local function mount(ground, decor, base, template)
         ground.Size.X * 0.97 / templateSize.X,
         ground.Size.Z * 0.97 / templateSize.Z, 1.05)
     if scale < 0.60 then return nil end
-    local clone = template:Clone()
-    local scaled = pcall(function() clone:ScaleTo(scale) end)
-    if not scaled then
-        clone:Destroy()
-        return nil
-    end
-    local sourceFrame, dimensions = clone:GetBoundingBox()
+    -- Model:ScaleTo() can reject an otherwise valid replicated MeshPart
+    -- package (and the engine integration scene's source geometry), making
+    -- every real floor panel silently fall back to primitive tiles. A
+    -- uniform per-MeshPart scale is deterministic and keeps the exact
+    -- existing original PBR UV layout/positions with no new geometry.
+    local dimensions = templateSize * scale
     if dimensions.X > ground.Size.X * 0.98
         or dimensions.Z > ground.Size.Z * 0.98
         or dimensions.Y > 1.5 then
-        clone:Destroy()
         return nil
     end
+    local clone = template:Clone()
+    local sourceFrame = clone:GetBoundingBox()
 
     -- The original warning/safe-route paint is at ~0.19-0.20 studs above
     -- the Base. This 3D art's top is capped at +0.033 over the existing
@@ -292,7 +292,12 @@ local function mount(ground, decor, base, template)
                 clone:Destroy()
                 return nil
             end
-            part.CFrame = frame * sourceFrame:ToObjectSpace(part.CFrame)
+            local sourceRelative = sourceFrame:ToObjectSpace(part.CFrame)
+            local sourceRotation = sourceRelative - sourceRelative.Position
+            part.Size = part.Size * scale
+            part.CFrame = frame
+                * CFrame.new(sourceRelative.Position * scale)
+                * sourceRotation
             part.Anchored = true
             part.Massless = true
             part.CanCollide = false
