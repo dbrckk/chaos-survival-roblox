@@ -342,7 +342,8 @@ jobs:
           }
           route_names = {"premium_jump_deck", "premium_skybridge_module", "premium_ground_tile"}
           district_names = {"district_observatory", "district_freight",
-                            "district_turbine", "district_aerial"}
+                            "district_turbine", "district_aerial",
+                            "district_sidewall_shell"}
           skyfleet_names = {"skyfleet_carrier"}
           underdeck_names = {"underdeck_chassis"}
           lobby_gate_names = {"lobby_gate"}
@@ -402,6 +403,7 @@ jobs:
               "skyline_depth_sculpt",
           }
           assert len(premium_extension_names) == 40
+          assert len(models) == 103
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
@@ -493,6 +495,11 @@ jobs:
                           "towers_cooling_stack": "tools/generate_original_towers_cooling_stack.py",
                       }[model["name"]]
                       assert path == Path(origin) and path.is_file()
+                  elif attr == "source" and model["name"] == "district_sidewall_shell":
+                      # Never admit a guessed 3D asset: authentic source
+                      # is produced and approved via the creator workflow.
+                      assert path == Path("tools/generate_original_district_sidewall_shell.py")
+                      assert path.is_file()
                   elif attr == "source" and model["name"] in premium_extension_names:
                       # Every new premium source must point to reproducible
                       # real geometry authoring, never an arbitrary asset.
@@ -542,6 +549,14 @@ jobs:
               "Turbine": approved["district_turbine"],
               "Aerial": approved["district_aerial"],
           }, "Approved source 3D facade IDs diverged from owned Roblox receipts"
+          sidewall_source = Path("src/server/PremiumDistrictSidewallAssets.lua").read_text()
+          sidewall_client = Path("src/client/ApprovedDistrictSidewallMeshKit.lua").read_text()
+          assert f'local ASSET_ID = {approved["district_sidewall_shell"]}' in sidewall_source
+          assert f'local ID = {approved["district_sidewall_shell"]}' in sidewall_client
+          assert "OriginalMeshScenery.sanitize(raw)" in sidewall_source
+          assert "GlobalApprovedImportGate.load" in sidewall_source
+          assert '"ApprovedDistrictSidewallsLocal"' in Path(
+              "src/shared/VisualBudgetRules.lua").read_text()
           assert "AssetService.LoadAssetAsync" in source
           assert "OriginalMeshScenery.sanitize(imported)" in source
           assert "OriginalMeshScenery.sanitize(raw)" in route_source
