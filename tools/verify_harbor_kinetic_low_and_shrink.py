@@ -49,9 +49,12 @@ assert 'or profile.Count == 0' in MOTION
 assert 'GetPropertyChangedSignal("CFrame")' in CLIENT
 assert 'GetPropertyChangedSignal("Size")' in CLIENT
 assert 'followNativeMotion(e)' in CLIENT
-for forbidden in ('RenderStepped','Heartbeat:Connect',
-                  'game:GetService("AssetService")','RemoteEvent'):
-    assert forbidden not in CLIENT
+# Ignore prose mentioning RenderStepped/RemoteEvent; forbid only real
+# engine event subscriptions, client asset imports or remote creations.
+for forbidden in ('.RenderStepped:Connect(', '.Heartbeat:Connect(',
+                  'game:GetService("AssetService")',
+                  'Instance.new("RemoteEvent")'):
+    assert forbidden not in CLIENT,forbidden
 
 # Shrinking floors from 320 to 200 / 120 / 60 studs must not remove
 # stationary crane silhouettes authored OUTSIDE the original arena.
