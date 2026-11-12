@@ -5,8 +5,12 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=114886409893890
-local QUALITIES={Low=0,Medium=1,High=1}
-local DISTANCE={Low=0,Medium=420,High=580}
+-- Low is a strict near-camera owner: one verified seven-MeshPart
+-- accessory replaces 4 exact nonphysical native details.
+-- It complements but never duplicates the independently approved large
+-- South Towers monument; GPU pressure 1 restores all primitives.
+local QUALITIES={Low=1,Medium=1,High=1}
+local DISTANCE={Low=152,Medium=420,High=580}
 local RETENTION=26
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedSouthTowersLiftTwinsLocal"
