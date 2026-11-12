@@ -127,6 +127,59 @@ assert "AssetService" not in TOWERS_CORNER
 print("PASS one approved 7-MeshPart 24-stud Towers corner source on",
       "healthy touch Low, cap animation intact, source and GPU fallback")
 
+# The original four giant 36-stud Harbor cranes already have two
+# creator-approved seven-material kinetic assets. Low native crane LOD is
+# intentionally hidden and its native trolley animation intentionally
+# disabled: a SINGLE nearfield static genuine crane provides a strong
+# 3D silhouette without starting new frame loops or false collisions.
+# Medium/High cranes stay native-animation-driven, even after the floor
+# shrinks, by authenticating immutable server OriginalSizeX/Z instead.
+HARBOR_CRANE=(CLIENT/"HarborGantryKineticMeshKit.lua").read_text(
+    encoding="utf8")
+HARBOR_MOTION=(ROOT/"src/shared/HarborGantryMotionRules.lua").read_text(
+    encoding="utf8")
+HARBOR_SERVER=(ROOT/"src/server/PremiumHarborGantryAssets.lua").read_text(
+    encoding="utf8")
+HARBOR_LOD=(CLIENT/"scenery-lod.client.lua").read_text(
+    encoding="utf8")
+assert 'Low = {models=1,distance=135,retention=18}' in HARBOR_CRANE
+assert 'Medium = {models=2,distance=170,retention=24}' in HARBOR_CRANE
+assert 'High = {models=4,distance=345,retention=36}' in HARBOR_CRANE
+assert 'elseif tier=="Low" and stress>0 then' in HARBOR_CRANE
+assert 'maxModels=0' in HARBOR_CRANE
+assert 'local function authenticBase(base)' in HARBOR_CRANE
+assert 'base:GetAttribute("OriginalSizeX")' in HARBOR_CRANE
+assert 'base:GetAttribute("OriginalSizeZ")' in HARBOR_CRANE
+assert 'base.Size.X<318' not in HARBOR_CRANE
+assert 'base.Size.Z<318' not in HARBOR_CRANE
+assert 'local function unmount(crane)' in HARBOR_CRANE
+assert 'folder.ChildRemoved:Connect(function(child)' in HARBOR_CRANE
+assert 'if e.model==child then unmount(crane);break end' in HARBOR_CRANE
+assert 'source.AncestryChanged:Connect(changed)' in HARBOR_CRANE
+assert 'source.DescendantRemoving:Connect' in HARBOR_CRANE
+assert 'clone.DescendantRemoving:Connect' in HARBOR_CRANE
+assert 'for _,crane in ipairs(obsolete) do unmount(crane) end' in HARBOR_CRANE
+assert 'Low" then' in HARBOR_MOTION
+assert 'return {Interval = 0.65, Count = 0, Range = 0}' in HARBOR_MOTION
+for asset in ('75684193304551','98809955094422'):
+    assert asset in HARBOR_SERVER and asset in HARBOR_CRANE
+assert 'roles.Static~=4 or roles.Trolley~=1' in HARBOR_CRANE
+assert 'roles.Cable~=1 or roles.Load~=1' in HARBOR_CRANE
+assert 'OriginalHarborGantryKineticRole' in HARBOR_CRANE
+assert 'CanCollide=false' in HARBOR_CRANE
+assert 'CanTouch=false' in HARBOR_CRANE
+assert 'CanQuery=false' in HARBOR_CRANE
+assert 'folder.Name = "OriginalHarborKineticGantryLocal"' in HARBOR_CRANE
+assert '"OriginalHarborKineticGantryLocal"' in ledger
+assert counts["OriginalHarborKineticGantryLocal"]==1
+assert 'HarborGantryKineticMeshKit.sync(arena,cameraPoint,' in HARBOR_LOD
+assert 'LocalOriginalHarborKineticGantryCount' in HARBOR_LOD
+# Comments are permitted to document why RenderStepped is unnecessary.
+assert '.RenderStepped:Connect(' not in HARBOR_CRANE
+assert '.Heartbeat:Connect(' not in HARBOR_CRANE
+print("PASS one authentic 7-MeshPart Harbor low-detail crane near camera",
+      "without motion cost; authored perimeter survives round shrink")
+
 # Orbital is the other exclusive arena variant: one original reactor
 # node plus its genuinely open radial strut may replace the 8th-part
 # native sphere/box pair only when BOTH seven-MeshPart approved sources

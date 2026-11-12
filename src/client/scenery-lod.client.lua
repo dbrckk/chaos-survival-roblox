@@ -1858,10 +1858,13 @@ task.spawn(function()
             applyFolder(scenery, HARBOR_GANTRY_LOD,
                 profile, scenery:GetPivot().Position, cameraPoint)
         end
-        -- Replace four source-authored native crane silhouettes with true
-        -- kinetic MeshParts that follow the ALREADY-RUNNING native
-        -- trolley/hoist motion. Same distance/quality LOD sample.
-        -- Low=0; Medium=2/1/0, High=4/2/0 under mobile pressure.
+        -- Near the camera, Low now renders ONE authentic seven-piece
+        -- source crane instead of four invisible distant native forms;
+        -- its existing Low motion profile stays STATIC (Count=0).
+        -- Medium/High keep native-driven trolley/hoist animation.
+        -- The authored exterior crane survives arena floor shrinking;
+        -- pressure 1/2 removes the optional Low model immediately.
+        -- Low=1/0/0; Medium=2/1/0; High=4/2/0.
         HarborGantryKineticMeshKit.sync(arena,cameraPoint,profile.Name,
             cameraReady,cameraLook,
             player:GetAttribute("OptionalVfxPressure"))

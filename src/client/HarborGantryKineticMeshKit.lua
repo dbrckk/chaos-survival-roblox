@@ -11,7 +11,10 @@ local APPROVED = {
     South = {name="CableGantry", id=98809955094422},
 }
 local BUDGET = {
-    Low = {models=0,distance=0,retention=0},
+    -- Low: one source-authenticated 7-MeshPart crane within camera-near
+    -- range. The existing Low gantry-motion profile remains static and
+    -- the native scenery is still hidden by its separate coarse LOD.
+    Low = {models=1,distance=135,retention=18},
     Medium = {models=2,distance=170,retention=24},
     High = {models=4,distance=345,retention=36},
 }
@@ -32,6 +35,18 @@ local activeArena = nil
 local mounted = {}
 local watchedBase = nil
 local baseChanged = nil
+
+-- The visible arena Base is shrunk during active survival rounds; the
+-- exterior gantries are not. Their authored perimeter is immutable and
+-- must be checked via the original dimensions, not the shrinking floor.
+local function authenticBase(base)
+    if not base or not base:IsA("BasePart")
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    return typeof(sx)=="number" and typeof(sz)=="number"
+        and sx>=318 and sz>=318
+end
 
 local function sourceFor(sector)
     local spec = APPROVED[sector]
@@ -70,8 +85,7 @@ end
 local function genuine(crane,arena,base)
     if not crane or not arena or not base
         or tostring(arena:GetAttribute("VariantId"))~="Harbor"
-        or not base:IsA("BasePart")
-        or base.Size.X<318 or base.Size.Z<318
+        or not authenticBase(base) or base.Parent~=arena
         or not crane:IsA("Model")
         or crane:GetAttribute("HarborGantryScenery")~=true
         or crane:GetAttribute("SourceIsOriginal")~=true
@@ -114,7 +128,7 @@ local function valid(e)
     -- 0.90s scenery LOD sampler performs full source/genuine checks.
     if not e or not e.model or e.model.Parent~=folder
         or e.arena~=activeArena or e.crane.Parent~=e.fleet
-        or e.base.Size.X<318 or e.base.Size.Z<318
+        or not authenticBase(e.base) or e.base.Parent~=e.arena
         or not e.source.Parent
         or e.source:GetAttribute("OriginalHarborKineticGantry3D")~=true
         or e.source:GetAttribute("Original3DAssetId")~=(
@@ -183,12 +197,29 @@ local function dispose(e)
     e.model:Destroy()
 end
 
-local function clearModels()
-    for crane,e in pairs(mounted) do
-        dispose(e)
-        mounted[crane]=nil
-    end
+local function unmount(crane)
+    local e=mounted[crane]
+    if not e then return end
+    -- Remove ownership first: Destroy/ChildRemoved callbacks must not
+    -- recursively tear down an already disposed original native crane.
+    mounted[crane]=nil
+    dispose(e)
 end
+
+local function clearModels()
+    local keys={}
+    for crane in pairs(mounted) do keys[#keys+1]=crane end
+    for _,crane in ipairs(keys) do unmount(crane) end
+end
+
+-- The shared Android budget may evict a 7-part crane between scenery
+-- ticks. Reveal the exact original crane immediately, not one tick later.
+folder.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for crane,e in pairs(mounted) do
+        if e.model==child then unmount(crane);break end
+    end
+end)
 
 local function clear()
     clearModels()
@@ -280,9 +311,15 @@ local function mount(arena,base,fleet,crane,source,sector)
             followNativeMotion(e)
         end)
     local function changed()
-        if not valid(e) then visibility(e) end
+        if mounted[crane]==e and not valid(e) then unmount(crane) end
     end
     e.connections[#e.connections+1]=crane.AncestryChanged:Connect(changed)
+    e.connections[#e.connections+1]=source.AncestryChanged:Connect(changed)
+    e.connections[#e.connections+1]=source.DescendantRemoving:Connect(function(part)
+        if mounted[crane]==e and part:IsA("MeshPart") then
+            unmount(crane)
+        end
+    end)
     e.connections[#e.connections+1]=base:GetPropertyChangedSignal(
         "Size"):Connect(changed)
     e.connections[#e.connections+1]=crane.ChildAdded:Connect(function(part)
@@ -294,10 +331,9 @@ local function mount(arena,base,fleet,crane,source,sector)
     end)
     e.connections[#e.connections+1]=crane.ChildRemoved:Connect(changed)
     e.connections[#e.connections+1]=clone.DescendantRemoving:Connect(function(p)
-        if not e.disposing and p:IsA("MeshPart") then
-            -- Imported primitive removed by stream/quality switch: reveal
-            -- native crane on the next safe scheduler resume.
-            task.defer(visibility,e)
+        if not e.disposing and mounted[crane]==e and p:IsA("MeshPart") then
+            -- Missing any of seven source pieces must restore the native.
+            unmount(crane)
         end
     end)
     if visibility(e) then followNativeMotion(e) end
@@ -316,6 +352,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
         maxModels=stress==0 and 4 or (stress==1 and 2 or 0)
     elseif tier=="Medium" then
         maxModels=stress==0 and 2 or (stress==1 and 1 or 0)
+    elseif tier=="Low" and stress>0 then
+        -- No costly original meshes under first optional-GPU pressure.
+        maxModels=0
     end
     if not arena or not cameraReady or maxModels==0
         or typeof(cameraPoint)~="Vector3"
@@ -325,18 +364,18 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
     local fleet=decor and decor:FindFirstChild("StormHarborGantryFleet")
-    if not base or not base:IsA("BasePart") or not fleet
-        or not fleet:IsA("Folder") or base.Size.X<318
-        or base.Size.Z<318 then
+    if not authenticBase(base) or base.Parent~=arena or not fleet
+        or not fleet:IsA("Folder") then
         clearModels();return
     end
     if watchedBase~=base then
         if baseChanged then baseChanged:Disconnect() end
         watchedBase=base
         baseChanged=base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X<318 or base.Size.Z<318 then
-                clearModels()
-            end
+            -- A shrinking playable floor does not invalidate the
+            -- original exterior art. Only a lost/invalid authored base
+            -- should release the model.
+            if not authenticBase(base) then clearModels() end
         end)
     end
     local ranked={}
@@ -373,15 +412,18 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     for i=1,math.min(maxModels,#ranked) do
         selected[ranked[i].crane]=ranked[i]
     end
+    local obsolete={}
     for crane,e in pairs(mounted) do
         local choose=selected[crane]
         if not choose or e.source~=choose.source or not valid(e) then
-            dispose(e)
-            mounted[crane]=nil
+            obsolete[#obsolete+1]=crane
         else
             if visibility(e) then followNativeMotion(e) end
         end
     end
+    -- Never mutate a Luau pairs iterator while cleanup callbacks remove
+    -- the budget-owned clone. All mounts are bounded (Low1/Med2/High4).
+    for _,crane in ipairs(obsolete) do unmount(crane) end
     for crane,selection in pairs(selected) do
         if not mounted[crane] then
             mounted[crane]=mount(arena,base,fleet,crane,
