@@ -166,7 +166,7 @@ for guard in (
     'OriginalSizeX','OriginalSizeZ',
     'base.Parent ~= arena',
     'or not base.Anchored or not base.CanCollide',
-    'or base.Size.X > sx + .2 or base.Size.Z > sz + .2',
+    'and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2',
     'door.CFrame * CFrame.new(.35, -4, 4.36)',
     'part.CFrame = target * frame:ToObjectSpace(part.CFrame)',
     'part.CanCollide = false','part.CanTouch = false',
