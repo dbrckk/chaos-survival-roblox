@@ -21,8 +21,12 @@ local SOURCE_BOUNDS = {
 local STATIONS = {"North", "East", "South", "West"}
 local VARIANTS = {Classic=true,Towers=true,Crossroads=true,
     Orbital=true,Harbor=true}
-local CAPS = {Low=0,Medium=1,High=3}
-local RANGE = {Low=0,Medium=170,High=245}
+-- Low purchases only TWO large service wings (2 x 7 approved MeshParts),
+-- never the two small top caps: full four-piece station art costs 28
+-- MeshParts and remains a Medium/High privilege. Both wing models must
+-- mount completely before either original WedgePart is masked.
+local CAPS = {Low=1,Medium=1,High=3}
+local RANGE = {Low=105,Medium=170,High=245}
 local RETENTION = 16
 
 local bucket = Instance.new("Folder")
@@ -99,7 +103,7 @@ local function sourceFor(kind)
     return source
 end
 
-local function genuineStation(arena, station, index)
+local function genuineStation(arena, station, index, tier)
     if not arena or not arena:IsA("Folder")
         or not VARIANTS[arena:GetAttribute("VariantId")]
         or not arena.Parent or arena.Parent.Name ~= "GeneratedMap"
@@ -117,7 +121,11 @@ local function genuineStation(arena, station, index)
     local natives={}
     -- Explicit iteration over names, not ipairs over an array containing
     -- streamed nils: a partial station must never hide its first cap.
-    for i, name in ipairs(NATIVE_NAMES) do
+    -- Low only replaces the two large wings; do not require or mask
+    -- top-cap natives that may stream in later on an Android phone.
+    local first=tier=="Low" and 3 or 1
+    for i=first,#NATIVE_NAMES do
+        local name=NATIVE_NAMES[i]
         local native=station:FindFirstChild(name)
         local size=EXPECTED[MODEL_NAMES[i]]
         if not native or not native:IsA("WedgePart")
@@ -185,13 +193,14 @@ local function fit(source, native, kind)
     return clone,parts
 end
 
-local function mount(arena, station, index, sources)
+local function mount(arena, station, index, sources, tier)
     if mounted[station] then return end
-    local natives=genuineStation(arena,station,index)
+    local natives=genuineStation(arena,station,index,tier)
     if not natives then return end
     local models,pieceSets={},{}
+    local first=tier=="Low" and 3 or 1
     for i,native in ipairs(natives) do
-        local kind=MODEL_NAMES[i]
+        local kind=MODEL_NAMES[first+i-1]
         local model,pieces=fit(sources[kind],native,kind)
         if not model then
             for _,old in ipairs(models) do old:Destroy() end
@@ -200,14 +209,16 @@ local function mount(arena, station, index, sources)
         models[#models+1]=model
         pieceSets[#pieceSets+1]=pieces
     end
-    if not genuineStation(arena,station,index)
-        or not sources.Cap.Parent or not sources.Wing.Parent then
+    if not genuineStation(arena,station,index,tier)
+        or not sources.Wing or not sources.Wing.Parent
+        or (tier~="Low" and (not sources.Cap or not sources.Cap.Parent)) then
         for _,model in ipairs(models) do model:Destroy() end
         return
     end
     local entry={
         index=index,models=models,pieces=pieceSets,original={},
-        frames={},sources=sources,connections={},
+        frames={},sources=sources,connections={},tier=tier,
+        expected=tier=="Low" and 2 or 4,
     }
     for _,native in ipairs(natives) do
         entry.original[native]=native.Transparency
@@ -294,16 +305,23 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
             base.AncestryChanged:Connect(invalidBase)
     end
 
-    local wing,capSource=sourceFor("Wing"),sourceFor("Cap")
-    if not wing or not capSource then removeAll();return end
+    local wing=sourceFor("Wing")
+    local capSource=tier~="Low" and sourceFor("Cap") or nil
+    if not wing or (tier~="Low" and not capSource) then
+        removeAll()
+        return
+    end
     local sources={Wing=wing,Cap=capSource}
     local ranked={}
     for index,name in ipairs(STATIONS) do
         local station=decor:FindFirstChild("PerimeterStation"..name)
-        local natives=genuineStation(arena,station,index)
+        local natives=genuineStation(arena,station,index,tier)
         if natives then
             local retained=mounted[station]~=nil
-            local distance=(natives[3].Position-cameraPoint).Magnitude
+            -- On Low the first validated native IS the left service wing;
+            -- Medium/High keep their historic third native (same wing).
+            local wingNative=tier=="Low" and natives[1] or natives[3]
+            local distance=(wingNative.Position-cameraPoint).Magnitude
             if distance<=(RANGE[tier] or 0)
                 +(retained and RETENTION or 0) then
                 ranked[#ranked+1]={
@@ -323,8 +341,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     end
     for station,entry in pairs(mounted) do
         local invalid=wanted[station]~=entry.index
+            or entry.tier~=tier
             or entry.sources.Cap~=capSource or entry.sources.Wing~=wing
-            or not genuineStation(arena,station,entry.index)
+            or not genuineStation(arena,station,entry.index,tier)
+            or #entry.models~=entry.expected
         if not invalid then
             for native,frame in pairs(entry.frames) do
                 if native.Parent~=station
@@ -350,24 +370,44 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     end
     for station,index in pairs(wanted) do
         if not mounted[station] then
-            mount(arena,station,index,sources)
+            mount(arena,station,index,sources,tier)
         end
     end
+end
+
+-- Count only COMPLETE source-backed groups. Low = two real 7-mesh
+-- wings; Medium/High = four real 7-mesh caps/wings. The statistic for
+-- replaced primitives must reflect what is actually hidden on each
+-- tier, never infer four wedges from one Low two-wing group.
+local function complete(entry)
+    if #entry.models~=entry.expected then return false end
+    for i,model in ipairs(entry.models) do
+        if model.Parent~=bucket then return false end
+        for _,piece in ipairs(entry.pieces[i]) do
+            if not piece:IsDescendantOf(model) then return false end
+        end
+    end
+    return true
 end
 
 function Kit.count()
     local n=0
     for _,entry in pairs(mounted) do
-        if #entry.models==4 and entry.models[1].Parent==bucket
-            and entry.models[2].Parent==bucket
-            and entry.models[3].Parent==bucket
-            and entry.models[4].Parent==bucket then n+=1 end
+        if complete(entry) then n+=1 end
     end
     return n
 end
 
 function Kit.replacedNativeCount()
-    return Kit.count()*4
+    local n=0
+    for _,entry in pairs(mounted) do
+        if complete(entry) then
+            for native in pairs(entry.original) do
+                if native.Transparency==1 then n+=1 end
+            end
+        end
+    end
+    return n
 end
 
 return Kit
