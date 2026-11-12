@@ -7,8 +7,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local ID = 72143366927826
 local BOUNDS = Vector3.new(7.36,24.9,7.36)
-local CAP = {Low=0,Medium=2,High=4}
-local RANGE = {Low=0,Medium=290,High=410}
+-- One existing seven-MeshPart approved 24.9-stud machinery tower can
+-- replace its two nonphysical cubic silhouettes on healthy Android Low.
+-- The animated native cap is hidden locally, antenna remains visible.
+local CAP = {Low=1,Medium=2,High=4}
+local RANGE = {Low=205,Medium=290,High=410}
 local RETENTION = 24
 local bucket = Instance.new("Folder")
 bucket.Name = "ApprovedTowersMachineryLocal"
@@ -41,6 +44,19 @@ local function restore(body)
     end
     entry.model:Destroy()
 end
+
+-- The cooperative Android renderer can evict an optional local model
+-- between two scenery samples. Immediately restore its original body
+-- and animated cap instead of leaving both native structures invisible.
+bucket.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for body,entry in pairs(mounted) do
+        if entry.model==child then
+            restore(body)
+            break
+        end
+    end
+end)
 
 local function clear()
     local owners = {}
@@ -242,8 +258,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if arena ~= activeArena then clear();activeArena=arena end
     local cap=CAP[tier] or 0
     if touch then
+        -- Previous touch fallback zeroed Low EVEN if CAP.Low was raised.
+        -- A single seven-mesh approved source is budgeted on touch Low;
+        -- pressure one reduces it to zero before any native masking.
         cap=tier=="High" and math.min(cap,2)
-            or tier=="Medium" and math.min(cap,1) or 0
+            or tier=="Medium" and math.min(cap,1)
+            or tier=="Low" and math.min(cap,1) or 0
     end
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     if stress==1 then cap=math.floor(cap*.5) end
