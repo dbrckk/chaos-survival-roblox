@@ -44,6 +44,38 @@ for filename,asset,names,count in specs:
     assert "SouthHorizonMonument" in source and '"Towers"' in source,filename
     assert "source.DescendantRemoving:Connect" in source,filename
     print("PASS",filename,asset,count,"native fallback")
+# South Towers' three authentic models target 13 disjoint block/wedge
+# instances and can coexist ONLY within their own independent caps.
+# In Low the newly enabled finishing has a much smaller trigger range
+# than the previously validated bridge and lift twins. Pressure 1
+# restores all 13 native parts; the total source bound is 3 x 7.
+low_ranges={
+    "ApprovedSouthTowersSkytransferMeshKit.lua":290,
+    "ApprovedSouthTowersLiftTwinsMeshKit.lua":152,
+    "ApprovedSouthTowersFinishingMeshKit.lua":106,
+}
+assert len(low_ranges)==len(specs)==3
+for filename,distance in low_ranges.items():
+    source=(root/"src/client"/filename).read_text()
+    assert "local QUALITIES={Low=1,Medium=1,High=1}" in source,filename
+    assert "local DISTANCE={Low="+str(distance)+",Medium=420,High=580}" in source,filename
+    assert "local RETENTION=26" in source,filename
+    assert 'if stress==1 and tier~="High" then cap=0 end' in source,filename
+    assert 'if stress>=2 then cap=0 end' in source,filename
+    assert 'if n~=7 then return nil end' in source,filename
+    assert 'if #pieces~=7 then' in source,filename
+    assert 'source:GetAttribute("CosmeticOnly")~=true' in source,filename
+    assert 'source:GetAttribute("OwnerVerified")~=true' in source,filename
+    assert 'source:GetAttribute("Original3DAssetId")~=MODEL_ID' in source,filename
+    assert 'part.CanTouch=false' in source and 'part.CanQuery=false' in source,filename
+    assert "source.DescendantRemoving:Connect" in source,filename
+    print("PASS verified South Towers Low",filename,distance,
+          "studs, 7 MeshParts, native fallback at pressure 1")
+assert sum(count for _,_,_,count in specs)==13
+assert 7*len(specs)==21
+print("PASS South Towers 13/13 primitive targets disjoint; maximum 21",
+      "creator-approved cosmetic MeshParts across three owners on healthy Low")
+
 for p in ("src/server/init.server.lua","src/client/scenery-lod.client.lua",
           "src/shared/VisualBudgetRules.lua"):
     text=(root/p).read_text()
