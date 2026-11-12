@@ -8,10 +8,12 @@ on:
   pull_request:
     paths:
       - .github/workflows/ci.yml
+      - tests/engine/visual-budget-rules.spec.luau
   push:
     branches: [main]
     paths:
       - .github/workflows/ci.yml
+      - tests/engine/visual-budget-rules.spec.luau
 
 concurrency:
   group: build-validation-${{ github.ref }}

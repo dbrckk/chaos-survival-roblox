@@ -659,16 +659,16 @@ describe("visual budget rules", function()
         if createdHolder then holder:Destroy() end
     end)
 
-    it("fills all 36 source-verified ground bays only on healthy High devices", function()
+    it("honors actual 2/16/36 source-verified ground bay caps and mobile pressure fallbacks", function()
         local count = PremiumGroundMeshKit.residencyCount
         expect(count("High", 0)).toBe(36)
-        expect(count("Medium", 0)).toBe(12)
+        expect(count("Medium", 0)).toBe(16)
         expect(count("Low", 0)).toBe(2)
         -- The existing hysteresis-filtered FPS/Parts pressure must
         -- reclaim genuine 7-MeshPart tiles without new render loops.
         expect(count("High", 1)).toBe(24)
         expect(count("High", 2)).toBe(16)
-        expect(count("Medium", 1)).toBe(8)
+        expect(count("Medium", 1)).toBe(10)
         expect(count("Medium", 2)).toBe(4)
         expect(count("Low", 1)).toBe(2)
         expect(count("Low", 2)).toBe(1)
