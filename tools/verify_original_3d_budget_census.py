@@ -180,12 +180,19 @@ for guard in (
     'mounted[building] = nil',
     'restore(entry)',
     'entry.model:Destroy()',
-    'Low = {count = 0, distance = 140, retention = 16}',
+    'Low = {count = 1, distance = 128, retention = 16}',
     'Medium = {count = 4, distance = 205, retention = 20}',
     'High = {count = 10, distance = 275, retention = 28}',
-    'local TOUCH_CAP = {Low = 0, Medium = 3, High = 8}',
+    'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}',
     'if stress == 1 then cap = math.floor(cap * .5) end',
     'if stress >= 2 then cap = 0 end',
+    # One extra 1,764-triangle Low shell is only allowed behind an
+    # already-mounted genuine owner-approved district facade. Model
+    # eviction must restore its five native walls immediately.
+    'building:GetAttribute("LocalApprovedDistrictFacadeMounted") ~= true',
+    'entry.requiresFacade = tier == "Low"',
+    '"LocalApprovedDistrictFacadeMounted"):Connect(reconcile)',
+    'if baseConnection then baseConnection:Disconnect() end',
 ):
     assert guard in SIDE,guard
 for name in ("ServiceCore","ArmoredSupportL","ArmoredSupportR",
@@ -211,8 +218,8 @@ for forbidden in ('RenderStepped','Heartbeat:Connect','LoadAssetAsync',
     assert forbidden not in SIDE,forbidden
 print("PASS original 6-MeshPart sidewall asset 77387019170428 genuinely Approved")
 print("PASS five real native wall volumes replaced only after authentic source")
-print("PASS existing Android tier/pressure quotas, native rollback and",
-      "same camera sampler, no new render/network cost")
+print("PASS existing Android tier/pressure quotas with one cohesive",
+      "Low near-camera 6-MeshPart building and immediate native rollback")
 
 # The sixteen district buildings and four corner monuments already have
 # actual approved 3D source models. The playable Base is shrunk each round

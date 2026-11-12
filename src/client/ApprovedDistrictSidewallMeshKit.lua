@@ -8,14 +8,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local ID = 77387019170428
 local BUDGET = {
-    Low = {count = 0, distance = 140, retention = 16},
+    -- One near-camera complete building, only if its genuine facade
+    -- is already resident. Six additional approved MeshParts / 1,764
+    -- triangles at most on healthy Low, zero under GPU pressure.
+    Low = {count = 1, distance = 128, retention = 16},
     Medium = {count = 4, distance = 205, retention = 20},
     High = {count = 10, distance = 275, retention = 28},
 }
 -- Android shares the existing 440/680/900 Parts census with all original
 -- monuments. Medium touch 3 and High touch 8 models max (six MeshParts
--- each); no new real sidewall mesh on Low or under severe GPU pressure.
-local TOUCH_CAP = {Low = 0, Medium = 3, High = 8}
+-- each); Low spends six pieces ONLY behind a mounted approved facade.
+local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}
 local SOURCE_FOLDER = "ApprovedDistrictSidewallShellTemplates"
 local REQUIRED = {
     {name = "ServiceCore", size = Vector3.new(6.8, 7.3, 6.8),
@@ -83,7 +86,13 @@ local function approved()
     return source, folder
 end
 
-local function eligible(building, district)
+local function eligible(building, district, requiresFacade)
+    -- A Low phone can afford only one full 3D envelope. Do not spend
+    -- its six extra mesh slots on an unpaired, still-primitive facade.
+    if requiresFacade == true
+        and building:GetAttribute("LocalApprovedDistrictFacadeMounted") ~= true then
+        return nil
+    end
     if not building:IsA("Model") or building.Parent ~= district
         or building:GetAttribute("ArenaDistrictArchitecture") ~= true
         or building:GetAttribute("SourceIsOriginal") ~= true
@@ -151,6 +160,10 @@ local function clear()
     local buildings = {}
     for building in pairs(mounted) do buildings[#buildings+1] = building end
     for _, building in ipairs(buildings) do release(building) end
+    -- An unloaded arena must not retain a listener to its former Base.
+    if baseConnection then baseConnection:Disconnect() end
+    baseConnection = nil
+    watchedBase = nil
 end
 
 local function valid(entry, arena, district, base)
@@ -160,7 +173,8 @@ local function valid(entry, arena, district, base)
         or entry.source:GetAttribute("Original3DAssetId") ~= ID
         or #entry.pieces ~= 6
         or not authenticBase(base, arena) then return false end
-    local door, origin, natives = eligible(entry.building, district)
+    local door, origin, natives = eligible(
+        entry.building, district, entry.requiresFacade)
     if door ~= entry.door or not origin or not natives
         or (door.CFrame.Position - entry.doorFrame.Position).Magnitude > .10
         or door.CFrame.LookVector:Dot(entry.doorFrame.LookVector) < .999
@@ -177,7 +191,7 @@ local function valid(entry, arena, district, base)
 end
 
 local function mount(arena, district, base, building, door,
-        origin, natives, source, folder)
+        origin, natives, source, folder, requiresFacade)
     local clone = source:Clone()
     local frame, size = clone:GetBoundingBox()
     -- Roblox may swap horizontal glTF axes. Keep uniform original source
@@ -212,6 +226,7 @@ local function mount(arena, district, base, building, door,
         arena = arena, building = building, model = clone,
         source = source, folder = folder, pieces = pieces,
         door = door, doorFrame = door.CFrame,
+        requiresFacade = requiresFacade,
         originals = {}, connections = {},
     }
     for _, part in ipairs(natives) do
@@ -230,6 +245,11 @@ local function mount(arena, district, base, building, door,
             if part.Parent == building then part.Transparency = 1 end
         end
     end
+    -- If the one real Low facade is evicted by streaming, tier or GPU
+    -- pressure, reveal all five original native walls immediately.
+    entry.connections[#entry.connections + 1] =
+        building:GetAttributeChangedSignal(
+            "LocalApprovedDistrictFacadeMounted"):Connect(reconcile)
     for _, owner in ipairs({clone, source, building, door, base}) do
         entry.connections[#entry.connections + 1] =
             owner.AncestryChanged:Connect(reconcile)
@@ -290,7 +310,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
     if facing then horizontal = horizontal.Unit end
     local candidates = {}
     for _, building in ipairs(district:GetChildren()) do
-        local door, origin, natives = eligible(building, district)
+        local door, origin, natives = eligible(
+            building, district, tier == "Low")
         if door and natives then
             local offset = door.Position-cameraPoint
             local distance = offset.Magnitude
@@ -321,6 +342,9 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
     end
     local obsolete={}
     for building,entry in pairs(mounted) do
+        -- An existing Medium model promoted/demoted to Low must obey
+        -- the same real-facade dependency, even without remounting.
+        entry.requiresFacade = tier == "Low"
         if not wanted[building]
             or entry.source ~= source
             or not valid(entry,arena,district,base) then
@@ -341,7 +365,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
                 end
             else
                 mount(arena,district,base,chosen.building,chosen.door,
-                    chosen.origin,chosen.natives,source,folder)
+                    chosen.origin,chosen.natives,source,folder,
+                    tier == "Low")
             end
         end
     end
