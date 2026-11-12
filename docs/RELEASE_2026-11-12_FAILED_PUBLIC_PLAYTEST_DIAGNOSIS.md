@@ -23,14 +23,14 @@ Ce correctif ne vaut pas publication. Après fusion, exécuter `Build Validation
 
 Les 86 suites de test moteur existantes ne sont ni supprimées ni remplacées par une vérification factice. Les FPS Android et la certification Studio ne sont pas attestés.
 
-## Relance autonome à usage unique, sans contournement
+## Relance contrôlée et nettoyage du workflow ponctuel
 
-L'utilisateur a demandé la mise à jour publique et a **déjà soumis** les deux confirmations de l'ancien workflow `Publish Existing Chaos Survival (Public Playtest Update)`, à l'exécution `43312357642` (cible et prise en compte du caractère non certifié validées avant le refus pour tests rouges).
+Le workflow ponctuel `one-shot-repair-and-public-playtest-20261112.yml` a réellement démarré lors du commit `8b7bdee` : [coordinator #43315373261](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43315373261). Il a déclenché la [Build Validation #43315387154](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43315387154), qui s'est arrêtée sur une **deuxième assertion périmée** : `assert len(models) == 102` à la ligne 650, alors que l'asset `district_sidewall_shell` est officiellement le **103e** modèle du registre. La coordination n'a donc **pas** lancé le test moteur ni publié l'expérience. Les garde-fous se sont comportés correctement.
 
-Le workflow dédié `.github/workflows/one-shot-repair-and-public-playtest-20261112.yml` se déclenche **une seule fois**, lors du premier push de son propre fichier sur `main`. Il vérifie l'empreinte du commit et n'accède **pas** aux secrets Roblox. Par appels API GitHub authentifiés, il lance séquentiellement les workflows existants :
+La deuxième assertion est corrigée dans le workflow existant. Le workflow *one-shot* **est retiré du dépôt** après cet essai pour éviter une publication involontaire lors d'une modification ultérieure du fichier. Les trois workflows protégés et manuels d'origine restent inchangés et doivent être déclenchés sur le nouveau SHA `main` :
 
-1. `Build Validation` — vérification complète du vrai dépôt et de la construction Rojo.
-2. `Roblox Open Cloud Engine Tests` — 7 suites réellement exécutées dans Roblox, **uniquement si 1 réussit**.
-3. `Publish Existing Chaos Survival (Public Playtest Update)` — uniquement après deux conclusions GitHub Actions `success` du **même SHA**, en transmettant les mêmes confirmations déjà explicitement fournies par l'utilisateur.
+1. `Build Validation` — vérifier `success` sur l'empreinte exacte.
+2. `Roblox Open Cloud Engine Tests` — vérifier les **sept suites de tests réelles**, pas des fixtures sources substituées.
+3. `Publish Existing Chaos Survival (Public Playtest Update)` — seulement si les deux validations sont vertes au même SHA, avec les confirmations explicites de publication publique.
 
-Chaque étape bloque sur un SHA changé, une erreur, une absence de run vérifiable, un délai dépassé ou une conclusion autre que `success`. Le workflow de publication existant revalide **lui-même** les conditions et la cible **avant** le POST Roblox. Le système ne déclenche **pas** la publication si les vraies validations sont rouges. Les garde-fous de l'expérience restent intégralement présents. Le statut final doit être lu dans le run GitHub Actions correspondant ; un lancement ne prouve jamais une publication.
+Le serveur publieur rejette toujours une nouvelle SHA non validée et un résultat moteur rouge ; les IDs propriétaire Universe `10771083668` et Place `95351659174730` restent inchangés. Le statut du jeu public demeure **non mis à jour** après les échecs documentés.
