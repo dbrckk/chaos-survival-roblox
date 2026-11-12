@@ -31,6 +31,22 @@ local mounted = {}
 local baseConnection = nil
 local watchedBase = nil
 
+-- The active arena floor shrinks during disasters. These four inert
+-- corner monuments do not travel with it; validate the immutable
+-- builder-origin footprint and still require the authoritative
+-- anchored, collidable Base to belong to this exact arena.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + 0.2 and base.Size.Z <= sz + 0.2
+end
+
 -- Only native sculptural silhouettes DUPLICATED by the approved imported
 -- profiles are suppressed. GroundPlinth and PlinthRim always remain, as do
 -- the observatory's tall lightning tip and cargo's signal fin to distinguish
@@ -170,8 +186,7 @@ end
 
 local function valid(entry, corners, base, variant)
     local slot, plinth = eligible(entry.native, corners, variant)
-    return base and base.Parent and base:IsA("BasePart")
-        and base.Size.X >= 318 and base.Size.Z >= 318
+    return authenticBase(base, activeArena)
         and slot == entry.slot and plinth == entry.plinth
         and (plinth.CFrame.Position - entry.plinthFrame.Position).Magnitude < .08
         and plinth.CFrame.LookVector:Dot(entry.plinthFrame.LookVector) > .999
@@ -256,9 +271,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
     local decor = arena:FindFirstChild("Decor")
     local corners = decor and decor:FindFirstChild("ArenaCornerLandmarks3D")
     local variant = arena:GetAttribute("VariantId")
-    if not base or not base:IsA("BasePart")
+    if not authenticBase(base, arena)
         or not corners or not corners:IsA("Folder")
-        or base.Size.X < 318 or base.Size.Z < 318
         or type(variant) ~= "string" then
         clearMounted()
         return
@@ -267,7 +281,9 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
         if baseConnection then baseConnection:Disconnect() end
         watchedBase = base
         baseConnection = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then clearMounted() end
+            -- Never fall back to rectangular skyline simply because
+            -- the shrinking playfield is narrower than its original Base.
+            if not authenticBase(base, activeArena) then clearMounted() end
         end)
     end
     local budget = BUDGET[tier] or BUDGET.Low
