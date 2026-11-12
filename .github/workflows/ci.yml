@@ -1023,7 +1023,7 @@ jobs:
                            'piece.CanTouch = false',
                            'piece.CanQuery = false',
                            'native.Transparency = 1',
-                           'entry.native.Transparency = entry.originalTransparency'):
+                           'entry.native.Transparency=entry.originalTransparency'):
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
           print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
