@@ -108,6 +108,64 @@ assert '.Heartbeat:Connect(' not in HARBOR
 assert 'AssetService' not in HARBOR
 print("PASS Harbor Low original seven-mesh cargo gantry, nine native block fallback and pressure 1 demotion")
 
+# Secondary SOUTH silhouettes have giant native lifts and ring mechanics,
+# but the authenticated originals were previously disabled on Low. Two
+# arena-exclusive 7-MeshPart models replace 4/6 exact native elements
+# only at 152 studs (not at the 290-stud long-distance skyline range).
+SOUTH_NEAR_MECHANICS={
+    "Towers": (
+        "ApprovedSouthTowersLiftTwinsMeshKit.lua",
+        "ApprovedSouthTowersLiftTwinsLocal",
+        114886409893890, "OriginalSouthTowersForgedLiftTwins3D", 4,
+        ("WestLift","EastLift","WestCrown","EastCrown"),
+    ),
+    "Orbital": (
+        "ApprovedSouthOrbitalFinishingMeshKit.lua",
+        "ApprovedSouthOrbitalFinishingLocal",
+        96266711661930, "OriginalSouthOrbitalForgedFinishing3D", 6,
+        ("Foundation","FloorInset","LeftRingSupport","RightRingSupport",
+         "SuspendedOrb","OrbClamp"),
+    ),
+}
+assert len(SOUTH_NEAR_MECHANICS)==2
+for variant,(filename,owner,asset,flag,replace_count,names) in (
+        SOUTH_NEAR_MECHANICS.items()):
+    kit=(CLIENT/filename).read_text(encoding="utf8")
+    assert f'local MODEL_ID={asset}' in kit,(variant,"approved ID")
+    assert 'local QUALITIES={Low=1,Medium=1,High=1}' in kit
+    assert 'local DISTANCE={Low=152,Medium=420,High=580}' in kit
+    assert 'local RETENTION=26' in kit
+    assert 'if stress==1 and tier~="High" then cap=0 end' in kit
+    assert 'if stress>=2 then cap=0 end' in kit
+    assert f'arena:GetAttribute("VariantId")~="{variant}"' in kit
+    assert f'owner:GetAttribute("SignatureVariant")~="{variant}"' in kit
+    assert f'source:GetAttribute("{flag}")~=true' in kit
+    assert 'source:GetAttribute("Original3DAssetId")~=MODEL_ID' in kit
+    assert 'source:GetAttribute("OwnerVerified")~=true' in kit
+    assert 'source:GetAttribute("CosmeticOnly")~=true' in kit
+    assert 'if not p:IsA("MeshPart") or p.CanCollide' in kit
+    assert 'if n~=7 then return nil end' in kit
+    assert 'if #pieces~=7 then' in kit
+    assert f'#currentNatives~={replace_count}' in kit
+    assert all('"'+name+'"' in kit for name in names),(variant,"native names")
+    assert 'part.CanCollide=false' in kit
+    assert 'part.CanTouch=false' in kit and 'part.CanQuery=false' in kit
+    assert 'model.Parent=bucket' in kit
+    assert kit.index('model.Parent=bucket')<kit.index('native.Transparency=1'),(
+        variant,"mount before primitive hide")
+    assert 'part.Transparency=alpha' in kit
+    assert 'source.DescendantRemoving:Connect' in kit
+    assert 'model.DescendantRemoving:Connect' in kit
+    assert 'if cap==0 or not cameraReady' in kit
+    assert f'bucket.Name="{owner}"' in kit
+    assert counts[owner]==1,(variant,"Android census registration")
+    assert '"'+owner+'"' in ledger
+    assert "RenderStepped" not in kit and "Heartbeat" not in kit
+    assert "AssetService" not in kit
+    print("PASS original South",variant,
+          "Low 152-stud near machinery: 7 MeshParts /",
+          replace_count,"native shapes, fallback pressure 1")
+
 # The four SOUTH skyline monuments have source-verified seven-piece
 # sculptures already approved on Medium/High. Promote exactly one per
 # active arena to Low only when camera-near and optional GPU pressure 0.
