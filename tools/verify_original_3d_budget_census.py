@@ -106,9 +106,62 @@ assert 'mounted[platform] = nil' in ROUTE
 assert 'length >= (quality == "Low" and 19.5 or 17)' in ROUTE
 assert 'length/width >= 1.35' in ROUTE
 assert 'item.platform:GetAttribute("ChaosSkybridge") ~= true' in ROUTE
-assert 'local actualScale=boundsOK and math.min(' in ROUTE
-assert 'if actualScale>=.56' in ROUTE
+# One axis-invariant source-fit contract for BOTH the pre-selection
+# AND the actual clone assembly. Roblox can import source X/Z swapped.
+assert 'local function fitUnderdeck(platform, sourceSize)' in ROUTE
+assert 'local sourceLong=math.max(sourceSize.X,sourceSize.Z)' in ROUTE
+assert 'local sourceShort=math.min(sourceSize.X,sourceSize.Z)' in ROUTE
+assert 'local scale=math.min(length*.88/sourceLong,' in ROUTE
+assert 'width*.88/sourceShort,1.06)' in ROUTE
+assert 'local sourceAlongZ=sourceSize.Z>sourceSize.X' in ROUTE
+assert 'local platformAlongZ=platform.Size.Z>platform.Size.X' in ROUTE
+assert 'local yaw=sourceAlongZ==platformAlongZ and 0 or math.pi*.5' in ROUTE
+assert 'local fit=fitUnderdeck(platform,sourceSize)' in ROUTE
+assert 'local underdeckFit=fitUnderdeck(item.platform,underdeckBounds)' in ROUTE
+assert 'if underdeckFit' in ROUTE
+assert 'local yaw=fit.yaw' in ROUTE
+assert 'or math.max(size.X,size.Z)>32' in ROUTE
+assert 'or math.min(size.X,size.Z)>18 or size.Y > 9' in ROUTE
+assert 'PremiumRouteMeshKit.underdeckFit = fitUnderdeck' in ROUTE
+assert 'sourceSize.X < 20' not in ROUTE
+assert 'underdeckBounds.X>=20' not in ROUTE
+# Numeric footprint proof across both approved 24x10 source orientations
+# and both REAL physical promenade / Sky Spine rotations.
+from math import pi
+for px,pz in ((22.85,12),(12,22.85)):
+    for sx,sz in ((24,10),(10,24)):
+        scale=min(max(px,pz)*.88/max(sx,sz),
+                  min(px,pz)*.88/min(sx,sz),1.06)
+        sourceAlongZ=sz>sx
+        deckAlongZ=pz>px
+        yaw=0 if sourceAlongZ==deckAlongZ else pi/2
+        afterLong=max(sx,sz)*scale
+        afterShort=min(sx,sz)*scale
+        assert scale>=.56
+        assert afterLong<=max(px,pz)*.88+1e-9
+        assert afterShort<=min(px,pz)*.88+1e-9
+        assert yaw in (0,pi/2)
+# Invalid source families or inadequate tiny landings remain unqualified.
+for px,pz,sx,sz in ((12,12,24,10),(22,12,32,10),(22,8,24,10)):
+    length,width=max(px,pz),min(px,pz)
+    sourceLong,sourceShort=max(sx,sz),min(sx,sz)
+    valid=20<=sourceLong<=26 and 8<=sourceShort<=13 and (
+        length>=17 and width>=9.5)
+    assert not valid,(px,pz,sx,sz)
 assert 'desired.underdeck, quality == "Low")' in ROUTE
+# A requested source is NOT the same as a successful import. If a
+# clone fails, do not claim a 3D undercarriage and do not tear down valid
+# top-cover meshes repeatedly on each 0.65-second LOD sample.
+assert 'underdeckRequested = underdeckTemplate ~= nil' in ROUTE
+assert 'underdeck = false,' in ROUTE
+assert 'entry.underdeck=addUnderdeckModel(' in ROUTE
+assert 'if entry.underdeck then' in ROUTE
+assert 'or (desired.underdeck ~= nil) ~= entry.underdeckRequested' in ROUTE
+# Match the complete old expression, not the intentional new
+# entry.underdeckRequested suffix that starts with the same characters.
+assert 'or (desired.underdeck ~= nil) ~= entry.underdeck\n' not in ROUTE
+assert 'clone:SetAttribute("OriginalUnderdeckArt", true)' in ROUTE
+
 assert 'model:SetAttribute("OriginalUnderdeckArt", true)' not in ROUTE
 assert 'clone:SetAttribute("OriginalUnderdeckArt", true)' in ROUTE
 assert 'PremiumRouteMeshKit.underdeckCount()' in LOD
