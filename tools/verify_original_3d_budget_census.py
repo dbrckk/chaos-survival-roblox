@@ -127,6 +127,93 @@ assert "AssetService" not in TOWERS_CORNER
 print("PASS one approved 7-MeshPart 24-stud Towers corner source on",
       "healthy touch Low, cap animation intact, source and GPU fallback")
 
+# New REAL 1,764-triangle creator-approved manufactured shell replaces exactly
+# 5 genuine noncolliding native Parts per eligible district, no door/glass
+# nor new physics and NO fake MeshId. This is an integration source check,
+# not a Studio render test or a new unit-test suite.
+SIDE=(CLIENT/"ApprovedDistrictSidewallMeshKit.lua").read_text(encoding="utf8")
+SIDE_SERVER=(ROOT/"src/server/PremiumDistrictSidewallAssets.lua").read_text(
+    encoding="utf8")
+SIDE_SOURCE=(ROOT/"tools/generate_original_district_sidewall_shell.py").read_text(
+    encoding="utf8")
+SIDE_LOD=(CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+SIDE_INIT=(ROOT/"src/server/init.server.lua").read_text(encoding="utf8")
+SIDE_REG=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())
+SIDE_ASSET=next(m for m in SIDE_REG["models"]
+                if m["name"]=="district_sidewall_shell")
+assert SIDE_ASSET["asset_id"]=="77387019170428"
+assert SIDE_ASSET["moderation"]=="Approved"
+assert SIDE_ASSET["workflow_run_id"]==43302925840
+assert SIDE_ASSET["source"]=="tools/generate_original_district_sidewall_shell.py"
+assert SIDE_ASSET["source_materials"]=="assets/source/chaos_route_kit.mtl"
+assert "local ID = 77387019170428" in SIDE
+assert "local ASSET_ID = 77387019170428" in SIDE_SERVER
+assert "OriginalDistrictSidewallShell3D" in SIDE_SERVER and (
+    "OriginalDistrictSidewallShell3D" in SIDE)
+assert 'ApprovedDistrictSidewallShellTemplates' in SIDE_SERVER and (
+    'ApprovedDistrictSidewallShellTemplates' in SIDE)
+assert 'OriginalMeshScenery.sanitize(raw)' in SIDE_SERVER
+assert 'GlobalApprovedImportGate.load' in SIDE_SERVER
+assert 'task.wait(22)' in SIDE_SERVER
+assert 'if meshCount ~= 6 then return false end' in SIDE_SERVER
+assert 'if pieces ~= 6 then return nil end' in SIDE
+assert 'if #pieces ~= 6 then clone:Destroy();return end' in SIDE
+assert 'if #pieces ~= 6 then clone:Destroy();return end' in SIDE
+for filename in ("ApprovedDistrictSidewallMeshKit.lua",
+                 "PremiumDistrictSidewallAssets.lua"):
+    assert filename in SIDE_LOD+SIDE_INIT
+for guard in (
+    'OriginalSizeX','OriginalSizeZ',
+    'base.Parent ~= arena',
+    'or not base.Anchored or not base.CanCollide',
+    'or base.Size.X > sx + .2 or base.Size.Z > sz + .2',
+    'door.CFrame * CFrame.new(.35, -4, 4.36)',
+    'part.CFrame = target * frame:ToObjectSpace(part.CFrame)',
+    'part.CanCollide = false','part.CanTouch = false',
+    'part.CanQuery = false','part.CastShadow = false',
+    'source.DescendantRemoving:Connect',
+    'clone.DescendantRemoving:Connect',
+    'source.AncestryChanged',
+    'source:GetAttribute("Original3DAssetId") ~= ID',
+    'if not valid(entry, arena, district, base)',
+    'entry.originals[part] = part.Transparency',
+    'mounted[building] = nil',
+    'restore(entry)',
+    'entry.model:Destroy()',
+    'Low = {count = 0, distance = 140, retention = 16}',
+    'Medium = {count = 4, distance = 205, retention = 20}',
+    'High = {count = 10, distance = 275, retention = 28}',
+    'local TOUCH_CAP = {Low = 0, Medium = 3, High = 8}',
+    'if stress == 1 then cap = math.floor(cap * .5) end',
+    'if stress >= 2 then cap = 0 end',
+):
+    assert guard in SIDE,guard
+for name in ("ServiceCore","ArmoredSupportL","ArmoredSupportR",
+             "SideCassette-1","SideCassette1"):
+    assert 'name = "'+name+'"' in SIDE,name
+    assert '"'+name+'"' in SIDE_SOURCE,name
+for no_hide in ("SideGlass","ServiceEntryDoor","ServiceEntryRecess",
+                "RecessedSignal","FoundationRim","BasaltFoundation"):
+    assert 'name = "'+no_hide+'"' not in SIDE,no_hide
+assert '"ApprovedDistrictSidewallsLocal"' in ledger
+assert counts["ApprovedDistrictSidewallsLocal"] == 1
+assert 'local ApprovedDistrictSidewallMeshKit = require(' in SIDE_LOD
+assert 'ApprovedDistrictSidewallMeshKit.sync(arena, cameraPoint,' in SIDE_LOD
+assert 'LocalOriginalDistrictSidewallMeshCount' in SIDE_LOD
+assert 'LocalOriginalDistrictSidewallPartsReplaced' in SIDE_LOD
+assert SIDE_LOD.index('PremiumDistrictFacadeMeshKit.sync(') < SIDE_LOD.index(
+    'ApprovedDistrictSidewallMeshKit.sync(')
+assert SIDE_LOD.index('ApprovedDistrictSidewallMeshKit.sync(') < SIDE_LOD.index(
+    'PremiumNearfieldPbrKit.reconcile(')
+assert 'require(script.PremiumDistrictSidewallAssets).start()' in SIDE_INIT
+for forbidden in ('RenderStepped','Heartbeat:Connect','LoadAssetAsync',
+                  'AssetService','Instance.new("RemoteEvent")'):
+    assert forbidden not in SIDE,forbidden
+print("PASS original 6-MeshPart sidewall asset 77387019170428 genuinely Approved")
+print("PASS five real native wall volumes replaced only after authentic source")
+print("PASS existing Android tier/pressure quotas, native rollback and",
+      "same camera sampler, no new render/network cost")
+
 # The sixteen district buildings and four corner monuments already have
 # actual approved 3D source models. The playable Base is shrunk each round
 # but the nonphysical skyline buildings retain their original positions.
