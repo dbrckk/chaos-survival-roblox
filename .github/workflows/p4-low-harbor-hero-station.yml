@@ -1,0 +1,31 @@
+name: P4 Harbor hero authentic original Low regression
+on:
+  pull_request:
+    paths:
+      - src/client/HarborHeroStationMeshKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - src/server/PremiumHarborHeroStationAssets.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_low_harbor_hero_station.py
+      - .github/workflows/p4-low-harbor-hero-station.yml
+  push:
+    branches: [main]
+    paths:
+      - src/client/HarborHeroStationMeshKit.lua
+      - src/client/scenery-lod.client.lua
+      - src/shared/VisualBudgetRules.lua
+      - src/server/PremiumHarborHeroStationAssets.lua
+      - assets/source/roblox-asset-registry.json
+      - tools/verify_low_harbor_hero_station.py
+      - .github/workflows/p4-low-harbor-hero-station.yml
+permissions:
+  contents: read
+jobs:
+  source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate 7 approved meshes, native fallback, animation and mobile cap
+        run: python3 tools/verify_low_harbor_hero_station.py
