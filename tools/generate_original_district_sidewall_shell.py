@@ -44,6 +44,11 @@ def authored_shell(m: Mesh) -> None:
 
         # Existing supports are real VOLUMES, not empty braces. Clone
         # their exact occupied envelope, with chamfered section and rings.
+        # A real floor-contact shoe gives the imported package a true
+        # authored minimum Y=0. This makes the existing center-based
+        # original-template mounting align at exactly the intended origin.
+        m.faceted("ForgedFloorContactShoe" + letter, "ALLOY",
+                  side * 4.4, .16, 1.8, 1.54, .32, 2.45, .10)
         m.faceted("ClosedForgedSupport" + letter, "ARMOR",
                   side * 4.4, 7.1, 1.8, 1.4, 12.6, 2.3, .38)
         for y in (1.2, 4.8, 10.9, 13.0):
