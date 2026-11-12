@@ -180,6 +180,69 @@ assert 'ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 print("PASS genuine 16 facade + 4 corner 3D owners survive shrinking Base",
       "while preserving authenticated geometry, existing caps and fallback")
 
+# Native wall volumes have NO corresponding original-side source mesh and
+# must never be erased to fake progress. The approved original front/roof
+# removes only overlapping optional primitive hardware. On a real source
+# eviction we must restore the fallback immediately, while preventing 6
+# hidden client-local Parts per mounted façade from consuming memory.
+DISTRICT_DETAIL=(CLIENT/"DistrictFacadeDetailKit.lua").read_text(encoding="utf8")
+SIDE_PBR=(ROOT/"src/shared/PbrDistrictRules.lua").read_text(encoding="utf8")
+assert 'local RESIDENT_MARKER = "LocalApprovedDistrictFacadeMounted"' in DISTRICT_FACADES
+assert 'local function markResident(entry, present)' in DISTRICT_FACADES
+assert 'markResident(entry, true)' in DISTRICT_FACADES
+assert DISTRICT_FACADES.index('suppressNative(entry)') < (
+    DISTRICT_FACADES.index('markResident(entry, true)'))
+assert DISTRICT_FACADES.count('markResident(entry, false)') >= 2
+assert 'model:GetAttribute("LocalApprovedDistrictFacadeMounted") == true' in DISTRICT_DETAIL
+assert 'clearOwned(model, slot)' in DISTRICT_DETAIL
+assert DISTRICT_DETAIL.index(
+    'if model:GetAttribute("LocalApprovedDistrictFacadeMounted") == true'
+) < DISTRICT_DETAIL.index(
+    '-- Android keeps the near-field')
+for group in (
+    '"SideCassette" .. tostring(direction)',
+    '"SideGlass" .. tostring(direction)',
+    '"ArmoredSupport" .. suffix',
+    '"ServiceCore"',
+    '"ServiceEntryDoor"',
+    '"ServiceEntryRecess"',
+):
+    assert group in (ROOT/"src/server/ArenaDistrictArchitecture.lua").read_text(),group
+for essential in ("ArmoredSupportL","ArmoredSupportR",
+                  "SideCassette-1","SideCassette1",
+                  "ServiceCore","SideGlass-1","SideGlass1",
+                  "ServiceEntryDoor","ServiceEntryRecess","RecessedSignal"):
+    assert f'{essential} = true' not in DISTRICT_FACADES,essential
+assert 'owner:GetAttribute("LocalApprovedDistrictFacadeMounted") == true' in SIDE_PBR
+assert SIDE_PBR.count('name == "servicecore"') >= 2
+for surface in ('sidecassette-1','sidecassette1',
+                'armoredsupportl','armoredsupportr'):
+    assert SIDE_PBR.count(f'name == "{surface}"') >= 2,surface
+assert 'structuralScore += 1800' in SIDE_PBR
+assert 'if material == Enum.Material.CorrodedMetal then return "oxidized" end' in SIDE_PBR
+for name, code in (
+    ("district",DISTRICT_FACADES),
+    ("corner",CORNER_MONUMENTS),
+):
+    assert 'if entry.disposed then return end' in code,name
+    assert 'entry.disposed = true' in code,name
+    assert 'entry.source.Parent ~= entry.sourceFolder' in code,name
+    assert 'entry.sourceFolder.Parent ~= ReplicatedStorage' in code,name
+    assert 'not part:IsDescendantOf(entry.model)' in code,name
+    assert 'clone.AncestryChanged:Connect(function()' in code,name
+    assert 'clone.DescendantRemoving:Connect(function(part)' in code,name
+    assert 'source.AncestryChanged:Connect(function()' in code,name
+    assert 'source.DescendantRemoving:Connect(function(part)' in code,name
+    assert 'if part:IsA("MeshPart") then revokeIfMounted() end' in code,name
+    assert 'for _, connection in ipairs(entry.connections' in code,name
+    assert '.RenderStepped:Connect(' not in code,name
+    assert '.Heartbeat:Connect(' not in code,name
+    assert 'LoadAssetAsync' not in code,name
+print("PASS authenticated facade 3D retains true side walls with bounded 2K finish",
+      "and removes redundant primitive detail Parts on mounted originals")
+print("PASS immediate native restoration on missing district or corner MeshParts",
+      "source ancestry and visual-budget eviction, without new render loops")
+
 # The other three massive 3D skyline owners used the live Base.Size
 # to authenticate outdoor monuments, causing all real MeshParts to fall
 # back to primitive Parts/WedgeParts on normal arena shrink. Their real
