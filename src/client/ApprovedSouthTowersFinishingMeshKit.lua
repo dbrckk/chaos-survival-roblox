@@ -6,8 +6,13 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=79666240429608
-local QUALITIES={Low=0,Medium=1,High=1}
-local DISTANCE={Low=0,Medium=420,High=580}
+-- Low: mount this final seven-piece *original* south Towers finishing
+-- only near the player at pressure zero. The pre-existing 7+7 source
+-- SkyTransfer / LiftTwins kits are disjoint but can be resident too;
+-- keeping finishing at 106 studs caps the new incremental visual load
+-- to one complete additional seven-MeshPart model at very close range.
+local QUALITIES={Low=1,Medium=1,High=1}
+local DISTANCE={Low=106,Medium=420,High=580}
 local RETENTION=26
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedSouthTowersFinishingLocal"
