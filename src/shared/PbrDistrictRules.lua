@@ -409,6 +409,25 @@ function PbrDistrictRules.materialKey(partName, material, owner)
         if material == Enum.Material.CorrodedMetal then return "oxidized" end
         if material == Enum.Material.CeramicTiles then return "ceramic" end
     end
+    -- When the real original district 3D is mounted, keep the genuine
+    -- side-wall / core primitives: no approved source mesh covers their
+    -- rear volume. Material variants add real audited 2K normal/roughness
+    -- relief to these remaining native architectural faces instead of
+    -- hiding them and leaving see-through walls.
+    if owner and owner:IsA("Model")
+        and owner:GetAttribute("ArenaDistrictArchitecture") == true
+        and owner:GetAttribute("SourceIsOriginal") == true
+        and owner:GetAttribute("LocalApprovedDistrictFacadeMounted") == true
+        and (name == "servicecore"
+            or name == "sidecassette-1" or name == "sidecassette1"
+            or name == "armoredsupportl" or name == "armoredsupportr") then
+        if material == Enum.Material.CorrodedMetal then return "oxidized" end
+        if material == Enum.Material.CeramicTiles then return "ceramic" end
+        if name == "armoredsupportl" or name == "armoredsupportr" then
+            return "armor"
+        end
+        return "titanium"
+    end
     -- Respect the native front-door material before generic naming heuristics.
     -- Otherwise the "service" substring turns an Orbital ceramic airlock
     -- into oxidized steel, or plated tower access into rust.
@@ -509,6 +528,21 @@ function PbrDistrictRules.priority(part)
         or name:find("tower", 1, true)
         or name:find("dish", 1, true)
         or name:find("manifold", 1, true)
+    -- Preserve the original side walls and structural support volumes
+    -- (the approved 3D facade meshes only author the front/roof).
+    -- When those sources are resident, move the SAME bounded PBR budget
+    -- onto the remaining large, physically harmless native side faces.
+    -- The camera/visibility filter still controls actual residency.
+    local owner = part.Parent
+    if owner and owner:IsA("Model")
+        and owner:GetAttribute("ArenaDistrictArchitecture") == true
+        and owner:GetAttribute("SourceIsOriginal") == true
+        and owner:GetAttribute("LocalApprovedDistrictFacadeMounted") == true
+        and (name == "sidecassette-1" or name == "sidecassette1"
+            or name == "armoredsupportl" or name == "armoredsupportr"
+            or name == "servicecore") then
+        structuralScore += 1800
+    end
     -- Prefer a readable PBR entrance on the nearby actual building
     -- rather than giving the 2K budget to a taller but remote roof shell.
     -- The existing owner/global quotas remain authoritative.
