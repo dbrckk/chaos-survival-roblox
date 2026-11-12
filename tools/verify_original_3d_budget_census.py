@@ -114,9 +114,11 @@ assert '"ApprovedClassicBroadcastFinLocal"' in ledger
 assert counts["ApprovedClassicBroadcastFinLocal"] == 1
 assert '"ClassicBroadcastFin" .. i' in CLASSIC_FIN_MAP
 assert '"ClassicBroadcastGlow" .. i' in CLASSIC_FIN_MAP
-assert 'ApprovedClassicBroadcastFinMeshKit.sync(arena,cameraPoint,' in LOD
-assert 'LocalClassicFinMeshCount' in LOD
-assert 'LocalClassicFinPrimitivesReplaced' in LOD
+CLASSIC_FIN_LOD=(CLIENT/"scenery-lod.client.lua").read_text(
+    encoding="utf8")
+assert 'ApprovedClassicBroadcastFinMeshKit.sync(arena,cameraPoint,' in CLASSIC_FIN_LOD
+assert 'LocalClassicFinMeshCount' in CLASSIC_FIN_LOD
+assert 'LocalClassicFinPrimitivesReplaced' in CLASSIC_FIN_LOD
 assert 'RenderStepped' not in CLASSIC_FIN
 assert 'Heartbeat:Connect' not in CLASSIC_FIN
 assert 'AssetService' not in CLASSIC_FIN
