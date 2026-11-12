@@ -318,7 +318,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
         local natives=genuineStation(arena,station,index,tier)
         if natives then
             local retained=mounted[station]~=nil
-            local distance=(natives[3].Position-cameraPoint).Magnitude
+            -- On Low the first validated native IS the left service wing;
+            -- Medium/High keep their historic third native (same wing).
+            local wingNative=tier=="Low" and natives[1] or natives[3]
+            local distance=(wingNative.Position-cameraPoint).Magnitude
             if distance<=(RANGE[tier] or 0)
                 +(retained and RETENTION or 0) then
                 ranked[#ranked+1]={
