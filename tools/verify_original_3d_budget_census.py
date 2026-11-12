@@ -69,6 +69,78 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# A truly visible exterior industrial foundation in Android Low must be
+# an approved SEVEN-MeshPart original, not a partial/repeated Part stack.
+# The parent of Low clones is a *workspace-local* Folder in the SAME 440
+# part cooperative census. The legacy Medium/High parent stays intact.
+# Its 3K-triangle mesh may mask all ELEVEN native blocks only when both
+# footprint axes match and streaming has delivered all native elements.
+FOUNDATION=(CLIENT/"ApprovedFoundationChassisMeshKit.lua").read_text(
+    encoding="utf8")
+FOUNDATION_SERVER=(ROOT/"src/server/OriginalMeshScenery.lua").read_text(
+    encoding="utf8")
+FOUNDATION_LOD=(CLIENT/"scenery-lod.client.lua").read_text(
+    encoding="utf8")
+assert 'local CHASSIS_ID = 84582262145054' in FOUNDATION
+assert 'Approved' in (ROOT/"assets/source/roblox-asset-registry.json").read_text()
+assert 'Low = {count = 1, distance = 128}' in FOUNDATION
+assert 'Medium = {count = 1, distance = 215}' in FOUNDATION
+assert 'High = {count = 2, distance = 300}' in FOUNDATION
+assert 'if tier == "Low" and stress >= 1 then cap = 0 end' in FOUNDATION
+assert 'if source and cap > 0 and (tier ~= "Low" or parts == 7)' in FOUNDATION
+assert 'local function fitFoundation(shoulder, sourceSize)' in FOUNDATION
+assert 'sx * scale >= shoulder.Size.X * .80' in FOUNDATION
+assert 'sz * scale >= shoulder.Size.Z * .78' in FOUNDATION
+assert 'select(3, fitFoundation(shoulder, sourceSize))' in FOUNDATION
+assert 'if scale < .48 or (tier == "Low" and not covers)' in FOUNDATION
+assert 'or (tier == "Low" and count ~= 7)' in FOUNDATION
+assert 'owner:GetAttribute("OriginalFoundationPieceCount") ~= 11' in FOUNDATION
+assert 'or foundationCount ~= 11' in FOUNDATION
+assert 'model:SetAttribute("OriginalFoundationBuilt", true)' in FOUNDATION_SERVER
+assert 'model:SetAttribute("OriginalFoundationPieceCount", #specs + details)' in FOUNDATION_SERVER
+for piece in (
+    "FoundationShoulder", "FoundationInset", "FoundationBallast",
+    "FoundationGroundPad", "OriginalChassisFrontIBeam",
+    "OriginalChassisRearIBeam", "OriginalTaperedLoadButtress",
+    "OriginalVerticalServiceRail",
+):
+    assert piece in FOUNDATION_SERVER, piece
+assert 'source:GetAttribute("Original3DAssetId") ~= CHASSIS_ID' in FOUNDATION
+assert 'source:GetAttribute("OwnerVerified") ~= true' in FOUNDATION
+assert 'source:GetAttribute("CosmeticOnly") ~= true' in FOUNDATION
+assert 'source:GetAttribute("PremiumUnderdeck3D") ~= true' in FOUNDATION
+assert 'if not part:IsA("MeshPart") then return nil end' in FOUNDATION
+assert 'part.CanCollide = false' in FOUNDATION
+assert 'part.CanTouch = false' in FOUNDATION
+assert 'part.CanQuery = false' in FOUNDATION
+assert 'part.CastShadow = false' in FOUNDATION
+assert 'local parent = tier == "Low" and bucket or owner' in FOUNDATION
+assert 'clone.Parent = parent' in FOUNDATION
+assert FOUNDATION.index('clone.Parent = parent') < FOUNDATION.index(
+    'for part in pairs(native) do part.Transparency = 1 end')
+assert 'bucket.Name = "ApprovedFoundationChassisLocal"' in FOUNDATION
+assert '"ApprovedFoundationChassisLocal"' in ledger
+assert counts["ApprovedFoundationChassisLocal"] == 1
+assert 'bucket.Parent = workspace' in FOUNDATION
+assert 'bucket.ChildRemoved:Connect(function(child)' in FOUNDATION
+assert 'if entry.mesh == child then' in FOUNDATION
+assert 'source.DescendantRemoving:Connect' in FOUNDATION
+assert 'clone.DescendantRemoving:Connect' in FOUNDATION
+assert 'shoulder:GetAttributeChangedSignal("SceneryLodHidden")' in FOUNDATION
+assert 'shoulder:GetPropertyChangedSignal("LocalTransparencyModifier")' in FOUNDATION
+assert 'if entry.mesh then entry.mesh:Destroy() end' in FOUNDATION
+assert 'mounted[owner] = nil' in FOUNDATION
+assert 'or entry.mesh.Parent ~= entry.parent or entry.source ~= source' in FOUNDATION
+assert 'entry and entry.mesh.Parent == entry.parent' in FOUNDATION
+assert 'ApprovedFoundationChassisMeshKit.sync(arena, imported, cameraPoint,' in FOUNDATION_LOD
+assert 'player:GetAttribute("OptionalVfxPressure"))' in FOUNDATION_LOD.split(
+    'ApprovedFoundationChassisMeshKit.sync(',1)[1].split(')',1)[0]+')'
+assert 'LocalApprovedFoundationChassis3DCount' in FOUNDATION_LOD
+assert 'RenderStepped' not in FOUNDATION and 'Heartbeat' not in FOUNDATION
+assert 'AssetService' not in FOUNDATION
+print("PASS 11 source-native pedestal shapes -> one genuine 7-MeshPart",
+      "Low exterior chassis, 128 studs, GPU rollback and live census")
+
 # Perimeter armor has four big native WedgeParts on every station.
 # Android Low may show only TWO genuine wing originals, never all four
 # (28 meshes), and MUST keep both native top-caps present. Medium/High
