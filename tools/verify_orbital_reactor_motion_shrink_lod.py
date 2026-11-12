@@ -34,7 +34,11 @@ for term in (
     'natives={[strut]=strut.Transparency}',
     'strut.Transparency=1',
     'native.Transparency=alpha',
-    'Low=0,Medium=3,High=6',
+    'Low=1,Medium=3,High=6',
+    'Low=210,Medium=340,High=460',
+    'or tier=="Low" and math.min(cap,1) or 0',
+    'bucket.ChildRemoved:Connect(function(child)',
+    'if entry.model==child then',
     'if pressureLevel>=2 then cap=0 end',
     '104654294187035','138666009076890',
 ):
