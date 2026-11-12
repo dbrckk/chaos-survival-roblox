@@ -36,6 +36,9 @@ local routeTargetConnections = {}
 local routeCueStates = {}
 local footprintDisconnects = {}
 local originalColumnDisconnects = {}
+-- Exact server-side native Parts covered by our locally mounted Low
+-- source column. A streamed-out support must tear down the client mesh.
+local mountedSupportNatives = {}
 local mountedLongCradles = {}
 local outpostMotions = {}
 local currentOutpostPosture = "normal"
@@ -99,6 +102,7 @@ local function clear()
         connection:Disconnect()
     end
     table.clear(originalColumnDisconnects)
+    table.clear(mountedSupportNatives)
     for platform in pairs(mountedLongCradles) do
         if platform.Parent then
             platform:SetAttribute("LocalOriginalLongCradleMounted", nil)
@@ -834,6 +838,7 @@ local function rebuild()
                     mountedCloseSupports += #columns.covered
                     for _, support in ipairs(columns.covered) do
                         actualSupportParts[#actualSupportParts+1] = support
+                        mountedSupportNatives[support] = true
                     end
                     for _, connection in ipairs(columns.disconnects) do
                         originalColumnDisconnects[#originalColumnDisconnects+1] =
@@ -1116,6 +1121,15 @@ local function watchDecor(generated)
                 player:GetAttribute("VfxQualityTier"),
                 UserInputService.TouchEnabled).Name
             if quality == "Low" then
+                -- The one original column may outlive its streamed-out
+                -- native source Part: rebuild ONLY if it was truly covered.
+                -- Faraway unrelated removals do not cause full-map churn.
+                if part.Parent ~= decor then
+                    if mountedSupportNatives[part] == true then
+                        queueSupportRebuild()
+                    end
+                    return
+                end
                 -- No churn while pressure has already demoted optional 3D,
                 -- or when this owner has spent its one Low support slot.
                 if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) > 0
