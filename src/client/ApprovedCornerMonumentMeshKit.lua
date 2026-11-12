@@ -103,6 +103,13 @@ local function suppressNative(entry)
 end
 
 local function dispose(entry)
+    if entry.disposed then return end
+    entry.disposed = true
+    -- Source or imported-child removal may call this synchronously.
+    -- Abandon the entry before destroying its own descendants.
+    if mounted[entry.native] == entry then
+        mounted[entry.native] = nil
+    end
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -185,6 +192,17 @@ local function eligible(native, corners, variant)
 end
 
 local function valid(entry, corners, base, variant)
+    if entry.disposed or entry.model.Parent ~= bucket
+        or entry.source.Parent ~= entry.sourceFolder
+        or entry.sourceFolder.Parent ~= ReplicatedStorage
+        or entry.sourceFolder.Name ~= "ApprovedDistrictFacadeTemplates"
+        or entry.source:GetAttribute("Original3DAssetId") ~= PROFILE[entry.slot].id
+        or #entry.pieces < 1 or #entry.pieces > 24 then
+        return false
+    end
+    for _, part in ipairs(entry.pieces) do
+        if not part:IsDescendantOf(entry.model) then return false end
+    end
     local slot, plinth = eligible(entry.native, corners, variant)
     return authenticBase(base, activeArena)
         and slot == entry.slot and plinth == entry.plinth
@@ -230,9 +248,11 @@ local function mount(native, corners, base, variant, slot, plinth, source)
     local entry = {
         native = native, slot = slot, plinth = plinth,
         plinthFrame = plinth.CFrame, plinthSize = plinth.Size,
-        model = clone, pieces = pieces, replaced = {}, connections = {},
+        model = clone, pieces = pieces, source = source,
+        sourceFolder = source.Parent, replaced = {}, connections = {},
     }
     local function reconcile()
+        if entry.disposed then return end
         if not valid(entry, corners, base, variant) then
             restoreNative(entry)
             for _, part in ipairs(pieces) do
@@ -254,6 +274,31 @@ local function mount(native, corners, base, variant, slot, plinth, source)
         native.AncestryChanged:Connect(reconcile)
     entry.connections[#entry.connections + 1] =
         plinth.AncestryChanged:Connect(reconcile)
+    -- Revive the original 3D skyline immediately if the optional
+    -- approved clone or its creator-owned source loses any MeshPart.
+    -- No polling, render loop, new source asset or external request.
+    local function revokeIfMounted()
+        if mounted[native] == entry then dispose(entry) end
+    end
+    entry.connections[#entry.connections + 1] =
+        clone.AncestryChanged:Connect(function()
+            if clone.Parent ~= bucket then revokeIfMounted() end
+        end)
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantRemoving:Connect(function(part)
+            if part:IsA("MeshPart") then revokeIfMounted() end
+        end)
+    entry.connections[#entry.connections + 1] =
+        source.AncestryChanged:Connect(function()
+            if source.Parent ~= entry.sourceFolder
+                or entry.sourceFolder.Parent ~= ReplicatedStorage then
+                revokeIfMounted()
+            end
+        end)
+    entry.connections[#entry.connections + 1] =
+        source.DescendantRemoving:Connect(function(part)
+            if part:IsA("MeshPart") then revokeIfMounted() end
+        end)
     reconcile()
     return entry
 end
