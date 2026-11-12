@@ -8,7 +8,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local ASSET_ID = 101457508594609
 local BUDGET = {
-    Low = {models = 0, distance = 0, retention = 0},
+    -- One original below-deck armored caisson directly under the camera.
+    -- Never add a false walkable surface or an extra collision platform.
+    Low = {models = 1, distance = 108, retention = 14},
     Medium = {models = 5, distance = 150, retention = 24},
     High = {models = 12, distance = 215, retention = 34},
 }
@@ -246,6 +248,10 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
         maximum = stress == 0 and 12 or (stress == 1 and 6 or 2)
     elseif quality == "Medium" then
         maximum = stress == 0 and 5 or (stress == 1 and 2 or 0)
+    elseif quality == "Low" and stress > 0 then
+        -- Restore the native physical deck as soon as GPU pressure rises.
+        -- The cosmetic underside has no authority over any gameplay Part.
+        maximum = 0
     end
     if not arena or not cameraReady or maximum <= 0
         or typeof(cameraPoint) ~= "Vector3"
@@ -271,7 +277,13 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
         end)
     end
     local source, expected = original()
-    if not source then clearModels(); return end
+    -- The approved source has seven material families. Low only accepts
+    -- exactly seven real MeshParts, never a larger importer split or
+    -- a cheap generic Part pretending to be the forged sidewall.
+    if not source or (quality == "Low" and expected ~= 7) then
+        clearModels()
+        return
+    end
     local nearby = {}
     for _, deck in ipairs(platforms:GetChildren()) do
         if genuineLanding(deck, arena, base) then
