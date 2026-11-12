@@ -43,3 +43,13 @@ Six MeshParts par modèle : sur Android High, **48 MeshParts au maximum** suppl�
 L'intégration est couverte par l'extension du vérificateur existant `tools/verify_original_3d_budget_census.py` et ses GitHub Actions, sans créer de nouveaux tests unitaires. Les invariants contrôlés portent sur l'ID officiellement modéré, la source réelle, la sélection, la restitution native, les budgets et les positions.
 
 **Ne pas prétendre** que la fusion `main` publie automatiquement dans le jeu : un Roblox Studio/Android visual QA et un déploiement séparé sont encore nécessaires avant annonce de la version publique. L'import externe officiel prouve l'approbation de l'asset, pas sa résidence effective dans la Place publique.
+
+## Finition supplémentaire : véritables normal/roughness/metalness 2K
+
+Le même maillage authentifié `ApprovedOriginalDistrictSidewall3D` (6 MeshParts) rejoint désormais le système partagé `PremiumNearfieldPbrKit`, **après** la sélection LOD du nouveau propriétaire `ApprovedDistrictSidewallMeshKit` et des autres sculptures de l'arène.
+
+Seules les vraies surfaces structurelles statiques et visibles des groupes `ARMOR`, `BRUSHED`, `ALLOY` et `CERAMIC` peuvent recevoir une instance `SurfaceAppearance` provenant des **quatre modèles de matériaux PBR 2K déjà approuvés** (`BrushedTitanium`, `OxidizedSteel`, `DiamondArmor`, `ReactorCeramic` ; 16 Image IDs au total). `GRIP` et `CARBON`, ainsi que `SIGNAL` ou `GLASS` si rencontrés, ne sont jamais recolorés.
+
+Les cinq variantes Classic/Towers/Crossroads/Orbital/Harbor partagent un plafond global inchangé de **2 modèles Medium/4 High sur Android**, 3/6 sur PC, réduit en cas de pression graphique, zéro en Low. **Ce n'est pas un quota additionnel** : une sculpture d'angle ou un monument prioritaire peut occuper une place à la place d'un mur latéral. Chaque overlay est réversible, et les matériaux d'import d'origine sont restaurés lorsque le modèle devient invisible ou non résident.
+
+Contrat de source ajouté dans `tools/verify_premium_nearfield_pbr.py` et le workflow existant `original-nearfield-pbr-source.yml`. Mesures FPS/qualité visuelle Roblox Engine toujours requises.
