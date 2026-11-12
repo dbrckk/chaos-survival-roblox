@@ -11,7 +11,9 @@ local PremiumRoutePbrKit = if script and script.Parent
 local Kit = {}
 local ID = 134157110756659
 local BUDGET = {
-    Low = {count = 0, distance = 0, retention = 0},
+    -- One seven-MeshPart original replaces NINE server-authored block
+    -- ornaments at the nearest actual cargo arch, only at pressure 0.
+    Low = {count = 1, distance = 118, retention = 14},
     Medium = {count = 2, distance = 205, retention = 25},
     High = {count = 6, distance = 280, retention = 34},
 }
@@ -294,6 +296,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,
         maximum=stress==0 and 6 or (stress==1 and 3 or 1)
     elseif tier=="Medium" then
         maximum=stress==0 and 2 or (stress==1 and 1 or 0)
+    elseif tier=="Low" and stress>0 then
+        -- The first optional GPU pressure restores ALL native arches.
+        -- Neither the actual walkway nor hazard warnings are masked.
+        maximum=0
     end
     if not arena or not cameraReady or maximum==0
         or typeof(cameraPoint)~="Vector3" then
@@ -322,7 +328,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,
         end)
     end
     local source,partCount=modelSource()
-    if not source then clearModels(); return end
+    if not source or (tier=="Low" and partCount~=7) then
+        clearModels()
+        return
+    end
     local ranked={}
     for _,deck in ipairs(platforms:GetChildren()) do
         if authentic(deck,arena,base) then
