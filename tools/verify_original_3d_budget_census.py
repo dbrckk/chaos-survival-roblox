@@ -161,8 +161,12 @@ for variant,spec in SIGNATURES.items():
     assert 'part.CanTouch=false' in kit or 'item.CanTouch=false' in kit
     assert 'part.CanQuery=false' in kit or 'item.CanQuery=false' in kit
     assert spec["masked"] in kit,(variant,"full source before mask")
-    assert 'native.Transparency=alpha' in kit or (
-        'part.Transparency=original' in kit or 'part.Transparency=alpha' in kit)
+    restoreNative={
+        "Classic":"native.Transparency=alpha",
+        "Towers":"native.Transparency=original",
+        "Harbor":"native.Transparency=alpha",
+    }[variant]
+    assert restoreNative in kit,(variant,"native restore")
     # Each kit publishes its Model under a differently named owner.
     # Test the precise publish statement, not a missing generic token
     # (str.index raises ValueError before an 'or' expression can retry).
