@@ -82,11 +82,28 @@ for snippet in ('"TowerMachinery"..index','"TowerMachineryCap"..index',
 assert 'antenna.Transparency=1' not in CLIENT
 assert 'antenna:Destroy()' not in CLIENT
 assert CLIENT.index("clone.Parent=bucket")<CLIENT.index("body.Transparency=1")
-assert 'Low=0,Medium=2,High=4' in CLIENT
-assert 'Low=0,Medium=290,High=410' in CLIENT
-assert 'math.min(cap,2)' in CLIENT and 'math.min(cap,1)' in CLIENT
+# Two independent Low off-switches must BOTH be fixed: the tier cap and
+# the mobile touch cap. At first GPU pressure one model becomes zero.
+assert 'local CAP = {Low=1,Medium=2,High=4}' in CLIENT
+assert 'local RANGE = {Low=220,Medium=290,High=410}' in CLIENT
+assert 'or tier=="Low" and math.min(cap,1) or 0' in CLIENT
+assert 'tier=="High" and math.min(cap,2)' in CLIENT
+assert 'tier=="Medium" and math.min(cap,1)' in CLIENT
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in CLIENT
 assert 'if stress>=2 then cap=0 end' in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
+assert 'local RETENTION = 24' in CLIENT
+# A client budget eviction must immediately restore both the body and
+# cap, while leaving the independently animated antenna untouched.
+assert 'bucket.ChildRemoved:Connect(function(child)' in CLIENT
+assert 'if entry.model==child then' in CLIENT
+assert 'restore(body)' in CLIENT
+assert CLIENT.index('mounted[body] = nil') < CLIENT.index('entry.model:Destroy()')
+assert 'entry.cap.LocalTransparencyModifier=entry.capOriginalModifier' in CLIENT
+assert 'entry.cap:SetAttribute("SceneryLodHidden",entry.capOriginalHidden)' in CLIENT
+assert 'antenna.Transparency=1' not in CLIENT
+assert 'antenna:Destroy()' not in CLIENT
+assert 'antenna.CFrame=' not in CLIENT
 for forbidden in ("RenderStepped","Heartbeat","LoadAssetAsync",
                   "RemoteEvent","RemoteFunction","CanCollide=true"):
     assert forbidden not in CLIENT,forbidden
