@@ -647,7 +647,9 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          assert len(models) == 102
+          # Exactly 103 owner-approved Models after the real new
+          # district_sidewall_shell asset 77387019170428 (Approved).
+          assert len(models) == 103
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
