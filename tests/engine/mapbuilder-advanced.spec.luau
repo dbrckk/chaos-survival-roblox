@@ -475,11 +475,26 @@ describe("Chaos Survival engine", function()
         source:SetAttribute("CosmeticOnly", true)
         source:SetAttribute("PremiumUnderdeck3D", true)
         source:SetAttribute("Original3DAssetId", 84582262145054)
-        local realGeometry = Instance.new("MeshPart")
-        realGeometry.Name = "SourceBoundsFixture"
-        realGeometry.Size = Vector3.new(23.3, 4.8, 9.9)
-        realGeometry.Anchored = true
-        realGeometry.Parent = source
+        -- The actual owner-approved chassis has SEVEN material MeshParts.
+        -- A previous one-part fixture was invalid under Low's existing
+        -- seven-mesh provenance gate, so it tested rejection rather than
+        -- successful mount. Match the real asset's 7 material groups while
+        -- keeping the existing 23.3 × 4.8 × 9.9 source envelope.
+        for i, material in ipairs({
+            "ARMOR", "BRUSHED", "CARBON", "GRIP",
+            "ALLOY", "CERAMIC", "SIGNAL",
+        }) do
+            local realGeometry = Instance.new("MeshPart")
+            realGeometry.Name = "ApprovedMaterial_" .. material
+            realGeometry.Size = if i == 1
+                then Vector3.new(23.3, 4.8, 9.9)
+                else Vector3.new(3.8, .38, 1.15)
+            realGeometry.Anchored = true
+            realGeometry.CanCollide = false
+            realGeometry.CanTouch = false
+            realGeometry.CanQuery = false
+            realGeometry.Parent = source
+        end
         source.Parent = holder
 
         local arena = Instance.new("Folder")
