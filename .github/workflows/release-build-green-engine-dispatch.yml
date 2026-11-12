@@ -1,0 +1,49 @@
+# Release-only orchestration. The full Build Validation is automatically
+# run on main ONLY when its workflow itself changes. When that exact push
+# build turns green, request the EXISTING owner-authorized Roblox Engine
+# suites on the same current main SHA. Never modifies/publishes a Roblox
+# Place, never sends credentials to a PR, never skips a failed check.
+name: Release Prepublish Engine Gate After Fixed Main Build
+on:
+  workflow_run:
+    workflows:
+      - Build Validation
+    types:
+      - completed
+    branches:
+      - main
+permissions:
+  contents: read
+  actions: write
+jobs:
+  dispatch-engine:
+    if: >-
+      github.repository == 'dbrckk/chaos-survival-roblox'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.head_branch == 'main'
+      && github.event.workflow_run.head_repository.full_name == 'dbrckk/chaos-survival-roblox'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify exact green build SHA and request real-engine suites
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          PARENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          test "${#RELEASE_SHA}" -eq 40
+          current="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
+            --jq '.object.sha')"
+          if [ "${current}" != "${RELEASE_SHA}" ]; then
+            echo "::error::Build ${PARENT_RUN_ID} targets a stale SHA; no engine dispatch."
+            exit 1
+          fi
+          echo "Verified green main build ${PARENT_RUN_ID} on exact ${RELEASE_SHA}"
+          gh workflow run roblox-cloud-test.yml --repo "${GITHUB_REPOSITORY}" --ref main
+          echo "Dispatched real seven-suite Roblox Open Cloud Engine Tests."
+          echo "The protected public Place publisher remains MANUAL and requires"
+          echo "both Build Validation and Roblox Open Cloud Engine Tests GREEN"
+          echo "on exactly this SHA. No Roblox Place publication performed."
