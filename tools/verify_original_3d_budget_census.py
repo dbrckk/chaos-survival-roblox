@@ -127,6 +127,59 @@ assert "AssetService" not in TOWERS_CORNER
 print("PASS one approved 7-MeshPart 24-stud Towers corner source on",
       "healthy touch Low, cap animation intact, source and GPU fallback")
 
+# The sixteen district buildings and four corner monuments already have
+# actual approved 3D source models. The playable Base is shrunk each round
+# but the nonphysical skyline buildings retain their original positions.
+# Never use the CURRENT floor width to evict these MeshParts and expose
+# their basic Parts/WedgeParts before streaming/LOD actually calls for it.
+DISTRICT_FACADES=(CLIENT/"PremiumDistrictFacadeMeshKit.lua").read_text(
+    encoding="utf8")
+CORNER_MONUMENTS=(CLIENT/"ApprovedCornerMonumentMeshKit.lua").read_text(
+    encoding="utf8")
+ORIGINAL_MAP=(ROOT/"src/server/MapBuilder.lua").read_text(encoding="utf8")
+assert 'base:SetAttribute("OriginalSizeX", base.Size.X)' in ORIGINAL_MAP
+assert 'base:SetAttribute("OriginalSizeZ", base.Size.Z)' in ORIGINAL_MAP
+for label, code, bucket in (
+    ("16 districts",DISTRICT_FACADES,"ApprovedDistrictFacadesLocal"),
+    ("4 corners",CORNER_MONUMENTS,"ApprovedOriginalCornerMonumentsLocal"),
+):
+    assert 'local function authenticBase(base, arena)' in code, label
+    for required in (
+        'base.Parent ~= arena',
+        'or not base.Anchored or not base.CanCollide',
+        'base:GetAttribute("OriginalSizeX")',
+        'base:GetAttribute("OriginalSizeZ")',
+        'and sx >= 318 and sz >= 318',
+        'base.Size.X <= sx + 0.2',
+        'base.Size.Z <= sz + 0.2',
+        'return authenticBase(base, activeArena)',
+        'if not authenticBase(base, arena)',
+        'if not authenticBase(base, activeArena) then',
+        'clearMounted()',
+        'restoreNative(entry)',
+        'GetPropertyChangedSignal("Size")',
+        'entry.model:Destroy()',
+    ):
+        assert required in code,(label,required)
+    assert 'base.Size.X < 318' not in code,label
+    assert 'base.Size.Z < 318' not in code,label
+    assert 'base.Size.X >= 318' not in code,label
+    assert 'base.Size.Z >= 318' not in code,label
+    assert bucket in ledger,(label,bucket)
+    assert '"AssetService"' not in code,label
+    assert '.RenderStepped:Connect(' not in code,label
+    assert '.Heartbeat:Connect(' not in code,label
+assert 'Low = {count = 1, distance = 130, retention = 16}' in DISTRICT_FACADES
+assert 'Medium = {count = 5, distance = 205, retention = 22}' in DISTRICT_FACADES
+assert 'High = {count = 12, distance = 270, retention = 28}' in DISTRICT_FACADES
+assert 'Low = {count = 1, distance = 145, retention = 16}' in CORNER_MONUMENTS
+assert 'Medium = {count = 4, distance = 280, retention = 22}' in CORNER_MONUMENTS
+assert 'High = {count = 4, distance = 330, retention = 26}' in CORNER_MONUMENTS
+assert 'PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
+assert 'ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
+print("PASS genuine 16 facade + 4 corner 3D owners survive shrinking Base",
+      "while preserving authenticated geometry, existing caps and fallback")
+
 # The original four giant 36-stud Harbor cranes already have two
 # creator-approved seven-material kinetic assets. Low native crane LOD is
 # intentionally hidden and its native trolley animation intentionally
