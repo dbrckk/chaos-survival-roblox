@@ -5,8 +5,11 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local MODEL_ID=120959181274080
-local QUALITIES={Low=0,Medium=1,High=1}
-local DISTANCE={Low=0,Medium=420,High=580}
+-- One genuine creator-approved seven-MeshPart skyline source on Android
+-- Low, ONLY at zero visual pressure. Each arena owns a disjoint south
+-- landmark, so this does not mount four models in one active world.
+local QUALITIES={Low=1,Medium=1,High=1}
+local DISTANCE={Low=290,Medium=420,High=580}
 local RETENTION=26
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedSouthTowersSkytransferLocal"
