@@ -69,6 +69,71 @@ for source in sorted(CLIENT.glob("*.lua")):
             assert owner in counts,(source.name,owner,
                 "client MeshParts not counted in adaptive Android census")
 
+# Perimeter armor has four big native WedgeParts on every station.
+# Android Low may show only TWO genuine wing originals, never all four
+# (28 meshes), and MUST keep both native top-caps present. Medium/High
+# still retain all four approved source replacements. Count actual
+# masked native wedges, not inferred four-per-station on mobile.
+ARMOR=(CLIENT/"ApprovedPerimeterArmorMeshKit.lua").read_text(
+    encoding="utf8")
+ARMOR_SERVER=(ROOT/"src/server/PremiumPerimeterArmorAssets.lua").read_text(
+    encoding="utf8")
+for word in ("88962643359267","138096293972093"):
+    assert word in ARMOR and word in ARMOR_SERVER
+assert 'local CAPS = {Low=1,Medium=1,High=3}' in ARMOR
+assert 'local RANGE = {Low=105,Medium=170,High=245}' in ARMOR
+assert 'local RETENTION = 16' in ARMOR
+assert 'if tier=="High" and touch then cap=2 end' in ARMOR
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in ARMOR
+assert 'if stress>=2 then cap=0 end' in ARMOR
+assert 'if cap==0 or not cameraReady' in ARMOR
+assert 'local first=tier=="Low" and 3 or 1' in ARMOR
+assert 'for i=first,#NATIVE_NAMES do' in ARMOR
+assert 'local kind=MODEL_NAMES[first+i-1]' in ARMOR
+assert 'local wingNative=tier=="Low" and natives[1] or natives[3]' in ARMOR
+assert 'local capSource=tier~="Low" and sourceFor("Cap") or nil' in ARMOR
+assert 'if not wing or (tier~="Low" and not capSource) then' in ARMOR
+assert 'or (tier~="Low" and (not sources.Cap or not sources.Cap.Parent))' in ARMOR
+assert 'expected=tier=="Low" and 2 or 4' in ARMOR
+assert 'or entry.tier~=tier' in ARMOR
+assert 'or #entry.models~=entry.expected' in ARMOR
+assert 'if #entry.models~=entry.expected then return false end' in ARMOR
+assert 'if complete(entry) then n+=1 end' in ARMOR
+assert 'for native in pairs(entry.original) do' in ARMOR
+assert 'if native.Transparency==1 then n+=1 end' in ARMOR
+assert 'return Kit.count()*4' not in ARMOR
+for native in ("LeftAngledCap","RightAngledCap",
+               "AngledServiceWingL","AngledServiceWingR"):
+    assert '"'+native+'"' in ARMOR
+assert 'if count ~= 7 then return nil end' in ARMOR
+assert 'if #parts~=7 then clone:Destroy();return nil end' in ARMOR
+assert 'if count ~= 7 then return false end' in ARMOR_SERVER
+assert 'source:GetAttribute("OwnerVerified") ~= true' in ARMOR
+assert 'source:GetAttribute("CosmeticOnly") ~= true' in ARMOR
+assert 'source:GetAttribute("OriginalPerimeterArmor3D") ~= true' in ARMOR
+assert 'source:GetAttribute("Original3DAssetId") ~= IDS[kind]' in ARMOR
+assert ARMOR.index('for _,model in ipairs(models) do model.Parent=bucket end') < (
+    ARMOR.index('for _,native in ipairs(natives) do native.Transparency=1 end'))
+assert 'bucket.ChildRemoved:Connect(function(child)' in ARMOR
+assert 'native.Transparency = alpha' in ARMOR
+assert 'piece.CanCollide=false' in ARMOR
+assert 'piece.CanTouch=false' in ARMOR
+assert 'piece.CanQuery=false' in ARMOR
+assert 'piece.CastShadow=false' in ARMOR
+assert 'local sources={Wing=wing,Cap=capSource}' in ARMOR
+assert 'mount(arena,station,index,sources,tier)' in ARMOR
+assert 'bucket.Name = "ApprovedPerimeterArmorLocal"' in ARMOR
+assert '"ApprovedPerimeterArmorLocal"' in ledger
+assert counts["ApprovedPerimeterArmorLocal"]==1
+assert 'ApprovedPerimeterArmorMeshKit.sync(arena, cameraPoint,' in (
+    CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+assert 'LocalPerimeterPrimitiveWedgesReplaced' in (
+    CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
+assert "RenderStepped" not in ARMOR and "Heartbeat" not in ARMOR
+assert "AssetService" not in ARMOR
+print("PASS two genuine 7-MeshPart near-camera Low perimeter wings,",
+      "unchanged cap wedges, pressure-one rollback, accurate native census")
+
 # One authenticated creator-original perimeter CrossBrace + GeneratorShield
 # pair can replace TWO primitive native blocks on a camera-near Low station.
 # Each material-split model contains 7 MeshParts: exactly 14 across BOTH
