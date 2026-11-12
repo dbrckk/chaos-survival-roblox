@@ -617,6 +617,58 @@ assert 'if lowBridgeChosen then' in OWNER
 assert 'longCradleBudget = 0' in OWNER
 assert 'supportBudget = 0' in OWNER
 assert 'or nearServiceHatches[platform] == true' in OWNER
+# Regression: the old half-density Low gate filtered EVEN numbered
+# real route decks AFTER the source owner selected a seven-MeshPart
+# LongCradle or support column. Its mask/collapse/resize registration
+# could never execute, leaving primitive posts and wasting the quota.
+# Keep half-density primitive paint while opening the structural gate.
+gate_start=OWNER.index('if tier.Name ~= "Low" or visualIndex % 2 ~= 0')
+gate_end=OWNER.index(' then',gate_start)
+low_gate=OWNER[gate_start:gate_end]
+for selected in (
+    'nearBridgeGirders[platform] == true',
+    'nearServiceHatches[platform] == true',
+    'nearCradles[platform] == true',
+    'nearSupports[platform] == true',
+):
+    assert selected in low_gate,("even-index real 3D eligibility",selected)
+assert OWNER.index('PremiumLargeStructureMeshKit.selectNearRouteStructures(') < gate_start
+assert OWNER.index('PremiumLargeStructureMeshKit.longCradle(',gate_end) > gate_end
+assert OWNER.index('PremiumLargeStructureMeshKit.supports(',gate_end) > gate_end
+assert OWNER.index('registerVisual(platform, piece)',gate_end) > gate_end
+assert 'if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then' in (
+    OWNER[gate_end:gate_end+900])
+assert 'PlatformFinishKit.bindRouteFootprint(' in OWNER
+assert 'PlatformFinishKit.applyCollapseVisibility(' in OWNER
+assert 'PlatformNativeTrimReplacementKit.bind(' in OWNER
+# Streaming a nearby native support later than its collidable PlatformN
+# should no longer permanently strand a genuine Low sculpture. Faraway
+# posts, pressure>0, and already-funded Low columns must not trigger work.
+support_watch=OWNER.split('local function supportChanged(part)',1)[1].split(
+    'decorAddedConnection = decor.ChildAdded',1)[0]
+assert 'quality == "Low"' in support_watch
+assert 'local mountedSupportNatives = {}' in OWNER
+assert 'table.clear(mountedSupportNatives)' in OWNER
+assert 'mountedSupportNatives[support] = true' in OWNER
+assert 'if part.Parent ~= decor then' in support_watch
+assert 'if mountedSupportNatives[part] == true then' in support_watch
+assert support_watch.index('if part.Parent ~= decor then') < (
+    support_watch.index('LocalOriginalNearSupportColumnCount'))
+
+assert 'part.Name:match(' in support_watch
+assert '"^PlatformSupport(%d+)_%d+$"' in support_watch
+assert 'LocalOriginalNearSupportColumnCount' in support_watch
+assert 'OptionalVfxPressure' in support_watch
+assert 'platforms:FindFirstChild("Platform"..tostring(index))' in support_watch
+assert '(deck.Position-camera.CFrame.Position).Magnitude > 125' in support_watch
+assert 'queueSupportRebuild()' in support_watch
+assert 'task.delay(0.18, function()' in OWNER
+assert 'task.delay(0.12, function()' in OWNER
+assert '.RenderStepped:Connect(' not in OWNER
+print("PASS Low even-index original undercradle/support adoption, native",
+      "half-density retained, late-near support streaming bounded/rebuilt")
+
+
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger
 assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
