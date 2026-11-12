@@ -1,14 +1,9 @@
 name: Roblox Open Cloud Engine Tests
 
-# Real-engine regression check on main only for this exact public release
-# gate repair. PRs never receive owner Roblox credentials. The existing
-# owner-wide single-flight lock still prevents parallel cloud execution.
+# Never run Roblox Open Cloud tests automatically during development.
+# Dispatch this manually at the final pre-publication milestone on main.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - tests/engine/visual-budget-rules.spec.luau
 
 concurrency:
   group: roblox-cloud-${{ github.ref }}
