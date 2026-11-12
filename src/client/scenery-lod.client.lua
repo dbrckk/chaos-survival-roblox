@@ -1128,10 +1128,12 @@ task.spawn(function()
         end
         -- Real original 3,072-triangle approved 3D chassis replace ONLY
         -- near-camera marked cosmetic underfloor beam bays. Low 1 / Medium
-        -- 4 / High 12; every bay has a self-restoring native fallback.
+        -- 4 / High 12; Low now releases its ONE chassis at pressure 1/2,
+        -- and every bay has an immediate stream/eviction native fallback.
         -- Reuse the SAME established camera sampler and part census.
         UnderstructureBeamMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady)
+            profile.Name, cameraReady,
+            player:GetAttribute("OptionalVfxPressure"))
         local beamMeshes = UnderstructureBeamMeshKit.count()
         if player:GetAttribute("LocalOriginalUnderstructureBeamCount")
             ~= beamMeshes then

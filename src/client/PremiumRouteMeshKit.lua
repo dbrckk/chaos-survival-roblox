@@ -27,7 +27,7 @@ local ASSETS = {
 -- them and existing VFX pressure reduces or disables expensive meshes.
 -- No additional source assets, work loops or new physical platforms.
 local BUDGET = {
-    Low = {decks = 2, bridges = 1, segments = 1, underdecks = 0,
+    Low = {decks = 2, bridges = 1, segments = 2, underdecks = 1,
         distance = 100, retention = 18},
     Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,
         distance = 195, retention = 22},
@@ -303,6 +303,27 @@ end
 -- existing camera sampler control this entire extra underdeck model.
 local function addUnderdeckModel(entry, platform, template)
     if not template then return false end
+    -- Low only permits the approved seven-material 3K-triangle Model.
+    -- An importer split, partial source or streaming-gap must never
+    -- silently increase a phone's scarce optional MeshPart allowance.
+    if entry.strictLowUnderdeck then
+        if template:GetAttribute("PremiumUnderdeck3D") ~= true then
+            return false
+        end
+        local parts = 0
+        for _, descendant in ipairs(template:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                if not descendant:IsA("MeshPart") then return false end
+                parts += 1
+            elseif descendant:IsA("LuaSourceContainer") then
+                return false
+            end
+        end
+        if parts ~= 7 then return false end
+    end
+    if platform:GetAttribute("LocalOriginalLongCradleMounted") == true then
+        return false
+    end
     local _, sourceSize = template:GetBoundingBox()
     if sourceSize.X < 20 or sourceSize.X > 26
         or sourceSize.Y < 3 or sourceSize.Y > 8
@@ -353,7 +374,8 @@ local function addUnderdeckModel(entry, platform, template)
             pieces[#pieces + 1] = part
         end
     end
-    if #pieces == 0 or #pieces > 16 then
+    if #pieces == 0 or #pieces > 16
+        or (entry.strictLowUnderdeck and #pieces ~= 7) then
         clone:Destroy()
         return false
     end
@@ -402,7 +424,7 @@ local function syncVisibility(entry, platform)
     end
 end
 
-local function mount(platform, template, count, bridgeCandidate, underdeckTemplate)
+local function mount(platform, template, count, bridgeCandidate, underdeckTemplate, strictLowUnderdeck)
     local _, bounds = template:GetBoundingBox()
     if bounds.X < 3 or bounds.Y < 0.1 or bounds.Z < 3 then
         return nil
@@ -424,6 +446,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         panel = nil,
         originalPanelAlpha = 0,
         underdeck = underdeckTemplate ~= nil,
+        strictLowUnderdeck = strictLowUnderdeck == true,
         -- The native landing paint is masked ONLY when the owner-approved
         -- model's actual bounding box covers both walkable axes.
         panelCovered = fit.panelCovered,
@@ -594,6 +617,24 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase"}) do
         entry.connections[#entry.connections + 1] =
             platform:GetAttributeChangedSignal(attribute):Connect(refresh)
+    end
+    if underdeckTemplate then
+        -- The event-driven true LongCradle owner can mount AFTER the
+        -- camera LOD sampler. Tear down our entire optional route skin
+        -- immediately rather than stacking two 3K-triangle chassis; the
+        -- next existing LOD sample restores its top-cover without a
+        -- duplicate undercarriage. Native panel fallback remains visible.
+        entry.connections[#entry.connections + 1] =
+            platform:GetAttributeChangedSignal(
+                "LocalOriginalLongCradleMounted"):Connect(function()
+                if platform:GetAttribute("LocalOriginalLongCradleMounted") == true
+                    and not entry.restoring then
+                    restore(entry)
+                    if mounted[platform] == entry then
+                        mounted[platform] = nil
+                    end
+                end
+            end)
     end
     refresh()
     return entry
@@ -930,11 +971,41 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
 
     -- A 3K-triangle hollow chassis is genuinely useful on long visible
     -- sky route foundations; never attach it to every streamed platform.
-    -- The existing 0/2/4 UNDERDECK MODEL quota is additional but stays
+    -- The existing 1/2/4 UNDERDECK MODEL quota is additional but stays
     -- inside the SAME PremiumRouteMeshLocal adaptive Android Parts ledger.
     -- Prefer eligible real 26-stud connector routes, then large safe decks.
     local underdeckTemplate = getTemplate("OriginalUnderdeckChassis")
     local underdeckSlots = underdeckCap
+    if quality == "Low" then
+        -- Harbor already owns its approved close-up caisson. On other
+        -- variants the one Low chassis is reserved for an elongated REAL
+        -- route with existing camera-selected authentic top art; no
+        -- additional phantom floor or competing square-deck hull.
+        if stress > 0 or arena:GetAttribute("VariantId") == "Harbor"
+            or not underdeckTemplate or
+            underdeckTemplate:GetAttribute("PremiumUnderdeck3D") ~= true then
+            underdeckSlots = 0
+        else
+            -- Source preflight BEFORE consuming the one mobile slot.
+            -- No partial import, non-mesh surrogate or embedded script.
+            local authentic=0
+            for _,child in ipairs(underdeckTemplate:GetDescendants()) do
+                if child:IsA("BasePart") then
+                    if not child:IsA("MeshPart")
+                        or child.CanCollide or child.CanTouch
+                        or child.CanQuery then
+                        authentic=-100
+                        break
+                    end
+                    authentic+=1
+                elseif child:IsA("LuaSourceContainer") then
+                    authentic=-100
+                    break
+                end
+            end
+            if authentic~=7 then underdeckSlots=0 end
+        end
+    end
     if underdeckTemplate and underdeckSlots > 0 then
         local ranked = {}
         for _, item in ipairs(bridges) do
@@ -944,11 +1015,27 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
             if wanted[item.platform] then ranked[#ranked + 1] = item end
         end
         table.sort(ranked, byDistance)
+        local _,underdeckBounds=underdeckTemplate:GetBoundingBox()
+        local boundsOK=underdeckBounds.X>=20
+            and underdeckBounds.X<=26
+            and underdeckBounds.Y>=3
+            and underdeckBounds.Y<=8
+            and underdeckBounds.Z>=8
+            and underdeckBounds.Z<=13
         for _, item in ipairs(ranked) do
             if underdeckSlots <= 0 then break end
             local size = item.platform.Size
-            if math.max(size.X, size.Z) >= 17
-                and math.min(size.X, size.Z) >= 9.5
+            local length=math.max(size.X,size.Z)
+            local width=math.min(size.X,size.Z)
+            local actualScale=boundsOK and math.min(
+                length*.88/underdeckBounds.X,
+                width*.88/underdeckBounds.Z,1.06) or 0
+            if actualScale>=.56
+                and length >= (quality == "Low" and 19.5 or 17)
+                and width >= 9.5
+                and (quality ~= "Low"
+                    or (length/width >= 1.35
+                        and item.platform:GetAttribute("ChaosSkybridge") ~= true))
                 and item.platform:GetAttribute(
                     "LocalOriginalLongCradleMounted") ~= true then
                 -- One approved open-frame model already provides this
@@ -972,7 +1059,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     for platform, desired in pairs(wanted) do
         if not mounted[platform] then
             mounted[platform] = mount(platform, desired.template, desired.count,
-                desired.bridge, desired.underdeck)
+                desired.bridge, desired.underdeck, quality == "Low")
         end
     end
     -- Late-streamed panel/geometry alignment is reconciled by this SAME

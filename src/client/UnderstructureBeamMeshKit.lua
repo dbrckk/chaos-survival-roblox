@@ -28,18 +28,40 @@ local watchedBase = nil
 local baseConnections = {}
 local mounted = {}
 
-local function removeAll()
-    for key, entry in pairs(mounted) do
-        if entry.native and entry.native.Parent
-            and entry.native:GetAttribute("OriginalUnderstructureBeam") == true
-            and not entry.native.CanCollide and not entry.native.CanTouch
-            and not entry.native.CanQuery then
-            entry.native.Transparency = entry.originalTransparency
-        end
-        if entry.model then entry.model:Destroy() end
-        mounted[key] = nil
+-- A missing original source Part, streamed MeshPart or budget-evicted
+-- clone must NEVER leave an invisible native understructure. Release its
+-- exact owner before destroying the model so callbacks cannot recurse.
+local function release(name)
+    local entry=mounted[name]
+    if not entry then return end
+    mounted[name]=nil
+    for _,conn in ipairs(entry.connections or {}) do
+        conn:Disconnect()
     end
+    if entry.native and entry.native.Parent
+        and entry.native:GetAttribute("OriginalUnderstructureBeam") == true
+        and not entry.native.CanCollide and not entry.native.CanTouch
+        and not entry.native.CanQuery
+        and entry.native.Transparency == 1 then
+        entry.native.Transparency=entry.originalTransparency
+    end
+    if entry.model then entry.model:Destroy() end
 end
+
+local function removeAll()
+    local keys={}
+    for key in pairs(mounted) do keys[#keys+1]=key end
+    for _,key in ipairs(keys) do release(key) end
+end
+
+bucket.ChildRemoved:Connect(function(child)
+    for name,entry in pairs(mounted) do
+        if entry.model==child then
+            release(name)
+            break
+        end
+    end
+end)
 
 local function clear()
     removeAll()
@@ -91,7 +113,7 @@ local function sourceTemplate()
         or size.Y < 3 or size.Y > 8 then
         return nil
     end
-    return source, size
+    return source, size, count
 end
 
 local function safeCandidate(part, folder)
@@ -148,17 +170,54 @@ local function mount(native, source, bounds)
     clone.Parent = bucket
     local originalTransparency = native.Transparency
     native.Transparency = 1
-    return {
-        model = clone, native = native, originalTransparency = originalTransparency,
+    local name=native.Name
+    local entry={
+        model=clone,native=native,source=source,
+        originalTransparency=originalTransparency,connections={},
     }
+    -- Exact source and native ancestry events: no polling or new frame
+    -- connection, immediate safe fallback when streaming removes geometry.
+    entry.connections[#entry.connections+1]=
+        native.AncestryChanged:Connect(function()
+            local sourceFolder=workspace:FindFirstChild("ArenaUnderstructureLocal")
+            if mounted[name]==entry
+                and (native.Parent==nil or not sourceFolder
+                    or not safeCandidate(native,sourceFolder)) then
+                release(name)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
+        source.AncestryChanged:Connect(function()
+            if mounted[name]==entry and not source.Parent then
+                release(name)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
+        source.DescendantRemoving:Connect(function(child)
+            if mounted[name]==entry and child:IsA("MeshPart") then
+                release(name)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
+        clone.DescendantRemoving:Connect(function(child)
+            if mounted[name]==entry and child:IsA("MeshPart") then
+                release(name)
+            end
+        end)
+    return entry
 end
 
-function Kit.sync(arena, cameraPoint, tier, cameraReady)
+function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local budget = BUDGET[tier] or BUDGET.Low
+    local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
+    local cap=budget.count
+    -- Understructure is optional: on mobile Low the FIRST backpressure
+    -- step releases its one 3K-triangle chassis, not server-owned beams.
+    if tier=="Low" and stress>=1 then cap=0 end
     if not arena or not cameraReady
         or typeof(cameraPoint) ~= "Vector3" then
         removeAll()
@@ -186,8 +245,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
         baseConnections[#baseConnections + 1] =
             base.AncestryChanged:Connect(removeAll)
     end
-    local source, bounds = sourceTemplate()
-    if not source then
+    local source, bounds, pieces = sourceTemplate()
+    if not source or (tier=="Low" and pieces~=7) then
         removeAll()
         return
     end
@@ -210,20 +269,18 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
         return a.native.Name < b.native.Name
     end)
     local wanted = {}
-    for i = 1, math.min(#ranked, budget.count) do
+    for i = 1, math.min(#ranked, cap) do
         wanted[ranked[i].native.Name] = ranked[i].native
     end
-    for name, entry in pairs(mounted) do
-        if wanted[name] ~= entry.native or entry.model.Parent ~= bucket
-            or not safeCandidate(entry.native, folder) then
-            if entry.native and entry.native.Parent
-                and not entry.native.CanCollide then
-                entry.native.Transparency = entry.originalTransparency
-            end
-            entry.model:Destroy()
-            mounted[name] = nil
+    local evicted={}
+    for name,entry in pairs(mounted) do
+        if wanted[name]~=entry.native or entry.model.Parent~=bucket
+            or entry.source~=source
+            or not safeCandidate(entry.native,folder) then
+            evicted[#evicted+1]=name
         end
     end
+    for _,name in ipairs(evicted) do release(name) end
     for name, native in pairs(wanted) do
         if not mounted[name] then
             mounted[name] = mount(native, source, bounds)
