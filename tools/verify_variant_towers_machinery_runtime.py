@@ -82,11 +82,29 @@ for snippet in ('"TowerMachinery"..index','"TowerMachineryCap"..index',
 assert 'antenna.Transparency=1' not in CLIENT
 assert 'antenna:Destroy()' not in CLIENT
 assert CLIENT.index("clone.Parent=bucket")<CLIENT.index("body.Transparency=1")
-assert 'Low=0,Medium=2,High=4' in CLIENT
-assert 'Low=0,Medium=290,High=410' in CLIENT
-assert 'math.min(cap,2)' in CLIENT and 'math.min(cap,1)' in CLIENT
+# The original 24.9-stud seven-piece corner machinery was disabled
+# twice on touch Low: tier cap 0 and touch branch's fallback "or 0".
+# On Low a single approved model may replace exactly one 24-stud body
+# and its animated cap; the antenna must remain a real live signal.
+assert 'local CAP = {Low=1,Medium=2,High=4}' in CLIENT
+assert 'local RANGE = {Low=205,Medium=290,High=410}' in CLIENT
+assert 'or tier=="Low" and math.min(cap,1) or 0' in CLIENT
+assert 'tier=="High" and math.min(cap,2)' in CLIENT
+assert 'tier=="Medium" and math.min(cap,1)' in CLIENT
+assert 'if stress==1 then cap=math.floor(cap*.5) end' in CLIENT
 assert 'if stress>=2 then cap=0 end' in CLIENT
 assert 'if cap==0 or not cameraReady' in CLIENT
+assert 'bucket.ChildRemoved:Connect(function(child)' in CLIENT
+assert 'if entry.model==child then' in CLIENT
+assert 'restore(body)' in CLIENT
+assert CLIENT.index('mounted[body] = nil') < CLIENT.index('entry.model:Destroy()')
+assert 'capOriginalModifier=cap.LocalTransparencyModifier' in CLIENT
+assert 'capOriginalHidden=cap:GetAttribute("SceneryLodHidden")' in CLIENT
+assert 'entry.cap.LocalTransparencyModifier=entry.capOriginalModifier' in CLIENT
+assert 'entry.cap:SetAttribute("SceneryLodHidden",entry.capOriginalHidden)' in CLIENT
+assert 'antenna.Transparency=1' not in CLIENT
+assert 'antenna:Destroy()' not in CLIENT
+assert 'local RETENTION = 24' in CLIENT
 for forbidden in ("RenderStepped","Heartbeat","LoadAssetAsync",
                   "RemoteEvent","RemoteFunction","CanCollide=true"):
     assert forbidden not in CLIENT,forbidden
