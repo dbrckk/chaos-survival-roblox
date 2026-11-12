@@ -219,6 +219,16 @@ local function finishForPart(part, variant)
     return Kit.finishFor(part.Name, variant)
 end
 
+-- Avoid burning one of the shared Medium/High 2K slots on a
+-- sculpture culled by the authoritative native/mesh LOD. Both kinds of
+-- local hiding are respected; only *currently visible* static surfaces
+-- receive the expensive high-resolution appearance overlays.
+local function visibleFinish(part, variant)
+    return finishForPart(part, variant) ~= nil
+        and part.Transparency < 0.98
+        and part.LocalTransparencyModifier < 0.98
+end
+
 local function sourceAppearance(family)
     if not KNOWN_FINISHES[family] then return nil end
     local holder = ReplicatedStorage:FindFirstChild("OriginalGroundPbrTemplates")
@@ -247,7 +257,7 @@ local function piecesFor(model, folder, id, variant)
     if #pieces ~= 7 then return nil end
     local any = false
     for _, part in ipairs(pieces) do
-        if finishForPart(part, variant) then any = true end
+        if visibleFinish(part, variant) then any = true end
     end
     return any and pieces or nil
 end
@@ -291,11 +301,11 @@ local function intact(model, state, pieces, variant)
             or not parent:IsDescendantOf(model)
             or overlay.Name ~= "OriginalNearfieldPbr2K"
             or parent:FindFirstChildOfClass("SurfaceAppearance") ~= overlay
-            or covered[parent] then return false end
+            or covered[parent] or not visibleFinish(parent, variant) then return false end
         covered[parent] = true
     end
     for _, part in ipairs(pieces) do
-        if finishForPart(part, variant) and not covered[part] then
+        if visibleFinish(part, variant) and not covered[part] then
             return false
         end
     end
@@ -309,7 +319,8 @@ local function install(model, pieces, variant)
     -- Never keep a half-finished 3D sculpture with arbitrary mixed maps.
     local success = pcall(function()
         for _, part in ipairs(pieces) do
-            local family = finishForPart(part, variant)
+            local family = visibleFinish(part, variant)
+                and finishForPart(part, variant) or nil
             if family then
                 local template = sourceAppearance(family)
                 if not template then error("Approved nearfield PBR template missing") end
