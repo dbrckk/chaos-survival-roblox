@@ -12,18 +12,29 @@ local EXTERIOR_ASSETS = {
     [95878714550124] = true, [135985134195364] = true,
 }
 -- A full, genuinely triangulated 3,072-triangle package only near-camera.
--- Low keeps zero extra material groups; Medium one; High two.
+-- One ORIGINAL 7-MeshPart chassis on healthy Low, directly under one
+-- real approved exterior foundation near the camera. Unlike legacy
+-- Medium/High child clones, Low's model is owned by a census-visible local
+-- Folder and removed under the first graphics pressure tier.
 local LIMITS = {
-    Low = {count = 0, distance = 0},
+    Low = {count = 1, distance = 128},
     Medium = {count = 1, distance = 215},
     High = {count = 2, distance = 300},
 }
+local bucket = Instance.new("Folder")
+bucket.Name = "ApprovedFoundationChassisLocal"
+bucket:SetAttribute("CosmeticOnly", true)
+bucket.Parent = workspace
+
 local mounted = {}
 local activeArena = nil
 local watchedBase = nil
 local baseConnections = {}
 
 local function restore(entry)
+    for _, connection in ipairs(entry.connections or {}) do
+        connection:Disconnect()
+    end
     for part, alpha in pairs(entry.native) do
         if part.Parent == entry.owner and part.Transparency == 1
             and part:GetAttribute("OriginalFoundationVisual") == true
@@ -35,12 +46,29 @@ local function restore(entry)
     if entry.mesh then entry.mesh:Destroy() end
 end
 
-local function unmountAll()
-    for owner, entry in pairs(mounted) do
-        restore(entry)
-        mounted[owner] = nil
-    end
+local function unmount(owner)
+    local entry = mounted[owner]
+    if not entry then return end
+    mounted[owner] = nil
+    restore(entry)
 end
+
+local function unmountAll()
+    local owners = {}
+    for owner in pairs(mounted) do owners[#owners + 1] = owner end
+    for _, owner in ipairs(owners) do unmount(owner) end
+end
+
+-- A budget/streaming owner can remove a Low clone before the next LOD
+-- sample; never leave eleven server foundation blocks invisible.
+bucket.ChildRemoved:Connect(function(child)
+    for owner, entry in pairs(mounted) do
+        if entry.mesh == child then
+            unmount(owner)
+            break
+        end
+    end
+end)
 
 local function clear()
     unmountAll()
@@ -50,6 +78,7 @@ local function clear()
     table.clear(baseConnections)
     watchedBase = nil
     activeArena = nil
+    bucket:ClearAllChildren()
 end
 
 local function template()
@@ -82,7 +111,24 @@ local function template()
         or size.Y < 3 or size.Y > 8 then
         return nil
     end
-    return source, size
+    return source, size, count
+end
+
+-- A narrow 24x10 original is NOT a legitimate substitute for a square
+-- pedestal: before masking its 4-11 native Parts check uniform-scale
+-- coverage on both world-horizontal axes. This is a Low-only requirement.
+local function fitFoundation(shoulder, sourceSize)
+    local longAxisX = sourceSize.X > sourceSize.Z
+    local nativeLongX = shoulder.Size.X > shoulder.Size.Z
+    local yaw = longAxisX == nativeLongX and 0 or math.pi * .5
+    local sx = yaw == 0 and sourceSize.X or sourceSize.Z
+    local sz = yaw == 0 and sourceSize.Z or sourceSize.X
+    local scale = math.min(1.35,
+        shoulder.Size.X * .93 / sx, shoulder.Size.Z * .93 / sz)
+    local covers = scale >= .48
+        and sx * scale >= shoulder.Size.X * .80
+        and sz * scale >= shoulder.Size.Z * .78
+    return yaw, scale, covers
 end
 
 local function safeOwner(arena, owner, base)
@@ -117,15 +163,9 @@ local function safeOwner(arena, owner, base)
     return shoulder
 end
 
-local function mount(owner, shoulder, source, sourceSize)
-    local longAxisX = sourceSize.X > sourceSize.Z
-    local nativeLongX = shoulder.Size.X > shoulder.Size.Z
-    local yaw = longAxisX == nativeLongX and 0 or math.pi * .5
-    local sx = yaw == 0 and sourceSize.X or sourceSize.Z
-    local sz = yaw == 0 and sourceSize.Z or sourceSize.X
-    local scale = math.min(1.35,
-        shoulder.Size.X * .93 / sx, shoulder.Size.Z * .93 / sz)
-    if scale < .48 then return nil end
+local function mount(owner, shoulder, source, sourceSize, tier)
+    local yaw, scale, covers = fitFoundation(shoulder, sourceSize)
+    if scale < .48 or (tier == "Low" and not covers) then return nil end
     local clone = source:Clone()
     local ok = pcall(function() clone:ScaleTo(scale) end)
     if not ok then clone:Destroy(); return nil end
@@ -156,7 +196,11 @@ local function mount(owner, shoulder, source, sourceSize)
             part.Massless = true
         end
     end
-    if count < 1 or count > 12 then clone:Destroy(); return nil end
+    if count < 1 or count > 12
+        or (tier == "Low" and count ~= 7) then
+        clone:Destroy()
+        return nil
+    end
     local native = {}
     for _, part in ipairs(owner:GetChildren()) do
         if part:IsA("BasePart")
@@ -175,24 +219,68 @@ local function mount(owner, shoulder, source, sourceSize)
     end
     local foundationCount = 0
     for _ in pairs(native) do foundationCount += 1 end
-    if foundationCount < 4 then clone:Destroy(); return nil end
+    if foundationCount < 4
+        or (tier == "Low" and
+            (owner:GetAttribute("OriginalFoundationPieceCount") ~= 11
+                or foundationCount ~= 11)) then
+        clone:Destroy()
+        return nil
+    end
     clone.Name = "ApprovedSculptedFoundation3D"
     clone:SetAttribute("CosmeticOnly", true)
     clone:SetAttribute("OriginalFoundationMesh3D", true)
     clone:SetAttribute("Original3DAssetId", CHASSIS_ID)
     clone.WorldPivot = target
-    clone.Parent = owner
+    -- The Low cosmetic must appear in the shared Android census.
+    -- Medium/High keep their existing original-model parent/Lod wiring.
+    local parent = tier == "Low" and bucket or owner
+    clone.Parent = parent
+    local entry = {owner = owner, mesh = clone, shoulder = shoulder,
+        frame = shoulder.CFrame, size = shoulder.Size, native = native,
+        parent = parent, source = source, connections = {}}
+    mounted[owner] = entry
     for part in pairs(native) do part.Transparency = 1 end
-    return {owner = owner, mesh = clone, shoulder = shoulder,
-        frame = shoulder.CFrame, size = shoulder.Size, native = native}
+    if tier == "Low" then
+        local function invalid()
+            if mounted[owner] ~= entry then return end
+            if owner.Parent == nil or shoulder.Parent ~= owner
+                or source.Parent == nil or clone.Parent ~= bucket
+                or shoulder:GetAttribute("SceneryLodHidden") == true
+                or shoulder.LocalTransparencyModifier >= .95 then
+                unmount(owner)
+            end
+        end
+        entry.connections[#entry.connections + 1] =
+            owner.AncestryChanged:Connect(invalid)
+        entry.connections[#entry.connections + 1] =
+            shoulder.AncestryChanged:Connect(invalid)
+        entry.connections[#entry.connections + 1] =
+            source.AncestryChanged:Connect(invalid)
+        entry.connections[#entry.connections + 1] =
+            shoulder:GetAttributeChangedSignal("SceneryLodHidden"):Connect(invalid)
+        entry.connections[#entry.connections + 1] =
+            shoulder:GetPropertyChangedSignal("LocalTransparencyModifier"):Connect(invalid)
+        entry.connections[#entry.connections + 1] =
+            source.DescendantRemoving:Connect(function(part)
+                if part:IsA("MeshPart") then unmount(owner) end
+            end)
+        entry.connections[#entry.connections + 1] =
+            clone.DescendantRemoving:Connect(function(part)
+                if part:IsA("MeshPart") then unmount(owner) end
+            end)
+    end
+    return entry
 end
 
-function Kit.sync(arena, imported, cameraPoint, tier, cameraReady)
+function Kit.sync(arena, imported, cameraPoint, tier, cameraReady, pressure)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local limits = LIMITS[tier] or LIMITS.Low
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
+    local cap = limits.count
+    if tier == "Low" and stress >= 1 then cap = 0 end
     local base = arena and arena:FindFirstChild("Base")
     if not cameraReady or typeof(cameraPoint) ~= "Vector3"
         or not arena or not base or not base:IsA("BasePart")
@@ -221,16 +309,19 @@ function Kit.sync(arena, imported, cameraPoint, tier, cameraReady)
         baseConnections[#baseConnections + 1] =
             base.AncestryChanged:Connect(stopOnShrink)
     end
-    local source, sourceSize = template()
+    local source, sourceSize, parts = template()
     local wanted = {}
-    if source and limits.count > 0 then
+    -- On Low only verified seven-piece original material packages count.
+    if source and cap > 0 and (tier ~= "Low" or parts == 7) then
         -- Imported is already camera-sorted by the authoritative LOD
         -- owner. No second scene traversal, render loop or asset request.
         for _, owner in ipairs(imported or {}) do
-            if #wanted >= limits.count then break end
+            if #wanted >= cap then break end
             local shoulder = safeOwner(arena, owner, base)
-            if shoulder and (shoulder.Position - cameraPoint).Magnitude
-                <= limits.distance then
+            if shoulder and (tier ~= "Low"
+                or select(3, fitFoundation(shoulder, sourceSize)))
+                and (shoulder.Position - cameraPoint).Magnitude
+                    <= limits.distance then
                 wanted[#wanted + 1] = {owner = owner, shoulder = shoulder}
             end
         end
@@ -240,19 +331,18 @@ function Kit.sync(arena, imported, cameraPoint, tier, cameraReady)
     for owner, entry in pairs(mounted) do
         local shoulder = approved[owner]
         if not shoulder or shoulder ~= entry.shoulder
-            or entry.mesh.Parent ~= owner
+            or entry.mesh.Parent ~= entry.parent or entry.source ~= source
             or (shoulder.CFrame.Position - entry.frame.Position).Magnitude > .08
             or shoulder.CFrame.LookVector:Dot(entry.frame.LookVector) < .999
             or (shoulder.Size - entry.size).Magnitude > .08 then
-            restore(entry)
-            mounted[owner] = nil
+            unmount(owner)
         end
     end
     if source then
         for _, entry in ipairs(wanted) do
             if not mounted[entry.owner] then
-                mounted[entry.owner] = mount(entry.owner,
-                    entry.shoulder, source, sourceSize)
+                mount(entry.owner, entry.shoulder,
+                    source, sourceSize, tier)
             end
         end
     end
@@ -261,7 +351,7 @@ end
 function Kit.count()
     local n = 0
     for owner, entry in pairs(mounted) do
-        if entry and entry.mesh.Parent == owner then n += 1 end
+        if entry and entry.mesh.Parent == entry.parent then n += 1 end
     end
     return n
 end

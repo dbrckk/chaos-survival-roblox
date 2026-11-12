@@ -73,6 +73,11 @@ VisualBudgetRules.LocalFolders = {
     -- Five genuine creator-approved hero skyline MeshParts replace native
     -- silhouettes and must count in the existing Android Parts budget.
     "ApprovedOriginalHeroStructuresLocal",
+    -- P4: exactly one near-camera source-approved original foundation
+    -- chassis on healthy Android Low. The 7 MeshParts are parented to
+    -- this local folder (NOT hidden within server-owned Original3DScenery)
+    -- so the existing 440/680/900-part cooperative census sees the cost.
+    "ApprovedFoundationChassisLocal",
     -- Four near-player perimeter stations can replace two primitive
     -- rectangular pillars apiece with previously creator-approved, real
     -- tall steel MeshParts. All mounted clones count in 440/680/900 local
