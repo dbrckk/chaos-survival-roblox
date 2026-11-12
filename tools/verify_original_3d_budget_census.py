@@ -180,6 +180,54 @@ assert 'ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 print("PASS genuine 16 facade + 4 corner 3D owners survive shrinking Base",
       "while preserving authenticated geometry, existing caps and fallback")
 
+# The other three massive 3D skyline owners used the live Base.Size
+# to authenticate outdoor monuments, causing all real MeshParts to fall
+# back to primitive Parts/WedgeParts on normal arena shrink. Their real
+# permanent foundations have fixed world positions from MapBuilder's
+# immutable original rim; preserve that footprint for EACH source owner.
+HERO_SKYLINE=(CLIENT/"ApprovedHeroStructureMeshKit.lua").read_text(
+    encoding="utf8")
+PRIMARY_SKYLINE=(CLIENT/"ApprovedPrimarySkylineMeshKit.lua").read_text(
+    encoding="utf8")
+DEPTH_SKYLINE=(CLIENT/"ApprovedSkylineDepthMeshKit.lua").read_text(
+    encoding="utf8")
+for name, code, owner in (
+    ("five hero profiles", HERO_SKYLINE, "ApprovedOriginalHeroStructuresLocal"),
+    ("four primary skyline columns", PRIMARY_SKYLINE, "ApprovedPrimarySkylineLocal"),
+    ("eight skyline depth roofs", DEPTH_SKYLINE, "ApprovedSkylineDepthLocal"),
+):
+    assert 'local function authenticFootprint(base, arena)' in code,name
+    for guard in (
+        'base.Parent ~= arena',
+        'or not base.Anchored or not base.CanCollide',
+        'base:GetAttribute("OriginalSizeX")',
+        'base:GetAttribute("OriginalSizeZ")',
+        'or sx < 318 or sz < 318',
+        'base.Size.X > sx + 0.2 or base.Size.Z > sz + 0.2',
+        'return sx, sz',
+    ):
+        assert guard in code,(name,guard)
+    assert 'base.Size.X < 318' not in code,name
+    assert 'base.Size.Z < 318' not in code,name
+    assert owner in ledger,(name,owner)
+    assert 'Restore' in code or 'restore' in code or 'release' in code,name
+    assert '.RenderStepped:Connect(' not in code,name
+    assert '.Heartbeat:Connect(' not in code,name
+    assert 'LoadAssetAsync' not in code,name
+assert 'originalX * .5 + size.X * .5 + 15' in HERO_SKYLINE
+assert 'return authenticFootprint(base, arena)' not in HERO_SKYLINE
+assert 'if not authenticFootprint(base, arena)' in HERO_SKYLINE
+assert 'z *= originalZ*.5+23' in PRIMARY_SKYLINE
+assert 'x *= originalX*.5+23' in PRIMARY_SKYLINE
+assert 'math.min(originalX,originalZ)*.5' in PRIMARY_SKYLINE
+assert 'z = z*(originalZ*.5+23)' in DEPTH_SKYLINE
+assert 'x = x*(originalX*.5+23)' in DEPTH_SKYLINE
+assert 'or not authenticFootprint(entry.base, entry.arena)' in DEPTH_SKYLINE
+assert 'base:SetAttribute("OriginalSizeX", base.Size.X)' in ORIGINAL_MAP
+assert 'base:SetAttribute("OriginalSizeZ", base.Size.Z)' in ORIGINAL_MAP
+print("PASS five hero, four skyline and eight outboard sculpted roofs",
+      "retain real source 3D during arena shrink with no new GPU slots")
+
 # The original four giant 36-stud Harbor cranes already have two
 # creator-approved seven-material kinetic assets. Low native crane LOD is
 # intentionally hidden and its native trolley animation intentionally
