@@ -9,8 +9,11 @@ local NODE_ID=104654294187035
 local STRUT_ID=138666009076890
 local NODE_BOUNDS=Vector3.new(4.36,4.36,4.36)
 local STRUT_BOUNDS=Vector3.new(8.46,1.24,1.10)
-local LIMITS={Low=0,Medium=3,High=6}
-local RANGE={Low=0,Medium=340,High=460}
+-- Healthy Android Low can render ONE genuine reactor node + its open
+-- trussed support: two approved seven-material Models = 14 MeshParts.
+-- Both native parts remain safe fallbacks at GPU pressure >=1.
+local LIMITS={Low=1,Medium=3,High=6}
+local RANGE={Low=210,Medium=340,High=460}
 local RETENTION=26
 local bucket=Instance.new("Folder")
 bucket.Name="ApprovedOrbitalReactorLandmarksLocal"
@@ -42,6 +45,19 @@ local function release(index)
     end
     entry.model:Destroy()
 end
+
+-- Budget evictions can happen independently of the 0.65/0.90s camera
+-- sampler. Release the exactly paired node/strut native originals now,
+-- preserving phase animation ownership on the reactor node itself.
+bucket.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for index,entry in pairs(mounted) do
+        if entry.model==child then
+            release(index)
+            break
+        end
+    end
+end)
 
 local function releaseAll()
     local keys={}
@@ -290,8 +306,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if arena~=activeArena then releaseAll();activeArena=arena end
     local cap=LIMITS[tier] or 0
     if touch then
+        -- Low previously fell through to zero on touchscreen devices
+        -- regardless of the tier cap. Allow only one atomic 14-mesh
+        -- node/strut original at pressure zero.
         cap=tier=="High" and math.min(cap,3)
-            or tier=="Medium" and math.min(cap,1) or 0
+            or tier=="Medium" and math.min(cap,1)
+            or tier=="Low" and math.min(cap,1) or 0
     end
     local pressureLevel=math.clamp(math.floor(
         tonumber(pressure) or 0),0,2)
