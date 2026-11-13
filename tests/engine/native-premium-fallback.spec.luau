@@ -1212,6 +1212,8 @@ describe("Original 3D native fallback isolation (engine)", function()
                 foreignPart.CanTouch=true
                 foreignPart.CanQuery=true
                 foreignPart.Parent=restoredClone
+                -- Roblox may deliver descendant signals in deferred mode.
+                task.wait()
                 expect(foreignPart.CanCollide).toBe(false)
                 expect(foreignPart.CanTouch).toBe(false)
                 expect(foreignPart.CanQuery).toBe(false)
