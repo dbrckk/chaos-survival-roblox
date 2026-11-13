@@ -620,7 +620,17 @@ jobs:
           assert "part.CanQuery = false" in client
           assert "part.CanTouch = false" in client
           assert "OriginalUnderdeckSafeCosmeticWeld" in client
-          assert "base.Size.X < 318 or base.Size.Z < 318" in client
+          # Real RouteTier / Towers skybridge geometry follows the physical
+          # shrink. The old 320-stud global size guard disabled every imported
+          # mesh during a normal disaster and must never be restored.
+          for required in (
+              "local function realFloorScale(base,arena)",
+              "local function authenticDeck(entry,platform)",
+              "local function refit(entry,platform)",
+              "local safe = refit(entry,platform)",
+          ):
+              assert required in client, required
+          assert "base.Size.X < 318 or base.Size.Z < 318" not in client
           census = Path("src/shared/VisualBudgetRules.lua").read_text()
           assert '"PremiumRouteMeshLocal"' in census
           assert "LocalOriginalUnderdeckMeshCount" in Path(
@@ -646,7 +656,7 @@ jobs:
           for safety in ("piece.CanCollide = false", "piece.CanTouch = false",
                          "piece.CanQuery = false", "SkySpineCrownCosmeticWeld",
                          "CollapsePhase", "BridgeShutterPhase",
-                         "base.Size.X < 318 or base.Size.Z < 318"):
+                         "clone.DescendantRemoving:Connect(function(child)"):
               assert safety in crown, safety
           assert 'OriginalSkySpineCrownLocal' in census
           assert 'SkySpineCrownMeshKit.sync(arena, cameraPoint' in scenery
@@ -757,7 +767,7 @@ jobs:
               "math.min(budget.count, residentLimit, #candidates)",
               'ground.CanCollide or ground.CanTouch or ground.CanQuery',
               'restoreOverlays(entry)',
-              "if base.Size.X < 318 or base.Size.Z < 318",
+              "local function signedFloorScale(base)",
           ):
               assert check in ground_mesh, check
           assert 'player:GetAttribute("OptionalVfxPressure")' in ground_lod
@@ -1243,7 +1253,7 @@ jobs:
               "CollapsePhase",
               "isPermanentConnector(platform)",
               "if not safePlatform(platform) then return nil end",
-              "base.Size.X < 318 or base.Size.Z < 318",
+              "local function authenticDeck(entry,platform)",
               "CanCollide = false",
               "CanTouch = false",
               "CanQuery = false",
