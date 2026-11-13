@@ -13,7 +13,6 @@ local LobbyPracticeVisualKit = require("../../src/client/LobbyPracticeVisualKit"
 local ArenaFloorFollowerKit = require("../../src/client/ArenaFloorFollowerKit")
 local HarborGantryMotionRules = require("../../src/shared/HarborGantryMotionRules")
 local HarborScenery = require("../../src/server/HarborScenery")
--- Harbor Low integration now lives in native-premium-fallback.spec.luau
 local VisualTheme = require("../../src/shared/VisualTheme")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local PremiumGroundPbrKit = require("../../src/client/PremiumGroundPbrKit")
@@ -29,9 +28,6 @@ local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistri
 
 describe("visual budget rules", function()
     it("shows one complete verified district 3D envelope on healthy Low and restores all five native masses on budget or facade loss", function()
-        -- Exercise the actual 16-building server-authored district and BOTH
-        -- existing client 3D owners. Genuine IDs and six authored material
-        -- MeshParts are source-proven separately in the release registry.
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local facadeTemplates = Instance.new("Folder")
         facadeTemplates.Name = "ApprovedDistrictFacadeTemplates"
@@ -106,7 +102,6 @@ describe("visual budget rules", function()
         local beam = building:FindFirstChild("ArmoredSupportL")
         local alpha = service.Transparency
 
-        -- A real, locally owned approved FACADE must mount FIRST.
         PremiumDistrictFacadeMeshKit.sync(arena, camera, "Low", true, look)
         expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
         expect(building:GetAttribute(
@@ -147,8 +142,6 @@ describe("visual budget rules", function()
         end
         expect(pieces).toBe(6)
 
-        -- Existing Low GPU pressure releases the optional 1,764-triangle
-        -- rear/side shell immediately, never the genuine playable Base.
         ApprovedDistrictSidewallMeshKit.sync(
             arena, camera, "Low", true, true, 1, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
@@ -161,12 +154,8 @@ describe("visual budget rules", function()
             arena, camera, "Low", true, true, 0, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
 
-        -- A disaster does not relocate the outboard building. The
-        -- immutable authenticated 320-stud Base signature survives shrink.
         base.Size = Vector3.new(230, 2, 230)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
-        -- Revoke the authenticated facade: the paired Low shell must
-        -- instantly restore its native pieces, without another camera tick.
         PremiumDistrictFacadeMeshKit.sync(nil, Vector3.zero, "Low", false)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
         expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(0)
@@ -175,7 +164,6 @@ describe("visual budget rules", function()
             arena, camera, "Low", true, true, 0, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
 
-        -- Medium prioritizes authentic pairs on actual generated buildings.
         PremiumDistrictFacadeMeshKit.sync(
             arena, camera, "Medium", true, look)
         ApprovedDistrictSidewallMeshKit.sync(
@@ -184,7 +172,6 @@ describe("visual budget rules", function()
         expect(ApprovedDistrictSidewallMeshKit.completeCount() >= 1).toBe(true)
         expect(ApprovedDistrictSidewallMeshKit.completeCount()
             <= ApprovedDistrictSidewallMeshKit.count()).toBe(true)
-        -- Medium critical GPU pressure restores every native wall.
         ApprovedDistrictSidewallMeshKit.sync(
             arena, camera, "Medium", true, false, 2, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
@@ -194,7 +181,6 @@ describe("visual budget rules", function()
             arena, camera, "Medium", true, false, 0, look)
         expect(ApprovedDistrictSidewallMeshKit.completeCount() >= 1)
             .toBe(true)
-        -- Facade eviction revokes complete-envelope credit immediately.
         PremiumDistrictFacadeMeshKit.sync(
             nil, Vector3.zero, "Medium", false, look)
         expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(0)
@@ -231,8 +217,6 @@ describe("visual budget rules", function()
             if index % 2 == 1 then odd += 1 else even += 1 end
         end
         expect(odd > 0 and even > 0).toBe(true)
-        -- Distinct real ring sectors remain separated, with no phantom
-        -- stations or tier-induced rotation/physical gameplay routes.
         for i = 1, 6 do
             for j = i + 1, 6 do
                 expect((seen[i] - seen[j]).Magnitude > 230).toBe(true)
@@ -282,8 +266,6 @@ describe("visual budget rules", function()
         expect(rules.owner(visual, platforms, decor)).toBe(nil)
         physics.Parent = platforms
 
-        -- Existing true support art is allowed ONLY with its correct
-        -- nonphysical, named server support inside this Arena.Decor.
         local support = Instance.new("Part")
         support.Name = "PlatformSupport53_1"
         support.Anchored = true
@@ -322,8 +304,6 @@ describe("visual budget rules", function()
         expect(visible("Medium", nearDistance, 145, 215, nil)).toBe(true)
         expect(visible("Medium", farDistance, 145, 215, nil)).toBe(false)
         expect(visible("Low", farDistance, 145, 215, nil)).toBe(false)
-        -- Near the map CENTER, keep the legacy visible skyline exactly:
-        -- the current patch never converts it into an empty horizon.
         expect(rules.distance(Vector3.zero, floorCenter, nearTower)).toBe(0)
 
         local folder = Instance.new("Folder")
@@ -362,8 +342,6 @@ describe("visual budget rules", function()
 
     it("spreads approved midground geometry over separate real-world sectors without raising tier caps", function()
         local selector = SpatialMidgroundSelectionRules.choose
-        -- Four authored nonphysical outboard sites, deliberately with two
-        -- pairs near one another. Already-approved sources are unchanged.
         local nearA = {Position = Vector3.new(-210, 7, -90)}
         local nearB = {Position = Vector3.new(-199, 7, -84)}
         local farA = {Position = Vector3.new(210, 7, 90)}
@@ -385,8 +363,6 @@ describe("visual budget rules", function()
         expect(medium[nearB] == nil).toBe(true)
         expect(medium[farB] == nil).toBe(true)
 
-        -- Harbor uses the same authorized strategy but a different
-        -- genuine native key; no client-only route or world mesh is made.
         local boats = {
             {hull = nearA, index = 1, score = 10},
             {hull = nearB, index = 2, score = 12},
@@ -421,7 +397,6 @@ describe("visual budget rules", function()
                 score = 8 + index * 2,
             }
         end
-        -- Tower Run Low/Medium/High: 1/2/5, same source-resident counts.
         expect(select(candidates, 1)[candidates[1].body] ~= nil).toBe(true)
         local medium = select(candidates, 2)
         expect(medium[candidates[1].body] ~= nil).toBe(true)
@@ -431,8 +406,6 @@ describe("visual budget rules", function()
         local total = 0
         for _ in pairs(towerHigh) do total += 1 end
         expect(total).toBe(5)
-        -- Orbital Low/Medium/High: 1/3/6. Three real stations occupy
-        -- opposite and perpendicular ring sectors, not adjacent blocks.
         local orbit = select(candidates, 3)
         expect(orbit[candidates[1].body] ~= nil).toBe(true)
         expect(orbit[candidates[3].body] ~= nil).toBe(true)
@@ -442,7 +415,6 @@ describe("visual budget rules", function()
         total = 0
         for _ in pairs(all) do total += 1 end
         expect(total).toBe(6)
-        -- No camera/native source candidate is fabricated to fill a cap.
         local invalid = {
             {body = {Position = Vector3.zero}, score = 0/0, index = 1},
             {body = {Position = "bad"}, score = 1, index = 2},
@@ -477,9 +449,6 @@ describe("visual budget rules", function()
         expect(limit("High", 0/0, true, false)).toBe(6)
         expect(limit("Bogus", 0, false, false)).toBe(0)
 
-        -- Cloning 2K channel maps is only allowed for a genuine owner-ID
-        -- source-backed model. An arbitrary Model cannot hijack approved
-        -- texture templates or become a phantom floor.
         local fakeModel = Instance.new("Model")
         fakeModel:SetAttribute("CosmeticOnly", true)
         fakeModel:SetAttribute("OriginalGroundMeshId", 1)
