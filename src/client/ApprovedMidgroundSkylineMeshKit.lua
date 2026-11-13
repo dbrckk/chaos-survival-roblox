@@ -79,6 +79,22 @@ local function template(name)
     return source, n
 end
 
+-- Outboard buildings never move with the shrinking gameplay floor.
+-- Preserve their original perimeter while rejecting forged/expanded bases.
+local function originalFootprint(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx < 318 or sz < 318
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local function genuineArena(arena)
     if not arena or not arena:IsA("Folder") then return nil end
     local variant = tostring(arena:GetAttribute("VariantId"))
@@ -89,8 +105,7 @@ local function genuineArena(arena)
     end
     local base = arena:FindFirstChild("Base")
     local mid = workspace:FindFirstChild("ArenaMidgroundMassLocal")
-    if not base or not base:IsA("BasePart") or not base.Anchored
-        or base.Size.X < 160 or base.Size.Z < 160
+    if not originalFootprint(base, arena)
         or not mid or not mid:IsA("Folder") or mid.Parent ~= workspace then
         return nil
     end
@@ -98,7 +113,8 @@ local function genuineArena(arena)
 end
 
 local function nativeBody(body, base, mid, profile, variant, index)
-    if not body or not body:IsA("BasePart") or body.Parent ~= mid
+    local originalX, originalZ = originalFootprint(base, base and base.Parent)
+    if not originalX or not body or not body:IsA("BasePart") or body.Parent ~= mid
         or body.Name ~= profile.prefix .. index
         or body:GetAttribute("OriginalMidgroundSkylineIndex") ~= index
         or body:GetAttribute("OriginalMidgroundSkylineVariant") ~= variant
@@ -111,9 +127,9 @@ local function nativeBody(body, base, mid, profile, variant, index)
     -- arena. Neither source art nor its old block may obscure a landing.
     local relative = base.CFrame:PointToObjectSpace(body.Position)
     local outsideX = math.abs(relative.X) -
-        (base.Size.X + body.Size.X) * 0.5
+        (originalX + body.Size.X) * 0.5
     local outsideZ = math.abs(relative.Z) -
-        (base.Size.Z + body.Size.Z) * 0.5
+        (originalZ + body.Size.Z) * 0.5
     return math.max(outsideX, outsideZ) >= 18
 end
 
@@ -279,6 +295,14 @@ local function mount(arena, base, mid, profile, variant, body, index, source)
         base:GetPropertyChangedSignal("Size"):Connect(changed)
     entry.connections[#entry.connections + 1] =
         base:GetPropertyChangedSignal("CFrame"):Connect(changed)
+    entry.connections[#entry.connections + 1] =
+        base:GetAttributeChangedSignal("OriginalSizeX"):Connect(changed)
+    entry.connections[#entry.connections + 1] =
+        base:GetAttributeChangedSignal("OriginalSizeZ"):Connect(changed)
+    entry.connections[#entry.connections + 1] =
+        base:GetPropertyChangedSignal("CanCollide"):Connect(changed)
+    entry.connections[#entry.connections + 1] =
+        base:GetPropertyChangedSignal("Anchored"):Connect(changed)
     entry.connections[#entry.connections + 1] =
         mid.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections + 1] =
