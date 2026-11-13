@@ -1742,12 +1742,12 @@ for name,asset_id in P4_IDS.items():
     assert str(asset_id) in P4_CLIENT
     assert name in P4_SOURCE
 assert 'require(script.PremiumRemainingStructureAssets).start()' in P4_START
-assert 'GlobalApprovedImportGate' not in P4_IMPORT or 'GlobalApprovedImportGate' in P4_IMPORT
+assert 'require("./PremiumApprovedAssetImportGate")' in P4_IMPORT
 for contract in (
     'local folder=Instance.new("Folder")',
     'folder.Name="ApprovedRemainingStructureMeshesLocal"',
     'for name in pairs(SOURCE) do src[name]=sourceFor(name) end',
-    'source:GetAttribute("Original3DAssetId")',
+    'model:GetAttribute("Original3DAssetId")',
     'realFloorScale(entry.arena)',
     'collectArch(entry.arena,entry.owner,decor,scale)',
     'collectCasing(entry.arena,entry.owner,group)',
@@ -1757,7 +1757,6 @@ for contract in (
     'data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)',
     'source.DescendantRemoving:Connect(function(child)',
     'clone.DescendantRemoving:Connect(function(child)',
-    'part.CanCollide=false',
     'piece.CanCollide=false',
     'visible=false,disposing=false',
     'Low={arch=1,casing=1,helix=0}',
