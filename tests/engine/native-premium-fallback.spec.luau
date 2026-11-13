@@ -88,11 +88,11 @@ describe("Original 3D native fallback isolation (engine)", function()
         if not ok then error(failure) end
     end)
 
-    -- One-off evidence gathering for the full five-map premium visual audit.
-    -- This temporary diagnostic emits authoritative server MapBuilder object
-    -- counts as Lest failures so GitHub records actual cloud-engine evidence.
-    -- Replace the diagnostic errors with permanent numeric assertions after
-    -- harvesting the results, then verify all seven suites green.
+    -- Repeatable real-engine structural census across all five fully
+    -- generated maps + lobby. The exact per-family snapshot is frozen in
+    -- docs/audit/structure-family-census-2026-11-13.csv. These safety
+    -- assertions reject empty/incomplete maps without tying development
+    -- to exact source Part counts or artificially failing CI.
     for _,variantId in ipairs(ArenaVariants.Order) do
         it("P4 five-world physical structure census "..variantId, function()
             local previous=workspace:FindFirstChild("GeneratedMap")
@@ -229,7 +229,14 @@ describe("Original 3D native fallback isolation (engine)", function()
             if generated then generated:Destroy() end
             if previous then previous.Parent=workspace end
             if not ok then error("P4_CENSUS_ERROR "..variantId.." "..tostring(result)) end
-            error("P4_CENSUS_ENGINE_REAL "..result)
+            local snapshot=game:GetService("HttpService"):JSONDecode(result)
+            expect(snapshot.variant).toBe(variantId)
+            expect(snapshot.groups>=140).toBe(true)
+            expect(snapshot.stats.total>2600).toBe(true)
+            expect(snapshot.stats.nonphysicalVisiblePrimitives>2400).toBe(true)
+            expect(snapshot.stats.physicalVisible>=100).toBe(true)
+            expect(snapshot.stats.meshes).toBe(0)
+            expect(#snapshot.inventory).toBe(snapshot.groups)
         end)
     end
 
