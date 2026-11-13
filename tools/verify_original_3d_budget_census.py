@@ -297,6 +297,29 @@ assert 'PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 assert 'ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 print("PASS genuine 16 facade + 4 corner 3D owners survive shrinking Base",
       "while preserving authenticated geometry, existing caps and fallback")
+# P0: Android approved facades now share the SAME pressure and touch
+# limits as genuine six-MeshPart sidewalls. Prevent orphan front assets
+# from consuming the 440/680/900-piece mobile budgets under GPU pressure.
+assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in DISTRICT_FACADES
+assert 'function PremiumDistrictFacadeMeshKit.residentBudget(tier, touch, pressure)' in DISTRICT_FACADES
+assert 'cap = math.min(cap, TOUCH_CAP[tier] or 0)' in DISTRICT_FACADES
+assert 'if stress >= 2 then return 0 end' in DISTRICT_FACADES
+assert 'if stress == 1 then return math.floor(cap * .5) end' in DISTRICT_FACADES
+assert 'if cap == 0 or not arena or not cameraReady' in DISTRICT_FACADES
+assert 'for i = 1, math.min(#candidates, cap) do' in DISTRICT_FACADES
+assert 'profile.Name, cameraReady, cameraLook, isTouch,' in TOWERS_LOD
+assert 'player:GetAttribute("OptionalVfxPressure"))' in TOWERS_LOD
+assert 'restoreNative(entry)' in DISTRICT_FACADES
+assert 'markResident(entry, false)' in DISTRICT_FACADES
+for tier, normal, touch in (("Low",1,1),("Medium",5,3),("High",12,8)):
+    assert touch<=normal
+    for pressure in (0,1,2):
+        expected=touch if pressure==0 else touch//2 if pressure==1 else 0
+        assert expected<=(normal if pressure==0 else normal//2),(
+            tier,pressure,expected)
+print("PASS Android 1/3/8 approved district facade touch quotas, pressure"
+      " 1 half / pressure 2 zero and instant native fallback")
+
 
 # Native wall volumes have NO corresponding original-side source mesh and
 # must never be erased to fake progress. The approved original front/roof
