@@ -64,25 +64,66 @@ aux modifications des arches et couronnes : **il n'atteste pas du HEAD final**.
 Aucune capture Android, mesure FPS ni publication publique n'a été effectuée
 dans ce lot.
 
-## Risques restants et prochain travail
+## Actualisation : source de vérité et repli StreamingEnabled
 
-Le recensement source rapporte désormais exactement **2** familles encore
-protégées par un garde `base.Size.X/Z < 318`, contre 5 avant ce travail :
+**Mise à jour du 13 novembre 2026, seconde passe.** Les deux familles
+initialement indiquées ci-dessus comme restant à migrer ont été corrigées
+sur `main` lors de l'étape suivante :
 
-- `PremiumGroundMeshKit.lua` : les 36 modules de revêtement non collidable
-  changent à la fois de taille et de `CFrame` avec le sol. Le modèle 3D
-  actuel est ancré à l'ancien `CFrame` : avant de supprimer le garde, il
-  faut suivre les événements du véritable module, conserver les panneaux
-  de danger/contraste et faire correspondre les dimensions X/Z.
-- `PremiumRouteMeshKit.lua` : ce kit couvre à la fois des routes
-  `RouteTier` qui changent de taille, des ponts de longueur variable et
-  des plateformes non compactées. Il faut classifier **par plateforme**,
-  pas enlever une condition globale : les protections `safePlatform`,
-  `BridgeShutterPhase`, `CollapsePhase`, taille initiale, repli des
-  panneaux et double châssis LongCradle restent obligatoires.
+- `PremiumGroundMeshKit.lua` recale les **36** revêtements sur les vraies
+  dalles non collidables avec vérification de leur position, dimensions
+  X/Z et provenance d'origine. Il conserve le contraste lave et les
+  avertissements. Toute disparition d'un modèle 3D déclenche maintenant
+  une restauration immédiate des joints/seams natifs et de leur état
+  de résidence, même entre deux échantillonnages LOD.
+- `PremiumRouteMeshKit.lua` distingue les decks `RouteTier` (X/Z),
+  les véritables `ChaosSkybridge` (axe long) et les decks dont
+  seule la position bouge. Chaque modèle 3D suit uniquement son véritable
+  plateau collidable, avec repli si le deck, un avertissement, un mesh
+  ou un assemblage LongCradle ne respecte plus le contrat.
 
-La réduction de 5 à 2 désigne des **modules gardés par cet ancien test**,
-pas une couverture globale de tous les modèles ou primitives présents à
-l'écran. L'inventaire général des structures et la liste des remplacements
-futurs restent dans
+Le [recensement visuel source du commit `5aa2470`](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43449489984)
+confirme **0** ancien garde global `base.Size.X/Z < 318` restant dans
+les 3D MeshKits, contre 19 au départ. **Ce nombre n'est pas un taux de
+remplacement 3D de toute la carte.**
+
+### Défauts de repli corrigés sur les couronnes et caissons
+
+Sur le code précédant cette seconde passe, `SkySpineCrownMeshKit.lua`
+acceptait un modèle encore présent même si un MeshPart interne avait disparu,
+si sa soudure n'existait plus ou s'il avait acquis une propriété physique
+incompatible. Le masque natif, le compteur de résidence et les PBR
+pouvaient alors annoncer un modèle 3D incomplet. Le kit vérifie désormais
+chaque MeshPart et sa soudure, observe `DescendantRemoving` et restaure
+immédiatement le vrai portique natif sans attendre le sampler caméra.
+
+Le `HarborPromenadePortalMeshKit.lua` applique le même contrat strict aux
+**neuf** structures industrielles dont il masque la version primitive :
+une soudure ou un MeshPart manquant ne donne plus droit au masquage ni au PBR.
+
+Dans `HarborDockCaissonMeshKit.lua`, une correction distincte porte
+sur les vrais événements `Size` : le gestionnaire `changed()`
+vérifiait auparavant uniquement la validité de la plateforme, sans
+recalculer la sculpture si le deck demeurait valide pendant le shrink.
+Il déclenche maintenant `visibility()`, donc `refit()`, **à chaque
+réduction réelle de la plateforme**. Les caissons retirés extérieurement
+libèrent immédiatement leurs écouteurs, et les rapports excluent
+les modèles incomplets ou dotés de collisions décoratives accidentelles.
+
+### Vérifications et limites
+
+- [Budget Android 3D après correctifs Harbor — réussi](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43449490015).
+- [Audit complet après correctif Harbor — réussi](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43449489984).
+- [Audit après contrôle partiel de Sky Spine — réussi](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43449113494).
+
+La CI de code/source peut confirmer les conditions vérifiables
+statiquement ; elle **ne prouve pas à elle seule** la qualité du rendu,
+les événements de streaming sur un client Android ou les FPS en jeu.
+Avant publication, relancer les suites Roblox Engine et effectuer
+une session visuelle Android sur les cinq arènes, notamment un shrink
+avec fermeture/ouverture de passerelle, alertes de catastrophe,
+rotation de caméra et changement de niveau graphique.
+
+Les modèles 3D restants, les primitives natives et les priorités
+esthétiques sont inventoriés dans
 [`audit/P4_AUDIT_EXHAUSTIF_STRUCTURES_RESTANTES_2026-11-13.md`](audit/P4_AUDIT_EXHAUSTIF_STRUCTURES_RESTANTES_2026-11-13.md).
