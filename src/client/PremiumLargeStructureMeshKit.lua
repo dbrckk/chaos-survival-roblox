@@ -123,6 +123,29 @@ local function validNativeSupport(part,index)
         and part.Size.Y <= 47
 end
 
+-- The same genuine-model envelope must govern candidate selection and
+-- final montage. Previously Medium/High could reserve a scarce authentic
+-- LongCradle slot for a deck whose source was too narrow/short when
+-- actually staged, leaving its huge rectangular native underframe visible.
+-- This pure check creates no parts and uses ONLY real model bounding boxes.
+function Kit.cradleFit(size,sourceBounds)
+    if typeof(size)~="Vector3" or typeof(sourceBounds)~="Vector3"
+        or sourceBounds.X<=0 or sourceBounds.Y<=0
+        or sourceBounds.Z<=0 then return nil end
+    local long=math.max(size.X,size.Z)
+    local short=math.min(size.X,size.Z)
+    if long<19.5 or long>34 or short<9 or short>18 then return nil end
+    local sourceLong=math.max(sourceBounds.X,sourceBounds.Z)
+    local sourceShort=math.min(sourceBounds.X,sourceBounds.Z)
+    local scale=math.min(1.21,long*.95/sourceLong,
+        short*.91/sourceShort)
+    if scale<.76 or sourceLong*scale<long*.87
+        or sourceShort*scale<short*.76
+        or sourceLong*scale>long*.97
+        or sourceBounds.Y*scale>5 then return nil end
+    return scale
+end
+
 -- Prioritize verified genuine supports + full-length undercarriages on
 -- physically safe, nearby bridge decks instead of arbitrary PlatformN %
 -- sampling or the first two PlatformN in a large streamed arena.
@@ -231,29 +254,14 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local spine=tonumber(platform:GetAttribute("SkySpineStep"))
             local promenade=tonumber(platform:GetAttribute("PromenadeStep"))
             if spine==5 or spine==6 then score-=14 end
+            -- All tiers now check the same geometry as longCradle().
+            -- Reject a 30+ stud native deck that the actual 22-stud
+            -- original cannot cover, BEFORE spending an approved 3D slot.
             if cradleSource and (spine or promenade)
-                and long>=19.5 and long<=34
-                and short>=9 and short<=18 then
-                local eligible=true
-                if tier == "Low" then
-                    -- Validate the EXACT approved source footprint before
-                    -- spending Low's sole seven-part structural budget.
-                    -- No fake small hull scaled across a 30-stud span.
-                    local sourceLong=math.max(cradleBounds.X,
-                        cradleBounds.Z)
-                    local sourceShort=math.min(cradleBounds.X,
-                        cradleBounds.Z)
-                    local scale=math.min(1.21,long*.95/sourceLong,
-                        short*.91/sourceShort)
-                    eligible=(platform.Position-cameraPoint).Magnitude<=125
-                        and scale>=.76
-                        and sourceLong*scale>=long*.87
-                        and sourceShort*scale>=short*.76
-                        and cradleBounds.Y*scale<=5
-                end
-                if eligible then
-                    cradles[#cradles+1]={platform=platform,score=score}
-                end
+                and Kit.cradleFit(size,cradleBounds)
+                and (tier ~= "Low"
+                    or (platform.Position-cameraPoint).Magnitude<=125) then
+                cradles[#cradles+1]={platform=platform,score=score}
             end
             if supportSource and supportsAvailable[id]
                 and long>=7 and long<=36 and short>=7
@@ -475,13 +483,8 @@ function Kit.longCradle(parent,platform,tier,index,selected)
     if not source or (tier == "Low" and count ~= 7) then return nil end
     local sx,sy,sz=platform.Size.X,platform.Size.Y,platform.Size.Z
     local long=math.max(sx,sz)
-    local short=math.min(sx,sz)
-    if long<19.5 or long>34 or short<9 or short>18 then return nil end
-    local srcLong=math.max(box.X,box.Z)
-    local srcShort=math.min(box.X,box.Z)
-    local scale=math.min(1.21,long*.95/srcLong,short*.91/srcShort)
-    if scale<.76 or srcLong*scale<long*.87
-        or srcShort*scale<short*.76 then return nil end
+    local scale=Kit.cradleFit(platform.Size,box)
+    if not scale then return nil end
     local yaw=(sz>sx)~=(box.Z>box.X) and math.pi*.5 or 0
     local stage=prepare(source,scale,function(bounds)
         if bounds.Y>5 or math.max(bounds.X,bounds.Z)>long*.97 then
