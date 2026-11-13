@@ -469,12 +469,21 @@ describe("Chaos Survival engine", function()
         ArenaKeelMeshKit.sync(arena, camera, "High", true)
         expect(ArenaKeelMeshKit.count()).toBe(5)
         expect(base.CanCollide).toBe(true)
-        -- The real disaster changes authoritative Size: remove all 3D
-        -- immediately, even BEFORE the next camera sampler callback.
+        -- A shrink immediately evicts every stale full-size clone.
+        -- The next authorized camera sample can re-mount ONLY the central
+        -- keel which still fits entirely inside the 230-stud collidable
+        -- floor; four corner modules would now protrude beyond the floor.
         base.Size = Vector3.new(230, 2, 230)
         expect(ArenaKeelMeshKit.count()).toBe(0)
         ArenaKeelMeshKit.sync(arena, camera, "High", true)
+        expect(ArenaKeelMeshKit.count()).toBe(1)
+        -- Even the central authentic 56-stud casing cannot survive
+        -- a 50-stud playable deck: no phantom landing or fake support.
+        base.Size = Vector3.new(50, 2, 50)
         expect(ArenaKeelMeshKit.count()).toBe(0)
+        ArenaKeelMeshKit.sync(arena, camera, "High", true)
+        expect(ArenaKeelMeshKit.count()).toBe(0)
+        expect(base.CanCollide).toBe(true)
         ArenaKeelMeshKit.sync(nil, Vector3.zero, "Low", false)
         arena:Destroy()
         holder:Destroy()
