@@ -375,7 +375,14 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
         -- restore safe cosmetics immediately; actual RouteTier resizing
         -- is handled by each deck's existing Size event.
         baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if not realFloorScale(base, arena) then clearModels() end
+            if not realFloorScale(base, arena) then
+                clearModels()
+            else
+                -- Floor contracts before any owned RouteTier deck. A
+                -- previously authentic caisson must hide if the server
+                -- deck has not yet reached its corresponding new size.
+                for _, entry in pairs(mounted) do visibility(entry) end
+            end
         end)
     end
     local source, expected = original()
