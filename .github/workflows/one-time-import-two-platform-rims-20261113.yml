@@ -1,0 +1,34 @@
+# One scoped creator-owned import of TWO original author-authored platform
+# rim models. Preview OBJ/glTF and budgets passed source QA run 43499193335.
+# Does NOT publish Roblox Place or alter a live player's experience.
+# This trigger is one-shot by filename; reruns are NOT safe for asset POST.
+name: One-time Import Two Authored Platform Rim Models 2026-11-13
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-two-platform-rims-20261113.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-authored-platform-rims-once-20261113
+  cancel-in-progress: false
+
+jobs:
+  original-owned-model:
+    if: github.repository == 'dbrckk/chaos-survival-roblox' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model: [platform_rim_rect, platform_rim_long]
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
