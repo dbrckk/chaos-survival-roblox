@@ -206,6 +206,18 @@ for clause in (
 assert '            isTouch)' in scenery_lod, "beam device budget not wired"
 print("PASS approved 16-beam desktop cap and mobile pressure guard")
 
+# Desktop Medium gets two more authenticated 3D chassis while mobile
+# Medium stays at four. A tampered clone must restore its native fallback.
+for clause in (
+    "Medium = {count = 6, distance = 225, retention = 22}",
+    'if touch == true and tier == "Medium" then cap = math.min(cap, 4) end',
+    "clone.DescendantAdded:Connect(function(child)",
+    "meshParts=meshParts",
+    "local intact = #entry.meshParts == 7",
+):
+    assert clause in beam_mesh, ("medium understructure safety", clause)
+print("PASS desktop Medium six-beam mesh residency and clone integrity")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
