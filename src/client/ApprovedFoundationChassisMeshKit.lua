@@ -131,12 +131,24 @@ local function fitFoundation(shoulder, sourceSize)
     return yaw, scale, covers
 end
 
+-- Foundations remain fixed outside the original 320-stud arena. The
+-- gameplay floor shrinks independently; authenticate its initial footprint.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
+
 local function safeOwner(arena, owner, base)
     local decor = arena and arena:FindFirstChild("Decor")
     local folder = decor and decor:FindFirstChild("Original3DScenery")
-    if not base or not base:IsA("BasePart") or base.Parent ~= arena
-        or not base.CanCollide or base.Size.X < 318
-        or base.Size.Z < 318 or not folder or not folder:IsA("Folder")
+    if not authenticBase(base, arena)
+        or not folder or not folder:IsA("Folder")
         or not owner or not owner:IsA("Model") or owner.Parent ~= folder
         or owner:GetAttribute("CosmeticOnly") ~= true
         or owner:GetAttribute("ChaosDistantScenery") ~= true
@@ -283,8 +295,7 @@ function Kit.sync(arena, imported, cameraPoint, tier, cameraReady, pressure)
     if tier == "Low" and stress >= 1 then cap = 0 end
     local base = arena and arena:FindFirstChild("Base")
     if not cameraReady or typeof(cameraPoint) ~= "Vector3"
-        or not arena or not base or not base:IsA("BasePart")
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        or not arena or not authenticBase(base, arena) then
         unmountAll()
         return
     end
@@ -294,20 +305,25 @@ function Kit.sync(arena, imported, cameraPoint, tier, cameraReady, pressure)
         end
         table.clear(baseConnections)
         watchedBase = base
-        local function stopOnShrink()
-            if not base.Parent or base.Size.X < 318 or base.Size.Z < 318
-                or not base.CanCollide then
+        local function revokeInvalidBase()
+            if not authenticBase(base, arena) then
                 unmountAll()
             end
         end
         baseConnections[#baseConnections + 1] =
-            base:GetPropertyChangedSignal("Size"):Connect(stopOnShrink)
+            base:GetPropertyChangedSignal("Size"):Connect(revokeInvalidBase)
         baseConnections[#baseConnections + 1] =
             base:GetPropertyChangedSignal("CFrame"):Connect(unmountAll)
         baseConnections[#baseConnections + 1] =
-            base:GetPropertyChangedSignal("CanCollide"):Connect(stopOnShrink)
+            base:GetPropertyChangedSignal("CanCollide"):Connect(revokeInvalidBase)
         baseConnections[#baseConnections + 1] =
-            base.AncestryChanged:Connect(stopOnShrink)
+            base.AncestryChanged:Connect(revokeInvalidBase)
+        baseConnections[#baseConnections + 1] =
+            base:GetAttributeChangedSignal("OriginalSizeX"):Connect(revokeInvalidBase)
+        baseConnections[#baseConnections + 1] =
+            base:GetAttributeChangedSignal("OriginalSizeZ"):Connect(revokeInvalidBase)
+        baseConnections[#baseConnections + 1] =
+            base:GetPropertyChangedSignal("Anchored"):Connect(revokeInvalidBase)
     end
     local source, sourceSize, parts = template()
     local wanted = {}
