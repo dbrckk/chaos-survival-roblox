@@ -153,6 +153,7 @@ HARBOR_LANDMARKS = (
     ("PremiumHarborHeroStationAssets.lua", "73237902371094", 33, 96),
     ("PremiumHarborGantryAssets.lua", "75684193304551", 58, 76),
     ("PremiumHarborMidgroundBargeAssets.lua", "132891280963772", 40, 108),
+    ("PremiumHarborFreighterAssets.lua", "128820723471019", 48, 66),
 )
 for path, source_id, early, normal in HARBOR_LANDMARKS:
     source=(ROOT/"src/server"/path).read_text()
@@ -199,5 +200,29 @@ assert '132891280963772' in APPROVED
 assert "task.defer(PremiumHarborMidgroundBargeAssets.start)" in INIT
 print("PASS Harbor native fallback, original approved 3D barge first-round priority")
 
+
+# The exterior cargo freighter belongs to a static, original 320-stud
+# footprint; Shrinking Arena changes only the physical floor, not the ship.
+freighter=(ROOT/"src/client/HarborFreighterMeshKit.lua").read_text()
+freighter_server=(ROOT/"src/server/PremiumHarborFreighterAssets.lua").read_text()
+assert 'local function authenticBase(base,arena)' in freighter
+assert 'base:GetAttribute("OriginalSizeX")' in freighter
+assert 'base:GetAttribute("OriginalSizeZ")' in freighter
+assert 'base.Size.X<=originalX+.2 and base.Size.Z<=originalZ+.2' in freighter
+assert 'or not authenticBase(base,arena) or not ship:IsA("Model")' in freighter
+assert 'base.Size.X<318' not in freighter
+assert 'base.Size.Z<318' not in freighter
+assert 'if entry and (entry.source~=source or entry.ship~=ship' in freighter
+assert 'part.Transparency=visible and 1 or alpha' in freighter
+assert 'part.CanCollide=false' in freighter
+assert 'part.CanTouch=false' in freighter
+assert 'part.CanQuery=false' in freighter
+assert 'if not e.disposing and p:IsA("MeshPart") then' in freighter
+assert 'source:Clone()' in freighter
+assert 'OriginalMeshScenery.sanitize(imported)' in freighter_server
+assert 'ActiveSignatureSchedule.waitFor("Harbor",48,66)' in freighter_server
+assert '128820723471019' in APPROVED
+assert 'task.defer(PremiumHarborFreighterAssets.start)' in INIT
+print("PASS Harbor: large real 3D freighter remains mounted during shrinking and recovers native shell")
 
 print("NOTE source CI does not measure concurrent network load or actual FPS")
