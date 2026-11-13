@@ -119,8 +119,8 @@ crossroads = definitions.split("    Crossroads = {",1)[1].split(
 decks = [
     tuple(float(v) for v in match)
     for match in re.findall(
-        r'\\{offset=Vector3\\.new\\([^)]+\\),size=Vector3\\.new\\('
-        r'\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*\\)',
+        r'\{offset=Vector3\.new\([^)]+\),size=Vector3\.new\('
+        r'\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)',
         crossroads,
     )
 ]
