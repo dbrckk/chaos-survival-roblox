@@ -42,6 +42,25 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(native.Anchored and not native.CanCollide
                 and not native.CanTouch and not native.CanQuery).toBe(true)
             expect(math.abs(native.Size.Y-4.85)<.001).toBe(true)
+            -- Exhaustive count for this exact Crossroads family: each
+            -- of four first elevated decks owns four real 4.85-stud
+            -- supports. Source eligibility is not sixteen simultaneous
+            -- client MeshParts, nor permission to erase their native art.
+            local eligibleNativeCount=0
+            for _,route in ipairs({2,4,6,8}) do
+                local owner=platforms:FindFirstChild("Platform"..route)
+                expect(owner~=nil and owner.CanCollide).toBe(true)
+                for corner=1,4 do
+                    local post=decor:FindFirstChild(
+                        "PlatformSupport"..route.."_"..corner)
+                    expect(post~=nil and post.Anchored
+                        and not post.CanCollide and not post.CanQuery
+                        and not post.CanTouch).toBe(true)
+                    expect(math.abs(post.Size.Y-4.85)<.001).toBe(true)
+                    eligibleNativeCount+=1
+                end
+            end
+            expect(eligibleNativeCount).toBe(16)
 
             templates=Instance.new("Folder")
             templates.Name="ApprovedLargeStructureTemplates"
@@ -127,6 +146,12 @@ describe("Original 3D native fallback isolation (engine)", function()
                     {platform},decor,"Crossroads","Low",base,
                     camera,Vector3.new(0,0,1),1)
             expect(pressured[platform]).toBe(nil)
+            local criticalCradles,criticalSupports=
+                PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                    {platform,farCradle},decor,"Crossroads","Low",base,
+                    camera,Vector3.new(0,0,1),2)
+            expect(next(criticalCradles)).toBe(nil)
+            expect(next(criticalSupports)).toBe(nil)
             meshes=Instance.new("Folder")
             meshes.Name="P0OriginalColumnLowFixture"
             meshes.Parent=workspace
