@@ -1,6 +1,6 @@
 -- Original approved 3D container freighter replaces the 70+ native
--- Part/WedgePart cargo ship only when visible on Harbor Medium/High.
--- All native pieces are retained server-side, including the Low fallback.
+-- Part/WedgePart cargo ship, with a seven-MeshPart near-camera Low
+-- replacement when healthy. All native pieces remain reversible fallback.
 -- The existing scenery-lod sampler is the ONLY scheduling owner.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -197,9 +197,13 @@ function Kit.sync(arena,cameraPoint,quality,cameraReady,_,pressure)
         currentArena=arena
     end
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
-    if not arena or not cameraReady or quality=="Low"
-        or (quality=="Medium" and stress>=2)
-        or (quality=="High" and stress>=2)
+    -- On Low, substitute the original seven source-authenticated MeshParts
+    -- for the 14-part coarse native silhouette only within 295 studs.
+    -- First graphics pressure restores native immediately; Medium/High
+    -- retain their established pressure-2 fallback.
+    if not arena or not cameraReady
+        or (quality=="Low" and stress>=1)
+        or (quality~="Low" and stress>=2)
         or typeof(cameraPoint)~="Vector3" then
         clear();return
     end
@@ -212,7 +216,8 @@ function Kit.sync(arena,cameraPoint,quality,cameraReady,_,pressure)
         clear();return
     end
     local distance=(cameraPoint-ship:GetPivot().Position).Magnitude
-    local maximum=quality=="High" and 610 or 440
+    local maximum=quality=="Low" and 295
+        or (quality=="High" and 610 or 440)
     if distance>maximum+(entry and 45 or 0) then
         clear();return
     end
