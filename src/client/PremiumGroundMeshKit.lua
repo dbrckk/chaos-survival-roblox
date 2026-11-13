@@ -163,22 +163,59 @@ local function clear()
     folder:ClearAllChildren()
 end
 
+-- Validate the builder's ORIGINAL 6x6 floor layout against the
+-- server's live signed footprint. A shrinking cosmetic bay must match
+-- BOTH the real size and moving position; it is never a walkable floor.
+-- An incomplete streaming update fails closed and exposes native paint.
+local function signedFloorScale(base)
+    local map = workspace:FindFirstChild("GeneratedMap")
+    local arena = base and base.Parent
+    if not map or not map:IsA("Folder") or not arena
+        or not arena:IsA("Folder") or arena.Name ~= "Arena"
+        or arena.Parent ~= map or not base:IsA("BasePart")
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx, sz = base:GetAttribute("OriginalSizeX"),
+        base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx >= math.huge or sz >= math.huge then return nil end
+    local x, z = base.Size.X / sx, base.Size.Z / sz
+    if x < .445 or x > 1.005 or z < .445 or z > 1.005
+        or math.abs(x - z) > .012 then return nil end
+    return math.min(x, z), sx, sz
+end
+
 local function originalSurface(ground, decor, base)
-    -- Only source-authored 49-stud modular floors may take imported art.
-    -- Do not decorate the real Base, platform collider, hazard or arbitrary
-    -- player-supplied instance with a falsely safe-looking floor surface.
-    if not ground or not decor or not base or not base.Parent
-        or ground.Parent ~= decor or not ground:IsA("Part")
-        or not ground.Name:match("^PremiumGroundModule%d+$")
+    local scale, sx, sz = signedFloorScale(base)
+    if not scale or not ground or not decor
+        or ground.Parent ~= decor or decor.Parent ~= base.Parent
+        or not ground:IsA("Part") or ground.Shape ~= Enum.PartType.Block
+        or not ground.Anchored or ground.CastShadow
         or ground:GetAttribute("OriginalGroundFinish") ~= true
         or ground:GetAttribute("PremiumArchitecturalSurface") ~= true
         or ground.CanCollide or ground.CanTouch or ground.CanQuery
         or ground.Transparency >= 0.5
-        or ground.Size.X < 35 or ground.Size.Z < 35
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        or math.abs(ground.Size.Y - .035) > .012 then
         return false
     end
-    return true
+    local index = tonumber(ground.Name:match("^PremiumGroundModule(%d+)$"))
+    if not index or index < 1 or index > 36 then return false end
+    local cellX, cellZ = (sx - 18) / 6, (sz - 18) / 6
+    local expectedSizeX, expectedSizeZ =
+        (cellX - 1.2) * scale, (cellZ - 1.2) * scale
+    if math.abs(ground.Size.X - expectedSizeX) > .24
+        or math.abs(ground.Size.Z - expectedSizeZ) > .24 then
+        return false
+    end
+    local ix, iz = math.floor((index - 1) / 6) + 1,
+        (index - 1) % 6 + 1
+    local expected = base.CFrame:PointToWorldSpace(Vector3.new(
+        (ix - 3.5) * cellX * scale,
+        base.Size.Y * .5 + .153,
+        (iz - 3.5) * cellZ * scale))
+    return (ground.Position - expected).Magnitude < .36
+        and ground.CFrame.LookVector:Dot(base.CFrame.LookVector) > .999
+        and ground.CFrame.RightVector:Dot(base.CFrame.RightVector) > .999
 end
 
 local function validTemplate()
@@ -236,13 +273,10 @@ local function safeAfterMount(entry, base)
             return false
         end
     end
-    if not originalSurface(ground, entry.decor, base)
-        or (ground.Size - entry.initialSize).Magnitude >= 0.07
-        or (ground.CFrame.Position - entry.initialCFrame.Position).Magnitude >= 0.07
-        -- A rotation or streamed reanchor must not leave ghost 3D paint.
-        or ground.CFrame.LookVector:Dot(entry.initialCFrame.LookVector) < 0.999
-        or ground.CFrame.RightVector:Dot(entry.initialCFrame.RightVector) < 0.999
-    then
+    -- The server shrinks the ORIGINAL bay and moves it each disaster
+    -- tick; the provenance/position checks above replace the obsolete
+    -- initial-size/CFrame tests. Welded art follows the actual native bay.
+    if not originalSurface(ground, entry.decor, base) then
         return false
     end
     return true
@@ -258,7 +292,7 @@ local function mount(ground, decor, base, template)
     local scale = math.min(
         ground.Size.X * 0.97 / templateSize.X,
         ground.Size.Z * 0.97 / templateSize.Z, 1.05)
-    if scale < 0.60 then return nil end
+    if scale < 0.35 then return nil end
     local clone = template:Clone()
     local scaled = pcall(function() clone:ScaleTo(scale) end)
     if not scaled then
@@ -293,7 +327,7 @@ local function mount(ground, decor, base, template)
                 return nil
             end
             part.CFrame = frame * sourceFrame:ToObjectSpace(part.CFrame)
-            part.Anchored = true
+            part.Anchored = false
             part.Massless = true
             part.CanCollide = false
             part.CanTouch = false
@@ -314,18 +348,64 @@ local function mount(ground, decor, base, template)
 
     local entry = {
         model = clone, ground = ground, decor = decor,
-        initialSize = ground.Size, initialCFrame = ground.CFrame,
+        initialSize = ground.Size,
         pieces = pieces, connections = {}, index = number, overlays = {},
-        originalColors = {},
+        originalColors = {}, joints = {}, frames = {}, sizes = {},
+        lastFootprint = nil,
     }
     for _, piece in ipairs(pieces) do
         entry.originalColors[piece] = piece.Color
+        local joint = Instance.new("Weld")
+        joint.Name = "PremiumGroundShrinkCosmeticWeld"
+        joint.Part0 = ground
+        joint.Part1 = piece
+        joint.C0 = ground.CFrame:ToObjectSpace(piece.CFrame)
+        joint.C1 = CFrame.identity
+        joint.Parent = piece
+        entry.joints[piece] = joint
+        entry.frames[piece] = ground.CFrame:ToObjectSpace(piece.CFrame)
+        entry.sizes[piece] = piece.Size
     end
     recolorMounted(entry)
+    -- Preserve the source's X/Z details while keeping the original
+    -- height flush below the authoritative warning/glyph overlay.
+    -- The weld carries all CFrame movement for free; only Size updates
+    -- the local mesh profile, using the ALREADY INSTALLED event signal.
+    local function refit()
+        if not safeAfterMount(entry, base) then return false end
+        local ratioX = ground.Size.X / entry.initialSize.X
+        local ratioZ = ground.Size.Z / entry.initialSize.Z
+        if ratioX <= 0 or ratioZ <= 0
+            or ratioX > 2.28 or ratioZ > 2.28
+            or math.abs(ratioX - ratioZ) > .015 then return false end
+        for _, piece in ipairs(entry.pieces) do
+            local joint = entry.joints[piece]
+            if not joint or joint.Parent ~= piece
+                or joint.Part0 ~= ground or joint.Part1 ~= piece
+                or not entry.frames[piece] or not entry.sizes[piece] then
+                return false
+            end
+        end
+        if entry.lastFootprint
+            and (ground.Size - entry.lastFootprint).Magnitude < .024 then
+            return true
+        end
+        for _, piece in ipairs(entry.pieces) do
+            local frame = entry.frames[piece]
+            local size = entry.sizes[piece]
+            piece.Size = Vector3.new(size.X * ratioX, size.Y,
+                size.Z * ratioZ)
+            entry.joints[piece].C0 = CFrame.new(
+                frame.Position.X * ratioX, frame.Position.Y,
+                frame.Position.Z * ratioZ) * (frame - frame.Position)
+        end
+        entry.lastFootprint = ground.Size
+        return true
+    end
     local function onGroundChanged()
         -- Hide untrusted/changed 3D immediately, and restore the native
         -- finish. Reversible if a harmless transparency change is undone.
-        if not safeAfterMount(entry, base) then
+        if not refit() then
             hide(entry)
             return
         end
@@ -378,12 +458,10 @@ function PremiumGroundMeshKit.sync(arena, cameraPoint, tier, cameraReady,
         if baseChanged then baseChanged:Disconnect() end
         watchedBase = base
         baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then
-                clearMounted()
-            end
+            if not signedFloorScale(base) then clearMounted() end
         end)
     end
-    if base.Size.X < 318 or base.Size.Z < 318 then
+    if not signedFloorScale(base) then
         clearMounted()
         return
     end
