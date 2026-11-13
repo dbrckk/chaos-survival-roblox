@@ -152,6 +152,7 @@ print("PASS Towers shares the ONE original Orbital source at the active window")
 HARBOR_LANDMARKS = (
     ("PremiumHarborHeroStationAssets.lua", "73237902371094", 33, 96),
     ("PremiumHarborGantryAssets.lua", "75684193304551", 58, 76),
+    ("PremiumHarborMidgroundBargeAssets.lua", "132891280963772", 40, 108),
 )
 for path, source_id, early, normal in HARBOR_LANDMARKS:
     source=(ROOT/"src/server"/path).read_text()
@@ -177,5 +178,26 @@ assert 'task.wait(4)' in gantries
 assert 'counts.Static ~= 4 or counts.Trolley ~= 1' in gantries
 assert 'counts.Cable ~= 1 or counts.Load ~= 1' in gantries
 print("PASS two real Harbor cranes remain sequential, validated and reversible")
+# Exact already-Approved chined cargo barge is now eligible while Harbor
+# is the active arena. Do not make a new AssetService request lane or bypass
+# global two-inflight fairness; this change only advances one existing owner.
+barge=(ROOT/"src/server/PremiumHarborMidgroundBargeAssets.lua").read_text()
+assert barge.count('GlobalApprovedImportGate.load')==1
+assert barge.count('task.spawn(function()')==1
+assert barge.count('ActiveSignatureSchedule.waitFor')==1
+assert 'ActiveSignatureSchedule.waitFor("Harbor",40,108)' in barge
+assert 'task.wait(108)' not in barge
+assert 'OriginalMeshScenery.sanitize(raw)' in barge
+assert 'authenticShape(safe)' in barge
+assert 'if n~=7 then return false end' in barge
+assert 'safe:SetAttribute("Original3DTriangleCount",3718)' in barge
+assert 'safe:SetAttribute("Original3DAssetId",ID)' in barge
+assert 'if attempt==3 then' in barge
+assert 'holder:SetAttribute("OwnerVerified",true)' in barge
+assert 'OriginalHarborBarge3D' in barge
+assert '132891280963772' in APPROVED
+assert "task.defer(PremiumHarborMidgroundBargeAssets.start)" in INIT
+print("PASS Harbor native fallback, original approved 3D barge first-round priority")
+
 
 print("NOTE source CI does not measure concurrent network load or actual FPS")
