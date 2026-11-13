@@ -1,0 +1,93 @@
+# P4 source-quality milestone. Creating preview meshes DOES NOT publish
+# a Roblox model or the live Place. Explicit creator approval is separate.
+name: P4 Authored Adaptive Platform Rim Source Validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/p4-platform-rims-source-check-20261113.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-platform-rim-source-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-perimeter-art:
+    if: github.repository == 'dbrckk/chaos-survival-roblox'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        rim: [platform_rim_rect, platform_rim_long]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate original 3D source and UV/tangent-ready seven-material glTF
+        env:
+          RIM: ${{ matrix.rim }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/author-art"
+          python3 tools/generate_original_platform_rims.py \
+            --model "$RIM" --output "$RUNNER_TEMP/author-art/chaos_${RIM}.obj" \
+            > "$RUNNER_TEMP/author-art/source.json"
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/author-art/chaos_${RIM}.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/author-art/chaos_${RIM}.gltf" \
+            > "$RUNNER_TEMP/author-art/export.json"
+          python3 - "$RUNNER_TEMP/author-art" "$RIM" <<'PY'
+          import base64,json,sys
+          from pathlib import Path
+          folder,kind=Path(sys.argv[1]),sys.argv[2]
+          summary=json.loads((folder/"source.json").read_text())
+          gltf=json.loads((folder/("chaos_"+kind+".gltf")).read_text())
+          assert summary["asset"]==kind
+          assert summary["source_is_author_3d"] is True
+          assert summary["client_replaces_server_colliders"] is False
+          assert 38<=summary["groups"]<=155
+          assert 500<=summary["triangles"]<=6500
+          x,y,z=summary["dimensions"]
+          if kind=="platform_rim_rect":
+              assert 16<=x<=17.1 and 9<=z<=10.1
+          else:
+              assert 25<=x<=26.1 and 7<=z<=8.1
+          assert 2.0<=y<=2.6
+          assert gltf["asset"]["version"]=="2.0"
+          names={"ARMOR","BRUSHED","CARBON","GRIP","ALLOY","CERAMIC","SIGNAL"}
+          assert set(x["name"] for x in gltf["materials"])==names
+          pieces=gltf["meshes"][0]["primitives"]
+          assert len(pieces)==7,"exactly seven real MeshParts per rim"
+          face_count=0
+          for piece in pieces:
+              attrs=piece["attributes"]
+              assert {"POSITION","NORMAL","TEXCOORD_0","TANGENT"}<=set(attrs)
+              face_count+=gltf["accessors"][attrs["POSITION"]]["count"]//3
+          assert face_count==summary["triangles"],(face_count,summary["triangles"])
+          data=gltf["buffers"][0]
+          binary=base64.b64decode(data["uri"].split(",",1)[1],validate=True)
+          assert len(binary)==data["byteLength"]
+          print("PASS original authored rim",kind,
+                "triangles",face_count,"bounds",summary["dimensions"])
+          PY
+      - name: Preserve preview for source review
+        uses: actions/upload-artifact@v4
+        with:
+          name: P4-${{ matrix.rim }}-OBJ-glTF-preview
+          path: |
+            ${{ runner.temp }}/author-art
+          retention-days: 14
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify existing source and native-mask contracts
+        run: |
+          python3 tools/audit_visual_structure_sources.py
+          python3 tools/verify_original_3d_budget_census.py
