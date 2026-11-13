@@ -1535,6 +1535,26 @@ assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
 print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero native hatch fallback")
 
+# P0 medium real support coverage: eight approved 7-piece columns are
+# already permitted by the existing client budget. Never select only four
+# owner platforms and leave half the allowed source budget idle. High
+# still uses eight decks with up to two columns each; Low stays at one.
+LARGE=(CLIENT/"PremiumLargeStructureMeshKit.lua").read_text(encoding="utf8")
+assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 8 or 1)' in LARGE
+assert 'local maxSupports = tier=="High" and 2 or 1' in LARGE
+assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)' not in LARGE
+assert 'local supportBudget = tier.Name == "High" and 16' in OWNER
+assert 'or (tier.Name == "Medium" and 8' in OWNER
+assert 'and nearSupports[platform] == true' in OWNER
+assert 'supportBudget -= columns.modules' in OWNER
+assert 'if output.modules < 1 then return nil end' in LARGE
+assert 'if tier == "Low" and supportParts ~= 7 then' in LARGE
+assert 'if tier == "Low" and not cameraReady then' in LARGE
+assert 'if segments <= available-output.modules' in LARGE
+assert 'Kit.bind(' not in LARGE
+print("PASS medium 8 real supported platform owners / 8 original modules,"
+      " High 8x2=16, Low one, native ownership and collapse fallback")
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
