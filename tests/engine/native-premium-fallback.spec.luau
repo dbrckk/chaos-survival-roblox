@@ -1103,6 +1103,8 @@ describe("Original 3D native fallback isolation (engine)", function()
                     model.Parent=templates
                 end
                 specimen("Access",Vector3.new(3.9,17.53,17.6))
+                specimen("Transfer",Vector3.new(4.1,18.33,17.6))
+                specimen("Summit",Vector3.new(5.2,19.73,17.6))
                 specimen("Casing",Vector3.new(8.58,10.378,5.3))
                 if variantId=="Orbital" then
                     specimen("Helix",Vector3.new(5.08,1.453,23.6))
@@ -1141,19 +1143,25 @@ describe("Original 3D native fallback isolation (engine)", function()
                 -- the approved originals without inventing a fake platform.
                 p4Phase="four genuine escape routes visibly sculpted"
                 local sculptedRoutes={}
+                local sculptedStages={}
                 for _,realDeck in ipairs(platforms:GetChildren()) do
-                    if realDeck:GetAttribute("PerimeterStep")==1 then
+                    local stage=realDeck:GetAttribute("PerimeterStep")
+                    if stage==1 or stage==4 or stage==8 then
                         local realId=tonumber(realDeck.Name:match("%d+"))
                         local native=realId and decor:FindFirstChild(
                             "SkyRouteMonument"..realId.."_MonumentalOverpass")
                         if native and native.LocalTransparencyModifier==1 then
                             sculptedRoutes[realDeck:GetAttribute("PerimeterRoute")]=true
+                            sculptedStages[stage]=true
                         end
                     end
                 end
                 local distinctRoutes=0
                 for _ in pairs(sculptedRoutes) do distinctRoutes+=1 end
                 expect(distinctRoutes).toBe(4)
+                expect(sculptedStages[1]).toBe(true)
+                expect(sculptedStages[4]).toBe(true)
+                expect(sculptedStages[8]).toBe(true)
                 p4Phase="approved casing residency"
                 expect(RemainingStructureKit.count("casing")>=1).toBe(true)
                 p4Phase="native arch mask and untouched signal"
