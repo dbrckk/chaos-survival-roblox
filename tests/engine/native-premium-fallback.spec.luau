@@ -80,25 +80,25 @@ describe("Original 3D native fallback isolation (engine)", function()
                 "Low",true,pressure)
         end
         update(0)
-        if HarborSignatureGantryKit.count()==0
-            or SouthHarborDrydockKit.count()==0 then
-            local _,box=northSource.SculptedGantry:GetBoundingBox()
-            local _,southBox=southSource.SculptedDrydock:GetBoundingBox()
-            local expected=base.Position+Vector3.new(
-                base:GetAttribute("OriginalSizeX")*.24,
-                base.Size.Y*.5+43.5,
-                -(base:GetAttribute("OriginalSizeZ")*.5+66))
-            error("HARBOR_OUTER_3D_ENGINE_DIAGNOSTIC: north="
-                ..tostring(HarborSignatureGantryKit.count())
-                .." south="..tostring(SouthHarborDrydockKit.count())
-                .." base="..tostring(base.Size)
-                .." originalX="..tostring(base:GetAttribute("OriginalSizeX"))
-                .." originalZ="..tostring(base:GetAttribute("OriginalSizeZ"))
-                .." northBox="..tostring(box).." southBox="..tostring(southBox)
-                .." beamError="..tostring((beam.Position-expected).Magnitude)
-                .." variant="..tostring(north:GetAttribute("SignatureVariant"))
-                .." sourceHolder="..tostring(northSource.Parent))
+        local function requireMounted(stage)
+            local n=HarborSignatureGantryKit.count()
+            local d=SouthHarborDrydockKit.count()
+            local hiddenN=HarborSignatureGantryKit.replacedNativeCount()
+            local hiddenD=SouthHarborDrydockKit.replacedNativeCount()
+            if n~=1 or d~=1 or hiddenN~=3 or hiddenD~=14
+                or beam.Transparency~=1 or drydock.Transparency~=1 then
+                error("Harbor authentic outer 3D failed at "..stage
+                    .." north="..tostring(n).." south="..tostring(d)
+                    .." northMasked="..tostring(hiddenN)
+                    .." southMasked="..tostring(hiddenD)
+                    .." northAlpha="..tostring(beam.Transparency)
+                    .." southAlpha="..tostring(drydock.Transparency)
+                    .." base="..tostring(base.Size)
+                    .." originalX="..tostring(base:GetAttribute("OriginalSizeX"))
+                    .." originalZ="..tostring(base:GetAttribute("OriginalSizeZ")))
+            end
         end
+        requireMounted("initial")
         expect(HarborSignatureGantryKit.count()).toBe(1)
         expect(HarborSignatureGantryKit.replacedNativeCount()).toBe(3)
         expect(SouthHarborDrydockKit.count()).toBe(1)
@@ -109,6 +109,7 @@ describe("Original 3D native fallback isolation (engine)", function()
         local originalDockPos=drydock.Position
         base.Size=Vector3.new(170,4,174)
         update(0)
+        requireMounted("after-shrink")
         expect(HarborSignatureGantryKit.count()).toBe(1)
         expect(SouthHarborDrydockKit.count()).toBe(1)
         expect((beam.Position-originalBeamPos).Magnitude<.01).toBe(true)
@@ -119,6 +120,7 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(beam.Transparency).toBe(beamAlpha)
         expect(drydock.Transparency).toBe(dockAlpha)
         update(0)
+        requireMounted("after-pressure-recovery")
         expect(HarborSignatureGantryKit.count()).toBe(1)
         expect(SouthHarborDrydockKit.count()).toBe(1)
         -- An invalid floor expansion must immediately reveal both
