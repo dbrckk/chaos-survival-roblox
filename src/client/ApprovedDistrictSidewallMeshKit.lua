@@ -13,7 +13,7 @@ local BUDGET = {
     -- triangles at most on healthy Low, zero under GPU pressure.
     Low = {count = 1, distance = 128, retention = 16},
     Medium = {count = 4, distance = 205, retention = 20},
-    High = {count = 12, distance = 275, retention = 28},
+    -- Desktop High may complete all sixteen authentic buildings; touch High\n    -- remains capped at eight, pressure High at five.\n    High = {count = 16, distance = 275, retention = 28},
 }
 -- Android shares the existing 440/680/900 Parts census with all original
 -- monuments. Medium touch 3 and High touch 8 models max (six MeshParts
@@ -195,6 +195,18 @@ local function valid(entry, arena, district, base)
         or door.CFrame.UpVector:Dot(entry.doorFrame.UpVector) < .999 then
         return false
     end
+    local actual = 0
+    for _, part in ipairs(entry.model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not part:IsA("MeshPart") or not part.Anchored
+                or part.CanCollide or part.CanTouch or part.CanQuery
+                or not part.Massless then return false end
+            actual += 1
+        elseif part:IsA("LuaSourceContainer") then
+            return false
+        end
+    end
+    if actual ~= 6 then return false end
     for _, part in ipairs(entry.pieces) do
         if not part:IsDescendantOf(entry.model) then return false end
     end
@@ -282,6 +294,12 @@ local function mount(arena, district, base, building, door,
     entry.connections[#entry.connections + 1] =
         clone.DescendantRemoving:Connect(function(part)
             if part:IsA("MeshPart") then release(building) end
+        end)
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantAdded:Connect(function(part)
+            if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then
+                release(building)
+            end
         end)
     reconcile()
 end
