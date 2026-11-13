@@ -398,15 +398,39 @@ local function mount(data,source)
                 o:GetPropertyChangedSignal(name):Connect(changed)
         end
     end
-    watch(data.owner,{"CFrame","Size"})
+    watch(data.owner,{"CFrame","Size","Transparency","CanCollide","Anchored"})
+    if data.category=="arch" then
+        -- A collapsing/shutter warning takes precedence over decorative
+        -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
+        entry.connections[#entry.connections+1]=
+            data.owner:GetAttributeChangedSignal("CollapsePhase"):Connect(changed)
+        entry.connections[#entry.connections+1]=
+            data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
+    end
     for _,native in ipairs(data.originals) do
         watch(native,{"CFrame","Size","Transparency"})
     end
     entry.connections[#entry.connections+1]=
         source.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections+1]=
+        source.DescendantRemoving:Connect(function(child)
+            if child:IsA("MeshPart") and not entry.disposing then
+                task.defer(function()
+                    if not entry.disposing then refresh(entry) end
+                end)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
         clone.DescendantRemoving:Connect(function(child)
             if child:IsA("MeshPart") and not entry.disposing then
+                task.defer(function()
+                    if not entry.disposing then refresh(entry) end
+                end)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
+        clone.DescendantAdded:Connect(function(child)
+            if child:IsA("BasePart") and not entry.disposing then
                 task.defer(function()
                     if not entry.disposing then refresh(entry) end
                 end)
