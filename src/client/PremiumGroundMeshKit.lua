@@ -138,6 +138,8 @@ local function markResident(entry, present)
 end
 
 local function restore(entry)
+    if not entry or entry.restoring then return end
+    entry.restoring = true
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -146,6 +148,20 @@ local function restore(entry)
     restoreOverlays(entry)
     if entry.model then entry.model:Destroy() end
 end
+
+-- An imported Model can disappear without removing its internal MeshParts
+-- (StreamingEnabled, external cleanup or a local owner error). Restore
+-- hidden native gussets and the residency advisory on the SAME event,
+-- rather than waiting for the next camera LOD sample.
+folder.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for ground, entry in pairs(mounted) do
+        if not entry.restoring and entry.model == child then
+            restore(entry)
+            mounted[ground] = nil
+        end
+    end
+end)
 
 local function clearMounted()
     for ground, entry in pairs(mounted) do
@@ -262,14 +278,17 @@ local function safeAfterMount(entry, base)
     -- streaming or failed asset replication even when its native 49-stud
     -- source Part is unchanged. NEVER leave masked native seams or 2K
     -- PBR painted on a missing genuine MeshPart.
-    if not entry.model or not entry.model.Parent
+    if entry.restoring or not entry.model
+        or entry.model.Parent ~= folder
         or not entry.pieces or #entry.pieces < 1
         or #entry.pieces > 24 then
         return false
     end
     for _, piece in ipairs(entry.pieces) do
         if not piece:IsA("MeshPart")
-            or not piece:IsDescendantOf(entry.model) then
+            or not piece:IsDescendantOf(entry.model)
+            or piece.Anchored or not piece.Massless
+            or piece.CanCollide or piece.CanTouch or piece.CanQuery then
             return false
         end
     end
