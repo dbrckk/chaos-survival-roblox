@@ -30,10 +30,14 @@ local DISTANCE={
     High={arch=325,casing=275,helix=265},
 }
 local ARCH_NATIVE={
-    "ExteriorAbutment-1","ExteriorAbutment1",
+    -- Five upper volumes are genuinely occluded by the authored canopy.
+    -- Keep BOTH deep abutments and lower keel/girder server-native: these
+    -- decks have variable genuine thickness 3 / 13.8 / 28.2 studs; the
+    -- approved seven-MeshPart roof sculpture does not span to the bottom
+    -- of all three floors, and masking their lower support would leave
+    -- the high SUMMIT platform looking dangerously unsupported.
     "VerticalBridgePylon-1","VerticalBridgePylon1",
-    "TaperedFin-1","TaperedFin1",
-    "LoadBearingKeel","MonumentalOverpass","RecessedCentralGirder",
+    "TaperedFin-1","TaperedFin1","MonumentalOverpass",
 }
 local CASING_NATIVE={
     "FoundationFoot","ArmoredFrontShell","ArmoredRearShell",
@@ -115,7 +119,8 @@ local function collectArch(arena,deck,decor,scale)
     if not deck:IsA("BasePart") or not deck.Name:match("^Platform%d+$")
         or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("PerimeterRoute")==nil
-        or deck:GetAttribute("ChaosPermanentRoute")~=true
+        -- SUMMIT (stage eight) is intentionally collapsible; require a
+        -- genuine collidable staged PerimeterRoute, NOT PermanentRoute.
         or type(deck:GetAttribute("RouteTier"))~="number"
         or not deck.Anchored or not deck.CanCollide
         or deck.Transparency>=.75 then return nil end
@@ -125,9 +130,14 @@ local function collectArch(arena,deck,decor,scale)
     local size=deck.Size
     -- A base-first shrink packet must NEVER make an old full-width imported
     -- arch appear over a now smaller real physical escape deck.
-    if size.Y<1.8 or size.Y>2.2
-        or size.Z/scale<7.5 or size.Z/scale>34
-        or size.X/scale<7.5 or size.X/scale>35 then return nil end
+    local height=step==1 and 3 or 6.6+(step-2)*3.6
+    local sourceWidth=step==1 and 12 or (step==4 and 11.6 or 10)
+    -- Actual MapBuilder perimeter decks have real collider heights
+    -- 3, 13.8 and 28.2 studs. Reject fake or half-streamed footprints,
+    -- but never assume every playable deck is a 2-stud Roblox slab.
+    if math.abs(size.Y-height)>.14
+        or math.abs(size.Z/scale-sourceWidth)>.32
+        or math.abs(size.X/scale-sourceWidth)>.32 then return nil end
     local phase=deck:GetAttribute("CollapsePhase")
     if phase~=nil and phase~="Normal" and phase~="Safe" then return nil end
     local shutter=deck:GetAttribute("BridgeShutterPhase")
@@ -146,7 +156,7 @@ local function collectArch(arena,deck,decor,scale)
     end
     -- The SOURCE overpass must have reached the current genuine resized
     -- deck; otherwise we are in the server Base-before-Decor replication gap.
-    local overpass=originals[8]
+    local overpass=originals[5]
     local extra=step==8 and 9 or 6.6
     local expected=(size.Z/scale+extra)*scale
     if math.abs(overpass.Size.Z-expected)>.36 then return nil end
@@ -155,7 +165,11 @@ local function collectArch(arena,deck,decor,scale)
     if (overpass.Position-expectedPos).Magnitude>.45 then return nil end
     return {category="arch",name=key,owner=deck,arena=arena,
         originals=originals,center=deck.Position,
-        orientation=deck.CFrame,scaleZ=size.Z/12.0,
+        -- The approved arch stands ON the actual top of the thick
+        -- collidable platform; its source upper crosshead is +1 above
+        -- the native overpass offset. Deep lower steel stays native.
+        orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0),
+        scaleZ=overpass.Size.Z/17.6,
         stage=step,index=index,expectedParent=decor}
 end
 
