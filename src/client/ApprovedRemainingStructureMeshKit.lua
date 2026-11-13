@@ -264,12 +264,29 @@ local function reveal(entry)
 end
 
 local function sourceIntact(entry)
-    if entry.disposing or not entry.model or entry.model.Parent~=folder
+    if entry.disposing or entry.corrupt or not entry.model
+        or entry.model.Parent~=folder
         or not entry.source or entry.source.Parent~=entry.sourceFolder
         or entry.sourceFolder.Parent~=ReplicatedStorage
+        or entry.sourceFolder:GetAttribute("OwnerVerified")~=true
+        or entry.source:GetAttribute("OwnerVerified")~=true
+        or entry.source:GetAttribute("P4OriginalRemainingStructure3D")~=true
+        or entry.source:GetAttribute("CosmeticOnly")~=true
         or entry.source:GetAttribute("Original3DAssetId")
             ~= SOURCE[entry.name].id
         or not entry.pieces or #entry.pieces~=7 then return false end
+    -- A streamed-in eighth mesh, stray Part or injected script must NEVER
+    -- survive hidden inside a supposedly approved seven-piece sculpture.
+    local actual=0
+    for _,child in ipairs(entry.model:GetDescendants()) do
+        if child:IsA("BasePart") then
+            if not child:IsA("MeshPart") then return false end
+            actual+=1
+        elseif child:IsA("LuaSourceContainer") then
+            return false
+        end
+    end
+    if actual~=7 then return false end
     for _,p in ipairs(entry.pieces) do
         if not p.part:IsA("MeshPart")
             or not p.part:IsDescendantOf(entry.model)
@@ -457,10 +474,19 @@ local function mount(data,source)
         end)
     entry.connections[#entry.connections+1]=
         clone.DescendantAdded:Connect(function(child)
-            if child:IsA("BasePart") and not entry.disposing then
-                task.defer(function()
-                    if not entry.disposing then refresh(entry) end
-                end)
+            if not entry.disposing and (child:IsA("BasePart")
+                or child:IsA("LuaSourceContainer")) then
+                -- Reject extra geometry immediately, BEFORE the next
+                -- camera sampler. A foreign Part cannot add a collider.
+                entry.corrupt=true
+                if child:IsA("BasePart") then
+                    child.Anchored=true
+                    child.CanCollide=false
+                    child.CanTouch=false
+                    child.CanQuery=false
+                    child.LocalTransparencyModifier=1
+                end
+                reveal(entry)
             end
         end)
     refresh(entry)
@@ -604,6 +630,51 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                         desired[data.owner]=data
                         taken+=1
                         break
+                    end
+                end
+            end
+        elseif kind=="arch" and cap>=2
+            and (tonumber(pressure) or 0)<1 then
+            -- On Android Medium/High and PC Medium, filling all slots by
+            -- proximity can repeat ACCESS on one route while approved
+            -- TRANSFER/SUMMIT sculptures nearby never appear. Preserve
+            -- the nearest arch; use remaining SAME-budget slots for
+            -- distinct sculpted stages and real escape routes. Never
+            -- sacrifice close foreground for a far, barely visible arch.
+            local nearest=candidates.arch[1]
+            local boundary=candidates.arch[math.min(cap,#candidates.arch)]
+            if nearest and boundary then
+                local ceiling=boundary.priority+60
+                local stages={}
+                local routes={}
+                local function claim(data)
+                    desired[data.owner]=data
+                    stages[data.stage]=true
+                    routes[data.route]=true
+                    taken+=1
+                end
+                claim(nearest)
+                for _,stage in ipairs({8,4,1}) do
+                    if taken>=cap then break end
+                    if not stages[stage] then
+                        local first=nil
+                        for _,data in ipairs(candidates.arch) do
+                            if data.stage==stage and not desired[data.owner]
+                                and data.priority<=ceiling then
+                                if not first then first=data end
+                                if not routes[data.route] then
+                                    first=data
+                                    break
+                                end
+                            end
+                        end
+                        if first then claim(first) end
+                    end
+                end
+                for _,data in ipairs(candidates.arch) do
+                    if taken>=cap then break end
+                    if not routes[data.route] and data.priority<=ceiling then
+                        claim(data)
                     end
                 end
             end
