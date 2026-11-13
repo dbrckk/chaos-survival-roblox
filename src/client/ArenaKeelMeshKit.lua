@@ -246,14 +246,25 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
     end
     local ranked = {}
     for _, slot in ipairs(SLOTS) do
-        local location = base.CFrame:PointToWorldSpace(
-            Vector3.new(slot.x, -base.Size.Y * 0.5 - bounds.Y * 0.5, slot.z))
-        local distance = (cameraPoint - location).Magnitude
-        local retained = mounted[slot.name] ~= nil
-        if distance <= budget.distance + (retained and budget.retention or 0) then
-            ranked[#ranked + 1] = {
-                slot = slot, score = distance - (retained and budget.retention * 0.6 or 0),
-            }
+        -- Decorative modules may reappear during a real shrinking-arena
+        -- event ONLY while their entire original MeshPart footprint is
+        -- still covered by the physical platform. A corner keel at x104
+        -- cannot float 17 studs beyond a deck shrunk to 230 studs.
+        local inside = math.abs(slot.x) + bounds.X * .5 + .5
+                <= base.Size.X * .5
+            and math.abs(slot.z) + bounds.Z * .5 + .5
+                <= base.Size.Z * .5
+        if inside then
+            local location = base.CFrame:PointToWorldSpace(
+                Vector3.new(slot.x, -base.Size.Y * 0.5 - bounds.Y * 0.5, slot.z))
+            local distance = (cameraPoint - location).Magnitude
+            local retained = mounted[slot.name] ~= nil
+            if distance <= budget.distance + (retained and budget.retention or 0) then
+                ranked[#ranked + 1] = {
+                    slot = slot,
+                    score = distance - (retained and budget.retention * 0.6 or 0),
+                }
+            end
         end
     end
     table.sort(ranked, function(a, b)
