@@ -297,7 +297,7 @@ for module in additional_fixed_owners:
         assert clause in code, (module, clause)
     assert "originalX" in code and "originalZ" in code, module
     assert not re.search(
-        r'base\\.Size\\.[XZ]\\s*<\\s*318', code), module
+        r'base\.Size\.[XZ]\s*<\s*318', code), module
 
 halo_kit = (ROOT / "src/client/ApprovedOrbitalHaloTrussMeshKit.lua").read_text(
     encoding="utf8")
@@ -317,8 +317,8 @@ for clause in (
     "base.Size.X>sx+.2 or base.Size.Z>sz+.2",
 ):
     assert clause in halo_rules, clause
-assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*318',halo_kit)
-assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*318',halo_rules)
+assert not re.search(r'base\.Size\.[XZ]\s*<\s*318',halo_kit)
+assert not re.search(r'base\.Size\.[XZ]\s*<\s*318',halo_rules)
 print("PASS 14 more fixed northern/southern/orbital visual owners survive shrink")
 
 # This is a risk inventory, not a count of defective objects: checking a
