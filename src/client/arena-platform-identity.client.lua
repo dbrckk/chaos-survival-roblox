@@ -519,10 +519,14 @@ local function rebuild()
     local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"), decor)
+    local nearLargeDeckHulls = PremiumLargeDeckHullMeshKit.selectVisibleDecks(
+        ordered, tier.Name, base, cameraPoint,
+        player:GetAttribute("OptionalVfxPressure"),
+        UserInputService.TouchEnabled, decor)
     local lowHubDeck = tier.Name == "Low"
         and PremiumLargeDeckHullMeshKit.selectLowDeck(
             ordered, base, cameraPoint,
-            player:GetAttribute("OptionalVfxPressure")) or nil
+            player:GetAttribute("OptionalVfxPressure"), decor) or nil
     local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
@@ -718,6 +722,7 @@ local function rebuild()
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0
                 or nearBridgeGirders[platform] == true
                 or nearCameraCarapaces[platform] == true
+                or platform == lowHubDeck
                 or nearServiceHatches[platform] == true
                 or nearCradles[platform] == true
                 or nearSupports[platform] == true then
@@ -743,7 +748,8 @@ local function rebuild()
             local largeHullPieces = (staged and staged.kind == "hull"
                 and staged.parts) or PremiumLargeDeckHullMeshKit.install(
                     folder, platform, tier.Name, visualIndex,
-                    tier.Name == "Low" and platform == lowHubDeck)
+                    (tier.Name == "Low" and platform == lowHubDeck)
+                        or nearLargeDeckHulls[platform] == true)
             if tier.Name == "Low" and largeHullPieces then
                 mountedLowHubHulls += 1
             end
