@@ -51,6 +51,8 @@ local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarbo
 local ApprovedClassicSignatureObservatoryMeshKit = require(script.Parent.ApprovedClassicSignatureObservatoryMeshKit)
 local ApprovedClassicForgedSupportsMeshKit = require(script.Parent.ApprovedClassicForgedSupportsMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
+local ApprovedRemainingStructureMeshKit = require(
+    script.Parent.ApprovedRemainingStructureMeshKit)
 local SkySpineCrownMeshKit = require(script.Parent.SkySpineCrownMeshKit)
 local HarborPromenadePortalMeshKit = require(script.Parent.HarborPromenadePortalMeshKit)
 local HarborDockCaissonMeshKit = require(script.Parent.HarborDockCaissonMeshKit)
@@ -2083,6 +2085,31 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalHeroPartsReplaced")
             ~= nativeHeroPieces then
             player:SetAttribute("LocalOriginalHeroPartsReplaced", nativeHeroPieces)
+        end
+
+        -- Five new Roblox Approved original 3D models replace only nine
+        -- nonphysical ascension gateway volumes, eleven casing elements,
+        -- or four true Orbital ramp underframe braces per selected owner.
+        -- This runs AFTER the native architecture/culling owners, on the
+        -- SAME LOD cadence: never hides player colliders, hazard signals,
+        -- arrows or safe deck boundaries. Streaming/shrink restore natives.
+        ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,
+            profile.Name,cameraReady,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local p4Counts = {
+            LocalOriginalAscensionArch3DCount =
+                ApprovedRemainingStructureMeshKit.count("arch"),
+            LocalOriginalColumnCasing3DCount =
+                ApprovedRemainingStructureMeshKit.count("casing"),
+            LocalOriginalOrbitalHelixUnderframe3DCount =
+                ApprovedRemainingStructureMeshKit.count("helix"),
+            LocalP4RemainingStructuralNativePiecesReplaced =
+                ApprovedRemainingStructureMeshKit.nativeCount(),
+        }
+        for name,value in pairs(p4Counts) do
+            if player:GetAttribute(name) ~= value then
+                player:SetAttribute(name,value)
+            end
         end
 
         -- Run AFTER every authoritative MeshPart owner has synced this
