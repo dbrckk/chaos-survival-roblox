@@ -1,4 +1,5 @@
-# Exact-main deterministic 5-source preview. NO ROBLOX UPLOAD or game publish.
+# Repeat real five-source preview after separating local OBJ sculptor from
+# the colossal skyfleet exporter. No Roblox asset POST and no game publish.
 name: One-time QA 2026-11-13 Five P0 Sculpted 3D Preview
 on:
   push:
