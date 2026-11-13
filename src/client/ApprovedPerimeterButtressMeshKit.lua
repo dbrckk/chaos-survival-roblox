@@ -256,6 +256,13 @@ local function mount(arena, base, decor, station, index, source, variant)
             model.DescendantRemoving:Connect(function(item)
                 if item:IsA("MeshPart") then dispose(station) end
             end)
+        entry.connections[#entry.connections + 1] =
+            model.DescendantAdded:Connect(function(item)
+                if item:IsA("BasePart")
+                    or item:IsA("LuaSourceContainer") then
+                    dispose(station)
+                end
+            end)
     end
 end
 
