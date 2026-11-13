@@ -65,7 +65,7 @@ identity = (root / "src/client/arena-platform-identity.client.lua").read_text()
 builder = (root / "src/server/MapBuilder.lua").read_text()
 assert 'or (tier == "Medium" and 8 or (lowReady and 1 or 0))' in side
 assert 'if tier == "Low" and not cameraReady then return chosen end' in side
-assert 'and (tier ~= "Low" or delta.Magnitude <= 125)' in side
+assert 'if tier ~= "Low" or delta.Magnitude <= 125 then' in side
 assert 'if tier == "Low" and selected ~= true then' in side
 assert 'sourceIndex % 8' not in side
 assert 'id % 8 ~= 1' not in side
