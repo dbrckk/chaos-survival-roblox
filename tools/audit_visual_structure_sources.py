@@ -78,6 +78,8 @@ owner_patterns = re.compile(
     r'\b([A-Za-z_][\w]*)\.Name\s*=\s*["\x27]([^"\x27]+Local)["\x27]'
 )
 owner_modules = defaultdict(list)
+nonvisual_audio_owners = []
+direct_workspace_transient_parts = []
 client_3d = []
 unbudgeted = []
 approval_names = {str(m["asset_id"]): str(m.get("name", ""))
@@ -102,9 +104,25 @@ for path in sorted((ROOT / "src/client").glob("*.lua")):
         nearby = code[match.end():match.end()+1500]
         if re.search(r'\b'+re.escape(var)+r'\.Parent\s*=\s*workspace\b',
                      nearby):
-            owner_modules[owner].append(name)
-            if owner not in registered:
-                unbudgeted.append({"owner":owner,"module":name})
+            before_name=code[max(0,match.start()-200):match.start()]
+            folder_decl=re.search(
+                r'\b'+re.escape(var)+r'\s*=\s*Instance\.new'
+                r'\(\s*["\x27]Folder["\x27]\s*\)',before_name)
+            if not folder_decl:
+                # Live pickup ripple Parts are not persistent 3D owners.
+                direct_workspace_transient_parts.append({
+                    "owner":owner,"module":name
+                })
+            elif owner=="ArenaSpatialAudioLocal":
+                # Sound-only owner has invisible spatial audio anchors.
+                # Do not interpret its invisible Parts as missing meshes.
+                nonvisual_audio_owners.append({
+                    "owner":owner,"module":name
+                })
+            else:
+                owner_modules[owner].append(name)
+                if owner not in registered:
+                    unbudgeted.append({"owner":owner,"module":name})
 
 # This is a risk inventory, not a count of defective objects: checking a
 # 320-stud playable floor is correct for physical platforms, but incorrect
@@ -144,6 +162,9 @@ report = {
     "local_owner_duplicates":
         {k:v for k,v in owner_modules.items() if len(v)>1},
     "local_owner_unbudgeted": unbudgeted,
+    "nonvisual_audio_owners_excluded": nonvisual_audio_owners,
+    "direct_workspace_transient_parts_not_meshkit_folders":
+        direct_workspace_transient_parts,
     "meshkit_3dkit_files": len(client_3d),
     "meshkit_3dkit_lod_linked": len(linked_kits),
     "meshkit_3dkit_not_directly_linked": len(unlinked_kits),
