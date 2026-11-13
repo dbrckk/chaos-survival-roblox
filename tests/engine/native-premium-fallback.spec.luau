@@ -120,7 +120,7 @@ describe("Original 3D native fallback isolation (engine)", function()
         for part in pairs(original) do
             expect(part.Transparency).toBe(1)
         end
-        expect(lens.Transparency).toBe(.15)
+        expect(math.abs(lens.Transparency-.15)<.001).toBe(true)
         local beforeMove=radarMesh.Position
         radar.CFrame=radar.CFrame*CFrame.new(0,0,3)
         expect((radarMesh.Position-beforeMove).Magnitude>2).toBe(true)
