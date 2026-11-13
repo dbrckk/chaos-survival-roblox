@@ -711,14 +711,37 @@ describe("Original 3D native fallback isolation (engine)", function()
                 source.Parent=approved
             end
             approved.Parent=templates
+            expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                decor,nearby)).toBe(true)
             local chosen=PremiumPlatformSideMeshKit.selectCarapaceDecks(
                 {distant,nearby},"Crossroads","Low",base,nearby.Position,
-                Vector3.new(0,0,1),0)
+                Vector3.new(0,0,1),0,decor)
             expect(chosen[nearby]).toBe(true)
             expect(chosen[distant]).toBe(nil)
             expect(PremiumPlatformSideMeshKit.selectCarapaceDecks(
                 {distant,nearby},"Crossroads","Low",base,nearby.Position,
-                Vector3.new(0,0,1),1)[nearby]).toBe(nil)
+                Vector3.new(0,0,1),1,decor)[nearby]).toBe(nil)
+
+            -- Roblox StreamingEnabled may replicate the physical deck
+            -- before its four original bevels or authentic underside.
+            -- Never spend scarce 3D source slots on missing native masks.
+            local missingBevel=bevels[1]
+            missingBevel.Parent=nil
+            expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                decor,nearby)).toBe(false)
+            expect(PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                {distant,nearby},"Crossroads","Low",base,nearby.Position,
+                Vector3.new(0,0,1),0,decor)[nearby]).toBe(nil)
+            missingBevel.Parent=decor
+            expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                decor,nearby)).toBe(true)
+            underside.Parent=nil
+            expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                decor,nearby)).toBe(false)
+            underside.Parent=decor
+            expect(PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                {distant,nearby},"Crossroads","Low",base,nearby.Position,
+                Vector3.new(0,0,1),0,decor)[nearby]).toBe(true)
 
             meshes=Instance.new("Folder")
             meshes.Name="OriginalCarapaceEvenDeckFixture"
