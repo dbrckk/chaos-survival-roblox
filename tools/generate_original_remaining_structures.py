@@ -9,6 +9,7 @@ Do not activate a source in Roblox until a creator-owned Model is Approved.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -206,12 +207,27 @@ def generate(model: str, output: Path) -> dict:
         if not (4.5<=dims[0]<=5.7 and 1.0<=dims[1]<=2.3
                 and 23.0<=dims[2]<=25.0):
             raise ValueError("Unexpected underframe geometry "+str(dims))
-    data=art.write(output)
-    data["model"]=model
-    data["nominal_envelope_xyz"]=dims
-    data["cosmetic_only"]=True
-    data["asset_id"]=None
-    return data
+    # Sculpture.write() is intentionally specialized to a 50-stud
+    # colossal skyfleet ship. Never weaken that existing gate to export
+    # these small arches or struts: serialize the same validated triangles
+    # independently after this model-specific envelope and polycount gate.
+    raw="\\n".join(art.lines)+"\\n"
+    output.parent.mkdir(parents=True,exist_ok=True)
+    output.write_text(raw, encoding="utf-8")
+    return {
+        "model":model,
+        "vertices":art.vertices,
+        "triangles":art.triangles,
+        "groups":art.groups,
+        "materials":sorted(art.materials),
+        "dimensions":dims,
+        "bounds_min":art.minimum,
+        "bounds_max":art.maximum,
+        "bytes":len(raw.encode("utf-8")),
+        "sha256":hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+        "cosmetic_only":True,
+        "asset_id":None,
+    }
 
 
 def main()->None:
