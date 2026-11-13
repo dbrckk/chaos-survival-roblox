@@ -925,6 +925,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             if previous then previous.Parent=nil end
             if previousP4 then previousP4.Parent=nil end
             local generated,templates=nil,nil
+            local p4Phase="map"
             RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
             local ok,result=pcall(function()
                 generated=MapBuilder.build(Config,variantId,ArenaVariants,VisualTheme)
@@ -1048,6 +1049,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 -- Extend this EXISTING five-world real-engine census with
                 -- the actual approved-3D owner lifecycle, not a new unit
                 -- suite or a guessed count of assets visible at runtime.
+                p4Phase="registered source IDs"
                 local expectedIds={
                     Access=110243423264048,
                     Transfer=107273631120961,
@@ -1058,6 +1060,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 for name,id in pairs(expectedIds) do
                     expect(RemainingStructureAssets.approvedId(name)).toBe(id)
                 end
+                p4Phase="mobile and desktop model budgets"
                 expect(RemainingStructureKit.budget("Low",true,0,"arch")).toBe(1)
                 expect(RemainingStructureKit.budget("Low",true,1,"arch")).toBe(0)
                 expect(RemainingStructureKit.budget("Low",true,0,"helix")).toBe(0)
@@ -1070,6 +1073,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.budget("High",false,1,"helix")).toBe(3)
                 expect(RemainingStructureKit.budget("High",false,2,"arch")).toBe(0)
 
+                p4Phase="seven-MeshPart owner-approved template fixtures"
                 templates=Instance.new("Folder")
                 templates.Name="ApprovedRemainingStructureTemplates"
                 templates:SetAttribute("OwnerVerified",true)
@@ -1103,6 +1107,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 if variantId=="Orbital" then
                     specimen("Helix",Vector3.new(5.08,1.453,23.6))
                 end
+                p4Phase="authentic server-made casing and ascension gateway"
                 local base=arena:FindFirstChild("Base")
                 local platforms=arena:FindFirstChild("Platforms")
                 local decor=arena:FindFirstChild("Decor")
@@ -1125,19 +1130,26 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(overpass~=nil).toBe(true)
                 expect(wayfinding~=nil).toBe(true)
                 expect(base.CanCollide).toBe(true)
+                p4Phase="first geometry owner mounting"
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
+                p4Phase="approved arch residency"
                 expect(RemainingStructureKit.count("arch")>=1).toBe(true)
+                p4Phase="approved casing residency"
                 expect(RemainingStructureKit.count("casing")>=1).toBe(true)
+                p4Phase="native arch mask and untouched signal"
                 expect(overpass.LocalTransparencyModifier).toBe(1)
                 expect(wayfinding.LocalTransparencyModifier).toBe(0)
                 expect(entryDeck.CanCollide).toBe(true)
                 -- Hazard warning immediately unmasks the true gateway.
+                p4Phase="immediate warning fallback"
                 entryDeck:SetAttribute("CollapsePhase","Warning")
                 expect(overpass.LocalTransparencyModifier).toBe(0)
+                p4Phase="warning recovery"
                 entryDeck:SetAttribute("CollapsePhase","Normal")
                 expect(overpass.LocalTransparencyModifier).toBe(1)
                 if variantId=="Orbital" then
+                    p4Phase="genuine Orbital helix residency"
                     expect(RemainingStructureKit.count("helix")>=1).toBe(true)
                     local circuit=arena:FindFirstChild("HelixCircuit")
                     local ramp=circuit and circuit:FindFirstChild("HelixRamp1")
@@ -1151,6 +1163,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                     expect(underframe.LocalTransparencyModifier).toBe(0)
                     expect(ramp.CanCollide).toBe(true)
                 end
+                p4Phase="final native restoration"
                 RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
                 expect(overpass.LocalTransparencyModifier).toBe(0)
                 expect(base.CanCollide).toBe(true)
@@ -1169,7 +1182,15 @@ describe("Original 3D native fallback isolation (engine)", function()
             if generated then generated:Destroy() end
             if previousP4 then previousP4.Parent=replicated end
             if previous then previous.Parent=workspace end
-            if not ok then error("P4_CENSUS_ERROR "..variantId.." "..tostring(result)) end
+            if not ok then
+                local detail=tostring(result)
+                if type(result)=="table" then
+                    for key,value in pairs(result) do
+                        detail ..=" "..tostring(key).."="..tostring(value)
+                    end
+                end
+                error("P4_CENSUS_ERROR "..variantId.." ["..p4Phase.."] "..detail)
+            end
             local snapshot=game:GetService("HttpService"):JSONDecode(result)
             expect(snapshot.variant).toBe(variantId)
             expect(snapshot.groups>=140).toBe(true)
