@@ -173,6 +173,22 @@ describe("Original 3D native fallback isolation (engine)", function()
             Kit.bind(arena,{},nil,mounted.covered,meshes)
             expect(Kit.count()).toBe(1)
             expect(native.LocalTransparencyModifier).toBe(1)
+            -- A single 7-MeshPart Low mount hides ONE native post, not
+            -- the other fifteen same-height posts or another deck.
+            local maskedNativeCount=0
+            for _,route in ipairs({2,4,6,8}) do
+                for corner=1,4 do
+                    local part=decor:FindFirstChild(
+                        "PlatformSupport"..route.."_"..corner)
+                    if part.LocalTransparencyModifier==1 then
+                        maskedNativeCount+=1
+                        expect(part).toBe(native)
+                    else
+                        expect(part.LocalTransparencyModifier).toBe(0)
+                    end
+                end
+            end
+            expect(maskedNativeCount).toBe(1)
             -- Collapse overrides any imported cosmetic; the real
             -- server-owned collidable deck never becomes intangible.
             platform:SetAttribute("CollapsePhase","Warning")
