@@ -591,6 +591,12 @@ for marker in (
     'local signal = part.Material==Enum.Material.Neon',
     '"AscensionStructure", "AscensionSignal"',
     '"HelixStructure", "HelixSignal"',
+    '"DistrictStructure", "DistrictSignal"',
+    '"PlatformSupportStructure", "PlatformSupportSignal"',
+    '"SkySpineStructure", "SkySpineSignal"',
+    '"PromenadeStructure", "PromenadeSignal"',
+    'or key=="District" or key=="PlatformSupport"',
+    'or key=="SkySpine" or key=="Promenade"',
     '"HarborFleet", "PerimeterStations"',
     'set(player, "AllScanned", scanned)',
 ):
