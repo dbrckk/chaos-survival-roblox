@@ -147,3 +147,48 @@ for index in (2,4,6,8):
 print("PASS four genuine even Crossroads decks fit original 3D source"
       " dimensions, with exactly one near-camera Low model permitted")
 
+
+# P0 support: a true Crossroads Platform2 stands at Y=7 with Y-size 2.
+# The MapBuilder source places its anchored, nonphysical support between
+# the underside (Y=6) and deckTop 1.15, hence 4.85 studs. Its 7-MeshPart
+# creator-owned ~14-stud original has a valid scale around .344, but the
+# previous >=5 cutoff silently barred its first four real route owners.
+large = (root / "src/client/PremiumLargeStructureMeshKit.lua").read_text()
+map_builder = (root / "src/server/MapBuilder.lua").read_text()
+variants = (root / "src/server/ArenaVariants.lua").read_text()
+assert 'local MIN_NATIVE_SUPPORT_HEIGHT = 4.75' in large
+assert 'part.Size.Y >= MIN_NATIVE_SUPPORT_HEIGHT' in large
+assert 'part.Size.Y <= 47' in large
+assert 'scale >= .34' in large
+assert 'scale <= 1.25' in large
+assert 'width <= 3.2' in large
+assert 'tier == "Low" and (tonumber(pressure) or 0) > 0' in large
+assert 'sourceParts ~= 7' in large
+assert 'originalSupportVisualWeld' not in large
+assert 'OriginalSupportVisualWeld' in large
+assert 'Kit.supports' in large
+assert 'local deckTop = 1.15' in map_builder
+assert 'local supportHeight = platformBottom - deckTop' in map_builder
+assert '"PlatformSupport" .. index .. "_" .. supportIndex' in map_builder
+definitions = variants.split("ArenaVariants.Definitions = {",1)[1]
+crossroads = definitions.split("    Crossroads = {",1)[1].split(
+    "    Orbital = {",1)[0]
+crossroads_dims = [
+    tuple(float(v) for v in match)
+    for match in re.findall(
+        r'\{offset=Vector3\.new\([^,]+,([\d.]+),[^)]+\),size=Vector3\.new\('
+        r'\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)',
+        crossroads,
+    )
+]
+assert len(crossroads_dims)>=8
+for i in (2,4,6,8):
+    y,sx,sy,sz = crossroads_dims[i-1]
+    assert (y,sx,sy,sz) in ((7.,14.,2.,12.),(7.,12.,2.,14.))
+    height = y - sy/2 - 1.15
+    assert abs(height-4.85)<.0001
+    assert height >= 4.75
+    for approved_source_height in (13.4,14.1):
+        assert height/approved_source_height >= .34
+print("PASS four genuine Crossroads low-route support clusters eligible"
+      " for approved 7-piece source with preserved native fallback")
