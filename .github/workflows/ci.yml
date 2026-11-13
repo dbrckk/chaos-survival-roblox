@@ -390,6 +390,7 @@ jobs:
               "deck_carapace_harbor", "bridge_side_girder",
           }
           large_hull_names = {"large_deck_hull"}
+          rim_names = {"platform_rim_rect", "platform_rim_long"}
           harbor_original_names = {
               "harbor_promenade_portal", "harbor_dock_caisson",
               "harbor_freighter",
@@ -432,7 +433,8 @@ jobs:
               | skyfleet_names | underdeck_names | lobby_gate_names
               | sky_spine_crown_names | arena_keel_names | service_names
               | ambient_names | relief_names | floor_hardware_names
-              | platform_side_names | large_hull_names | large_support_names
+              | platform_side_names | large_hull_names | rim_names
+              | large_support_names
               | harbor_original_names | premium_extension_names)
           ids = [m["asset_id"] for m in models]
           assert len(set(ids)) == len(ids)
@@ -456,7 +458,8 @@ jobs:
                       "deck_carapace_classic", "deck_carapace_towers",
                       "deck_carapace_crossroads", "deck_carapace_orbital",
                       "deck_carapace_harbor", "bridge_side_girder",
-                      "large_deck_hull",
+                      "large_deck_hull", "platform_rim_rect",
+                      "platform_rim_long",
                       "column_classic", "column_towers", "column_crossroads",
                       "column_orbital", "column_harbor", "long_route_cradle",
                       "harbor_promenade_portal", "harbor_dock_caisson",
@@ -498,6 +501,8 @@ jobs:
                           "deck_carapace_harbor": "tools/generate_original_platform_carapaces.py",
                           "bridge_side_girder": "tools/generate_original_platform_carapaces.py",
                           "large_deck_hull": "tools/generate_original_large_deck_support.py",
+                          "platform_rim_rect": "tools/generate_original_platform_rims.py",
+                          "platform_rim_long": "tools/generate_original_platform_rims.py",
                           "column_classic": "tools/generate_original_large_supports.py",
                           "column_towers": "tools/generate_original_large_supports.py",
                           "column_crossroads": "tools/generate_original_large_supports.py",
@@ -680,9 +685,9 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          # Exactly 108 creator-owned, moderated Models: earlier 103 plus
-          # five approved P0 structural source imports (run 43467373476).
-          assert len(models) == 108
+          # 110 Roblox-moderated, creator-owned Models: the previous 108
+          # plus the two new approved rectangular/long platform rims.
+          assert len(models) == 110
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
@@ -1036,8 +1041,8 @@ jobs:
           assert 'UnderCrossroadsTrunk' not in understructure
           assert 'UnderstructureBeamMeshKit' in engine
           assert 'Low = {count = 1' in beams
-          assert 'Medium = {count = 4' in beams
-          assert 'High = {count = 12' in beams
+          assert 'Medium = {count = 6' in beams
+          assert 'High = {count = 16' in beams
           for required in ('source:GetAttribute("OwnerVerified") ~= true',
                            'source:GetAttribute("Original3DAssetId") ~= ASSET_ID',
                            'base:GetPropertyChangedSignal("Size")',
@@ -1048,7 +1053,7 @@ jobs:
                            'entry.native.Transparency=entry.originalTransparency'):
               assert required in beams, required
           assert 'RunService' not in beams and 'task.spawn' not in beams
-          print("Authenticated approved 3D underfloor beam replacements: all five arenas, tier 1/4/12, source-only, native restoration, no new LOD loop.")
+          print("Authenticated approved 3D underfloor beam replacements: all five arenas, desktop tier 1/6/16, source-only, mobile capped, no new LOD loop.")
           # Verify the centralized two-permit authentic-asset import
           # enforcement (all 46 Premium owner loaders) has not regressed.
           import subprocess, sys
