@@ -398,7 +398,16 @@ local function mount(data,source)
                 o:GetPropertyChangedSignal(name):Connect(changed)
         end
     end
-    watch(data.owner,{"CFrame","Size","Transparency","CanCollide","Anchored"})
+    if data.owner:IsA("BasePart") then
+        watch(data.owner,{"CFrame","Size","Transparency","CanCollide","Anchored"})
+    else
+        -- Real authored ArchitecturalCasing owners are MODELS, which do
+        -- not implement CFrame/Size/Transparency property-changed signals.
+        -- Their eleven actual BasePart descendants below own all geometry
+        -- events; watch only Model ancestry here.
+        entry.connections[#entry.connections+1]=
+            data.owner.AncestryChanged:Connect(changed)
+    end
     if data.category=="arch" then
         -- A collapsing/shutter warning takes precedence over decorative
         -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
