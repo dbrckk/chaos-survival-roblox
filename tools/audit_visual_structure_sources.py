@@ -242,6 +242,17 @@ for clause in (
     assert clause in buttress, ("buttress runtime integrity guard", clause)
 print("PASS authenticated nonphysical buttress clone integrity")
 
+# Source-template injection and resized native station geometry must
+# revoke an existing authenticated buttress replacement.
+for clause in (
+    'source.DescendantAdded:Connect(function(item)',
+    'or math.abs(native.Size.X - 1.5) > .1',
+    'or math.abs(native.Size.Y - 9) > .1',
+    'or math.abs(native.Size.Z - 2) > .1',
+):
+    assert clause in buttress, ("buttress source/native revocation", clause)
+print("PASS station geometry and source-template mutation revocation")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
