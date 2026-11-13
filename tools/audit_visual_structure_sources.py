@@ -352,6 +352,13 @@ for clause in (
     "piece.Size = entry.sizes[piece] * factor",
     "if not valid(entry) then return false end",
     "local show = refit(entry)",
+    "folder.ChildRemoved:Connect(function(child)",
+    "if not entry.disposing and entry.model == child then",
+    'or part.CanCollide or part.CanTouch or part.CanQuery',
+    "or weld.Part0 ~= entry.deck or weld.Part1 ~= part",
+    "local function changed()",
+    "visibility(entry)",
+
     'deck:GetPropertyChangedSignal(property):Connect(changed)',
     '"CollapsePhase", "BridgeShutterPhase", "HarborRoute"',
     "if not realFloorScale(base, arena) then clearModels() end",
@@ -379,6 +386,10 @@ for clause in (
     "piece.Size = Vector3.new(original.X * scale,",
     "entry.frames[piece]=deck.CFrame:ToObjectSpace(piece.CFrame)",
     "local visible = refit(entry)",
+    "or part.CanCollide or part.CanTouch or part.CanQuery",
+    "or joint.Part0 ~= entry.deck or joint.Part1 ~= part",
+    "or not entry.frames[part] or not entry.sizes[part]",
+
     "visible and 1 or native.original",
     "PremiumRoutePbrKit.detach(entry)",
 ):
