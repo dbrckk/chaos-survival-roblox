@@ -1,0 +1,50 @@
+name: Exhaustive visual source structure census
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/audit_visual_structure_sources.py
+      - .github/workflows/visual-structure-source-census.yml
+  pull_request:
+    paths:
+      - tools/audit_visual_structure_sources.py
+      - .github/workflows/visual-structure-source-census.yml
+
+permissions:
+  contents: read
+
+jobs:
+  visual-source-census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect ALL Luau runtime source, approved mesh registry and budget owners
+        run: python3 tools/audit_visual_structure_sources.py
+      - name: Record exact source-level scope and limitations
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          x=json.loads(Path("build/visual-structure-source-census.json").read_text())
+          print("## Chaos Survival — complete source inventory")
+          print("Includes all `src/**/*.lua` files, 3D asset approvals, and every local MeshKit/3DKit owner.")
+          for field in ("lua_files","approved_original_3d_models",
+                        "direct_workspace_local_folders_registered",
+                        "direct_workspace_local_owners_detected",
+                        "meshkit_3dkit_files",
+                        "meshkit_3dkit_lod_linked",
+                        "static_320_floor_guard_outboard_meshkits"):
+              print("- **"+field+"**: "+str(x[field]))
+          print("\n**Important:** a constructor call site is not a runtime object. "
+                "Per-map object totals come from separate Roblox Engine census.")
+          PY
+      - name: Save machine-readable auditable inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-world-visual-structure-source-census
+          path: build/visual-structure-source-census.json
+          retention-days: 30
