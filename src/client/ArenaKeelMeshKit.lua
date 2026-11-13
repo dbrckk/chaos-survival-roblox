@@ -136,8 +136,13 @@ local function authentic(arena, base)
         and base ~= nil and base:IsA("BasePart")
         and base.Name == "Base" and base.Parent == arena
         and base.Anchored and base.CanCollide
-        and base.Size.X >= 318 and base.Size.Z >= 318
-        and base.Size.X <= 322 and base.Size.Z <= 322
+        and typeof(base:GetAttribute("OriginalSizeX")) == "number"
+        and typeof(base:GetAttribute("OriginalSizeZ")) == "number"
+        and base:GetAttribute("OriginalSizeX") >= 318
+        and base:GetAttribute("OriginalSizeZ") >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= base:GetAttribute("OriginalSizeX") + .2
+        and base.Size.Z <= base:GetAttribute("OriginalSizeZ") + .2
         and base.Size.Y >= 1 and base.Size.Y <= 5
 end
 
