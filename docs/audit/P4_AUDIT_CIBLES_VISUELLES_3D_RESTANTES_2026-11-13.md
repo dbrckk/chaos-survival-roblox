@@ -10,6 +10,23 @@
 
 **Inventaires vérifiables :** [754 lignes du relevé moteur d'origine](structure-family-census-2026-11-13.csv), [25 groupes priorisés et cinq colonnes par arène](remaining-3d-priority-matrix-2026-11-13.csv), [audit historique et méthode](P4_AUDIT_EXHAUSTIF_STRUCTURES_RESTANTES_2026-11-13.md).
 
+## Instrumentation complémentaire — 13 novembre 2026
+
+Le recensement client `RemainingVisualNativeCensus.sample` distingue
+maintenant, pour **District**, **PlatformSupport**, **SkySpine** et
+**Promenade**, les primitives de structure (`...Structure`) des
+primitives de guidage (`...Signal`). La classification se fonde sur le
+matériau Neon, l'attribut `ChaosWayfinding` et les marqueurs de nom
+`signal/beacon/guide/glow`. Les totaux de famille restent inchangés :
+ces compteurs sont des sous-ensembles, **pas des objets additionnels**.
+
+L'objectif est de mesurer, sur une vraie session Android/PC, le
+**reste de volumes primitifs non physiques visibles** avant de relever
+des budgets MeshParts. Les chiffres historiques du CSV ne doivent pas
+être présentés comme un inventaire de ce qui est actuellement visible.
+Aucune capture, mesure FPS, création d'asset ou publication n'est
+revendiquée par cette instrumentation seule.
+
 ## Conclusion
 
 Il n'existe **aucun nombre exact démontré de modèles « non remplacés actuellement à l'écran »** : le serveur conserve les primitives de repli ; les copies MeshPart réelles sont activées localement selon la caméra, le streaming, la carte, la qualité et la pression GPU. Il est incorrect de dire que les 13 846 natives initiales restent toutes visuellement primitives.
