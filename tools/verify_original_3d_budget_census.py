@@ -216,6 +216,30 @@ assert 'require(script.PremiumDistrictSidewallAssets).start()' in SIDE_INIT
 for forbidden in ('RenderStepped','Heartbeat:Connect','LoadAssetAsync',
                   'AssetService','Instance.new("RemoteEvent")'):
     assert forbidden not in SIDE,forbidden
+# A genuinely complete building (approved 3D front PLUS true side/back
+# shell) is visually stronger than two half-upgraded silhouettes. Medium
+# and High now slightly favor SAME-owner resident facades without reducing
+# their native fallback or spending any new mesh slots. Low remains strict.
+assert 'function Kit.pairedPriority(priority, facadeMounted, tier)' in SIDE
+assert 'if tier ~= "Low" and facadeMounted == true then' in SIDE
+assert 'return priority - 16' in SIDE
+assert 'priority = Kit.pairedPriority(priority,' in SIDE
+assert 'building:GetAttribute(' in SIDE
+assert '"LocalApprovedDistrictFacadeMounted") == true, tier)' in SIDE
+assert 'priority += 80' in SIDE
+assert 'function Kit.completeCount()' in SIDE
+assert 'entry.model.Parent == bucket' in SIDE
+assert 'LocalCompleteDistrict3DCount' in SIDE_LOD
+assert 'LocalUnpairedDistrictSidewall3DCount' in SIDE_LOD
+assert 'sidewallMeshCount - completeDistricts' in SIDE_LOD
+assert 'ApprovedDistrictSidewallMeshKit.completeCount()' in SIDE_LOD
+assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
+assert 'Medium = {count = 4, distance = 205, retention = 20}' in SIDE
+assert 'High = {count = 10, distance = 275, retention = 28}' in SIDE
+assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
+print("PASS complete original front+side district priority on Medium/High,"
+      " real paired live census, fixed 1/4/10 and touch 1/3/8 budgets")
+
 print("PASS original 6-MeshPart sidewall asset 77387019170428 genuinely Approved")
 print("PASS five real native wall volumes replaced only after authentic source")
 print("PASS existing Android tier/pressure quotas with one cohesive",
