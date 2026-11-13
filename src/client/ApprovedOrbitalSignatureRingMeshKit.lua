@@ -85,6 +85,22 @@ local function sourceFor()
     return source
 end
 
+-- The sixteen cosmetic reactor arcs are positioned from the original
+-- arena perimeter; only the playable collision floor shrinks mid-round.
+local function originalDimensions(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx < 318 or sz < 318
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local function context(arena)
     if not arena or not arena:IsA("Folder")
         or arena:GetAttribute("VariantId")~="Orbital" then return nil end
@@ -93,9 +109,8 @@ local function context(arena)
         or arena.Parent~=generated or arena.Name~="Arena" then return nil end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart") or base.Parent~=arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+    local originalX,originalZ=originalDimensions(base,arena)
+    if not originalX
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena then return nil end
     local owner=decor:FindFirstChild("ArenaSignatureMegastructure")
@@ -103,8 +118,8 @@ local function context(arena)
         or owner:GetAttribute("ChaosDistantScenery")~=true
         or owner:GetAttribute("SignatureVariant")~="Orbital" then return nil end
 
-    local origin=base.Position+Vector3.new(base.Size.X*.24,
-        base.Size.Y*.5,-(base.Size.Z*.5+66))
+    local origin=base.Position+Vector3.new(originalX*.24,
+        base.Size.Y*.5,-(originalZ*.5+66))
     local center=origin+Vector3.new(0,LEVEL,0)
     local arcs={}
     for k=0,SEGMENTS-1 do
@@ -275,8 +290,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         table.clear(baseConnections)
         watchedBase=base
         local function checkBase()
-            if base.Parent~=arena or not base.Anchored or not base.CanCollide
-                or base.Size.X<318 or base.Size.Z<318 then restore() end
+            if not originalDimensions(base,arena) then restore() end
         end
         baseConnections[#baseConnections+1]=
             base:GetPropertyChangedSignal("Size"):Connect(checkBase)
@@ -284,6 +298,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
             base:GetPropertyChangedSignal("CanCollide"):Connect(checkBase)
         baseConnections[#baseConnections+1]=
             base.AncestryChanged:Connect(checkBase)
+        baseConnections[#baseConnections+1]=
+            base:GetPropertyChangedSignal("Anchored"):Connect(checkBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeX"):Connect(checkBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeZ"):Connect(checkBase)
     end
     local source=sourceFor()
     if not source then restore();return end
