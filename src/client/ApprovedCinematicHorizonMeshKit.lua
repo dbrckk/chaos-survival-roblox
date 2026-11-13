@@ -93,6 +93,21 @@ local function template(key,cache)
     return entry
 end
 
+-- Horizon art is anchored to the original arena, not to its shrinking floor.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx < 318 or sz < 318
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return Vector3.new(sx, base.Size.Y, sz)
+end
+
 local function arenaContext(arena)
     local generated=workspace:FindFirstChild("GeneratedMap")
     if not arena or not arena:IsA("Folder")
@@ -100,8 +115,7 @@ local function arenaContext(arena)
     local base=arena:FindFirstChild("Base")
     local cinematic=workspace:FindFirstChild("ArenaCinematicDepthLocal")
     local variant=arena:GetAttribute("VariantId")
-    if not base or not base:IsA("BasePart") or not base.Anchored
-        or base.Size.X<318 or base.Size.Z<318
+    if not authenticBase(base, arena)
         or not cinematic or not cinematic:IsA("Folder")
         or cinematic.Parent~=workspace
         or not Rules.bodySize(variant,1) then return nil end
@@ -109,7 +123,8 @@ local function arenaContext(arena)
 end
 
 local function genuineBody(body,base,cinematic,variant,index)
-    if not body or not body:IsA("Part")
+    local originalSize = authenticBase(base, base and base.Parent)
+    if not originalSize or not body or not body:IsA("Part")
         or body.Parent~=cinematic
         or body.Name~="CinemaHorizonStructure"..index
         or body:GetAttribute("OriginalCinematicHorizonIndex")~=index
@@ -118,7 +133,7 @@ local function genuineBody(body,base,cinematic,variant,index)
         or not body.Anchored or body.CanCollide
         or body.CanTouch or body.CanQuery then return false end
     local required=Rules.bodySize(variant,index)
-    local offset=Rules.offset(base.Size,variant,index)
+    local offset=Rules.offset(originalSize,variant,index)
     if not required or not offset
         or (body.Size-required).Magnitude>.15
         or (base.CFrame:PointToObjectSpace(body.Position)-offset).Magnitude>.3
@@ -299,6 +314,10 @@ local function mount(arena,base,cinematic,variant,body,index,source)
         body:GetPropertyChangedSignal("CFrame"),
         base:GetPropertyChangedSignal("Size"),
         base:GetPropertyChangedSignal("CFrame"),
+        base:GetAttributeChangedSignal("OriginalSizeX"),
+        base:GetAttributeChangedSignal("OriginalSizeZ"),
+        base:GetPropertyChangedSignal("CanCollide"),
+        base:GetPropertyChangedSignal("Anchored"),
         source.source.AncestryChanged,
     }) do
         entry.connections[#entry.connections+1]=signal:Connect(changed)
