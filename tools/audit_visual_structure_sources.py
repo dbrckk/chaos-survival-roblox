@@ -533,6 +533,8 @@ for marker in (
     'kind=="arch" and tier=="High" and touch~=true',
     'if not routes[data.route] then',
     'routes[data.route]=true',
+    'for _,stage in ipairs({4,8}) do',
+    'if data.stage==stage and not desired[data.owner] then',
     'for _,data in ipairs(candidates[kind]) do',
 ):
     assert marker in remaining, "Four-route approved P4 owner lost: "+marker
