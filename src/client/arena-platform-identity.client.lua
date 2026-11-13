@@ -9,6 +9,7 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
+local ApprovedPlatformRimMeshKit = require(script.Parent.ApprovedPlatformRimMeshKit)
 local PlatformNativeTrimReplacementKit = require(
     script.Parent.PlatformNativeTrimReplacementKit)
 local PremiumLargeStructureMeshKit = require(
@@ -129,6 +130,9 @@ local function clear()
     end
     if player:GetAttribute("LocalOriginalLargeDeckHullMountedCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeDeckHullMountedCount", 0)
+    end
+    if player:GetAttribute("LocalOriginalPlatformRimDeckCount") ~= 0 then
+        player:SetAttribute("LocalOriginalPlatformRimDeckCount", 0)
     end
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearBridgeGirderCount", 0)
@@ -533,6 +537,11 @@ local function rebuild()
     local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
+    local nearRims = ApprovedPlatformRimMeshKit.selectVisibleDecks(
+        ordered, tier.Name, base, cameraPoint,
+        player:GetAttribute("OptionalVfxPressure"),
+        UserInputService.TouchEnabled, decor,
+        nearCameraCarapaces, nearLargeDeckHulls)
 
     -- Low visual source reservation is an actual successful MODEL mount,
     -- never a speculative source/size check. A missing or malformed clone
@@ -559,17 +568,19 @@ local function rebuild()
             end
             return chosen, distance
         end
-        -- Only four mutually exclusive genuine original families exist.
-        -- At most four bounded attempts on a map/tier/pressure rebuild.
-        for _ = 1, 4 do
+        -- All five exclusive original families share ONE Low model slot.
+        -- At most five bounded attempts per rebuilt map/tier/pressure.
+        for _ = 1, 5 do
             local bridge, bridgeDistance = nearest(nearBridgeGirders)
             local carapace, carapaceDistance = nearest(nearCameraCarapaces)
             local hatch, hatchDistance = nearest(nearServiceHatches)
+            local rim, rimDistance = nearest(nearRims)
             local hullDistance = lowHubDeck
                 and typeof(cameraPoint) == "Vector3"
                 and (lowHubDeck.Position-cameraPoint).Magnitude or math.huge
             local foregroundDistance = math.min(
-                carapaceDistance, hatchDistance, hullDistance)
+                carapaceDistance, hatchDistance, hullDistance,
+                rimDistance)
             local choice, target = nil, nil
             if bridge and (foregroundDistance == math.huge
                 or bridgeDistance <= foregroundDistance + 16) then
@@ -586,8 +597,11 @@ local function rebuild()
                 if lowHubDeck and hullDistance <= math.min(
                     carapaceDistance + 12, hatchScore + 12) then
                     choice, target = "hull", lowHubDeck
-                elseif carapace and carapaceDistance <= hatchScore + 8 then
+                elseif carapace and carapaceDistance <= hatchScore + 8
+                    and carapaceDistance <= rimDistance + 8 then
                     choice, target = "carapace", carapace
+                elseif rim and rimDistance <= hatchScore + 8 then
+                    choice, target = "rim", rim
                 elseif hatch then
                     choice, target = "hatch", hatch
                 end
@@ -604,6 +618,9 @@ local function rebuild()
             elseif choice == "carapace" then
                 pieces = PremiumPlatformSideMeshKit.carapace(
                     folder, target, variant, tier.Name, id, true)
+            elseif choice == "rim" then
+                pieces = ApprovedPlatformRimMeshKit.install(
+                    folder, target, id, nearRims[target], decor)
             else
                 pieces = PlatformFinishKit.buildServiceHatch(
                     folder, target, variant, tier.Name, theme, id, true)
@@ -620,6 +637,8 @@ local function rebuild()
                     and {[target] = true} or {}
                 nearServiceHatches = choice == "hatch"
                     and {[target] = true} or {}
+                nearRims = choice == "rim"
+                    and {[target] = nearRims[target]} or {}
                 lowHubDeck = choice == "hull" and target or nil
                 break
             end
@@ -634,6 +653,8 @@ local function rebuild()
                 lowHubDeck = nil
             elseif choice == "carapace" then
                 nearCameraCarapaces = {}
+            elseif choice == "rim" then
+                nearRims = {}
             else
                 nearServiceHatches = {}
             end
@@ -642,6 +663,7 @@ local function rebuild()
             nearBridgeGirders = {}
             nearCameraCarapaces = {}
             nearServiceHatches = {}
+            nearRims = {}
             lowHubDeck = nil
         end
     end
@@ -651,6 +673,7 @@ local function rebuild()
     local mountedCameraCarapaces = 0
     local mountedLowHubHulls = 0
     local mountedLargeDeckHulls = 0
+    local mountedRimDecks = 0
     local mountedServiceHatches3D = 0
     local nearCradles,nearSupports={},{}
     if not lowBridgeChosen then
@@ -727,6 +750,7 @@ local function rebuild()
                 or nearBridgeGirders[platform] == true
                 or nearCameraCarapaces[platform] == true
                 or platform == lowHubDeck
+                or nearRims[platform] ~= nil
                 or nearServiceHatches[platform] == true
                 or nearCradles[platform] == true
                 or nearSupports[platform] == true then
