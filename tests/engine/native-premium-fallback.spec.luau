@@ -10,8 +10,112 @@ local VisualTheme = require("../../src/shared/VisualTheme")
 local HarborFreighterMeshKit = require("../../src/client/HarborFreighterMeshKit")
 local HarborHeroStationMeshKit = require("../../src/client/HarborHeroStationMeshKit")
 local HarborMidgroundBargeMeshKit = require("../../src/client/HarborMidgroundBargeMeshKit")
+local HarborSignatureGantryKit = require("../../src/client/ApprovedHarborSignatureGantryMeshKit")
+local SouthHarborDrydockKit = require("../../src/client/ApprovedSouthHarborDrydockMeshKit")
+local MapBuilder = require("../../src/server/MapBuilder")
+local ArenaVariants = require("../../src/server/ArenaVariants")
+local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("keeps both authentic outer Harbor 3D landmarks through shrink with native restoration", function()
+        -- Use the real MapBuilder Harbor geometry, not stand-in native
+        -- signature parts. Only the approved imported meshes are local
+        -- test fixtures; production imports remain gated by AssetService.
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
+        local generated=arena.Parent
+        local base=arena:FindFirstChild("Base")
+        local decor=arena:FindFirstChild("Decor")
+        local north=decor:FindFirstChild("ArenaSignatureMegastructure")
+        local south=decor:FindFirstChild("SouthHorizonMonument")
+        expect(base~=nil and north~=nil and south~=nil).toBe(true)
+        local storage=game:GetService("ReplicatedStorage")
+        local function originalSource(folderName,modelName,tag,id,dimensions)
+            local holder=Instance.new("Folder")
+            holder.Name=folderName
+            holder:SetAttribute("OwnerVerified",true)
+            holder.Parent=storage
+            local source=Instance.new("Model")
+            source.Name=modelName
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute(tag,true)
+            source:SetAttribute("Original3DAssetId",id)
+            for i=1,7 do
+                local mesh=Instance.new("MeshPart")
+                mesh.Name="ApprovedSourceMesh"..i
+                mesh.Size=if i==1 then dimensions
+                    else Vector3.new(1,1,1)
+                mesh.Anchored=true
+                mesh.CanCollide=false
+                mesh.CanTouch=false
+                mesh.CanQuery=false
+                mesh.Parent=source
+            end
+            source.Parent=holder
+            return holder
+        end
+        local northSource=originalSource(
+            "ApprovedHarborSignatureGantryTemplates","SculptedGantry",
+            "OriginalHarborSignatureGantry3D",124368710235343,
+            Vector3.new(40.8,14.0425,9.141))
+        local southSource=originalSource(
+            "ApprovedSouthHarborDrydockTemplates","SculptedDrydock",
+            "OriginalSouthHarborSculptedDrydock3D",125428569657840,
+            Vector3.new(16.58,18.42,4.63))
+        local beam=north:FindFirstChild("QuayCraneSpanningBeam")
+        local drydock=south:FindFirstChild("HarborLightshipBridge")
+        expect(beam~=nil and drydock~=nil).toBe(true)
+        local beamAlpha=beam.Transparency
+        local dockAlpha=drydock.Transparency
+        local northCamera=beam.Position
+        local southCamera=drydock.Position
+        local function update(pressure)
+            HarborSignatureGantryKit.sync(arena,northCamera,
+                "Low",true,pressure)
+            SouthHarborDrydockKit.sync(arena,southCamera,
+                "Low",true,pressure)
+        end
+        update(0)
+        expect(HarborSignatureGantryKit.count()).toBe(1)
+        expect(HarborSignatureGantryKit.replacedNativeCount()).toBe(3)
+        expect(SouthHarborDrydockKit.count()).toBe(1)
+        expect(SouthHarborDrydockKit.replacedNativeCount()).toBe(14)
+        expect(beam.Transparency).toBe(1)
+        expect(drydock.Transparency).toBe(1)
+        local originalBeamPos=beam.Position
+        local originalDockPos=drydock.Position
+        base.Size=Vector3.new(170,4,174)
+        update(0)
+        expect(HarborSignatureGantryKit.count()).toBe(1)
+        expect(SouthHarborDrydockKit.count()).toBe(1)
+        expect((beam.Position-originalBeamPos).Magnitude<.01).toBe(true)
+        expect((drydock.Position-originalDockPos).Magnitude<.01).toBe(true)
+        update(1)
+        expect(HarborSignatureGantryKit.count()).toBe(0)
+        expect(SouthHarborDrydockKit.count()).toBe(0)
+        expect(beam.Transparency).toBe(beamAlpha)
+        expect(drydock.Transparency).toBe(dockAlpha)
+        update(0)
+        expect(HarborSignatureGantryKit.count()).toBe(1)
+        expect(SouthHarborDrydockKit.count()).toBe(1)
+        -- An invalid floor expansion must immediately reveal both
+        -- original silhouettes instead of retaining counterfeit art.
+        base.Size=Vector3.new(330,4,320)
+        update(0)
+        expect(HarborSignatureGantryKit.count()).toBe(0)
+        expect(SouthHarborDrydockKit.count()).toBe(0)
+        expect(beam.Transparency).toBe(beamAlpha)
+        expect(drydock.Transparency).toBe(dockAlpha)
+        HarborSignatureGantryKit.sync(nil,northCamera,"Low",false,2)
+        SouthHarborDrydockKit.sync(nil,southCamera,"Low",false,2)
+        generated:Destroy()
+        northSource:Destroy()
+        southSource:Destroy()
+        if previous then previous.Parent=workspace end
+    end)
+
     it("mounts the approved Harbor hero 3D on genuine Low scenery without nonexistent hoist sensors", function()
         local storage=game:GetService("ReplicatedStorage")
         local templates=Instance.new("Folder")
