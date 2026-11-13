@@ -1550,22 +1550,26 @@ describe("Original 3D native fallback isolation (engine)", function()
             return part
         end
         local function genuine(anchor, name, large)
-            local piece = Instance.new("MeshPart")
-            piece.Name = name
-            piece.CanCollide = false
-            piece.CanTouch = false
-            piece.CanQuery = false
-            piece:SetAttribute(
-                large and "OriginalLargeStructure3D"
-                    or "Original3DStructuralSide", true
-            )
-            local weld = Instance.new("WeldConstraint")
-            weld.Name = "OriginalSupportVisualWeld"
-            weld.Part0 = piece
-            weld.Part1 = anchor
-            weld.Parent = piece
-            piece.Parent = meshes
-            return piece
+            local first
+            for i=1,7 do
+                local piece = Instance.new("MeshPart")
+                piece.Name = name .. "_" .. i
+                piece.CanCollide = false
+                piece.CanTouch = false
+                piece.CanQuery = false
+                piece:SetAttribute(
+                    large and "OriginalLargeStructure3D"
+                        or "Original3DStructuralSide", true
+                )
+                local weld = Instance.new("WeldConstraint")
+                weld.Name = "OriginalSupportVisualWeld"
+                weld.Part0 = piece
+                weld.Part1 = anchor
+                weld.Parent = piece
+                piece.Parent = meshes
+                if i == 1 then first = piece end
+            end
+            return first
         end
 
         local platform1 = physical("Platform1")
@@ -1593,8 +1597,21 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(rib3.LocalTransparencyModifier).toBe(1)
         expect(support4.LocalTransparencyModifier).toBe(1)
 
-        -- One failed original import no longer turns all five worlds back
-        -- into their Roblox-native underneath. Other original meshes live.
+        -- Removing just ONE of the seven genuine source MeshParts
+        -- must restore ONLY that platform's whole native underside.
+        -- As soon as the exact original part streams back in, all seven
+        -- are again verified and its five-piece fallback can be masked.
+        shell1.Parent = nil
+        expect(frame1.LocalTransparencyModifier).toBe(0)
+        expect(frame2.LocalTransparencyModifier).toBe(1)
+        expect(Kit.count()).toBe(3)
+        shell1.Parent = meshes
+        expect(frame1.LocalTransparencyModifier).toBe(1)
+        expect(Kit.count()).toBe(4)
+
+        -- Permanent loss of the same ONE material leaves the other
+        -- owner-verified 3D platforms resident. Never wait for loss of
+        -- the sixth or final sibling before recovering the native.
         shell1:Destroy()
         expect(frame1.LocalTransparencyModifier).toBe(0)
         expect(frame2.LocalTransparencyModifier).toBe(1)
@@ -1602,6 +1619,8 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(support4.LocalTransparencyModifier).toBe(1)
         expect(Kit.count()).toBe(3)
 
+        -- A tall seven-part support must also reveal its native Part
+        -- when ONE material fails, rather than leaving a hollow column.
         column4:Destroy()
         expect(support4.LocalTransparencyModifier).toBe(0)
         expect(frame2.LocalTransparencyModifier).toBe(1)
