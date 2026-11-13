@@ -2,7 +2,8 @@
 # authentic native fallback, 110 Approved source IDs, real-engine rectangular and long deck bevel replacements,
 # shared mobile budget and nonphysical safe importer. NO Roblox publish.
 # It NEVER publishes an experience and cannot run from a PR.
-# Retest the dedicated smaller 87th real-engine rim spec after fixing source-size cap.
+# Exact-SHA retest after correcting owner-targeted P4 fallbacks and
+# keel shrink footprint safety; verified 87th rim spec remains in Cloud.
 name: One-time QA 2026-11-13 Approved Platform Rims Engine No Publish
 on:
   push:
