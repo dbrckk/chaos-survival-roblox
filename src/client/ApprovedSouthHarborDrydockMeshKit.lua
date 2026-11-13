@@ -80,6 +80,19 @@ local function sourceFor()
     return source
 end
 
+-- The south drydock sits outside the survival floor and does not shrink.
+-- Authenticate the original server-authored map dimensions instead.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    return typeof(sx)=="number" and typeof(sz)=="number"
+        and sx>=318 and sz>=318
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=sx+.2 and base.Size.Z<=sz+.2
+end
+
 local function context(arena)
     if not arena or not arena:IsA("Folder")
         or arena:GetAttribute("VariantId")~="Harbor" then return nil end
@@ -88,9 +101,7 @@ local function context(arena)
         or arena.Parent~=generated or arena.Name~="Arena" then return nil end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart") or base.Parent~=arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+    if not authenticBase(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena then return nil end
     local owner=decor:FindFirstChild("SouthHorizonMonument")
@@ -98,8 +109,10 @@ local function context(arena)
         or owner:GetAttribute("ChaosDistantScenery")~=true
         or owner:GetAttribute("SignatureVariant")~="Harbor" then return nil end
 
+    local originalX=base:GetAttribute("OriginalSizeX")
+    local originalZ=base:GetAttribute("OriginalSizeZ")
     local origin=CFrame.new(base.Position+Vector3.new(
-        -base.Size.X*.20,base.Size.Y*.5,base.Size.Z*.5+54))
+        -originalX*.20,base.Size.Y*.5,originalZ*.5+54))
     local specs={
         {"Foundation","Part",Vector3.new(47,2,13),CFrame.new(0,-1,0)},
         {"FloorInset","Part",Vector3.new(39,.3,10),CFrame.new(0,.16,0)},
@@ -267,8 +280,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         table.clear(baseConnections)
         watchedBase=base
         local function checkBase()
-            if base.Parent~=arena or not base.Anchored or not base.CanCollide
-                or base.Size.X<318 or base.Size.Z<318 then restore() end
+            if not authenticBase(base,arena) then restore() end
         end
         baseConnections[#baseConnections+1]=
             base:GetPropertyChangedSignal("Size"):Connect(checkBase)
