@@ -706,12 +706,13 @@ local function rebuild()
             -- half-density below; gameplay takeoff cues are unaffected.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0
                 or nearBridgeGirders[platform] == true
+                or nearCameraCarapaces[platform] == true
                 or nearServiceHatches[platform] == true
                 or nearCradles[platform] == true
                 or nearSupports[platform] == true then
-            -- A camera-selected original bridge, hatch, undercradle or
-            -- support can sit on an EVEN-index physical deck. Register the
-            -- true art without reintroducing omitted native Low paint.
+            -- A camera-selected original carapace, bridge, hatch, cradle
+            -- or support can sit on an EVEN-index physical deck. Register
+            -- the true approved 3D without reintroducing native Low paint.
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme
