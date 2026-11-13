@@ -614,7 +614,7 @@ local function rebuild()
                     folder, target, tier.Name, id, true)
             elseif choice == "hull" then
                 pieces = PremiumLargeDeckHullMeshKit.install(
-                    folder, target, tier.Name, id, true)
+                    folder, target, tier.Name, id, true, decor)
             elseif choice == "carapace" then
                 pieces = PremiumPlatformSideMeshKit.carapace(
                     folder, target, variant, tier.Name, id, true)
@@ -777,7 +777,7 @@ local function rebuild()
                 and staged.parts) or PremiumLargeDeckHullMeshKit.install(
                     folder, platform, tier.Name, visualIndex,
                     (tier.Name == "Low" and platform == lowHubDeck)
-                        or nearLargeDeckHulls[platform] == true)
+                        or nearLargeDeckHulls[platform] == true, decor)
             if largeHullPieces and #largeHullPieces == 7 then
                 mountedLargeDeckHulls += 1
                 if tier.Name == "Low" then
