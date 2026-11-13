@@ -57,7 +57,10 @@ assert "LocalCrossroadsGantryPrimitivesReplaced" in LOD
 # both orthogonal placements use exactly the same source geometry.
 for literal in (
     '"CrossroadGantry"..index','"CrossroadSignal"..index',
-    'base.Size.Z*.5+4','base.Size.X*.5+4',
+    'originalZ*.5+4','originalX*.5+4',
+    'originalFootprint(base, arena)',
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
     'Vector3.new(28,2,2)','Vector3.new(2,2,28)',
     'Vector3.new(18,.34,2.12)','Vector3.new(2.12,.34,18)',
     'index<=2','desiredX=index<=2',
