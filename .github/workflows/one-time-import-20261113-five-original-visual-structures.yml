@@ -1,0 +1,36 @@
+# One authorized batch of FIVE strictly source-allowlisted original 3D uploads.
+# Preview workflow 43467221966 already passed five model source/glTF gates.
+# NEVER touches the public experience, a Place version or fake asset IDs.
+name: One-time Import Five P0 Original 3D Visual Structures 2026-11-13
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-20261113-five-original-visual-structures.yml
+permissions:
+  contents: read
+concurrency:
+  group: five-p0-original-visual-assets-once-20261113
+  cancel-in-progress: false
+jobs:
+  creator-owned-original-asset:
+    name: Import and verify creator asset
+    if: github.repository == 'dbrckk/chaos-survival-roblox' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model:
+          - ascension_access_arch
+          - ascension_transfer_arch
+          - ascension_summit_arch
+          - architectural_column_casing
+          - orbital_helix_underframe
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
