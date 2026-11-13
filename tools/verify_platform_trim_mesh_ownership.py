@@ -86,3 +86,22 @@ assert 'part.LocalTransparencyModifier = 1' in source
 assert 'owner.CanCollide' in source
 print("PASS P0 Low near-camera premium carapace can replace authentic even-index"
       " four-bevel underside without increasing 1-model/7-MeshPart cap")
+
+# The real on-screen premium carapace must not sit behind four unrelated
+# world imports: prioritize the creator-approved ACTIVE arena once at the
+# existing 74-second milestone. The shared bridge remains second; both
+# reuse exactly the same global two-call gate and six approved IDs.
+server = (root / "src/server/PremiumPlatformSideAssets.lua").read_text()
+assert 'local function orderedForActiveArena()' in server
+assert 'workspace:FindFirstChild("GeneratedMap")' in server
+assert 'arena:GetAttribute("VariantId")' in server
+assert 'if type(variant)~="string" or not APPROVED[variant]' in server
+assert 'local ordered={variant,"Bridge"}' in server
+assert 'name~=variant and name~="Bridge"' in server
+assert 'for _, name in ipairs(orderedForActiveArena()) do' in server
+assert 'task.wait(74)' in server
+assert 'GlobalApprovedImportGate.load' in server
+assert 'OriginalMeshScenery.sanitize(raw)' in server
+assert 'local ORDER = {"Classic", "Towers", "Crossroads", "Orbital", "Harbor", "Bridge"}' in server
+print("PASS active world's moderated sculpt loads before inactive worlds"
+      " without new AssetService calls, imports, or priority bypass")
