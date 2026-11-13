@@ -480,7 +480,17 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook,
         if baseChanged then baseChanged:Disconnect() end
         watchedBase = base
         baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if not realFloorScale(base, arena) then clearModels() end
+            if not realFloorScale(base, arena) then
+                clearModels()
+            else
+                -- ShrinkingArena updates Base FIRST, then physical RouteTier
+                -- decks. Reveal the authentic native upper portico in this
+                -- short asynchronous gap; the deck Size signal refits and
+                -- remasks the complete original once physics catches up.
+                for _, entry in pairs(mounted) do
+                    updateVisibility(entry)
+                end
+            end
         end)
     end
     local template = source()
