@@ -404,10 +404,20 @@ for clause in (
     "visible and 1 or saved.original",
     "if not visible then PremiumRoutePbrKit.detach(entry) end",
     "darknessGuard",
+    "or not piece:IsDescendantOf(entry.model)",
+    "or piece.CanCollide or piece.CanTouch or piece.CanQuery",
+    "joint.Part0 ~= entry.deck or joint.Part1 ~= piece",
+    "clone.DescendantRemoving:Connect(function(child)",
+    "task.defer(function()",
+    "if not entry.restoring then updateVisibility(entry) end",
+    "if safeAfterMount(entry) then count += 1 end",
+    "visible and 1 or saved.original",
 ):
     assert clause in crown, clause
 assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', crown)
-print("PASS true Sky Spine 3D crowns follow deck shrink without fake collisions")
+assert ".RenderStepped:Connect(" not in crown
+assert ".Heartbeat:Connect(" not in crown
+print("PASS Sky Spine crown shrink + partial-stream native fallback + truthful residency")
 
 # Original 6x6 creator-authored ground plating now follows the ACTUAL
 # server-owned 36 tiles. Full source coordinates, live footprint and
