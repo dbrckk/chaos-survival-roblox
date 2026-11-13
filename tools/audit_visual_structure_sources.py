@@ -139,6 +139,21 @@ for clause in (
     assert clause in district_facade, ("district facade integrity", clause)
 print("PASS district approved 3D clone rejects foreign geometry/scripts")
 
+# Genuine approved sidewall meshes can now cover all 16 buildings on
+# healthy desktop High, without lifting mobile or GPU pressure ceilings.
+sidewall = (ROOT / "src/client/ApprovedDistrictSidewallMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "High = {count = 16, distance = 275, retention = 28}",
+    "local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}",
+    "if tier == \"High\" then cap = math.min(cap, 5) end",
+    'clone.DescendantAdded:Connect(function(part)',
+    'if actual ~= 6 then return false end',
+    'release(building)',
+):
+    assert clause in sidewall, ("district sidewall coverage/safety", clause)
+print("PASS 16 desktop district sidewalls, unchanged touch and pressure caps")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
