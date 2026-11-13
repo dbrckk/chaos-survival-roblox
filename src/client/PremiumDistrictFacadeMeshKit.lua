@@ -343,6 +343,19 @@ local function mount(building, district, base, slot, door, source)
     return entry
 end
 
+-- The approved rear/side shell owner runs after this facade owner on
+-- each camera pass. On Medium/High a previously authenticated six-mesh
+-- sidewall can exist with an unmounted/streamed-out front. A small symmetric
+-- rank bonus lets the NEXT camera pass complete that building, without
+-- adding facade models, prioritizing offscreen structures or touching Low.
+function PremiumDistrictFacadeMeshKit.pairedPriority(priority, sidewallMounted, tier)
+    if type(priority) ~= "number" then return priority end
+    if tier ~= "Low" and sidewallMounted == true then
+        return priority - 12
+    end
+    return priority
+end
+
 function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
     if arena ~= activeArena then
         clear()
@@ -399,6 +412,9 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
                     -- than spending precious Android meshes behind camera.
                     priority += 80
                 end
+                priority = PremiumDistrictFacadeMeshKit.pairedPriority(
+                    priority, building:GetAttribute(
+                        "LocalApprovedDistrictSidewallMounted") == true, tier)
                 candidates[#candidates + 1] = {
                     building = building, slot = slot, door = door,
                     distance = distance, priority = priority,
@@ -445,6 +461,24 @@ end
 
 -- Real resident native pieces replaced by owner-approved MeshParts, not
 -- estimated visual progress. Shares the existing client scenery cadence.
+-- A bit is present only for a live, model-verified, visible original
+-- facade on a real district owner. Streamed-out or LOD-evicted owners
+-- never count, regardless of native Parts existing in the server.
+function PremiumDistrictFacadeMeshKit.residentMask16()
+    local mask = 0
+    for building, entry in pairs(mounted) do
+        local index = building:GetAttribute("DistrictIndex")
+        if not entry.disposed and entry.model.Parent == holder
+            and building.Parent
+            and building:GetAttribute(RESIDENT_MARKER) == true
+            and type(index) == "number" and index % 1 == 0
+            and index >= 1 and index <= 16 then
+            mask = bit32.bor(mask, bit32.lshift(1, index - 1))
+        end
+    end
+    return mask
+end
+
 function PremiumDistrictFacadeMeshKit.replacedNativeCount()
     local n = 0
     for _, entry in pairs(mounted) do
