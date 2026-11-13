@@ -13,7 +13,7 @@ local BUDGET = {
     -- triangles at most on healthy Low, zero under GPU pressure.
     Low = {count = 1, distance = 128, retention = 16},
     Medium = {count = 4, distance = 205, retention = 20},
-    High = {count = 10, distance = 275, retention = 28},
+    High = {count = 12, distance = 275, retention = 28},
 }
 -- Android shares the existing 440/680/900 Parts census with all original
 -- monuments. Medium touch 3 and High touch 8 models max (six MeshParts
@@ -290,7 +290,7 @@ end
 -- Medium/High. Only the actual resident approved facade's client marker
 -- earns this small bonus: at most 16 studs of ranking, never enough to
 -- overturn the existing 80-stud off-camera penalty. Do not change Low's
--- strict paired-only rule or any tier's 1/4/10 model limits.
+-- strict paired-only rule or the Low/Medium 1/4 model limits.
 function Kit.pairedPriority(priority, facadeMounted, tier)
     if type(priority) ~= "number" then return priority end
     if tier ~= "Low" and facadeMounted == true then
@@ -308,7 +308,12 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
     local cap = spec.count
     if touch == true then cap = math.min(cap, TOUCH_CAP[tier] or 0) end
     local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
-    if stress == 1 then cap = math.floor(cap * .5) end
+    if stress == 1 then
+        -- Preserve the previous desktop High pressure cap (five originals).
+        -- Touch High still halves 8 -> 4, never expanding mobile residency.
+        cap = math.floor(cap * .5)
+        if tier == "High" then cap = math.min(cap, 5) end
+    end
     if stress >= 2 then cap = 0 end
     if cap == 0 or not arena or not cameraReady
         or typeof(cameraPoint) ~= "Vector3" then
@@ -416,7 +421,7 @@ function Kit.count()
 end
 
 -- Exact live count, not a source-inventory percentage. Scenery LOD
--- samples the same <=10 mounted source records, with no extra workspace
+-- samples at most 12 mounted source records, with no extra workspace
 -- traversal, frame heartbeat, mesh import or budget slot.
 -- Exact 16-bit visibility census for the one active map; a bit means
 -- a real owner-verified six-MeshPart sidewall remains installed, not that

@@ -182,7 +182,7 @@ for guard in (
     'entry.model:Destroy()',
     'Low = {count = 1, distance = 128, retention = 16}',
     'Medium = {count = 4, distance = 205, retention = 20}',
-    'High = {count = 10, distance = 275, retention = 28}',
+    'High = {count = 12, distance = 275, retention = 28}',
     'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}',
     'if stress == 1 then cap = math.floor(cap * .5) end',
     'if stress >= 2 then cap = 0 end',
@@ -235,10 +235,10 @@ assert 'sidewallMeshCount - completeDistricts' in SIDE_LOD
 assert 'ApprovedDistrictSidewallMeshKit.completeCount()' in SIDE_LOD
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
 assert 'Medium = {count = 4, distance = 205, retention = 20}' in SIDE
-assert 'High = {count = 10, distance = 275, retention = 28}' in SIDE
+assert 'High = {count = 12, distance = 275, retention = 28}' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 print("PASS complete original front+side district priority on Medium/High,"
-      " real paired live census, fixed 1/4/10 and touch 1/3/8 budgets")
+      " real paired live census, healthy desktop 1/4/12 and touch 1/3/8 budgets")
 
 print("PASS original 6-MeshPart sidewall asset 77387019170428 genuinely Approved")
 print("PASS five real native wall volumes replaced only after authentic source")
@@ -289,7 +289,7 @@ for label, code, bucket in (
     assert '.Heartbeat:Connect(' not in code,label
 assert 'Low = {count = 1, distance = 130, retention = 16}' in DISTRICT_FACADES
 assert 'Medium = {count = 5, distance = 205, retention = 22}' in DISTRICT_FACADES
-assert 'High = {count = 12, distance = 270, retention = 28}' in DISTRICT_FACADES
+assert 'High = {count = 16, distance = 270, retention = 28}' in DISTRICT_FACADES
 assert 'Low = {count = 1, distance = 145, retention = 16}' in CORNER_MONUMENTS
 assert 'Medium = {count = 4, distance = 280, retention = 22}' in CORNER_MONUMENTS
 assert 'High = {count = 4, distance = 330, retention = 26}' in CORNER_MONUMENTS
@@ -304,14 +304,14 @@ assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in DISTRICT_FACADES
 assert 'function PremiumDistrictFacadeMeshKit.residentBudget(tier, touch, pressure)' in DISTRICT_FACADES
 assert 'cap = math.min(cap, TOUCH_CAP[tier] or 0)' in DISTRICT_FACADES
 assert 'if stress >= 2 then return 0 end' in DISTRICT_FACADES
-assert 'if stress == 1 then return math.floor(cap * .5) end' in DISTRICT_FACADES
+assert 'return tier == "High" and math.min(reduced, 6) or reduced' in DISTRICT_FACADES
 assert 'if cap == 0 or not arena or not cameraReady' in DISTRICT_FACADES
 assert 'for i = 1, math.min(#candidates, cap) do' in DISTRICT_FACADES
 assert 'profile.Name, cameraReady, cameraLook, isTouch,' in TOWERS_LOD
 assert 'player:GetAttribute("OptionalVfxPressure"))' in TOWERS_LOD
 assert 'restoreNative(entry)' in DISTRICT_FACADES
 assert 'markResident(entry, false)' in DISTRICT_FACADES
-for tier, normal, touch in (("Low",1,1),("Medium",5,3),("High",12,8)):
+for tier, normal, touch in (("Low",1,1),("Medium",5,3),("High",16,8)):
     assert touch<=normal
     for pressure in (0,1,2):
         expected=touch if pressure==0 else touch//2 if pressure==1 else 0
@@ -1688,6 +1688,12 @@ assert 'LocalApprovedDistrictFacadeMounted' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
 assert 'Medium = {count = 4, distance = 205, retention = 20}' in SIDE
-assert 'High = {count = 10, distance = 275, retention = 28}' in SIDE
+assert 'High = {count = 12, distance = 275, retention = 28}' in SIDE
 print("PASS authentic reverse-paired 3D district and exact streamed N/F/S/B"
       " 16-building census without additional Android model budget")
+
+# Full desktop High visible coverage uses existing approved models only.
+assert 'if tier == "High" then cap = math.min(cap, 5) end' in SIDE
+assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
+assert 'return tier == "High" and math.min(reduced, 6) or reduced' in DISTRICT_FACADES
+print("PASS 16 facade + 12 sidewall healthy desktop High; old Android touch and emergency caps retained")

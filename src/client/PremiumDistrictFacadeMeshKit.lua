@@ -16,7 +16,7 @@ local IDS = {132020956214241, 88725004643299,
 local BUDGET = {
     Low = {count = 1, distance = 130, retention = 16},
     Medium = {count = 5, distance = 205, retention = 22},
-    High = {count = 12, distance = 270, retention = 28},
+    High = {count = 16, distance = 270, retention = 28},
 }
 local holder = Instance.new("Folder")
 holder.Name = "ApprovedDistrictFacadesLocal"
@@ -356,10 +356,12 @@ function PremiumDistrictFacadeMeshKit.pairedPriority(priority, sidewallMounted, 
     return priority
 end
 
--- Keep the already-approved facade source count unchanged in normal
--- desktop tiers; Android touch mirrors the *existing* sidewall quota.
--- At optional GPU pressure 1 halve the resident facade cap, at pressure 2
--- restore all native rooflines and stop mounting nonessential MeshParts.
+-- On healthy desktop High, all SIXTEEN genuine district buildings can
+-- display existing owner-approved roof/facade originals rather than their
+-- simple block rooflines. No new assets or source imports. Touch still caps
+-- at 1/3/8 and GPU pressure 1 retains the old desktop High maximum of
+-- SIX: quality upgrades cannot compete with emergency pressure relief.
+-- At pressure 2 restore every native roofline.
 -- This prevents genuine sidewall fallbacks from leaving an expensive
 -- facade still consuming mobile render budget without its 3D envelope.
 local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}
@@ -372,7 +374,10 @@ function PremiumDistrictFacadeMeshKit.residentBudget(tier, touch, pressure)
     end
     local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
     if stress >= 2 then return 0 end
-    if stress == 1 then return math.floor(cap * .5) end
+    if stress == 1 then
+        local reduced = math.floor(cap * .5)
+        return tier == "High" and math.min(reduced, 6) or reduced
+    end
     return cap
 end
 
