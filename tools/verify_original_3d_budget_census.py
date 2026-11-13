@@ -606,7 +606,7 @@ assert 'OriginalUnderdeckChassis = 84582262145054' in ROUTE
 assert 'local BUDGET = {' in ROUTE
 assert 'Low = {decks = 2, bridges = 1, segments = 2, underdecks = 1,' in ROUTE
 assert 'Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,' in ROUTE
-assert 'High = {decks = 12, bridges = 5, segments = 4, underdecks = 4,' in ROUTE
+assert 'High = {decks = 16, bridges = 5, segments = 4, underdecks = 4,' in ROUTE
 assert 'if stress == 1 then' in ROUTE
 assert 'underdeckCap = math.floor(underdeckCap*.50)' in ROUTE
 assert 'underdeckCap = 0' in ROUTE
@@ -707,9 +707,9 @@ print("PASS authentic healthy Low Sky Promenade undercarriage: 2 bridge",
 # pressure even on Low. No visual-only clone may survive a stressed phone
 # or remain floating if its source/native/clone streams away.
 assert 'Low = {count = 1, distance = 140, retention = 14}' in BEAMS
-assert 'Medium = {count = 4, distance = 225, retention = 22}' in BEAMS
-assert 'High = {count = 12, distance = 290, retention = 25}' in BEAMS
-assert 'function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure)' in BEAMS
+assert 'Medium = {count = 6, distance = 225, retention = 22}' in BEAMS
+assert 'High = {count = 16, distance = 290, retention = 25}' in BEAMS
+assert 'function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure, touch)' in BEAMS
 assert 'if tier=="Low" and stress>=1 then cap=0 end' in BEAMS
 assert 'if not source or (tier=="Low" and pieces~=7) then' in BEAMS
 assert 'for i = 1, math.min(#ranked, cap) do' in BEAMS
@@ -730,7 +730,10 @@ assert 'for _,name in ipairs(evicted) do release(name) end' in BEAMS
 assert 'UnderstructureBeamMeshKit.sync(arena, cameraPoint,' in LOD
 beam_call=LOD.split('UnderstructureBeamMeshKit.sync(',1)[1].split(
     'local beamMeshes',1)[0]
-assert 'player:GetAttribute("OptionalVfxPressure"))' in beam_call
+assert 'player:GetAttribute("OptionalVfxPressure"),' in beam_call
+assert 'isTouch)' in beam_call
+assert 'if touch == true and tier == "Medium" then cap = math.min(cap, 4) end' in BEAMS
+assert 'if touch == true and tier == "High" then cap = math.min(cap, 12) end' in BEAMS
 assert 'CanCollide = false' in BEAMS
 assert 'CanTouch = false' in BEAMS and 'CanQuery = false' in BEAMS
 assert "RenderStepped" not in BEAMS and "Heartbeat" not in BEAMS
