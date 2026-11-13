@@ -31,7 +31,7 @@ local BUDGET = {
         distance = 100, retention = 18},
     Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2,
         distance = 195, retention = 22},
-    High = {decks = 12, bridges = 5, segments = 4, underdecks = 4,
+    High = {decks = 16, bridges = 5, segments = 4, underdecks = 4,
         distance = 260, retention = 28},
 }
 
@@ -960,15 +960,22 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     local stress = math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     local deckCap, bridgeCap, underdeckCap =
         budget.decks, budget.bridges, budget.underdecks
+    -- Extra four approved deck skins are desktop High only. Preserve the
+    -- previous 12-deck mobile ceiling and pressure 1/2 maximums.
+    if touch == true and quality == "High" then
+        deckCap = math.min(deckCap, 12)
+    end
     -- This is the existing 0.65/0.90-second cosmetic LOD sampler. Under
     -- actual frame pressure, evict optional dense 3D BEFORE lowering
     -- server-owned real routes or hazard warnings (those never change).
     if stress == 1 then
         deckCap = math.max(1,math.ceil(deckCap*.68))
+        if quality == "High" then deckCap = math.min(deckCap, 9) end
         bridgeCap = math.max(0,math.floor(bridgeCap*.70))
         underdeckCap = math.floor(underdeckCap*.50)
     elseif stress == 2 then
         deckCap = math.max(1,math.ceil(deckCap*.38))
+        if quality == "High" then deckCap = math.min(deckCap, 5) end
         bridgeCap = 0
         underdeckCap = 0
     end
