@@ -151,7 +151,7 @@ end
 -- sampling or the first two PlatformN in a large streamed arena.
 -- One snapshot per EXISTING map/tier/asset arrival rebuild. No camera loop,
 -- network calls or server-authoritative gameplay changes.
-function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint,cameraLook,pressure)
+function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraPoint,cameraLook,pressure,desktopHigh)
     local cradleSet,supportSet={},{}
     -- Low spends exactly ONE approved seven-MeshPart source module:
     -- a near-camera LongCradle OR one rectangular support replacement,
@@ -320,7 +320,13 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         end
         return selected
     end
-    local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 1)
+    -- Desktop High may TRADE four existing 7-piece column modules for
+    -- four extra open-lattice underframes. Android High/Medium/Low retain
+    -- all old caps. This selector only exposes the eligible candidate set;
+    -- arena-platform-identity reallocates the exact SAME total modules
+    -- when the creator-approved LongCradle is actually available.
+    local cradleLimit=tier=="High" and
+        (desktopHigh==true and 8 or 4) or (tier=="Medium" and 2 or 1)
     -- Medium's renderer already budgets eight seven-MeshPart support
     -- modules. Each Medium platform mounts at most ONE support, so
     -- selecting only four deck owners left half the approved budget idle.
