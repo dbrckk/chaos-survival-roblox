@@ -631,7 +631,7 @@ jobs:
           # mobile quality improvement with the obsolete zero-source gate.
           assert "Low = {decks = 2, bridges = 1, segments = 2, underdecks = 1" in client
           assert "Medium = {decks = 8, bridges = 3, segments = 3, underdecks = 2" in client
-          assert "High = {decks = 12, bridges = 5, segments = 4, underdecks = 4" in client
+          assert "High = {decks = 16, bridges = 5, segments = 4, underdecks = 4" in client
           assert "part.CanCollide = false" in client
           assert "part.CanQuery = false" in client
           assert "part.CanTouch = false" in client
@@ -1282,7 +1282,7 @@ jobs:
           # Current authenticated near-camera skybridge counts: three
           # Medium / five High, still finite and subject to VFX pressure.
           assert "decks = 8, bridges = 3, segments = 3" in route
-          assert "decks = 12, bridges = 5, segments = 4" in route
+          assert "decks = 16, bridges = 5, segments = 4" in route
           assert "fit.longCoverage >= 0.68" in route
           assert "fit.widthCoverage >= 0.65" in route
           assert "longCoverage >= 0.95" in route
