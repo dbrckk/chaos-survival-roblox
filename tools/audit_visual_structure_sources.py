@@ -231,6 +231,17 @@ for clause in (
     assert clause in buttress, ("approved perimeter buttress safety", clause)
 print("PASS desktop Medium two-station 3D buttress residency")
 
+# The two station buttress meshes must never become collidable or
+# non-MeshPart while their native fallback remains hidden.
+for clause in (
+    'if not piece:IsA("MeshPart")',
+    'or not piece.Anchored or not piece.Massless',
+    'or piece.CanCollide or piece.CanTouch',
+    'or piece.CanQuery then',
+):
+    assert clause in buttress, ("buttress runtime integrity guard", clause)
+print("PASS authenticated nonphysical buttress clone integrity")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
