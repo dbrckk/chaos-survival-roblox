@@ -7,6 +7,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
 local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFacadeMeshKit")
+local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFacadeMeshKit")
 local DistrictVisualCensusRules = require("../../src/shared/DistrictVisualCensusRules")
 local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
 local PremiumLargeStructureMeshKit = require("../../src/client/PremiumLargeStructureMeshKit")
@@ -23,6 +24,116 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("drops genuine district facade and restores native roof under Android pressure", function()
+        local ReplicatedStorage=game:GetService("ReplicatedStorage")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        local previousTemplates=ReplicatedStorage:FindFirstChild(
+            "ApprovedDistrictFacadeTemplates")
+        if previousMap then previousMap.Parent=nil end
+        if previousTemplates then previousTemplates.Parent=nil end
+        PremiumDistrictFacadeMeshKit.sync(
+            nil,Vector3.zero,"Low",false)
+        local generated,templates
+        local ok,why=pcall(function()
+            -- These are the SAME budgets as the six-source approved
+            -- sidewall kit, with no new Android MeshParts or API calls.
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "Low",true,0)).toBe(1)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "Low",true,1)).toBe(0)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "Medium",true,0)).toBe(3)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "Medium",true,1)).toBe(1)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "High",true,0)).toBe(8)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "High",true,1)).toBe(4)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "High",true,2)).toBe(0)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "Medium",false,0)).toBe(5)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "High",false,0)).toBe(12)
+            expect(PremiumDistrictFacadeMeshKit.residentBudget(
+                "High",false,1)).toBe(6)
+
+            local arena=MapBuilder.buildArena(Config,"Classic",
+                ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local base=arena:FindFirstChild("Base")
+            local decor=arena:FindFirstChild("Decor")
+            local district=decor:FindFirstChild(
+                "ArenaDistrictArchitecture3D")
+            local building=district:FindFirstChild("DistrictNorth1")
+            local door=building:FindFirstChild("ServiceEntryDoor")
+            local roof=building:FindFirstChild("AngledRoofL")
+            expect(roof~=nil and roof:IsA("WedgePart")).toBe(true)
+            expect(roof.CanCollide or roof.CanTouch or roof.CanQuery)
+                .toBe(false)
+            local originalAlpha=roof.Transparency
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedDistrictFacadeTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=ReplicatedStorage
+            local source=Instance.new("Model")
+            source.Name="Observatory"
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute("DistrictFacade3D",true)
+            source:SetAttribute("Original3DAssetId",132020956214241)
+            local mesh=Instance.new("MeshPart")
+            mesh.Size=Vector3.new(12,20,8)
+            mesh.Anchored=true
+            mesh.CanCollide=false
+            mesh.CanTouch=false
+            mesh.CanQuery=false
+            mesh.Parent=source
+            source.Parent=templates
+            local position=door.Position+Vector3.new(0,5,0)
+            local look=door.CFrame.LookVector
+
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,position,"Low",true,look,true,0)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictFacadeMounted")).toBe(true)
+            expect(roof.Transparency).toBe(1)
+            expect(base.CanCollide).toBe(true)
+
+            -- Critical Low phone pressure: release approved 3D and
+            -- restore its exact native WedgePart IMMEDIATELY.
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,position,"Low",true,look,true,1)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(0)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictFacadeMounted")).toBe(nil)
+            expect(roof.Transparency).toBe(originalAlpha)
+            expect(base.CanCollide).toBe(true)
+
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,position,"Low",true,look,true,0)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(roof.Transparency).toBe(1)
+            -- Severe pressure also evicts even the permitted Medium
+            -- front; it cannot remain orphaned while sidewalls fall back.
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,position,"Medium",true,look,true,2)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(0)
+            expect(roof.Transparency).toBe(originalAlpha)
+            expect(base.CanCollide).toBe(true)
+        end)
+        PremiumDistrictFacadeMeshKit.sync(
+            nil,Vector3.zero,"Low",false)
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if previousTemplates then
+            previousTemplates.Parent=ReplicatedStorage
+        end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
     it("completes existing approved 3D district shells symmetrically with a true streamed 16-slot census", function()
         -- Low never receives a reciprocal boost: its one sidewall must
         -- FIRST have a true mounted facade. Medium/High can use a small
