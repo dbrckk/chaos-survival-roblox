@@ -582,7 +582,11 @@ describe("Chaos Survival engine", function()
                     < base.Position.Y - base.Size.Y * .5).toBe(true)
             end
         end
-        UnderstructureBeamMeshKit.sync(arena, camera, "Medium", true)
+        -- Healthy desktop Medium now replaces six genuine beam bays.
+        -- Tactile Medium remains capped at four by the real LOD owner.
+        UnderstructureBeamMeshKit.sync(arena, camera, "Medium", true, 0, false)
+        expect(UnderstructureBeamMeshKit.count()).toBe(6)
+        UnderstructureBeamMeshKit.sync(arena, camera, "Medium", true, 0, true)
         expect(UnderstructureBeamMeshKit.count()).toBe(4)
         UnderstructureBeamMeshKit.sync(arena, camera, "High", true)
         -- The six available fixture beams fit under High's twelve-model
