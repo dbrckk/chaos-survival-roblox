@@ -5,6 +5,23 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
+-- These outboard landmarks are fixed to the BUILDER's initial perimeter.
+-- Shrinking Arena contracts the playable Base, not the original sculpture.
+local function originalFootprint(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx == math.huge or sz == math.huge
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local ASSET_ID=90844491148907
 -- Low allows one approved seven-MeshPart gantry; stress 1 restores
 -- its original primitive. The warning signal remains server-authored.
@@ -75,23 +92,24 @@ local function genuine(arena,index)
     local generated=workspace:FindFirstChild("GeneratedMap")
     local base=arena and arena:FindFirstChild("Base")
     local decor=arena and arena:FindFirstChild("Decor")
+    local originalX, originalZ = originalFootprint(base, arena)
     if not arena or not arena:IsA("Folder") or arena.Name~="Arena"
         or not generated or arena.Parent~=generated
         or arena:GetAttribute("VariantId")~="Crossroads"
         or not base or not base:IsA("BasePart")
         or base.Parent~=arena or not base.Anchored
-        or not base.CanCollide or base.Size.X<318 or base.Size.Z<318
+        or not base.CanCollide or not originalFootprint(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena or index<1 or index>4 then return nil end
     local x,z=0,0
     local expectedBody
     local expectedSignal
     if index<=2 then
-        z=(index==1 and -1 or 1)*(base.Size.Z*.5+4)
+        z=(index==1 and -1 or 1)*(originalZ*.5+4)
         expectedBody=Vector3.new(28,2,2)
         expectedSignal=Vector3.new(18,.34,2.12)
     else
-        x=(index==3 and -1 or 1)*(base.Size.X*.5+4)
+        x=(index==3 and -1 or 1)*(originalX*.5+4)
         expectedBody=Vector3.new(2,2,28)
         expectedSignal=Vector3.new(2.12,.34,18)
     end
@@ -201,6 +219,14 @@ local function mount(arena,index,body,signal,base,decor,source,holder)
         base:GetPropertyChangedSignal("Size"):Connect(changed)
     entry.connections[#entry.connections+1]=
         base:GetPropertyChangedSignal("CFrame"):Connect(changed)
+    for _, signal in ipairs({
+        base:GetAttributeChangedSignal("OriginalSizeX"),
+        base:GetAttributeChangedSignal("OriginalSizeZ"),
+        base:GetPropertyChangedSignal("CanCollide"),
+        base:GetPropertyChangedSignal("Anchored"),
+    }) do
+        entry.connections[#entry.connections+1]=signal:Connect(changed)
+    end
     entry.connections[#entry.connections+1]=
         source.DescendantRemoving:Connect(function(piece)
             if piece:IsA("MeshPart") then unmount(body) end

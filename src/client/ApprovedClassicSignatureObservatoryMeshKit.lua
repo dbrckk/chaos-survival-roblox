@@ -4,6 +4,23 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
+-- These outboard landmarks are fixed to the BUILDER's initial perimeter.
+-- Shrinking Arena contracts the playable Base, not the original sculpture.
+local function originalFootprint(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx == math.huge or sz == math.huge
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local OWNER_ID=112493873850364
 -- Android Low: one authenticated seven-MeshPart landmark instead of
 -- 7 distant primitive silhouette Parts, only at VFX pressure zero.
@@ -114,9 +131,10 @@ local function context(arena)
         or arena.Parent~=generated then return nil end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
+    local originalX, originalZ = originalFootprint(base, arena)
     if not base or not base:IsA("BasePart")
         or base.Parent~=arena or not base.Anchored
-        or not base.CanCollide or base.Size.X<318 or base.Size.Z<318
+        or not base.CanCollide or not originalFootprint(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena then return nil end
     local owner=decor:FindFirstChild("ArenaSignatureMegastructure")
@@ -146,9 +164,9 @@ local function context(arena)
 
     local mast=originals[1]
     local expected=base.Position+Vector3.new(
-        base.Size.X*.24,
+        originalX*.24,
         base.Size.Y*.5+27.5,
-        -(base.Size.Z*.5+66))
+        -(originalZ*.5+66))
     if (mast.Position-expected).Magnitude>.20 then return nil end
     for i=2,7 do
         local actual=mast.CFrame:ToObjectSpace(originals[i].CFrame)
@@ -320,8 +338,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         watchedBase=base
         local function verifyBase()
             if base.Parent~=arena or not base.Anchored
-                or not base.CanCollide or base.Size.X<318
-                or base.Size.Z<318 then restore() end
+                or not base.CanCollide or not originalFootprint(base,arena) then restore() end
         end
         baseConnections[#baseConnections+1]=
             base:GetPropertyChangedSignal("Size"):Connect(verifyBase)
@@ -329,6 +346,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
             base:GetPropertyChangedSignal("CanCollide"):Connect(verifyBase)
         baseConnections[#baseConnections+1]=
             base.AncestryChanged:Connect(verifyBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeX"):Connect(verifyBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeZ"):Connect(verifyBase)
+        baseConnections[#baseConnections+1]=
+            base:GetPropertyChangedSignal("Anchored"):Connect(verifyBase)
     end
     local source=approvedSource()
     if not source then restore();return end

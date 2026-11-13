@@ -5,6 +5,23 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
+-- These outboard landmarks are fixed to the BUILDER's initial perimeter.
+-- Shrinking Arena contracts the playable Base, not the original sculpture.
+local function originalFootprint(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx == math.huge or sz == math.huge
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local MODEL_ID=96622579843060
 local RANGE={Low=320,Medium=405,High=580}
 local RETENTION=25
@@ -89,9 +106,10 @@ local function nativeContext(arena)
         or arena.Parent~=generated then return nil end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
+    local originalX, originalZ = originalFootprint(base, arena)
     if not base or not base:IsA("BasePart") or base.Parent~=arena
         or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+        or not originalFootprint(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena then return nil end
     local owner=decor:FindFirstChild("ArenaSignatureMegastructure")
@@ -138,7 +156,7 @@ local function nativeContext(arena)
     end
     local lower=natives[1]
     local expected=base.Position+Vector3.new(
-        base.Size.X*.24,base.Size.Y*.5+29,-(base.Size.Z*.5+66))
+        originalX*.24,base.Size.Y*.5+29,-(originalZ*.5+66))
     if (lower.Position-expected).Magnitude>.20 then return nil end
     local relative={
         CFrame.new(0,7.5,0),
@@ -292,7 +310,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         watchedBase=base
         local function validateBase()
             if base.Parent~=arena or not base.Anchored or not base.CanCollide
-                or base.Size.X<318 or base.Size.Z<318 then
+                or not originalFootprint(base,arena) then
                 restore()
             end
         end
@@ -302,6 +320,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
             base:GetPropertyChangedSignal("CanCollide"):Connect(validateBase)
         baseConnections[#baseConnections+1]=
             base.AncestryChanged:Connect(validateBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeX"):Connect(validateBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeZ"):Connect(validateBase)
+        baseConnections[#baseConnections+1]=
+            base:GetPropertyChangedSignal("Anchored"):Connect(validateBase)
     end
     local source=approvedSource()
     if not source then restore();return end

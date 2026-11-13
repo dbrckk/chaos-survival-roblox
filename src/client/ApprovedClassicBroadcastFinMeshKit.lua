@@ -5,6 +5,23 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
+-- These outboard landmarks are fixed to the BUILDER's initial perimeter.
+-- Shrinking Arena contracts the playable Base, not the original sculpture.
+local function originalFootprint(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx == math.huge or sz == math.huge
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local ASSET_ID = 123049626693705
 local SIZE = Vector3.new(5.46,15.92,1.76)
 -- One real 7-MeshPart original at camera range in healthy Low.
@@ -88,6 +105,7 @@ local function genuine(arena,index)
     local generated=workspace:FindFirstChild("GeneratedMap")
     local base=arena and arena:FindFirstChild("Base")
     local decor=arena and arena:FindFirstChild("Decor")
+    local originalX, originalZ = originalFootprint(base, arena)
     if not arena or not arena:IsA("Folder") or arena.Name~="Arena"
         or not generated or not generated:IsA("Folder")
         or arena.Parent~=generated
@@ -95,11 +113,11 @@ local function genuine(arena,index)
         or not base or not base:IsA("BasePart")
         or base.Parent~=arena or not base.Anchored
         or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+        or not originalFootprint(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena or index<1 or index>4 then return nil end
-    local halfX=base.Size.X*.5
-    local halfZ=base.Size.Z*.5
+    local halfX=originalX*.5
+    local halfZ=originalZ*.5
     local offset
     if index==1 then
         offset=Vector3.new(-halfX-5,8,-18)
@@ -229,6 +247,14 @@ local function mount(arena,index,fin,glow,base,decor,source,holder)
         base:GetPropertyChangedSignal("Size"):Connect(changed)
     entry.connections[#entry.connections+1]=
         base:GetPropertyChangedSignal("CFrame"):Connect(changed)
+    for _, signal in ipairs({
+        base:GetAttributeChangedSignal("OriginalSizeX"),
+        base:GetAttributeChangedSignal("OriginalSizeZ"),
+        base:GetPropertyChangedSignal("CanCollide"),
+        base:GetPropertyChangedSignal("Anchored"),
+    }) do
+        entry.connections[#entry.connections+1]=signal:Connect(changed)
+    end
     entry.connections[#entry.connections+1]=
         source.DescendantRemoving:Connect(function(piece)
             if piece:IsA("MeshPart") then unmount(fin) end
