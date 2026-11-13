@@ -1396,6 +1396,7 @@ local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
     LongCradle = true, LargeDeckHull = true,
+    Rect = true, Long = true,
 }
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
     if not holder or not holder:IsA("Folder") then return end
