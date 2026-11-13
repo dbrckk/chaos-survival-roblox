@@ -6,6 +6,7 @@ local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 local Kit = {}
 local ASSET_ID = 128820723471019
 local started = false
@@ -22,8 +23,11 @@ function Kit.start()
     end
     holder:SetAttribute("OwnerVerified", true)
     task.spawn(function()
-        -- Prioritize gameplay, near-camera floors and true Harbor routes.
-        task.wait(66)
+        -- First-screen gameplay and approved Harbor sea/hero/barge art
+        -- retain priority. For an active Harbor map, this 88-stud cargo
+        -- silhouette becomes eligible at 48s; 66s on other variants.
+        -- One existing worker, still behind the shared two-load gate.
+        ActiveSignatureSchedule.waitFor("Harbor",48,66)
         for attempt = 1, 3 do
             local ok, imported = pcall(
                 GlobalApprovedImportGate.load, AssetService, ASSET_ID)
