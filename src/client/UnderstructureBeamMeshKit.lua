@@ -14,7 +14,7 @@ local ASSET_ID = 84582262145054
 -- Models share one verified source mesh package and remain camera-ranked.
 local BUDGET = {
     Low = {count = 1, distance = 140, retention = 14},
-    Medium = {count = 4, distance = 225, retention = 22},
+    Medium = {count = 6, distance = 225, retention = 22},
     High = {count = 16, distance = 290, retention = 25},
 }
 local VARIANTS = {Classic = true, Crossroads = true, Towers = true, Harbor = true, Orbital = true}
@@ -235,6 +235,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure, touch)
     -- Four additional genuine chassis only on healthy desktop High.
     -- Mobile keeps its previous 12 chassis maximum, and pressure evicts
     -- optional 3D before touching authoritative server-owned beams.
+    if touch == true and tier == "Medium" then cap = math.min(cap, 4) end
     if touch == true and tier == "High" then cap = math.min(cap, 12) end
     if stress == 1 and tier == "High" then cap = math.min(cap, 8) end
     if stress >= 2 and tier == "High" then cap = math.min(cap, 4) end
