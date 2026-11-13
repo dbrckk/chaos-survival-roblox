@@ -356,13 +356,36 @@ function PremiumDistrictFacadeMeshKit.pairedPriority(priority, sidewallMounted, 
     return priority
 end
 
-function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
+-- Keep the already-approved facade source count unchanged in normal
+-- desktop tiers; Android touch mirrors the *existing* sidewall quota.
+-- At optional GPU pressure 1 halve the resident facade cap, at pressure 2
+-- restore all native rooflines and stop mounting nonessential MeshParts.
+-- This prevents genuine sidewall fallbacks from leaving an expensive
+-- facade still consuming mobile render budget without its 3D envelope.
+local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}
+
+function PremiumDistrictFacadeMeshKit.residentBudget(tier, touch, pressure)
+    local spec = BUDGET[tier] or BUDGET.Low
+    local cap = spec.count
+    if touch == true then
+        cap = math.min(cap, TOUCH_CAP[tier] or 0)
+    end
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
+    if stress >= 2 then return 0 end
+    if stress == 1 then return math.floor(cap * .5) end
+    return cap
+end
+
+function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, touch, pressure)
     if arena ~= activeArena then
         clear()
         activeArena = arena
     end
     local budget = BUDGET[tier] or BUDGET.Low
-    if not arena or not cameraReady or typeof(cameraPoint) ~= "Vector3" then
+    local cap = PremiumDistrictFacadeMeshKit.residentBudget(
+        tier, touch, pressure)
+    if cap == 0 or not arena or not cameraReady
+        or typeof(cameraPoint) ~= "Vector3" then
         clear()
         return
     end
@@ -428,7 +451,7 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
         return a.building.Name < b.building.Name
     end)
     local wanted = {}
-    for i = 1, math.min(#candidates, budget.count) do
+    for i = 1, math.min(#candidates, cap) do
         wanted[candidates[i].building] = candidates[i]
     end
     for building, entry in pairs(mounted) do
