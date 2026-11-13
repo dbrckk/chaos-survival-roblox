@@ -33,7 +33,10 @@ for required in (
     'descendant.Name ~= "OriginalSupportVisualWeld"',
     "piece.Parent == meshFolder",
     "registerSourcePiece(piece)",
-    "meshFolder.ChildRemoved:Connect(",
+    "meshFolder.ChildRemoved:Connect(revokeSourcePiece)",
+    "meshFolder.DescendantRemoving:Connect(function(descendant)",
+    "local function revokeSourcePiece(piece)",
+    'if piece and piece.Parent == meshFolder then',
     'local remaining = math.max(0,',
     '(livePiecesByOwner[owner] or 1) - 1)',
     "active[owner] = nil",
@@ -60,6 +63,12 @@ for incomplete in (0,1,2,3,4,5,6,8,9,13,15,27):
 assert "if remaining > 0 then" not in source
 print("PASS first missing approved MeshPart revokes ONLY its platform's"
       " 7/14/21/28-piece native mask, full genuine restoration required")
+
+assert "meshFolder.DescendantRemoving:Connect(function(descendant)" in source
+assert "meshFolder.ChildRemoved:Connect(revokeSourcePiece)" in source
+assert "revokeSourcePiece(piece)" in source
+print("PASS missing WeldConstraint has same immediate one-owner native"
+      " fallback as missing MeshPart, with idempotent double events")
 
 # Capture all real masks by family in an EXISTING event-based callback.
 for name in (
