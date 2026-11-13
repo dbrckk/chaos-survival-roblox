@@ -238,7 +238,7 @@ for module, clauses in fixed_scenery_guards.items():
         *clauses,
     ):
         assert clause in code, (module, clause)
-    assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*(?:318|160)', code), module
+    assert not re.search(r'base\.Size\.[XZ]\s*<\s*(?:318|160)', code), module
 print("PASS exterior foundations, cinematic horizon and midground remain 3D-eligible during shrink")
 
 # This is a risk inventory, not a count of defective objects: checking a
