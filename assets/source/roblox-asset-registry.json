@@ -907,6 +907,32 @@
       "source_generator": "tools/generate_original_remaining_structures.py",
       "workflow_run_id": 43467373476,
       "cosmetic_only": true
+    },
+    {
+      "name": "platform_rim_rect",
+      "asset_id": "131482590870627",
+      "moderation": "Approved",
+      "triangles": 1760,
+      "groups": 64,
+      "source_sha256": "ea38326a4ffd092016f7209542b8ce285854c8511224a31c06524ba92001bdf2",
+      "source": "tools/generate_original_platform_rims.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_platform_rims.py",
+      "workflow_run_id": 43499366621,
+      "cosmetic_only": true
+    },
+    {
+      "name": "platform_rim_long",
+      "asset_id": "127617571835277",
+      "moderation": "Approved",
+      "triangles": 2040,
+      "groups": 74,
+      "source_sha256": "c8e4e6c79b489ac2547b0eebb941a4b39f1590904007844be68f73f8d216a5ca",
+      "source": "tools/generate_original_platform_rims.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_platform_rims.py",
+      "workflow_run_id": 43499366621,
+      "cosmetic_only": true
     }
   ]
 }
