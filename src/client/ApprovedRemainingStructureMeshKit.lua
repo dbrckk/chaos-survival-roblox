@@ -436,6 +436,10 @@ local function mount(data,source)
     end
     if #entry.pieces~=7 then clone:Destroy();return nil end
     clone.Name="ApprovedP4_"..data.name
+    -- Observability only: identical approved Access models may serve four
+    -- distinct routes. Bind diagnostics and stream-loss proof to the
+    -- ACTUAL server-owned platform instead of the first same-named clone.
+    clone:SetAttribute("OriginalP4OwnerPlatform",data.owner.Name)
     clone:SetAttribute("CosmeticOnly",true)
     clone:SetAttribute("P4OriginalRemainingStructure3D",true)
     clone:SetAttribute("Original3DAssetId",SOURCE[data.name].id)
