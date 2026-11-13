@@ -129,9 +129,11 @@ end
 -- The server keeps all colliders, collapse cues and source fallbacks.
 function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, cameraLook, pressure)
     local chosen = {}
-    -- Low gets ONE authentic sculpt in place of its existing 2-WedgePart
-    -- underside, never an extra platform. Demote to the native source
-    -- immediately on pressure 1/2. Medium/High budgets are unchanged.
+    -- Low may mount ONE authentic seven-MeshPart sculpt over the actual
+    -- server-authored four-bevel/underframe cluster of ANY safe near-camera
+    -- playable deck. Previously an arbitrary "index 1 modulo 8" gate
+    -- stranded the budget when the player stood on another deck.
+    -- The single shared Low model cap and pressure fallback are unchanged.
     local lowReady = tier == "Low" and (tonumber(pressure) or 0) == 0
     local limit = tier == "High" and 16
         or (tier == "Medium" and 8 or (lowReady and 1 or 0))
@@ -179,17 +181,15 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
             -- native deck footprint before its full-width underframe may
             -- be hidden. Long 26-stud promenades require the different
             -- certified 22-stud LongCradle, not half a carapace.
-            local sourceIndex = tonumber(platform.Name:match("^Platform(%d+)$"))
             if (phase == nil or phase == "Normal" or phase == "Safe")
                 and short >= 7.1 and long <= 36
                 and long / short <= 2.6 and scale >= .62
                 and sourceLong*scale >= long*.78
                 and sourceShort*scale >= short*.72
-                -- Low only replaces TWO wedges that were ALREADY mounted
-                -- under this source platform, instead of creating a new
-                -- visual slot on an otherwise undecorated deck.
-                and (tier ~= "Low" or (sourceIndex
-                    and sourceIndex % 8 == 1)) then
+                -- The real MapBuilder already owns FOUR noncolliding
+                -- WedgePart bevels and one underside on every PlatformN.
+                -- Visual owner verification, not an index, decides masking.
+                then
                 local delta=platform.Position-focus
                 -- Upper decks remain attractive but distant unused edge
                 -- platforms must not consume the scarce true-mesh budget.
@@ -319,9 +319,9 @@ end
 
 -- Genuine whole-underside skins replace native wedges,
 -- bars and fake keel blocks on a selected subset of existing platforms.
--- High 16 / Medium 8, Low ONE camera-near, pressure-free original
--- on a deck that would already have 2 native wedges. Originals replace native
--- wedge/rail/brace clusters instead of simply stacking extra primitives.
+-- High 16 / Medium 8, Low ONE camera-near, pressure-free original on
+-- any safe, dimension-compatible physical PlatformN. Four server-owned
+-- WedgeParts and its underside are retained as immediate native fallback.
 -- Candidate only: real Android GPU and silhouette QA still required.
 function Kit.carapace(parent, platform, variant, tier, index, selected)
     if platform:GetAttribute("ChaosSkybridge") == true then
@@ -330,9 +330,9 @@ function Kit.carapace(parent, platform, variant, tier, index, selected)
     local id = tonumber(index)
     if not id or id < 1 then return nil end
     -- Low must NEVER fall back to the legacy modulo 6/12 selection.
-    -- One camera-selected mount replaces only an existing Low 2-wedge
-    -- shell (index 1 modulo 8), and requires an explicit true selector.
-    if tier == "Low" and (selected ~= true or id % 8 ~= 1) then
+    -- One explicitly camera-selected, safe deck is eligible regardless
+    -- of its numeric index. Its approved source must still fit exactly.
+    if tier == "Low" and selected ~= true then
         return nil
     end
     -- Explicit TRUE only for one of the 16/8 nearest genuine safe decks.
