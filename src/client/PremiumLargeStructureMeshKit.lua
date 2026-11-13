@@ -314,12 +314,22 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     end
     local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 1)
     local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)
-    cradleSet=distribute(cradles,cradleLimit,
-        tier=="High" and 2 or 1)
-    -- Low must NOT stack a seven-piece tall column behind a seven-piece
-    -- underframe: give the one sculpted long bridge source priority.
-    -- No compatible long bridge => retain the one real support candidate.
-    if tier ~= "Low" or next(cradleSet) == nil then
+    -- An authenticated long Sky Spine cradle 110 studs away used to
+    -- consume Low's only structural 3D slot even with a sculptable
+    -- native support immediately in the player's view. Use the EXISTING
+    -- ranked camera/route scores: prefer the nearby genuine post only
+    -- when it is clearly closer (eight-stud hysteresis), otherwise keep
+    -- the more prominent long lattice. Still ONE seven-MeshPart source.
+    local preferSupport=tier=="Low" and supports[1]
+        and (not cradles[1]
+            or supports[1].score+8<cradles[1].score)
+    if not preferSupport then
+        cradleSet=distribute(cradles,cradleLimit,
+            tier=="High" and 2 or 1)
+    end
+    -- Never stack a seven-piece tall column behind a seven-piece
+    -- underframe on Low. Medium/High keep their independent budgets.
+    if tier~="Low" or next(cradleSet)==nil then
         supportSet=distribute(supports,supportLimit,
             tier=="High" and 5 or (tier=="Medium" and 2 or 1))
     end
