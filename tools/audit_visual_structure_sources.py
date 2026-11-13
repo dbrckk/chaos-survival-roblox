@@ -344,12 +344,18 @@ for clause in (
     "and size.X*scale >= deck.Size.X*.80",
     "and size.Z*scale >= deck.Size.Z*.80",
     "if tier ~= \"Low\" and selected == false then return nil end",
+    "function Kit.install(parent, deck, tier, index, selected, decor)",
+    "or (decor ~= nil and not nativeFallback(decor, deck)) then",
+    "or bounds.X < sx*.80 or bounds.Z < sz*.80",
+    "or size.X*scale < sx*.80 or size.Z*scale < sz*.80",
 ):
     assert clause in hull, ("P4 approved large hull native replacement", clause)
 assert "id%8==1" not in hull, "Low original hull cannot remain index-limited"
 for clause in (
     "PremiumLargeDeckHullMeshKit.selectVisibleDecks(",
     "UserInputService.TouchEnabled, decor)",
+    "folder, target, tier.Name, id, true, decor)",
+    "or nearLargeDeckHulls[platform] == true, decor)",
     "or platform == lowHubDeck",
     "or nearLargeDeckHulls[platform] == true)",
     'LocalOriginalLargeDeckHullMountedCount',
