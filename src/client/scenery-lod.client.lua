@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualBudgetRules = require(ReplicatedStorage.Shared.VisualBudgetRules)
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
+local DistrictVisualCensusRules = require(ReplicatedStorage.Shared.DistrictVisualCensusRules)
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local MidgroundOutboardLodRules = require(ReplicatedStorage.Shared.MidgroundOutboardLodRules)
 local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
@@ -1942,6 +1943,46 @@ task.spawn(function()
             ~= unpairedSidewalls then
             player:SetAttribute("LocalUnpairedDistrictSidewall3DCount",
                 unpairedSidewalls)
+        end
+        -- Exhaustive 16-position report of THIS arena's actually
+        -- streamed server-authored buildings. - = not replicated,
+        -- N = real building with no resident approved model, F = front
+        -- only, S = side/back only, B = complete genuine 3D envelope.
+        -- Source masks are computed from live imported MeshPart owners,
+        -- not the presence of an arbitrary local attribute or a guessed
+        -- percent of five static map variants. Existing LOD cadence only.
+        local districtLoadedMask = 0
+        if district and district:IsA("Folder") then
+            for _, building in ipairs(district:GetChildren()) do
+                local n = building:GetAttribute("DistrictIndex")
+                if building:IsA("Model")
+                    and building:GetAttribute(
+                        "ArenaDistrictArchitecture") == true
+                    and building:GetAttribute(
+                        "SourceIsOriginal") == true
+                    and type(n) == "number" and n % 1 == 0
+                    and n >= 1 and n <= 16 then
+                    districtLoadedMask = bit32.bor(districtLoadedMask,
+                        bit32.lshift(1, n - 1))
+                end
+            end
+        end
+        local census = DistrictVisualCensusRules.summarize(
+            districtLoadedMask,
+            PremiumDistrictFacadeMeshKit.residentMask16(),
+            ApprovedDistrictSidewallMeshKit.residentMask16())
+        local audit = {
+            LocalDistrict3DStates16 = census.states,
+            LocalDistrict3DLoadedCount = census.loaded,
+            LocalDistrict3DUnstreamedCount = census.unstreamed,
+            LocalDistrict3DNativeOnlyCount = census.nativeOnly,
+            LocalDistrict3DFacadeOnlyCount = census.facadeOnly,
+            LocalDistrict3DSidewallOnlyCount = census.sidewallOnly,
+        }
+        for name, value in pairs(audit) do
+            if player:GetAttribute(name) ~= value then
+                player:SetAttribute(name, value)
+            end
         end
         local sidewallPartsReplaced =
             ApprovedDistrictSidewallMeshKit.replacedNativeCount()
