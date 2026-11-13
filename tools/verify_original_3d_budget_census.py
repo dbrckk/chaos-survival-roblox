@@ -1497,7 +1497,7 @@ assert 'part.CanTouch = false' in FINISH
 assert 'part.CanQuery = false' in FINISH
 # A priority decision must not consume Android Low's scarce 7+7
 # genuine 3D source budget until a valid source is ACTUALLY MOUNTED.
-# Four finite attempts try the next approved family when a creator asset
+# Five finite attempts try the next approved family when a creator asset
 # fails ScaleTo, bridge staging, dimensions or mesh clone construction.
 # The winner is adopted in the existing platform owner without cloning it
 # twice. Medium/High and structural VFX budgets are unchanged.
@@ -1506,7 +1506,7 @@ assert 'local lowPreMounted = {}' in OWNER
 assert 'if tier.Name == "Low" then' in OWNER
 assert 'local function nearest(set)' in OWNER
 assert 'if platform.Parent == platforms then' in OWNER
-assert 'for _ = 1, 4 do' in OWNER
+assert 'for _ = 1, 5 do' in OWNER
 assert 'local bridge, bridgeDistance = nearest(nearBridgeGirders)' in OWNER
 assert 'local carapace, carapaceDistance = nearest(nearCameraCarapaces)' in OWNER
 assert 'local hatch, hatchDistance = nearest(nearServiceHatches)' in OWNER
@@ -1514,7 +1514,10 @@ assert 'local foregroundDistance = math.min(' in OWNER
 assert 'bridgeDistance <= foregroundDistance + 16' in OWNER
 assert 'cameraLook.Y < -0.50' in OWNER
 assert 'if lowHubDeck and hullDistance <= math.min(' in OWNER
-assert 'elseif carapace and carapaceDistance <= hatchScore + 8 then' in OWNER
+assert 'elseif carapace and carapaceDistance <= hatchScore + 8' in OWNER
+assert 'and carapaceDistance <= rimDistance + 8 then' in OWNER
+assert 'elseif rim and rimDistance <= hatchScore + 8 then' in OWNER
+assert 'pieces = ApprovedPlatformRimMeshKit.install(' in OWNER
 assert 'elseif hatch then' in OWNER
 assert 'pieces = PremiumPlatformSideMeshKit.bridgeGirders(' in OWNER
 assert 'pieces = PremiumLargeDeckHullMeshKit.install(' in OWNER
