@@ -660,13 +660,10 @@ local function rebuild()
     -- remains exactly 20 (original 16 columns + 4 cradles).
     -- Do not reserve extras without actual approved, source-fitted decks;
     -- Android Low/Medium/High selection and budgets remain untouched.
-    if tier.Name == "High" and not UserInputService.TouchEnabled then
-        local actualCandidates=0
-        for _ in pairs(nearCradles) do actualCandidates+=1 end
-        local transferred=math.min(4,math.max(0,actualCandidates-4))
-        longCradleBudget+=transferred
-        supportBudget-=transferred
-    end
+    local transferred=PremiumLargeStructureMeshKit.desktopCradleTransfer(
+        tier.Name,not UserInputService.TouchEnabled,nearCradles)
+    longCradleBudget+=transferred
+    supportBudget-=transferred
     -- One 14-piece bridge OR two 7-piece Low structural slots,
     -- never both. Medium/Android High unchanged.
     if lowBridgeChosen then
