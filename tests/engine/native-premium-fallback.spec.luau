@@ -1148,6 +1148,29 @@ describe("Original 3D native fallback isolation (engine)", function()
                 p4Phase="warning recovery"
                 entryDeck:SetAttribute("CollapsePhase","Normal")
                 expect(overpass.LocalTransparencyModifier).toBe(1)
+                -- If a single cosmetic MeshPart streams out, restore the
+                -- native immediately. On the next existing LOD sample,
+                -- discard only its damaged clone and remount the complete
+                -- seven-part source. The actual walkable deck never changes.
+                p4Phase="partial 3D clone eviction and remount"
+                local residentFolder=workspace:FindFirstChild(
+                    "ApprovedRemainingStructureMeshesLocal")
+                expect(residentFolder~=nil).toBe(true)
+                local originalClone=residentFolder:FindFirstChild(
+                    "ApprovedP4_Access")
+                expect(originalClone~=nil).toBe(true)
+                local missingPiece=originalClone:FindFirstChildWhichIsA(
+                    "MeshPart",true)
+                expect(missingPiece~=nil).toBe(true)
+                local before=RemainingStructureKit.count("arch")
+                missingPiece:Destroy()
+                task.wait()
+                expect(RemainingStructureKit.count("arch")).toBe(before-1)
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")).toBe(before)
+                expect(overpass.LocalTransparencyModifier).toBe(1)
+                expect(entryDeck.CanCollide).toBe(true)
                 if variantId=="Orbital" then
                     p4Phase="genuine Orbital helix residency"
                     expect(RemainingStructureKit.count("helix")>=1).toBe(true)
