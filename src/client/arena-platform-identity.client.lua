@@ -1204,7 +1204,11 @@ local function watchDecor(generated)
                     "ApprovedLargeDeckHullTemplates")
                 local source = templates and templates:FindFirstChild(
                     "LargeDeckHull")
-                if not source then return end
+                local rims = ReplicatedStorage:FindFirstChild(
+                    "ApprovedPlatformRimTemplates")
+                local rimReady = rims and (rims:FindFirstChild("Rect")
+                    or rims:FindFirstChild("Long"))
+                if not source and not rimReady then return end
                 local currentArena = workspace:FindFirstChild("GeneratedMap")
                 currentArena = currentArena and
                     currentArena:FindFirstChild("Arena")
@@ -1226,8 +1230,9 @@ local function watchDecor(generated)
                 else
                     for _, piece in ipairs(visualsByPlatform[deck] or {}) do
                         if piece.Parent == folder and piece:IsA("MeshPart")
-                            and piece:GetAttribute("OriginalLargeDeckHull")
-                                == true then
+                            and (piece:GetAttribute("OriginalLargeDeckHull")
+                                == true or piece:GetAttribute(
+                                    "OriginalPlatformRim3D") == true) then
                             queueSupportRebuild()
                             break
                         end
@@ -1502,6 +1507,33 @@ local function watchHullTemplates(holder)
     end
 end
 
+-- The two new creator-owned rim imports arrive after gameplay start.
+-- Reuse the exact same verified template readiness and debounce owner.
+local rimTemplateConnections = {}
+local watchedRimTemplates = nil
+local function watchRimTemplates(holder)
+    if watchedRimTemplates == holder then return end
+    for _, connection in ipairs(rimTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(rimTemplateConnections)
+    watchedRimTemplates = holder
+    if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            rimTemplateConnections, "OriginalPlatformRim3D")
+        local function changed(child)
+            if child.Name == "Rect" or child.Name == "Long" then
+                scheduleRebuild()
+            end
+        end
+        rimTemplateConnections[#rimTemplateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        rimTemplateConnections[#rimTemplateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+        scheduleRebuild()
+    end
+end
+
 -- Late-arriving approved tall columns and long-route open lattice.
 -- This shares the same already present client rebuild owner; no ticker.
 local largeStructureTemplateConnections = {}
@@ -1540,6 +1572,8 @@ ReplicatedStorage.ChildAdded:Connect(function(child)
         watchSideTemplates(child)
     elseif child.Name == "ApprovedLargeDeckHullTemplates" then
         watchHullTemplates(child)
+    elseif child.Name == "ApprovedPlatformRimTemplates" then
+        watchRimTemplates(child)
     elseif child.Name == "ApprovedLargeStructureTemplates" then
         watchLargeStructureTemplates(child)
     end
@@ -1554,6 +1588,9 @@ ReplicatedStorage.ChildRemoved:Connect(function(child)
     elseif child == watchedHullTemplates then
         watchHullTemplates(nil)
         scheduleRebuild()
+    elseif child == watchedRimTemplates then
+        watchRimTemplates(nil)
+        scheduleRebuild()
     elseif child == watchedLargeStructureTemplates then
         watchLargeStructureTemplates(nil)
         scheduleRebuild()
@@ -1565,6 +1602,8 @@ watchSideTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedPlatformSideTemplates"))
 watchHullTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedLargeDeckHullTemplates"))
+watchRimTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedPlatformRimTemplates"))
 watchLargeStructureTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates"))
 
