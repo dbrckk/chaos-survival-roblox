@@ -49,3 +49,19 @@ les sept suites Roblox Engine et la cohérence des vrais rendus
 High/Medium/Low sur PC/Android. **Les FPS et captures visuelles
 client ne sont pas mesurés ici. Aucune publication publique n'est
 déclenchée par cette modification.**
+
+## Optimisation du chargement des quatre profils
+
+Dans l'ancien propriétaire de façade, la sélection effectuait un
+`template(slot)` complet (provenance, nombre de MeshParts, limites de
+bounding box) pour **chaque candidat** et recommençait à l'installation.
+Avec seize bâtiments High, cela pouvait imposer des dizaines de relectures
+des mêmes quatre templates au sein d'un unique passage caméra.
+
+La liste des quatre sources approuvées est désormais vérifiée **une fois
+par profil et par passage** ; la sélection et le montage utilisent cette
+même liste temporaire. Ce cache n'est pas persistant : il se renouvelle à
+chaque passage LOD afin de ne pas faire confiance à un modèle
+remplacé ou retiré entre deux échantillons. Aucun nouveau ticker,
+MeshPart ou appel réseau n'est introduit. La réduction des vérifications
+est déductible du code, mais **aucun gain FPS n'a été mesuré**.

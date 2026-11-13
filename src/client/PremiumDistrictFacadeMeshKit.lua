@@ -420,10 +420,20 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
     local hasFacing = look.Magnitude > 0.2
     if hasFacing then look = look.Unit end
 
+    -- The SAME four approved source profiles may serve sixteen buildings.
+    -- Validate each source once per existing scenery LOD sample instead of
+    -- repeating OwnerVerified, 3D bounds and descendant scans for every
+    -- candidate, then once again for each mounted facade. Keep this cache
+    -- local to ONE synchronous sample so streamed source changes remain
+    -- subject to verification on the very next sample.
+    local approvedByProfile = {}
+    for profile = 1, 4 do
+        approvedByProfile[profile] = template(profile)
+    end
     local candidates = {}
     for _, building in ipairs(district:GetChildren()) do
         local slot, door = eligible(building, district)
-        if slot and template(slot) then
+        if slot and approvedByProfile[slot] then
             local delta = door.Position - cameraPoint
             local distance = delta.Magnitude
             local resident = mounted[building] ~= nil
@@ -470,7 +480,7 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
     for building, desired in pairs(wanted) do
         if not mounted[building] then
             mounted[building] = mount(building, district, base,
-                desired.slot, desired.door, template(desired.slot))
+                desired.slot, desired.door, approvedByProfile[desired.slot])
         elseif mounted[building].reconcile then
             -- Local facade hardware may have appeared on the same tick;
             -- hide newly redundant native trim while the verified 3D lives.

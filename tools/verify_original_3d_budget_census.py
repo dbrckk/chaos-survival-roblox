@@ -1697,4 +1697,16 @@ print("PASS authentic reverse-paired 3D district and exact streamed N/F/S/B"
 assert 'if tier == "High" then cap = math.min(cap, 5) end' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 assert 'return tier == "High" and math.min(reduced, 6) or reduced' in DISTRICT_FACADES
+# Candidate scanning was bounded to four original source validations per
+# existing camera sample; no cross-sample cache or unsafe private download.
+for source_contract in (
+    'local approvedByProfile = {}',
+    'for profile = 1, 4 do',
+    'approvedByProfile[profile] = template(profile)',
+    'if slot and approvedByProfile[slot] then',
+    'desired.slot, desired.door, approvedByProfile[desired.slot])',
+):
+    assert source_contract in DISTRICT_FACADES, source_contract
+assert 'if slot and template(slot) then' not in DISTRICT_FACADES
 print("PASS 16 facade + 12 sidewall healthy desktop High; old Android touch and emergency caps retained")
+print("PASS four source-verified district facade profiles scanned once per existing camera sample")
