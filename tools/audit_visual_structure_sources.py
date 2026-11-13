@@ -155,6 +155,23 @@ for clause in (
     assert clause in sidewall, ("district sidewall coverage/safety", clause)
 print("PASS 16 desktop district sidewalls, unchanged touch and pressure caps")
 
+# Four additional desktop High route skins may hide real native panels
+# only when the imported model covers the actual authoritative platform.
+# Touch and stressed clients retain their previous bounded residency.
+route_mesh = (ROOT / "src/client/PremiumRouteMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "High = {decks = 16, bridges = 5, segments = 4, underdecks = 4,",
+    'if touch == true and quality == "High" then',
+    "deckCap = math.min(deckCap, 12)",
+    'if quality == "High" then deckCap = math.min(deckCap, 9) end',
+    'if quality == "High" then deckCap = math.min(deckCap, 5) end',
+    "entry.panelCovered",
+    "authenticDeck(entry,platform)",
+):
+    assert clause in route_mesh, ("desktop route mesh native fallback", clause)
+print("PASS desktop 16-deck approved art with unchanged mobile/pressure caps")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
