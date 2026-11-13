@@ -332,12 +332,41 @@ for path in source_files:
 outer_scene_checks = [p for p in live_floor_checks
     if p.startswith("src/client/") and
     ("MeshKit" in p or "3DKit" in p)]
-# Remaining five are genuinely floor/deck-bound. They must restore
-# native gameplay-compatible visuals during shrink until the mesh itself
-# can follow moving/reduced geometry. Do not replace their live guards with
-# original-perimeter checks; that would fabricate walkable-looking space.
+# Harbor cargo caissons are now refitted to *real* shrinking
+# RouteTier landings; the game-owned deck always supplies collision.
+# Refit uses adjustable local Weld.C0, bounded geometry update cadence,
+# genuine source registry/provenance and the pre-existing Size listener.
+caisson = (ROOT / "src/client/HarborDockCaissonMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function realFloorScale(base, arena)",
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    'deck:GetAttribute("RouteTier")',
+    "deck.Size.X / floorScale",
+    "deck.Size.Z / floorScale",
+    'local joint = Instance.new("Weld")',
+    "joint.Part0 = deck",
+    "joint.Part1 = piece",
+    "entry.joints[piece].C0 = shift",
+    "piece.Size = entry.sizes[piece] * factor",
+    "if not valid(entry) then return false end",
+    "local show = refit(entry)",
+    'deck:GetPropertyChangedSignal(property):Connect(changed)',
+    '"CollapsePhase", "BridgeShutterPhase", "HarborRoute"',
+    "if not realFloorScale(base, arena) then clearModels() end",
+):
+    assert clause in caisson, clause
+assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', caisson)
+for forbidden in ("RenderStepped", "Heartbeat", "RemoteEvent",
+                  "AssetService.LoadAssetAsync", "CanCollide = true"):
+    assert forbidden not in caisson, forbidden
+print("PASS Harbor caisson mesh follows real shrinking decks with safe 3D fallback")
+
+# Four remaining families guard true gameplay-sensitive surfaces. Never
+# remove these live-size checks without implementing the same bounded,
+# provenance-validated deck-specific refit and immediate hazard fallback.
 floor_coupled = {
-    "src/client/HarborDockCaissonMeshKit.lua",
     "src/client/HarborPromenadePortalMeshKit.lua",
     "src/client/PremiumGroundMeshKit.lua",
     "src/client/PremiumRouteMeshKit.lua",
@@ -347,7 +376,7 @@ assert set(outer_scene_checks) == floor_coupled, (
     "unreviewed live-size guard or missing floor safeguard",
     sorted(set(outer_scene_checks) ^ floor_coupled),
 )
-print("PASS only five intentional floor/deck-following live shrink guards remain")
+print("PASS four floor/deck-bound live shrink guards remain")
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
