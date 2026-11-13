@@ -83,6 +83,38 @@ sont **14 en Low tactile, 28 en Medium tactile, 56 en High tactile,
 dans la carte, avant dégradation sous pression. Ces MeshParts font partie
 des mêmes plafonds globaux Low **440**, Medium **680**, High **900**.
 
+
+## Répartition spatiale sans hausse de budget — 13 novembre 2026
+
+La précédente sélection High PC réservait les six arches aux seuls
+meilleurs scores caméra. Plusieurs arches pouvaient donc se concentrer
+sur un seul circuit, alors que les trois sources approuvées
+`ACCESS`, `TRANSFER` et `SUMMIT` existaient déjà.
+
+Le propriétaire `ApprovedRemainingStructureMeshKit` vérifie désormais
+l'attribut serveur **`PerimeterRoute` entre 1 et 4**. Sur un client
+**PC High sans pression**, il choisit dans le quota existant **au maximum
+six arches** :
+
+1. Un propriétaire 3D réellement éligible, le mieux placé, sur chacun
+   des quatre circuits d'évasion présents dans la fenêtre caméra ;
+2. Si des emplacements restent libres, un portique de niveau
+   **TRANSFER** et un de niveau **SUMMIT** authentifiés ;
+3. Les éventuels autres slots sont remplis selon le score caméra initial.
+
+Cet arbitrage ne change **aucun quota** High PC, Low, Medium, Android
+ou état sous pression, ne charge aucun asset supplémentaire, n'ajoute
+pas de boucle de rendu, et ne crée aucune collision. Une route dont
+les vrais éléments natifs n'ont pas répliqué reste intacte avec son
+repli ; les slots non disponibles sont redistribués sans monter
+un modèle incomplet.
+
+Les assertions de source existantes et le scénario Roblox Engine des
+**cinq arènes** ont été étendus pour vérifier simultanément les
+**quatre circuits** et les trois silhouettes `1/4/8`. Cela vérifie
+la répartition dans le DataModel Roblox et **ne constitue pas une capture
+visuelle Android ni une mesure de FPS**.
+
 ## Recette et limites du travail
 
 `tests/engine/native-premium-fallback.spec.luau` a été enrichi dans son
