@@ -418,28 +418,45 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     registerSourcePiece(piece)
                 end
             end)
-        watchers[#watchers + 1] = meshFolder.ChildRemoved:Connect(
-            function(piece)
-                local owner = sourceOwnerByPiece[piece]
-                sourceOwnerByPiece[piece] = nil
-                -- An unrelated decorative MeshPart never invalidates
-                -- premium replacements; only a tracked, source-authored
-                -- mesh bound to an actual server native owner can do so.
-                if owner == nil then return end
-                local remaining = math.max(0,
-                    (livePiecesByOwner[owner] or 1) - 1)
-                livePiecesByOwner[owner] =
-                    remaining > 0 and remaining or nil
-                -- Even ONE missing source material may leave a visible
-                -- hole in a sculpted deck or crane girder. Reveal the
-                -- authentic server-native fallback IMMEDIATELY, and
-                -- re-authorize only after every verified piece returns.
-                if type(owner) == "string" then
-                    active[owner] = nil
-                else
-                    verifiedSupports[owner] = nil
+        local function revokeSourcePiece(piece)
+            local owner = sourceOwnerByPiece[piece]
+            sourceOwnerByPiece[piece] = nil
+            -- A decorative MeshPart without an approved welded server
+            -- owner never affects a native platform silhouette.
+            if owner == nil then return end
+            local remaining = math.max(0,
+                (livePiecesByOwner[owner] or 1) - 1)
+            livePiecesByOwner[owner] =
+                remaining > 0 and remaining or nil
+            -- A single broken source material OR missing weld can leave
+            -- a hole in a 3D skirt. Restore the ENTIRE native source
+            -- silhouette only for this one physical owner immediately.
+            if type(owner) == "string" then
+                active[owner] = nil
+            else
+                verifiedSupports[owner] = nil
+            end
+            reconcile()
+        end
+        watchers[#watchers + 1] =
+            meshFolder.ChildRemoved:Connect(revokeSourcePiece)
+        -- DescendantRemoving fires BEFORE the original mesh's parent
+        -- changes during Destroy(); revokeSourcePiece is idempotent, so
+        -- ChildRemoved cannot subtract the same piece twice. A detached
+        -- WeldConstraint with an otherwise surviving MeshPart must also
+        -- reveal all four native WedgePart bevels without another tick.
+        watchers[#watchers + 1] =
+            meshFolder.DescendantRemoving:Connect(function(descendant)
+                if (descendant.Name ~= "ChaosPlatformTrimWeld"
+                        and descendant.Name ~= "OriginalSupportVisualWeld")
+                    or (not descendant:IsA("Weld")
+                        and not descendant:IsA("WeldConstraint")) then
+                    return
                 end
-                reconcile()
+                local piece = descendant.Parent
+                if piece and piece.Parent == meshFolder then
+                    revokeSourcePiece(piece)
+                end
             end)
     end
     watchers[#watchers + 1] = arena.ChildAdded:Connect(function(child)
