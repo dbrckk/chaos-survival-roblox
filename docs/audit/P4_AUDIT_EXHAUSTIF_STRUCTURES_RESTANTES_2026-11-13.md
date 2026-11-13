@@ -111,6 +111,16 @@ Cela préserve l'éligibilité des **quatre tours par variante**, soit **20 tour
 
 Le recensement source CI contient une assertion explicite pour empêcher le retour du test de largeur live et de la frontière calculée sur une plateforme rétrécie.
 
+## P0 — supports de 4,85 studs sur les premières routes Crossroads
+
+**Constat vérifié dans les générateurs serveur :** `Crossroads` définit les plateformes physiques `Platform2/4/6/8` à une altitude de 7 studs avec 2 studs d'épaisseur. `MapBuilder` construit leurs supports entre le bas de la plateforme (Y=6) et la dalle de référence (Y=1,15), soit **4,85 studs**. Pour chacune des quatre plateformes 14×12 / 12×14, les quatre `PlatformSupportN_1..4` existent : **16 supports natifs distincts dans cette famille de Crossroads**.
+
+L'ancien filtre `validNativeSupport()` exigeait `Size.Y >= 5`, ce qui rejetait systématiquement ces **16 supports** avant même le test d'échelle du véritable modèle original `93993697329658`. Le seuil a été ajusté à **4,75 studs** : le garde de *source approved*, exactement **sept MeshParts** sur Low sain, l'échelle `>= 0.34`, la largeur, la distance maximale caméra de 125 studs et le repli à pression >0 demeurent obligatoires.
+
+**Capacité, pas résidence :** les 16 piliers deviennent candidats de remplacement par une sculpture 3D approuvée, mais **un seul support à la fois** peut être recouvert sur Android Low par ce kit (sept MeshParts), sous réserve de chargement et validation effectifs. Les 800 supports du tableau initial restent **800 natures serveur** pour garantir un retour aux formes natives, ce qui est intentionnel. Aucun collider de joueur, destination de saut, ni indicateur de danger n'a été modifié.
+
+La régression `verify_platform_trim_mesh_ownership.py` contrôle les quatre configurations authentiques, leurs 4,85 studs, la limite de sept pièces et le retour natif. Une validation spécifique est intégrée dans `native-premium-fallback.spec.luau`, sur une vraie carte `MapBuilder.buildArena` avec source MeshPart de test locale aux proportions de l'asset modéré ; elle couvre les phases `Warning/Normal` et la disparition de la dernière pièce 3D.
+
 ## Plan d'élimination ordonné et conditions d'acceptation
 
 1. **P0 :** fusionner / masquer de façon sûre les bordures `PlatformBevel`, les supports `PlatformSupport` et les sous-cadres `PlatformUnderFrame`, en réutilisant des géométries et kits originaux approuvés adaptés aux différents gabarits. Ne jamais supprimer un `CanCollide` de gameplay ni un indicateur de danger.
