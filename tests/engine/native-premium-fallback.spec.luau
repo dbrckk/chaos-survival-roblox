@@ -1183,8 +1183,20 @@ describe("Original 3D native fallback isolation (engine)", function()
                 local residentFolder=workspace:FindFirstChild(
                     "ApprovedRemainingStructureMeshesLocal")
                 expect(residentFolder~=nil).toBe(true)
-                local originalClone=residentFolder:FindFirstChild(
-                    "ApprovedP4_Access")
+                -- Six high-PC arches can include several identical
+                -- Access imports. Corrupt the clone for THIS actual
+                -- owned deck, not the first same-named sibling.
+                local function ownedAccessClone()
+                    for _,model in ipairs(residentFolder:GetChildren()) do
+                        if model.Name=="ApprovedP4_Access"
+                            and model:GetAttribute("OriginalP4OwnerPlatform")
+                                ==entryDeck.Name then
+                            return model
+                        end
+                    end
+                    return nil
+                end
+                local originalClone=ownedAccessClone()
                 expect(originalClone~=nil).toBe(true)
                 local missingPiece=originalClone:FindFirstChildWhichIsA(
                     "MeshPart",true)
@@ -1203,8 +1215,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 -- cannot be trusted as part of the seven-piece original.
                 -- Restore the native instantly and reject local collision.
                 p4Phase="foreign geometry corruption and native recovery"
-                local restoredClone=residentFolder:FindFirstChild(
-                    "ApprovedP4_Access")
+                local restoredClone=ownedAccessClone()
                 expect(restoredClone~=nil).toBe(true)
                 local foreignPart=Instance.new("Part")
                 foreignPart.Name="UnapprovedEighthPart"
@@ -1239,12 +1250,18 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(overpass.LocalTransparencyModifier).toBe(0)
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
-                expect(RemainingStructureKit.count("arch")<before).toBe(true)
+                -- Invalid Access source can release its previous slots
+                -- to already-Approved Transfer/Summit meshes. Total arch
+                -- count may stay at its capped budget: the exact Access
+                -- owner and its native warning geometry must be restored.
+                expect(ownedAccessClone()==nil).toBe(true)
+                expect(RemainingStructureKit.count("arch")<=before).toBe(true)
                 sourcePiece.Parent=originalSourceParent
                 task.wait()
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
                 expect(RemainingStructureKit.count("arch")).toBe(before)
+                expect(ownedAccessClone()~=nil).toBe(true)
                 expect(overpass.LocalTransparencyModifier).toBe(1)
 
                 -- Same approved geometry, different client budget: mobile
