@@ -103,6 +103,23 @@ local function sourceFor(corner)
     return source
 end
 
+-- The four off-map ridges never move when the collidable round
+-- floor shrinks. Authenticate against the signed original footprint.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or not arena
+        or base.Parent~=arena or not base.Anchored
+        or not base.CanCollide then return nil end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    if typeof(sx)~="number" or typeof(sz)~="number"
+        or sx<318 or sz<318
+        or base.Size.X<=0 or base.Size.Z<=0
+        or base.Size.X>sx+.2 or base.Size.Z>sz+.2 then
+        return nil
+    end
+    return sx,sz
+end
+
 local function realRidges(arena,owner,corner)
     local spec=PROFILES[corner]
     if not spec or not arena or not arena:IsA("Folder")
@@ -116,10 +133,8 @@ local function realRidges(arena,owner,corner)
     end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart")
-        or base.Parent~=arena or not base.Anchored
-        or not base.CanCollide or base.Size.X<318
-        or base.Size.Z<318 or not decor
+    local originalX,originalZ=authenticBase(base,arena)
+    if not originalX or not decor
         or not decor:IsA("Folder") or decor.Parent~=arena
         or not owner or not owner:IsA("Model")
         or owner.Parent~=decor
@@ -128,8 +143,8 @@ local function realRidges(arena,owner,corner)
         return nil
     end
     local anchor=base.Position+Vector3.new(
-        spec.sx*(base.Size.X*.5+28),base.Size.Y*.5,
-        spec.sz*(base.Size.Z*.5+28))
+        spec.sx*(originalX*.5+28),base.Size.Y*.5,
+        spec.sz*(originalZ*.5+28))
     local yaw=math.atan2(spec.sx,spec.sz)
     local natives={}
     for index=1,3 do
@@ -265,9 +280,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
         return
     end
     local base=arena and arena:FindFirstChild("Base")
-    if not base or not base:IsA("BasePart") or not base.Anchored
-        or not base.CanCollide or base.Size.X<318
-        or base.Size.Z<318 then
+    if not authenticBase(base,arena) then
         removeAll()
         return
     end
@@ -276,9 +289,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
         table.clear(baseConnections)
         watchedBase=base
         local function checkBase()
-            if base.Parent~=arena or not base.Anchored
-                or not base.CanCollide or base.Size.X<318
-                or base.Size.Z<318 then
+            if not authenticBase(base,arena) then
                 removeAll()
             end
         end
