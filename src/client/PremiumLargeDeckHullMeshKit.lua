@@ -160,7 +160,11 @@ function Kit.selectLowDeck(platforms, base, cameraPoint, pressure, decor)
             and (decor == nil or nativeFallback(decor,deck)) then
             local scale = math.min(1.08,
                 deck.Size.X*.94/size.X,deck.Size.Z*.94/size.Z)
-            if scale >= .77 then
+            if scale >= .77
+                and size.X*scale >= deck.Size.X*.80
+                and size.Z*scale >= deck.Size.Z*.80
+                and size.X*scale <= deck.Size.X*.96
+                and size.Z*scale <= deck.Size.Z*.96 then
                 local distance=(deck.Position-cameraPoint).Magnitude
                 if distance < bestDistance
                     or (distance == bestDistance and best
@@ -185,18 +189,28 @@ function Kit.install(parent, deck, tier, index, selected)
         return nil
     end
     local source,count,size = verifiedSource()
-    if not source or (tier == "Low" and count ~= 7) then return nil end
+    if not source or count ~= 7 then return nil end
     local sx,sy,sz=deck.Size.X,deck.Size.Y,deck.Size.Z
     local scale = math.min(1.08,sx*.94/size.X,sz*.94/size.Z)
-    if scale<.77 then return nil end
+    -- Selection is only a snapshot: a deck can shrink or a source can
+    -- change before installation. Revalidate both axes at mount time.
+    if scale < .77
+        or size.X*scale < sx*.80 or size.Z*scale < sz*.80
+        or size.X*scale > sx*.96 or size.Z*scale > sz*.96 then
+        return nil
+    end
     local copy = source:Clone()
     if not pcall(function() copy:ScaleTo(scale) end) then
         copy:Destroy()
         return nil
     end
     local frame,bounds = copy:GetBoundingBox()
-    if bounds.X>sx*.96 or bounds.Z>sz*.96 or bounds.Y>4.6
-        or bounds.Y<=0 then copy:Destroy();return nil end
+    if bounds.X > sx*.96 or bounds.Z > sz*.96
+        or bounds.X < sx*.80 or bounds.Z < sz*.80
+        or bounds.Y > 4.6 or bounds.Y <= 0 then
+        copy:Destroy()
+        return nil
+    end
     local target=deck.CFrame*CFrame.new(0,sy*.5-.12-bounds.Y*.5,0)
     local pieces={}
     for _,obj in ipairs(copy:GetDescendants()) do
