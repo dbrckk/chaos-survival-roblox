@@ -204,6 +204,19 @@ describe("visual budget rules", function()
         expect(ApprovedDistrictSidewallMeshKit.completeCount() >= 1).toBe(true)
         expect(ApprovedDistrictSidewallMeshKit.completeCount()
             <= ApprovedDistrictSidewallMeshKit.count()).toBe(true)
+        -- The actual high-pressure GPU fallback on Medium drops ALL
+        -- optional original sidewalls, not just the paired subset.
+        -- Neither a "complete 3D" metric nor a hidden primitive may
+        -- survive that demotion. The next healthy snapshot remounts.
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Medium", true, false, 2, look)
+        expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(0)
+        expect(service.Transparency).toBe(alpha)
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Medium", true, false, 0, look)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount() >= 1)
+            .toBe(true)
         -- Dropping the real approved facade instantly removes its credit,
         -- without lying about how many independent sidewall meshes exist.
         PremiumDistrictFacadeMeshKit.sync(
