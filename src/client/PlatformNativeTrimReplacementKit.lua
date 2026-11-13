@@ -69,7 +69,7 @@ local function eligible(part)
         return name:match("^PlatformSupport%d+_%d+$") ~= nil
     end
     local id = name:match("^PlatformBevel(%d+)_%d+$")
-    if id and active[id] == "carapace" then
+    if id and (active[id] == "carapace" or active[id] == "rim") then
         -- Sloped WedgePart server edge, now replaced by a real sculpted
         -- SIDE face, not a gameplay warning or a walkable landing.
         return part:IsA("WedgePart")
@@ -192,6 +192,7 @@ local function watchOwner(part)
     if not id then return end
     local kind = active[id]
     if platformId and not (kind == "carapace" or kind == "cradle"
+        or kind == "rim"
         or verifiedSupportIndices[id] == true) then return end
     if bridgeId and kind ~= "bridge" then return end
     watchedOwners[part] = true
@@ -278,7 +279,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         if type(id) == "string"
             and id:match("^%d+$") and (#id < 6)
             and (kind == "carapace" or kind == "bridge"
-                or kind == "cradle") then
+                or kind == "cradle" or kind == "rim") then
             active[id] = kind
         end
     end
@@ -349,7 +350,8 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local id = platformId or bridgeId
             if id and ((platformId
                     and (approvedKinds[id] == "carapace"
-                        or approvedKinds[id] == "cradle"))
+                        or approvedKinds[id] == "cradle"
+                        or approvedKinds[id] == "rim"))
                 or (bridgeId and approvedKinds[id] == "bridge")) then
                 return id, owner
             end
