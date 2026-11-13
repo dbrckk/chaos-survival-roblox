@@ -206,6 +206,10 @@ VisualBudgetRules.LocalFolders = {
     -- imported Models on Low/Medium/High respectively, counted against
     -- the SAME adaptive Android Parts budget as all other visual meshes.
     "OriginalSkySpineCrownLocal",
+    -- Five new source-moderated P0 structure originals (7 MeshParts each)
+    -- share the SAME Low 440 / Medium 680 / High 900 Android part census;
+    -- route signals and colliders remain native, with live GPU backoff.
+    "ApprovedRemainingStructureMeshesLocal",
     -- Six genuine APPROVED Harbor cargo gantries (7 MeshParts each)
     -- replace the nine obsolete native Promenade Parts per selected arch.
     -- Count all MeshParts in the existing 440/680/900 Android ledger.
