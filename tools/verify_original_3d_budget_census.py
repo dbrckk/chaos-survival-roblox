@@ -1611,3 +1611,50 @@ assert len(observed)>=8,observed
 print("PASS",len(observed),"direct-workspace MeshKit/3DKit owners included")
 print("PASS unique LocalFolders entries and shared cooperative Android census")
 print("LIMIT: static coverage, not measured FPS or Studio screenshot validation")
+
+# Bidirectional completion of AUTHENTIC district envelopes and exact
+# streamed 16-building census; no extra original imports, draw calls,
+# LOD samplers or relaxed physical validation.
+FRONT=(CLIENT/"PremiumDistrictFacadeMeshKit.lua").read_text(encoding="utf8")
+CENSUS_RULES=(ROOT/"src/shared/DistrictVisualCensusRules.lua").read_text(
+    encoding="utf8")
+assert 'RESIDENT_MARKER = "LocalApprovedDistrictSidewallMounted"' in SIDE
+assert 'markResident(entry, false)' in SIDE
+assert 'markResident(entry, true)' in SIDE
+assert 'function Kit.residentMask16()' in SIDE
+assert 'function PremiumDistrictFacadeMeshKit.residentMask16()' in FRONT
+assert 'function PremiumDistrictFacadeMeshKit.pairedPriority(' in FRONT
+assert 'tier ~= "Low" and sidewallMounted == true' in FRONT
+assert 'return priority - 12' in FRONT
+assert 'LocalApprovedDistrictSidewallMounted") == true, tier)' in FRONT
+assert 'if type(index) == "number" and index % 1 == 0' in SIDE
+assert 'and index >= 1 and index <= 16' in SIDE
+assert 'and index >= 1 and index <= 16' in FRONT
+assert 'DistrictVisualCensusRules' in SIDE_LOD
+assert 'PremiumDistrictFacadeMeshKit.residentMask16()' in SIDE_LOD
+assert 'ApprovedDistrictSidewallMeshKit.residentMask16()' in SIDE_LOD
+assert 'DistrictVisualCensusRules.summarize(' in SIDE_LOD
+for attribute in (
+    'LocalDistrict3DStates16',
+    'LocalDistrict3DLoadedCount',
+    'LocalDistrict3DUnstreamedCount',
+    'LocalDistrict3DNativeOnlyCount',
+    'LocalDistrict3DFacadeOnlyCount',
+    'LocalDistrict3DSidewallOnlyCount',
+):
+    assert attribute in SIDE_LOD, attribute
+for code in ('state[index] = "-"','state[index] = "N"',
+             'state[index] = "F"','state[index] = "S"',
+             'state[index] = "B"','totals.loaded += 1',
+             'totals.unstreamed += 1',
+             'local loaded = bounded(loadedMask)',
+             'local fronts = bit32.band(loaded, bounded(facadeMask))',
+             'local sides = bit32.band(loaded, bounded(sidewallMask))'):
+    assert code in CENSUS_RULES,code
+assert 'LocalApprovedDistrictFacadeMounted' in SIDE
+assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
+assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
+assert 'Medium = {count = 4, distance = 205, retention = 20}' in SIDE
+assert 'High = {count = 10, distance = 275, retention = 28}' in SIDE
+print("PASS authentic reverse-paired 3D district and exact streamed N/F/S/B"
+      " 16-building census without additional Android model budget")
