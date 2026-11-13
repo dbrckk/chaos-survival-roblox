@@ -151,6 +151,7 @@ local function mount(native, source, bounds)
         0, native.Size.Y * .5 - bounds.Y * .5 - .17, 0
     ) * CFrame.Angles(0, yaw, 0)
     local count = 0
+    local meshParts = {}
     for _, piece in ipairs(clone:GetDescendants()) do
         if piece:IsA("BasePart") then
             if not piece:IsA("MeshPart") then
@@ -158,6 +159,7 @@ local function mount(native, source, bounds)
                 return nil
             end
             count += 1
+            meshParts[#meshParts + 1] = piece
             piece.CFrame = center * sourceFrame:ToObjectSpace(piece.CFrame)
             piece.Anchored = true
             piece.Massless = true
@@ -177,7 +179,7 @@ local function mount(native, source, bounds)
     native.Transparency = 1
     local name=native.Name
     local entry={
-        model=clone,native=native,source=source,
+        model=clone,native=native,source=source,meshParts=meshParts,
         originalTransparency=originalTransparency,connections={},
     }
     -- Exact source and native ancestry events: no polling or new frame
@@ -206,6 +208,16 @@ local function mount(native, source, bounds)
     entry.connections[#entry.connections+1]=
         clone.DescendantRemoving:Connect(function(child)
             if mounted[name]==entry and child:IsA("MeshPart") then
+                release(name)
+            end
+        end)
+    -- An added primitive or embedded script invalidates the imported
+    -- cosmetic model immediately; never leave its native beam hidden.
+    entry.connections[#entry.connections+1]=
+        clone.DescendantAdded:Connect(function(child)
+            if mounted[name]==entry
+                and (child:IsA("BasePart")
+                    or child:IsA("LuaSourceContainer")) then
                 release(name)
             end
         end)
@@ -285,8 +297,21 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure, touch)
     end
     local evicted={}
     for name,entry in pairs(mounted) do
+        local intact = #entry.meshParts == 7
+        if intact then
+            for _, piece in ipairs(entry.meshParts) do
+                if not piece:IsDescendantOf(entry.model)
+                    or not piece:IsA("MeshPart")
+                    or not piece.Anchored or not piece.Massless
+                    or piece.CanCollide or piece.CanTouch
+                    or piece.CanQuery then
+                    intact = false
+                    break
+                end
+            end
+        end
         if wanted[name]~=entry.native or entry.model.Parent~=bucket
-            or entry.source~=source
+            or entry.source~=source or not intact
             or not safeCandidate(entry.native,folder) then
             evicted[#evicted+1]=name
         end
