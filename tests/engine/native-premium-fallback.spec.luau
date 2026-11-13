@@ -1225,6 +1225,28 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.count("arch")).toBe(before)
                 expect(overpass.LocalTransparencyModifier).toBe(1)
 
+                -- The approved TEMPLATE must remain seven real pieces,
+                -- not just its already-mounted copy. Missing original
+                -- geometry immediately restores all affected native roofs.
+                p4Phase="mutated approved source and recovery"
+                local template=templates:FindFirstChild("Access")
+                local sourcePiece=template:FindFirstChildWhichIsA(
+                    "MeshPart",true)
+                expect(sourcePiece~=nil).toBe(true)
+                local originalSourceParent=sourcePiece.Parent
+                sourcePiece.Parent=nil
+                task.wait()
+                expect(overpass.LocalTransparencyModifier).toBe(0)
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")<before).toBe(true)
+                sourcePiece.Parent=originalSourceParent
+                task.wait()
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")).toBe(before)
+                expect(overpass.LocalTransparencyModifier).toBe(1)
+
                 -- Same approved geometry, different client budget: mobile
                 -- High displays at most three distinct real deck owners.
                 -- It must never obtain the six-slot PC allocation.
