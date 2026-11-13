@@ -88,6 +88,7 @@ local function startPremiumAssets()
     local PremiumFloorReliefAssets = require(script.PremiumFloorReliefAssets)
     local PremiumPlatformSideAssets = require(script.PremiumPlatformSideAssets)
     local PremiumLargeDeckHullAssets = require(script.PremiumLargeDeckHullAssets)
+    local PremiumPlatformRimAssets = require(script.PremiumPlatformRimAssets)
     local PremiumLargeStructureAssets = require(script.PremiumLargeStructureAssets)
     local PremiumLobbyGateMeshAssets = require(script.PremiumLobbyGateMeshAssets)
     local PremiumLobbyPylonShellAssets = require(script.PremiumLobbyPylonShellAssets)
@@ -185,6 +186,9 @@ local function startPremiumAssets()
     task.defer(PremiumFloorReliefAssets.start)
     task.defer(PremiumPlatformSideAssets.start)
     task.defer(PremiumLargeDeckHullAssets.start)
+    -- Owner-verified seven-MeshPart sculpted perimeter rims for the
+    -- formerly primitive long and rectangular jump deck bevels.
+    task.defer(PremiumPlatformRimAssets.start)
     task.defer(PremiumLargeStructureAssets.start)
     task.defer(PremiumLobbyGateMeshAssets.start)
     -- Owner-approved, closed 3D shells for the four physical lobby pylons.
