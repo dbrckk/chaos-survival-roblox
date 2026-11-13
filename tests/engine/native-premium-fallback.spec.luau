@@ -429,6 +429,36 @@ describe("Original 3D native fallback isolation (engine)", function()
         if not ok then error(reason) end
     end)
 
+    it("prefits approved support columns before spending limited Android and PC 3D slots", function()
+        -- This exact source envelope belongs to the approved Crossroads
+        -- seven-material original. Selection and final mounting must agree
+        -- on both fit and how many modules each real pillar consumes.
+        local bounds = Vector3.new(2.12, 14.1, 2.12)
+        local fitLow, scaleLow = PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(1.3, 4.85, 1.3), bounds)
+        expect(fitLow).toBe(1)
+        expect(scaleLow >= .34 and scaleLow <= 1.25).toBe(true)
+        local fitMedium = PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(1.3, 28, 1.3), bounds)
+        expect(fitMedium).toBe(2)
+        local fitHigh = PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(1.3, 46, 1.3), bounds)
+        expect(fitHigh).toBe(3)
+        -- An ultra-thin but correctly named native, or a source that
+        -- would require over-expansion, cannot reserve any mesh slot.
+        expect(PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(.25, 30, .25), bounds)).toBe(nil)
+        expect(PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(1.3, 4.0, 1.3), bounds)).toBe(nil)
+        expect(PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(1.3, 47.1, 1.3), bounds)).toBe(nil)
+        expect(PremiumLargeStructureMeshKit.supportFit(
+            Vector3.new(1.3, 28, 1.3), Vector3.new(2, 0, 2)))
+            .toBe(nil)
+        expect(PremiumLargeStructureMeshKit.supportFit(
+            nil, bounds)).toBe(nil)
+    end)
+
     it("replaces a real 4.85-stud Crossroads near support on Low with native recovery", function()
         Kit.reset()
         local previous=workspace:FindFirstChild("GeneratedMap")
