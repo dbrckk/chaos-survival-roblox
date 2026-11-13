@@ -524,6 +524,22 @@ for asset_id in (
 # the intact approved model without changing the physical perimeter deck.
 assert 'or not sourceIntact(entry) then' in remaining
 assert 'mounted[owner]=nil\n            dispose(entry)' in remaining
+# High PC coverage must span all four genuine physical escape routes within
+# the SAME six-approved-model cap. Never expand Android or add another timer.
+for marker in (
+    'local route=deck:GetAttribute("PerimeterRoute")',
+    'or route<1 or route>4 then return nil end',
+    'stage=step,route=route,index=index',
+    'kind=="arch" and tier=="High" and touch~=true',
+    'if not routes[data.route] then',
+    'routes[data.route]=true',
+    'for _,data in ipairs(candidates[kind]) do',
+):
+    assert marker in remaining, "Four-route approved P4 owner lost: "+marker
+assert 'High={arch=6,casing=4,helix=6}' in remaining
+assert 'High={arch=3,casing=2,helix=3}' in remaining
+assert '.RenderStepped:Connect(' not in remaining
+assert '.Heartbeat:Connect(' not in remaining
 for marker in (
     'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,',
     'RemainingVisualNativeCensus.sample(player, arena, profile.Name)',
