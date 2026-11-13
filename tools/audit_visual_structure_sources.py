@@ -361,7 +361,8 @@ for clause in (
 
     'deck:GetPropertyChangedSignal(property):Connect(changed)',
     '"CollapsePhase", "BridgeShutterPhase", "HarborRoute"',
-    "if not realFloorScale(base, arena) then clearModels() end",
+    "base:GetPropertyChangedSignal(\"Size\"):Connect(function()",
+    "for _, entry in pairs(mounted) do visibility(entry) end",
 ):
     assert clause in caisson, clause
 assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', caisson)
@@ -389,6 +390,7 @@ for clause in (
     "or part.CanCollide or part.CanTouch or part.CanQuery",
     "or joint.Part0 ~= entry.deck or joint.Part1 ~= part",
     "or not entry.frames[part] or not entry.sizes[part]",
+    "for _, entry in pairs(entries) do refresh(entry) end",
 
     "visible and 1 or native.original",
     "PremiumRoutePbrKit.detach(entry)",
@@ -422,6 +424,8 @@ for clause in (
     "task.defer(function()",
     "if not entry.restoring then updateVisibility(entry) end",
     "if safeAfterMount(entry) then count += 1 end",
+    "if not realFloorScale(base, arena) then",
+    "updateVisibility(entry)",
     "visible and 1 or saved.original",
 ):
     assert clause in crown, clause
