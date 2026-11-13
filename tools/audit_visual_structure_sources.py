@@ -219,6 +219,28 @@ fixed_scenery_guards = {
         'base:GetAttributeChangedSignal("OriginalSizeX")',
         'base:GetAttributeChangedSignal("OriginalSizeZ")',
     ),
+    "ApprovedAtmosphereColumnsMeshKit": (
+        "local function originalDimensions(base, arena)",
+        "local originalX, originalZ = originalDimensions(base, arena)",
+        "(originalX * 0.5 + 10)",
+        "(originalZ * 0.5 + 10)",
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+    ),
+    "ApprovedAtmosphereCrownMeshKit": (
+        "local function authenticBase(base, arena)",
+        "if not authenticBase(base, arena)",
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+    ),
+    "ApprovedOrbitalSignatureRingMeshKit": (
+        "local function originalDimensions(base, arena)",
+        "local originalX,originalZ=originalDimensions(base,arena)",
+        "local origin=base.Position+Vector3.new(originalX*.24,",
+        "-(originalZ*.5+66)",
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+    ),
     "ApprovedMidgroundSkylineMeshKit": (
         "local function originalFootprint(base, arena)",
         "local originalX, originalZ = originalFootprint(base, base and base.Parent)",
@@ -242,7 +264,7 @@ for module, clauses in fixed_scenery_guards.items():
         or "base.Size.X > sx + .2 or base.Size.Z > sz + .2" in code
     ), (module, "reject original-footprint expansion")
     assert not re.search(r'base\.Size\.[XZ]\s*<\s*(?:318|160)', code), module
-print("PASS exterior foundations, cinematic horizon and midground remain 3D-eligible during shrink")
+print("PASS six fixed outboard 3D families remain eligible through arena shrink")
 
 # This is a risk inventory, not a count of defective objects: checking a
 # 320-stud playable floor is correct for physical platforms, but incorrect
