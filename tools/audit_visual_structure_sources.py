@@ -538,6 +538,26 @@ for marker in (
     'for _,data in ipairs(candidates[kind]) do',
 ):
     assert marker in remaining, "Four-route approved P4 owner lost: "+marker
+# On cap-limited clients, approved stage diversity only reallocates
+# already eligible source models near the camera. A damaged local clone
+# must restore the five native upper arch volumes without collisions.
+for marker in (
+    'elseif kind=="arch" and cap>=2',
+    'local boundary=candidates.arch[math.min(cap,#candidates.arch)]',
+    'local ceiling=boundary.priority+60',
+    'for _,stage in ipairs({8,4,1}) do',
+    'if not routes[data.route] and data.priority<=ceiling then',
+    'local actual=0',
+    'entry.model:GetDescendants()',
+    'if actual~=7 then return false end',
+    'or entry.corrupt or not entry.model',
+    'entry.corrupt=true',
+    'child.CanCollide=false',
+    'child.CanTouch=false',
+    'child.CanQuery=false',
+    'reveal(entry)',
+):
+    assert marker in remaining, "P4 safe sculptor diversity lost: " + marker
 assert 'High={arch=6,casing=4,helix=6}' in remaining
 assert 'High={arch=3,casing=2,helix=3}' in remaining
 assert '.RenderStepped:Connect(' not in remaining
