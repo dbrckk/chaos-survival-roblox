@@ -52,13 +52,22 @@ describe("Chaos Survival engine", function()
         -- 7-source-material/real-ID guards are enforced by release CI.
         template("OriginalUnderdeckChassis", 84582262145054,
             Vector3.new(23.3, 4.0, 10.0))
+        -- Mirror MapBuilder's real parentage and signed 320-stud floor.
+        -- Source-authenticated 3D correctly refuses a detached smoke arena.
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = workspace
         local arena = Instance.new("Folder")
-        arena.Name = "PremiumRouteSmokeArena"
-        arena.Parent = workspace
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId", "Classic")
+        arena.Parent = generated
         local base = Instance.new("Part")
         base.Name = "Base"
         base.Size = Vector3.new(320, 2, 320)
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
         base.Anchored = true
+        base.CanCollide = true
         base.Parent = arena
         local platforms = Instance.new("Folder")
         platforms.Name = "Platforms"
@@ -169,7 +178,7 @@ describe("Chaos Survival engine", function()
         expect(deck.CanCollide).toBe(true)
         expect(bridge.CanCollide).toBe(true)
         PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
-        arena:Destroy()
+        generated:Destroy()
         holder:Destroy()
     end)
     it("places owner-approved Sky Spine 3D only on real center interchange decks, preserving safe native fallback", function()
@@ -201,13 +210,20 @@ describe("Chaos Survival engine", function()
         signal.Parent = source
         source.Parent = holder
 
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = workspace
         local arena = Instance.new("Folder")
-        arena.Name = "SkySpineOriginal3DEngineArena"
-        arena.Parent = workspace
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId", "Classic")
+        arena.Parent = generated
         local base = Instance.new("Part")
         base.Name = "Base"
         base.Size = Vector3.new(320, 2, 320)
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
         base.Anchored = true
+        base.CanCollide = true
         base.Parent = arena
         local platforms = Instance.new("Folder")
         platforms.Name = "Platforms"
@@ -226,6 +242,7 @@ describe("Chaos Survival engine", function()
             deck:SetAttribute("ChaosPermanentRoute", true)
             deck:SetAttribute("SkySpineInterchange", true)
             deck:SetAttribute("SkySpineStep", step)
+            deck:SetAttribute("RouteTier", 4)
             deck.Parent = platforms
             local crown = Instance.new("Part")
             crown.Name = "SkySpine" .. index .. "_InterchangeCrown"
@@ -388,7 +405,7 @@ describe("Chaos Survival engine", function()
         SkySpineCrownMeshKit.sync(nil, Vector3.zero, "Low", false)
         expect(SkySpineCrownMeshKit.lightCount()).toBe(0)
         SkySpineCrownMeshKit.setDarknessGuard(true)
-        arena:Destroy()
+        generated:Destroy()
         holder:Destroy()
     end)
     it("mounts genuine approved suspended arena keel only BELOW real collision base, tiered and shrink safe", function()
@@ -619,26 +636,39 @@ describe("Chaos Survival engine", function()
         mesh.Parent = template
         template.Parent = holder
 
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = workspace
         local arena = Instance.new("Folder")
-        arena.Name = "Ground3DSourceSmokeArena"
-        arena.Parent = workspace
+        arena.Name = "Arena"
+        arena:SetAttribute("VariantId", "Classic")
+        arena.Parent = generated
         local base = Instance.new("Part")
         base.Name = "Base"
         base.Size = Vector3.new(320, 2, 320)
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
         base.Anchored = true
         base.CanCollide = true
         base.Parent = arena
         local decor = Instance.new("Folder")
         decor.Name = "Decor"
         decor.Parent = arena
-        for index = 1, 8 do
+        -- The real builder uses a 6x6 grid, not an unrelated 4x2 stand-in.
+        -- Choose eight genuine central bays so Low has two within 125 studs.
+        local cell = (320 - 18) / 6
+        local centerBays = {14, 15, 16, 17, 20, 21, 22, 23}
+        for _, index in ipairs(centerBays) do
+            local ix = math.floor((index - 1) / 6) + 1
+            local iz = (index - 1) % 6 + 1
             local ground = Instance.new("Part")
             ground.Name = "PremiumGroundModule" .. index
-            ground.Size = Vector3.new(49.133, 0.035, 49.133)
-            ground.CFrame = base.CFrame
-                * CFrame.new(((index - 1) % 4 - 1.5) * 50.33, 1.153,
-                    (math.floor((index - 1) / 4) - 0.5) * 50.33)
+            ground.Size = Vector3.new(cell - 1.2, 0.035, cell - 1.2)
+            ground.CFrame = base.CFrame * CFrame.new(
+                (ix - 3.5) * cell, base.Size.Y * .5 + .153,
+                (iz - 3.5) * cell)
             ground.Anchored = true
+            ground.CastShadow = false
             ground.CanCollide = false
             ground.CanTouch = false
             ground.CanQuery = false
@@ -678,7 +708,7 @@ describe("Chaos Survival engine", function()
         expect(base.CanCollide).toBe(true)
         expect(base.Size).toBe(Vector3.new(231, 2, 231))
         PremiumGroundMeshKit.sync(nil, Vector3.zero, "Low", false)
-        arena:Destroy()
+        generated:Destroy()
         holder:Destroy()
     end)
     it("builds sixteen physical side lookouts without changing original route indices", function()
