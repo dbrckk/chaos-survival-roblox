@@ -438,6 +438,8 @@ describe("Chaos Survival engine", function()
         local base = Instance.new("Part")
         base.Name = "Base"
         base.Size = Vector3.new(320, 2, 320)
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
         base.Anchored = true
         base.CanCollide = true
         base.CFrame = CFrame.new(100, 10, 240)
@@ -521,6 +523,8 @@ describe("Chaos Survival engine", function()
         local base = Instance.new("Part")
         base.Name = "Base"
         base.Size = Vector3.new(320, 2, 320)
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
         base.CFrame = CFrame.new(0, 10, 0)
         base.Anchored = true
         base.CanCollide = true
