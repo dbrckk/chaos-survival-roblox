@@ -110,6 +110,12 @@ local function startPremiumAssets()
     task.defer(function()
         require(script.PremiumDistrictSidewallAssets).start()
     end)
+    -- Five newly Approved original 3D gateway/casing/helix sources load
+    -- late and serially through the SAME global AssetService gate. This
+    -- owner never delays real gameplay, round start or public route physics.
+    task.defer(function()
+        require(script.PremiumRemainingStructureAssets).start()
+    end)
     -- Heavy original skyfleet art is purely optional and loads later to
     -- avoid Roblox owner-wide AssetService throttling at player arrival.
     task.defer(PremiumSkyfleetMeshAssets.start)
