@@ -1036,6 +1036,20 @@ local function rebuild()
                 player:SetAttribute("LocalNativeStructuralPartsReplaced",
                     nativeCount)
             end
+            -- Counts of truly hidden server-native primitives for THIS
+            -- one active arena, not a speculative replacement percentage.
+            local family = PlatformNativeTrimReplacementKit.breakdown()
+            local attributes = {
+                LocalBevelNativePartsReplaced = family.bevel,
+                LocalUnderframeNativePartsReplaced = family.underframe,
+                LocalSupportNativePartsReplaced = family.support,
+                LocalOtherStructuralNativePartsReplaced = family.other,
+            }
+            for name, value in pairs(attributes) do
+                if player:GetAttribute(name) ~= value then
+                    player:SetAttribute(name, value)
+                end
+            end
         end, actualSupportParts, folder)
     if player:GetAttribute("LocalOriginalLargeStructure3DCount")
         ~= originalLargeCount then
