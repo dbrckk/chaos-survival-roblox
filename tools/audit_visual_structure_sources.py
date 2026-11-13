@@ -172,6 +172,21 @@ for clause in (
     assert clause in route_mesh, ("desktop route mesh native fallback", clause)
 print("PASS desktop 16-deck approved art with unchanged mobile/pressure caps")
 
+# Approved underfloor geometry is fixed to the creator's initial
+# footprint, not the contracting playable Base. Verify both owners.
+for module in ("UnderstructureBeamMeshKit", "ArenaKeelMeshKit"):
+    code = (ROOT / "src/client" / (module + ".lua")).read_text(
+        encoding="utf8")
+    for clause in (
+        'base:GetAttribute("OriginalSizeX")',
+        'base:GetAttribute("OriginalSizeZ")',
+        'base.Size.X <= base:GetAttribute("OriginalSizeX") + .2',
+        'base.Size.Z <= base:GetAttribute("OriginalSizeZ") + .2',
+    ):
+        assert clause in code, ("underfloor shrink mesh coverage", module, clause)
+    assert "base.Size.X >= 318 and base.Size.X <= 322" not in code, module
+print("PASS approved underfloor 3D remains eligible through valid shrink")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
