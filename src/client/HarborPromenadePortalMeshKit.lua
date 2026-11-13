@@ -63,18 +63,42 @@ local function modelSource()
     return source,n
 end
 
+-- The server contracts real Harbor RouteTier decks horizontally;
+-- their original industrial arches remain decorative and cannot collide.
+-- Authenticate the signed original floor and the ACTUAL scaled deck, not
+-- the ephemeral live 320-stud floor size.
+local function realFloorScale(base, arena)
+    local map = workspace:FindFirstChild("GeneratedMap")
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not arena or arena.Name ~= "Arena"
+        or arena:GetAttribute("VariantId") ~= "Harbor"
+        or not map or arena.Parent ~= map
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx, sz = base:GetAttribute("OriginalSizeX"),
+        base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx >= math.huge or sz >= math.huge then return nil end
+    local scaleX, scaleZ = base.Size.X / sx, base.Size.Z / sz
+    if scaleX < .445 or scaleX > 1.005 or scaleZ < .445
+        or scaleZ > 1.005 or math.abs(scaleX - scaleZ) > .012 then
+        return nil
+    end
+    return math.min(scaleX, scaleZ)
+end
+
 local function authentic(deck, arena, base)
-    if not deck or not arena or not base
-        or not deck:IsA("BasePart")
+    local scale = realFloorScale(base, arena)
+    if not scale or not deck or not deck:IsA("BasePart")
         or deck.Parent ~= arena:FindFirstChild("Platforms")
         or not deck.Name:match("^Platform%d+$")
         or deck:GetAttribute("ChaosPermanentRoute") ~= true
+        or type(deck:GetAttribute("RouteTier")) ~= "number"
         or not deck.Anchored or not deck.CanCollide
         or deck.Transparency >= .75
-        or deck.Size.X < 18 or deck.Size.X > 32
+        or deck.Size.X / scale < 17.8 or deck.Size.X / scale > 32.2
         or math.abs(deck.Size.Y - 2) > .12
-        or math.abs(deck.Size.Z - 12) > .15
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        or math.abs(deck.Size.Z / scale - 12) > .22 then
         return false
     end
     local lane = deck:GetAttribute("PromenadeLane")
@@ -105,8 +129,7 @@ end
 local function isAlive(entry)
     if not entry.model or entry.model.Parent ~= folder
         or entry.arena ~= activeArena
-        or not authentic(entry.deck,entry.arena,entry.base)
-        or (entry.deck.Size-entry.initialSize).Magnitude > .075 then
+        or not authentic(entry.deck,entry.arena,entry.base) then
         return false
     end
     local n=0
@@ -117,8 +140,38 @@ local function isAlive(entry)
     return n == entry.expected
 end
 
+-- Resize only the imported ornament, never the real collidable
+-- deck. Server-authored native trims contract in horizontal X/Z but retain
+-- their elevation; do the same here by updating cosmetic Weld.C0/Size.
+-- Existing Size events drive this, without a Heartbeat/render poll.
+local function refit(entry)
+    if not isAlive(entry) then return false end
+    local scale = realFloorScale(entry.base, entry.arena)
+    if not scale then return false end
+    for _, piece in ipairs(entry.pieces) do
+        local joint = entry.joints[piece]
+        if not joint or joint.Parent ~= piece or joint.Part0 ~= entry.deck
+            or joint.Part1 ~= piece or not entry.frames[piece]
+            or not entry.sizes[piece] then return false end
+    end
+    if entry.lastScale and math.abs(entry.lastScale - scale) < .008 then
+        return true
+    end
+    for _, piece in ipairs(entry.pieces) do
+        local frame = entry.frames[piece]
+        local original = entry.sizes[piece]
+        piece.Size = Vector3.new(original.X * scale,
+            original.Y, original.Z * scale)
+        entry.joints[piece].C0 = CFrame.new(
+            frame.Position.X * scale, frame.Position.Y,
+            frame.Position.Z * scale) * (frame - frame.Position)
+    end
+    entry.lastScale = scale
+    return true
+end
+
 local function refresh(entry)
-    local visible = isAlive(entry)
+    local visible = refit(entry)
     -- Server hazard/shrink priority: restore original UV and safety cues
     -- during the same physical attribute event, not the next LOD pass.
     if not visible then PremiumRoutePbrKit.detach(entry) end
@@ -221,8 +274,9 @@ local function mount(arena,base,decor,deck,template,expected)
     if #pieces ~= expected then copy:Destroy(); return nil end
     local entry = {
         model=copy, pieces=pieces, expected=expected, arena=arena,
-        base=base, deck=deck, initialSize=deck.Size, connections={},
-        native={}, disposing=false,
+        base=base, deck=deck, connections={},
+        native={}, joints={}, frames={}, sizes={}, lastScale=nil,
+        disposing=false,
     }
     local seen = {}
     local function watchNative(part)
@@ -247,21 +301,27 @@ local function mount(arena,base,decor,deck,template,expected)
         deck:GetAttribute("PromenadeStep"))
     copy.Parent=folder
     for _, piece in ipairs(pieces) do
-        local joint=Instance.new("WeldConstraint")
+        local joint=Instance.new("Weld")
         joint.Name="HarborCargoGantryCosmeticWeld"
         joint.Part0=deck
         joint.Part1=piece
+        joint.C0=deck.CFrame:ToObjectSpace(piece.CFrame)
+        joint.C1=CFrame.identity
         joint.Parent=piece
+        entry.joints[piece]=joint
+        entry.frames[piece]=deck.CFrame:ToObjectSpace(piece.CFrame)
+        entry.sizes[piece]=piece.Size
     end
     local function changed()
-        if not isAlive(entry) then refresh(entry) end
+        refresh(entry)
     end
-    for _, property in ipairs({"Size","CanCollide","Transparency"}) do
+    for _, property in ipairs({"Size","CanCollide","Transparency",
+        "Anchored"}) do
         entry.connections[#entry.connections+1] =
             deck:GetPropertyChangedSignal(property):Connect(changed)
     end
     for _, attribute in ipairs({"CollapsePhase","ChaosPermanentRoute",
-        "PromenadeLane","PromenadeStep"}) do
+        "PromenadeLane","PromenadeStep","RouteTier"}) do
         entry.connections[#entry.connections+1] =
             deck:GetAttributeChangedSignal(attribute):Connect(changed)
     end
@@ -313,10 +373,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,
     local base=arena:FindFirstChild("Base")
     local platforms=arena:FindFirstChild("Platforms")
     local decor=arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart")
-        or not platforms or not platforms:IsA("Folder")
+    if not platforms or not platforms:IsA("Folder")
         or not decor or not decor:IsA("Folder")
-        or base.Size.X<318 or base.Size.Z<318 then
+        or not realFloorScale(base, arena) then
         clearModels()
         return
     end
@@ -324,7 +383,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,
         if baseConnection then baseConnection:Disconnect() end
         watchedBase=base
         baseConnection=base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X<318 or base.Size.Z<318 then clearModels() end
+            if not realFloorScale(base, arena) then clearModels() end
         end)
     end
     local source,partCount=modelSource()
