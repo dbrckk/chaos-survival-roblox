@@ -670,10 +670,18 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
             local rotation = data.localCFrame - p
             local localFrame = CFrame.new(p.X * ratioX, p.Y, p.Z * ratioZ)
                 * rotation
+            -- The authored Rect/Long perimeter rim may be turned 90°
+            -- relative to the physical deck. Resize imported LOCAL mesh
+            -- axes accordingly, otherwise one skirt protrudes beyond a
+            -- contracting bridge while the other collapses incorrectly.
+            local rimSwapped = part:GetAttribute(
+                "OriginalPlatformRimAxisSwap") == true
             part.Size = Vector3.new(
-                math.max(0.05, data.size.X * ratioX),
+                math.max(0.05, data.size.X
+                    * (rimSwapped and ratioZ or ratioX)),
                 data.size.Y,
-                math.max(0.05, data.size.Z * ratioZ)
+                math.max(0.05, data.size.Z
+                    * (rimSwapped and ratioX or ratioZ))
             )
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
                 or part:FindFirstChild("PlatformIdentityWeld")
