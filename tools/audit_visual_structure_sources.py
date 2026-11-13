@@ -125,6 +125,20 @@ for path in sorted((ROOT / "src/client").glob("*.lua")):
                 if owner not in registered:
                     unbudgeted.append({"owner":owner,"module":name})
 
+# A mounted district facade must never hide its original primitives if
+# an unexpected clone descendant arrives between existing LOD samples.
+district_facade = (ROOT / "src/client/PremiumDistrictFacadeMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    'clone.DescendantAdded:Connect(function(part)',
+    'if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then',
+    'revokeIfMounted()',
+    'if actual ~= #entry.pieces then return false end',
+    'restoreNative(entry)',
+):
+    assert clause in district_facade, ("district facade integrity", clause)
+print("PASS district approved 3D clone rejects foreign geometry/scripts")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
