@@ -156,6 +156,74 @@ describe("Original 3D native fallback isolation (engine)", function()
             for _,mesh in ipairs(sculpt) do mesh:Destroy() end
             expect(underframe.LocalTransparencyModifier).toBe(0)
             expect(owner.CanCollide).toBe(true)
+
+            -- Go beyond an abstract selection: actually mount EIGHT
+            -- individually authored, seven-MeshPart High source fixtures
+            -- on EIGHT real Crossroads promenade collider owners.
+            -- Reuse the same physical MapBuilder Parts, no mock platforms.
+            Kit.reset()
+            local highParts={}
+            local highReplacements={}
+            local installed=0
+            local firstOwner=nil
+            for deck in pairs(desktopCradles) do
+                local n=tonumber(deck.Name:match("^Platform(%d+)$"))
+                local genuine=PremiumLargeStructureMeshKit.longCradle(
+                    meshes,deck,"High",n,true)
+                expect(genuine~=nil and #genuine==7).toBe(true)
+                installed+=1
+                highParts[deck]=genuine
+                highReplacements[tostring(n)]="cradle"
+                if firstOwner==nil then firstOwner=deck end
+                expect(deck.CanCollide).toBe(true)
+            end
+            expect(installed).toBe(8)
+            expect(#meshes:GetChildren()).toBe(56)
+            Kit.bind(arena,highReplacements,nil,nil,meshes)
+            local masked=0
+            for deck in pairs(desktopCradles) do
+                local n=tonumber(deck.Name:match("^Platform(%d+)$"))
+                local native=decor:FindFirstChild("PlatformUnderFrame"..n)
+                expect(native.LocalTransparencyModifier).toBe(1)
+                masked+=1
+            end
+            expect(masked).toBe(8)
+            -- Warning on ONE real deck restores only its own fallback.
+            local firstId=tonumber(firstOwner.Name:match("^Platform(%d+)$"))
+            local firstFrame=decor:FindFirstChild(
+                "PlatformUnderFrame"..firstId)
+            firstOwner:SetAttribute("CollapsePhase","Warning")
+            expect(firstFrame.LocalTransparencyModifier).toBe(0)
+            for deck in pairs(desktopCradles) do
+                if deck~=firstOwner then
+                    local n=tonumber(deck.Name:match("^Platform(%d+)$"))
+                    expect(decor:FindFirstChild(
+                        "PlatformUnderFrame"..n).LocalTransparencyModifier)
+                        .toBe(1)
+                end
+            end
+            firstOwner:SetAttribute("CollapsePhase","Normal")
+            expect(firstFrame.LocalTransparencyModifier).toBe(1)
+            for _,piece in ipairs(highParts[firstOwner]) do
+                piece:Destroy()
+            end
+            expect(firstFrame.LocalTransparencyModifier).toBe(0)
+            for deck in pairs(desktopCradles) do
+                if deck~=firstOwner then
+                    local n=tonumber(deck.Name:match("^Platform(%d+)$"))
+                    expect(decor:FindFirstChild(
+                        "PlatformUnderFrame"..n).LocalTransparencyModifier)
+                        .toBe(1)
+                end
+                expect(deck.CanCollide).toBe(true)
+            end
+            Kit.reset()
+            for deck in pairs(desktopCradles) do
+                local n=tonumber(deck.Name:match("^Platform(%d+)$"))
+                expect(decor:FindFirstChild(
+                    "PlatformUnderFrame"..n).LocalTransparencyModifier)
+                    .toBe(0)
+            end
         end)
         Kit.reset()
         if meshes then meshes:Destroy() end
