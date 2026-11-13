@@ -420,9 +420,13 @@ jobs:
               "variant_classic_sculpted_broadcast_fin", "variant_orbital_sculpted_node", "variant_orbital_trussed_strut",
               "variant_crossroads_sculpted_entrance_portal", "variant_classic_grid_marker_sculpt", "variant_towers_spine_sculpt",
               "skyline_depth_sculpt",
+              # Five genuine original, Roblox-moderated P0 structure sculptures.
+              "ascension_access_arch", "ascension_transfer_arch",
+              "ascension_summit_arch", "architectural_column_casing",
+              "orbital_helix_underframe",
           }
-          assert len(premium_extension_names) == 40
-          assert len(models) == 103
+          assert len(premium_extension_names) == 45
+          assert len(models) == 108
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
@@ -676,9 +680,9 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          # Exactly 103 owner-approved Models after the real new
-          # district_sidewall_shell asset 77387019170428 (Approved).
-          assert len(models) == 103
+          # Exactly 108 creator-owned, moderated Models: earlier 103 plus
+          # five approved P0 structural source imports (run 43467373476).
+          assert len(models) == 108
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
