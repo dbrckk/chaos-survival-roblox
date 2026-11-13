@@ -55,3 +55,34 @@ for first_count in range(1, 8):
     active = live > 0
     assert active
 print("PASS original MeshPart streaming recovery restores authorization")
+
+# P0 Low premium carapace must follow the real camera, not an arbitrary
+# one-in-eight platform-ID sample. Keep exactly ONE seven-MeshPart source
+# and never mask gameplay collision or server-owned hazard signaling.
+root = Path(__file__).resolve().parents[1]
+side = (root / "src/client/PremiumPlatformSideMeshKit.lua").read_text()
+identity = (root / "src/client/arena-platform-identity.client.lua").read_text()
+builder = (root / "src/server/MapBuilder.lua").read_text()
+assert 'or (tier == "Medium" and 8 or (lowReady and 1 or 0))' in side
+assert 'if tier == "Low" and not cameraReady then return chosen end' in side
+assert 'and (tier ~= "Low" or delta.Magnitude <= 125)' in side
+assert 'if tier == "Low" and selected ~= true then' in side
+assert 'sourceIndex % 8' not in side
+assert 'id % 8 ~= 1' not in side
+assert 'verified(variant)' in side
+assert 'and sourceParts ~= 7' in side
+assert 'if not platform.Parent or not platform.CanCollide' not in side
+assert 'nearCameraCarapaces[platform] == true' in identity
+low_visual_gate = identity.split(
+    'if tier.Name ~= "Low" or visualIndex % 2 ~= 0\n',1)[0]
+assert 'or nearCameraCarapaces[platform] == true' in low_visual_gate
+assert 'local bevel = Instance.new("WedgePart")' in builder
+assert 'bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex' in builder
+assert 'bevel:SetAttribute("OriginalStructuralBevel", true)' in builder
+assert 'bevel.CanCollide = false' in builder
+assert '"PlatformUnderFrame" .. index' in builder
+assert 'underFrame:SetAttribute("PremiumArchitecturalSurface", true)' in builder
+assert 'part.LocalTransparencyModifier = 1' in source
+assert 'owner.CanCollide' in source
+print("PASS P0 Low near-camera premium carapace can replace authentic even-index"
+      " four-bevel underside without increasing 1-model/7-MeshPart cap")
