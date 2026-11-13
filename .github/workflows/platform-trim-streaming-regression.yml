@@ -6,6 +6,7 @@ on:
       - src/client/PremiumPlatformSideMeshKit.lua
       - src/client/arena-platform-identity.client.lua
       - src/server/MapBuilder.lua
+      - src/server/PremiumPlatformSideAssets.lua
       - tools/verify_platform_trim_mesh_ownership.py
       - .github/workflows/platform-trim-streaming-regression.yml
   push:
@@ -15,6 +16,7 @@ on:
       - src/client/PremiumPlatformSideMeshKit.lua
       - src/client/arena-platform-identity.client.lua
       - src/server/MapBuilder.lua
+      - src/server/PremiumPlatformSideAssets.lua
       - tools/verify_platform_trim_mesh_ownership.py
       - .github/workflows/platform-trim-streaming-regression.yml
 permissions:
