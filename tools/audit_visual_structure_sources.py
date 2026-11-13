@@ -201,6 +201,46 @@ for module in perimeter_shrink_kits:
     assert not re.search(r'base\.Size\.[XZ]\s*<\s*318',code),module
 print("PASS six additional original perimeter station 3D families survive shrink")
 
+# Three additional fixed, outboard 3D families must not be invalidated by
+# the live gameplay floor contracting. These assertions inspect the actual
+# client scripts (no fake mesh source, runtime FPS or render claims).
+fixed_scenery_guards = {
+    "ApprovedFoundationChassisMeshKit": (
+        "local function authenticBase(base, arena)",
+        "not authenticBase(base, arena)",
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+        'base:GetPropertyChangedSignal("Size"):Connect(revokeInvalidBase)',
+    ),
+    "ApprovedCinematicHorizonMeshKit": (
+        "local function authenticBase(base, arena)",
+        "local originalSize = authenticBase(base, base and base.Parent)",
+        "Rules.offset(originalSize,variant,index)",
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+    ),
+    "ApprovedMidgroundSkylineMeshKit": (
+        "local function originalFootprint(base, arena)",
+        "local originalX, originalZ = originalFootprint(base, base and base.Parent)",
+        "(originalX + body.Size.X)",
+        "(originalZ + body.Size.Z)",
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+    ),
+}
+for module, clauses in fixed_scenery_guards.items():
+    code = (ROOT / "src/client" / (module + ".lua")).read_text(
+        encoding="utf8")
+    for clause in (
+        'base:GetAttribute("OriginalSizeX")',
+        'base:GetAttribute("OriginalSizeZ")',
+        "base.Size.X <= sx + .2 and base.Size.Z <= sz + .2",
+        *clauses,
+    ):
+        assert clause in code, (module, clause)
+    assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*(?:318|160)', code), module
+print("PASS exterior foundations, cinematic horizon and midground remain 3D-eligible during shrink")
+
 # This is a risk inventory, not a count of defective objects: checking a
 # 320-stud playable floor is correct for physical platforms, but incorrect
 # for outboard static scenery during Shrinking Arena.
