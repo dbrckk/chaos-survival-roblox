@@ -146,14 +146,13 @@ describe("Original 3D native fallback isolation (engine)", function()
                     if a[4]~=b[4] then return a[4]>b[4] end
                     return a[1]<b[1]
                 end)
-                local trimmed={}
-                for i=1,math.min(#ordered,75) do
-                    trimmed[i]=ordered[i]
-                end
+                -- Every owner group, including small visual details, is
+                -- emitted in this diagnostic: the finished CSV must not
+                -- silently discard low-frequency groups or the lobby.
                 return HttpService:JSONEncode({
                     variant=variantId,stats=stats,
                     groups=#ordered,
-                    top75=trimmed,
+                    inventory=ordered,
                 })
             end)
             if generated then generated:Destroy() end
