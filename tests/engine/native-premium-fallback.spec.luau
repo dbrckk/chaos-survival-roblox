@@ -93,6 +93,42 @@ describe("Original 3D native fallback isolation (engine)", function()
                 owner=part
             end
             expect(count).toBe(2)
+            -- On the same REAL MapBuilder route inventory, High Android
+            -- retains four fully source-fitted 22-stud cradles; High
+            -- desktop reuses four existing column slots to mount EIGHT.
+            -- Both keep 20 seven-MeshPart structure modules in total.
+            local mobileCradles=PremiumLargeStructureMeshKit
+                .selectNearRouteStructures(ordered,decor,"Crossroads",
+                    "High",base,camera,Vector3.new(0,0,1),0,false)
+            local desktopCradles=PremiumLargeStructureMeshKit
+                .selectNearRouteStructures(ordered,decor,"Crossroads",
+                    "High",base,camera,Vector3.new(0,0,1),0,true)
+            local mobileCount,desktopCount=0,0
+            for part in pairs(mobileCradles) do
+                mobileCount+=1
+                expect(PremiumLargeStructureMeshKit.cradleFit(
+                    part.Size,sourceBounds)~=nil).toBe(true)
+            end
+            for part in pairs(desktopCradles) do
+                desktopCount+=1
+                expect(part:IsA("BasePart") and part.CanCollide).toBe(true)
+                expect(PremiumLargeStructureMeshKit.cradleFit(
+                    part.Size,sourceBounds)~=nil).toBe(true)
+                expect(decor:FindFirstChild("PlatformUnderFrame"
+                    ..part.Name:match("^Platform(%d+)$"))~=nil).toBe(true)
+            end
+            expect(mobileCount).toBe(4)
+            expect(desktopCount).toBe(8)
+            local moved=PremiumLargeStructureMeshKit.desktopCradleTransfer(
+                "High",true,desktopCradles)
+            expect(moved).toBe(4)
+            expect(4+moved+16-moved).toBe(20)
+            expect(PremiumLargeStructureMeshKit.desktopCradleTransfer(
+                "High",false,desktopCradles)).toBe(0)
+            expect(PremiumLargeStructureMeshKit.desktopCradleTransfer(
+                "Medium",true,desktopCradles)).toBe(0)
+            expect(PremiumLargeStructureMeshKit.desktopCradleTransfer(
+                "High",true,mobileCradles)).toBe(0)
             expect(owner~=nil).toBe(true)
             local id=tonumber(owner.Name:match("^Platform(%d+)$"))
             local underframe=decor:FindFirstChild("PlatformUnderFrame"..id)
