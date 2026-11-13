@@ -21,4 +21,12 @@ Sur Android Low, le kit imposait déjà que la façade authentique soit en place
 - `tests/engine/visual-budget-rules.spec.luau` utilise le vrai générateur serveur à **16 bâtiments** : monte façade+coque sur un même bâtiment en Low, vérifie les cinq primitives masquées, le retour natif sous pression ou perte de façade, et le comptage exact ; teste également la résidence et la disparition de la paire en Medium. Les règles de classement Medium/High sont testées face à une différence de distance et à la pénalité hors caméra.
 - Ces résultats garantissent la sécurité des sélections, **pas** une valeur FPS Android ni un pourcentage de structures « définitivement remplacées ». Le nombre d'édifices complets est désormais consultable en runtime au lieu d'être deviné.
 
-**Publication :** aucun déploiement public Roblox n'est prétendu. Le commit doit avoir un Build Validation et les sept suites Roblox Engine verts avant une publication explicite.
+## Résultats finaux vérifiés
+
+- [Contrôle source des budgets et des assets approuvés : réussi](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43420796671).
+- [Build Validation : réussi](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43421331456), commit testé `0851ede54574cded0cf224c97043496a734632e0`.
+- [Prépublication (déclenchement des tests, pas du jeu) : réussie](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43422081928).
+- [**Sept suites Roblox Open Cloud Engine : réussies**](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43422096406), le **même** commit `0851ede54574cded0cf224c97043496a734632e0`. L'intégration Medium et la priorité 3D sont exercées en moteur, avec des fixtures MeshParts de test, non des captures Android.
+- Le workflow de prépublication a été restauré à son contenu précédent après une tentative de modification du contrôle de déclenchement. [La comparaison source](https://github.com/dbrckk/chaos-survival-roblox/compare/0851ede54574cded0cf224c97043496a734632e0...6fed4008af36bb3a6f3b9bef0ee32655b0d28e8e) ne montre **aucun fichier modifié** entre le commit moteur validé et ce dernier commit de restauration.
+
+**Publication :** aucune republication publique Roblox n'a eu lieu pendant ce chantier. Une suite Engine verte ne mesure pas des FPS Android réels ni ne remplace la certification visuelle du jeu déployé.
