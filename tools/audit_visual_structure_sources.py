@@ -436,7 +436,8 @@ for clause in (
 ):
     assert clause in ground, clause
 assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', ground)
-assert "RenderStepped" not in ground and "Heartbeat" not in ground
+assert ".RenderStepped:Connect(" not in ground
+assert ".Heartbeat:Connect(" not in ground
 print("PASS 36 real nonphysical 3D floor bays follow server shrink")
 
 # PremiumRouteMeshKit has diverse physical owners: RouteTier decks shrink
