@@ -5,15 +5,18 @@
 local Census = {}
 
 local function visible(part)
-    return part:IsA("BasePart") and not part:IsA("MeshPart")
-        and part.Anchored and not part.CanCollide
+    -- Count the SAME native primitive classes as the real engine source
+    -- census; do not incorrectly classify Unions/Terrain as blockout art.
+    local primitive = part:IsA("Part") or part:IsA("WedgePart")
+        or part:IsA("CornerWedgePart") or part:IsA("TrussPart")
+    return primitive and part.Anchored and not part.CanCollide
         and not part.CanTouch and not part.CanQuery
         and part.Transparency < .95
         and part.LocalTransparencyModifier < .95
         and part.Size.X > .02 and part.Size.Y > .02 and part.Size.Z > .02
 end
 
-local function groupFor(part, decor, circuit)
+local function groupFor(part, decor, circuit, owners)
     local name = part.Name
     if name:match("^SkyRouteMonument%d+_") then
         return "Ascension"
@@ -23,6 +26,10 @@ local function groupFor(part, decor, circuit)
         return "PlatformSupport"
     elseif name:match("^PlatformUnderFrame%d+$") then
         return "PlatformUnderFrame"
+    elseif name:match("^PlatformPanel%d+$") then
+        return "PlatformPanel"
+    elseif name:match("^PremiumGroundModule%d+$") then
+        return "GroundFinish"
     elseif name:match("^SkySpine%d+_") then
         return "SkySpine"
     elseif name:match("^Promenade%d+_")
@@ -33,10 +40,33 @@ local function groupFor(part, decor, circuit)
         return "PlatformSignals"
     end
     if circuit and part:IsDescendantOf(circuit) then return "Helix" end
-    local casing = decor:FindFirstChild("OriginalPremiumColumnCladding")
-    if casing and part:IsDescendantOf(casing) then return "ColumnCasing" end
-    local district = decor:FindFirstChild("ArenaDistrictArchitecture3D")
-    if district and part:IsDescendantOf(district) then return "District" end
+    -- All folders are resolved ONCE per sample, rather than calling
+    -- FindFirstChild several thousand times for a five-world census.
+    if owners.casing and part:IsDescendantOf(owners.casing) then
+        return "ColumnCasing"
+    end
+    if owners.district and part:IsDescendantOf(owners.district) then
+        return "District"
+    end
+    if owners.corners and part:IsDescendantOf(owners.corners) then
+        return "CornerLandmarks"
+    end
+    if owners.exterior and part:IsDescendantOf(owners.exterior) then
+        return "ExteriorRetrofits"
+    end
+    if owners.harbor and part:IsDescendantOf(owners.harbor) then
+        return "HarborFleet"
+    end
+    -- Four pre-existing, owner-tagged stations are Models directly under
+    -- Decor; count each descendant without creating another index/loop.
+    local owner=part
+    while owner and owner.Parent~=decor do
+        owner=owner.Parent
+    end
+    if owner and owner:IsA("Model") and owner.Parent==decor
+        and owner:GetAttribute("ChaosPerimeterStation")==true then
+        return "PerimeterStations"
+    end
     return nil
 end
 
@@ -44,6 +74,12 @@ local KEYS = {
     "Ascension", "ColumnCasing", "Helix", "District",
     "PlatformBevel", "PlatformSupport", "PlatformUnderFrame",
     "SkySpine", "Promenade", "PlatformSignals",
+    -- Additional P4 breakdowns are independent counters, NOT extra Parts.
+    -- Prevent neon/wayfinding cues from inflating a "needs 3D" backlog.
+    "AscensionStructure", "AscensionSignal",
+    "HelixStructure", "HelixSignal",
+    "PlatformPanel", "GroundFinish", "CornerLandmarks",
+    "ExteriorRetrofits", "HarborFleet", "PerimeterStations",
 }
 local function set(player, key, value)
     local attr = "LocalP4VisibleNative" .. key
@@ -62,14 +98,30 @@ function Census.sample(player, arena, quality)
         local decor = arena:FindFirstChild("Decor")
         local circuit = arena:FindFirstChild("HelixCircuit")
         if decor and decor:IsA("Folder") then
-            -- GetDescendants includes streamed-in server native fallback only.
-            -- Exclude client-generated replacement folders under Workspace.
+            local owners = {
+                casing = decor:FindFirstChild("OriginalPremiumColumnCladding"),
+                district = decor:FindFirstChild("ArenaDistrictArchitecture3D"),
+                corners = decor:FindFirstChild("ArenaCornerLandmarks3D"),
+                exterior = decor:FindFirstChild("OriginalExteriorRetrofits"),
+                harbor = decor:FindFirstChild("StormHarborGantryFleet"),
+            }
+            -- GetDescendants includes streamed-in SERVER native fallback
+            -- only. Client replacement folders live under Workspace and
+            -- are intentionally excluded from this diagnostic.
             local function scan(root)
                 for _,part in ipairs(root:GetDescendants()) do
                     if visible(part) then
                         scanned += 1
-                        local key = groupFor(part, decor, circuit)
-                        if key then counts[key] += 1 end
+                        local key = groupFor(part, decor, circuit, owners)
+                        if key then
+                            counts[key] += 1
+                            if key=="Ascension" or key=="Helix" then
+                                local signal = part.Material==Enum.Material.Neon
+                                    or part:GetAttribute("ChaosWayfinding")==true
+                                local suffix=signal and "Signal" or "Structure"
+                                counts[key..suffix] += 1
+                            end
+                        end
                     end
                 end
             end
@@ -79,7 +131,9 @@ function Census.sample(player, arena, quality)
         end
     end
     for _,key in ipairs(KEYS) do set(player, key, counts[key]) end
+    -- Backward compatible name; this count includes the Orbital circuit.
     set(player, "AllDecor", scanned)
+    set(player, "AllScanned", scanned)
     if player:GetAttribute("LocalP4NativeCensusReady") ~= streamed then
         player:SetAttribute("LocalP4NativeCensusReady", streamed)
     end
