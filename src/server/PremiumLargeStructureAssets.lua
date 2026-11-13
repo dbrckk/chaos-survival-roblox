@@ -17,9 +17,11 @@ local APPROVED = {
 }
 local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle"}
 
--- The original fixed order left the non-Classic columns waiting through
--- several optional imports. Prioritize ONLY the current server arena.
--- Preserve all six original imports, the retry sequence and the global
+-- Import the real active world's columns FIRST, the shared 22-stud
+-- genuine LongCradle SECOND, then the four inactive worlds. Previously
+-- this universally useful 3D underframe came LAST, after up to four
+-- irrelevant sources; players saw primitive underframes for longer.
+-- Preserve all six approved IDs, the retry sequence and global
 -- two-slot AssetService gate.
 local function prioritizedOrder()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -33,9 +35,11 @@ local function prioritizedOrder()
     if not APPROVED[variant] or variant == "LongCradle" then
         return ORDER
     end
-    local ordered = {variant}
+    local ordered = {variant,"LongCradle"}
     for _, name in ipairs(ORDER) do
-        if name ~= variant then ordered[#ordered + 1] = name end
+        if name ~= variant and name ~= "LongCradle" then
+            ordered[#ordered + 1] = name
+        end
     end
     return ordered
 end
