@@ -396,7 +396,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,
         if baseConnection then baseConnection:Disconnect() end
         watchedBase=base
         baseConnection=base:GetPropertyChangedSignal("Size"):Connect(function()
-            if not realFloorScale(base, arena) then clearModels() end
+            if not realFloorScale(base, arena) then
+                clearModels()
+            else
+                -- ShrinkingArena resizes the Base BEFORE each real walkway.
+                -- Do not mask nine native supports with an imported gantry
+                -- while its authoritative RouteTier footprint is stale.
+                for _, entry in pairs(entries) do refresh(entry) end
+            end
         end)
     end
     local source,partCount=modelSource()
