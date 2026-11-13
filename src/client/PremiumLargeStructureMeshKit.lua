@@ -313,7 +313,13 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         return selected
     end
     local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 1)
-    local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)
+    -- Medium's renderer already budgets eight seven-MeshPart support
+    -- modules. Each Medium platform mounts at most ONE support, so
+    -- selecting only four deck owners left half the approved budget idle.
+    -- Rank up to eight *distinct* real support-bearing platforms without
+    -- increasing the existing eight-module ceiling. High still chooses
+    -- eight owners (at most two supports each); Low still chooses one.
+    local supportLimit=tier=="High" and 8 or (tier=="Medium" and 8 or 1)
     -- An authenticated long Sky Spine cradle 110 studs away used to
     -- consume Low's only structural 3D slot even with a sculptable
     -- native support immediately in the player's view. Use the EXISTING
