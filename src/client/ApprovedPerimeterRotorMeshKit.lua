@@ -4,6 +4,21 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
+
+-- Perimeter station geometry stays fixed outside the playable floor.
+-- Shrinking Arena changes only the live Base footprint. Authenticate
+-- its builder-owned ORIGINAL size and reject expansion or invalid physics.
+local function authenticBase(base, arena)
+    if not arena or not base or not base:IsA("BasePart")
+        or base.Parent ~= arena or not base.Anchored
+        or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
 local APPROVED = 133526819668194
 local STATIONS = {"North", "East", "South", "West"}
 local ARENAS = {
@@ -120,8 +135,7 @@ local function genuineStation(arena, station, index)
     if not decor or not decor:IsA("Folder") or station.Parent ~= decor
         or not base or not base:IsA("BasePart")
         or base.Parent ~= arena or not base.Anchored
-        or not base.CanCollide or base.Size.X < 318
-        or base.Size.Z < 318 then return nil end
+        or not base.CanCollide or not authenticBase(base, arena) then return nil end
     -- Besides the three rotors, demand the physical station's authored
     -- machinery core. Streaming an incomplete station must not qualify.
     local core = station:FindFirstChild("CoreHousing")
@@ -304,7 +318,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, suppre
     local decor = arena:FindFirstChild("Decor")
     if not base or not base:IsA("BasePart")
         or not decor or not decor:IsA("Folder")
-        or base.Size.X < 318 or base.Size.Z < 318
+        or not authenticBase(base, arena)
         or not base.Anchored or not base.CanCollide then
         removeAll()
         return
@@ -315,8 +329,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, suppre
         watchedBase = base
         local function validateBase()
             if base.Parent ~= arena or not base.Anchored
-                or not base.CanCollide or base.Size.X < 318
-                or base.Size.Z < 318 then
+                or not base.CanCollide or not authenticBase(base, arena) then
                 removeAll()
             end
         end

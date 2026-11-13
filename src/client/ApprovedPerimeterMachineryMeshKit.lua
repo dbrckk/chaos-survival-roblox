@@ -6,6 +6,21 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
+
+-- Perimeter station geometry stays fixed outside the playable floor.
+-- Shrinking Arena changes only the live Base footprint. Authenticate
+-- its builder-owned ORIGINAL size and reject expansion or invalid physics.
+local function authenticBase(base, arena)
+    if not arena or not base or not base:IsA("BasePart")
+        or base.Parent ~= arena or not base.Anchored
+        or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
 local STATIONS = {"North", "East", "South", "West"}
 local IDS = {Core = 127295681925871, Pod = 106083832432833}
 local NAMES = {Core = "Orbital", Pod = "Towers"}
@@ -117,8 +132,7 @@ local function nativePieces(arena, station, index)
         or station.Parent ~= decor
         or not base or not base:IsA("BasePart")
         or base.Parent ~= arena or not base.Anchored
-        or not base.CanCollide or base.Size.X < 318
-        or base.Size.Z < 318 then return nil end
+        or not base.CanCollide or not authenticBase(base, arena) then return nil end
     local natives = {}
     -- Explicit indexed loop: ipairs({core, left, right}) could silently
     -- accept a partially streamed station with a nil third member.

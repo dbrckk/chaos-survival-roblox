@@ -3,6 +3,21 @@
 -- The six neon/glass safety/navigation parts remain server-authoritative.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
+
+-- Perimeter station geometry stays fixed outside the playable floor.
+-- Shrinking Arena changes only the live Base footprint. Authenticate
+-- its builder-owned ORIGINAL size and reject expansion or invalid physics.
+local function authenticBase(base, arena)
+    if not arena or not base or not base:IsA("BasePart")
+        or base.Parent ~= arena or not base.Anchored
+        or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
 local SOURCE_ID = 72507987666671
 local STATIONS = {"North", "East", "South", "West"}
 local VARIANTS = {Classic=true,Towers=true,Crossroads=true,Orbital=true,Harbor=true}
@@ -56,7 +71,7 @@ local function realArena(arena)
     local decor = arena:FindFirstChild("Decor")
     if not base or not base:IsA("BasePart") or base.Parent ~= arena
         or not base.Anchored or not base.CanCollide
-        or base.Size.X < 318 or base.Size.Z < 318
+        or not authenticBase(base, arena)
         or not decor or not decor:IsA("Folder") or decor.Parent ~= arena
     then return nil end
     return base,decor
@@ -175,7 +190,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
         trackedBase=base
         local function invalid()
             if base.Parent~=arena or not base.Anchored or not base.CanCollide
-                or base.Size.X<318 or base.Size.Z<318 then unmountAll() end
+                or not authenticBase(base, arena) then unmountAll() end
         end
         baseListeners[#baseListeners+1]=
             base:GetPropertyChangedSignal("Size"):Connect(invalid)

@@ -4,6 +4,21 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 
+-- Perimeter station geometry stays fixed outside the playable floor.
+-- Shrinking Arena changes only the live Base footprint. Authenticate
+-- its builder-owned ORIGINAL size and reject expansion or invalid physics.
+local function authenticBase(base, arena)
+    if not arena or not base or not base:IsA("BasePart")
+        or base.Parent ~= arena or not base.Anchored
+        or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
+
 local SPECS = {
     Towers = {
         kind = "Towers", id = 131413152501235,
@@ -143,8 +158,7 @@ local function nativePair(arena, station, index, spec)
         or decor.Parent ~= arena or station.Parent ~= decor
         or not base or not base:IsA("BasePart")
         or base.Parent ~= arena or not base.Anchored
-        or not base.CanCollide or base.Size.X < 318
-        or base.Size.Z < 318 then return nil end
+        or not base.CanCollide or not authenticBase(base, arena) then return nil end
     local core = station:FindFirstChild("CoreHousing")
     if not core or not core:IsA("Part") or core.Parent ~= station
         or not core.Anchored or core.CanCollide or core.CanTouch
@@ -300,7 +314,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     if not decor or not decor:IsA("Folder")
         or not base or not base:IsA("BasePart")
         or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318 then
+        or not authenticBase(base, arena) then
         removeAll()
         return
     end
@@ -310,8 +324,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
         watchedBase=base
         local function validateBase()
             if base.Parent~=arena or not base.Anchored
-                or not base.CanCollide or base.Size.X<318
-                or base.Size.Z<318 then removeAll() end
+                or not base.CanCollide or not authenticBase(base, arena) then removeAll() end
         end
         watchers[#watchers+1]=base:GetPropertyChangedSignal("Size"):Connect(validateBase)
         watchers[#watchers+1]=base:GetPropertyChangedSignal("CanCollide"):Connect(validateBase)
