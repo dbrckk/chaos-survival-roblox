@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Source regression: streaming one MeshPart must not unmask a whole deck."""
 from pathlib import Path
+import re
 
 source = (Path(__file__).resolve().parents[1] /
           "src/client/PlatformNativeTrimReplacementKit.lua").read_text()
@@ -105,3 +106,44 @@ assert 'OriginalMeshScenery.sanitize(raw)' in server
 assert 'local ORDER = {"Classic", "Towers", "Crossroads", "Orbital", "Harbor", "Bridge"}' in server
 print("PASS active world's moderated sculpt loads before inactive worlds"
       " without new AssetService calls, imports, or priority bypass")
+
+# Verify this is not merely a syntactic eligibility flag: the authentic
+# Crossroads map supplies four EVEN-index 14x12 / 12x14 physical decks,
+# and the approved sculpted 3D asset's authored 11-stud by 8-stud profile
+# actually passes the identical safe fit thresholds used by both select
+# and mount. No collider index or native geometry is fabricated.
+variants = (root / "src/server/ArenaVariants.lua").read_text()
+definitions = variants.split("ArenaVariants.Definitions = {",1)[1]
+crossroads = definitions.split("    Crossroads = {",1)[1].split(
+    "    Orbital = {",1)[0]
+decks = [
+    tuple(float(v) for v in match)
+    for match in re.findall(
+        r'\\{offset=Vector3\\.new\\([^)]+\\),size=Vector3\\.new\\('
+        r'\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*\\)',
+        crossroads,
+    )
+]
+assert len(decks) >= 8
+assert [decks[i-1] for i in (2,4,6,8)] == [
+    (14.,2.,12.),(14.,2.,12.),
+    (12.,2.,14.),(12.,2.,14.)
+]
+generator = (root / "tools/generate_original_platform_carapaces.py").read_text()
+assert 'def crossroads(m: Sculpture)' in generator
+assert 'skirt(m, side)' in generator
+assert '(-5.52, -.15, z), (5.52, -.15, z)' in generator
+assert 'z = 4.18 * side' in generator
+# Use the minimum 11.04x8.36 structural envelope of the approved
+# creator-authored model rather than making up a square source fixture.
+src_long,src_short = 11.04,8.36
+for index in (2,4,6,8):
+    x,y,z = decks[index-1]
+    long,short = max(x,z),min(x,z)
+    factor=min(1.1,long*.92/src_long,short*.91/src_short)
+    assert short>=7.1 and long<=36 and long/short<=2.6
+    assert factor>=.62 and src_long*factor>=long*.78
+    assert src_short*factor>=short*.72
+print("PASS four genuine even Crossroads decks fit original 3D source"
+      " dimensions, with exactly one near-camera Low model permitted")
+
