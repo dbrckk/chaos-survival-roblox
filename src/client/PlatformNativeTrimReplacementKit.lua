@@ -324,6 +324,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         local sourceOwnerByPiece = {}
         local livePiecesByOwner = {}
         local requiredPiecesByOwner = {}
+        local initializing = true
         local platformFolder = arena:FindFirstChild("Platforms")
         -- Source identity is checked against the actual welded server
         -- owner, never the mesh name or arbitrary client-supplied count.
@@ -379,9 +380,10 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             else
                 verifiedSupports[key] = sourceComplete(key) and true or nil
             end
-            -- The exact source owner alone loses or regains native
-            -- masking, independently of the other visual families.
-            reconcile()
+            -- Initial source census can contain hundreds of approved
+            -- MeshParts. Reconcile ONCE after the complete snapshot, not
+            -- once per source material while scanning all native Decor.
+            if not initializing then reconcile() end
         end
         local function registerSourcePiece(piece)
             if sourceOwnerByPiece[piece] ~= nil then return end
@@ -394,6 +396,8 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         for _, piece in ipairs(meshFolder:GetChildren()) do
             registerSourcePiece(piece)
         end
+        initializing = false
+        reconcile()
         -- Streaming may add the remaining MeshParts after the folder is
         -- initially bound. Track only verified, welded source geometry.
         watchers[#watchers + 1] =
