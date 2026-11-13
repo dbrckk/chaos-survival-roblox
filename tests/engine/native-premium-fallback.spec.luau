@@ -735,6 +735,15 @@ describe("Original 3D native fallback isolation (engine)", function()
             missingBevel.Parent=decor
             expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
                 decor,nearby)).toBe(true)
+            -- A present but unauthenticated WedgePart is not legitimate
+            -- native geometry. Reject before consuming a scarce MeshKit
+            -- slot, and resume when the server's original tag returns.
+            missingBevel:SetAttribute("OriginalStructuralBevel",false)
+            expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                decor,nearby)).toBe(false)
+            missingBevel:SetAttribute("OriginalStructuralBevel",true)
+            expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                decor,nearby)).toBe(true)
             underside.Parent=nil
             expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
                 decor,nearby)).toBe(false)
