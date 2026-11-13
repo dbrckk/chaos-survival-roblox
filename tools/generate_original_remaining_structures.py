@@ -211,7 +211,7 @@ def generate(model: str, output: Path) -> dict:
     # colossal skyfleet ship. Never weaken that existing gate to export
     # these small arches or struts: serialize the same validated triangles
     # independently after this model-specific envelope and polycount gate.
-    raw="\\n".join(art.lines)+"\\n"
+    raw="\n".join(art.lines)+"\n"
     output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(raw, encoding="utf-8")
     return {
