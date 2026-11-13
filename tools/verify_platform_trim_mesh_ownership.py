@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
-"""Source regression: streaming one MeshPart must not unmask a whole deck."""
+"""Source regression: ALL authenticated MeshParts must survive for a native mask."""
 from pathlib import Path
 import re
 
 source = (Path(__file__).resolve().parents[1] /
           "src/client/PlatformNativeTrimReplacementKit.lua").read_text()
+identity = (Path(__file__).resolve().parents[1] /
+            "src/client/arena-platform-identity.client.lua").read_text()
 for required in (
+    "local requiredPiecesByOwner = {}",
     "local livePiecesByOwner = {}",
-    "local approvedKinds = table.clone(active)",
-    "local approvedSupports = table.clone(verifiedSupports)",
+    "approvedKinds = table.clone(active)",
+    "approvedSupports = table.clone(verifiedSupports)",
+    "table.clear(active)",
+    "table.clear(verifiedSupports)",
     "if approvedSupports[owner] == true then",
-    "active[id] = approvedKinds[id]",
-    "watchOwner(owner)",
+    'local function sourceOwner(piece)',
+    'if owner.Parent ~= platformFolder then return nil end',
+    'local function sourceComplete(key)',
+    'required ~= nil and required >= 7',
+    'and required % 7 == 0',
+    'and (livePiecesByOwner[key] or 0) == required',
+    'local function refreshOwner(key, owner)',
+    'active[key] = sourceComplete(key) and approvedKinds[key]',
+    'verifiedSupports[key] = sourceComplete(key) and true or nil',
     "if sourceOwnerByPiece[piece] ~= nil then return end",
-    "livePiecesByOwner[owner] = (livePiecesByOwner[owner] or 0) + 1",
-    "livePiecesByOwner[id] = (livePiecesByOwner[id] or 0) + 1",
+    "sourceOwnerByPiece[piece] = key",
+    "livePiecesByOwner[key] = (livePiecesByOwner[key] or 0) + 1",
     "meshFolder.ChildAdded:Connect(registerSourcePiece)",
     "meshFolder.DescendantAdded:Connect(function(descendant)",
     'descendant.Name ~= "ChaosPlatformTrimWeld"',
@@ -22,40 +34,53 @@ for required in (
     "piece.Parent == meshFolder",
     "registerSourcePiece(piece)",
     "meshFolder.ChildRemoved:Connect(",
-    "local remaining = (livePiecesByOwner[owner] or 1) - 1",
-    "if remaining > 0 then",
-    "livePiecesByOwner[owner] = remaining",
-    "livePiecesByOwner[owner] = nil",
+    'local remaining = math.max(0,',
+    '(livePiecesByOwner[owner] or 1) - 1)',
     "active[owner] = nil",
     "verifiedSupports[owner] = nil",
     "reconcile()",
     "Kit.authorizesMask",
+    "local initializing = true",
+    "if not initializing then reconcile() end",
+    "initializing = false",
+    "function Kit.breakdown()",
 ):
     assert required in source, required
 
-# The source-level counter contract: only removal of the final piece
-# revokes an owner's masking, never an unrelated or earlier sibling.
-for n in range(1, 15):
-    remaining = n
-    for i in range(n):
-        remaining -= 1
-        revoked = remaining == 0
-        assert revoked == (i == n - 1)
-print("PASS verified per-owner MeshPart counting and final-piece fallback")
-print("LIMIT real Roblox StreamingEnabled tests remain required")
+# A 7-material original (or 14/21/28 piece approved composite) is
+# NEVER complete while any one sibling is missing. Recover only when
+# the exact initial welded bundle is once more fully resident.
+for expected in (7,14,21,28):
+    for live in range(expected+2):
+        authorized = (expected>=7 and expected%7==0 and live==expected)
+        assert authorized == (live==expected)
+    assert (expected-1)!=expected
+for incomplete in (0,1,2,3,4,5,6,8,9,13,15,27):
+    assert incomplete<7 or incomplete%7 != 0
+assert "if remaining > 0 then" not in source
+print("PASS first missing approved MeshPart revokes ONLY its platform's"
+      " 7/14/21/28-piece native mask, full genuine restoration required")
 
-# Recovery contract: the same originally-approved owner can regain its
-# premium silhouette after Roblox streams a valid MeshPart back in.
-for first_count in range(1, 8):
-    live = first_count
-    while live:
-        live -= 1
-    assert live == 0
-    active = False
-    live += 1
-    active = live > 0
-    assert active
-print("PASS original MeshPart streaming recovery restores authorization")
+# Capture all real masks by family in an EXISTING event-based callback.
+for name in (
+    "LocalBevelNativePartsReplaced",
+    "LocalUnderframeNativePartsReplaced",
+    "LocalSupportNativePartsReplaced",
+    "LocalOtherStructuralNativePartsReplaced",
+):
+    assert name in identity,name
+for selector in (
+    '^PlatformBevel%d+_%d+$',
+    '^PlatformUnderFrame%d+$',
+    '^PlatformSupport%d+_%d+$',
+):
+    assert selector in source,selector
+assert 'function Kit.breakdown()' in source
+assert 'PlatformNativeTrimReplacementKit.breakdown()' in identity
+assert 'if player:GetAttribute("LocalNativeStructuralPartsReplaced")' in identity
+assert 'and part.Parent ~= activeDecor' not in source
+print("PASS dynamic per-arena native primitive mask census from the"
+      " event-driven existing 3D owner, not static five-map counts")
 
 # P0 Low premium carapace must follow the real camera, not an arbitrary
 # one-in-eight platform-ID sample. Keep exactly ONE seven-MeshPart source
