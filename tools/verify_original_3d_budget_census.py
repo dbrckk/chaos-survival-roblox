@@ -1000,7 +1000,17 @@ assert 'source:GetAttribute("CosmeticOnly") ~= true' in DOCK
 assert 'source:GetAttribute("OriginalHarborDockCaisson3D") ~= true' in DOCK
 assert 'source:GetAttribute("Original3DAssetId") ~= ASSET_ID' in DOCK
 assert 'deck.Name:match("^Platform%d+$")' in DOCK
-assert 'or not deck.CanCollide or deck.Transparency >= .75' in DOCK
+assert 'or not deck.Anchored or not deck.CanCollide' in DOCK
+assert 'or deck.Transparency >= .75' in DOCK
+assert 'local function realFloorScale(base, arena)' in DOCK
+assert 'deck.Size.X / floorScale' in DOCK
+assert 'deck.Size.Z / floorScale' in DOCK
+assert 'type(deck:GetAttribute("RouteTier")) ~= "number"' in DOCK
+assert 'local function refit(entry)' in DOCK
+assert 'piece.Size = entry.sizes[piece] * factor' in DOCK
+assert 'entry.joints[piece].C0 = shift' in DOCK
+assert 'local joint = Instance.new("Weld")' in DOCK
+assert 'realFloorScale(base, arena)' in DOCK
 assert 'or deck:GetAttribute("ChaosSkybridge") == true' in DOCK
 assert 'if collapse ~= nil and collapse ~= "Normal" and collapse ~= "Safe"' in DOCK
 assert 'if shutter ~= nil and shutter ~= "Idle" then return false end' in DOCK
