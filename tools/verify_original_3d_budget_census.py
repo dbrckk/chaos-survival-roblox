@@ -1282,8 +1282,11 @@ for variant,spec in SIGNATURES.items():
 # It must remain in the global Android Part census and return natives
 # at first optional-VFX pressure tier, without AssetService client calls.
 BUTTRESS=(CLIENT/"ApprovedPerimeterButtressMeshKit.lua").read_text()
-assert 'local LIMITS = {Low = 1, Medium = 1, High = 4}' in BUTTRESS
+assert 'local LIMITS = {Low = 1, Medium = 2, High = 4}' in BUTTRESS
 assert 'local RANGE = {Low = 150, Medium = 185, High = 275}' in BUTTRESS
+assert 'if tier == "Medium" and touch then cap = 1 end' in BUTTRESS
+assert 'model.DescendantAdded:Connect(function(item)' in BUTTRESS
+assert 'source.DescendantAdded:Connect(function(item)' in BUTTRESS
 assert 'if stress == 1 then cap = math.floor(cap * .5) end' in BUTTRESS
 assert 'if stress >= 2 then cap = 0 end' in BUTTRESS
 assert 'local first, firstParts = fittedClone(source, left, APPROVED[variant])' in BUTTRESS
