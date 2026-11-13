@@ -31,7 +31,7 @@ local STATIONS = {"North", "East", "South", "West"}
 -- One nearest authentic two-pillar pair at Android Low. The original
 -- two native cuboids are hidden only after both owner-verified Models
 -- mount. The first pressure tier floors the cap to zero and restores them.
-local LIMITS = {Low = 1, Medium = 1, High = 4}
+local LIMITS = {Low = 1, Medium = 2, High = 4}
 local RANGE = {Low = 150, Medium = 185, High = 275}
 local RETENTION = 18
 
@@ -282,6 +282,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
     end
     local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
     local cap = LIMITS[tier] or 0
+    if tier == "Medium" and touch then cap = 1 end
     if tier == "High" and touch then cap = 2 end
     if stress == 1 then cap = math.floor(cap * .5) end
     if stress >= 2 then cap = 0 end
