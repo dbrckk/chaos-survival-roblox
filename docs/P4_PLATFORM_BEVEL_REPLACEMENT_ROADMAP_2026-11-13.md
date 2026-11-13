@@ -37,8 +37,8 @@ le nombre de bordures restant à remplacer en temps réel.
 | P0 | Import Roblox propriétaire | Fait, **Approved** | Deux ID réels, preuve GitHub Actions, pas de placeholder |
 | P0 | Chargeur serveur et propriétaire de remplacement client | Fait, source | Source allowlist, sept MeshParts complets, masque des 4 seuls Wedges |
 | P0 | Fallback, streaming et sécurité des catastrophes | Fait, source | Collision inchangée, masque révoqué si source perdue, warning et shrink |
-| P0 | Suites sources, Lint, Build Validation | En validation | GitHub Actions vert sur un même SHA |
-| P0 | Tests Roblox Cloud Engine | Test ajouté, à confirmer | Montage rect + long, huit Wedges masqués, underframes et collisions conservés, fallback |
+| P0 | Suites sources, Lint, Build Validation | **Validé** sur `01306e9` | [Build Validation](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43505241568) |
+| P0 | Tests Roblox Cloud Engine | **7/7 suites et 1 146/1 146 assertions réussies** sur `01306e9` | [Validation moteur](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43505256785) : montage Rect + Long, repli natif, collisions et shrink |
 | P0 | Publication jeu public | **Non effectuée** | Pipeline de publication validé sur SHA testé, contrôle de la Place cible |
 | P1 | Captures Android Low/Medium/High | À mesurer | Capture en mouvement, danger warning/gone/restauré, stabilité du streaming |
 | P1 | Performances Android, 8 joueurs | À mesurer | Éviter régressions FPS, pics de MeshParts/GC et surcouches PBR |
@@ -94,6 +94,27 @@ Validation des sources :
   y compris à la disparition et au rétrécissement.
 - Ne pas lancer la publication publique sur une simple source Python
   ou une validation « Approved » d'asset ; conserver le rollback.
+
+## Lot suivant appliqué — supports de plateformes P0
+
+**Situation mesurée par inspection du propriétaire 3D :** `PremiumLargeStructureMeshKit` sélectionnait auparavant des `PlatformSupportN_K` sur la seule base d'une hauteur acceptable. Le vrai installateur exige pourtant un rapport de dimension, une largeur et un facteur d'échelle précis. Des candidats impossibles à monter pouvaient monopoliser une des **8 allocations Medium ou 16 modules High**. De plus, l'authentification du modèle tolérait 1–12 MeshParts, alors que le propriétaire de masquage de la primitive exige strictement des groupes de **7**.
+
+**Corrections appliquées à `main` :**
+
+- Une fonction pure `Kit.supportFit(nativeSize, sourceBounds)` détermine **avant réservation** la validité exacte et le coût d'une colonne originale : 1, 2 ou 3 segments de sept MeshParts selon la hauteur. Le montage utilise la **même** fonction, sans divergence entre le sélecteur et le résultat.
+- Les piliers trop étroits et les sources trop petites/grandes sont écartés. Low refuse les supports nécessitant deux/trois segments, car il ne peut dépenser qu'un module. Medium/High conservent leurs plafonds et n'augmentent pas la densité GPU.
+- Le modèle source doit appartenir au dossier répliqué attendu, être un véritable paquet de **7 MeshParts** non physiques et ne contenir aucun script. Sans ce paquet complet, le client conserve les supports natifs.
+- Le test Roblox `tests/engine/native-premium-fallback.spec.luau` contrôle les coûts 1/2/3 segments et les cas invalides.
+- Les vérificateurs statiques `verify_original_3d_budget_census.py` et `verify_platform_trim_mesh_ownership.py` vérifient maintenant le partage du calcul, pas une ancienne chaîne littérale de `if`.
+
+**Critère de sortie de ce lot :** tests moteur Roblox Cloud exact-SHA, deux scripts de régression statique et Build Validation réussis. Aucune publication de la Place ni mesure FPS Android n'est revendiquée avant preuves séparées.
+
+### Suites restantes dans l'ordre
+
+1. Vérifier en session que les supports incompatibles sont rejetés et que les **8/16 modules disponibles** peuvent être consommés par des remplacements admissibles (plutôt que gaspiller des allocations).
+2. Couvrir davantage de coques arrière et volumes sous les bâtiments de districts, en conservant portes, lumières, signaux et physics serveur.
+3. Mesurer une session Android à huit joueurs : `LocalP4VisibleNativePlatformSupportStructure`, compteurs de mesh résidents, mémoire et FPS pendant shrink et catastrophes.
+4. Réserver la publication publique au SHA exact dont le Build et les suites Roblox sont verts.
 
 ## Autres chantiers visuels prioritaires
 
