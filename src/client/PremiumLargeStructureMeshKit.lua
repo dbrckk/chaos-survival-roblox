@@ -18,9 +18,11 @@ local IDS = {
 local function verified(kind)
     local holder = ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates")
     if not holder or not holder:IsA("Folder")
+        or holder.Parent ~= ReplicatedStorage
         or holder:GetAttribute("OwnerVerified") ~= true then return nil end
     local source = holder:FindFirstChild(kind)
     if not source or not source:IsA("Model")
+        or source.Parent ~= holder
         or source:GetAttribute("Original3DAssetId") ~= IDS[kind]
         or source:GetAttribute("OwnerVerified") ~= true
         or source:GetAttribute("OriginalLargeStructure3D") ~= true
@@ -28,13 +30,17 @@ local function verified(kind)
     local count = 0
     for _, v in ipairs(source:GetDescendants()) do
         if v:IsA("BasePart") then
-            if not v:IsA("MeshPart") then return nil end
+            if not v:IsA("MeshPart") or v.CanCollide
+                or v.CanTouch or v.CanQuery then return nil end
             count += 1
         elseif v:IsA("LuaSourceContainer") then
             return nil
         end
     end
-    if count < 1 or count > 12 then return nil end
+    -- Imported originals have seven material groups each. Accepting a
+    -- partial/extra source left complete-source masking with a non-7
+    -- bundle impossible, and wasted scarce Android 3D modules.
+    if count ~= 7 then return nil end
     local _, size = source:GetBoundingBox()
     local xzLong = math.max(size.X,size.Z)
     local xzShort = math.min(size.X,size.Z)
@@ -123,6 +129,30 @@ local function validNativeSupport(part,index)
         and part.Size.Y <= 47
 end
 
+-- Source-fit and module cost for ONE genuine native support. This is
+-- intentionally shared by candidate selection and mounting: a 42-stud
+-- column consumes three seven-MeshPart modules and a too-narrow native
+-- must not occupy a camera-ranked slot that would fail on installation.
+-- Pure computation: no Roblox Instances or new frame listeners.
+function Kit.supportFit(nativeSize, sourceBounds)
+    if typeof(nativeSize) ~= "Vector3"
+        or typeof(sourceBounds) ~= "Vector3"
+        or nativeSize.X <= 0 or nativeSize.Z <= 0
+        or nativeSize.Y < MIN_NATIVE_SUPPORT_HEIGHT
+        or nativeSize.Y > 47
+        or sourceBounds.X <= 0 or sourceBounds.Y <= 0
+        or sourceBounds.Z <= 0 then return nil end
+    local segments = math.clamp(math.ceil(nativeSize.Y / 16.0), 1, 3)
+    local segmentHeight = nativeSize.Y / segments
+    local scale = segmentHeight / sourceBounds.Y
+    local width = math.max(sourceBounds.X, sourceBounds.Z) * scale
+    if scale < .34 or scale > 1.25
+        or width > 3.2
+        or width > math.max(nativeSize.X, nativeSize.Z) * 2.5
+        or segmentHeight > 17.8 then return nil end
+    return segments, scale
+end
+
 -- The same genuine-model envelope must govern candidate selection and
 -- final montage. Previously Medium/High could reserve a scarce authentic
 -- LongCradle slot for a deck whose source was too narrow/short when
@@ -196,22 +226,16 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
             local id=tonumber(suffix)
             if id and validNativeSupport(part,id) then
-                local eligible=true
-                if tier == "Low" then
-                    -- Only ONE source module is budgeted. Validate all
-                    -- actual stage-fit constraints BEFORE reserving it,
-                    -- so a too-tall/wide column does not consume the
-                    -- only Android Low replacement candidate.
-                    local scale=part.Size.Y/supportBounds.Y
-                    local width=math.max(supportBounds.X,
-                        supportBounds.Z)*scale
-                    eligible=part.Size.Y <= 16
-                        and scale >= .34 and scale <= 1.25
-                        and width <= 3.2
-                        and width <= math.max(part.Size.X,
-                            part.Size.Z)*2.5
+                local segments = Kit.supportFit(part.Size, supportBounds)
+                -- Low has only one available source module. Other tiers
+                -- must also reject an impossible fit before reserving a
+                -- finite camera-near owner; taller valid posts cost 2-3.
+                if segments and (tier ~= "Low" or segments == 1) then
+                    local previous = supportsAvailable[id]
+                    if previous == nil or segments < previous then
+                        supportsAvailable[id] = segments
+                    end
                 end
-                if eligible then supportsAvailable[id]=true end
             end
         end
     end
@@ -404,13 +428,9 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
     local output = {parts={},covered={},disconnects={},modules=0}
     for _,support in ipairs(natives) do
         if #output.covered >= maxSupports or output.modules >= available then break end
-        local segments = math.clamp(math.ceil(support.Size.Y/16.0),1,3)
-        local height = support.Size.Y/segments
-        local scale = height/box.Y
-        local width = math.max(box.X,box.Z)*scale
-        if segments <= available-output.modules and scale >= .34
-            and scale <= 1.25 and width <= 3.2
-            and width <= math.max(support.Size.X,support.Size.Z)*2.5 then
+        local segments, scale = Kit.supportFit(support.Size, box)
+        if segments and segments <= available - output.modules then
+            local height = support.Size.Y / segments
             local stages = {}
             local ok = true
             for k=1,segments do
