@@ -1785,5 +1785,23 @@ assert 'HelixUnderframe' in P4_HELIX
 for disallowed in ("RunService.RenderStepped", "RunService.Heartbeat",
                    "AssetService.LoadAssetAsync", "Instance.new(\"RemoteEvent\")"):
     assert disallowed not in P4_CLIENT,disallowed
+# Authentic perimeter stages use a thick 3 / 13.8 / 28.2-stud
+# physical collider, NOT a 2-stud generic route slab. Mask only five
+# genuinely sculpted UPPER pieces: deep underdeck abutments/keel/girder
+# remain native rather than exposing a floating high SUMMIT platform.
+for required in (
+    'local height=step==1 and 3 or 6.6+(step-2)*3.6',
+    'local sourceWidth=step==1 and 12 or (step==4 and 11.6 or 10)',
+    'local overpass=originals[5]',
+    'orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0)',
+    'scaleZ=overpass.Size.Z/17.6',
+    '"VerticalBridgePylon-1","VerticalBridgePylon1"',
+    '"TaperedFin-1","TaperedFin1","MonumentalOverpass"',
+):
+    assert required in P4_CLIENT, required
+assert 'deck:GetAttribute("ChaosPermanentRoute")~=true' not in P4_CLIENT
+assert 'local overpass=originals[8]' not in P4_CLIENT
+print("PASS P4 upper arch fits true 3/13.8/28.2 height, retains deep load-bearing"
+      " native beams and accepts genuine collapsible Summit stage")
 print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
