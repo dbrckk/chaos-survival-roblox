@@ -1627,7 +1627,7 @@ assert 'function PremiumDistrictFacadeMeshKit.pairedPriority(' in FRONT
 assert 'tier ~= "Low" and sidewallMounted == true' in FRONT
 assert 'return priority - 12' in FRONT
 assert 'LocalApprovedDistrictSidewallMounted") == true, tier)' in FRONT
-assert 'if type(index) == "number" and index % 1 == 0' in SIDE
+assert 'and type(index) == "number" and index % 1 == 0' in SIDE
 assert 'and index >= 1 and index <= 16' in SIDE
 assert 'and index >= 1 and index <= 16' in FRONT
 assert 'DistrictVisualCensusRules' in SIDE_LOD
