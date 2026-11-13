@@ -28,6 +28,35 @@ local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFa
 local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
 
 describe("visual budget rules", function()
+    it("prioritizes genuinely paired Medium/High district shells without changing GPU caps", function()
+        -- Both legitimate LOD rankers compare an owner-verified front and
+        -- side/back shell on the SAME real server-authored building. At
+        -- most 16 studs of priority, never overriding an offscreen 80.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,true,"Medium")).toBe(84)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,true,"High")).toBe(84)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,true,"Low")).toBe(100)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,false,"Medium")).toBe(100)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,false,"High")).toBe(100)
+        -- A building 12 studs further away but genuinely complete takes
+        -- the sidewall slot from a partly primitive nearby facade.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            112,true,"Medium") < ApprovedDistrictSidewallMeshKit
+                .pairedPriority(100,false,"Medium")).toBe(true)
+        -- An actual 25-stud gap still wins in favor of the nearer native.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            126,true,"Medium") > ApprovedDistrictSidewallMeshKit
+                .pairedPriority(100,false,"Medium")).toBe(true)
+        -- Hidden or distant behind-camera buildings still lose decisively.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            180,true,"High") > ApprovedDistrictSidewallMeshKit
+                .pairedPriority(100,false,"High")).toBe(true)
+    end)
+
     it("shows one complete verified district 3D envelope on healthy Low and restores all five native masses on budget or facade loss", function()
         -- Exercise the actual 16-building server-authored district and BOTH
         -- existing client 3D owners. Genuine IDs and six authored material
@@ -114,6 +143,7 @@ describe("visual budget rules", function()
         ApprovedDistrictSidewallMeshKit.sync(
             arena, camera, "Low", true, true, 0, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
         expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(5)
         expect(service.Transparency).toBe(1)
         expect(beam.Transparency).toBe(1)
@@ -156,10 +186,29 @@ describe("visual budget rules", function()
         -- instantly restore its native pieces, without another camera tick.
         PremiumDistrictFacadeMeshKit.sync(nil, Vector3.zero, "Low", false)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(0)
         expect(service.Transparency).toBe(alpha)
         ApprovedDistrictSidewallMeshKit.sync(
             arena, camera, "Low", true, true, 0, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+
+        -- Actual 16-building server-authored district, now Medium:
+        -- optional sidewalls are permitted even if one facade profile
+        -- has not loaded. However verified front+back pairs take priority
+        -- and their exact count is observable without additional instances.
+        PremiumDistrictFacadeMeshKit.sync(
+            arena, camera, "Medium", true, look)
+        ApprovedDistrictSidewallMeshKit.sync(
+            arena, camera, "Medium", true, false, 0, look)
+        expect(ApprovedDistrictSidewallMeshKit.count() >= 1).toBe(true)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount() >= 1).toBe(true)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount()
+            <= ApprovedDistrictSidewallMeshKit.count()).toBe(true)
+        -- Dropping the real approved facade instantly removes its credit,
+        -- without lying about how many independent sidewall meshes exist.
+        PremiumDistrictFacadeMeshKit.sync(
+            nil, Vector3.zero, "Medium", false, look)
+        expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(0)
 
         ApprovedDistrictSidewallMeshKit.sync(
             nil, Vector3.zero, "Low", false, true, 0, look)
