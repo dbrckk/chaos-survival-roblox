@@ -19,13 +19,13 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
-    it("spends the same one Low seven-mesh carapace on the real even-index near deck", function()
+    it("spends the same one Low seven-mesh carapace on the real even-index Crossroads near deck", function()
         Kit.reset()
         local previous=workspace:FindFirstChild("GeneratedMap")
         if previous then previous.Parent=nil end
         local generated,templates,meshes
         local ok,failure=pcall(function()
-            local arena=MapBuilder.buildArena(Config,"Classic",ArenaVariants,VisualTheme)
+            local arena=MapBuilder.buildArena(Config,"Crossroads",ArenaVariants,VisualTheme)
             generated=arena.Parent
             local base=arena:FindFirstChild("Base")
             local platforms=arena:FindFirstChild("Platforms")
@@ -34,6 +34,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             local distant=platforms:FindFirstChild("Platform1")
             expect(nearby~=nil and distant~=nil).toBe(true)
             expect(nearby.CanCollide and nearby.Anchored).toBe(true)
+            expect(nearby.Size).toBe(Vector3.new(14,2,12))
             -- The true MapBuilder has FOUR safe fallback bevels and
             -- one underframe for this already-existing even-index deck.
             local bevels={}
@@ -55,15 +56,18 @@ describe("Original 3D native fallback isolation (engine)", function()
             templates:SetAttribute("OwnerVerified",true)
             templates.Parent=game:GetService("ReplicatedStorage")
             local approved=Instance.new("Model")
-            approved.Name="Classic"
-            approved:SetAttribute("Original3DAssetId",92590025262416)
+            -- Exact dimension range of creator-approved Crossroads
+            -- original. The 14x12 real physical deck can host it; square
+            -- 10x10 decks in Classic do not pass the source-fit guard.
+            approved.Name="Crossroads"
+            approved:SetAttribute("Original3DAssetId",116452624086023)
             approved:SetAttribute("OwnerVerified",true)
             approved:SetAttribute("CosmeticOnly",true)
             approved:SetAttribute("OriginalStructuralSide3D",true)
             for i=1,7 do
                 local source=Instance.new("MeshPart")
                 source.Name="ApprovedDeckMaterial"..i
-                source.Size=if i==1 then Vector3.new(11,3,9)
+                source.Size=if i==1 then Vector3.new(11.04,3,8.36)
                     else Vector3.new(1,1,1)
                 source.Anchored=true
                 source.CanCollide=false
@@ -73,19 +77,19 @@ describe("Original 3D native fallback isolation (engine)", function()
             end
             approved.Parent=templates
             local chosen=PremiumPlatformSideMeshKit.selectCarapaceDecks(
-                {distant,nearby},"Classic","Low",base,nearby.Position,
+                {distant,nearby},"Crossroads","Low",base,nearby.Position,
                 Vector3.new(0,0,1),0)
             expect(chosen[nearby]).toBe(true)
             expect(chosen[distant]).toBe(nil)
             expect(PremiumPlatformSideMeshKit.selectCarapaceDecks(
-                {distant,nearby},"Classic","Low",base,nearby.Position,
+                {distant,nearby},"Crossroads","Low",base,nearby.Position,
                 Vector3.new(0,0,1),1)[nearby]).toBe(nil)
 
             meshes=Instance.new("Folder")
             meshes.Name="OriginalCarapaceEvenDeckFixture"
             meshes.Parent=workspace
             local parts=PremiumPlatformSideMeshKit.carapace(
-                meshes,nearby,"Classic","Low",2,true)
+                meshes,nearby,"Crossroads","Low",2,true)
             expect(parts~=nil and #parts==7).toBe(true)
             for _,piece in ipairs(parts) do
                 expect(piece:IsA("MeshPart")).toBe(true)
