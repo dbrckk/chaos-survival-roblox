@@ -51,6 +51,8 @@ jobs:
           assert summary["asset"]==kind
           assert summary["source_is_author_3d"] is True
           assert summary["client_replaces_server_colliders"] is False
+          assert len(summary["sha256"]) == 64
+          assert len(bytes.fromhex(summary["sha256"])) == 32
           assert 38<=summary["groups"]<=155
           assert 500<=summary["triangles"]<=6500
           x,y,z=summary["dimensions"]
