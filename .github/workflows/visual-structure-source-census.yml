@@ -6,10 +6,22 @@ on:
     branches: [main]
     paths:
       - tools/audit_visual_structure_sources.py
+      - src/client/**MeshKit.lua
+      - src/client/**3DKit.lua
+      - src/server/MapBuilder.lua
+      - src/server/ArenaAtmosphere.server.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
       - .github/workflows/visual-structure-source-census.yml
   pull_request:
     paths:
       - tools/audit_visual_structure_sources.py
+      - src/client/**MeshKit.lua
+      - src/client/**3DKit.lua
+      - src/server/MapBuilder.lua
+      - src/server/ArenaAtmosphere.server.lua
+      - src/shared/VisualBudgetRules.lua
+      - assets/source/roblox-asset-registry.json
       - .github/workflows/visual-structure-source-census.yml
 
 permissions:
