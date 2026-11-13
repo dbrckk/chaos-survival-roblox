@@ -842,6 +842,71 @@
       "source": "tools/generate_original_skyline_depth.py",
       "source_materials": "assets/source/chaos_route_kit.mtl",
       "workflow_run_id": 42994003806
+    },
+    {
+      "name": "ascension_access_arch",
+      "asset_id": "110243423264048",
+      "moderation": "Approved",
+      "triangles": 1584,
+      "groups": 56,
+      "source_sha256": "845be59ff8df0f5856414c9c77658c1b8021d3674e912c9b6afd34362974298e",
+      "source": "assets/source/chaos_ascension_access_arch.obj",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_remaining_structures.py",
+      "workflow_run_id": 43467373476,
+      "cosmetic_only": true
+    },
+    {
+      "name": "ascension_transfer_arch",
+      "asset_id": "107273631120961",
+      "moderation": "Approved",
+      "triangles": 1584,
+      "groups": 56,
+      "source_sha256": "d120ed9eae899586f45450b1374280f8b2a6183648f34340a40d826046ab774f",
+      "source": "assets/source/chaos_ascension_transfer_arch.obj",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_remaining_structures.py",
+      "workflow_run_id": 43467373476,
+      "cosmetic_only": true
+    },
+    {
+      "name": "ascension_summit_arch",
+      "asset_id": "127049813505254",
+      "moderation": "Approved",
+      "triangles": 1584,
+      "groups": 56,
+      "source_sha256": "f8aa7289c91c543595f92d88b97fcff32fc2332dbdce22261e46335a4f87afb6",
+      "source": "assets/source/chaos_ascension_summit_arch.obj",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_remaining_structures.py",
+      "workflow_run_id": 43467373476,
+      "cosmetic_only": true
+    },
+    {
+      "name": "architectural_column_casing",
+      "asset_id": "130196548599769",
+      "moderation": "Approved",
+      "triangles": 928,
+      "groups": 32,
+      "source_sha256": "12516214b75f119a9f816147d7458ccd6e7c8be122d9274cb33b1ca41db606c2",
+      "source": "assets/source/chaos_architectural_column_casing.obj",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_remaining_structures.py",
+      "workflow_run_id": 43467373476,
+      "cosmetic_only": true
+    },
+    {
+      "name": "orbital_helix_underframe",
+      "asset_id": "106863534763803",
+      "moderation": "Approved",
+      "triangles": 1624,
+      "groups": 58,
+      "source_sha256": "00fb82904e583925ebb8b8e01ece87a4891c543f5d923cf92fc9be80af9cdab8",
+      "source": "assets/source/chaos_orbital_helix_underframe.obj",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "source_generator": "tools/generate_original_remaining_structures.py",
+      "workflow_run_id": 43467373476,
+      "cosmetic_only": true
     }
   ]
 }
