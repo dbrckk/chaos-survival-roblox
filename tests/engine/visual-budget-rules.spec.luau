@@ -772,14 +772,23 @@ describe("visual budget rules", function()
             source.Parent = holder
             createdSource = true
         end
+        -- This is an actual Roblox engine integration fixture. Mirror the
+        -- MapBuilder's signed GeneratedMap/Arena parentage, not a detached
+        -- Folder that correctly fails the import provenance contract.
+        local generated = Instance.new("Folder")
+        generated.Name = "GeneratedMap"
+        generated.Parent = workspace
         local arena = Instance.new("Folder")
         arena.Name = "Arena"
         arena:SetAttribute("VariantId","Harbor")
-        arena.Parent = workspace
+        arena.Parent = generated
         local base = Instance.new("Part")
         base.Name = "Base"
         base.Size = Vector3.new(320,2,320)
         base.Anchored = true
+        base.CanCollide = true
+        base:SetAttribute("OriginalSizeX", 320)
+        base:SetAttribute("OriginalSizeZ", 320)
         base.Parent = arena
         local platforms = Instance.new("Folder")
         platforms.Name = "Platforms"
@@ -794,24 +803,40 @@ describe("visual budget rules", function()
         deck.Anchored = true
         deck.CanCollide = true
         deck:SetAttribute("ChaosPermanentRoute",true)
+        deck:SetAttribute("RouteTier", 3)
         deck:SetAttribute("PromenadeLane",1)
         deck:SetAttribute("PromenadeStep",2)
         deck.Parent = platforms
-        local native = Instance.new("Part")
-        native.Name = "Promenade991_LoadPylon-1"
-        native.Size = Vector3.new(1.6,13.25,1.8)
-        native.Anchored = true
-        native.CanCollide = false
-        native.CanTouch = false
-        native.CanQuery = false
-        native:SetAttribute("PromenadeVisualOnly",true)
-        native:SetAttribute("PerimeterPlatformIndex",991)
-        native.Parent = decor
+        -- All nine actual authored ornament names must unmask as a group.
+        -- Merely testing one pylon would miss a partial nine-piece fallback.
+        local native = {}
+        for _, suffix in ipairs({
+            "LoadPylon-1", "LoadPylon1", "DiagonalStay-1",
+            "DiagonalStay1", "MonumentalCrosshead", "UnderdeckTruss",
+            "FreightHoistArm", "SuspendedCrate", "CargoChain",
+        }) do
+            local part = Instance.new("Part")
+            part.Name = "Promenade991_" .. suffix
+            part.Size = Vector3.new(1.6,13.25,1.8)
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part:SetAttribute("PromenadeVisualOnly",true)
+            part:SetAttribute("PerimeterPlatformIndex",991)
+            part.Parent = decor
+            native[#native+1] = part
+        end
+        local function nativeMask(alpha)
+            for _, part in ipairs(native) do
+                expect(part.LocalTransparencyModifier).toBe(alpha)
+            end
+        end
         local camera = Vector3.new(0,54,-18)
         local look = Vector3.new(0,0,1)
         Kit.sync(arena,camera,"High",true,look,0,false,false)
         expect(Kit.count()).toBe(1)
-        expect(native.LocalTransparencyModifier).toBe(1)
+        nativeMask(1)
         expect(deck.CanCollide).toBe(true)
         local bucket = workspace:FindFirstChild(
             "OriginalHarborPromenadePortalsLocal")
@@ -819,23 +844,35 @@ describe("visual budget rules", function()
         local clone = bucket:FindFirstChild("ApprovedHarborSuspendedCargoGantry3D")
         expect(clone ~= nil and clone:IsA("Model")).toBe(true)
         clone:Destroy()
-        expect(native.LocalTransparencyModifier).toBe(0)
+        nativeMask(0)
         expect(Kit.count()).toBe(0)
         Kit.sync(arena,camera,"High",true,look,0,false,false)
         expect(Kit.count()).toBe(1)
-        expect(native.LocalTransparencyModifier).toBe(1)
+        nativeMask(1)
         deck:SetAttribute("CollapsePhase","Warning")
-        expect(native.LocalTransparencyModifier).toBe(0)
+        nativeMask(0)
         Kit.sync(arena,camera,"High",true,look,0,false,false)
         expect(Kit.count()).toBe(0)
         deck:SetAttribute("CollapsePhase","Normal")
         Kit.sync(arena,camera,"High",true,look,0,false,false)
         expect(Kit.count()).toBe(1)
+        -- ShrinkingArena moves the real floor BEFORE the RouteTier decks.
+        -- The nine native structures must be visible during this gap.
         base.Size = Vector3.new(230,2,230)
         expect(Kit.count()).toBe(0)
-        expect(native.LocalTransparencyModifier).toBe(0)
+        nativeMask(0)
+        -- Once the genuine server-owned deck reaches the same scale,
+        -- its imported arch can safely refit without adding collision.
+        local scale = 230 / 320
+        deck.Size = Vector3.new(26*scale,2,12*scale)
+        Kit.sync(arena,camera,"High",true,look,0,false,false)
+        expect(Kit.count()).toBe(1)
+        nativeMask(1)
+        expect(deck.CanCollide).toBe(true)
+        deck:SetAttribute("CollapsePhase","Warning")
+        nativeMask(0)
         Kit.sync(nil,Vector3.zero,"Low",false)
-        arena:Destroy()
+        generated:Destroy()
         if createdSource then source:Destroy() end
         if createdHolder then holder:Destroy() end
     end)
