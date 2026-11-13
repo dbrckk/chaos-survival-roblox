@@ -78,6 +78,12 @@ local KEYS = {
     -- Prevent neon/wayfinding cues from inflating a "needs 3D" backlog.
     "AscensionStructure", "AscensionSignal",
     "HelixStructure", "HelixSignal",
+    -- Separate real architectural backlog from navigational Neon so the
+    -- next mesh batch targets visible blockout rather than route guidance.
+    "DistrictStructure", "DistrictSignal",
+    "PlatformSupportStructure", "PlatformSupportSignal",
+    "SkySpineStructure", "SkySpineSignal",
+    "PromenadeStructure", "PromenadeSignal",
     "PlatformPanel", "GroundFinish", "CornerLandmarks",
     "ExteriorRetrofits", "HarborFleet", "PerimeterStations",
 }
@@ -115,9 +121,16 @@ function Census.sample(player, arena, quality)
                         local key = groupFor(part, decor, circuit, owners)
                         if key then
                             counts[key] += 1
-                            if key=="Ascension" or key=="Helix" then
+                            if key=="Ascension" or key=="Helix"
+                                or key=="District" or key=="PlatformSupport"
+                                or key=="SkySpine" or key=="Promenade" then
+                                local lower=string.lower(part.Name)
                                 local signal = part.Material==Enum.Material.Neon
                                     or part:GetAttribute("ChaosWayfinding")==true
+                                    or lower:find("signal",1,true)~=nil
+                                    or lower:find("beacon",1,true)~=nil
+                                    or lower:find("guide",1,true)~=nil
+                                    or lower:find("glow",1,true)~=nil
                                 local suffix=signal and "Signal" or "Structure"
                                 counts[key..suffix] += 1
                             end
