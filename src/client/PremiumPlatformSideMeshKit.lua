@@ -127,7 +127,41 @@ end
 -- This is a snapshot (not live camera tracking); PremiumRouteMeshKit already
 -- owns continuous camera-LOD for upper deck paint and bridge covers.
 -- The server keeps all colliders, collapse cues and source fallbacks.
-function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, cameraLook, pressure)
+-- Only reserve a scarce genuine seven-MeshPart carapace for a REAL
+-- server platform whose entire five-piece native fallback is replicated.
+-- On streamed Android maps, a physical PlatformN may arrive before its
+-- four sloped WedgeParts and full native underside in Decor. Selecting
+-- such an owner wastes an approved slot with zero/partial actual masks.
+-- Existing callers may omit decor; the live platform identity owner
+-- always passes the actual arena Decor so selection is fail-closed there.
+function Kit.hasNativeCarapaceFallback(decor, platform)
+    if not decor or not decor:IsA("Folder")
+        or not platform or not platform:IsA("BasePart") then
+        return false
+    end
+    local id = platform.Name:match("^Platform(%d+)$")
+    if not id then return false end
+    local frame = decor:FindFirstChild("PlatformUnderFrame" .. id)
+    if not frame or not frame:IsA("BasePart")
+        or frame.Parent ~= decor or not frame.Anchored
+        or frame.CanCollide or frame.CanTouch or frame.CanQuery
+        or frame:GetAttribute("PremiumArchitecturalSurface") ~= true then
+        return false
+    end
+    for edge = 1,4 do
+        local bevel = decor:FindFirstChild(
+            "PlatformBevel" .. id .. "_" .. edge)
+        if not bevel or not bevel:IsA("WedgePart")
+            or bevel.Parent ~= decor or not bevel.Anchored
+            or bevel.CanCollide or bevel.CanTouch or bevel.CanQuery
+            or bevel:GetAttribute("OriginalStructuralBevel") ~= true then
+            return false
+        end
+    end
+    return true
+end
+
+function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, cameraLook, pressure, decor)
     local chosen = {}
     -- Low may mount ONE authentic seven-MeshPart sculpt over the actual
     -- server-authored four-bevel/underframe cluster of ANY safe near-camera
@@ -171,7 +205,9 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
             and platform.Name:match("^Platform%d+$")
             and platform.Anchored and platform.CanCollide
             and platform.Transparency < .75
-            and platform:GetAttribute("ChaosSkybridge") ~= true then
+            and platform:GetAttribute("ChaosSkybridge") ~= true
+            and (decor == nil
+                or Kit.hasNativeCarapaceFallback(decor, platform)) then
             local phase = platform:GetAttribute("CollapsePhase")
             local x,z = platform.Size.X,platform.Size.Z
             local long,short = math.max(x,z),math.min(x,z)
