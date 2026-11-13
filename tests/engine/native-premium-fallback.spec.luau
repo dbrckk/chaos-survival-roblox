@@ -88,13 +88,16 @@ describe("Original 3D native fallback isolation (engine)", function()
                 base:GetAttribute("OriginalSizeX")*.24,
                 base.Size.Y*.5+43.5,
                 -(base:GetAttribute("OriginalSizeZ")*.5+66))
-            warn("HARBOR_OUTER_3D_ENGINE_DIAGNOSTIC",
-                "northCount",HarborSignatureGantryKit.count(),
-                "southCount",SouthHarborDrydockKit.count(),
-                "base",base.Size,"originalX",base:GetAttribute("OriginalSizeX"),
-                "northSource",box,"southSource",southBox,
-                "beamError",(beam.Position-expected).Magnitude,
-                "northVariant",north:GetAttribute("SignatureVariant"))
+            error("HARBOR_OUTER_3D_ENGINE_DIAGNOSTIC: north="
+                ..tostring(HarborSignatureGantryKit.count())
+                .." south="..tostring(SouthHarborDrydockKit.count())
+                .." base="..tostring(base.Size)
+                .." originalX="..tostring(base:GetAttribute("OriginalSizeX"))
+                .." originalZ="..tostring(base:GetAttribute("OriginalSizeZ"))
+                .." northBox="..tostring(box).." southBox="..tostring(southBox)
+                .." beamError="..tostring((beam.Position-expected).Magnitude)
+                .." variant="..tostring(north:GetAttribute("SignatureVariant"))
+                .." sourceHolder="..tostring(northSource.Parent))
         end
         expect(HarborSignatureGantryKit.count()).toBe(1)
         expect(HarborSignatureGantryKit.replacedNativeCount()).toBe(3)
