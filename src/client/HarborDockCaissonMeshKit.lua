@@ -127,17 +127,29 @@ local function genuineLanding(deck, arena, base)
 end
 
 local function valid(entry)
-    if not entry.model or entry.model.Parent ~= folder
+    if entry.disposing or not entry.model or entry.model.Parent ~= folder
         or entry.arena ~= activeArena
-        or not genuineLanding(entry.deck, entry.arena, entry.base) then
+        or not genuineLanding(entry.deck, entry.arena, entry.base)
+        or not entry.pieces or #entry.pieces ~= entry.expected then
         return false
     end
-    local count = 0
     for _, part in ipairs(entry.pieces) do
-        if not part or part.Parent ~= entry.model then return false end
-        count += 1
+        -- A partial imported model, lost weld or accidentally collidable
+        -- cosmetic is not an authentic underdeck shell. Hide it rather
+        -- than claiming that the caisson has survived the shrink event.
+        if not part:IsA("MeshPart") or part.Parent ~= entry.model
+            or part.Anchored or not part.Massless
+            or part.CanCollide or part.CanTouch or part.CanQuery then
+            return false
+        end
+        local weld = entry.joints[part]
+        if not weld or weld.Parent ~= part
+            or weld.Part0 ~= entry.deck or weld.Part1 ~= part
+            or not entry.localFrames[part] or not entry.sizes[part] then
+            return false
+        end
     end
-    return count == entry.expected
+    return true
 end
 
 -- Refit the already-imported seven real MeshParts to the live, solid
@@ -183,12 +195,26 @@ local function visibility(entry)
 end
 
 local function dispose(entry)
+    if entry.disposing then return end
     entry.disposing = true
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
     entry.model:Destroy()
 end
+
+-- No native art is hidden by this kit, but an externally removed model
+-- must release its per-deck listeners immediately: do not retain ghost
+-- residents or stale references until the next camera LOD sample.
+folder.ChildRemoved:Connect(function(child)
+    if not child:IsA("Model") then return end
+    for deck, entry in pairs(mounted) do
+        if not entry.disposing and entry.model == child then
+            dispose(entry)
+            mounted[deck] = nil
+        end
+    end
+end)
 
 local function clearModels()
     for deck, entry in pairs(mounted) do
@@ -279,7 +305,11 @@ local function mount(deck, arena, base, source, expected)
         entry.sizes[piece] = piece.Size
     end
     local function changed()
-        if not valid(entry) then visibility(entry) end
+        -- This MUST run when Size changes even if the deck is healthy:
+        -- a fully valid shrinking RouteTier needs its welded imported
+        -- geometry resized, not merely checked for a hazard. Otherwise
+        -- the original 12-stud shell survives until the next LOD tick.
+        visibility(entry)
     end
     for _, property in ipairs({"Size", "CanCollide", "Transparency",
         "Anchored"}) do
