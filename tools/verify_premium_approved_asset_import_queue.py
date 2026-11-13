@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prevent the original premium 3D source import thundering herd globally.
 
-Deterministic repository contract: 49 independently scheduled owner-approved
+Deterministic repository contract: 50 independently scheduled owner-approved
 Premium*Assets modules share exactly one bounded AssetService queue; the
 eight South imports additionally retain their stricter one-at-a-time gate.
 The engine's true request timings still require Studio measurement.
@@ -24,7 +24,7 @@ SOUTH_NAMES={
     "PremiumSouthTowersLiftTwinsAssets.lua",
     "PremiumSouthTowersSkytransferAssets.lua",
 }
-assert len(SOURCES)==49,(len(SOURCES),[s.name for s in SOURCES])
+assert len(SOURCES)==50,(len(SOURCES),[s.name for s in SOURCES])
 assert len(SOUTH_NAMES)==8
 assert SOUTH_NAMES <= {s.name for s in SOURCES}
 assert "local MAX_IN_FLIGHT = 2" in QUEUE
@@ -130,7 +130,7 @@ for source in SOURCES:
     assert "service.LoadAssetAsync" not in s,source
 
 print("PASS 60s authentic active apex priority, 132s background sweep, no duplicate import")
-print("PASS 49 Premium original 3D loaders use the global 2-import FIFO queue")
+print("PASS 50 Premium original 3D loaders use the global 2-import FIFO queue")
 print("PASS 8 South imports retain a stricter shared 1-import sub-gate")
 print("PASS no direct calls outside queue; no new server/client frame loops")
 print("LIMIT runtime concurrency and Android FPS must be measured in-engine")
