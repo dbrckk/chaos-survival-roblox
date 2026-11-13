@@ -22,15 +22,15 @@ for group,body in groups:
     named[group]=set(re.findall(r'"([^"]+)"',body))
 assert "premium_extension_names" in named
 assert len(named["premium_extension_names"])==45
-assert len(named)==17,(len(named),sorted(named))
+assert len(named)==18,(len(named),sorted(named))
 expected=set().union(*named.values())
 models=registry["models"]
 actual={x["name"] for x in models}
-assert len(models)==108,(len(models),"approved source count")
+assert len(models)==110,(len(models),"approved source count")
 assert len(expected)==len(models)==len(actual),(len(expected),len(models),len(actual))
 assert expected==actual,("Missing",sorted(actual-expected),"Phantom",sorted(expected-actual))
 ids=[x["asset_id"] for x in models]
-assert len(set(ids))==108
+assert len(set(ids))==110
 for model in models:
     assert model["moderation"]=="Approved"
     assert model["asset_id"].isdecimal() and int(model["asset_id"])>0
@@ -67,8 +67,9 @@ for model in models:
             assert path.name.startswith("generate_original_")
         if attr=="source_materials":
             assert path.is_relative_to("assets/source")
-assert "assert len(models) == 108" in section
+assert "assert len(models) == 110" in section
 assert '| harbor_original_names | premium_extension_names)' in section
+assert '| platform_side_names | large_hull_names | rim_names' in section
 assert 'model["name"] in premium_extension_names' in section
 assert 'tools/verify_premium_approved_asset_import_queue.py' in section
 assert 'assert "AssetService.LoadAssetAsync" in source' in section
@@ -85,6 +86,6 @@ listed=re.findall(r'"(tests/engine/[^"*]+\.spec\.luau)"',cloud)
 assert len(all_specs)==86,(len(all_specs),"unexpected engine spec count")
 assert len(set(listed))==86 and len(listed)==86
 assert set(listed)==all_specs,("Missing",all_specs-set(listed))
-print("PASS 108 real Approved original Models and all 45 premium extension sources")
+print("PASS 110 real Approved original Models, including two P4 rim assets, and all 45 premium extension sources")
 print("PASS release Build Validation uses current 2-permit global importer contract")
 print("PASS all 86 engine specs listed exactly once; Lest diagnostic test is valid")
