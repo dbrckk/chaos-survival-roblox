@@ -164,6 +164,11 @@ assert 'scale <= 1.25' in large
 assert 'width <= 3.2' in large
 assert 'tier == "Low" and (tonumber(pressure) or 0) > 0' in large
 assert 'sourceParts ~= 7' in large
+assert 'local preferSupport=tier=="Low" and supports[1]' in large
+assert 'supports[1].score+8<cradles[1].score' in large
+assert 'if not preferSupport then' in large
+assert 'if tier~="Low" or next(cradleSet)==nil then' in large
+assert 'supportSet=distribute(supports,supportLimit,' in large
 assert 'originalSupportVisualWeld' not in large
 assert 'OriginalSupportVisualWeld' in large
 assert 'Kit.supports' in large
