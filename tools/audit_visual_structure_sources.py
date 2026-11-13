@@ -518,6 +518,11 @@ for asset_id in (
 ):
     assert asset_id in remaining, "P4 source not connected: " + asset_id
     assert ids[asset_id] == 1, "P4 source not uniquely approved: " + asset_id
+# A corrupted local seven-MeshPart clone must not own its slot forever:
+# native reveal happens immediately, the subsequent LOD pass remounts
+# the intact approved model without changing the physical perimeter deck.
+assert 'or not sourceIntact(entry) then' in remaining
+assert 'mounted[owner]=nil\n            dispose(entry)' in remaining
 for marker in (
     'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,',
     'RemainingVisualNativeCensus.sample(player, arena, profile.Name)',
