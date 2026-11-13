@@ -162,6 +162,7 @@ jobs:
             "tests/engine/mapbuilder-advanced.spec.luau",
             "tests/engine/parkour-flow.spec.luau",
             "tests/engine/native-premium-fallback.spec.luau",
+            "tests/engine/platform-rim-original-3d.spec.luau",
             "tests/engine/sky-network-physical-wayfinding.spec.luau",
             "tests/engine/sky-command-bot-approach.spec.luau",
             "tests/engine/lava-ground-visual-contrast.spec.luau",
