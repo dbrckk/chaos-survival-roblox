@@ -507,6 +507,37 @@ assert ".RenderStepped:Connect(" not in routes
 assert ".Heartbeat:Connect(" not in routes
 assert not outer_scene_checks, ("stale 320-live-floor guard", outer_scene_checks)
 print("PASS all 19 original remaining floor guards classified and corrected safely")
+# Existing approved P4 sculptures were already imported. Assert the
+# five actual moderated IDs, the single LOD owner and the sampled client
+# fallback census so source audits cannot mislabel them as unimplemented.
+remaining = (ROOT / "src/client/ApprovedRemainingStructureMeshKit.lua").read_text(
+    encoding="utf8")
+for asset_id in (
+    "110243423264048", "107273631120961", "127049813505254",
+    "130196548599769", "106863534763803",
+):
+    assert asset_id in remaining, "P4 source not connected: " + asset_id
+    assert ids[asset_id] == 1, "P4 source not uniquely approved: " + asset_id
+for marker in (
+    'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,',
+    'RemainingVisualNativeCensus.sample(player, arena, profile.Name)',
+    'LocalP4RemainingStructuralNativePiecesReplaced',
+):
+    assert marker in SCENERY, "P4 telemetry missing: " + marker
+census = (ROOT / "src/client/RemainingVisualNativeCensus.lua").read_text(
+    encoding="utf8")
+for marker in (
+    'part.LocalTransparencyModifier < .95',
+    'part.Transparency < .95',
+    'part:IsDescendantOf(circuit)',
+    '"Ascension", "ColumnCasing", "Helix", "District"',
+    'LocalP4VisibleNative',
+    'LocalP4NativeCensusReady',
+):
+    assert marker in census, "P4 runtime census guard missing: " + marker
+assert "RenderStepped" not in census and "Heartbeat:Connect" not in census
+print("PASS five approved P4 sources and sampled native visibility census")
+
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
