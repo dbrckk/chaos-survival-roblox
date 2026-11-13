@@ -533,10 +533,23 @@ for marker in (
     '"Ascension", "ColumnCasing", "Helix", "District"',
     'LocalP4VisibleNative',
     'LocalP4NativeCensusReady',
+    # Match native primitive classes from the actual real-engine census.
+    'part:IsA("Part") or part:IsA("WedgePart")',
+    'part:IsA("CornerWedgePart") or part:IsA("TrussPart")',
+    'local owners = {',
+    'casing = decor:FindFirstChild("OriginalPremiumColumnCladding")',
+    'owners.casing and part:IsDescendantOf(owners.casing)',
+    'counts[key..suffix] += 1',
+    'local signal = part.Material==Enum.Material.Neon',
+    '"AscensionStructure", "AscensionSignal"',
+    '"HelixStructure", "HelixSignal"',
+    '"HarborFleet", "PerimeterStations"',
+    'set(player, "AllScanned", scanned)',
 ):
     assert marker in census, "P4 runtime census guard missing: " + marker
 assert "RenderStepped" not in census and "Heartbeat:Connect" not in census
-print("PASS five approved P4 sources and sampled native visibility census")
+assert census.count('GetDescendants()') == 1, "unexpected extra native scan"
+print("PASS five approved P4 sources and family-accurate native visibility census")
 
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
