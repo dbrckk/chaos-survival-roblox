@@ -56,9 +56,9 @@ describe("Original 3D native fallback isolation (engine)", function()
         local hull=ship:FindFirstChild("MainHull")
         local initialAlpha=hull.Transparency
         local camera=ship:GetPivot().Position
-        local function sync(pressure)
-            HarborFreighterMeshKit.sync(arena,camera,"High",true,
-                Vector3.zero,pressure)
+        local function sync(pressure,quality,position)
+            HarborFreighterMeshKit.sync(arena,position or camera,
+                quality or "High",true,Vector3.zero,pressure)
         end
         sync(0)
         expect(HarborFreighterMeshKit.count()).toBe(1)
@@ -74,7 +74,27 @@ describe("Original 3D native fallback isolation (engine)", function()
             end
         end
         expect(partCount).toBe(7)
+        -- The same seven approved meshes must replace the fourteen-part
+        -- native Low outline, but only near the camera and pressure-free.
+        sync(0,"Low")
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        expect(hull.Transparency).toBe(1)
+        sync(0,"Low",camera+Vector3.new(0,0,350))
+        expect(HarborFreighterMeshKit.count()).toBe(0)
+        expect(hull.Transparency).toBe(initialAlpha)
+        sync(0,"Low")
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        sync(1,"Low")
+        expect(HarborFreighterMeshKit.count()).toBe(0)
+        expect(hull.Transparency).toBe(initialAlpha)
+        sync(0,"Low")
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        -- Genuine stationary exterior art must not disappear when only
+        -- the survival floor contracts during Shrinking Arena.
         base.Size=Vector3.new(170,4,174)
+        sync(0,"Low")
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        expect(hull.Transparency).toBe(1)
         sync(0)
         expect(HarborFreighterMeshKit.count()).toBe(1)
         expect(hull.Transparency).toBe(1)
