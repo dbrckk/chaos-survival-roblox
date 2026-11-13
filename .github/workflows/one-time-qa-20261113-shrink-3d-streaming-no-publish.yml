@@ -1,6 +1,7 @@
 # One-shot, exact-main-SHA full validation of the P4 3D shrink/streaming
 # repair. On replay the engine fixture uses actual GeneratedMap/Arena,
 # signed initial floor attributes and builder-accurate 6x6 bay coordinates.
+# Reverify after fixing base-before-deck event ordering on all 3D deck owners.
 # It NEVER publishes an experience and cannot run from a PR.
 name: One-time QA 2026-11-13 3D Shrink Streaming No Publish
 on:
