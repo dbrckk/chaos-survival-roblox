@@ -227,7 +227,8 @@ VisualBudgetRules.LocalFolders = {
     -- three follow already animated radar/cable/weight Parts; budget 0/1/1.
     "OriginalHarborHeroStationLocal",
     -- Four uniquely sculpted authentic 3D shallow-draft Harbor barges;
-    -- 7 imported MeshParts per Model, 0/2/4 Android tier/source caps.
+    -- 7 imported MeshParts per Model, 1/2/4 healthy Low/Medium/High caps.
+    -- Low permits exactly one within 145 studs, and none under pressure.
     -- Count their 3D impact against existing global Parts budgets.
     "OriginalHarborMidgroundBargesLocal",
     -- Authentic 960-stud authored coast annulus: 7 real marine PBR
