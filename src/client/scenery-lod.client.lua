@@ -1138,7 +1138,8 @@ task.spawn(function()
         -- Reuse the SAME established camera sampler and part census.
         UnderstructureBeamMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady,
-            player:GetAttribute("OptionalVfxPressure"))
+            player:GetAttribute("OptionalVfxPressure"),
+            game:GetService("UserInputService").TouchEnabled)
         local beamMeshes = UnderstructureBeamMeshKit.count()
         if player:GetAttribute("LocalOriginalUnderstructureBeamCount")
             ~= beamMeshes then
