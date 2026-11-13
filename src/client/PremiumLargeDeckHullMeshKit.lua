@@ -177,7 +177,7 @@ function Kit.selectLowDeck(platforms, base, cameraPoint, pressure, decor)
     return best
 end
 
-function Kit.install(parent, deck, tier, index, selected)
+function Kit.install(parent, deck, tier, index, selected, decor)
     local n = tonumber(index)
     if tier == "Low" and selected ~= true then return nil end
     -- Existing external callers retain legacy 1..24 access only.
@@ -185,7 +185,8 @@ function Kit.install(parent, deck, tier, index, selected)
     -- Medium/High deck, so lifting the index gate cannot stamp 100 hulls.
     if tier ~= "Low" and selected == false then return nil end
     if selected ~= true and (not n or n > 24) then return nil end
-    if not parent or not physicalFit(deck, index, selected == true) then
+    if not parent or not physicalFit(deck, index, selected == true)
+        or (decor ~= nil and not nativeFallback(decor, deck)) then
         return nil
     end
     local source,count,size = verifiedSource()
