@@ -360,7 +360,12 @@ local function mount(data,source)
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,
         native={},model=clone,pieces={},connections={},
-        longX=b.X>b.Z,visible=false,disposing=false}
+        -- Architectural casings have an intentional X-wide front: rotating
+        -- that source to Z would put the machined service front on a SIDE.
+        -- Only the two longitudinal route owners may need Roblox import's
+        -- X/Z axis swap corrected.
+        longX=data.category~="casing" and b.X>b.Z,
+        visible=false,disposing=false}
     for _,native in ipairs(data.originals) do
         entry.native[#entry.native+1]={
             part=native,alpha=native.LocalTransparencyModifier}
