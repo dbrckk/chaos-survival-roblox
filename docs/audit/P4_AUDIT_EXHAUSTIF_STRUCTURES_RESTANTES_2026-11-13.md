@@ -103,6 +103,14 @@ Les **200 formes conservées natives** sont surtout des éléments de navigation
 
 **Crêtes originales sur les cinq cartes :** `ApprovedExteriorRidgeMeshKit.lua` vérifie à présent la véritable `Base` et son empreinte initiale signée `OriginalSizeX/Z`, et place les trois wedges de chaque coin relativement à l'empreinte d'origine. Le rétrécissement réel du sol ne désactive plus automatiquement les **12 primitives source éligibles par arène**. Le kit conserve son choix **Low 1 / Medium 2 / High 4 modèles de sept MeshParts**, les limites caméra, la pression 1 sur Low qui restaure les natives et l'interdiction de collision. Le test moteur utilise une vraie `ExteriorRidgeNW` générée par `MapBuilder` et un modèle de source limité au fixture de test : rapprochement, shrink, repli GPU, refus d'expansion. **Aucun faux asset ni nouvelle physique n'a été déployé.**
 
+## Chantier complémentaire : quatre tours extérieures par carte
+
+Le kit `ApprovedExteriorTowerMeshKit.lua` était encore l'un des contrôles de taille `base.Size.X/Z < 318` fragiles. Il validait en outre le périmètre externe à partir de la taille **courante** du plancher. Désormais il utilise `OriginalSizeX/Z` pour la frontière signée et vérifie que la vraie base est ancrée, collidable, toujours enfant de l'arène et jamais agrandie au-delà de sa taille d'origine.
+
+Cela préserve l'éligibilité des **quatre tours par variante**, soit **20 tours** sur les cinq définitions de carte, à leurs MeshParts approuvés pendant Shrinking Arena, sans changer la sélection par caméra, la limite Low **1 tour**, ni la restauration des quatre corps natifs par tour sous pression. Cela représente **80 corps natifs source éligibles** au total, mais **pas 80 MeshParts simultanément actifs**. La couverture visuelle réelle et les FPS Android nécessitent toujours des captures client.
+
+Le recensement source CI contient une assertion explicite pour empêcher le retour du test de largeur live et de la frontière calculée sur une plateforme rétrécie.
+
 ## Plan d'élimination ordonné et conditions d'acceptation
 
 1. **P0 :** fusionner / masquer de façon sûre les bordures `PlatformBevel`, les supports `PlatformSupport` et les sous-cadres `PlatformUnderFrame`, en réutilisant des géométries et kits originaux approuvés adaptés aux différents gabarits. Ne jamais supprimer un `CanCollide` de gameplay ni un indicateur de danger.
