@@ -73,18 +73,48 @@ local function route(deck)
         and spokeStep <= 4 and spokeStep % 1 == 0
 end
 
+-- ShrinkingArena scales and MOVES genuine Harbor RouteTier decks every
+-- round tick. Require the server-authored ORIGINAL floor footprint and
+-- compare deck width against the actual floor shrink fraction, instead of
+-- hiding every approved caisson as soon as the playable floor contracts.
+local function realFloorScale(base, arena)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    if not arena or not generated or arena.Parent ~= generated
+        or arena.Name ~= "Arena" or arena:GetAttribute("VariantId") ~= "Harbor"
+        or not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx, sz = base:GetAttribute("OriginalSizeX"),
+        base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx >= math.huge or sz >= math.huge then return nil end
+    local scaleX, scaleZ = base.Size.X / sx, base.Size.Z / sz
+    if scaleX < .445 or scaleX > 1.005 or scaleZ < .445
+        or scaleZ > 1.005 or math.abs(scaleX - scaleZ) > .012 then
+        return nil
+    end
+    return math.min(scaleX, scaleZ)
+end
+
 local function genuineLanding(deck, arena, base)
-    if not deck or not arena or not base or not deck:IsA("BasePart")
+    local floorScale = realFloorScale(base, arena)
+    if not floorScale or not deck or not deck:IsA("BasePart")
         or not deck.Name:match("^Platform%d+$")
         or deck.Parent ~= arena:FindFirstChild("Platforms")
-        or not deck.CanCollide or deck.Transparency >= .75
+        or not deck.Anchored or not deck.CanCollide
+        or deck.Transparency >= .75
         or deck:GetAttribute("ChaosSkybridge") == true
+        or type(deck:GetAttribute("RouteTier")) ~= "number"
         or not route(deck)
-        or deck.Size.X < 9.5 or deck.Size.X > 12.2
-        or deck.Size.Z < 9.5 or deck.Size.Z > 12.2
-        or math.abs(deck.Size.X - deck.Size.Z) > .15
-        or math.abs(deck.Size.Y - 2) > .10
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        -- The server's genuine Harbor switchback/spoke footprint starts
+        -- between 9.5 and 12.2 studs and scales uniformly with the floor.
+        -- An unrelated/lagging deck never qualifies as a forged landing.
+        or deck.Size.X / floorScale < 9.35
+        or deck.Size.X / floorScale > 12.35
+        or deck.Size.Z / floorScale < 9.35
+        or deck.Size.Z / floorScale > 12.35
+        or math.abs(deck.Size.X - deck.Size.Z) > .18
+        or math.abs(deck.Size.Y - 2) > .10 then
         return false
     end
     local collapse = deck:GetAttribute("CollapsePhase")
@@ -99,8 +129,7 @@ end
 local function valid(entry)
     if not entry.model or entry.model.Parent ~= folder
         or entry.arena ~= activeArena
-        or not genuineLanding(entry.deck, entry.arena, entry.base)
-        or (entry.deck.Size - entry.initialSize).Magnitude > .075 then
+        or not genuineLanding(entry.deck, entry.arena, entry.base) then
         return false
     end
     local count = 0
@@ -111,8 +140,41 @@ local function valid(entry)
     return count == entry.expected
 end
 
+-- Refit the already-imported seven real MeshParts to the live, solid
+-- server deck. Weld.C0 can be changed WITHOUT moving/resizing its anchored
+-- owner. Avoid recurring Clone/Destroy and don't add a render-step loop.
+-- The imported caisson always finishes .14 studs below the real deck top.
+local function refit(entry)
+    if not valid(entry) then return false end
+    local width = math.min(entry.deck.Size.X, entry.deck.Size.Z)
+    local factor = width / entry.initialWidth
+    if factor < .44 or factor > 1.03 then return false end
+    for _, piece in ipairs(entry.pieces) do
+        local weld, frame, size =
+            entry.joints[piece], entry.localFrames[piece], entry.sizes[piece]
+        if not weld or weld.Parent ~= piece or weld.Part0 ~= entry.deck
+            or weld.Part1 ~= piece or not frame or not size then
+            return false
+        end
+    end
+    if entry.lastWidth and math.abs(entry.lastWidth - width) < .016 then
+        return true
+    end
+    local shift = CFrame.new(0,
+        entry.deck.Size.Y * .5 - .14 - entry.boxHeight * factor * .5, 0)
+    for _, piece in ipairs(entry.pieces) do
+        local frame = entry.localFrames[piece]
+        piece.Size = entry.sizes[piece] * factor
+        entry.joints[piece].C0 = shift *
+            CFrame.new(frame.Position * factor) *
+            (frame - frame.Position)
+    end
+    entry.lastWidth = width
+    return true
+end
+
 local function visibility(entry)
-    local show = valid(entry)
+    local show = refit(entry)
     for _, part in ipairs(entry.pieces) do
         if part.Parent then
             part.LocalTransparencyModifier = show and 0 or 1
@@ -151,7 +213,7 @@ local function mount(deck, arena, base, source, expected)
     -- three axes together: this preserves bevel tangents, UVs and truss
     -- proportions, while the actual walkable top remains authoritative.
     local scale = width / 12.0
-    if scale < .78 or scale > 1.02 then
+    if scale < .34 or scale > 1.02 then
         clone:Destroy()
         return nil
     end
@@ -192,8 +254,9 @@ local function mount(deck, arena, base, source, expected)
     if #pieces ~= expected then clone:Destroy(); return nil end
     local entry = {
         model = clone, source = source, arena = arena, base = base,
-        deck = deck, initialSize = deck.Size,
+        deck = deck, initialWidth = width, boxHeight = box.Y,
         pieces = pieces, expected = expected, connections = {},
+        localFrames = {}, sizes = {}, joints = {}, lastWidth = nil,
         disposing = false,
     }
     clone.Name = "ApprovedOriginalHarborDockCaisson3D"
@@ -202,22 +265,30 @@ local function mount(deck, arena, base, source, expected)
     clone.Parent = folder
 
     for _, piece in ipairs(pieces) do
-        local joint = Instance.new("WeldConstraint")
+        -- Weld with adjustable C0: the deck stays authoritative, while
+        -- uniform cosmetic geometry follows the server-owned shrinking size.
+        local joint = Instance.new("Weld")
         joint.Name = "HarborDockCosmeticWeld"
         joint.Part0 = deck
         joint.Part1 = piece
+        joint.C0 = deck.CFrame:ToObjectSpace(piece.CFrame)
+        joint.C1 = CFrame.identity
         joint.Parent = piece
+        entry.joints[piece] = joint
+        entry.localFrames[piece] = target:ToObjectSpace(piece.CFrame)
+        entry.sizes[piece] = piece.Size
     end
     local function changed()
         if not valid(entry) then visibility(entry) end
     end
-    for _, property in ipairs({"Size", "CanCollide", "Transparency"}) do
+    for _, property in ipairs({"Size", "CanCollide", "Transparency",
+        "Anchored"}) do
         entry.connections[#entry.connections + 1] =
             deck:GetPropertyChangedSignal(property):Connect(changed)
     end
     for _, attr in ipairs({
         "CollapsePhase", "BridgeShutterPhase", "HarborRoute",
-        "HarborStep", "HarborSpokeRoute", "HarborSpokeStep",
+        "HarborStep", "HarborSpokeRoute", "HarborSpokeStep", "RouteTier",
     }) do
         entry.connections[#entry.connections + 1] =
             deck:GetAttributeChangedSignal(attr):Connect(changed)
@@ -230,6 +301,7 @@ local function mount(deck, arena, base, source, expected)
                 task.defer(visibility, entry)
             end
         end)
+    -- The attached deck may already have shrunk before this LOD sample.
     visibility(entry)
     return entry
 end
@@ -261,19 +333,19 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
     end
     local base = arena:FindFirstChild("Base")
     local platforms = arena:FindFirstChild("Platforms")
-    if not base or not base:IsA("BasePart")
-        or not platforms or not platforms:IsA("Folder")
-        or base.Size.X < 318 or base.Size.Z < 318 then
+    if not platforms or not platforms:IsA("Folder")
+        or not realFloorScale(base, arena) then
         clearModels()
         return
     end
     if watchedBase ~= base then
         if baseChanged then baseChanged:Disconnect() end
         watchedBase = base
+        -- A streaming mismatch, invalid provenance or floor reset must
+        -- restore safe cosmetics immediately; actual RouteTier resizing
+        -- is handled by each deck's existing Size event.
         baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then
-                clearModels()
-            end
+            if not realFloorScale(base, arena) then clearModels() end
         end)
     end
     local source, expected = original()
