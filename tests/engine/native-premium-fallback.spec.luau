@@ -5,9 +5,94 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
+local HarborScenery = require("../../src/server/HarborScenery")
+local VisualTheme = require("../../src/shared/VisualTheme")
+local HarborFreighterMeshKit = require("../../src/client/HarborFreighterMeshKit")
 local HarborMidgroundBargeMeshKit = require("../../src/client/HarborMidgroundBargeMeshKit")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("keeps the approved Harbor cargo freighter through shrink and restores native on GPU pressure", function()
+        local storage=game:GetService("ReplicatedStorage")
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedHarborFreighterTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="OriginalContainerFreighter"
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("OriginalHarborFreighter3D",true)
+        source:SetAttribute("Original3DAssetId",128820723471019)
+        for i=1,7 do
+            local part=Instance.new("MeshPart")
+            part.Name="FreighterMaterial"..i
+            part.Size=if i==1 then Vector3.new(29.1,9.8,6.4)
+                else Vector3.new(1,1,1)
+            part.Anchored=true
+            part.CanCollide=false
+            part.CanTouch=false
+            part.CanQuery=false
+            part.Parent=source
+        end
+        source.Parent=holder
+        local arena=Instance.new("Folder")
+        arena.Name="Arena"
+        arena:SetAttribute("VariantId","Harbor")
+        arena.Parent=workspace
+        local base=Instance.new("Part")
+        base.Name="Base"
+        base.Size=Vector3.new(320,4,320)
+        base.Anchored=true
+        base.CanCollide=true
+        base:SetAttribute("OriginalSizeX",320)
+        base:SetAttribute("OriginalSizeZ",320)
+        base.Parent=arena
+        local decor=Instance.new("Folder")
+        decor.Name="Decor"
+        decor.Parent=arena
+        local fleet=HarborScenery.build(decor,base,VisualTheme.arena("Harbor"))
+        local ship=fleet:FindFirstChild("HarborCargoVessel")
+        expect(ship ~= nil).toBe(true)
+        local hull=ship:FindFirstChild("MainHull")
+        local initialAlpha=hull.Transparency
+        local camera=ship:GetPivot().Position
+        local function sync(pressure)
+            HarborFreighterMeshKit.sync(arena,camera,"High",true,
+                Vector3.zero,pressure)
+        end
+        sync(0)
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        expect(hull.Transparency).toBe(1)
+        local model=workspace.OriginalHarborFreighterLocal:
+            FindFirstChild("ApprovedHarborFreighter3D")
+        expect(model ~= nil).toBe(true)
+        local partCount=0
+        for _,p in ipairs(model:GetDescendants()) do
+            if p:IsA("BasePart") then
+                partCount+=1
+                expect(p.CanCollide or p.CanTouch or p.CanQuery).toBe(false)
+            end
+        end
+        expect(partCount).toBe(7)
+        base.Size=Vector3.new(170,4,174)
+        sync(0)
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        expect(hull.Transparency).toBe(1)
+        sync(2)
+        expect(HarborFreighterMeshKit.count()).toBe(0)
+        expect(hull.Transparency).toBe(initialAlpha)
+        sync(0)
+        expect(HarborFreighterMeshKit.count()).toBe(1)
+        base.Size=Vector3.new(330,4,320)
+        sync(0)
+        expect(HarborFreighterMeshKit.count()).toBe(0)
+        expect(hull.Transparency).toBe(initialAlpha)
+        HarborFreighterMeshKit.sync(nil,camera,"Low",false,
+            Vector3.zero,2)
+        arena:Destroy()
+        holder:Destroy()
+    end)
+
     -- Engine integration of the real Harbor LOD owner with Roblox instances.
     it("keeps one authentic Harbor barge on Low through shrink and restores native art under GPU pressure", function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
