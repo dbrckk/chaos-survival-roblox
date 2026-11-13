@@ -427,7 +427,14 @@ jobs:
               "orbital_helix_underframe",
           }
           assert len(premium_extension_names) == 45
-          assert len(models) == 108
+          assert len(models) == 110
+          rim_ids = {"platform_rim_rect": "131482590870627",
+                     "platform_rim_long": "127617571835277"}
+          assert {m["name"]: m["asset_id"] for m in models
+                  if m["name"] in rim_ids} == rim_ids
+          assert all(m["moderation"] == "Approved" and
+                     m.get("workflow_run_id") == 43499366621
+                     for m in models if m["name"] in rim_ids)
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
