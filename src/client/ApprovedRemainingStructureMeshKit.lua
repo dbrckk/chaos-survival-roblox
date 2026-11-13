@@ -592,6 +592,21 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                     taken+=1
                 end
             end
+            -- The approved sculptors made THREE distinct silhouettes,
+            -- yet camera-only ranking could use all six slots on ACCESS.
+            -- After giving each real route one owner, prioritize one
+            -- TRANSFER and one SUMMIT arch, provided those genuine decks
+            -- and their exact source templates are safely available.
+            for _,stage in ipairs({4,8}) do
+                if taken>=cap then break end
+                for _,data in ipairs(candidates.arch) do
+                    if data.stage==stage and not desired[data.owner] then
+                        desired[data.owner]=data
+                        taken+=1
+                        break
+                    end
+                end
+            end
         end
         for _,data in ipairs(candidates[kind]) do
             if taken>=cap then break end
