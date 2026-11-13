@@ -184,7 +184,8 @@ for guard in (
     'Medium = {count = 4, distance = 205, retention = 20}',
     'High = {count = 12, distance = 275, retention = 28}',
     'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}',
-    'if stress == 1 then cap = math.floor(cap * .5) end',
+    'cap = math.floor(cap * .5)',
+    'if tier == "High" then cap = math.min(cap, 5) end',
     'if stress >= 2 then cap = 0 end',
     # One extra 1,764-triangle Low shell is only allowed behind an
     # already-mounted genuine owner-approved district facade. Model
