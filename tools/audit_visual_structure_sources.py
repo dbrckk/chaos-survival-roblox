@@ -253,6 +253,77 @@ for clause in (
     assert clause in buttress, ("buttress source/native revocation", clause)
 print("PASS station geometry and source-template mutation revocation")
 
+# Creator-owned rectangular/long 7-MeshPart rim art added 13 November.
+# Unlike a full underside carapace, rim replacement may mask ONLY four
+# WedgePart edges and must keep the native underframe and all hazard cues.
+rim_server = (ROOT / "src/server/PremiumPlatformRimAssets.lua").read_text(
+    encoding="utf8")
+rim_client = (ROOT / "src/client/ApprovedPlatformRimMeshKit.lua").read_text(
+    encoding="utf8")
+rim_native = (ROOT / "src/client/PlatformNativeTrimReplacementKit.lua").read_text(
+    encoding="utf8")
+rim_finish = (ROOT / "src/client/PlatformFinishKit.lua").read_text(
+    encoding="utf8")
+rim_owner = (ROOT / "src/client/arena-platform-identity.client.lua").read_text(
+    encoding="utf8")
+rim_init = (ROOT / "src/server/init.server.lua").read_text(encoding="utf8")
+for name, id_, tris in (
+    ("platform_rim_rect", "131482590870627", 1760),
+    ("platform_rim_long", "127617571835277", 2040),
+):
+    models = [m for m in REGISTRY["models"] if m["name"] == name]
+    assert len(models) == 1 and str(models[0]["asset_id"]) == id_
+    assert models[0]["moderation"] == "Approved"
+    assert models[0]["triangles"] == tris
+    assert len(models[0]["source_sha256"]) == 64
+    assert models[0]["source"] == "tools/generate_original_platform_rims.py"
+    assert id_ in rim_server and id_ in rim_client
+for clause in (
+    "GlobalApprovedImportGate", "ImportGate.load",
+    "OriginalMeshScenery.sanitize(raw)",
+    "if count ~= 7 then return false end",
+    "OriginalPlatformRim3D", "OwnerVerified", "CosmeticOnly",
+):
+    assert clause in rim_server, ("approved rim safe importer", clause)
+for clause in (
+    "if pieces~=7 then return nil end",
+    "if #parts~=7 then copy:Destroy();return nil end",
+    'edge:GetAttribute("OriginalStructuralBevel")~=true',
+    'underside:GetAttribute("PremiumArchitecturalSurface")~=true',
+    "if scale<.60 or coverLong<.90 or coverShort<.87",
+    'piece:SetAttribute("OriginalPlatformRim3D",true)',
+    'joint.Name="ChaosPlatformTrimWeld"',
+    'piece.CanCollide=false', 'piece.CanTouch=false',
+    'piece.CanQuery=false',
+    "if stress>=2 or cap<=0",
+):
+    assert clause in rim_client, ("rim physical/LOD fallback", clause)
+assert 'or kind == "rim"' in rim_native
+assert 'active[id] == "carapace" or active[id] == "rim"' in rim_native
+assert 'if id and (active[id] == "carapace" or active[id] == "cradle")' in rim_native
+for clause in (
+    "OriginalPlatformRimAxisSwap",
+    "rimSwapped and ratioZ or ratioX",
+    "rimSwapped and ratioX or ratioZ",
+):
+    assert clause in rim_finish
+for clause in (
+    "ApprovedPlatformRimMeshKit.selectVisibleDecks(",
+    "ApprovedPlatformRimMeshKit.install(",
+    'replacements[tostring(visualIndex)] = "rim"',
+    "for _, piece in ipairs(rimPieces or {}) do",
+    "LocalOriginalPlatformRimDeckCount",
+    "watchRimTemplates(",
+    "Rect = true, Long = true",
+    'child.Name == "ApprovedPlatformRimTemplates"',
+    "or nearRims[platform] ~= nil",
+):
+    assert clause in rim_owner, ("rim source-mounted visual ownership", clause)
+assert "require(script.PremiumPlatformRimAssets)" in rim_init
+assert "task.defer(PremiumPlatformRimAssets.start)" in rim_init
+assert "RenderStepped" not in rim_client and "Heartbeat:Connect" not in rim_client
+print("PASS two genuine approved perimeter rim assets with camera LOD, bevel-only masks and shrink fallback")
+
 # P4 large-deck bevel coverage must not regress to a hard-coded first-24
 # physical platform gate. Only approved 18-stud, seven-mesh hulls may
 # mask all four fully replicated, noncolliding server WedgeParts.
