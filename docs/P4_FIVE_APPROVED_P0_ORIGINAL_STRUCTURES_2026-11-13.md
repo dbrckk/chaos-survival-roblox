@@ -115,6 +115,37 @@ Les assertions de source existantes et le scénario Roblox Engine des
 la répartition dans le DataModel Roblox et **ne constitue pas une capture
 visuelle Android ni une mesure de FPS**.
 
+## Diversification mobile / PC Medium et repli strict — 13 novembre 2026
+
+Sur **Android Medium (2 arches), Android High (3)** et **PC Medium
+(3)**, le propriétaire conserve désormais l'arche admissible la plus
+proche de la caméra, puis utilise les places restantes pour faire apparaître
+des **silhouettes ACCESS, TRANSFER et SUMMIT différentes**, si leurs vrais
+propriétaires collidables et les assets approuvés sont déjà éligibles.
+Parmi les candidats de même niveau, les quatre routes réelles
+`PerimeterRoute` sont réparties en priorité. Aucun modèle n'est choisi
+au-delà de **60 points de priorité caméra** après le dernier candidat qui
+aurait été retenu sans diversification : si les sculptures alternatives
+sont trop éloignées, la sélection revient aux proches. Ces choix ne
+créent ni MeshPart, ni abonnement de rendu, ni budget supplémentaire.
+
+La sélection antérieure **PC High sans pression** (au plus six arches :
+quatre routes + TRANSFER/SUMMIT) reste inchangée. Android Low conserve
+**une arche**, pression 1 conserve ses plafonds réduits et pression 2
+évince toutes ces sculptures. En cas d'import incomplet, sept MeshParts
+restent exigés, et une **huitième primitive, un objet script ou une source
+perdant sa provenance** provoque un retour au décor natif ; une
+primitive ajoutée dans un clone local est également rendue non physique
+immédiatement. La prochaine passe LOD reconstruit seulement les clones
+depuis les sources approuvées intactes.
+
+La suite Roblox Engine existante a reçu des assertions sur les cinq
+mondes, couvrant l'injection d'une huitième primitive, son innocuité
+physique, le retour natif, la récupération et le plafond Android High
+de trois vrais portiques. **L'ajout de ces assertions ne suffit pas à
+revendiquer leur exécution réussie sur le SHA final.** Ni capture
+Android/Studio ni mesure FPS ni publication ne sont revendiquées ici.
+
 ## Recette et limites du travail
 
 `tests/engine/native-premium-fallback.spec.luau` a été enrichi dans son
