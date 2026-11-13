@@ -165,7 +165,8 @@ for path, source_id, early, normal in HARBOR_LANDMARKS:
     assert source.count("ActiveSignatureSchedule.waitFor")==1
     assert source.count("GlobalApprovedImportGate.load")==1
     assert source.count("task.spawn(function()")==1
-    assert 'OriginalMeshScenery.sanitize(raw)' in source
+    assert ("OriginalMeshScenery.sanitize(raw)" in source
+        or "OriginalMeshScenery.sanitize(imported)" in source)
     assert 'holder:SetAttribute("OwnerVerified",true)' in source or (
         'holder:SetAttribute("OwnerVerified", true)' in source)
     assert ("for attempt=1,3 do" in source
