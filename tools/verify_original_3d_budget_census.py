@@ -181,8 +181,8 @@ for guard in (
     'restore(entry)',
     'entry.model:Destroy()',
     'Low = {count = 1, distance = 128, retention = 16}',
-    'Medium = {count = 4, distance = 205, retention = 20}',
-    'High = {count = 12, distance = 275, retention = 28}',
+    'Medium = {count = 5, distance = 205, retention = 20}',
+    'High = {count = 16, distance = 275, retention = 28}',
     'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}',
     'cap = math.floor(cap * .5)',
     'if tier == "High" then cap = math.min(cap, 5) end',
@@ -235,11 +235,11 @@ assert 'LocalUnpairedDistrictSidewall3DCount' in SIDE_LOD
 assert 'sidewallMeshCount - completeDistricts' in SIDE_LOD
 assert 'ApprovedDistrictSidewallMeshKit.completeCount()' in SIDE_LOD
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
-assert 'Medium = {count = 4, distance = 205, retention = 20}' in SIDE
-assert 'High = {count = 12, distance = 275, retention = 28}' in SIDE
+assert 'Medium = {count = 5, distance = 205, retention = 20}' in SIDE
+assert 'High = {count = 16, distance = 275, retention = 28}' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 print("PASS complete original front+side district priority on Medium/High,"
-      " real paired live census, healthy desktop 1/4/12 and touch 1/3/8 budgets")
+      " real paired live census, healthy desktop 1/5/16 and touch 1/3/8 budgets")
 
 print("PASS original 6-MeshPart sidewall asset 77387019170428 genuinely Approved")
 print("PASS five real native wall volumes replaced only after authentic source")
@@ -1688,8 +1688,8 @@ for code in ('state[index] = "-"','state[index] = "N"',
 assert 'LocalApprovedDistrictFacadeMounted' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
-assert 'Medium = {count = 4, distance = 205, retention = 20}' in SIDE
-assert 'High = {count = 12, distance = 275, retention = 28}' in SIDE
+assert 'Medium = {count = 5, distance = 205, retention = 20}' in SIDE
+assert 'High = {count = 16, distance = 275, retention = 28}' in SIDE
 print("PASS authentic reverse-paired 3D district and exact streamed N/F/S/B"
       " 16-building census without additional Android model budget")
 
