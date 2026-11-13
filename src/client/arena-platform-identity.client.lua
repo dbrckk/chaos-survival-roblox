@@ -784,11 +784,22 @@ local function rebuild()
                     mountedLowHubHulls += 1
                 end
             end
+            -- Native WedgeParts should never be replaced with ANOTHER
+            -- native fallback when a true seven-mesh rim succeeded.
+            -- Each rim consumes an approved, explicitly selected source.
+            local rimPieces = not largeHullPieces and
+                ((staged and staged.kind == "rim" and staged.parts)
+                or (nearRims[platform] and ApprovedPlatformRimMeshKit.install(
+                    folder, platform, visualIndex,
+                    nearRims[platform], decor))) or nil
+            local authenticRim = rimPieces and #rimPieces == 7
+                and rimPieces[1]:GetAttribute("OriginalPlatformRim3D") == true
+            if authenticRim then mountedRimDecks += 1 end
             local carapacePieces = largeHullPieces
                 or (staged and staged.kind == "carapace" and staged.parts)
-                or PlatformFinishKit.buildCarapace(
+                or (not authenticRim and PlatformFinishKit.buildCarapace(
                     folder, platform, variant, tier.Name, theme, visualIndex,
-                    nearCameraCarapaces[platform] == true)
+                    nearCameraCarapaces[platform] == true)) or {}
             if carapacePieces[1] and carapacePieces[1]:GetAttribute(
                 "NearCameraCarapace3D") == true then
                 mountedCameraCarapaces += 1
@@ -797,7 +808,7 @@ local function rebuild()
                 and carapacePieces[1]:GetAttribute(
                     "Original3DStructuralSide") == true
             local sidePieces = {}
-            if not authenticCarapace then
+            if not authenticCarapace and not authenticRim then
                 sidePieces = (staged and staged.kind == "bridge"
                     and staged.parts) or PlatformFinishKit.buildSideRails(
                     folder, platform, tier.Name, theme, variant, visualIndex,
@@ -808,11 +819,14 @@ local function rebuild()
                     "Original3DStructuralSide") == true
             if authenticCarapace then
                 replacements[tostring(visualIndex)] = "carapace"
+            elseif authenticRim then
+                replacements[tostring(visualIndex)] = "rim"
             elseif authenticBridge then
                 replacements[tostring(visualIndex)] = "bridge"
                 mountedBridgeGirders += 1
             end
-            if not authenticCarapace and not authenticBridge then
+            if not authenticCarapace and not authenticBridge
+                and not authenticRim then
                 for _, piece in ipairs(PlatformFinishKit.buildArmor(
                     folder, platform, variant, tier.Name, theme
                 )) do
@@ -822,7 +836,8 @@ local function rebuild()
             for _, piece in ipairs(sidePieces) do
                 registerVisual(platform, piece)
             end
-            if not authenticCarapace and not authenticBridge then
+            if not authenticCarapace and not authenticBridge
+                and not authenticRim then
                 for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(
                     folder, platform, variant, tier.Name, theme
                 )) do
@@ -902,6 +917,9 @@ local function rebuild()
             -- New authentic MeshParts and native carapace fallback both
             -- enter the EXISTING collapse/shrink snapshot and visibility owner.
             for _, piece in ipairs(carapacePieces) do
+                registerVisual(platform, piece)
+            end
+            for _, piece in ipairs(rimPieces or {}) do
                 registerVisual(platform, piece)
             end
 
@@ -1060,6 +1078,11 @@ local function rebuild()
         ~= mountedLargeDeckHulls then
         player:SetAttribute("LocalOriginalLargeDeckHullMountedCount",
             mountedLargeDeckHulls)
+    end
+    if player:GetAttribute("LocalOriginalPlatformRimDeckCount")
+        ~= mountedRimDecks then
+        player:SetAttribute("LocalOriginalPlatformRimDeckCount",
+            mountedRimDecks)
     end
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount")
         ~= mountedBridgeGirders then
