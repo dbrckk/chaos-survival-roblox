@@ -5,6 +5,7 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
+local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
 local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
 local PremiumLargeStructureMeshKit = require("../../src/client/PremiumLargeStructureMeshKit")
 local HarborScenery = require("../../src/server/HarborScenery")
@@ -20,6 +21,35 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("prioritizes genuinely paired Medium/High district shells without changing GPU caps", function()
+        -- Both legitimate LOD rankers compare an owner-verified front and
+        -- side/back shell on the SAME real server-authored building. At
+        -- most 16 studs of priority, never overriding an offscreen 80.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,true,"Medium")).toBe(84)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,true,"High")).toBe(84)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,true,"Low")).toBe(100)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,false,"Medium")).toBe(100)
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            100,false,"High")).toBe(100)
+        -- A building 12 studs further away but genuinely complete takes
+        -- the sidewall slot from a partly primitive nearby facade.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            112,true,"Medium") < ApprovedDistrictSidewallMeshKit
+                .pairedPriority(100,false,"Medium")).toBe(true)
+        -- An actual 25-stud gap still wins in favor of the nearer native.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            126,true,"Medium") > ApprovedDistrictSidewallMeshKit
+                .pairedPriority(100,false,"Medium")).toBe(true)
+        -- Hidden or distant behind-camera buildings still lose decisively.
+        expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
+            180,true,"High") > ApprovedDistrictSidewallMeshKit
+                .pairedPriority(100,false,"High")).toBe(true)
+    end)
+
     it("selects only genuinely fitting 22-stud cradles and unmasks real underframes", function()
         Kit.reset()
         local previous=workspace:FindFirstChild("GeneratedMap")
