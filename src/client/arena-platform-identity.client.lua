@@ -1144,6 +1144,50 @@ local function watchDecor(generated)
     decorRebuildPending = false
     if decor and decor:IsA("Folder") then
         local function supportChanged(part)
+            -- Late-streamed four-edge + underframe fallbacks used to leave
+            -- compatible 18-stud decks forever unselected. Rebuild only
+            -- when the approved hull exists and one NEAR physical deck
+            -- has become complete, or a mounted hull loses a native edge.
+            -- The existing 0.18s batch avoids one rebuild per wedge.
+            local id = part:IsA("BasePart") and
+                (part.Name:match("^PlatformBevel(%d+)_[1-4]$")
+                    or part.Name:match("^PlatformUnderFrame(%d+)$"))
+            if id then
+                local templates = ReplicatedStorage:FindFirstChild(
+                    "ApprovedLargeDeckHullTemplates")
+                local source = templates and templates:FindFirstChild(
+                    "LargeDeckHull")
+                if not source then return end
+                local currentArena = workspace:FindFirstChild("GeneratedMap")
+                currentArena = currentArena and
+                    currentArena:FindFirstChild("Arena")
+                local platforms = currentArena and
+                    currentArena:FindFirstChild("Platforms")
+                local deck = platforms and platforms:FindFirstChild(
+                    "Platform" .. id)
+                local camera = workspace.CurrentCamera
+                if not deck or not deck:IsA("BasePart")
+                    or not camera or not deck.CanCollide
+                    or (deck.Position-camera.CFrame.Position).Magnitude > 220 then
+                    return
+                end
+                if part.Parent == decor then
+                    if PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                        decor, deck) then
+                        queueSupportRebuild()
+                    end
+                else
+                    for _, piece in ipairs(visualsByPlatform[deck] or {}) do
+                        if piece.Parent == folder and piece:IsA("MeshPart")
+                            and piece:GetAttribute("OriginalLargeDeckHull")
+                                == true then
+                            queueSupportRebuild()
+                            break
+                        end
+                    end
+                end
+                return
+            end
             -- Low used to ignore ALL late native support arrivals.
             -- If the 7-MeshPart approved model had already streamed in,
             -- first-join could remain rectangular forever. Recover only
