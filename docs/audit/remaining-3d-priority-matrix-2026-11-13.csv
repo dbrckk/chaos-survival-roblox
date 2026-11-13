@@ -1,6 +1,6 @@
 owner_family,description,priority,coverage_status,classic_raw_natives,towers_raw_natives,crossroads_raw_natives,orbital_raw_natives,harbor_raw_natives,five_world_raw_natives,large_12_plus,signal_neon_subset,evidence_action
 district,Bâtiments de district,P0,PARTIEL_SOURCE_3D,440,456,456,456,440,2248,440,120,High PC 16 façades / 12 coques; Android tactile 8/8. Sous-structures et socles natifs
-bevel,Bordures WedgePart,P0,PARTIEL_SOURCE_3D,376,396,380,384,544,2080,1148,0,"Au plus quatre bordures masquées par carapace, 1/8/16 decks Low/Medium/High"
+bevel,Bordures WedgePart,P0,PARTIEL_SOURCE_3D,376,396,380,384,544,2080,1148,0,"Inventaire brut historique sur cinq cartes. Carapaces compactes 1/8/16 decks Low/Medium/High; nouvelles coques originales 18 studs sur tous indices compatibles: 1 Low partage, Medium PC 3/tactile 1, High PC 6/tactile 3. Chaque coque authentique peut masquer 4 wedges et 1 sous-cadre sous budget; compter uniquement LocalBevelNativePartsReplaced en session."
 supports,Supports de decks,P0,PARTIEL_SOURCE_3D,128,136,152,140,244,800,592,0,Colonnes 3D: 1/8/16 modules par qualité; supports natifs obligatoires en repli
 underframes,Sous-cadres de decks,P0,PARTIEL_SOURCE_3D,94,99,95,96,136,520,317,0,Carapaces et LongCradle sur decks authentifiés
 skyroute,Monuments des routes ascensionnelles,P0,SOURCE_3D_APPROUVEE_LOD_PARTIEL,176,176,176,188,188,904,140,280,"Sources ACCESS/TRANSFER/SUMMIT approuvées; cinq volumes supérieurs masqués par arche résidente; appuis profonds et 280 signaux conservés. Budgets PC Low 1 Medium 3 High 6; tactile 1/2/3."
