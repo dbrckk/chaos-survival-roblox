@@ -106,12 +106,21 @@ local function commit(parent,stage,kind,suffix)
     return stage.parts
 end
 
+-- The server authors true 4.85-stud posts under the first elevated
+-- 14x12 Crossroads route decks (bottom 6, support deckTop 1.15). The
+-- previous hardcoded five-stud cutoff rejected them even though the
+-- creator-approved 14-stud original fits the already-enforced >=.34
+-- source-scale requirement. Never admit shorter posts: they remain
+-- bare native until a proven approved source fits.
+local MIN_NATIVE_SUPPORT_HEIGHT = 4.75
+
 local function validNativeSupport(part,index)
     return part and part:IsA("BasePart")
         and part.Anchored and not part.CanCollide and not part.CanTouch
         and not part.CanQuery and part.Name:match(
             "^PlatformSupport"..tostring(index).."_%d+$") ~= nil
-        and part.Size.Y >= 5 and part.Size.Y <= 47
+        and part.Size.Y >= MIN_NATIVE_SUPPORT_HEIGHT
+        and part.Size.Y <= 47
 end
 
 -- Prioritize verified genuine supports + full-length undercarriages on
