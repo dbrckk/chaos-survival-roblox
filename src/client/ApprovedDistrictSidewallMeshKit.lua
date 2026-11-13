@@ -271,6 +271,19 @@ local function mount(arena, district, base, building, door,
     reconcile()
 end
 
+-- Favor a WHOLE authentic building over an orphan back-wall on
+-- Medium/High. Only the actual resident approved facade's client marker
+-- earns this small bonus: at most 16 studs of ranking, never enough to
+-- overturn the existing 80-stud off-camera penalty. Do not change Low's
+-- strict paired-only rule or any tier's 1/4/10 model limits.
+function Kit.pairedPriority(priority, facadeMounted, tier)
+    if type(priority) ~= "number" then return priority end
+    if tier ~= "Low" and facadeMounted == true then
+        return priority - 16
+    end
+    return priority
+end
+
 function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
     if arena ~= activeArena then
         clear()
@@ -324,6 +337,13 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
                     and planar.Unit:Dot(horizontal) < -.15 then
                     priority += 80
                 end
+                -- Both kits run in the SAME existing scenery LOD pass:
+                -- facade first, sidewall second. Spend each scarce
+                -- approved sidewall source on a completed building when
+                -- the physical/camera ranking is otherwise comparable.
+                priority = Kit.pairedPriority(priority,
+                    building:GetAttribute(
+                        "LocalApprovedDistrictFacadeMounted") == true, tier)
                 candidates[#candidates+1] = {
                     building=building,door=door,origin=origin,natives=natives,
                     priority=priority,distance=distance,
@@ -376,6 +396,21 @@ function Kit.count()
     local n=0
     for _,entry in pairs(mounted) do
         if entry.model.Parent==bucket then n+=1 end
+    end
+    return n
+end
+
+-- Exact live count, not a source-inventory percentage. Scenery LOD
+-- samples the same <=10 mounted source records, with no extra workspace
+-- traversal, frame heartbeat, mesh import or budget slot.
+function Kit.completeCount()
+    local n = 0
+    for building, entry in pairs(mounted) do
+        if entry.model.Parent == bucket
+            and building:GetAttribute(
+                "LocalApprovedDistrictFacadeMounted") == true then
+            n += 1
+        end
     end
     return n
 end
