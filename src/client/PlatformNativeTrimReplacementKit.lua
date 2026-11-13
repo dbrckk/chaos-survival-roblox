@@ -441,7 +441,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         watchers[#watchers + 1] =
             meshFolder.ChildRemoved:Connect(revokeSourcePiece)
         -- DescendantRemoving fires BEFORE the original mesh's parent
-        -- changes during Destroy(); revokeSourcePiece is idempotent, so
+        -- changes during teardown; revokeSourcePiece is idempotent, so
         -- ChildRemoved cannot subtract the same piece twice. A detached
         -- WeldConstraint with an otherwise surviving MeshPart must also
         -- reveal all four native WedgePart bevels without another tick.
