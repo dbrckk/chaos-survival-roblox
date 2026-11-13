@@ -253,6 +253,43 @@ for clause in (
     assert clause in buttress, ("buttress source/native revocation", clause)
 print("PASS station geometry and source-template mutation revocation")
 
+# P4 large-deck bevel coverage must not regress to a hard-coded first-24
+# physical platform gate. Only approved 18-stud, seven-mesh hulls may
+# mask all four fully replicated, noncolliding server WedgeParts.
+hull = (ROOT / "src/client/PremiumLargeDeckHullMeshKit.lua").read_text(
+    encoding="utf8")
+identity = (ROOT / "src/client/arena-platform-identity.client.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "function Kit.selectVisibleDecks(platforms, tier, base, cameraPoint,",
+    'deck.Name ~= "Platform" .. tostring(n)',
+    "n > 512",
+    "local function nativeFallback(decor, deck)",
+    'bevel:GetAttribute("OriginalStructuralBevel") ~= true',
+    'frame:GetAttribute("PremiumArchitecturalSurface") ~= true',
+    'local cap = tier == "High" and (touch and 3 or 6)',
+    "if stress >= 2 or type(platforms)",
+    "if not source or count ~= 7 then return chosen end",
+    "and size.X*scale >= deck.Size.X*.80",
+    "and size.Z*scale >= deck.Size.Z*.80",
+    "if tier ~= \"Low\" and selected == false then return nil end",
+):
+    assert clause in hull, ("P4 approved large hull native replacement", clause)
+assert "id%8==1" not in hull, "Low original hull cannot remain index-limited"
+for clause in (
+    "PremiumLargeDeckHullMeshKit.selectVisibleDecks(",
+    "UserInputService.TouchEnabled, decor)",
+    "or platform == lowHubDeck",
+    "or nearLargeDeckHulls[platform] == true)",
+    'LocalOriginalLargeDeckHullMountedCount',
+    'player:GetAttributeChangedSignal("OptionalVfxPressure")',
+    ':Connect(scheduleRebuild)',
+    'PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(',
+    'part.Name:match("^PlatformBevel(%d+)_[1-4]$")',
+):
+    assert clause in identity, ("large-hull 3D owner integration", clause)
+print("PASS approved large-deck 3D hulls cover any indexed deck within capped camera LOD")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
