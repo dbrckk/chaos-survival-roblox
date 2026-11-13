@@ -218,6 +218,19 @@ for clause in (
     assert clause in beam_mesh, ("medium understructure safety", clause)
 print("PASS desktop Medium six-beam mesh residency and clone integrity")
 
+# Two perimeter stations on desktop Medium can now replace four
+# native primitive buttresses, while touch Medium retains one station.
+buttress = (ROOT / "src/client/ApprovedPerimeterButtressMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local LIMITS = {Low = 1, Medium = 2, High = 4}",
+    'if tier == "Medium" and touch then cap = 1 end',
+    'model.DescendantAdded:Connect(function(item)',
+    'item:IsA("LuaSourceContainer")',
+):
+    assert clause in buttress, ("approved perimeter buttress safety", clause)
+print("PASS desktop Medium two-station 3D buttress residency")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
