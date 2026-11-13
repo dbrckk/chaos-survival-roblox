@@ -93,6 +93,27 @@ assert APEX.count('for attempt = 1, 3 do') == 1
 assert 'OriginalMeshScenery.sanitize(raw)' in APEX
 assert 'geometryOK(clean, spec)' in APEX
 
+# The five-world original column importer also owns the universal
+# approved 22-stud sculpted underframe. Import the active variant first,
+# LongCradle second: inactive-world support bundles must not monopolize
+# the FIFO ahead of currently visible platform undersides.
+STRUCTURES = (SERVER/"PremiumLargeStructureAssets.lua").read_text()
+for clause in (
+    'local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle"}',
+    'local ordered = {variant,"LongCradle"}',
+    'name ~= variant and name ~= "LongCradle"',
+    'if not APPROVED[variant] or variant == "LongCradle" then',
+    'task.wait(29)',
+    'GlobalApprovedImportGate.load, AssetService, APPROVED[name]',
+    'OriginalMeshScenery.sanitize(raw)',
+    'geometryAllowed(safe,name)',
+):
+    assert clause in STRUCTURES,clause
+assert 'for _, name in ipairs(prioritizedOrder()) do' in STRUCTURES
+assert STRUCTURES.count("GlobalApprovedImportGate.load")==1
+print("PASS active world's source then shared LongCradle then inactive models,"
+      " same six approved sources, retry schedule and 2-permit import gate")
+
 for source in SOURCES:
     s=source.read_text()
     assert "OriginalMeshScenery.sanitize(" in s,source
