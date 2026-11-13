@@ -68,4 +68,34 @@ print("PASS mount-before-hide, WedgePart-native restoration and no new frame loo
 for path in ("src/server/init.server.lua","src/client/scenery-lod.client.lua",
              "src/shared/VisualBudgetRules.lua"):
     assert "SouthHarborDrydock" in (root/path).read_text(),path
+# Both external Harbor landmarks are anchored to the original server
+# footprint, not the shrinking live survival floor. Their real native
+# positions are fixed while only Base.Size changes during disasters.
+north=(root/"src/client/ApprovedHarborSignatureGantryMeshKit.lua").read_text()
+for name,code in (("north",north),("south",client)):
+    assert 'local function authenticBase(base,arena)' in code,name
+    assert 'base:GetAttribute("OriginalSizeX")' in code,name
+    assert 'base:GetAttribute("OriginalSizeZ")' in code,name
+    assert 'base.Size.X>0 and base.Size.Z>0' in code,name
+    assert 'base.Size.X<=sx+.2 and base.Size.Z<=sz+.2' in code,name
+    assert 'if not authenticBase(base,arena)' in code,name
+    assert 'if not authenticBase(base,arena) then restore() end' in code,name
+    assert 'base.Size.X<318 or base.Size.Z<318' not in code,name
+    for signal in ('base:GetPropertyChangedSignal("Size")',
+                   'base:GetPropertyChangedSignal("CanCollide")',
+                   'base.AncestryChanged:Connect'):
+        assert signal in code,(name,signal)
+assert 'originalX*.24,base.Size.Y*.5+43.5,-(originalZ*.5+66)' in north
+assert '-originalX*.20,base.Size.Y*.5,originalZ*.5+54' in client
+assert 'or (stress==1 and tier~="High")' in north
+assert 'if stress==1 and tier~="High" then cap=0 end' in client
+assert 'local QUALITY={Low=1,Medium=1,High=1}' in north
+assert 'local QUALITIES={Low=1,Medium=1,High=1}' in client
+assert 'local MODEL_ID=124368710235343' in north
+assert '124368710235343' in [m['asset_id'] for m in models.values() if m.get('moderation')=='Approved']
+assert 'part.CanCollide=false' in north
+assert 'part.CanCollide=false' in client
+assert 'model.Parent=bucket' in north
+assert 'model.Parent=bucket' in client
+print("PASS both Harbor offshore approved Models are shrink-safe, pressure-adaptive and restore natives")
 print("PASS server loader, shared scenery sampling, LOD and visual budget")
