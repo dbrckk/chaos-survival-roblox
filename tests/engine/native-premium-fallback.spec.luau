@@ -1135,6 +1135,25 @@ describe("Original 3D native fallback isolation (engine)", function()
                     Vector3.new(0,0,-1),0,false)
                 p4Phase="approved arch residency"
                 expect(RemainingStructureKit.count("arch")>=1).toBe(true)
+                -- Verify REAL source-masked upper porticos on all FOUR
+                -- physical perimeter escape routes, using the existing six
+                -- High PC slots. This catches camera-only concentration of
+                -- the approved originals without inventing a fake platform.
+                p4Phase="four genuine escape routes visibly sculpted"
+                local sculptedRoutes={}
+                for _,realDeck in ipairs(platforms:GetChildren()) do
+                    if realDeck:GetAttribute("PerimeterStep")==1 then
+                        local realId=tonumber(realDeck.Name:match("%d+"))
+                        local native=realId and decor:FindFirstChild(
+                            "SkyRouteMonument"..realId.."_MonumentalOverpass")
+                        if native and native.LocalTransparencyModifier==1 then
+                            sculptedRoutes[realDeck:GetAttribute("PerimeterRoute")]=true
+                        end
+                    end
+                end
+                local distinctRoutes=0
+                for _ in pairs(sculptedRoutes) do distinctRoutes+=1 end
+                expect(distinctRoutes).toBe(4)
                 p4Phase="approved casing residency"
                 expect(RemainingStructureKit.count("casing")>=1).toBe(true)
                 p4Phase="native arch mask and untouched signal"
