@@ -224,6 +224,16 @@ assert 'OriginalMeshScenery.sanitize(imported)' in freighter_server
 assert 'ActiveSignatureSchedule.waitFor("Harbor",48,66)' in freighter_server
 assert '128820723471019' in APPROVED
 assert 'task.defer(PremiumHarborFreighterAssets.start)' in INIT
+# The genuine 4,918-triangle, seven-material approved cargo replaces the
+# coarse Harbor Low silhouette at camera-near range, with native rollback.
+assert 'local maximum=quality=="Low" and 295' in freighter
+assert 'or (quality=="Low" and stress>=1)' in freighter
+assert 'or (quality~="Low" and stress>=2)' in freighter
+assert 'local distance=(cameraPoint-ship:GetPivot().Position).Magnitude' in freighter
+assert 'if distance>maximum+(entry and 45 or 0) then' in freighter
+assert 'quality=="Low"\n        or' not in freighter
+assert '"OriginalHarborFreighterLocal"' in freighter
+print("PASS Harbor: Low original 7-MeshPart freighter, 295-stud camera cap, first-pressure native rollback")
 print("PASS Harbor: large real 3D freighter remains mounted during shrinking and recovers native shell")
 
 print("NOTE source CI does not measure concurrent network load or actual FPS")
