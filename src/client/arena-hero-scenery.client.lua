@@ -1063,7 +1063,14 @@ end
 -- noncolliding, tiered local scenery owner. All decorations remain outside
 -- the real survival floor and never suggest a traversable shortcut.
 local function buildHarbor(base, theme, tier)
-    local hz = base.Size.Z * 0.5
+    -- Client tier changes can rebuild the hero while Shrinking Arena is
+    -- active. Harbor's offshore signal station must keep its original
+    -- berth, not slide inward with the shrinking playable floor.
+    local sourceZ=base:GetAttribute("OriginalSizeZ")
+    local span=typeof(sourceZ)=="number" and sourceZ>=318
+        and base.Size.Z>0 and base.Size.Z<=sourceZ+.2
+        and sourceZ or base.Size.Z
+    local hz=span*.5
     local frame = localFrame(base, 0, 0, hz + 18, 180)
     local steel = theme.Structure:Lerp(Color3.fromRGB(83, 91, 88), 0.32)
     local dark = theme.Surface:Lerp(VisualTheme.World.Deep, 0.38)
