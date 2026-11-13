@@ -91,18 +91,41 @@ local function source()
     return model
 end
 
+-- A genuine Sky Spine entrance is welded to a server-authored
+-- RouteTier deck. ShrinkingArena scales that REAL deck in horizontal X/Z,
+-- and the nonphysical upper sculpture must follow it without pretending
+-- the old full-width bridge still exists.
+local function realFloorScale(base, arena)
+    local generated=workspace:FindFirstChild("GeneratedMap")
+    if not arena or arena.Name~="Arena"
+        or not generated or arena.Parent~=generated
+        or not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    if typeof(sx)~="number" or typeof(sz)~="number"
+        or sx~=sx or sz~=sz or sx<318 or sz<318
+        or sx>=math.huge or sz>=math.huge then return nil end
+    local x,z=base.Size.X/sx,base.Size.Z/sz
+    if x<.445 or x>1.005 or z<.445 or z>1.005
+        or math.abs(x-z)>.012 then return nil end
+    return math.min(x,z)
+end
+
 local function authentic(deck, arena, base)
-    if not deck or not arena or not base
-        or not deck:IsA("BasePart")
+    local scale=realFloorScale(base, arena)
+    if not scale or not deck or not deck:IsA("BasePart")
         or deck.Parent ~= arena:FindFirstChild("Platforms")
         or not deck.Name:match("^Platform%d+$")
         or deck:GetAttribute("ChaosPermanentRoute") ~= true
         or deck:GetAttribute("SkySpineInterchange") ~= true
-        or not deck.CanCollide or deck.Transparency >= 0.75
-        or math.abs(deck.Size.X - 12) > 0.15
+        or type(deck:GetAttribute("RouteTier")) ~= "number"
+        or not deck.Anchored or not deck.CanCollide
+        or deck.Transparency >= 0.75
+        or math.abs(deck.Size.X / scale - 12) > 0.22
         or deck.Size.Y < 1.8 or deck.Size.Y > 2.2
-        or deck.Size.Z < 14.5 or deck.Size.Z > 33
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        or deck.Size.Z / scale < 14.3
+        or deck.Size.Z / scale > 33.2 then
         return false
     end
     local step = deck:GetAttribute("SkySpineStep")
@@ -145,7 +168,6 @@ local function safeAfterMount(entry)
     return entry.model.Parent == folder
         and entry.arena == activeArena
         and authentic(deck, entry.arena, entry.base)
-        and (deck.Size - entry.initialSize).Magnitude < 0.07
 end
 
 local function refreshLight(entry)
@@ -198,8 +220,38 @@ function Kit.setDarknessGuard(active)
     for _, entry in pairs(mounted) do refreshLight(entry) end
 end
 
+-- Only the cosmetic MeshParts follow the shrinking deck. Their Y
+-- heights remain original, matching ShrinkingArena's x/z-only resizing of
+-- server-owned nonphysical upper details. The adjustable local Weld does
+-- not move or resize the actual anchored gameplay platform.
+local function refit(entry)
+    if not safeAfterMount(entry) then return false end
+    local scale=realFloorScale(entry.base, entry.arena)
+    if not scale then return false end
+    for _, piece in ipairs(entry.pieces) do
+        local weld=entry.joints[piece]
+        if not weld or weld.Parent~=piece or weld.Part0~=entry.deck
+            or weld.Part1~=piece or not entry.frames[piece]
+            or not entry.sizes[piece] then return false end
+    end
+    if entry.lastScale and math.abs(entry.lastScale-scale)<.008 then
+        return true
+    end
+    for _, piece in ipairs(entry.pieces) do
+        local frame=entry.frames[piece]
+        local original=entry.sizes[piece]
+        piece.Size=Vector3.new(original.X*scale,
+            original.Y,original.Z*scale)
+        entry.joints[piece].C0=CFrame.new(
+            frame.Position.X*scale,frame.Position.Y,
+            frame.Position.Z*scale)*(frame-frame.Position)
+    end
+    entry.lastScale=scale
+    return true
+end
+
 local function updateVisibility(entry)
-    local visible = safeAfterMount(entry)
+    local visible = refit(entry)
     if not visible then PremiumRoutePbrKit.detach(entry) end
     refreshLight(entry)
     for _, part in ipairs(entry.pieces) do
@@ -289,8 +341,9 @@ local function mount(deck, arena, base, decor, template)
         return nil
     end
     local entry = {
-        deck = deck, arena = arena, base = base, initialSize = deck.Size,
+        deck = deck, arena = arena, base = base,
         model = clone, pieces = pieces, native = {}, connections = {},
+        joints = {}, frames = {}, sizes = {}, lastScale = nil,
     }
     local knownNative = {}
     local function watchNative(part)
@@ -318,26 +371,30 @@ local function mount(deck, arena, base, decor, template)
     clone:SetAttribute("OriginalSkySpinePlatform", deck.Name)
     clone.Parent = folder
     for _, piece in ipairs(pieces) do
-        local joint = Instance.new("WeldConstraint")
+        local joint = Instance.new("Weld")
         joint.Name = "SkySpineCrownCosmeticWeld"
         joint.Part0 = deck
         joint.Part1 = piece
+        joint.C0 = deck.CFrame:ToObjectSpace(piece.CFrame)
+        joint.C1 = CFrame.identity
         joint.Parent = piece
+        entry.joints[piece] = joint
+        entry.frames[piece] = deck.CFrame:ToObjectSpace(piece.CFrame)
+        entry.sizes[piece] = piece.Size
     end
     local function changed()
-        if not safeAfterMount(entry) then
-            -- No fake overhead route during disaster, stream or shrinking.
-            -- Reveal all native upper geometry immediately; LOD tick
-            -- disposes the imported model and restores the original state.
-            updateVisibility(entry)
-        end
+        -- Live deck scaling adjusts authentic 3D at its Size event.
+        -- A collapse/stream hazard reveals original 2D immediately.
+        updateVisibility(entry)
     end
-    for _, property in ipairs({"Size", "CanCollide", "Transparency"}) do
+    for _, property in ipairs({"Size", "CanCollide", "Transparency",
+        "Anchored"}) do
         entry.connections[#entry.connections + 1] =
             deck:GetPropertyChangedSignal(property):Connect(changed)
     end
     for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase",
-        "ChaosPermanentRoute", "SkySpineStep", "SkySpineInterchange"}) do
+        "ChaosPermanentRoute", "SkySpineStep", "SkySpineInterchange",
+        "RouteTier"}) do
         entry.connections[#entry.connections + 1] =
             deck:GetAttributeChangedSignal(attribute):Connect(changed)
     end
@@ -376,10 +433,9 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook,
     local base = arena:FindFirstChild("Base")
     local platforms = arena:FindFirstChild("Platforms")
     local decor = arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart")
-        or not platforms or not platforms:IsA("Folder")
+    if not platforms or not platforms:IsA("Folder")
         or not decor or not decor:IsA("Folder")
-        or base.Size.X < 318 or base.Size.Z < 318 then
+        or not realFloorScale(base, arena) then
         clearModels()
         return
     end
@@ -387,9 +443,7 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook,
         if baseChanged then baseChanged:Disconnect() end
         watchedBase = base
         baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then
-                clearModels()
-            end
+            if not realFloorScale(base, arena) then clearModels() end
         end)
     end
     local template = source()
