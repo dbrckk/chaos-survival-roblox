@@ -4,6 +4,23 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
+-- These southern monuments were authored at the ORIGINAL outer perimeter.
+-- The shrinking floor changes collision dimensions, not this fixed art.
+local function originalFootprint(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return nil end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    if typeof(sx) ~= "number" or typeof(sz) ~= "number"
+        or sx ~= sx or sz ~= sz or sx < 318 or sz < 318
+        or sx == math.huge or sz == math.huge
+        or base.Size.X <= 0 or base.Size.Z <= 0
+        or base.Size.X > sx + .2 or base.Size.Z > sz + .2 then
+        return nil
+    end
+    return sx, sz
+end
+
 local MODEL_ID=96266711661930
 -- Low is a strict near-camera owner: one verified seven-MeshPart
 -- accessory replaces 6 exact nonphysical native details.
@@ -89,9 +106,10 @@ local function context(arena)
         or arena.Parent~=generated or arena.Name~="Arena" then return nil end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
+    local originalX, originalZ = originalFootprint(base, arena)
     if not base or not base:IsA("BasePart") or base.Parent~=arena
         or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+        or not originalFootprint(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena then return nil end
     local owner=decor:FindFirstChild("SouthHorizonMonument")
@@ -100,7 +118,7 @@ local function context(arena)
         or owner:GetAttribute("SignatureVariant")~="Orbital" then return nil end
 
     local origin=CFrame.new(base.Position+Vector3.new(
-        -base.Size.X*.20,base.Size.Y*.5,base.Size.Z*.5+54))
+        -originalX*.20,base.Size.Y*.5,originalZ*.5+54))
     local specs={
         {"Foundation",Vector3.new(47,2,13),CFrame.new(0,-1,0)},
         {"FloorInset",Vector3.new(39,.3,10),CFrame.new(0,.16,0)},
@@ -266,7 +284,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         watchedBase=base
         local function checkBase()
             if base.Parent~=arena or not base.Anchored or not base.CanCollide
-                or base.Size.X<318 or base.Size.Z<318 then restore() end
+                or not originalFootprint(base,arena) then restore() end
         end
         baseConnections[#baseConnections+1]=
             base:GetPropertyChangedSignal("Size"):Connect(checkBase)
@@ -274,6 +292,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
             base:GetPropertyChangedSignal("CanCollide"):Connect(checkBase)
         baseConnections[#baseConnections+1]=
             base.AncestryChanged:Connect(checkBase)
+        baseConnections[#baseConnections+1]=
+            base:GetPropertyChangedSignal("Anchored"):Connect(checkBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeX"):Connect(checkBase)
+        baseConnections[#baseConnections+1]=
+            base:GetAttributeChangedSignal("OriginalSizeZ"):Connect(checkBase)
     end
     local source=sourceFor()
     if not source then restore();return end
