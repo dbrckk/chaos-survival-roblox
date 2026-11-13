@@ -6,6 +6,8 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
+local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFacadeMeshKit")
+local DistrictVisualCensusRules = require("../../src/shared/DistrictVisualCensusRules")
 local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
 local PremiumLargeStructureMeshKit = require("../../src/client/PremiumLargeStructureMeshKit")
 local HarborScenery = require("../../src/server/HarborScenery")
@@ -21,6 +23,57 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("completes existing approved 3D district shells symmetrically with a true streamed 16-slot census", function()
+        -- Low never receives a reciprocal boost: its one sidewall must
+        -- FIRST have a true mounted facade. Medium/High can use a small
+        -- verified sidewall boost to complete an otherwise split building.
+        expect(PremiumDistrictFacadeMeshKit.pairedPriority(
+            100, true, "Low")).toBe(100)
+        expect(PremiumDistrictFacadeMeshKit.pairedPriority(
+            100, false, "Medium")).toBe(100)
+        expect(PremiumDistrictFacadeMeshKit.pairedPriority(
+            100, true, "Medium")).toBe(88)
+        expect(PremiumDistrictFacadeMeshKit.pairedPriority(
+            100, true, "High")).toBe(88)
+        expect(PremiumDistrictFacadeMeshKit.pairedPriority(
+            112, true, "High") < PremiumDistrictFacadeMeshKit
+                .pairedPriority(101, false, "High")).toBe(true)
+        expect(PremiumDistrictFacadeMeshKit.pairedPriority(
+            130, true, "High") > PremiumDistrictFacadeMeshKit
+                .pairedPriority(100, false, "High")).toBe(true)
+
+        local b1=bit32.lshift(1,0)
+        local b2=bit32.lshift(1,1)
+        local b3=bit32.lshift(1,2)
+        local b4=bit32.lshift(1,3)
+        local b16=bit32.lshift(1,15)
+        local b8=bit32.lshift(1,7)
+        local loaded=bit32.bor(b1,b2,b3,b4,b16)
+        -- Source models outside streamed buildings do not count. No
+        -- native-only building may be counted as a genuine replacement.
+        local census=DistrictVisualCensusRules.summarize(
+            loaded,bit32.bor(b1,b2,b8),bit32.bor(b2,b3,b8))
+        expect(census.states:sub(1,4)).toBe("FBSN")
+        expect(census.states:sub(5,15)).toBe(string.rep("-",11))
+        expect(census.states:sub(16,16)).toBe("N")
+        expect(census.loaded).toBe(5)
+        expect(census.unstreamed).toBe(11)
+        expect(census.complete).toBe(1)
+        expect(census.facadeOnly).toBe(1)
+        expect(census.sidewallOnly).toBe(1)
+        expect(census.nativeOnly).toBe(2)
+        local all=DistrictVisualCensusRules.summarize(65535,65535,65535)
+        expect(all.complete).toBe(16)
+        expect(all.nativeOnly).toBe(0)
+        expect(all.unstreamed).toBe(0)
+        expect(all.states).toBe(string.rep("B",16))
+        local absent=DistrictVisualCensusRules.summarize(0,65535,65535)
+        expect(absent.loaded).toBe(0)
+        expect(absent.unstreamed).toBe(16)
+        expect(absent.complete).toBe(0)
+        expect(absent.states).toBe(string.rep("-",16))
+    end)
+
     it("prioritizes genuinely paired Medium/High district shells without changing GPU caps", function()
         -- Both legitimate LOD rankers compare an owner-verified front and
         -- side/back shell on the SAME real server-authored building. At
