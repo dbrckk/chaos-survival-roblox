@@ -459,6 +459,31 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     report()
 end
 
+-- Accurate ACTUAL masked natives, not the 2,080/800/520
+-- server-authored source inventory repeated across five different maps.
+-- Event-driven: the existing onChange callback samples these counters
+-- only on a native-mask change, not on RenderStepped or a new timer.
+function Kit.breakdown()
+    local result = {
+        bevel = 0, underframe = 0, support = 0, other = 0,
+    }
+    for part in pairs(saved) do
+        if part.Parent == activeDecor then
+            local name = part.Name
+            if name:match("^PlatformBevel%d+_%d+$") then
+                result.bevel += 1
+            elseif name:match("^PlatformUnderFrame%d+$") then
+                result.underframe += 1
+            elseif name:match("^PlatformSupport%d+_%d+$") then
+                result.support += 1
+            else
+                result.other += 1
+            end
+        end
+    end
+    return result
+end
+
 function Kit.count()
     return count
 end
