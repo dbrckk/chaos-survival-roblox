@@ -94,6 +94,19 @@ local function sourceFor(height)
     return source
 end
 
+-- External skyline towers are fixed to the original authored perimeter.
+-- The gameplay floor may shrink in X/Z without moving their structures.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    return typeof(sx)=="number" and typeof(sz)=="number"
+        and sx>=318 and sz>=318
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=sx+.2 and base.Size.Z<=sz+.2
+end
+
 local function realTower(arena,owner,index)
     local height=HEIGHTS[index]
     if not arena or not arena:IsA("Folder")
@@ -109,9 +122,7 @@ local function realTower(arena,owner,index)
     local base=arena:FindFirstChild("Base")
     if not decor or not decor:IsA("Folder") or decor.Parent~=arena
         or owner.Parent~=decor
-        or not base or not base:IsA("BasePart") or base.Parent~=arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318 then return nil end
+        or not authenticBase(base,arena) then return nil end
     local expected={
         Vector3.new(9,height,8),
         Vector3.new(12,1.2,10),
@@ -161,7 +172,8 @@ local function realTower(arena,owner,index)
     local offset=shell.Position-base.Position
     if offset.Y<height*.5-5 or offset.Y>height*.5+5
         or math.max(math.abs(offset.X),math.abs(offset.Z))
-            <math.min(base.Size.X,base.Size.Z)*.48 then
+            <math.min(base:GetAttribute("OriginalSizeX"),
+                base:GetAttribute("OriginalSizeZ"))*.48 then
         return nil
     end
     return natives
@@ -285,9 +297,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure,cameraLook)
     local decor=arena:FindFirstChild("Decor")
     local base=arena:FindFirstChild("Base")
     if not decor or not decor:IsA("Folder")
-        or not base or not base:IsA("BasePart")
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318 then
+        or not authenticBase(base,arena) then
         removeAll()
         return
     end
@@ -296,9 +306,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure,cameraLook)
         table.clear(baseConnections)
         observedBase=base
         local function checkBase()
-            if base.Parent~=arena or not base.Anchored
-                or not base.CanCollide or base.Size.X<318
-                or base.Size.Z<318 then removeAll() end
+            if not authenticBase(base,arena) then removeAll() end
         end
         baseConnections[#baseConnections+1]=
             base:GetPropertyChangedSignal("Size"):Connect(checkBase)
