@@ -11,6 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 KIT=(ROOT/"src/client/HarborHeroStationMeshKit.lua").read_text()
 SERVER=(ROOT/"src/server/PremiumHarborHeroStationAssets.lua").read_text()
 LOD=(ROOT/"src/client/scenery-lod.client.lua").read_text()
+SCENERY=(ROOT/"src/client/arena-hero-scenery.client.lua").read_text()
 BUDGET=(ROOT/"src/shared/VisualBudgetRules.lua").read_text()
 REG=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())
 entry=next(x for x in REG["models"] if x["name"]=="harbor_hero_station")
@@ -61,6 +62,18 @@ assert 'e.source.Parent~=e.sourceHolder' in KIT
 assert 'e.sourceHolder.Parent~=ReplicatedStorage' in KIT
 assert 'e.base.Size.X<318' not in KIT
 assert 'e.base.Size.Z<318' not in KIT
+# The native source itself must remain on the original offshore berth
+# across a Low->High quality rebuild while the round floor is shrinking.
+harbor_scenery=SCENERY[SCENERY.index("local function buildHarbor(base, theme, tier)"):SCENERY.index("local function rebuild()")]
+assert 'base:GetAttribute("OriginalSizeZ")' in harbor_scenery
+assert 'sourceZ>=318' in harbor_scenery
+assert 'base.Size.Z<=sourceZ+.2' in harbor_scenery
+assert 'local hz=span*.5' in harbor_scenery
+assert 'local frame = localFrame(base, 0, 0, hz + 18, 180)' in harbor_scenery
+assert 'if tier.Name == "Low" then return end' in harbor_scenery
+assert 'makePart("HarborHeroRadarArm"' in harbor_scenery
+assert 'makePart("HarborHeroHoistCable"' in harbor_scenery
+
 assert 'clone.Parent=localFolder' in KIT
 assert KIT.index('clone.Parent=localFolder') < KIT.index('if visibility(e) then syncMotion(e) end')
 assert 'HarborHeroStormLens' in KIT
@@ -79,4 +92,5 @@ assert 'if native.CanCollide or native.CanQuery or native.CanTouch then' in KIT
 assert 'part.Transparency=show and 1 or original' in KIT
 print("PASS Harbor hero: seven genuine 3D meshes replace seven verified native Low pieces (12+ on Medium/High)")
 print("PASS Low radar motion with absent hoists; Medium/High all 3 motions; lens, pressure, shrink and budget eviction fallback")
+print("PASS Harbor offshore hero native berth stays fixed across tier rebuild under Shrinking Arena")
 print("LIMIT: Roblox Engine visual output and real Android FPS not measured")
