@@ -744,6 +744,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(masks.bevel).toBe(4)
             expect(masks.underframe).toBe(1)
             expect(masks.support).toBe(0)
+            expect(masks.other).toBe(0)
             -- The approved source is a genuine seven-piece bundle.
             -- Losing just its FIRST mesh must immediately restore ALL
             -- four authentic WedgePart bevels and the full underframe.
@@ -1632,6 +1633,11 @@ describe("Original 3D native fallback isolation (engine)", function()
             ["3"] = "bridge",
         }, nil, {support4}, meshes)
         expect(Kit.count()).toBe(4)
+        local initialMasks=Kit.breakdown()
+        expect(initialMasks.bevel).toBe(0)
+        expect(initialMasks.underframe).toBe(2)
+        expect(initialMasks.support).toBe(1)
+        expect(initialMasks.other).toBe(1)
         expect(frame1.LocalTransparencyModifier).toBe(1)
         expect(frame2.LocalTransparencyModifier).toBe(1)
         expect(rib3.LocalTransparencyModifier).toBe(1)
