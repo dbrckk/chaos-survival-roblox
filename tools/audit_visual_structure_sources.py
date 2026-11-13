@@ -386,19 +386,40 @@ for clause in (
 assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', portal)
 print("PASS Harbor promenade 3D follows contracted collidable decks")
 
-# The last three families need different logic: floor tiles are flat server
-# art, RouteMesh mixes shrinking and nonshrinking decks, and crown silhouettes
-# must track the true moving sky-spine.
+# The four genuine Sky Spine gateway crowns now follow shrinking,
+# server-owned decks and retain original-height nonphysical silhouettes.
+crown = (ROOT / "src/client/SkySpineCrownMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function realFloorScale(base, arena)",
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    "math.abs(deck.Size.X / scale - 12)",
+    "deck.Size.Z / scale < 14.3",
+    'type(deck:GetAttribute("RouteTier")) ~= "number"',
+    'local joint = Instance.new("Weld")',
+    "entry.joints[piece].C0=CFrame.new(",
+    "piece.Size=Vector3.new(original.X*scale,",
+    "local visible = refit(entry)",
+    "visible and 1 or saved.original",
+    "if not visible then PremiumRoutePbrKit.detach(entry) end",
+    "darknessGuard",
+):
+    assert clause in crown, clause
+assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', crown)
+print("PASS true Sky Spine 3D crowns follow deck shrink without fake collisions")
+
+# Last two kits require a separate safety design: dynamically shrinking
+# visual-only floor tiles and general RouteMesh with mixed platform classes.
 floor_coupled = {
     "src/client/PremiumGroundMeshKit.lua",
     "src/client/PremiumRouteMeshKit.lua",
-    "src/client/SkySpineCrownMeshKit.lua",
 }
 assert set(outer_scene_checks) == floor_coupled, (
     "unreviewed live-size guard or missing floor safeguard",
     sorted(set(outer_scene_checks) ^ floor_coupled),
 )
-print("PASS three floor/deck-bound live shrink guards remain")
+print("PASS two floor/route live shrink guards remain")
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
