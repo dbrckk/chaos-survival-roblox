@@ -1,0 +1,30 @@
+# Exact-main deterministic 5-source preview. NO ROBLOX UPLOAD or game publish.
+name: One-time QA 2026-11-13 Five P0 Sculpted 3D Preview
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-qa-20261113-five-p0-original-3d-no-upload.yml
+permissions:
+  contents: read
+concurrency:
+  group: p0-five-original-3d-preview-20261113
+  cancel-in-progress: false
+jobs:
+  preview-all-five:
+    name: Source and glTF geometry validation
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - ascension_access_arch
+          - ascension_transfer_arch
+          - ascension_summit_arch
+          - architectural_column_casing
+          - orbital_helix_underframe
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: ${{ matrix.model }}
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: true
