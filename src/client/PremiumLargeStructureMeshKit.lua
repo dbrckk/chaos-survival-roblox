@@ -146,6 +146,19 @@ function Kit.cradleFit(size,sourceBounds)
     return scale
 end
 
+-- Exchange source modules, never create a new GPU allowance. At most
+-- four of High desktop's 16 seven-MeshPart column slots may become four
+-- additional seven-MeshPart original underframes, and ONLY when real
+-- source-authenticated compatible deck candidates exist. In all cases
+-- 16+4 == (16-traded)+(4+traded) == 20 total structure modules.
+function Kit.desktopCradleTransfer(tier,desktopHigh,candidates)
+    if tier~="High" or desktopHigh~=true
+        or type(candidates)~="table" then return 0 end
+    local count=0
+    for _ in pairs(candidates) do count+=1 end
+    return math.min(4,math.max(0,count-4))
+end
+
 -- Prioritize verified genuine supports + full-length undercarriages on
 -- physically safe, nearby bridge decks instead of arbitrary PlatformN %
 -- sampling or the first two PlatformN in a large streamed arena.
