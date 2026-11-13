@@ -18,6 +18,31 @@ local APPROVED = {
 local ORDER = {"Classic", "Towers", "Crossroads", "Orbital", "Harbor", "Bridge"}
 local started = false
 
+-- Do not make the active world's sculpt wait behind unrelated, inactive
+-- arena imports. At the existing 74-second load checkpoint the real
+-- GeneratedMap arena is known; prioritize its already-approved model,
+-- then the shared bridge girder, then the same remaining six sources.
+-- GlobalApprovedImportGate still caps concurrent AssetService operations.
+local function orderedForActiveArena()
+    local generated=workspace:FindFirstChild("GeneratedMap")
+    local arena=generated and generated:FindFirstChild("Arena")
+    local variant=generated and generated:IsA("Folder")
+        and generated.Parent==workspace and arena
+        and arena:IsA("Folder") and arena.Parent==generated
+        and arena:GetAttribute("VariantId") or nil
+    if type(variant)~="string" or not APPROVED[variant]
+        or variant=="Bridge" then
+        return ORDER
+    end
+    local ordered={variant,"Bridge"}
+    for _,name in ipairs(ORDER) do
+        if name~=variant and name~="Bridge" then
+            ordered[#ordered+1]=name
+        end
+    end
+    return ordered
+end
+
 function Kit.approvedId(name)
     return APPROVED[name]
 end
@@ -62,7 +87,7 @@ function Kit.start()
     -- first; optional side skins are serialized and may fail safely.
     task.spawn(function()
         task.wait(74)
-        for _, name in ipairs(ORDER) do
+        for _, name in ipairs(orderedForActiveArena()) do
             if not folder:FindFirstChild(name) then
                 for attempt = 1, 3 do
                     local ok, raw = pcall(
