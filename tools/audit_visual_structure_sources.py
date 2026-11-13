@@ -187,6 +187,25 @@ for module in ("UnderstructureBeamMeshKit", "ArenaKeelMeshKit"):
     assert "base.Size.X >= 318 and base.Size.X <= 322" not in code, module
 print("PASS approved underfloor 3D remains eligible through valid shrink")
 
+# Approved 7-MeshPart chassis now replace up to 16 original
+# understructure beams on desktop High. Android stays at 12 and
+# GPU-pressure caps reduce cosmetic models without affecting physics.
+beam_mesh = (ROOT / "src/client/UnderstructureBeamMeshKit.lua").read_text(
+    encoding="utf8")
+scenery_lod = (ROOT / "src/client/scenery-lod.client.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "High = {count = 16, distance = 290, retention = 25}",
+    'if touch == true and tier == "High" then cap = math.min(cap, 12) end',
+    'if stress == 1 and tier == "High" then cap = math.min(cap, 8) end',
+    'if stress >= 2 and tier == "High" then cap = math.min(cap, 4) end',
+    'if count ~= 7 then return nil end',
+    'if count ~= 7 then clone:Destroy(); return nil end',
+):
+    assert clause in beam_mesh, ("approved beam replacement coverage", clause)
+assert '            isTouch)' in scenery_lod, "beam device budget not wired"
+print("PASS approved 16-beam desktop cap and mobile pressure guard")
+
 # An approved four-tower exterior mesh must remain eligible when the
 # original playable floor contracts. Reject fabricated expansions and
 # preserve the unchanged, signed exterior boundary; this is one of the
