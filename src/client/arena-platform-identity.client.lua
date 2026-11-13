@@ -518,7 +518,7 @@ local function rebuild()
         player:GetAttribute("OptionalVfxPressure"))
     local nearCameraCarapaces = PremiumPlatformSideMeshKit.selectCarapaceDecks(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
-        player:GetAttribute("OptionalVfxPressure"))
+        player:GetAttribute("OptionalVfxPressure"), decor)
     local lowHubDeck = tier.Name == "Low"
         and PremiumLargeDeckHullMeshKit.selectLowDeck(
             ordered, base, cameraPoint,
