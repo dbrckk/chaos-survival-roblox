@@ -3,12 +3,18 @@ on:
   pull_request:
     paths:
       - src/client/PlatformNativeTrimReplacementKit.lua
+      - src/client/PremiumPlatformSideMeshKit.lua
+      - src/client/arena-platform-identity.client.lua
+      - src/server/MapBuilder.lua
       - tools/verify_platform_trim_mesh_ownership.py
       - .github/workflows/platform-trim-streaming-regression.yml
   push:
     branches: [main]
     paths:
       - src/client/PlatformNativeTrimReplacementKit.lua
+      - src/client/PremiumPlatformSideMeshKit.lua
+      - src/client/arena-platform-identity.client.lua
+      - src/server/MapBuilder.lua
       - tools/verify_platform_trim_mesh_ownership.py
       - .github/workflows/platform-trim-streaming-regression.yml
 permissions:
