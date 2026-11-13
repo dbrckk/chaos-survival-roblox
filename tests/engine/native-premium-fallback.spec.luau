@@ -761,6 +761,26 @@ describe("Original 3D native fallback isolation (engine)", function()
             end
             expect(underside.LocalTransparencyModifier).toBe(1)
 
+            -- The MeshPart may remain in the render folder but lose its
+            -- actual WeldConstraint on the playable Platform2 owner.
+            -- A naked 3D skirt is not an authorized native replacement.
+            local joint = parts[2]:FindFirstChild("ChaosPlatformTrimWeld")
+            expect(joint~=nil and joint.Part1==nearby).toBe(true)
+            joint.Parent = nil
+            expect(Kit.count()).toBe(0)
+            expect(Kit.breakdown().bevel).toBe(0)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(0)
+            end
+            expect(underside.LocalTransparencyModifier).toBe(0)
+            joint.Parent = parts[2]
+            expect(Kit.count()).toBe(5)
+            expect(Kit.breakdown().bevel).toBe(4)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(1)
+            end
+            expect(underside.LocalTransparencyModifier).toBe(1)
+
             nearby:SetAttribute("CollapsePhase","Warning")
             expect(Kit.count()).toBe(0)
             for _,bevel in ipairs(bevels) do
