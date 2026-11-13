@@ -1,3 +1,5 @@
+> **Ré-audit au code actuel `16b8a52` :** [audit P4 des vraies cibles visuelles restantes](P4_AUDIT_CIBLES_VISUELLES_3D_RESTANTES_2026-11-13.md) · [matrice chiffrée par variante et priorité](remaining-3d-priority-matrix-2026-11-13.csv). Le relevé historique ci-dessous recense les natives **avant les substitutions client** et certains paragraphes décrivent des commits antérieurs.
+
 # Chaos Survival — audit exhaustif du parc de structures visuelles, 13 novembre 2026
 
 ## Conclusion et définition des nombres
