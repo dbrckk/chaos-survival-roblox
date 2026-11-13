@@ -85,6 +85,19 @@ local function approvedSource()
     return source
 end
 
+-- Exterior gantry stays at the originally authored northern berth.
+-- Only the survival floor contracts during Shrinking Arena.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    return typeof(sx)=="number" and typeof(sz)=="number"
+        and sx>=318 and sz>=318
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=sx+.2 and base.Size.Z<=sz+.2
+end
+
 local function realContext(arena)
     if not arena or not arena:IsA("Folder") or arena.Name~="Arena"
         or arena:GetAttribute("VariantId")~="Harbor" then return nil end
@@ -93,9 +106,7 @@ local function realContext(arena)
         or arena.Parent~=generated then return nil end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart") or base.Parent~=arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X<318 or base.Size.Z<318
+    if not authenticBase(base,arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent~=arena then return nil end
     local owner=decor:FindFirstChild("ArenaSignatureMegastructure")
@@ -116,8 +127,10 @@ local function realContext(arena)
         natives[i]=part
     end
     local beam=natives[1]
+    local originalX=base:GetAttribute("OriginalSizeX")
+    local originalZ=base:GetAttribute("OriginalSizeZ")
     local expected=base.Position+Vector3.new(
-        base.Size.X*.24,base.Size.Y*.5+43.5,-(base.Size.Z*.5+66))
+        originalX*.24,base.Size.Y*.5+43.5,-(originalZ*.5+66))
     if (beam.Position-expected).Magnitude>.20 then return nil end
     -- Authored MapBuilder frame relationships are exact and unchanged.
     local expectedRelative={
@@ -291,8 +304,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         table.clear(baseConnections)
         watchedBase=base
         local function checkBase()
-            if base.Parent~=arena or not base.Anchored or not base.CanCollide
-                or base.Size.X<318 or base.Size.Z<318 then restore() end
+            if not authenticBase(base,arena) then restore() end
         end
         baseConnections[#baseConnections+1]=
             base:GetPropertyChangedSignal("Size"):Connect(checkBase)
