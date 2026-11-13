@@ -126,7 +126,11 @@ local function collectArch(arena,deck,decor,scale)
         or deck.Transparency>=.75 then return nil end
     local step=deck:GetAttribute("PerimeterStep")
     local key=STAGE[step]
-    if not key then return nil end
+    local route=deck:GetAttribute("PerimeterRoute")
+    -- The real builder has four signed physical routes. Decline a fake
+    -- or half-replicated owner instead of spending approved art on it.
+    if not key or type(route)~="number" or route%1~=0
+        or route<1 or route>4 then return nil end
     local size=deck.Size
     -- A base-first shrink packet must NEVER make an old full-width imported
     -- arch appear over a now smaller real physical escape deck.
@@ -170,7 +174,7 @@ local function collectArch(arena,deck,decor,scale)
         -- the native overpass offset. Deep lower steel stays native.
         orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0),
         scaleZ=overpass.Size.Z/17.6,
-        stage=step,index=index,expectedParent=decor}
+        stage=step,route=route,index=index,expectedParent=decor}
 end
 
 local function collectCasing(arena,casing,group)
@@ -568,9 +572,33 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             return a.owner.Name<b.owner.Name
         end)
         local cap=caps(tier,touch,pressure,kind)
-        for i=1,math.min(cap,#candidates[kind]) do
-            local data=candidates[kind][i]
-            desired[data.owner]=data
+        local taken=0
+        -- High DESKTOP: distribute the SAME six imported arch slots over
+        -- four independently playable perimeter escape routes. Previously
+        -- several expensive arches on one side left entire routes looking
+        -- like default blockout geometry even with all approved assets.
+        -- First reserve the highest ranked genuine candidate on EACH
+        -- visible route, then fill unused slots by the existing camera
+        -- score. Mobile, Medium, GPU pressure and all other owners retain
+        -- their unchanged budgets and near-camera selection.
+        if kind=="arch" and tier=="High" and touch~=true
+            and (tonumber(pressure) or 0)<1 and cap>=4 then
+            local routes={}
+            for _,data in ipairs(candidates.arch) do
+                if taken>=cap then break end
+                if not routes[data.route] then
+                    routes[data.route]=true
+                    desired[data.owner]=data
+                    taken+=1
+                end
+            end
+        end
+        for _,data in ipairs(candidates[kind]) do
+            if taken>=cap then break end
+            if not desired[data.owner] then
+                desired[data.owner]=data
+                taken+=1
+            end
         end
     end
     for owner,entry in pairs(mounted) do
