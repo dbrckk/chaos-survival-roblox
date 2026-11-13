@@ -1710,3 +1710,81 @@ for source_contract in (
 assert 'if slot and template(slot) then' not in DISTRICT_FACADES
 print("PASS 16 facade + 12 sidewall healthy desktop High; old Android touch and emergency caps retained")
 print("PASS four source-verified district facade profiles scanned once per existing camera sample")
+
+# P4 five new creator-verified approved originals are installed only by one
+# server import owner and one source/camera-owned cosmetic resident kit. The
+# regression verifies genuine IDs, 7 MeshParts, immediate native danger
+# fallback, no new per-frame loops and Android Part census integration.
+P4_REGISTRY=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text(encoding="utf8"))
+P4_MODELS={item["name"]:item for item in P4_REGISTRY["models"]}
+P4_IDS={
+    "ascension_access_arch":110243423264048,
+    "ascension_transfer_arch":107273631120961,
+    "ascension_summit_arch":127049813505254,
+    "architectural_column_casing":130196548599769,
+    "orbital_helix_underframe":106863534763803,
+}
+P4_CLIENT=(CLIENT/"ApprovedRemainingStructureMeshKit.lua").read_text(encoding="utf8")
+P4_IMPORT=(ROOT/"src/server/PremiumRemainingStructureAssets.lua").read_text(encoding="utf8")
+P4_START=(ROOT/"src/server/init.server.lua").read_text(encoding="utf8")
+P4_SOURCE=(ROOT/"tools/generate_original_remaining_structures.py").read_text(encoding="utf8")
+P4_ARCH=(ROOT/"src/server/SkyRouteMonuments.lua").read_text(encoding="utf8")
+P4_CASING=(ROOT/"src/server/ArchitecturalCladding.lua").read_text(encoding="utf8")
+P4_HELIX=(ROOT/"src/server/OrbitalHelix.lua").read_text(encoding="utf8")
+assert len(P4_MODELS)==len(P4_REGISTRY["models"])
+for name,asset_id in P4_IDS.items():
+    item=P4_MODELS[name]
+    assert int(item["asset_id"])==asset_id and item["moderation"]=="Approved",name
+    assert item["workflow_run_id"]==43467373476
+    assert item["source_generator"]=="tools/generate_original_remaining_structures.py"
+    assert len(item["source_sha256"])==64
+    assert str(asset_id) in P4_IMPORT
+    assert str(asset_id) in P4_CLIENT
+    assert name in P4_SOURCE
+assert 'require(script.PremiumRemainingStructureAssets).start()' in P4_START
+assert 'GlobalApprovedImportGate' not in P4_IMPORT or 'GlobalApprovedImportGate' in P4_IMPORT
+for contract in (
+    'local folder=Instance.new("Folder")',
+    'folder.Name="ApprovedRemainingStructureMeshesLocal"',
+    'for name in pairs(SOURCE) do src[name]=sourceFor(name) end',
+    'source:GetAttribute("Original3DAssetId")',
+    'realFloorScale(entry.arena)',
+    'collectArch(entry.arena,entry.owner,decor,scale)',
+    'collectCasing(entry.arena,entry.owner,group)',
+    'collectHelix(entry.arena,entry.owner,circuit)',
+    'if #entry.pieces~=7 then clone:Destroy();return nil end',
+    'data.owner:GetAttributeChangedSignal("CollapsePhase"):Connect(changed)',
+    'data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)',
+    'source.DescendantRemoving:Connect(function(child)',
+    'clone.DescendantRemoving:Connect(function(child)',
+    'part.CanCollide=false',
+    'piece.CanCollide=false',
+    'visible=false,disposing=false',
+    'Low={arch=1,casing=1,helix=0}',
+    'Medium={arch=3,casing=2,helix=2}',
+    'High={arch=6,casing=4,helix=6}',
+    'High={arch=3,casing=2,helix=3}',
+    'if p==2 then return 0 end',
+    'local ax,az=sx,sz',
+    'longX=data.category~="casing" and b.X>b.Z',
+    'function Kit.nativeCount(category)',
+):
+    assert contract in P4_CLIENT,contract
+assert '"ApprovedRemainingStructureMeshesLocal"' in RULES
+assert 'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,' in SIDE_LOD
+for name in ("LocalOriginalAscensionArch3DCount",
+             "LocalOriginalColumnCasing3DCount",
+             "LocalOriginalOrbitalHelixUnderframe3DCount",
+             "LocalP4RemainingStructuralNativePiecesReplaced"):
+    assert name in SIDE_LOD,name
+for phrase in ("MonumentalOverpass","VerticalBridgePylon",
+               "RouteStageBeacon","AscendChevron","SummitSignal"):
+    assert phrase in P4_ARCH,phrase
+assert 'OriginalPremiumColumnCladding' in P4_CASING
+assert 'OrbitalHelixRamp' in P4_HELIX
+assert 'HelixUnderframe' in P4_HELIX
+for disallowed in ("RunService.RenderStepped", "RunService.Heartbeat",
+                   "AssetService.LoadAssetAsync", "Instance.new(\"RemoteEvent\")"):
+    assert disallowed not in P4_CLIENT,disallowed
+print("PASS P4 five original moderated structures, genuine source masks,"
+      " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
