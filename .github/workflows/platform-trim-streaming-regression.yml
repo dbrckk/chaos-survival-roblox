@@ -4,6 +4,7 @@ on:
     paths:
       - src/client/PlatformNativeTrimReplacementKit.lua
       - src/client/PremiumPlatformSideMeshKit.lua
+      - src/client/PremiumLargeStructureMeshKit.lua
       - src/client/arena-platform-identity.client.lua
       - src/server/MapBuilder.lua
       - src/server/PremiumPlatformSideAssets.lua
@@ -14,6 +15,7 @@ on:
     paths:
       - src/client/PlatformNativeTrimReplacementKit.lua
       - src/client/PremiumPlatformSideMeshKit.lua
+      - src/client/PremiumLargeStructureMeshKit.lua
       - src/client/arena-platform-identity.client.lua
       - src/server/MapBuilder.lua
       - src/server/PremiumPlatformSideAssets.lua
