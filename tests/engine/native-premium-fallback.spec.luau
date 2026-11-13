@@ -95,7 +95,24 @@ describe("Original 3D native fallback isolation (engine)", function()
                     .." southAlpha="..tostring(drydock.Transparency)
                     .." base="..tostring(base.Size)
                     .." originalX="..tostring(base:GetAttribute("OriginalSizeX"))
-                    .." originalZ="..tostring(base:GetAttribute("OriginalSizeZ")))
+                    .." originalZ="..tostring(base:GetAttribute("OriginalSizeZ"))
+                    .." baseParent="..tostring(base.Parent==arena)
+                    .." baseAnchored="..tostring(base.Anchored)
+                    .." baseCollide="..tostring(base.CanCollide)
+                    .." northVariant="..tostring(north:GetAttribute("SignatureVariant"))
+                    .." southVariant="..tostring(south:GetAttribute("SignatureVariant"))
+                    .." generatedOk="..tostring(
+                        workspace:FindFirstChild("GeneratedMap")==generated)
+                    .." northTargetError="..tostring(
+                        (beam.Position-(base.Position+Vector3.new(
+                            base:GetAttribute("OriginalSizeX")*.24,
+                            base.Size.Y*.5+43.5,
+                            -(base:GetAttribute("OriginalSizeZ")*.5+66)))).Magnitude)
+                    .." southTargetError="..tostring(
+                        (south.Foundation.Position-(base.Position+Vector3.new(
+                            -base:GetAttribute("OriginalSizeX")*.20,
+                            base.Size.Y*.5-1,
+                            base:GetAttribute("OriginalSizeZ")*.5+54))).Magnitude))
             end
         end
         requireMounted("initial")
