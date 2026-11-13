@@ -25,7 +25,9 @@ folder.Parent=workspace
 local currentArena=nil
 local active={}
 local BUDGET={
-    Low={models=0,distance=0,retention=0},
+    -- One 3,718-triangle creator-approved barge replaces a near-camera
+    -- native cargo block only on a healthy Low device (seven MeshParts).
+    Low={models=1,distance=145,retention=18},
     Medium={models=2,distance=270,retention=27},
     High={models=4,distance=380,retention=45},
 }
@@ -61,13 +63,25 @@ local function source()
     return model,APPROVED_ID
 end
 
+-- The sea and berth positions do not shrink with the playable floor.
+-- Compare the signed original 320-stud footprint, not live round dimensions.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local originalX=base:GetAttribute("OriginalSizeX")
+    local originalZ=base:GetAttribute("OriginalSizeZ")
+    return typeof(originalX)=="number" and typeof(originalZ)=="number"
+        and originalX>=318 and originalZ>=318
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=originalX+.2 and base.Size.Z<=originalZ+.2
+end
+
 local function authentic(hull,arena,midground,base)
     if not hull or not arena or not midground or not base
         or tostring(arena:GetAttribute("VariantId"))~="Harbor"
         or not hull:IsA("BasePart") or hull.Parent~=midground
         or not hull.Anchored or hull.CanCollide or hull.CanTouch
-        or hull.CanQuery or not base:IsA("BasePart")
-        or base.Size.X<318 or base.Size.Z<318 then return false end
+        or hull.CanQuery or not authenticBase(base,arena) then return false end
     local index=tonumber(hull.Name:match("^HarborFreightBargeHull([1-4])$"))
     if not index or hull:GetAttribute("OriginalHarborMidgroundBargeIndex")
         ~=index then return false end
@@ -78,13 +92,16 @@ end
 local function alive(e)
     if not e or not e.model or e.model.Parent~=folder
         or e.arena~=currentArena or e.hull.Parent~=e.midground
-        or e.source.Parent==nil or e.base.Size.X<318 or e.base.Size.Z<318
+        or e.source.Parent~=e.sourceHolder
+        or e.sourceHolder.Parent~=ReplicatedStorage
+        or e.source:GetAttribute("Original3DAssetId")~=APPROVED_ID
+        or not authentic(e.hull,e.arena,e.midground,e.base)
         or e.hull:GetAttribute("OriginalHarborMidgroundBargeIndex")~=e.index
         or not e.hull.Anchored or e.hull.CanCollide
         or (e.hull.Size-e.size).Magnitude>.15 then return false end
     local n=0
     for _,piece in ipairs(e.pieces) do
-        if not piece or piece.Parent~=e.model then return false end
+        if not piece or not piece:IsDescendantOf(e.model) then return false end
         n+=1
     end
     return n==7
@@ -169,7 +186,8 @@ local function mount(arena,base,midground,hull,index,approved,id)
     end
     if nativeCount<4 then clone:Destroy();return nil end
     local entry={arena=arena,base=base,midground=midground,hull=hull,
-        index=index,size=hull.Size,source=approved,model=clone,
+        index=index,size=hull.Size,source=approved,
+        sourceHolder=approved.Parent,model=clone,
         native=native,pieces=pieces,connections={},disposing=false}
     clone.Name="ApprovedOriginal3DHarborBarge"..index
     clone:SetAttribute("CosmeticOnly",true)
@@ -202,7 +220,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     local budget=BUDGET[tier] or BUDGET.Low
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     local cap=budget.models
-    if tier=="Medium" then
+    if tier=="Low" then
+        cap=stress==0 and 1 or 0
+    elseif tier=="Medium" then
         cap=stress==0 and 2 or (stress==1 and 1 or 0)
     elseif tier=="High" then
         cap=stress==0 and 4 or (stress==1 and 2 or 0)
@@ -246,7 +266,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure)
     -- First verified 3D barge stays nearest to the player; when
     -- Medium/high pressure permits a second, distribute it along
     -- the coast instead of using a second nearby native block.
-    -- Exact 0/1/2/4 pre-existing tier caps are never exceeded.
+    -- At most 1/2/4 authentic barges for Low/Medium/High (pressure 0);
+    -- Low falls back to native immediately at pressure 1 or 2.
     local wanted=SpatialMidgroundSelectionRules.choose(choices,cap)
     for hull,e in pairs(active) do
         if not wanted[hull] or not alive(e) or e.source~=approved then
