@@ -295,6 +295,18 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             end
         end
     end
+    -- In production, masks require a COMPLETE, owner-verified source,
+    -- not a boolean replacement tag or one surviving MeshPart. Start with
+    -- ZERO authorized masks until the actual mounted source is counted.
+    -- Caller-supplied source-less engine fixtures retain their old API.
+    local approvedKinds = nil
+    local approvedSupports = nil
+    if meshFolder and meshFolder:IsA("Folder") then
+        approvedKinds = table.clone(active)
+        approvedSupports = table.clone(verifiedSupports)
+        table.clear(active)
+        table.clear(verifiedSupports)
+    end
     -- Watch the REAL physical PlatformN/SkybridgeN owners before masking
     -- their native cosmetic underframes. Streaming in late also reconciles.
     attachPlatforms(arena:FindFirstChild("Platforms"))
@@ -311,35 +323,26 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     if meshFolder and meshFolder:IsA("Folder") then
         local sourceOwnerByPiece = {}
         local livePiecesByOwner = {}
-        -- Keep the original verified authorization separately: streaming
-        -- out the last piece must restore native trim, but a later genuine
-        -- source must be able to reinstate the premium silhouette.
-        local approvedKinds = table.clone(active)
-        local approvedSupports = table.clone(verifiedSupports)
-        local function registerSourcePiece(piece)
-            if sourceOwnerByPiece[piece] ~= nil then return end
+        local requiredPiecesByOwner = {}
+        local platformFolder = arena:FindFirstChild("Platforms")
+        -- Source identity is checked against the actual welded server
+        -- owner, never the mesh name or arbitrary client-supplied count.
+        local function sourceOwner(piece)
             if not piece:IsA("MeshPart")
                 or not (piece:GetAttribute("Original3DStructuralSide") == true
                     or piece:GetAttribute("OriginalLargeStructure3D") == true
-                    or piece:GetAttribute("OriginalLargeDeckHull") == true) then
-                return
-            end
+                    or piece:GetAttribute("OriginalLargeDeckHull") == true)
+                or piece.Parent ~= meshFolder then return nil end
             local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
                 or piece:FindFirstChild("OriginalSupportVisualWeld")
             if not joint or (not joint:IsA("Weld")
-                and not joint:IsA("WeldConstraint")) then return end
+                and not joint:IsA("WeldConstraint")) then return nil end
             local owner = joint.Part1
-            if not owner or not owner:IsA("BasePart") then return end
-
+            if not owner or not owner:IsA("BasePart") then return nil end
             if approvedSupports[owner] == true then
-                verifiedSupports[owner] = true
-                -- One verified support, not every support in the district.
-                sourceOwnerByPiece[piece] = owner
-                livePiecesByOwner[owner] = (livePiecesByOwner[owner] or 0) + 1
-                reconcile()
-                return
+                return owner, owner
             end
-            if owner.Parent ~= activePlatforms then return end
+            if owner.Parent ~= platformFolder then return nil end
             local platformId = owner.Name:match("^Platform(%d+)$")
             local bridgeId = owner.Name:match("^Skybridge(%d+)$")
             local id = platformId or bridgeId
@@ -347,12 +350,46 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     and (approvedKinds[id] == "carapace"
                         or approvedKinds[id] == "cradle"))
                 or (bridgeId and approvedKinds[id] == "bridge")) then
-                sourceOwnerByPiece[piece] = id
-                livePiecesByOwner[id] = (livePiecesByOwner[id] or 0) + 1
-                active[id] = approvedKinds[id]
-                watchOwner(owner)
-                reconcile()
+                return id, owner
             end
+            return nil
+        end
+        -- A single complete seven-material approved source contains 7
+        -- MeshParts; stacked pillars and bridge sides contain multiples
+        -- of 7. Capture the FULL initial welded source bundle once.
+        -- Never infer a complete kit from a lone streamed sibling.
+        for _, piece in ipairs(meshFolder:GetChildren()) do
+            local key = sourceOwner(piece)
+            if key then
+                requiredPiecesByOwner[key] =
+                    (requiredPiecesByOwner[key] or 0) + 1
+            end
+        end
+        local function sourceComplete(key)
+            local required = requiredPiecesByOwner[key]
+            return required ~= nil and required >= 7
+                and required % 7 == 0
+                and (livePiecesByOwner[key] or 0) == required
+        end
+        local function refreshOwner(key, owner)
+            if type(key) == "string" then
+                active[key] = sourceComplete(key) and approvedKinds[key]
+                    or nil
+                if active[key] then watchOwner(owner) end
+            else
+                verifiedSupports[key] = sourceComplete(key) and true or nil
+            end
+            -- The exact source owner alone loses or regains native
+            -- masking, independently of the other visual families.
+            reconcile()
+        end
+        local function registerSourcePiece(piece)
+            if sourceOwnerByPiece[piece] ~= nil then return end
+            local key, owner = sourceOwner(piece)
+            if not key then return end
+            sourceOwnerByPiece[piece] = key
+            livePiecesByOwner[key] = (livePiecesByOwner[key] or 0) + 1
+            refreshOwner(key, owner)
         end
         for _, piece in ipairs(meshFolder:GetChildren()) do
             registerSourcePiece(piece)
@@ -385,19 +422,19 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                 -- premium replacements; only a tracked, source-authored
                 -- mesh bound to an actual server native owner can do so.
                 if owner == nil then return end
-                local remaining = (livePiecesByOwner[owner] or 1) - 1
-                if remaining > 0 then
-                    livePiecesByOwner[owner] = remaining
-                    return
-                end
-                livePiecesByOwner[owner] = nil
+                local remaining = math.max(0,
+                    (livePiecesByOwner[owner] or 1) - 1)
+                livePiecesByOwner[owner] =
+                    remaining > 0 and remaining or nil
+                -- Even ONE missing source material may leave a visible
+                -- hole in a sculpted deck or crane girder. Reveal the
+                -- authentic server-native fallback IMMEDIATELY, and
+                -- re-authorize only after every verified piece returns.
                 if type(owner) == "string" then
                     active[owner] = nil
                 else
                     verifiedSupports[owner] = nil
                 end
-                -- Reconcile native masks immediately for this one owner.
-                -- Do not clear the other maps' source authorizations.
                 reconcile()
             end)
     end
