@@ -1925,6 +1925,24 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalDistrictSidewallMeshCount",
                 sidewallMeshCount)
         end
+        -- Observable, actual resident WHOLE buildings: source-approved
+        -- facade + six-piece sculpted side/back shell on the SAME owner.
+        -- This is a live client count, not a percentage inferred from
+        -- native MapBuilder Parts or assumed mesh imports.
+        local completeDistricts =
+            ApprovedDistrictSidewallMeshKit.completeCount()
+        if player:GetAttribute("LocalCompleteDistrict3DCount")
+            ~= completeDistricts then
+            player:SetAttribute("LocalCompleteDistrict3DCount",
+                completeDistricts)
+        end
+        local unpairedSidewalls = math.max(0,
+            sidewallMeshCount - completeDistricts)
+        if player:GetAttribute("LocalUnpairedDistrictSidewall3DCount")
+            ~= unpairedSidewalls then
+            player:SetAttribute("LocalUnpairedDistrictSidewall3DCount",
+                unpairedSidewalls)
+        end
         local sidewallPartsReplaced =
             ApprovedDistrictSidewallMeshKit.replacedNativeCount()
         if player:GetAttribute("LocalOriginalDistrictSidewallPartsReplaced")
