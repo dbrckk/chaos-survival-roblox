@@ -363,11 +363,33 @@ for forbidden in ("RenderStepped", "Heartbeat", "RemoteEvent",
     assert forbidden not in caisson, forbidden
 print("PASS Harbor caisson mesh follows real shrinking decks with safe 3D fallback")
 
-# Four remaining families guard true gameplay-sensitive surfaces. Never
-# remove these live-size checks without implementing the same bounded,
-# provenance-validated deck-specific refit and immediate hazard fallback.
+# Harbor promenade arches now follow genuine colliding skywalks through
+# ShrinkingArena; only the imported nonphysical MeshParts are reformed.
+portal = (ROOT / "src/client/HarborPromenadePortalMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function realFloorScale(base, arena)",
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    "deck.Size.X / scale",
+    "deck.Size.Z / scale",
+    'type(deck:GetAttribute("RouteTier")) ~= "number"',
+    'local joint=Instance.new("Weld")',
+    "entry.joints[piece].C0 = CFrame.new(",
+    "piece.Size = Vector3.new(original.X * scale,",
+    "entry.frames[piece]=deck.CFrame:ToObjectSpace(piece.CFrame)",
+    "local visible = refit(entry)",
+    "visible and 1 or native.original",
+    "PremiumRoutePbrKit.detach(entry)",
+):
+    assert clause in portal, clause
+assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', portal)
+print("PASS Harbor promenade 3D follows contracted collidable decks")
+
+# The last three families need different logic: floor tiles are flat server
+# art, RouteMesh mixes shrinking and nonshrinking decks, and crown silhouettes
+# must track the true moving sky-spine.
 floor_coupled = {
-    "src/client/HarborPromenadePortalMeshKit.lua",
     "src/client/PremiumGroundMeshKit.lua",
     "src/client/PremiumRouteMeshKit.lua",
     "src/client/SkySpineCrownMeshKit.lua",
@@ -376,7 +398,7 @@ assert set(outer_scene_checks) == floor_coupled, (
     "unreviewed live-size guard or missing floor safeguard",
     sorted(set(outer_scene_checks) ^ floor_coupled),
 )
-print("PASS four floor/deck-bound live shrink guards remain")
+print("PASS three floor/deck-bound live shrink guards remain")
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
