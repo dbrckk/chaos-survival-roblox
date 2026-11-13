@@ -1902,8 +1902,12 @@ task.spawn(function()
         -- doors already have their actual visible/hidden state. Never
         -- show imported facades on an offscreen, culled or shrunk building.
         local districtSyncStartedAt = os.clock()
+        -- Facades and six-MeshPart sidewalls use the SAME touch/pressure
+        -- snapshot, so a mobile GPU fallback releases both authentic
+        -- surfaces and reveals original native geometry in one LOD tick.
         PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady, cameraLook)
+            profile.Name, cameraReady, cameraLook, isTouch,
+            player:GetAttribute("OptionalVfxPressure"))
         lodDistrictTotalMs += (os.clock() - districtSyncStartedAt) * 1000
         local facadeMeshCount = PremiumDistrictFacadeMeshKit.count()
         if player:GetAttribute("LocalOriginalDistrictFacadeMeshCount")
