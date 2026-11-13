@@ -124,6 +124,31 @@ for path in sorted((ROOT / "src/client").glob("*.lua")):
                 if owner not in registered:
                     unbudgeted.append({"owner":owner,"module":name})
 
+# An approved four-tower exterior mesh must remain eligible when the
+# original playable floor contracts. Reject fabricated expansions and
+# preserve the unchanged, signed exterior boundary; this is one of the
+# 32 historically fragile outboard MeshKit checks.
+exterior_towers = (ROOT / "src/client/ApprovedExteriorTowerMeshKit.lua").read_text(
+    encoding="utf8")
+assert "local function authenticBase(base,arena)" in exterior_towers
+for clause in (
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    'base.Size.X<=sx+.2 and base.Size.Z<=sz+.2',
+    'if not authenticBase(base,arena) then removeAll() end',
+    'base:GetPropertyChangedSignal("Size"):Connect(checkBase)',
+    'base:GetPropertyChangedSignal("CanCollide"):Connect(checkBase)',
+    'base.AncestryChanged:Connect(checkBase)',
+    'math.min(base:GetAttribute("OriginalSizeX"),',
+    'local QUALITIES = {Low=1,Medium=2,High=4}',
+    'if stress==1 then cap=math.floor(cap*.5) end',
+):
+    assert clause in exterior_towers,("exterior tower shrink safety",clause)
+assert 'base.Size.X<318 or base.Size.Z<318' not in exterior_towers
+assert 'base.Size.X<318' not in exterior_towers
+assert 'base.Size.Z<318' not in exterior_towers
+print("PASS signed original perimeter for four exterior 3D towers during shrink")
+
 # This is a risk inventory, not a count of defective objects: checking a
 # 320-stud playable floor is correct for physical platforms, but incorrect
 # for outboard static scenery during Shrinking Arena.
