@@ -20,6 +20,115 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("selects only genuinely fitting 22-stud cradles and unmasks real underframes", function()
+        Kit.reset()
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        local generated,templates,meshes
+        local ok,reason=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Crossroads",
+                ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local platforms=arena:FindFirstChild("Platforms")
+            local decor=arena:FindFirstChild("Decor")
+            local base=arena:FindFirstChild("Base")
+            -- These bounds match the existing approved LongCradle model
+            -- (128914328933863), but the fixture has no external assets.
+            local sourceBounds=Vector3.new(22.6,3.0,9.8)
+            expect(PremiumLargeStructureMeshKit.cradleFit(
+                Vector3.new(34,2,12),sourceBounds)).toBe(nil)
+            expect(PremiumLargeStructureMeshKit.cradleFit(
+                Vector3.new(24,2,12),sourceBounds)~=nil).toBe(true)
+            expect(PremiumLargeStructureMeshKit.cradleFit(
+                Vector3.new(12,2,12),sourceBounds)).toBe(nil)
+
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedLargeStructureTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=game:GetService("ReplicatedStorage")
+            local source=Instance.new("Model")
+            source.Name="LongCradle"
+            source:SetAttribute("Original3DAssetId",128914328933863)
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute("OriginalLargeStructure3D",true)
+            for i=1,7 do
+                local material=Instance.new("MeshPart")
+                material.Name="CradleMaterial"..i
+                material.Size=if i==1 then sourceBounds
+                    else Vector3.new(.3,.3,.3)
+                material.Anchored=true
+                material.CanCollide=false
+                material.CanTouch=false
+                material.CanQuery=false
+                material.Parent=source
+            end
+            source.Parent=templates
+
+            local ordered={}
+            for _,part in ipairs(platforms:GetChildren()) do
+                if part:IsA("BasePart")
+                    and part.Name:match("^Platform%d+$") then
+                    ordered[#ordered+1]=part
+                end
+            end
+            local camera=platforms:FindFirstChild("Platform2").Position
+            local selected=PremiumLargeStructureMeshKit
+                .selectNearRouteStructures(ordered,decor,"Crossroads",
+                    "Medium",base,camera,Vector3.new(0,0,1),0)
+            local count,owner=0,nil
+            for part in pairs(selected) do
+                count+=1
+                local id=part.Name:match("^Platform(%d+)$")
+                expect(id~=nil).toBe(true)
+                expect(part.CanCollide and part.Anchored).toBe(true)
+                expect(part:GetAttribute("PromenadeStep")~=nil
+                    or part:GetAttribute("SkySpineStep")~=nil).toBe(true)
+                expect(PremiumLargeStructureMeshKit.cradleFit(
+                    part.Size,sourceBounds)~=nil).toBe(true)
+                local native=decor:FindFirstChild("PlatformUnderFrame"..id)
+                expect(native~=nil).toBe(true)
+                expect(native.CanCollide or native.CanTouch or native.CanQuery)
+                    .toBe(false)
+                owner=part
+            end
+            expect(count).toBe(2)
+            expect(owner~=nil).toBe(true)
+            local id=tonumber(owner.Name:match("^Platform(%d+)$"))
+            local underframe=decor:FindFirstChild("PlatformUnderFrame"..id)
+            expect(underframe:GetAttribute("PremiumArchitecturalSurface"))
+                .toBe(true)
+            meshes=Instance.new("Folder")
+            meshes.Name="OriginalLongCradleUnderframeFixture"
+            meshes.Parent=workspace
+            local sculpt=PremiumLargeStructureMeshKit.longCradle(
+                meshes,owner,"Medium",id,true)
+            expect(sculpt~=nil and #sculpt==7).toBe(true)
+            for _,mesh in ipairs(sculpt) do
+                expect(mesh:IsA("MeshPart")).toBe(true)
+                expect(mesh.CanCollide or mesh.CanTouch or mesh.CanQuery)
+                    .toBe(false)
+                expect(mesh:GetAttribute("OriginalLongCradle3D")).toBe(true)
+            end
+            Kit.bind(arena,{[tostring(id)]="cradle"},nil,nil,meshes)
+            expect(underframe.LocalTransparencyModifier).toBe(1)
+            expect(owner.CanCollide).toBe(true)
+            owner:SetAttribute("CollapsePhase","Warning")
+            expect(underframe.LocalTransparencyModifier).toBe(0)
+            owner:SetAttribute("CollapsePhase","Normal")
+            expect(underframe.LocalTransparencyModifier).toBe(1)
+            for _,mesh in ipairs(sculpt) do mesh:Destroy() end
+            expect(underframe.LocalTransparencyModifier).toBe(0)
+            expect(owner.CanCollide).toBe(true)
+        end)
+        Kit.reset()
+        if meshes then meshes:Destroy() end
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if previous then previous.Parent=workspace end
+        if not ok then error(reason) end
+    end)
+
     it("replaces a real 4.85-stud Crossroads near support on Low with native recovery", function()
         Kit.reset()
         local previous=workspace:FindFirstChild("GeneratedMap")
