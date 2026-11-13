@@ -41,7 +41,26 @@ assert 'OwnerVerified' in KIT
 assert 'CosmeticOnly' in KIT
 assert 'if roles.Static~=4 or roles.Radar~=1' in KIT
 assert 'if #pieces~=7 or roles.Static~=4' in KIT
-assert 'if observed<12 then clone:Destroy();return nil end' in KIT
+assert 'if observed<(tier=="Low" and 7 or 12) then' in KIT
+assert 'local function nativeScene(arena,tier)' in KIT
+assert 'local radar=hero:FindFirstChild("HarborHeroRadarArm")' in KIT
+assert 'local cable=hero:FindFirstChild("HarborHeroHoistCable")' in KIT
+assert 'local weight=hero:FindFirstChild("HarborHeroHoistWeight")' in KIT
+assert '(tier~="Low" and (not cable or not weight))' in KIT
+assert 'local refs={Radar=radar}' in KIT
+assert 'if cable then' in KIT
+assert 'local scene=nativeScene(arena,tier)' in KIT
+assert 'if not entry then entry=mount(arena,scene,source,tier) end' in KIT
+assert 'local nativeFrame=scene.girder.CFrame*CFrame.new(0,-21.5,0)' in KIT
+assert 'base.Size.Z*.5+18' not in KIT
+assert 'local function authenticBase(base,arena)' in KIT
+assert 'base:GetAttribute("OriginalSizeX")' in KIT
+assert 'base:GetAttribute("OriginalSizeZ")' in KIT
+assert 'not authenticBase(e.base,e.arena)' in KIT
+assert 'e.source.Parent~=e.sourceHolder' in KIT
+assert 'e.sourceHolder.Parent~=ReplicatedStorage' in KIT
+assert 'e.base.Size.X<318' not in KIT
+assert 'e.base.Size.Z<318' not in KIT
 assert 'clone.Parent=localFolder' in KIT
 assert KIT.index('clone.Parent=localFolder') < KIT.index('if visibility(e) then syncMotion(e) end')
 assert 'HarborHeroStormLens' in KIT
@@ -58,6 +77,6 @@ assert len(re.findall(r'^    HarborHero[A-Za-z]+\s*=true,',KIT,re.MULTILINE))>=1
 assert 'EXPECTED_NAMES[native.Name]' in KIT
 assert 'if native.CanCollide or native.CanQuery or native.CanTouch then' in KIT
 assert 'part.Transparency=show and 1 or original' in KIT
-print("PASS Harbor hero: one 7-MeshPart approved model replaces >=12 verified native pieces on healthy Low")
-print("PASS original Radar/Cable/Weight motion, storm lens, GPU pressure and budget eviction fallback")
+print("PASS Harbor hero: seven genuine 3D meshes replace seven verified native Low pieces (12+ on Medium/High)")
+print("PASS Low radar motion with absent hoists; Medium/High all 3 motions; lens, pressure, shrink and budget eviction fallback")
 print("LIMIT: Roblox Engine visual output and real Android FPS not measured")
