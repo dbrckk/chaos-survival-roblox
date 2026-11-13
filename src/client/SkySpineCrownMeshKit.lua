@@ -164,10 +164,34 @@ local function originalUpperParts(decor, deck)
 end
 
 local function safeAfterMount(entry)
-    local deck = entry.deck
-    return entry.model.Parent == folder
-        and entry.arena == activeArena
-        and authentic(deck, entry.arena, entry.base)
+    -- A streamed or externally removed ONE-piece crown is not a complete
+    -- approved original. Leaving the surviving MeshParts visible would keep
+    -- the native Sky Spine portico hidden behind a broken 3D silhouette.
+    -- Check the same exact source pieces and cosmetic welds on every
+    -- event-driven fallback, PBR/light decision, and existing LOD sample.
+    if entry.restoring or not entry.model
+        or entry.model.Parent ~= folder
+        or entry.arena ~= activeArena
+        or not authentic(entry.deck, entry.arena, entry.base)
+        or not entry.pieces or #entry.pieces < 1
+        or #entry.pieces > 12 then
+        return false
+    end
+    for _, piece in ipairs(entry.pieces) do
+        if not piece:IsA("MeshPart")
+            or not piece:IsDescendantOf(entry.model)
+            or piece.Anchored or not piece.Massless
+            or piece.CanCollide or piece.CanTouch or piece.CanQuery then
+            return false
+        end
+        local joint = entry.joints and entry.joints[piece]
+        if not joint or joint.Parent ~= piece
+            or joint.Part0 ~= entry.deck or joint.Part1 ~= piece
+            or not entry.frames[piece] or not entry.sizes[piece] then
+            return false
+        end
+    end
+    return true
 end
 
 local function refreshLight(entry)
@@ -402,6 +426,19 @@ local function mount(deck, arena, base, decor, template)
         deck.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections + 1] =
         decor.ChildAdded:Connect(watchNative)
+    -- DescendantRemoving fires BEFORE the MeshPart leaves its Model.
+    -- Re-evaluate on defer so the original, nonphysical portico is revealed
+    -- immediately after a partial StreamingEnabled loss, not after the
+    -- next 0.65/0.90-second scenery residency sample.
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantRemoving:Connect(function(child)
+            if not entry.restoring and child:IsA("MeshPart")
+                and table.find(entry.pieces, child) then
+                task.defer(function()
+                    if not entry.restoring then updateVisibility(entry) end
+                end)
+            end
+        end)
     updateVisibility(entry)
     return entry
 end
@@ -537,9 +574,11 @@ end
 function Kit.pbrCount()
     local models, appearances = 0, 0
     for _, entry in pairs(mounted) do
-        local n, m = PremiumRoutePbrKit.count(entry)
-        models += n
-        appearances += m
+        if safeAfterMount(entry) then
+            local n, m = PremiumRoutePbrKit.count(entry)
+            models += n
+            appearances += m
+        end
     end
     return models, appearances
 end
@@ -547,7 +586,7 @@ end
 function Kit.count()
     local count = 0
     for _, entry in pairs(mounted) do
-        if entry.model.Parent then count += 1 end
+        if safeAfterMount(entry) then count += 1 end
     end
     return count
 end
