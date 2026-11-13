@@ -1617,7 +1617,11 @@ assert 'supportBudget -= columns.modules' in OWNER
 assert 'if output.modules < 1 then return nil end' in LARGE
 assert 'if tier == "Low" and supportParts ~= 7 then' in LARGE
 assert 'if tier == "Low" and not cameraReady then' in LARGE
-assert 'if segments <= available-output.modules' in LARGE
+assert 'local segments, scale = Kit.supportFit(support.Size, box)' in LARGE
+assert 'if segments and segments <= available - output.modules then' in LARGE
+assert 'local segments = Kit.supportFit(part.Size, supportBounds)' in LARGE
+assert 'if segments and (tier ~= "Low" or segments == 1) then' in LARGE
+assert 'if count ~= 7 then return nil end' in LARGE
 assert 'Kit.bind(' not in LARGE
 print("PASS medium 8 real supported platform owners / 8 original modules,"
       " High 8x2=16, Low one, native ownership and collapse fallback")
