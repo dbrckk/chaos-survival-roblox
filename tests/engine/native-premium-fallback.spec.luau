@@ -1198,6 +1198,55 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.count("arch")).toBe(before)
                 expect(overpass.LocalTransparencyModifier).toBe(1)
                 expect(entryDeck.CanCollide).toBe(true)
+
+                -- An extra unexpected primitive in an imported clone
+                -- cannot be trusted as part of the seven-piece original.
+                -- Restore the native instantly and reject local collision.
+                p4Phase="foreign geometry corruption and native recovery"
+                local restoredClone=residentFolder:FindFirstChild(
+                    "ApprovedP4_Access")
+                expect(restoredClone~=nil).toBe(true)
+                local foreignPart=Instance.new("Part")
+                foreignPart.Name="UnapprovedEighthPart"
+                foreignPart.CanCollide=true
+                foreignPart.CanTouch=true
+                foreignPart.CanQuery=true
+                foreignPart.Parent=restoredClone
+                expect(foreignPart.CanCollide).toBe(false)
+                expect(foreignPart.CanTouch).toBe(false)
+                expect(foreignPart.CanQuery).toBe(false)
+                expect(foreignPart.LocalTransparencyModifier).toBe(1)
+                expect(overpass.LocalTransparencyModifier).toBe(0)
+                expect(RemainingStructureKit.count("arch")).toBe(before-1)
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")).toBe(before)
+                expect(overpass.LocalTransparencyModifier).toBe(1)
+
+                -- Same approved geometry, different client budget: mobile
+                -- High displays at most three distinct real deck owners.
+                -- It must never obtain the six-slot PC allocation.
+                p4Phase="three-slot Android High verified native owners"
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,true)
+                expect(RemainingStructureKit.count("arch")).toBe(3)
+                local visibleMobileOwners=0
+                for _,realDeck in ipairs(platforms:GetChildren()) do
+                    local stage=realDeck:GetAttribute("PerimeterStep")
+                    if stage==1 or stage==4 or stage==8 then
+                        local realId=tonumber(realDeck.Name:match("%d+"))
+                        local native=realId and decor:FindFirstChild(
+                            "SkyRouteMonument"..realId.."_MonumentalOverpass")
+                        if native and native.LocalTransparencyModifier==1 then
+                            visibleMobileOwners+=1
+                            expect(realDeck.CanCollide).toBe(true)
+                        end
+                    end
+                end
+                expect(visibleMobileOwners).toBe(3)
+                -- Restore PC context for the Orbital-specific helix check.
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
                 if variantId=="Orbital" then
                     p4Phase="genuine Orbital helix residency"
                     expect(RemainingStructureKit.count("helix")>=1).toBe(true)
