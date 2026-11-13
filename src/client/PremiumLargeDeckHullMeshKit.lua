@@ -8,8 +8,9 @@ local APPROVED = 125929150866282
 -- The single selected Low mount SHARES its slot with Low carapaces.
 local function physicalFit(deck, index, strictSafe)
     local n = tonumber(index)
-    if not n or n < 1 or n > 24 or not deck
+    if not n or n < 1 or n > 512 or not deck
         or not deck:IsA("BasePart") or not deck.Parent
+        or deck.Name ~= "Platform" .. tostring(n)
         or not deck.CanCollide or deck.Transparency >= .75
         or deck:GetAttribute("ChaosSkybridge") == true then return false end
     -- Preserve Medium/High historical eligibility. Low's optional
@@ -43,17 +44,104 @@ local function verifiedSource()
             count += 1
         elseif item:IsA("LuaSourceContainer") then return nil end
     end
-    if count<1 or count>12 then return nil end
+    if count ~= 7 then return nil end
     local _,size = source:GetBoundingBox()
     if size.X<16.5 or size.X>18.4 or size.Z<16.5 or size.Z>18.4
         or size.Y<2.3 or size.Y>4.2 then return nil end
     return source, count, size
 end
 
+-- Only the actual five-piece server-authored cosmetic fallback may be
+-- substituted. Streamed-in platforms without ALL FOUR WedgeParts cannot
+-- reserve expensive seven-MeshPart shells and cannot lose their silhouette.
+local function nativeFallback(decor, deck)
+    if not decor or not decor:IsA("Folder")
+        or not deck or not deck:IsA("BasePart") then return false end
+    local id = deck.Name:match("^Platform(%d+)$")
+    if not id then return false end
+    local frame = decor:FindFirstChild("PlatformUnderFrame" .. id)
+    if not frame or not frame:IsA("BasePart")
+        or frame.Parent ~= decor or not frame.Anchored
+        or frame.CanCollide or frame.CanTouch or frame.CanQuery
+        or frame:GetAttribute("PremiumArchitecturalSurface") ~= true then
+        return false
+    end
+    for edge = 1, 4 do
+        local bevel = decor:FindFirstChild("PlatformBevel" .. id .. "_" .. edge)
+        if not bevel or not bevel:IsA("WedgePart")
+            or bevel.Parent ~= decor or not bevel.Anchored
+            or bevel.CanCollide or bevel.CanTouch or bevel.CanQuery
+            or bevel:GetAttribute("OriginalStructuralBevel") ~= true then
+            return false
+        end
+    end
+    return true
+end
+
+-- The formerly hard-coded Platform1..24 gate left compatible 18x18
+-- decks farther into the arena entirely primitive. Select genuine hull
+-- assets by visible physical owner instead of by an arbitrary index.
+-- The source is a real existing approved seven-MeshPart 18-stud hull,
+-- NOT a new fake WedgePart or a stretched 11-stud side carapace.
+-- Medium/High budgets are bounded per rebuild, mobile and GPU pressure
+-- cost less; no additional camera sampler, event or gameplay collider.
+function Kit.selectVisibleDecks(platforms, tier, base, cameraPoint,
+    pressure, touch, decor)
+    local chosen = {}
+    if tier ~= "Medium" and tier ~= "High" then return chosen end
+    local cap = tier == "High" and (touch and 3 or 6)
+        or (touch and 1 or 3)
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
+    if stress == 1 then cap = math.floor(cap * .5) end
+    if stress >= 2 or type(platforms) ~= "table"
+        or not base or not base:IsA("BasePart")
+        or not base.Anchored or not base.CanCollide
+        or typeof(cameraPoint) ~= "Vector3"
+        or not decor or not decor:IsA("Folder") then return chosen end
+    local localCamera = base.CFrame:PointToObjectSpace(cameraPoint)
+    if math.abs(localCamera.X) > base.Size.X*.5+16
+        or math.abs(localCamera.Z) > base.Size.Z*.5+16
+        or math.abs(localCamera.Y) > 130 then return chosen end
+    local source, count, size = verifiedSource()
+    if not source or count ~= 7 then return chosen end
+    local range = tier == "High" and (touch and 205 or 290)
+        or (touch and 155 or 230)
+    local ranked = {}
+    for _,deck in ipairs(platforms) do
+        local id = deck:IsA("BasePart")
+            and tonumber(deck.Name:match("^Platform(%d+)$")) or nil
+        if id and physicalFit(deck, id, true)
+            and nativeFallback(decor, deck) then
+            local scale = math.min(1.08,
+                deck.Size.X*.94/size.X, deck.Size.Z*.94/size.Z)
+            if scale >= .77
+                and size.X*scale <= deck.Size.X*.96
+                and size.Z*scale <= deck.Size.Z*.96
+                and size.X*scale >= deck.Size.X*.80
+                and size.Z*scale >= deck.Size.Z*.80 then
+                local distance = (deck.Position-cameraPoint).Magnitude
+                if distance <= range then
+                    ranked[#ranked+1] = {part=deck, distance=distance}
+                end
+            end
+        end
+    end
+    table.sort(ranked, function(a,b)
+        if a.distance ~= b.distance then
+            return a.distance < b.distance
+        end
+        return a.part.Name < b.part.Name
+    end)
+    for i=1,math.min(cap,#ranked) do
+        chosen[ranked[i].part] = true
+    end
+    return chosen
+end
+
 -- Only the ONE camera-near, fully safe, already Low-decorated
 -- 18x18-ish PlatformN can spend the existing seven-MeshPart Low shell
 -- slot. Reuses the arena-rebuild camera snapshot, not a new sampler.
-function Kit.selectLowDeck(platforms, base, cameraPoint, pressure)
+function Kit.selectLowDeck(platforms, base, cameraPoint, pressure, decor)
     if (tonumber(pressure) or 0) > 0
         or type(platforms) ~= "table"
         or not base or not base:IsA("BasePart")
@@ -68,7 +156,8 @@ function Kit.selectLowDeck(platforms, base, cameraPoint, pressure)
     for _,deck in ipairs(platforms) do
         local id = deck:IsA("BasePart")
             and tonumber(deck.Name:match("^Platform(%d+)$")) or nil
-        if id and id%8==1 and physicalFit(deck,id,true) then
+        if id and physicalFit(deck,id,true)
+            and (decor == nil or nativeFallback(decor,deck)) then
             local scale = math.min(1.08,
                 deck.Size.X*.94/size.X,deck.Size.Z*.94/size.Z)
             if scale >= .77 then
@@ -84,11 +173,15 @@ function Kit.selectLowDeck(platforms, base, cameraPoint, pressure)
     return best
 end
 
-function Kit.install(parent, deck, tier, index, selectedLow)
+function Kit.install(parent, deck, tier, index, selected)
     local n = tonumber(index)
-    if tier == "Low" and (selectedLow ~= true
-        or not n or n%8 ~= 1) then return nil end
-    if not parent or not physicalFit(deck, index, tier == "Low") then
+    if tier == "Low" and selected ~= true then return nil end
+    -- Existing external callers retain legacy 1..24 access only.
+    -- The live owner explicitly passes FALSE for every non-selected
+    -- Medium/High deck, so lifting the index gate cannot stamp 100 hulls.
+    if tier ~= "Low" and selected == false then return nil end
+    if selected ~= true and (not n or n > 24) then return nil end
+    if not parent or not physicalFit(deck, index, selected == true) then
         return nil
     end
     local source,count,size = verifiedSource()
