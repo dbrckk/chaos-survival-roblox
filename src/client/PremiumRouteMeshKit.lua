@@ -93,9 +93,10 @@ local function clear()
     folder:ClearAllChildren()
 end
 
-local function safePlatform(platform, initialSize)
+local function safePlatform(platform)
     if not platform or not platform.Parent or not platform:IsA("BasePart")
-        or not platform.CanCollide or platform.Transparency >= 0.75 then
+        or not platform.Anchored or not platform.CanCollide
+        or platform.Transparency >= 0.75 then
         return false
     end
     local phase = platform:GetAttribute("CollapsePhase")
@@ -110,11 +111,6 @@ local function safePlatform(platform, initialSize)
     -- Restore the genuine server route paint immediately, before LOD tick.
     local shutter = platform:GetAttribute("BridgeShutterPhase")
     if shutter ~= nil and shutter ~= "Idle" then
-        return false
-    end
-    if initialSize and (math.abs(platform.Size.X - initialSize.X) >= 0.09
-        or math.abs(platform.Size.Z - initialSize.Z) >= 0.09) then
-        -- No false safe 3D bridge/deck during independent shrinking routes.
         return false
     end
     return true
@@ -135,6 +131,65 @@ local function modelsIntact(entry)
         end
     end
     return true
+end
+
+-- ShrinkingArena owns three real kinds: RouteTier decks contract X/Z,
+-- gated Skybridges contract in their long axis, ordinary decks only move.
+-- Reject forged/single-axis base tags and asynchronous unsafe deck sizes.
+local function realFloorScale(base,arena)
+    local map=workspace:FindFirstChild("GeneratedMap")
+    if not map or not map:IsA("Folder") or not arena
+        or not arena:IsA("Folder") or arena.Name~="Arena"
+        or arena.Parent~=map or not base or not base:IsA("BasePart")
+        or base.Parent~=arena or not base.Anchored
+        or not base.CanCollide then return nil end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    if typeof(sx)~="number" or typeof(sz)~="number"
+        or sx~=sx or sz~=sz or sx<318 or sz<318
+        or sx>=math.huge or sz>=math.huge then return nil end
+    local scaleX,scaleZ=base.Size.X/sx,base.Size.Z/sz
+    if scaleX<.445 or scaleX>1.005 or scaleZ<.445
+        or scaleZ>1.005 or math.abs(scaleX-scaleZ)>.012 then
+        return nil
+    end
+    return math.min(scaleX,scaleZ)
+end
+
+local function authenticDeck(entry,platform)
+    if not entry or not safePlatform(platform) or entry.restoring
+        or entry.arena~=activeArena or not entry.arena
+        or platform.Parent~=entry.arena:FindFirstChild("Platforms")
+        or not entry.base or entry.base.Parent~=entry.arena
+        or not entry.initialFloorScale then return false end
+    local scale=realFloorScale(entry.base,entry.arena)
+    if not scale then return false end
+    local ratio=scale/entry.initialFloorScale
+    if ratio<.44 or ratio>2.3 then return false end
+    local sx,sz=entry.initialSize.X,entry.initialSize.Z
+    if entry.resizeKind=="compact" then
+        local tier=tonumber(platform:GetAttribute("RouteTier"))
+        if not tier or tier<1 or tier>4 or tier%1~=0 then
+            return false
+        end
+        sx,sz=sx*ratio,sz*ratio
+    elseif entry.resizeKind=="skybridge" then
+        if platform:GetAttribute("ChaosSkybridge")~=true
+            or not platform.Name:match("^Skybridge%d+$") then
+            return false
+        end
+        if entry.longAlongX then
+            sx=math.max(4,(sx+7)*ratio-7)
+        else
+            sz=math.max(4,(sz+7)*ratio-7)
+        end
+    elseif tonumber(platform:GetAttribute("RouteTier"))~=nil
+        or platform:GetAttribute("ChaosSkybridge")==true then
+        return false
+    end
+    return math.abs(platform.Size.X-sx)<.19
+        and math.abs(platform.Size.Y-entry.initialSize.Y)<.10
+        and math.abs(platform.Size.Z-sz)<.19
 end
 
 local function getTemplate(name)
@@ -285,11 +340,16 @@ local function addModel(entry, platform, template, offset, scale, yaw)
         template:GetAttribute("Original3DAssetId"))
     clone.Parent = folder
     for _, piece in ipairs(parts) do
-        local weld = Instance.new("WeldConstraint")
-        weld.Name = "OriginalRouteMeshCosmeticWeld"
-        weld.Part0 = platform
-        weld.Part1 = piece
-        weld.Parent = piece
+        local weld=Instance.new("Weld")
+        weld.Name="OriginalRouteMeshCosmeticWeld"
+        weld.Part0=platform
+        weld.Part1=piece
+        weld.C0=platform.CFrame:ToObjectSpace(piece.CFrame)
+        weld.C1=CFrame.identity
+        weld.Parent=piece
+        entry.joints[piece]=weld
+        entry.frames[piece]=platform.CFrame:ToObjectSpace(piece.CFrame)
+        entry.sizes[piece]=piece.Size
     end
     entry.models[#entry.models + 1] = clone
     return true
@@ -400,19 +460,60 @@ local function addUnderdeckModel(entry, platform, template)
         template:GetAttribute("Original3DAssetId"))
     clone.Parent = folder
     for _, piece in ipairs(pieces) do
-        local weld = Instance.new("WeldConstraint")
-        weld.Name = "OriginalUnderdeckSafeCosmeticWeld"
-        weld.Part0 = platform
-        weld.Part1 = piece
-        weld.Parent = piece
+        local weld=Instance.new("Weld")
+        weld.Name="OriginalUnderdeckSafeCosmeticWeld"
+        weld.Part0=platform
+        weld.Part1=piece
+        weld.C0=platform.CFrame:ToObjectSpace(piece.CFrame)
+        weld.C1=CFrame.identity
+        weld.Parent=piece
+        entry.joints[piece]=weld
+        entry.frames[piece]=platform.CFrame:ToObjectSpace(piece.CFrame)
+        entry.sizes[piece]=piece.Size
     end
     entry.models[#entry.models + 1] = clone
     return true
 end
 
+-- The native collidable Part moves via the server. Welds follow CFrame
+-- automatically; only the two horizontal cosmetic axes resize. Reject
+-- incomplete streaming and reveal native collision/hazard markings.
+local function refit(entry,platform)
+    if not authenticDeck(entry,platform) or not modelsIntact(entry) then
+        return false
+    end
+    local fx=platform.Size.X/entry.initialSize.X
+    local fz=platform.Size.Z/entry.initialSize.Z
+    if fx<.2 or fz<.2 or fx>2.3 or fz>2.3 then return false end
+    for _,model in ipairs(entry.models) do
+        for _,piece in ipairs(entry.modelParts[model]) do
+            local weld=entry.joints[piece]
+            if not weld or weld.Parent~=piece or weld.Part0~=platform
+                or weld.Part1~=piece or not entry.frames[piece]
+                or not entry.sizes[piece] then return false end
+        end
+    end
+    if entry.lastFootprint
+        and (entry.lastFootprint-platform.Size).Magnitude<.023 then
+        return true
+    end
+    for _,model in ipairs(entry.models) do
+        for _,piece in ipairs(entry.modelParts[model]) do
+            local frame=entry.frames[piece]
+            local original=entry.sizes[piece]
+            piece.Size=Vector3.new(original.X*fx,original.Y,
+                original.Z*fz)
+            entry.joints[piece].C0=CFrame.new(
+                frame.Position.X*fx,frame.Position.Y,
+                frame.Position.Z*fz)*(frame-frame.Position)
+        end
+    end
+    entry.lastFootprint=platform.Size
+    return true
+end
+
 local function syncVisibility(entry, platform)
-    local safe = safePlatform(platform, entry.initialSize)
-        and modelsIntact(entry)
+    local safe = refit(entry,platform)
     -- An active collapse/shutter must release optional GPU-heavy 2K
     -- overlays on the SAME server-property event that restores the real
     -- native landing paint; never wait for another 0.65s camera pass.
@@ -439,6 +540,10 @@ local function syncVisibility(entry, platform)
 end
 
 local function mount(platform, template, count, bridgeCandidate, underdeckTemplate, strictLowUnderdeck)
+    local arena=platform.Parent and platform.Parent.Parent
+    local base=arena and arena:FindFirstChild("Base")
+    local initialFloorScale=realFloorScale(base,arena)
+    if not initialFloorScale then return nil end
     local _, bounds = template:GetBoundingBox()
     if bounds.X < 3 or bounds.Y < 0.1 or bounds.Z < 3 then
         return nil
@@ -455,6 +560,14 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         connections = {},
         decorConnections = {},
         initialSize = platform.Size,
+        initialFloorScale = initialFloorScale,
+        arena = arena,
+        base = base,
+        resizeKind = tonumber(platform:GetAttribute("RouteTier"))~=nil
+            and "compact" or (platform:GetAttribute("ChaosSkybridge")==true
+            and "skybridge" or "static"),
+        longAlongX = platform.Size.X > platform.Size.Z,
+        joints = {}, frames = {}, sizes = {}, lastFootprint = nil,
         count = countToMount,
         bridge = isBridge,
         panel = nil,
@@ -526,7 +639,6 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
 
     local index = tonumber(platform.Name:match("^Platform(%d+)$")
         or platform.Name:match("^Skybridge(%d+)$"))
-    local arena = platform.Parent and platform.Parent.Parent
     local decor = nil
     local panelName = index and "PlatformPanel" .. index or nil
 
@@ -629,11 +741,12 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             syncVisibility(entry, platform)
         end
     end
-    for _, prop in ipairs({"CanCollide", "Transparency", "Size"}) do
+    for _, prop in ipairs({"CanCollide", "Transparency", "Size", "Anchored"}) do
         entry.connections[#entry.connections + 1] =
             platform:GetPropertyChangedSignal(prop):Connect(refresh)
     end
-    for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase"}) do
+    for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase",
+        "RouteTier", "ChaosSkybridge"}) do
         entry.connections[#entry.connections + 1] =
             platform:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
@@ -791,7 +904,15 @@ local function eligible(platform, cameraPoint, maxDistance, retention, cameraLoo
     if not isBridge and not isDeck then return nil end
     local width, length = math.min(platform.Size.X, platform.Size.Z),
         math.max(platform.Size.X, platform.Size.Z)
-    if width < (isBridge and 3.8 or 8) or width > 26 then return nil end
+    local minimumWidth=isBridge and 3.8 or 8
+    if tonumber(platform:GetAttribute("RouteTier"))~=nil then
+        local arena=platform.Parent and platform.Parent.Parent
+        local base=arena and arena:FindFirstChild("Base")
+        local scale=realFloorScale(base,arena)
+        if not scale then return nil end
+        minimumWidth=math.max(3.7,minimumWidth*scale)
+    end
+    if width < minimumWidth or width > 26 then return nil end
     if not isBridge and length / width > 1.85 then return nil end
 
     local resident = mounted[platform] ~= nil
@@ -864,16 +985,20 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     end
     if base ~= watchedBase then
         if baseChanged then baseChanged:Disconnect() end
-        watchedBase = base
-        -- Resize is an immediate hazard; don't wait for the next 0.65s LOD
-        -- cycle to hide cosmetic meshes from nonexistent jumpable ground.
-        baseChanged = base:GetPropertyChangedSignal("Size"):Connect(function()
-            if base.Size.X < 318 or base.Size.Z < 318 then
+        watchedBase=base
+        -- Base size updates before real moving decks. During that short
+        -- mismatch show native fallback, then the deck Size event refits.
+        baseChanged=base:GetPropertyChangedSignal("Size"):Connect(function()
+            if not realFloorScale(base,arena) then
                 clearMounted()
+            else
+                for platform,entry in pairs(mounted) do
+                    syncVisibility(entry,platform)
+                end
             end
         end)
     end
-    if base.Size.X < 318 or base.Size.Z < 318 then
+    if not realFloorScale(base,arena) then
         clearMounted()
         return
     end
@@ -1098,8 +1223,8 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     local variant = arena:GetAttribute("VariantId")
     for platform, entry in pairs(mounted) do
         PremiumRoutePbrKit.apply(entry, "route", variant,
-            pbrSelected[platform] == true and safePlatform(
-                platform, entry.initialSize))
+            pbrSelected[platform] == true and authenticDeck(
+                entry,platform))
     end
 end
 
@@ -1121,7 +1246,7 @@ function PremiumRouteMeshKit.connectedPairsCount()
     for platform, entry in pairs(mounted) do
         if entry.bridge and entry.models[1]
             and entry.models[1].Parent == folder
-            and safePlatform(platform, entry.initialSize) then
+            and authenticDeck(entry,platform) then
             platforms[#platforms + 1] = platform
         end
     end
@@ -1169,7 +1294,7 @@ function PremiumRouteMeshKit.coveredPanelCount()
     for platform, entry in pairs(mounted) do
         if entry.panel and entry.panel.Parent
             and entry.panelCovered
-            and safePlatform(platform, entry.initialSize)
+            and authenticDeck(entry,platform)
             and entry.panel.LocalTransparencyModifier == 1 then
             count += 1
         end
