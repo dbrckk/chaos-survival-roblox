@@ -40,11 +40,23 @@ local function approved()
     return model
 end
 
+-- Exterior ships remain fixed while the actual survival floor shrinks.
+-- Verify the signed original map footprint rather than its live width.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local originalX=base:GetAttribute("OriginalSizeX")
+    local originalZ=base:GetAttribute("OriginalSizeZ")
+    return typeof(originalX)=="number" and typeof(originalZ)=="number"
+        and originalX>=318 and originalZ>=318
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=originalX+.2 and base.Size.Z<=originalZ+.2
+end
+
 local function genuine(arena,base,ship)
     if not arena or not base or not ship
         or tostring(arena:GetAttribute("VariantId"))~="Harbor"
-        or not base:IsA("BasePart") or base.Size.X<318
-        or base.Size.Z<318 or not ship:IsA("Model")
+        or not authenticBase(base,arena) or not ship:IsA("Model")
         or ship.Name~="HarborCargoVessel"
         or ship:GetAttribute("HarborVesselScenery")~=true
         or ship:GetAttribute("CosmeticOnly")~=true then return false end
