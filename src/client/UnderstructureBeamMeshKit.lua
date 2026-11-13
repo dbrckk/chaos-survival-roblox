@@ -15,7 +15,7 @@ local ASSET_ID = 84582262145054
 local BUDGET = {
     Low = {count = 1, distance = 140, retention = 14},
     Medium = {count = 4, distance = 225, retention = 22},
-    High = {count = 12, distance = 290, retention = 25},
+    High = {count = 16, distance = 290, retention = 25},
 }
 local VARIANTS = {Classic = true, Crossroads = true, Towers = true, Harbor = true, Orbital = true}
 
@@ -110,7 +110,7 @@ local function sourceTemplate()
             return nil
         end
     end
-    if count < 1 or count > 12 then return nil end
+    if count ~= 7 then return nil end
     local _, size = source:GetBoundingBox()
     local length = math.max(size.X, size.Z)
     local width = math.min(size.X, size.Z)
@@ -167,7 +167,7 @@ local function mount(native, source, bounds)
             piece.CastShadow = false
         end
     end
-    if count < 1 or count > 12 then clone:Destroy(); return nil end
+    if count ~= 7 then clone:Destroy(); return nil end
     clone.Name = "OriginalApprovedUnderstructure3D_" .. native.Name
     clone:SetAttribute("Original3DAssetId", ASSET_ID)
     clone:SetAttribute("CosmeticOnly", true)
@@ -212,7 +212,7 @@ local function mount(native, source, bounds)
     return entry
 end
 
-function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure)
+function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure, touch)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -220,6 +220,12 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, pressure)
     local budget = BUDGET[tier] or BUDGET.Low
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
     local cap=budget.count
+    -- Four additional genuine chassis only on healthy desktop High.
+    -- Mobile keeps its previous 12 chassis maximum, and pressure evicts
+    -- optional 3D before touching authoritative server-owned beams.
+    if touch == true and tier == "High" then cap = math.min(cap, 12) end
+    if stress == 1 and tier == "High" then cap = math.min(cap, 8) end
+    if stress >= 2 and tier == "High" then cap = math.min(cap, 4) end
     -- Understructure is optional: on mobile Low the FIRST backpressure
     -- step releases its one 3K-triangle chassis, not server-owned beams.
     if tier=="Low" and stress>=1 then cap=0 end
