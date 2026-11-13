@@ -83,6 +83,19 @@ local function approvedSource()
     return source, holder, bounds
 end
 
+-- The Towers crown is a fixed elevated nonphysical structure; shrinking
+-- the walkable floor must not revoke a verified seven-MeshPart torus.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
+
 local function realCrown(arena)
     if not arena or not arena:IsA("Folder")
         or arena.Name ~= "Arena"
@@ -96,9 +109,7 @@ local function realCrown(arena)
     end
     local base = arena:FindFirstChild("Base")
     local atmosphere = arena:FindFirstChild("Atmosphere")
-    if not base or not base:IsA("BasePart") or base.Parent ~= arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X < 318 or base.Size.Z < 318
+    if not authenticBase(base, arena)
         or not atmosphere or not atmosphere:IsA("Folder")
         or atmosphere.Parent ~= arena
         or atmosphere:GetAttribute("VariantId") ~= "Towers"
@@ -239,6 +250,16 @@ local function mount(arena, source, holder, dimensions)
         native:GetPropertyChangedSignal("CFrame"):Connect(check)
     newEntry.connections[#newEntry.connections + 1] =
         native:GetPropertyChangedSignal("Size"):Connect(check)
+    for _, signal in ipairs({
+        base:GetPropertyChangedSignal("Size"),
+        base:GetPropertyChangedSignal("Anchored"),
+        base:GetPropertyChangedSignal("CanCollide"),
+        base:GetAttributeChangedSignal("OriginalSizeX"),
+        base:GetAttributeChangedSignal("OriginalSizeZ"),
+        base.AncestryChanged,
+    }) do
+        newEntry.connections[#newEntry.connections + 1] = signal:Connect(check)
+    end
     newEntry.connections[#newEntry.connections + 1] =
         source.DescendantRemoving:Connect(function(part)
             if part:IsA("MeshPart") then restore() end
