@@ -12,11 +12,82 @@ local HarborHeroStationMeshKit = require("../../src/client/HarborHeroStationMesh
 local HarborMidgroundBargeMeshKit = require("../../src/client/HarborMidgroundBargeMeshKit")
 local HarborSignatureGantryKit = require("../../src/client/ApprovedHarborSignatureGantryMeshKit")
 local SouthHarborDrydockKit = require("../../src/client/ApprovedSouthHarborDrydockMeshKit")
+local ExteriorRidgeKit = require("../../src/client/ApprovedExteriorRidgeMeshKit")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("retains genuine exterior ridge sculpture across shrink on Android Low", function()
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        local generated,templates
+        local ok,failure=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Classic",
+                ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local base=arena:FindFirstChild("Base")
+            local decor=arena:FindFirstChild("Decor")
+            local ridgeOwner=decor:FindFirstChild("ExteriorRidgeNW")
+            expect(ridgeOwner~=nil).toBe(true)
+            local ridge=ridgeOwner:FindFirstChild("Ridge1")
+            expect(ridge:IsA("WedgePart")).toBe(true)
+            local alpha=ridge.Transparency
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedExteriorRidgeTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=game:GetService("ReplicatedStorage")
+            local source=Instance.new("Model")
+            source.Name="RidgesNW"
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute("OriginalExteriorRidges3D",true)
+            source:SetAttribute("Original3DAssetId",123836720232695)
+            source:SetAttribute("ExteriorCornerId","NW")
+            for i=1,7 do
+                local mesh=Instance.new("MeshPart")
+                mesh.Name="RidgeMaterial"..i
+                mesh.Size=if i==1 then Vector3.new(
+                    37.45768,15.9,33.90254) else Vector3.new(1,1,1)
+                mesh.Anchored=true
+                mesh.CanCollide=false
+                mesh.CanTouch=false
+                mesh.CanQuery=false
+                mesh.Parent=source
+            end
+            source.Parent=templates
+            local camera=ridge.Position
+            local function sync(pressure)
+                ExteriorRidgeKit.sync(arena,camera,"Low",true,true,pressure)
+            end
+            sync(0)
+            expect(ExteriorRidgeKit.count()).toBe(1)
+            expect(ExteriorRidgeKit.replacedNativeCount()).toBe(3)
+            expect(ridge.Transparency).toBe(1)
+            local initialPosition=ridge.Position
+            -- Real shrink changes X/Z but not the authored floor thickness.
+            base.Size=Vector3.new(170,base.Size.Y,174)
+            sync(0)
+            expect(ExteriorRidgeKit.count()).toBe(1)
+            expect(ExteriorRidgeKit.replacedNativeCount()).toBe(3)
+            expect((ridge.Position-initialPosition).Magnitude<.01).toBe(true)
+            sync(1)
+            expect(ExteriorRidgeKit.count()).toBe(0)
+            expect(math.abs(ridge.Transparency-alpha)<.001).toBe(true)
+            sync(0)
+            expect(ExteriorRidgeKit.count()).toBe(1)
+            base.Size=Vector3.new(330,base.Size.Y,320)
+            sync(0)
+            expect(ExteriorRidgeKit.count()).toBe(0)
+            expect(math.abs(ridge.Transparency-alpha)<.001).toBe(true)
+        end)
+        ExteriorRidgeKit.sync(nil,Vector3.zero,"Low",false,true,2)
+        if generated then generated:Destroy() end
+        if templates then templates:Destroy() end
+        if previous then previous.Parent=workspace end
+        if not ok then error(failure) end
+    end)
+
     -- One-off evidence gathering for the full five-map premium visual audit.
     -- This temporary diagnostic emits authoritative server MapBuilder object
     -- counts as Lest failures so GitHub records actual cloud-engine evidence.
