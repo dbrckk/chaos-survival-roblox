@@ -1139,7 +1139,7 @@ task.spawn(function()
         UnderstructureBeamMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady,
             player:GetAttribute("OptionalVfxPressure"),
-            game:GetService("UserInputService").TouchEnabled)
+            isTouch)
         local beamMeshes = UnderstructureBeamMeshKit.count()
         if player:GetAttribute("LocalOriginalUnderstructureBeamCount")
             ~= beamMeshes then
