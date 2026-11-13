@@ -577,7 +577,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         local data=desired[owner]
         if not data or data.name~=entry.name
             or data.category~=entry.category or data.arena~=entry.arena
-            or src[entry.name]~=entry.source then
+            or src[entry.name]~=entry.source
+            or not sourceIntact(entry) then
+            -- A streamed/lost local MeshPart is not a valid seven-piece
+            -- sculpture. refresh() already restores the real native trim;
+            -- discard its broken clone and remount only from the currently
+            -- verified creator-owned source on this SAME existing LOD pass.
+            -- Without this check a partial clone stayed mounted forever,
+            -- keeping its authentic source slot but never recovering 3D.
             mounted[owner]=nil
             dispose(entry)
         end
