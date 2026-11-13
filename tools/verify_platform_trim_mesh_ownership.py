@@ -122,6 +122,23 @@ assert 'owner.CanCollide' in source
 print("PASS P0 Low near-camera premium carapace can replace authentic even-index"
       " four-bevel underside without increasing 1-model/7-MeshPart cap")
 
+# The real owner has all FOUR server-authored sloped WedgeParts + ONE
+# authentic underside before consuming any of 1/8/16 approved 3D slots.
+# This is a residency / streaming improvement, not new geometry or budget.
+assert "function Kit.hasNativeCarapaceFallback(decor, platform)" in side
+assert 'decor:FindFirstChild("PlatformUnderFrame" .. id)' in side
+assert 'decor:FindFirstChild(' in side
+assert '"PlatformBevel" .. id .. "_" .. edge' in side
+assert 'for edge = 1,4 do' in side
+assert 'bevel:IsA("WedgePart")' in side
+assert 'bevel:GetAttribute("OriginalStructuralBevel") ~= true' in side
+assert 'frame:GetAttribute("PremiumArchitecturalSurface") ~= true' in side
+assert 'or Kit.hasNativeCarapaceFallback(decor, platform)' in side
+assert 'player:GetAttribute("OptionalVfxPressure"), decor)' in identity
+print("PASS only true five-native-fallback deck sources reserve an approved"
+      " 7-mesh platform slot on live Android and desktop streaming")
+
+
 # The real on-screen premium carapace must not sit behind four unrelated
 # world imports: prioritize the creator-approved ACTIVE arena once at the
 # existing 74-second milestone. The shared bridge remains second; both
