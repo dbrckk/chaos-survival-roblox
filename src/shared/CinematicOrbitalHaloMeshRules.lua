@@ -28,9 +28,23 @@ end
 function Rules.position(base,index)
     local angle=Ring.angle("OrbitalHalo",index)
     if not angle or typeof(base)~="Instance"
-        or not base:IsA("BasePart")
-        or base.Size.X<318 or base.Size.Z<318 then return nil end
-    local radius=math.max(base.Size.X,base.Size.Z)*.5+78
+        or not base:IsA("BasePart") then return nil end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    -- An untagged Base can still be used by old source-level preview
+    -- builders before MapBuilder attributes are replicated; a tagged
+    -- Base must never revert to live dimensions when its tag is invalid.
+    if sx==nil and sz==nil then
+        sx,sz=base.Size.X,base.Size.Z
+    end
+    if typeof(sx)~="number" or typeof(sz)~="number"
+        or sx~=sx or sz~=sz or sx<318 or sz<318
+        or sx==math.huge or sz==math.huge
+        or base.Size.X<=0 or base.Size.Z<=0
+        or base.Size.X>sx+.2 or base.Size.Z>sz+.2 then
+        return nil
+    end
+    local radius=math.max(sx,sz)*.5+78
     return base.CFrame:PointToWorldSpace(Vector3.new(
         math.cos(angle)*radius,
         34+math.sin(angle*2)*5,

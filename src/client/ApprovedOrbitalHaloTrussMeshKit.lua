@@ -8,6 +8,20 @@ local Ring=require(ReplicatedStorage.Shared.CinematicDepthLayoutRules)
 local Spatial=require(ReplicatedStorage.Shared.SpatialMidgroundSelectionRules)
 
 local Kit={}
+-- Visual halo geometry is outside the original floor. Shrink only affects
+-- the playable Base, never the server-authored skyline ring.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    return typeof(sx)=="number" and typeof(sz)=="number"
+        and sx==sx and sz==sz and sx>=318 and sz>=318
+        and sx<math.huge and sz<math.huge
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=sx+.2 and base.Size.Z<=sz+.2
+end
+
 local folder=Instance.new("Folder")
 folder.Name=Rules.LOCAL_FOLDER
 folder:SetAttribute("CosmeticOnly",true)
@@ -50,8 +64,7 @@ local function context(arena)
     local base=arena:FindFirstChild("Base")
     local cinematic=workspace:FindFirstChild("ArenaCinematicDepthLocal")
     if not base or not base:IsA("BasePart")
-        or base.Parent~=arena or not base.Anchored
-        or base.Size.X<318 or base.Size.Z<318
+        or not authenticBase(base,arena)
         or not cinematic or not cinematic:IsA("Folder")
         or cinematic.Parent~=workspace then return nil end
     return base,cinematic
@@ -190,6 +203,16 @@ local function mount(arena,base,cinematic,native,index,source,
         native.AncestryChanged:Connect(invalidated)
     entry.connections[#entry.connections+1]=
         source.AncestryChanged:Connect(invalidated)
+    for _,signal in ipairs({
+        base:GetPropertyChangedSignal("Size"),
+        base:GetPropertyChangedSignal("Anchored"),
+        base:GetPropertyChangedSignal("CanCollide"),
+        base:GetAttributeChangedSignal("OriginalSizeX"),
+        base:GetAttributeChangedSignal("OriginalSizeZ"),
+        base.AncestryChanged,
+    }) do
+        entry.connections[#entry.connections+1]=signal:Connect(invalidated)
+    end
     native.Transparency=1
     if not valid(entry) then
         restore(entry)
