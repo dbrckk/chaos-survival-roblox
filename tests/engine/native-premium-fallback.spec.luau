@@ -5,6 +5,7 @@
 local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
+local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
 local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local HarborFreighterMeshKit = require("../../src/client/HarborFreighterMeshKit")
@@ -18,6 +19,114 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("spends the same one Low seven-mesh carapace on the real even-index near deck", function()
+        Kit.reset()
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        local generated,templates,meshes
+        local ok,failure=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Classic",ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local base=arena:FindFirstChild("Base")
+            local platforms=arena:FindFirstChild("Platforms")
+            local decor=arena:FindFirstChild("Decor")
+            local nearby=platforms:FindFirstChild("Platform2")
+            local distant=platforms:FindFirstChild("Platform1")
+            expect(nearby~=nil and distant~=nil).toBe(true)
+            expect(nearby.CanCollide and nearby.Anchored).toBe(true)
+            -- The true MapBuilder has FOUR safe fallback bevels and
+            -- one underframe for this already-existing even-index deck.
+            local bevels={}
+            for i=1,4 do
+                local bevel=decor:FindFirstChild("PlatformBevel2_"..i)
+                expect(bevel~=nil and bevel:IsA("WedgePart")).toBe(true)
+                expect(bevel:GetAttribute("OriginalStructuralBevel")).toBe(true)
+                expect(bevel.CanCollide or bevel.CanTouch or bevel.CanQuery)
+                    .toBe(false)
+                bevels[#bevels+1]=bevel
+            end
+            local underside=decor:FindFirstChild("PlatformUnderFrame2")
+            expect(underside~=nil).toBe(true)
+            expect(underside:GetAttribute("PremiumArchitecturalSurface"))
+                .toBe(true)
+
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedPlatformSideTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=game:GetService("ReplicatedStorage")
+            local approved=Instance.new("Model")
+            approved.Name="Classic"
+            approved:SetAttribute("Original3DAssetId",92590025262416)
+            approved:SetAttribute("OwnerVerified",true)
+            approved:SetAttribute("CosmeticOnly",true)
+            approved:SetAttribute("OriginalStructuralSide3D",true)
+            for i=1,7 do
+                local source=Instance.new("MeshPart")
+                source.Name="ApprovedDeckMaterial"..i
+                source.Size=if i==1 then Vector3.new(11,3,9)
+                    else Vector3.new(1,1,1)
+                source.Anchored=true
+                source.CanCollide=false
+                source.CanTouch=false
+                source.CanQuery=false
+                source.Parent=approved
+            end
+            approved.Parent=templates
+            local chosen=PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                {distant,nearby},"Classic","Low",base,nearby.Position,
+                Vector3.new(0,0,1),0)
+            expect(chosen[nearby]).toBe(true)
+            expect(chosen[distant]).toBe(nil)
+            expect(PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                {distant,nearby},"Classic","Low",base,nearby.Position,
+                Vector3.new(0,0,1),1)[nearby]).toBe(nil)
+
+            meshes=Instance.new("Folder")
+            meshes.Name="OriginalCarapaceEvenDeckFixture"
+            meshes.Parent=workspace
+            local parts=PremiumPlatformSideMeshKit.carapace(
+                meshes,nearby,"Classic","Low",2,true)
+            expect(parts~=nil and #parts==7).toBe(true)
+            for _,piece in ipairs(parts) do
+                expect(piece:IsA("MeshPart")).toBe(true)
+                expect(piece.CanCollide or piece.CanTouch or piece.CanQuery)
+                    .toBe(false)
+                expect(piece:GetAttribute("Original3DStructuralSide"))
+                    .toBe(true)
+            end
+            Kit.bind(arena,{["2"]="carapace"},nil,nil,meshes)
+            expect(Kit.count()).toBe(5)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(1)
+            end
+            expect(underside.LocalTransparencyModifier).toBe(1)
+            expect(nearby.CanCollide).toBe(true)
+
+            nearby:SetAttribute("CollapsePhase","Warning")
+            expect(Kit.count()).toBe(0)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(0)
+            end
+            expect(underside.LocalTransparencyModifier).toBe(0)
+            nearby:SetAttribute("CollapsePhase","Normal")
+            expect(Kit.count()).toBe(5)
+            -- A lost imported original must restore the server natives,
+            -- never leave a hole around the physical landing surface.
+            for _,piece in ipairs(parts) do piece:Destroy() end
+            expect(Kit.count()).toBe(0)
+            expect(underside.LocalTransparencyModifier).toBe(0)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(0)
+            end
+        end)
+        Kit.reset()
+        if meshes then meshes:Destroy() end
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if previous then previous.Parent=workspace end
+        if not ok then error(failure) end
+    end)
+
     it("retains genuine exterior ridge sculpture across shrink on Android Low", function()
         local previous=workspace:FindFirstChild("GeneratedMap")
         if previous then previous.Parent=nil end
