@@ -124,7 +124,7 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(drydock.Transparency).toBe(1)
         local originalBeamPos=beam.Position
         local originalDockPos=drydock.Position
-        base.Size=Vector3.new(170,4,174)
+        base.Size=Vector3.new(170,base.Size.Y,174)
         local eventNorth=HarborSignatureGantryKit.count()
         local eventSouth=SouthHarborDrydockKit.count()
         local expectedNorth=base.Position+Vector3.new(
@@ -163,7 +163,7 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(SouthHarborDrydockKit.count()).toBe(1)
         -- An invalid floor expansion must immediately reveal both
         -- original silhouettes instead of retaining counterfeit art.
-        base.Size=Vector3.new(330,4,320)
+        base.Size=Vector3.new(330,base.Size.Y,320)
         update(0)
         expect(HarborSignatureGantryKit.count()).toBe(0)
         expect(SouthHarborDrydockKit.count()).toBe(0)
