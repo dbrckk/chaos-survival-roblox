@@ -279,7 +279,7 @@ for name, id_, tris in (
     assert models[0]["source"] == "tools/generate_original_platform_rims.py"
     assert id_ in rim_server and id_ in rim_client
 for clause in (
-    "GlobalApprovedImportGate", "ImportGate.load",
+    'require("./PremiumApprovedAssetImportGate")', "ImportGate.load",
     "OriginalMeshScenery.sanitize(raw)",
     "if count ~= 7 then return false end",
     "OriginalPlatformRim3D", "OwnerVerified", "CosmeticOnly",
