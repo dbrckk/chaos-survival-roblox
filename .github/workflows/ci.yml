@@ -1,8 +1,8 @@
 name: Build Validation
 
 # Release-gate repair: exercise the ACTUAL full build on PRs that edit this
-# workflow and on their main merge; ordinary feature changes still do NOT
-# trigger expensive build or Roblox Engine suites.
+# workflow, the real 3D district census or its budget-security gate.
+# Ordinary feature changes still do NOT trigger expensive Roblox suites.
 on:
   workflow_dispatch:
   pull_request:
@@ -10,12 +10,16 @@ on:
       - .github/workflows/ci.yml
       - tests/engine/visual-budget-rules.spec.luau
       - tests/engine/native-premium-fallback.spec.luau
+      - src/shared/DistrictVisualCensusRules.lua
+      - tools/verify_original_3d_budget_census.py
   push:
     branches: [main]
     paths:
       - .github/workflows/ci.yml
       - tests/engine/visual-budget-rules.spec.luau
       - tests/engine/native-premium-fallback.spec.luau
+      - src/shared/DistrictVisualCensusRules.lua
+      - tools/verify_original_3d_budget_census.py
 
 concurrency:
   group: build-validation-${{ github.ref }}
