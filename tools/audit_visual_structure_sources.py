@@ -409,17 +409,46 @@ for clause in (
 assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', crown)
 print("PASS true Sky Spine 3D crowns follow deck shrink without fake collisions")
 
-# Last two kits require a separate safety design: dynamically shrinking
-# visual-only floor tiles and general RouteMesh with mixed platform classes.
-floor_coupled = {
-    "src/client/PremiumGroundMeshKit.lua",
-    "src/client/PremiumRouteMeshKit.lua",
-}
+# Original 6x6 creator-authored ground plating now follows the ACTUAL
+# server-owned 36 tiles. Full source coordinates, live footprint and
+# Part order must match the 320-stud builder with no false solid floor.
+ground = (ROOT / "src/client/PremiumGroundMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function signedFloorScale(base)",
+    "local function originalSurface(ground, decor, base)",
+    'ground:GetAttribute("OriginalGroundFinish") ~= true',
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    "(cellX - 1.2) * scale",
+    "(cellZ - 1.2) * scale",
+    "(ground.Position - expected).Magnitude < .36",
+    "local function refit()",
+    'local joint = Instance.new("Weld")',
+    "joint.Part0 = ground",
+    "joint.Part1 = piece",
+    "piece.Size = Vector3.new(size.X * ratioX, size.Y,",
+    "entry.joints[piece].C0 = CFrame.new(",
+    "if not refit() then",
+    "PremiumGroundPbrKit.detach(entry)",
+    "restoreOverlays(entry)",
+    'ground:GetPropertyChangedSignal(prop):Connect(onGroundChanged)',
+):
+    assert clause in ground, clause
+assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*318', ground)
+assert "RenderStepped" not in ground and "Heartbeat" not in ground
+print("PASS 36 real nonphysical 3D floor bays follow server shrink")
+
+# PremiumRouteMeshKit has diverse physical owners: RouteTier decks shrink
+# in both axes, Towers skybridges shorten in one axis, and unrelated decks
+# move without resizing. Until each case passes true fit validation,
+# keep that final global floor safety guard.
+floor_coupled = {"src/client/PremiumRouteMeshKit.lua"}
 assert set(outer_scene_checks) == floor_coupled, (
     "unreviewed live-size guard or missing floor safeguard",
     sorted(set(outer_scene_checks) ^ floor_coupled),
 )
-print("PASS two floor/route live shrink guards remain")
+print("PASS only mixed RouteMesh has a remaining live floor guard")
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
