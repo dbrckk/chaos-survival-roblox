@@ -362,7 +362,13 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
             for i, model in ipairs(entry.models) do
                 if model.Parent ~= bucket then invalid = true end
                 for _, piece in ipairs(entry.parts[i]) do
-                    if not piece:IsDescendantOf(model) then invalid = true end
+                    if not piece:IsA("MeshPart")
+                        or not piece:IsDescendantOf(model)
+                        or not piece.Anchored or not piece.Massless
+                        or piece.CanCollide or piece.CanTouch
+                        or piece.CanQuery then
+                        invalid = true
+                    end
                 end
             end
         end
