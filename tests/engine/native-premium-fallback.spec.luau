@@ -106,6 +106,39 @@ describe("Original 3D native fallback isolation (engine)", function()
                 mesh.Parent=lattice
             end
             lattice.Parent=templates
+            -- Medium already reserves EIGHT seven-piece support modules,
+            -- but the old selector returned at most FOUR platform owners.
+            -- Use the actual complete Crossroads MapBuilder geometry and
+            -- genuine named server posts: no synthetic platforms/posts.
+            local actualDecks={}
+            for _,deck in ipairs(platforms:GetChildren()) do
+                if deck:IsA("BasePart") and
+                    deck.Name:match("^Platform%d+$") then
+                    actualDecks[#actualDecks+1]=deck
+                end
+            end
+            local _,mediumSupports=
+                PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                    actualDecks,decor,"Crossroads","Medium",base,
+                    platform.Position,Vector3.new(0,0,1),0)
+            local selectedMedium=0
+            for owner in pairs(mediumSupports) do
+                selectedMedium+=1
+                expect(owner.Anchored and owner.CanCollide).toBe(true)
+                local id=owner.Name:match("^Platform(%d+)$")
+                expect(id~=nil).toBe(true)
+                local actualNative=false
+                for _,post in ipairs(decor:GetChildren()) do
+                    if post.Name:match("^PlatformSupport"..id.."_%d+$")
+                        and post:IsA("BasePart") and post.Anchored
+                        and not post.CanCollide then
+                        actualNative=true
+                        break
+                    end
+                end
+                expect(actualNative).toBe(true)
+            end
+            expect(selectedMedium).toBe(8)
             local farCradle=nil
             local farDistance=math.huge
             for _,candidate in ipairs(platforms:GetChildren()) do
