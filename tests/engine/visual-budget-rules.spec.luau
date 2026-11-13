@@ -115,6 +115,16 @@ describe("visual budget rules", function()
             arena, camera, "Low", true, true, 0, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
         expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
+        expect(building:GetAttribute(
+            "LocalApprovedDistrictSidewallMounted")).toBe(true)
+        local districtBit=bit32.lshift(1,
+            building:GetAttribute("DistrictIndex")-1)
+        expect(bit32.band(
+            ApprovedDistrictSidewallMeshKit.residentMask16(),
+            districtBit)).toBe(districtBit)
+        expect(bit32.band(
+            PremiumDistrictFacadeMeshKit.residentMask16(),
+            districtBit)).toBe(districtBit)
         expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(5)
         expect(service.Transparency).toBe(1)
         expect(beam.Transparency).toBe(1)
@@ -143,6 +153,8 @@ describe("visual budget rules", function()
             arena, camera, "Low", true, true, 1, look)
         expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
         expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(0)
+        expect(building:GetAttribute(
+            "LocalApprovedDistrictSidewallMounted")).toBe(nil)
         expect(service.Transparency).toBe(alpha)
         expect(beam.Transparency).toBe(0)
         ApprovedDistrictSidewallMeshKit.sync(
