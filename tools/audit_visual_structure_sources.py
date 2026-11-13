@@ -357,7 +357,7 @@ for clause in (
     "folder, target, tier.Name, id, true, decor)",
     "or nearLargeDeckHulls[platform] == true, decor)",
     "or platform == lowHubDeck",
-    "or nearLargeDeckHulls[platform] == true)",
+    "or nearLargeDeckHulls[platform] == true, decor)",
     'LocalOriginalLargeDeckHullMountedCount',
     'player:GetAttributeChangedSignal("OptionalVfxPressure")',
     ':Connect(scheduleRebuild)',
