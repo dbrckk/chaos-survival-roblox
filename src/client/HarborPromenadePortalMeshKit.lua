@@ -127,17 +127,30 @@ local function isNative(part, deck, decor)
 end
 
 local function isAlive(entry)
-    if not entry.model or entry.model.Parent ~= folder
+    -- The same complete-source test owns masking, PBR residency, late
+    -- StreamingEnabled native pieces and the camera sampler. A surviving
+    -- imported MeshPart with a missing weld cannot replace the nine native
+    -- cargo gantry structures: reveal the server-authored original instead.
+    if entry.disposing or not entry.model or entry.model.Parent ~= folder
         or entry.arena ~= activeArena
-        or not authentic(entry.deck,entry.arena,entry.base) then
+        or not authentic(entry.deck,entry.arena,entry.base)
+        or not entry.pieces or #entry.pieces ~= entry.expected then
         return false
     end
-    local n=0
     for _, part in ipairs(entry.pieces) do
-        if not part or part.Parent ~= entry.model then return false end
-        n += 1
+        if not part:IsA("MeshPart") or part.Parent ~= entry.model
+            or part.Anchored or not part.Massless
+            or part.CanCollide or part.CanTouch or part.CanQuery then
+            return false
+        end
+        local joint=entry.joints[part]
+        if not joint or joint.Parent ~= part
+            or joint.Part0 ~= entry.deck or joint.Part1 ~= part
+            or not entry.frames[part] or not entry.sizes[part] then
+            return false
+        end
     end
-    return n == entry.expected
+    return true
 end
 
 -- Resize only the imported ornament, never the real collidable
