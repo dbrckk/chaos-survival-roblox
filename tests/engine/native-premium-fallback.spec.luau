@@ -23,8 +23,10 @@ describe("Original 3D native fallback isolation (engine)", function()
         -- test fixtures; production imports remain gated by AssetService.
         local previous=workspace:FindFirstChild("GeneratedMap")
         if previous then previous.Parent=nil end
+        local generated,northSource,southSource
+        local ok,failure=pcall(function()
         local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
-        local generated=arena.Parent
+        generated=arena.Parent
         local base=arena:FindFirstChild("Base")
         local decor=arena:FindFirstChild("Decor")
         local north=decor:FindFirstChild("ArenaSignatureMegastructure")
@@ -56,11 +58,11 @@ describe("Original 3D native fallback isolation (engine)", function()
             source.Parent=holder
             return holder
         end
-        local northSource=originalSource(
+        northSource=originalSource(
             "ApprovedHarborSignatureGantryTemplates","SculptedGantry",
             "OriginalHarborSignatureGantry3D",124368710235343,
             Vector3.new(40.8,14.0425,9.141))
-        local southSource=originalSource(
+        southSource=originalSource(
             "ApprovedSouthHarborDrydockTemplates","SculptedDrydock",
             "OriginalSouthHarborSculptedDrydock3D",125428569657840,
             Vector3.new(16.58,18.42,4.63))
@@ -78,6 +80,22 @@ describe("Original 3D native fallback isolation (engine)", function()
                 "Low",true,pressure)
         end
         update(0)
+        if HarborSignatureGantryKit.count()==0
+            or SouthHarborDrydockKit.count()==0 then
+            local _,box=northSource.SculptedGantry:GetBoundingBox()
+            local _,southBox=southSource.SculptedDrydock:GetBoundingBox()
+            local expected=base.Position+Vector3.new(
+                base:GetAttribute("OriginalSizeX")*.24,
+                base.Size.Y*.5+43.5,
+                -(base:GetAttribute("OriginalSizeZ")*.5+66))
+            warn("HARBOR_OUTER_3D_ENGINE_DIAGNOSTIC",
+                "northCount",HarborSignatureGantryKit.count(),
+                "southCount",SouthHarborDrydockKit.count(),
+                "base",base.Size,"originalX",base:GetAttribute("OriginalSizeX"),
+                "northSource",box,"southSource",southBox,
+                "beamError",(beam.Position-expected).Magnitude,
+                "northVariant",north:GetAttribute("SignatureVariant"))
+        end
         expect(HarborSignatureGantryKit.count()).toBe(1)
         expect(HarborSignatureGantryKit.replacedNativeCount()).toBe(3)
         expect(SouthHarborDrydockKit.count()).toBe(1)
@@ -108,12 +126,16 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(SouthHarborDrydockKit.count()).toBe(0)
         expect(beam.Transparency).toBe(beamAlpha)
         expect(drydock.Transparency).toBe(dockAlpha)
-        HarborSignatureGantryKit.sync(nil,northCamera,"Low",false,2)
-        SouthHarborDrydockKit.sync(nil,southCamera,"Low",false,2)
-        generated:Destroy()
-        northSource:Destroy()
-        southSource:Destroy()
+        end)
+        -- Even a failed assertion must never leak a GeneratedMap into
+        -- subsequent map, bot or visual tests in this engine shard.
+        HarborSignatureGantryKit.sync(nil,Vector3.zero,"Low",false,2)
+        SouthHarborDrydockKit.sync(nil,Vector3.zero,"Low",false,2)
+        if generated then generated:Destroy() end
+        if northSource then northSource:Destroy() end
+        if southSource then southSource:Destroy() end
         if previous then previous.Parent=workspace end
+        if not ok then error(failure) end
     end)
 
     it("mounts the approved Harbor hero 3D on genuine Low scenery without nonexistent hoist sensors", function()
