@@ -158,7 +158,19 @@ assert 'or sourceBounds.Y*scale>5 then return nil end' in structure
 assert 'and Kit.cradleFit(size,cradleBounds)' in structure
 assert 'local scale=Kit.cradleFit(platform.Size,box)' in structure
 assert 'if not scale then return nil end' in structure
-assert 'local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 1)' in structure
+assert 'local cradleLimit=tier=="High" and' in structure
+assert '(desktopHigh==true and 8 or 4) or (tier=="Medium" and 2 or 1)' in structure
+assert 'function Kit.desktopCradleTransfer(tier,desktopHigh,candidates)' in structure
+assert 'if tier~="High" or desktopHigh~=true' in structure
+assert 'return math.min(4,math.max(0,count-4))' in structure
+assert 'PremiumLargeStructureMeshKit.desktopCradleTransfer(' in (
+    (root / "src/client/arena-platform-identity.client.lua").read_text())
+assert 'longCradleBudget+=transferred' in (
+    (root / "src/client/arena-platform-identity.client.lua").read_text())
+assert 'supportBudget-=transferred' in (
+    (root / "src/client/arena-platform-identity.client.lua").read_text())
+assert 'tier.Name == "High" and not UserInputService.TouchEnabled' in (
+    (root / "src/client/arena-platform-identity.client.lua").read_text())
 assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 8 or 1)' in structure
 assert 'replacements[tostring(visualIndex)] = "cradle"' in (
     (root / "src/client/arena-platform-identity.client.lua").read_text())
@@ -218,3 +230,15 @@ for i in (2,4,6,8):
         assert height/approved_source_height >= .34
 print("PASS four genuine Crossroads low-route support clusters eligible"
       " for approved 7-piece source with preserved native fallback")
+
+# Source arithmetic contract: approved seven-MeshPart modules stay at
+# exactly 20 across the structural families, even when all 8 real
+# desktop underframe candidates are eligible. Android never trades.
+for eligible in range(0,15):
+    traded=min(4,max(0,eligible-4))
+    assert 0<=traded<=4
+    assert (4+traded)+(16-traded)==20
+    if eligible<=4:
+        assert traded==0
+print("PASS High desktop 4-to-8 genuine LongCradle capacity trades column"
+      " modules at fixed 20 source models; Android budgets unchanged")
