@@ -4,7 +4,7 @@
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
-local ImportGate = require("./PremiumApprovedAssetImportGate")
+local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Kit = {}
 local APPROVED = {
@@ -69,7 +69,7 @@ function Kit.start()
         for _,kind in ipairs(order) do
             if not templates:FindFirstChild(kind) then
                 for attempt=1,3 do
-                    local ok,raw=pcall(ImportGate.load,
+                    local ok,raw=pcall(GlobalApprovedImportGate.load,
                         AssetService, APPROVED[kind])
                     if ok and raw and raw:IsA("Model") then
                         local clean=OriginalMeshScenery.sanitize(raw)
