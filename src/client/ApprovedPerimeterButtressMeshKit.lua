@@ -251,6 +251,15 @@ local function mount(arena, base, decor, station, index, source, variant)
         source.DescendantRemoving:Connect(function(item)
             if item:IsA("MeshPart") then dispose(station) end
         end)
+    -- A mutated shared approved template is no longer trustworthy,
+    -- even if its original seven pieces remain present.
+    entry.connections[#entry.connections + 1] =
+        source.DescendantAdded:Connect(function(item)
+            if item:IsA("BasePart")
+                or item:IsA("LuaSourceContainer") then
+                dispose(station)
+            end
+        end)
     for _, model in ipairs(entry.models) do
         entry.connections[#entry.connections + 1] =
             model.DescendantRemoving:Connect(function(item)
@@ -353,6 +362,11 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure)
         if not invalid then
             for native in pairs(entry.native) do
                 if native.Parent ~= station
+                    or not native:IsA("Part") or not native.Anchored
+                    or native.CanCollide or native.CanTouch or native.CanQuery
+                    or math.abs(native.Size.X - 1.5) > .1
+                    or math.abs(native.Size.Y - 9) > .1
+                    or math.abs(native.Size.Z - 2) > .1
                     or (native.CFrame.Position - entry.frames[native].Position).Magnitude > .08
                     or native.CFrame.LookVector:Dot(entry.frames[native].LookVector) < .999 then
                     invalid = true
