@@ -287,6 +287,21 @@ local function sourceIntact(entry)
         end
     end
     if actual~=7 then return false end
+    -- Check the *source* as well as its resident clone. A streamed-out
+    -- material region, new unapproved part or Lua code invalidates the
+    -- imported original without waiting for the next camera sample.
+    local sourceCount=0
+    for _,child in ipairs(entry.source:GetDescendants()) do
+        if child:IsA("BasePart") then
+            if not child:IsA("MeshPart") or not child.Anchored
+                or not child.Massless or child.CanCollide
+                or child.CanTouch or child.CanQuery then return false end
+            sourceCount+=1
+        elseif child:IsA("LuaSourceContainer") then
+            return false
+        end
+    end
+    if sourceCount~=7 then return false end
     for _,p in ipairs(entry.pieces) do
         if not p.part:IsA("MeshPart")
             or not p.part:IsDescendantOf(entry.model)
@@ -458,7 +473,17 @@ local function mount(data,source)
         source.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections+1]=
         source.DescendantRemoving:Connect(function(child)
-            if child:IsA("MeshPart") and not entry.disposing then
+            if (child:IsA("BasePart") or child:IsA("LuaSourceContainer"))
+                and not entry.disposing then
+                task.defer(function()
+                    if not entry.disposing then refresh(entry) end
+                end)
+            end
+        end)
+    entry.connections[#entry.connections+1]=
+        source.DescendantAdded:Connect(function(child)
+            if (child:IsA("BasePart") or child:IsA("LuaSourceContainer"))
+                and not entry.disposing then
                 task.defer(function()
                     if not entry.disposing then refresh(entry) end
                 end)
