@@ -74,21 +74,45 @@ local function allowedModel()
     return source
 end
 
-local function nativeScene(arena)
+-- The offshore signal station stays at its original berth when the
+-- authoritative survival floor shrinks. Never authenticate via live width.
+local function authenticBase(base,arena)
+    if not base or not base:IsA("BasePart") or base.Parent~=arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx=base:GetAttribute("OriginalSizeX")
+    local sz=base:GetAttribute("OriginalSizeZ")
+    return typeof(sx)=="number" and typeof(sz)=="number"
+        and sx>=318 and sz>=318
+        and base.Size.X>0 and base.Size.Z>0
+        and base.Size.X<=sx+.2 and base.Size.Z<=sz+.2
+end
+
+local function nativeScene(arena,tier)
     if not arena or tostring(arena:GetAttribute("VariantId"))~="Harbor"
         then return nil end
     local generated=workspace:FindFirstChild("GeneratedMap")
-    if not generated or arena.Parent~=generated then return nil end
+    if not generated or generated.Parent~=workspace
+        or arena.Parent~=generated then return nil end
     local base=arena:FindFirstChild("Base")
-    if not base or not base:IsA("BasePart") or base.Size.X<318
-        or base.Size.Z<318 then return nil end
+    if not authenticBase(base,arena) then return nil end
     local hero=workspace:FindFirstChild("ArenaHeroSceneryLocal")
     if not hero or not hero:IsA("Folder") then return nil end
-    local refs={
-        Radar=hero:FindFirstChild("HarborHeroRadarArm"),
-        Cable=hero:FindFirstChild("HarborHeroHoistCable"),
-        Weight=hero:FindFirstChild("HarborHeroHoistWeight"),
-    }
+    -- Low intentionally builds only the radar (seven hero natives).
+    -- Cable and Weight native motion sensors do not exist on that tier.
+    -- Keep their genuine imported MeshParts static at their authored rest
+    -- pose while the existing radar still follows its native animation.
+    local radar=hero:FindFirstChild("HarborHeroRadarArm")
+    local cable=hero:FindFirstChild("HarborHeroHoistCable")
+    local weight=hero:FindFirstChild("HarborHeroHoistWeight")
+    if not radar or (cable==nil)~=(weight==nil)
+        or (tier~="Low" and (not cable or not weight)) then
+        return nil
+    end
+    local refs={Radar=radar}
+    if cable then
+        refs.Cable=cable
+        refs.Weight=weight
+    end
     local girder=hero:FindFirstChild("HarborHeroGantryCrosshead")
     local lens=hero:FindFirstChild("HarborHeroStormLens")
     local foundation=hero:FindFirstChild("HarborHeroPierFoundation")
@@ -112,7 +136,9 @@ local function alive(e)
         or not e.source.Parent or e.source:GetAttribute(
             "OriginalHarborHeroStation3D")~=true
         or e.source:GetAttribute("Original3DAssetId")~=ID
-        or e.base.Size.X<318 or e.base.Size.Z<318
+        or e.source.Parent~=e.sourceHolder
+        or e.sourceHolder.Parent~=ReplicatedStorage
+        or not authenticBase(e.base,e.arena)
         or e.girder.Parent~=e.hero or e.lens.Parent~=e.hero then
         return false
     end
@@ -180,7 +206,7 @@ localFolder.ChildRemoved:Connect(function(child)
     end
 end)
 
-local function mount(arena,scene,source)
+local function mount(arena,scene,source,tier)
     local clone=source:Clone()
     local before,b=clone:GetBoundingBox()
     if math.min(b.X,b.Z)<6.8 or math.max(b.X,b.Z)>29.1
@@ -193,9 +219,9 @@ local function mount(arena,scene,source)
         or math.max(big.X,big.Z)<37.5 or math.max(big.X,big.Z)>39.6
         or big.Y<36.8 or big.Y>39.3 then clone:Destroy();return nil end
     local base=scene.base
-    local nativeFrame=base.CFrame
-        *CFrame.new(0,0,base.Size.Z*.5+18)
-        *CFrame.Angles(0,math.pi,0)
+    -- Derive the immutable offshore position from the actual native
+    -- crosshead, not the shrinking Base.Size.Z or an arbitrary import pivot.
+    local nativeFrame=scene.girder.CFrame*CFrame.new(0,-21.5,0)
     local rotation=big.X<big.Z and math.pi*.5 or 0
     -- The source model's TRUE geometric center, not its arbitrary
     -- Roblox import pivot, preserves alignment to the exact native
@@ -240,11 +266,16 @@ local function mount(arena,scene,source)
             observed+=1
         end
     end
-    if observed<12 then clone:Destroy();return nil end
+    -- Low has exactly seven verified native structural pieces; Medium
+    -- and High have the existing additional cargo machinery and braces.
+    if observed<(tier=="Low" and 7 or 12) then
+        clone:Destroy();return nil
+    end
     local refs=scene.refs
     local e={
         arena=arena,base=base,hero=scene.hero,lens=scene.lens,
-        girder=scene.girder,source=source,model=clone,
+        girder=scene.girder,source=source,sourceHolder=source.Parent,
+        model=clone,
         pieces=pieces,refs=refs,motionRefs=refs,
         initial={
             Radar=nativeFrame*CFrame.new(0,37.7,0),
@@ -304,7 +335,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         or typeof(cameraPoint)~="Vector3" then
         dismount();return
     end
-    local scene=nativeScene(arena)
+    local scene=nativeScene(arena,tier)
     local source=allowedModel()
     if not scene or not source then dismount();return end
     local distance=(cameraPoint-scene.girder.Position).Magnitude
@@ -315,7 +346,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
         or entry.girder~=scene.girder or not alive(entry)) then
         dismount()
     end
-    if not entry then entry=mount(arena,scene,source) end
+    if not entry then entry=mount(arena,scene,source,tier) end
     if entry then
         if visibility(entry) then syncMotion(entry) end
     end
