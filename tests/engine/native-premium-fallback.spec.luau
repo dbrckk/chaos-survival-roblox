@@ -11,6 +11,8 @@ local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFa
 local DistrictVisualCensusRules = require("../../src/shared/DistrictVisualCensusRules")
 local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
 local PremiumLargeStructureMeshKit = require("../../src/client/PremiumLargeStructureMeshKit")
+local RemainingStructureKit = require("../../src/client/ApprovedRemainingStructureMeshKit")
+local RemainingStructureAssets = require("../../src/server/PremiumRemainingStructureAssets")
 local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local HarborFreighterMeshKit = require("../../src/client/HarborFreighterMeshKit")
@@ -917,8 +919,13 @@ describe("Original 3D native fallback isolation (engine)", function()
     for _,variantId in ipairs(ArenaVariants.Order) do
         it("P4 five-world physical structure census "..variantId, function()
             local previous=workspace:FindFirstChild("GeneratedMap")
+            local replicated=game:GetService("ReplicatedStorage")
+            local previousP4=replicated:FindFirstChild(
+                "ApprovedRemainingStructureTemplates")
             if previous then previous.Parent=nil end
-            local generated=nil
+            if previousP4 then previousP4.Parent=nil end
+            local generated,templates=nil,nil
+            RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
             local ok,result=pcall(function()
                 generated=MapBuilder.build(Config,variantId,ArenaVariants,VisualTheme)
                 local arena=generated:FindFirstChild("Arena")
@@ -1038,6 +1045,116 @@ describe("Original 3D native fallback isolation (engine)", function()
                     if a[4]~=b[4] then return a[4]>b[4] end
                     return a[1]<b[1]
                 end)
+                -- Extend this EXISTING five-world real-engine census with
+                -- the actual approved-3D owner lifecycle, not a new unit
+                -- suite or a guessed count of assets visible at runtime.
+                local expectedIds={
+                    Access=110243423264048,
+                    Transfer=107273631120961,
+                    Summit=127049813505254,
+                    Casing=130196548599769,
+                    Helix=106863534763803,
+                }
+                for name,id in pairs(expectedIds) do
+                    expect(RemainingStructureAssets.approvedId(name)).toBe(id)
+                end
+                expect(RemainingStructureKit.budget("Low",true,0,"arch")).toBe(1)
+                expect(RemainingStructureKit.budget("Low",true,1,"arch")).toBe(0)
+                expect(RemainingStructureKit.budget("Low",true,0,"helix")).toBe(0)
+                expect(RemainingStructureKit.budget("Medium",true,0,"arch")).toBe(2)
+                expect(RemainingStructureKit.budget("Medium",true,0,"helix")).toBe(1)
+                expect(RemainingStructureKit.budget("High",true,0,"arch")).toBe(3)
+                expect(RemainingStructureKit.budget("High",true,0,"casing")).toBe(2)
+                expect(RemainingStructureKit.budget("High",false,0,"arch")).toBe(6)
+                expect(RemainingStructureKit.budget("High",false,0,"helix")).toBe(6)
+                expect(RemainingStructureKit.budget("High",false,1,"helix")).toBe(3)
+                expect(RemainingStructureKit.budget("High",false,2,"arch")).toBe(0)
+
+                templates=Instance.new("Folder")
+                templates.Name="ApprovedRemainingStructureTemplates"
+                templates:SetAttribute("OwnerVerified",true)
+                templates.Parent=replicated
+                -- Engine-only stand-ins with EXACT pre-verified source
+                -- metadata. Asset ID / glTF provenance is independently
+                -- certified by creator upload run 43467373476 (Approved).
+                local function specimen(name,size)
+                    local model=Instance.new("Model")
+                    model.Name=name
+                    model:SetAttribute("OwnerVerified",true)
+                    model:SetAttribute("CosmeticOnly",true)
+                    model:SetAttribute("Original3DAssetId",expectedIds[name])
+                    model:SetAttribute("P4OriginalRemainingStructure3D",true)
+                    for index=1,7 do
+                        local part=Instance.new("MeshPart")
+                        part.Name="OriginalMaterialRegion"..index
+                        part.Size=size
+                        part.CFrame=CFrame.new(0,0,0)
+                        part.Anchored=true
+                        part.Massless=true
+                        part.CanCollide=false
+                        part.CanTouch=false
+                        part.CanQuery=false
+                        part.Parent=model
+                    end
+                    model.Parent=templates
+                end
+                specimen("Access",Vector3.new(3.9,17.53,17.6))
+                specimen("Casing",Vector3.new(8.58,10.378,5.3))
+                if variantId=="Orbital" then
+                    specimen("Helix",Vector3.new(5.08,1.453,23.6))
+                end
+                local base=arena:FindFirstChild("Base")
+                local platforms=arena:FindFirstChild("Platforms")
+                local decor=arena:FindFirstChild("Decor")
+                local casingGroup=decor:FindFirstChild(
+                    "OriginalPremiumColumnCladding")
+                expect(casingGroup~=nil).toBe(true)
+                expect(#casingGroup:GetChildren()).toBe(4)
+                local entryDeck=nil
+                for _,platform in ipairs(platforms:GetChildren()) do
+                    if platform:GetAttribute("PerimeterStep")==1 then
+                        entryDeck=platform;break
+                    end
+                end
+                expect(entryDeck~=nil).toBe(true)
+                local deckId=tonumber(entryDeck.Name:match("%d+"))
+                local overpass=decor:FindFirstChild(
+                    "SkyRouteMonument"..deckId.."_MonumentalOverpass")
+                local wayfinding=decor:FindFirstChild(
+                    "SkyRouteMonument"..deckId.."_RouteStageBeacon")
+                expect(overpass~=nil).toBe(true)
+                expect(wayfinding~=nil).toBe(true)
+                expect(base.CanCollide).toBe(true)
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")>=1).toBe(true)
+                expect(RemainingStructureKit.count("casing")>=1).toBe(true)
+                expect(overpass.LocalTransparencyModifier).toBe(1)
+                expect(wayfinding.LocalTransparencyModifier).toBe(0)
+                expect(entryDeck.CanCollide).toBe(true)
+                -- Hazard warning immediately unmasks the true gateway.
+                entryDeck:SetAttribute("CollapsePhase","Warning")
+                expect(overpass.LocalTransparencyModifier).toBe(0)
+                entryDeck:SetAttribute("CollapsePhase","Normal")
+                expect(overpass.LocalTransparencyModifier).toBe(1)
+                if variantId=="Orbital" then
+                    expect(RemainingStructureKit.count("helix")>=1).toBe(true)
+                    local circuit=arena:FindFirstChild("HelixCircuit")
+                    local ramp=circuit and circuit:FindFirstChild("HelixRamp1")
+                    expect(ramp~=nil and ramp.CanCollide).toBe(true)
+                    local underframe=circuit:FindFirstChild("HelixUnderframe1_-1")
+                    expect(underframe~=nil).toBe(true)
+                    expect(underframe.LocalTransparencyModifier).toBe(1)
+                    RemainingStructureKit.sync(arena,base.Position,"Low",true,
+                        Vector3.new(0,0,-1),0,true)
+                    expect(RemainingStructureKit.count("helix")).toBe(0)
+                    expect(underframe.LocalTransparencyModifier).toBe(0)
+                    expect(ramp.CanCollide).toBe(true)
+                end
+                RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
+                expect(overpass.LocalTransparencyModifier).toBe(0)
+                expect(base.CanCollide).toBe(true)
+
                 -- Every owner group, including small visual details, is
                 -- emitted in this diagnostic: the finished CSV must not
                 -- silently discard low-frequency groups or the lobby.
@@ -1047,7 +1164,10 @@ describe("Original 3D native fallback isolation (engine)", function()
                     inventory=ordered,
                 })
             end)
+            RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
+            if templates then templates:Destroy() end
             if generated then generated:Destroy() end
+            if previousP4 then previousP4.Parent=replicated end
             if previous then previous.Parent=workspace end
             if not ok then error("P4_CENSUS_ERROR "..variantId.." "..tostring(result)) end
             local snapshot=game:GetService("HttpService"):JSONDecode(result)
