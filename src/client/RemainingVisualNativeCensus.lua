@@ -32,7 +32,7 @@ local function groupFor(part, decor, circuit)
         or name:match("^PlatformCoreGlow%d+$") then
         return "PlatformSignals"
     end
-    if part:IsDescendantOf(circuit) then return "Helix" end
+    if circuit and part:IsDescendantOf(circuit) then return "Helix" end
     local casing = decor:FindFirstChild("OriginalPremiumColumnCladding")
     if casing and part:IsDescendantOf(casing) then return "ColumnCasing" end
     local district = decor:FindFirstChild("ArenaDistrictArchitecture3D")
@@ -86,9 +86,7 @@ function Census.sample(player, arena, quality)
     if player:GetAttribute("LocalP4NativeCensusQuality") ~= quality then
         player:SetAttribute("LocalP4NativeCensusQuality", quality)
     end
-    if player:GetAttribute("LocalP4NativeCensusClock") ~= nil or streamed then
-        player:SetAttribute("LocalP4NativeCensusClock", os.clock())
-    end
+    player:SetAttribute("LocalP4NativeCensusClock", os.clock())
 end
 
 return Census
