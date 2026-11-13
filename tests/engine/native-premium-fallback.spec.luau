@@ -740,6 +740,26 @@ describe("Original 3D native fallback isolation (engine)", function()
             end
             expect(underside.LocalTransparencyModifier).toBe(1)
             expect(nearby.CanCollide).toBe(true)
+            local masks=Kit.breakdown()
+            expect(masks.bevel).toBe(4)
+            expect(masks.underframe).toBe(1)
+            expect(masks.support).toBe(0)
+            -- The approved source is a genuine seven-piece bundle.
+            -- Losing just its FIRST mesh must immediately restore ALL
+            -- four authentic WedgePart bevels and the full underframe.
+            parts[1].Parent = nil
+            expect(Kit.count()).toBe(0)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(0)
+            end
+            expect(underside.LocalTransparencyModifier).toBe(0)
+            expect(nearby.CanCollide).toBe(true)
+            parts[1].Parent = meshes
+            expect(Kit.count()).toBe(5)
+            for _,bevel in ipairs(bevels) do
+                expect(bevel.LocalTransparencyModifier).toBe(1)
+            end
+            expect(underside.LocalTransparencyModifier).toBe(1)
 
             nearby:SetAttribute("CollapsePhase","Warning")
             expect(Kit.count()).toBe(0)
