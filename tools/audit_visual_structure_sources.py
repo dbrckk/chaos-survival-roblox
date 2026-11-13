@@ -266,6 +266,61 @@ for module, clauses in fixed_scenery_guards.items():
     assert not re.search(r'base\.Size\.[XZ]\s*<\s*(?:318|160)', code), module
 print("PASS six fixed outboard 3D families remain eligible through arena shrink")
 
+# All northern/southern signature monuments and the 14-slot Orbital
+# cinematic ring are FIXED original-perimeter sculptures, not platforms.
+additional_fixed_owners = (
+    "ApprovedClassicBroadcastFinMeshKit",
+    "ApprovedClassicForgedSupportsMeshKit",
+    "ApprovedClassicSignatureObservatoryMeshKit",
+    "ApprovedCrossroadsOpenGantryMeshKit",
+    "ApprovedCrossroadsSignatureInterchangeMeshKit",
+    "ApprovedTowersSignatureBridgeMeshKit",
+    "ApprovedSouthClassicObservatoryMeshKit",
+    "ApprovedSouthCrossroadsExchangeMeshKit",
+    "ApprovedSouthOrbitalFinishingMeshKit",
+    "ApprovedSouthOrbitalObservationRingMeshKit",
+    "ApprovedSouthTowersFinishingMeshKit",
+    "ApprovedSouthTowersLiftTwinsMeshKit",
+    "ApprovedSouthTowersSkytransferMeshKit",
+)
+for module in additional_fixed_owners:
+    code = (ROOT / "src/client" / (module + ".lua")).read_text(
+        encoding="utf8")
+    for clause in (
+        "local function originalFootprint(base, arena)",
+        "local originalX, originalZ = originalFootprint(base, arena)",
+        'base:GetAttribute("OriginalSizeX")',
+        'base:GetAttribute("OriginalSizeZ")',
+        'base:GetAttributeChangedSignal("OriginalSizeX")',
+        'base:GetAttributeChangedSignal("OriginalSizeZ")',
+    ):
+        assert clause in code, (module, clause)
+    assert "originalX" in code and "originalZ" in code, module
+    assert not re.search(
+        r'base\\.Size\\.[XZ]\\s*<\\s*318', code), module
+
+halo_kit = (ROOT / "src/client/ApprovedOrbitalHaloTrussMeshKit.lua").read_text(
+    encoding="utf8")
+halo_rules = (ROOT / "src/shared/CinematicOrbitalHaloMeshRules.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function authenticBase(base, arena)",
+    "not authenticBase(base,arena)",
+    'base:GetAttributeChangedSignal("OriginalSizeX")',
+    'base:GetAttributeChangedSignal("OriginalSizeZ")',
+):
+    assert clause in halo_kit, clause
+for clause in (
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    "local radius=math.max(sx,sz)*.5+78",
+    "base.Size.X>sx+.2 or base.Size.Z>sz+.2",
+):
+    assert clause in halo_rules, clause
+assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*318',halo_kit)
+assert not re.search(r'base\\.Size\\.[XZ]\\s*<\\s*318',halo_rules)
+print("PASS 14 more fixed northern/southern/orbital visual owners survive shrink")
+
 # This is a risk inventory, not a count of defective objects: checking a
 # 320-stud playable floor is correct for physical platforms, but incorrect
 # for outboard static scenery during Shrinking Arena.
@@ -277,6 +332,22 @@ for path in source_files:
 outer_scene_checks = [p for p in live_floor_checks
     if p.startswith("src/client/") and
     ("MeshKit" in p or "3DKit" in p)]
+# Remaining five are genuinely floor/deck-bound. They must restore
+# native gameplay-compatible visuals during shrink until the mesh itself
+# can follow moving/reduced geometry. Do not replace their live guards with
+# original-perimeter checks; that would fabricate walkable-looking space.
+floor_coupled = {
+    "src/client/HarborDockCaissonMeshKit.lua",
+    "src/client/HarborPromenadePortalMeshKit.lua",
+    "src/client/PremiumGroundMeshKit.lua",
+    "src/client/PremiumRouteMeshKit.lua",
+    "src/client/SkySpineCrownMeshKit.lua",
+}
+assert set(outer_scene_checks) == floor_coupled, (
+    "unreviewed live-size guard or missing floor safeguard",
+    sorted(set(outer_scene_checks) ^ floor_coupled),
+)
+print("PASS only five intentional floor/deck-following live shrink guards remain")
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
