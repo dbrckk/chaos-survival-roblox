@@ -103,6 +103,22 @@ local function sourceFor(kind)
     return source
 end
 
+-- The four perimeter stations remain fixed outside the contracting playable
+-- floor. Verify the builder-signed ORIGINAL arena footprint, not the live
+-- Shrinking Arena size; still reject fake expansion, missing map authority
+-- and any unanchored/noncollidable gameplay base.
+local function authenticBase(base, arena)
+    if not base or not base:IsA("BasePart")
+        or not arena or base.Parent ~= arena
+        or not base.Anchored or not base.CanCollide then return false end
+    local sx = base:GetAttribute("OriginalSizeX")
+    local sz = base:GetAttribute("OriginalSizeZ")
+    return typeof(sx) == "number" and typeof(sz) == "number"
+        and sx >= 318 and sz >= 318
+        and base.Size.X > 0 and base.Size.Z > 0
+        and base.Size.X <= sx + .2 and base.Size.Z <= sz + .2
+end
+
 local function genuineStation(arena, station, index, tier)
     if not arena or not arena:IsA("Folder")
         or not VARIANTS[arena:GetAttribute("VariantId")]
@@ -113,9 +129,7 @@ local function genuineStation(arena, station, index, tier)
         or station:GetAttribute("ChaosPerimeterStation") ~= true
         or station:GetAttribute("StationIndex") ~= index then return nil end
     local base,decor=arena:FindFirstChild("Base"),arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart") or base.Parent ~= arena
-        or not base.Anchored or not base.CanCollide
-        or base.Size.X < 318 or base.Size.Z < 318
+    if not authenticBase(base, arena)
         or not decor or not decor:IsA("Folder")
         or decor.Parent ~= arena or station.Parent ~= decor then return nil end
     local natives={}
@@ -281,10 +295,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
     end
     local base=arena:FindFirstChild("Base")
     local decor=arena:FindFirstChild("Decor")
-    if not base or not base:IsA("BasePart")
-        or not decor or not decor:IsA("Folder")
-        or base.Size.X<318 or base.Size.Z<318
-        or not base.Anchored or not base.CanCollide then
+    if not authenticBase(base,arena)
+        or not decor or not decor:IsA("Folder") then
         removeAll()
         return
     end
@@ -293,14 +305,18 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,touch,pressure)
         table.clear(baseWatchers)
         watchedBase=base
         local function invalidBase()
-            if base.Parent~=arena or not base.Anchored
-                or not base.CanCollide or base.Size.X<318
-                or base.Size.Z<318 then removeAll() end
+            if not authenticBase(base,arena) then removeAll() end
         end
         baseWatchers[#baseWatchers+1]=
             base:GetPropertyChangedSignal("Size"):Connect(invalidBase)
         baseWatchers[#baseWatchers+1]=
             base:GetPropertyChangedSignal("CanCollide"):Connect(invalidBase)
+        baseWatchers[#baseWatchers+1]=
+            base:GetPropertyChangedSignal("Anchored"):Connect(invalidBase)
+        for _,attribute in ipairs({"OriginalSizeX","OriginalSizeZ"}) do
+            baseWatchers[#baseWatchers+1]=
+                base:GetAttributeChangedSignal(attribute):Connect(invalidBase)
+        end
         baseWatchers[#baseWatchers+1]=
             base.AncestryChanged:Connect(invalidBase)
     end

@@ -149,6 +149,34 @@ assert 'base.Size.X<318' not in exterior_towers
 assert 'base.Size.Z<318' not in exterior_towers
 print("PASS signed original perimeter for four exterior 3D towers during shrink")
 
+# Four perimeter stations also stay on their creator-authored OUTER
+# footprint while the playable arena shrinks. Two original seven-mesh
+# wings may replace their WedgeParts even on Low, without changing caps,
+# proximity, colliders, or disappearing when the floor becomes <318.
+perimeter_armor = (ROOT / "src/client/ApprovedPerimeterArmorMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    'local function authenticBase(base, arena)',
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    'base.Size.X <= sx + .2 and base.Size.Z <= sz + .2',
+    'if not authenticBase(base, arena)',
+    'if not authenticBase(base,arena)',
+    'base:GetPropertyChangedSignal("Size"):Connect(invalidBase)',
+    'base:GetPropertyChangedSignal("Anchored"):Connect(invalidBase)',
+    'base:GetAttributeChangedSignal(attribute):Connect(invalidBase)',
+    'local CAPS = {Low=1,Medium=1,High=3}',
+    'if stress==1 then cap=math.floor(cap*.5) end',
+    'if stress>=2 then cap=0 end',
+    'if count ~= 7 then return nil end',
+):
+    assert clause in perimeter_armor,("perimeter armor shrink safety",clause)
+assert 'base.Size.X<318' not in perimeter_armor
+assert 'base.Size.Z<318' not in perimeter_armor
+assert 'base.Size.X < 318' not in perimeter_armor
+assert 'base.Size.Z < 318' not in perimeter_armor
+print("PASS four authentic perimeter armor stations remain 3D-eligible after shrink")
+
 # This is a risk inventory, not a count of defective objects: checking a
 # 320-stud playable floor is correct for physical platforms, but incorrect
 # for outboard static scenery during Shrinking Arena.
