@@ -8,6 +8,7 @@ local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
+local ActiveSignatureSchedule = require("./PremiumActiveVariantImportSchedule")
 
 local Kit={}
 local ID=132891280963772
@@ -59,9 +60,12 @@ function Kit.start()
     -- clients must compare the same immutable ID to the Model.
     holder:SetAttribute("Original3DAssetId",ID)
     task.spawn(function()
-        -- First-screen interaction, playable routes, major cargo vessel,
-        -- four large cranes and hero radar station retain their priority.
-        task.wait(108)
+        -- Harbor is already in play: request this authenticated nearshore
+        -- 3D barge at 40s, after the sea (18s), main hero (33s) and the
+        -- primary signatures (20s). On other maps retain the original
+        -- 108s deadline; a map rotation can wake this single worker.
+        -- GlobalApprovedImportGate still permits only two inflight loads.
+        ActiveSignatureSchedule.waitFor("Harbor",40,108)
         for attempt=1,3 do
             local ok,raw=pcall(
                 GlobalApprovedImportGate.load,AssetService,ID)
