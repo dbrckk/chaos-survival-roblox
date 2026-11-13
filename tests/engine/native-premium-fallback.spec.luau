@@ -108,6 +108,27 @@ describe("Original 3D native fallback isolation (engine)", function()
         local originalBeamPos=beam.Position
         local originalDockPos=drydock.Position
         base.Size=Vector3.new(170,4,174)
+        local eventNorth=HarborSignatureGantryKit.count()
+        local eventSouth=SouthHarborDrydockKit.count()
+        local expectedNorth=base.Position+Vector3.new(
+            base:GetAttribute("OriginalSizeX")*.24,
+            base.Size.Y*.5+43.5,
+            -(base:GetAttribute("OriginalSizeZ")*.5+66))
+        local expectedDock=base.Position+Vector3.new(
+            -base:GetAttribute("OriginalSizeX")*.20,
+            base.Size.Y*.5,base:GetAttribute("OriginalSizeZ")*.5+54)
+        if eventNorth~=1 or eventSouth~=1 then
+            error("Harbor outer 3D invalidated by Base.Size event: north="
+                ..tostring(eventNorth).." south="..tostring(eventSouth)
+                .." baseCollide="..tostring(base.CanCollide)
+                .." baseAnchored="..tostring(base.Anchored)
+                .." baseParentOk="..tostring(base.Parent==arena)
+                .." beamPositionErr="..tostring(
+                    (beam.Position-expectedNorth).Magnitude)
+                .." drydockOriginErr="..tostring(
+                    (south.Foundation.Position-
+                        (expectedDock+Vector3.new(0,-1,0))).Magnitude))
+        end
         update(0)
         requireMounted("after-shrink")
         expect(HarborSignatureGantryKit.count()).toBe(1)
