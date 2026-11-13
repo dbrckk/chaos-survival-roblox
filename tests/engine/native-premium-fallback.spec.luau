@@ -17,6 +17,152 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    -- One-off evidence gathering for the full five-map premium visual audit.
+    -- This temporary diagnostic emits authoritative server MapBuilder object
+    -- counts as Lest failures so GitHub records actual cloud-engine evidence.
+    -- Replace the diagnostic errors with permanent numeric assertions after
+    -- harvesting the results, then verify all seven suites green.
+    for _,variantId in ipairs(ArenaVariants.Order) do
+        it("P4 five-world physical structure census "..variantId, function()
+            local previous=workspace:FindFirstChild("GeneratedMap")
+            if previous then previous.Parent=nil end
+            local generated=nil
+            local ok,result=pcall(function()
+                generated=MapBuilder.build(Config,variantId,ArenaVariants,VisualTheme)
+                local arena=generated:FindFirstChild("Arena")
+                local lobby=generated:FindFirstChild("Lobby")
+                assert(arena and lobby,"Full map and lobby must exist")
+                local HttpService=game:GetService("HttpService")
+                local stats={
+                    total=0,visible=0,primitives=0,meshes=0,
+                    visiblePrimitives=0,physicalVisible=0,
+                    nonphysicalVisiblePrimitives=0,
+                    largeNonphysical=0,hugeNonphysical=0,
+                    neonNonphysical=0,opaqueNonphysical=0,
+                    invisible=0,lights=0,effects=0,
+                    models=0,lobbyPrimitives=0,
+                    lobbyVisible=0,arenaVisible=0,
+                    arenaNonphysical=0,arenaCollidable=0,
+                }
+                local groups={}
+                local function category(part)
+                    local chain={}
+                    local parent=part
+                    while parent and parent~=generated do
+                        table.insert(chain,1,parent)
+                        parent=parent.Parent
+                    end
+                    local top=chain[1] and chain[1].Name or "External"
+                    if top=="Arena" then
+                        local section=chain[2] and chain[2].Name or "Direct"
+                        if section=="Decor" then
+                            local subgroup=chain[3]
+                            if not subgroup then return "Arena/Decor/Empty" end
+                            if subgroup==part then
+                                return "Arena/Decor/Direct/"
+                                    ..part.Name:gsub("%d+","#")
+                            end
+                            return "Arena/Decor/"..subgroup.Name:gsub("%d+","#")
+                        end
+                        return "Arena/"..section
+                    end
+                    return top
+                end
+                for _,inst in ipairs(generated:GetDescendants()) do
+                    if inst:IsA("Model") then stats.models+=1 end
+                    if inst:IsA("Light") then stats.lights+=1 end
+                    if inst:IsA("ParticleEmitter")
+                        or inst:IsA("Trail") or inst:IsA("Beam") then
+                        stats.effects+=1
+                    end
+                    if inst:IsA("BasePart") then
+                        stats.total+=1
+                        local name=category(inst)
+                        local item=groups[name]
+                        if not item then
+                            item={0,0,0,0,0,0,0}
+                            groups[name]=item
+                        end
+                        item[1]+=1
+                        local primitive=inst:IsA("Part")
+                            or inst:IsA("WedgePart")
+                            or inst:IsA("CornerWedgePart")
+                            or inst:IsA("TrussPart")
+                        local visible=inst.Transparency<.99
+                        local physical=inst.CanCollide or inst.CanTouch
+                            or inst.CanQuery
+                        local maxDim=math.max(inst.Size.X,inst.Size.Y,inst.Size.Z)
+                        local cue=inst.Material==Enum.Material.Neon
+                            or string.find(string.lower(inst.Name),
+                                "signal")~=nil
+                            or string.find(string.lower(inst.Name),
+                                "beacon")~=nil
+                            or string.find(string.lower(inst.Name),
+                                "glow")~=nil
+                            or string.find(string.lower(inst.Name),
+                                "guide")~=nil
+                            or string.find(string.lower(inst.Name),
+                                "lens")~=nil
+                        if primitive then stats.primitives+=1 end
+                        if inst:IsA("MeshPart") then stats.meshes+=1;item[7]+=1 end
+                        if visible then
+                            stats.visible+=1;item[2]+=1
+                            if name=="Lobby" then stats.lobbyVisible+=1
+                            else stats.arenaVisible+=1 end
+                            if physical then
+                                stats.physicalVisible+=1;item[6]+=1
+                                if name~="Lobby" then stats.arenaCollidable+=1 end
+                            else
+                                if name~="Lobby" then stats.arenaNonphysical+=1 end
+                                if primitive then
+                                    stats.nonphysicalVisiblePrimitives+=1
+                                    item[3]+=1
+                                    if maxDim>=12 then
+                                        stats.largeNonphysical+=1;item[4]+=1
+                                    end
+                                    if maxDim>=30 then stats.hugeNonphysical+=1 end
+                                    if cue then
+                                        stats.neonNonphysical+=1;item[5]+=1
+                                    else
+                                        stats.opaqueNonphysical+=1
+                                    end
+                                end
+                            end
+                            if primitive then stats.visiblePrimitives+=1 end
+                            if name=="Lobby" and primitive then
+                                stats.lobbyPrimitives+=1
+                            end
+                        else
+                            stats.invisible+=1
+                        end
+                    end
+                end
+                local ordered={}
+                for name,counts in pairs(groups) do
+                    ordered[#ordered+1]={name,unpack(counts)}
+                end
+                table.sort(ordered,function(a,b)
+                    if a[5]~=b[5] then return a[5]>b[5] end
+                    if a[4]~=b[4] then return a[4]>b[4] end
+                    return a[1]<b[1]
+                end)
+                local trimmed={}
+                for i=1,math.min(#ordered,75) do
+                    trimmed[i]=ordered[i]
+                end
+                return HttpService:JSONEncode({
+                    variant=variantId,stats=stats,
+                    groups=#ordered,
+                    top75=trimmed,
+                })
+            end)
+            if generated then generated:Destroy() end
+            if previous then previous.Parent=workspace end
+            if not ok then error("P4_CENSUS_ERROR "..variantId.." "..tostring(result)) end
+            error("P4_CENSUS_ENGINE_REAL "..result)
+        end)
+    end
+
     it("keeps both authentic outer Harbor 3D landmarks through shrink with native restoration", function()
         -- Use the real MapBuilder Harbor geometry, not stand-in native
         -- signature parts. Only the approved imported meshes are local
