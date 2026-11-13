@@ -6,6 +6,7 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
+local PremiumLargeStructureMeshKit = require("../../src/client/PremiumLargeStructureMeshKit")
 local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local HarborFreighterMeshKit = require("../../src/client/HarborFreighterMeshKit")
@@ -19,6 +20,110 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("replaces a real 4.85-stud Crossroads near support on Low with native recovery", function()
+        Kit.reset()
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        local generated,templates,meshes
+        local result,err=pcall(function()
+            -- The real MapBuilder produces a 4.85-stud source support under
+            -- Platform2 (7-stud deck centre - 1-stud half-height - 1.15).
+            -- No fabricated Roblox native pillars are used for this test.
+            local arena=MapBuilder.buildArena(Config,"Crossroads",
+                ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local base=arena:FindFirstChild("Base")
+            local decor=arena:FindFirstChild("Decor")
+            local platforms=arena:FindFirstChild("Platforms")
+            local platform=platforms:FindFirstChild("Platform2")
+            local native=decor:FindFirstChild("PlatformSupport2_1")
+            expect(platform~=nil and native~=nil).toBe(true)
+            expect(platform.Anchored and platform.CanCollide).toBe(true)
+            expect(native.Anchored and not native.CanCollide
+                and not native.CanTouch and not native.CanQuery).toBe(true)
+            expect(math.abs(native.Size.Y-4.85)<.001).toBe(true)
+
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedLargeStructureTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=game:GetService("ReplicatedStorage")
+            local source=Instance.new("Model")
+            source.Name="Crossroads"
+            source:SetAttribute("Original3DAssetId",93993697329658)
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute("OriginalLargeStructure3D",true)
+            for i=1,7 do
+                local mesh=Instance.new("MeshPart")
+                mesh.Name="OriginalColumnMaterial"..i
+                mesh.Size=if i==1 then Vector3.new(2.12,14.1,2.12)
+                    else Vector3.new(.3,.3,.3)
+                mesh.Anchored=true
+                mesh.CanCollide=false
+                mesh.CanTouch=false
+                mesh.CanQuery=false
+                mesh.Parent=source
+            end
+            source.Parent=templates
+
+            local camera=platform.Position
+            local cradles,supports=
+                PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                    {platform},decor,"Crossroads","Low",base,
+                    camera,Vector3.new(0,0,1),0)
+            expect(supports[platform]).toBe(true)
+            expect(cradles[platform]).toBe(nil)
+            local _,pressured=
+                PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                    {platform},decor,"Crossroads","Low",base,
+                    camera,Vector3.new(0,0,1),1)
+            expect(pressured[platform]).toBe(nil)
+            meshes=Instance.new("Folder")
+            meshes.Name="P0OriginalColumnLowFixture"
+            meshes.Parent=workspace
+            local mounted=PremiumLargeStructureMeshKit.supports(
+                meshes,decor,platform,"Crossroads","Low",2,1,true)
+            expect(mounted~=nil).toBe(true)
+            expect(mounted.modules).toBe(1)
+            expect(#mounted.parts).toBe(7)
+            expect(#mounted.covered).toBe(1)
+            expect(mounted.covered[1]).toBe(native)
+            for _,part in ipairs(mounted.parts) do
+                expect(part:IsA("MeshPart")).toBe(true)
+                expect(part.CanCollide or part.CanTouch or part.CanQuery)
+                    .toBe(false)
+                expect(part:GetAttribute("OriginalSupportColumn3D"))
+                    .toBe(true)
+            end
+
+            Kit.bind(arena,{},nil,mounted.covered,meshes)
+            expect(Kit.count()).toBe(1)
+            expect(native.LocalTransparencyModifier).toBe(1)
+            -- Collapse overrides any imported cosmetic; the real
+            -- server-owned collidable deck never becomes intangible.
+            platform:SetAttribute("CollapsePhase","Warning")
+            expect(Kit.count()).toBe(0)
+            expect(native.LocalTransparencyModifier).toBe(0)
+            platform:SetAttribute("CollapsePhase","Normal")
+            expect(Kit.count()).toBe(1)
+            -- Streaming/destruction of the final source segment always
+            -- unmasks the original anchored, nonphysical server support.
+            for _,part in ipairs(mounted.parts) do part:Destroy() end
+            expect(Kit.count()).toBe(0)
+            expect(native.LocalTransparencyModifier).toBe(0)
+            expect(platform.CanCollide).toBe(true)
+            for _,conn in ipairs(mounted.disconnects) do
+                conn:Disconnect()
+            end
+        end)
+        Kit.reset()
+        if meshes then meshes:Destroy() end
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if previous then previous.Parent=workspace end
+        if not result then error(err) end
+    end)
+
     it("spends the same one Low seven-mesh carapace on the real even-index Crossroads near deck", function()
         Kit.reset()
         local previous=workspace:FindFirstChild("GeneratedMap")
