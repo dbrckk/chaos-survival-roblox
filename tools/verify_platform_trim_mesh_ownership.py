@@ -146,6 +146,27 @@ for index in (2,4,6,8):
     assert src_short*factor>=short*.72
 print("PASS four genuine even Crossroads decks fit original 3D source"
       " dimensions, with exactly one near-camera Low model permitted")
+# LongCradle: Medium/High's 2/4 scarce authentic models must only be
+# reserved when the REAL 22-stud mesh can also mount on that deck.
+# Reject overlong undersides BEFORE consuming a model slot, using one
+# fit function for selection and installation across all quality tiers.
+structure = (root / "src/client/PremiumLargeStructureMeshKit.lua").read_text()
+assert 'function Kit.cradleFit(size,sourceBounds)' in structure
+assert 'if long<19.5 or long>34 or short<9 or short>18 then return nil end' in structure
+assert 'or sourceShort*scale<short*.76' in structure
+assert 'or sourceBounds.Y*scale>5 then return nil end' in structure
+assert 'and Kit.cradleFit(size,cradleBounds)' in structure
+assert 'local scale=Kit.cradleFit(platform.Size,box)' in structure
+assert 'if not scale then return nil end' in structure
+assert 'local cradleLimit=tier=="High" and 4 or (tier=="Medium" and 2 or 1)' in structure
+assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 8 or 1)' in structure
+assert 'replacements[tostring(visualIndex)] = "cradle"' in (
+    (root / "src/client/arena-platform-identity.client.lua").read_text())
+assert 'if id and (active[id] == "carapace" or active[id] == "cradle") then' in source
+assert 'return part:GetAttribute("PremiumArchitecturalSurface") == true' in source
+print("PASS real approved LongCradle source-fit selection matches mount on"
+      " Low/Medium/High; 1/2/4 source quotas and native fallback unchanged")
+
 
 
 # P0 support: a true Crossroads Platform2 stands at Y=7 with Y-size 2.
