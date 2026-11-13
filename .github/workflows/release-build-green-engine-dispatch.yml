@@ -17,12 +17,14 @@ permissions:
   actions: write
 jobs:
   dispatch-engine:
+    # GitHub can omit nested workflow_run HEAD repository metadata in
+    # events, making a legitimate green main build silently "skipped".
+    # Keep only the completed-success trigger here. Re-fetch the *actual*
+    # parent run from GitHub API and fail closed on every trust criterion
+    # before the privileged engine dispatch below.
     if: >-
       github.repository == 'dbrckk/chaos-survival-roblox'
-      && github.event.workflow_run.event == 'push'
       && github.event.workflow_run.conclusion == 'success'
-      && github.event.workflow_run.head_branch == 'main'
-      && github.event.workflow_run.head_repository.full_name == 'dbrckk/chaos-survival-roblox'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -35,6 +37,29 @@ jobs:
         run: |
           set -euo pipefail
           test "${#RELEASE_SHA}" -eq 40
+          # Validate metadata from a fresh authenticated GitHub API read,
+          # not from possibly incomplete workflow_run event objects.
+          parent="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PARENT_RUN_ID}" \
+            --jq '[.event, .conclusion, .head_branch, .head_repository.full_name, .head_sha] | @tsv')"
+          IFS=
+            echo "::error::Build ${PARENT_RUN_ID} targets a stale SHA; no engine dispatch."
+            exit 1
+          fi
+          echo "Verified green main build ${PARENT_RUN_ID} on exact ${RELEASE_SHA}"
+          gh workflow run roblox-cloud-test.yml --repo "${GITHUB_REPOSITORY}" --ref main
+          echo "Dispatched real seven-suite Roblox Open Cloud Engine Tests."
+          echo "The protected public Place publisher remains MANUAL and requires"
+          echo "both Build Validation and Roblox Open Cloud Engine Tests GREEN"
+          echo "on exactly this SHA. No Roblox Place publication performed."
+\t' read -r parent_event parent_result parent_branch parent_repo parent_sha <<< "${parent}"
+          if [ "${parent_event}" != "push" ] \
+            || [ "${parent_result}" != "success" ] \
+            || [ "${parent_branch}" != "main" ] \
+            || [ "${parent_repo}" != "${GITHUB_REPOSITORY}" ] \
+            || [ "${parent_sha}" != "${RELEASE_SHA}" ]; then
+            echo "::error::Parent Build Validation provenance mismatch; refusing engine dispatch."
+            exit 1
+          fi
           current="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" \
             --jq '.object.sha')"
           if [ "${current}" != "${RELEASE_SHA}" ]; then
