@@ -440,16 +440,43 @@ assert ".RenderStepped:Connect(" not in ground
 assert ".Heartbeat:Connect(" not in ground
 print("PASS 36 real nonphysical 3D floor bays follow server shrink")
 
-# PremiumRouteMeshKit has diverse physical owners: RouteTier decks shrink
-# in both axes, Towers skybridges shorten in one axis, and unrelated decks
-# move without resizing. Until each case passes true fit validation,
-# keep that final global floor safety guard.
-floor_coupled = {"src/client/PremiumRouteMeshKit.lua"}
-assert set(outer_scene_checks) == floor_coupled, (
-    "unreviewed live-size guard or missing floor safeguard",
-    sorted(set(outer_scene_checks) ^ floor_coupled),
-)
-print("PASS only mixed RouteMesh has a remaining live floor guard")
+# Mixed RouteMesh now validates the physical *per-deck* shrink contract:
+# RouteTier x/z, gated Towers Skybridge long axis, or fixed-size translation.
+# A fitted, approved MeshPart shell is adjusted through its own deck's Weld
+# and Size event, never by adding a fake client route/collider.
+routes = (ROOT / "src/client/PremiumRouteMeshKit.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function realFloorScale(base,arena)",
+    "local function authenticDeck(entry,platform)",
+    'base:GetAttribute("OriginalSizeX")',
+    'base:GetAttribute("OriginalSizeZ")',
+    'entry.resizeKind=="compact"',
+    'entry.resizeKind=="skybridge"',
+    "sx,sz=sx*ratio,sz*ratio",
+    "sx=math.max(4,(sx+7)*ratio-7)",
+    "sz=math.max(4,(sz+7)*ratio-7)",
+    "local function refit(entry,platform)",
+    'local weld=Instance.new("Weld")',
+    "weld.Part0=platform",
+    "weld.Part1=piece",
+    "entry.joints[piece].C0=CFrame.new(",
+    "piece.Size=Vector3.new(original.X*fx,original.Y,",
+    "local safe = refit(entry,platform)",
+    'platform:GetPropertyChangedSignal(prop):Connect(refresh)',
+    "if not realFloorScale(base,arena) then",
+    "syncVisibility(entry,platform)",
+    "PremiumRoutePbrKit.detach(entry)",
+    'platform:GetAttribute("LocalOriginalLongCradleMounted") == true',
+    'platform:GetAttribute("BridgeShutterPhase")',
+    'platform:GetAttribute("CollapsePhase")',
+):
+    assert clause in routes, clause
+assert not re.search(r'base\.Size\.[XZ]\s*<\s*318',routes)
+assert ".RenderStepped:Connect(" not in routes
+assert ".Heartbeat:Connect(" not in routes
+assert not outer_scene_checks, ("stale 320-live-floor guard", outer_scene_checks)
+print("PASS all 19 original remaining floor guards classified and corrected safely")
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
 
