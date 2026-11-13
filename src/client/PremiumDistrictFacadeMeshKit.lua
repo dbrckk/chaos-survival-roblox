@@ -228,6 +228,18 @@ local function valid(entry, district, base)
         or #entry.pieces < 1 or #entry.pieces > 24 then
         return false
     end
+    local actual = 0
+    for _, part in ipairs(entry.model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not part:IsA("MeshPart") or not part.Anchored
+                or part.CanCollide or part.CanTouch or part.CanQuery
+                or not part.Massless then return false end
+            actual += 1
+        elseif part:IsA("LuaSourceContainer") then
+            return false
+        end
+    end
+    if actual ~= #entry.pieces then return false end
     for _, part in ipairs(entry.pieces) do
         if not part:IsDescendantOf(entry.model) then return false end
     end
@@ -327,6 +339,14 @@ local function mount(building, district, base, slot, door, source)
     entry.connections[#entry.connections + 1] =
         clone.DescendantRemoving:Connect(function(part)
             if part:IsA("MeshPart") then revokeIfMounted() end
+        end)
+    -- An extra injected primitive or script must never be allowed to
+    -- coexist with a locally hidden original facade. Fall back instantly.
+    entry.connections[#entry.connections + 1] =
+        clone.DescendantAdded:Connect(function(part)
+            if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then
+                revokeIfMounted()
+            end
         end)
     entry.connections[#entry.connections + 1] =
         source.AncestryChanged:Connect(function()
