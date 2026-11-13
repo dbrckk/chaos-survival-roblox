@@ -8,9 +8,153 @@ local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 local HarborScenery = require("../../src/server/HarborScenery")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local HarborFreighterMeshKit = require("../../src/client/HarborFreighterMeshKit")
+local HarborHeroStationMeshKit = require("../../src/client/HarborHeroStationMeshKit")
 local HarborMidgroundBargeMeshKit = require("../../src/client/HarborMidgroundBargeMeshKit")
 
 describe("Original 3D native fallback isolation (engine)", function()
+    it("mounts the approved Harbor hero 3D on genuine Low scenery without nonexistent hoist sensors", function()
+        local storage=game:GetService("ReplicatedStorage")
+        local templates=Instance.new("Folder")
+        templates.Name="ApprovedHarborHeroStationTemplates"
+        templates:SetAttribute("OwnerVerified",true)
+        templates.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="SignalStation"
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("OriginalHarborHeroStation3D",true)
+        source:SetAttribute("Original3DAssetId",73237902371094)
+        local roles={"Static","Static","Static","Static",
+            "Radar","Cable","Weight"}
+        for i,role in ipairs(roles) do
+            local part=Instance.new("MeshPart")
+            part.Name=role.."Mesh"..i
+            part.Size=if i==1 then Vector3.new(28.4,28.2,7.2)
+                else Vector3.new(1,1,1)
+            part.Anchored=true
+            part.CanCollide=false
+            part.CanTouch=false
+            part.CanQuery=false
+            part:SetAttribute("OriginalHarborHeroMotionRole",role)
+            part.Parent=source
+        end
+        source.Parent=templates
+        local generated=Instance.new("Folder")
+        generated.Name="GeneratedMap"
+        generated.Parent=workspace
+        local arena=Instance.new("Folder")
+        arena.Name="Arena"
+        arena:SetAttribute("VariantId","Harbor")
+        arena.Parent=generated
+        local base=Instance.new("Part")
+        base.Name="Base"
+        base.Anchored=true
+        base.CanCollide=true
+        base.Size=Vector3.new(320,4,320)
+        base:SetAttribute("OriginalSizeX",320)
+        base:SetAttribute("OriginalSizeZ",320)
+        base.Parent=arena
+        local hero=Instance.new("Folder")
+        hero.Name="ArenaHeroSceneryLocal"
+        hero.Parent=workspace
+        local frame=base.CFrame*CFrame.new(0,0,178)
+            *CFrame.Angles(0,math.pi,0)
+        local original={}
+        local function native(name,size,offset)
+            local p=Instance.new("Part")
+            p.Name=name
+            p.Size=size
+            p.CFrame=frame*CFrame.new(offset)
+            p.Anchored=true
+            p.CanCollide=false
+            p.CanTouch=false
+            p.CanQuery=false
+            p.Transparency=.15
+            p.Parent=hero
+            original[p]=p.Transparency
+            return p
+        end
+        native("HarborHeroPierFoundation",
+            Vector3.new(23,2,8.8),Vector3.new(0,1.4,0))
+        native("HarborHeroPortLeg",
+            Vector3.new(2.2,19,2.4),Vector3.new(-7.8,11.5,0))
+        native("HarborHeroStarboardLeg",
+            Vector3.new(2.2,19,2.4),Vector3.new(7.8,11.5,0))
+        local girder=native("HarborHeroGantryCrosshead",
+            Vector3.new(19.5,1.8,3),Vector3.new(0,21.5,0))
+        native("HarborHeroSignalCabin",
+            Vector3.new(9.5,5.7,6.5),Vector3.new(0,25.2,0))
+        native("HarborHeroRadarMast",
+            Vector3.new(.9,9.5,.9),Vector3.new(0,32.9,0))
+        local radar=native("HarborHeroRadarArm",
+            Vector3.new(11.5,.48,.6),Vector3.new(0,37.7,0))
+        local lens=native("HarborHeroStormLens",
+            Vector3.new(2.6,2.6,2.6),Vector3.new(0,39.8,0))
+        original[lens]=nil
+        local camera=girder.Position
+        local function sync(tier,pressure)
+            HarborHeroStationMeshKit.sync(arena,camera,tier,true,pressure)
+        end
+        -- Low's native scene has no HarborHeroHoistCable/Weight at all.
+        expect(hero:FindFirstChild("HarborHeroHoistCable")).toBe(nil)
+        expect(hero:FindFirstChild("HarborHeroHoistWeight")).toBe(nil)
+        sync("Low",0)
+        expect(HarborHeroStationMeshKit.count()).toBe(1)
+        local mounted=workspace.OriginalHarborHeroStationLocal:
+            FindFirstChild("ApprovedOriginalHarborHeroStation3D")
+        expect(mounted~=nil).toBe(true)
+        local meshCount=0
+        local radarMesh=nil
+        for _,part in ipairs(mounted:GetDescendants()) do
+            if part:IsA("BasePart") then
+                meshCount+=1
+                expect(part:IsA("MeshPart")).toBe(true)
+                expect(part.CanCollide or part.CanTouch or part.CanQuery).toBe(false)
+                if part:GetAttribute("OriginalHarborHeroMotionRole")=="Radar" then
+                    radarMesh=part
+                end
+            end
+        end
+        expect(meshCount).toBe(7)
+        expect(radarMesh~=nil).toBe(true)
+        for part in pairs(original) do
+            expect(part.Transparency).toBe(1)
+        end
+        expect(lens.Transparency).toBe(.15)
+        local beforeMove=radarMesh.Position
+        radar.CFrame=radar.CFrame*CFrame.new(0,0,3)
+        expect((radarMesh.Position-beforeMove).Magnitude>2).toBe(true)
+        -- The station's already-mounted original 3D does not move or
+        -- disappear when the physical survival floor shrinks.
+        local beforeShrink=girder.Position
+        base.Size=Vector3.new(170,4,174)
+        sync("Low",0)
+        expect(HarborHeroStationMeshKit.count()).toBe(1)
+        expect((girder.Position-beforeShrink).Magnitude<.01).toBe(true)
+        sync("Low",1)
+        expect(HarborHeroStationMeshKit.count()).toBe(0)
+        for part,alpha in pairs(original) do
+            expect(part.Transparency).toBe(alpha)
+        end
+        sync("Low",0)
+        expect(HarborHeroStationMeshKit.count()).toBe(1)
+        local live=workspace.OriginalHarborHeroStationLocal:
+            FindFirstChild("ApprovedOriginalHarborHeroStation3D")
+        live:Destroy()
+        expect(HarborHeroStationMeshKit.count()).toBe(0)
+        for part,alpha in pairs(original) do
+            expect(part.Transparency).toBe(alpha)
+        end
+        -- No spoofed, larger physical floor can authorize an offshore 3D.
+        base.Size=Vector3.new(330,4,320)
+        sync("Low",0)
+        expect(HarborHeroStationMeshKit.count()).toBe(0)
+        HarborHeroStationMeshKit.sync(nil,camera,"Low",false,2)
+        hero:Destroy()
+        generated:Destroy()
+        templates:Destroy()
+    end)
+
     it("keeps the approved Harbor cargo freighter through shrink and restores native on GPU pressure", function()
         local storage=game:GetService("ReplicatedStorage")
         local holder=Instance.new("Folder")
