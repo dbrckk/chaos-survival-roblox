@@ -10,6 +10,7 @@ streaming and graphics LOD which static regex cannot count truthfully.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import csv
 import json
 from pathlib import Path
 import re
@@ -555,6 +556,39 @@ for marker in (
 assert "RenderStepped" not in census and "Heartbeat:Connect" not in census
 assert census.count('GetDescendants()') == 1, "unexpected extra native scan"
 print("PASS five approved P4 sources and family-accurate native visibility census")
+
+# Validate the actionable five-world 3D backlog as actual CSV, including
+# independently verifiable row totals. A broken quotation or comma could
+# silently corrupt the priority chosen for a whole family.
+matrix_path = ROOT / "docs/audit/remaining-3d-priority-matrix-2026-11-13.csv"
+numeric = (
+    "classic_raw_natives", "towers_raw_natives", "crossroads_raw_natives",
+    "orbital_raw_natives", "harbor_raw_natives",
+)
+with matrix_path.open(newline="", encoding="utf8") as handle:
+    reader = csv.DictReader(handle, strict=True)
+    assert reader.fieldnames == [
+        "owner_family", "description", "priority", "coverage_status",
+        *numeric, "five_world_raw_natives", "large_12_plus",
+        "signal_neon_subset", "evidence_action",
+    ], "3D matrix schema changed"
+    priority_rows = list(reader)
+assert len(priority_rows) >= 25, "Missing 3D backlog families"
+assert len({r["owner_family"] for r in priority_rows}) == len(priority_rows)
+for row in priority_rows:
+    assert None not in row and all(
+        isinstance(v, str) and v.strip() for v in row.values()
+    ), "Malformed or truncated priority CSV: " + repr(row)
+    assert row["priority"] in ("P0", "P1", "P2", "CONSERVER", "AUDITER")
+    numbers = [int(row[key]) for key in numeric]
+    total = int(row["five_world_raw_natives"])
+    assert all(v >= 0 for v in numbers) and sum(numbers) == total, row
+    assert 0 <= int(row["large_12_plus"]) <= total, row
+    assert 0 <= int(row["signal_neon_subset"]) <= total, row
+for key in ("skyroute", "columnclad", "helix"):
+    group = next(r for r in priority_rows if r["owner_family"] == key)
+    assert group["coverage_status"] == "SOURCE_3D_APPROUVEE_LOD_PARTIEL"
+print("PASS five-world 3D priority matrix: valid CSV, owner totals and approved P4 coverage")
 
 linked_kits = [x for x in client_3d if x["linked_in_scenery_lod"]]
 unlinked_kits = [x for x in client_3d if not x["linked_in_scenery_lod"]]
