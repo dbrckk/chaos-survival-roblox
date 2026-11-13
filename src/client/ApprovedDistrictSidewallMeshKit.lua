@@ -20,6 +20,7 @@ local BUDGET = {
 -- each); Low spends six pieces ONLY behind a mounted approved facade.
 local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}
 local SOURCE_FOLDER = "ApprovedDistrictSidewallShellTemplates"
+local RESIDENT_MARKER = "LocalApprovedDistrictSidewallMounted"
 local REQUIRED = {
     {name = "ServiceCore", size = Vector3.new(6.8, 7.3, 6.8),
         offset = CFrame.new(0, 8.4, 0)},
@@ -135,6 +136,18 @@ local function eligible(building, district, requiresFacade)
     return door, origin, natives
 end
 
+-- A local, diagnostic-only signal for the matching genuine facade kit.
+-- Only an authenticated six-MeshPart model can publish residency.
+local function markResident(entry, present)
+    local building = entry.building
+    if building and building.Parent then
+        local desired = present and true or nil
+        if building:GetAttribute(RESIDENT_MARKER) ~= desired then
+            building:SetAttribute(RESIDENT_MARKER, desired)
+        end
+    end
+end
+
 local function restore(entry)
     for native, alpha in pairs(entry.originals) do
         if native.Parent == entry.building and native.Transparency == 1
@@ -152,6 +165,7 @@ local function release(building)
     -- Removing a source MeshPart may synchronously fire multiple callbacks.
     mounted[building] = nil
     for _, conn in ipairs(entry.connections) do conn:Disconnect() end
+    markResident(entry, false)
     restore(entry)
     entry.model:Destroy()
 end
@@ -244,6 +258,7 @@ local function mount(arena, district, base, building, door,
         for _, part in ipairs(natives) do
             if part.Parent == building then part.Transparency = 1 end
         end
+        markResident(entry, true)
     end
     -- If the one real Low facade is evicted by streaming, tier or GPU
     -- pressure, reveal all five original native walls immediately.
@@ -403,6 +418,23 @@ end
 -- Exact live count, not a source-inventory percentage. Scenery LOD
 -- samples the same <=10 mounted source records, with no extra workspace
 -- traversal, frame heartbeat, mesh import or budget slot.
+-- Exact 16-bit visibility census for the one active map; a bit means
+-- a real owner-verified six-MeshPart sidewall remains installed, not that
+-- the static server authored a native part. No new sampler or render loop.
+function Kit.residentMask16()
+    local mask = 0
+    for building, entry in pairs(mounted) do
+        local index = building:GetAttribute("DistrictIndex")
+        if entry.model.Parent == bucket and building.Parent
+            and building:GetAttribute(RESIDENT_MARKER) == true
+            and type(index) == "number" and index % 1 == 0
+            and index >= 1 and index <= 16 then
+            mask = bit32.bor(mask, bit32.lshift(1, index - 1))
+        end
+    end
+    return mask
+end
+
 function Kit.completeCount()
     local n = 0
     for building, entry in pairs(mounted) do
