@@ -127,6 +127,9 @@ local function clear()
     if player:GetAttribute("LocalOriginalLowHubHullCount") ~= 0 then
         player:SetAttribute("LocalOriginalLowHubHullCount", 0)
     end
+    if player:GetAttribute("LocalOriginalLargeDeckHullMountedCount") ~= 0 then
+        player:SetAttribute("LocalOriginalLargeDeckHullMountedCount", 0)
+    end
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearBridgeGirderCount", 0)
     end
@@ -647,6 +650,7 @@ local function rebuild()
     local mountedBridgeGirders = 0
     local mountedCameraCarapaces = 0
     local mountedLowHubHulls = 0
+    local mountedLargeDeckHulls = 0
     local mountedServiceHatches3D = 0
     local nearCradles,nearSupports={},{}
     if not lowBridgeChosen then
@@ -750,8 +754,11 @@ local function rebuild()
                     folder, platform, tier.Name, visualIndex,
                     (tier.Name == "Low" and platform == lowHubDeck)
                         or nearLargeDeckHulls[platform] == true)
-            if tier.Name == "Low" and largeHullPieces then
-                mountedLowHubHulls += 1
+            if largeHullPieces and #largeHullPieces == 7 then
+                mountedLargeDeckHulls += 1
+                if tier.Name == "Low" then
+                    mountedLowHubHulls += 1
+                end
             end
             local carapacePieces = largeHullPieces
                 or (staged and staged.kind == "carapace" and staged.parts)
@@ -1024,6 +1031,11 @@ local function rebuild()
         ~= mountedLowHubHulls then
         player:SetAttribute("LocalOriginalLowHubHullCount",
             mountedLowHubHulls)
+    end
+    if player:GetAttribute("LocalOriginalLargeDeckHullMountedCount")
+        ~= mountedLargeDeckHulls then
+        player:SetAttribute("LocalOriginalLargeDeckHullMountedCount",
+            mountedLargeDeckHulls)
     end
     if player:GetAttribute("LocalOriginalNearBridgeGirderCount")
         ~= mountedBridgeGirders then
