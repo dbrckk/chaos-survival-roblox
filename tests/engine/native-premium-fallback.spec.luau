@@ -65,14 +65,63 @@ describe("Original 3D native fallback isolation (engine)", function()
                 mesh.Parent=source
             end
             source.Parent=templates
+            -- An authentic long lattice ALSO exists: the old Low selector
+            -- always chose it, including when it was ~100 studs away from
+            -- this immediately visible native pillar. Both fixture models
+            -- have the exact approved IDs and permitted bounding boxes.
+            local lattice=Instance.new("Model")
+            lattice.Name="LongCradle"
+            lattice:SetAttribute("Original3DAssetId",128914328933863)
+            lattice:SetAttribute("OwnerVerified",true)
+            lattice:SetAttribute("CosmeticOnly",true)
+            lattice:SetAttribute("OriginalLargeStructure3D",true)
+            for i=1,7 do
+                local mesh=Instance.new("MeshPart")
+                mesh.Name="OriginalLatticeMaterial"..i
+                mesh.Size=if i==1 then Vector3.new(22.6,3.0,9.8)
+                    else Vector3.new(.25,.25,.25)
+                mesh.Anchored=true
+                mesh.CanCollide=false
+                mesh.CanTouch=false
+                mesh.CanQuery=false
+                mesh.Parent=lattice
+            end
+            lattice.Parent=templates
+            local farCradle=nil
+            local farDistance=math.huge
+            for _,candidate in ipairs(platforms:GetChildren()) do
+                if candidate:IsA("BasePart")
+                    and (candidate:GetAttribute("PromenadeStep")~=nil
+                        or candidate:GetAttribute("SkySpineStep")~=nil) then
+                    local long=math.max(candidate.Size.X,candidate.Size.Z)
+                    local short=math.min(candidate.Size.X,candidate.Size.Z)
+                    local scale=math.min(1.21,long*.95/22.6,
+                        short*.91/9.8)
+                    local distance=(candidate.Position-platform.Position).Magnitude
+                    if long>=19.5 and long<=34 and short>=9 and short<=18
+                        and scale>=.76 and 22.6*scale>=long*.87
+                        and 9.8*scale>=short*.76
+                        and distance<=125 and distance<farDistance then
+                        farCradle=candidate
+                        farDistance=distance
+                    end
+                end
+            end
+            expect(farCradle~=nil).toBe(true)
 
             local camera=platform.Position
             local cradles,supports=
                 PremiumLargeStructureMeshKit.selectNearRouteStructures(
-                    {platform},decor,"Crossroads","Low",base,
+                    {platform,farCradle},decor,"Crossroads","Low",base,
                     camera,Vector3.new(0,0,1),0)
             expect(supports[platform]).toBe(true)
-            expect(cradles[platform]).toBe(nil)
+            expect(cradles[farCradle]).toBe(nil)
+            local nearestCradle,demotedSupport=
+                PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                    {platform,farCradle},decor,"Crossroads","Low",base,
+                    farCradle.Position,Vector3.new(0,0,1),0)
+            expect(nearestCradle[farCradle]).toBe(true)
+            expect(demotedSupport[platform]).toBe(nil)
             local _,pressured=
                 PremiumLargeStructureMeshKit.selectNearRouteStructures(
                     {platform},decor,"Crossroads","Low",base,
