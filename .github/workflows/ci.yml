@@ -42,13 +42,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # A build is NOT release-ready if the real Roblox Cloud runner
-      # cannot package one of its 88 source specs. Check the identical
-      # composer and per-file 105-KiB limit before reporting green CI.
-      - name: Validate all real Roblox Cloud test bundles fit source limits
+      # A build is NOT release-ready if Roblox Cloud cannot package
+      # any engine source file. The full shard manifest is generated
+      # only in roblox-cloud-test.yml (which has universe/place secrets),
+      # so this independent build checks each original spec using the
+      # exact composer's wrapper and byte ceiling, not a missing manifest.
+      - name: Validate every real Roblox engine spec fits Cloud source cap
         run: |
           python3 tools/prepare_cloud_batches.py --self-test
-          python3 tools/prepare_cloud_batches.py
+          python3 - <<'PY'
+          from pathlib import Path
+          from tools.prepare_cloud_batches import MAX_SOURCE_BYTES, inline_source
+          specs = sorted(Path("tests/engine").glob("*.spec.luau"))
+          assert len(specs) >= 88, "Missing original Roblox engine tests"
+          for spec in specs:
+              if spec.name.startswith("__ci_"):
+                  continue
+              size = len(inline_source(spec).encode("utf-8"))
+              assert size <= MAX_SOURCE_BYTES, (
+                  f"{spec}: {size} bytes exceed Cloud cap {MAX_SOURCE_BYTES}")
+          print(f"PASS: {len(specs)} real engine specs fit the {MAX_SOURCE_BYTES}-byte cloud source cap")
+          PY
 
       - name: Validate original MeshPart source exports (no Roblox uploads)
         shell: bash
