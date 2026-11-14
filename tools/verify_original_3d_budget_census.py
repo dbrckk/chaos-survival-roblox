@@ -181,7 +181,7 @@ for guard in (
     'restore(entry)',
     'entry.model:Destroy()',
     'Low = {count = 1, distance = 128, retention = 16}',
-    'Medium = {count = 5, distance = 205, retention = 20}',
+    'Medium = {count = 8, distance = 205, retention = 20}',
     'High = {count = 16, distance = 275, retention = 28}',
     'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}',
     'cap = math.floor(cap * .5)',
@@ -235,7 +235,7 @@ assert 'LocalUnpairedDistrictSidewall3DCount' in SIDE_LOD
 assert 'sidewallMeshCount - completeDistricts' in SIDE_LOD
 assert 'ApprovedDistrictSidewallMeshKit.completeCount()' in SIDE_LOD
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
-assert 'Medium = {count = 5, distance = 205, retention = 20}' in SIDE
+assert 'Medium = {count = 8, distance = 205, retention = 20}' in SIDE
 assert 'High = {count = 16, distance = 275, retention = 28}' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 print("PASS complete original front+side district priority on Medium/High,"
@@ -289,7 +289,7 @@ for label, code, bucket in (
     assert '.RenderStepped:Connect(' not in code,label
     assert '.Heartbeat:Connect(' not in code,label
 assert 'Low = {count = 1, distance = 130, retention = 16}' in DISTRICT_FACADES
-assert 'Medium = {count = 5, distance = 205, retention = 22}' in DISTRICT_FACADES
+assert 'Medium = {count = 8, distance = 205, retention = 22}' in DISTRICT_FACADES
 assert 'High = {count = 16, distance = 270, retention = 28}' in DISTRICT_FACADES
 assert 'Low = {count = 1, distance = 145, retention = 16}' in CORNER_MONUMENTS
 assert 'Medium = {count = 4, distance = 280, retention = 22}' in CORNER_MONUMENTS
@@ -1701,7 +1701,7 @@ for code in ('state[index] = "-"','state[index] = "N"',
 assert 'LocalApprovedDistrictFacadeMounted' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
-assert 'Medium = {count = 5, distance = 205, retention = 20}' in SIDE
+assert 'Medium = {count = 8, distance = 205, retention = 20}' in SIDE
 assert 'High = {count = 16, distance = 275, retention = 28}' in SIDE
 print("PASS authentic reverse-paired 3D district and exact streamed N/F/S/B"
       " 16-building census without additional Android model budget")
