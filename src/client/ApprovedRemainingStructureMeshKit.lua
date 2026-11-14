@@ -14,10 +14,23 @@ local SOURCE={
     Helix={id=106863534763803,major=23.6,minor=5.08,height=1.453,centerY=-.97125},
 }
 local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
+-- Desktop-only extra creator-approved sculptures. The authenticated real
+-- platform/casing/ramp and source dimensions still decide actual mounts.
+-- No new assets, physical Parts, import requests or sampling loops.
+-- In one fully source-resident map these caps allow three more Medium arches,
+-- two more central casings and two more Orbital underframes; High can use
+-- four more arches and the last two Helix ramps.
 local BUDGET={
     Low={arch=1,casing=1,helix=0},
-    Medium={arch=3,casing=2,helix=2},
-    High={arch=6,casing=4,helix=6},
+    Medium={arch=6,casing=4,helix=4},
+    High={arch=10,casing=4,helix=8},
+}
+-- Preserve EXACT former GPU-pressure-1 ceilings even when healthy desktop
+-- rendering is promoted: active hazards must retain their old relief path.
+local PRESSURE_CAP={
+    Low={arch=0,casing=0,helix=0},
+    Medium={arch=1,casing=1,helix=1},
+    High={arch=3,casing=2,helix=3},
 }
 local TOUCH_CAP={
     Low={arch=1,casing=1,helix=0},
@@ -532,7 +545,10 @@ local function caps(tier,touch,pressure,kind)
     if p~=p then p=0 end
     p=math.clamp(math.floor(p),0,2)
     if p==2 then return 0 end
-    if p==1 then return math.floor(cap*.5) end
+    if p==1 then
+        local prior=(PRESSURE_CAP[tier] or PRESSURE_CAP.Low)[kind] or 0
+        return math.min(math.floor(cap*.5),prior)
+    end
     return cap
 end
 Kit.budget=caps
@@ -628,15 +644,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end)
         local cap=caps(tier,touch,pressure,kind)
         local taken=0
-        -- High DESKTOP: distribute the SAME six imported arch slots over
-        -- four independently playable perimeter escape routes. Previously
-        -- several expensive arches on one side left entire routes looking
-        -- like default blockout geometry even with all approved assets.
-        -- First reserve the highest ranked genuine candidate on EACH
-        -- visible route, then fill unused slots by the existing camera
-        -- score. Mobile, Medium, GPU pressure and all other owners retain
-        -- their unchanged budgets and near-camera selection.
-        if kind=="arch" and tier=="High" and touch~=true
+        -- Healthy DESKTOP Medium/High: distribute only existing approved
+        -- source modules over four real escape routes first, then reserve
+        -- one true TRANSFER and SUMMIT when available. Low/touch/pressure
+        -- keep the previous distance-ranked proximity/stage behavior.
+        -- No native lower-support or signal may be suppressed by this.
+        if kind=="arch" and (tier=="High" or tier=="Medium") and touch~=true
             and (tonumber(pressure) or 0)<1 and cap>=4 then
             local routes={}
             for _,data in ipairs(candidates.arch) do
@@ -647,8 +660,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                     taken+=1
                 end
             end
-            -- The approved sculptors made THREE distinct silhouettes,
-            -- yet camera-only ranking could use all six slots on ACCESS.
+            -- The approved sculptors made THREE distinct silhouettes;
+            -- camera-only ranking could otherwise use every slot on ACCESS.
             -- After giving each real route one owner, prioritize one
             -- TRANSFER and one SUMMIT arch, provided those genuine decks
             -- and their exact source templates are safely available.
@@ -664,7 +677,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         elseif kind=="arch" and cap>=2
             and (tonumber(pressure) or 0)<1 then
-            -- On Android Medium/High and PC Medium, filling all slots by
+            -- On Android Medium/High, filling all slots by
             -- proximity can repeat ACCESS on one route while approved
             -- TRANSFER/SUMMIT sculptures nearby never appear. Preserve
             -- the nearest arch; use remaining SAME-budget slots for
