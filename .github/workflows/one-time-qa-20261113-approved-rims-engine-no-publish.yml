@@ -15,6 +15,10 @@
 # P4 2026-11-14: the exact-main Cloud gate now validates 8 approved
 # facade + rear-shell models on healthy desktop Medium, while keeping
 # three Android Medium models, pressure rollback and original collision.
+# P4 Cloud source-limit incident: previously 106,219B spec rejected by
+# composer before engine launch. Source now 104,013B and Build Validation
+# independently executes identical batch generator; run whole cloud gate
+# on same main SHA, without public Roblox publication.
 # P4 follow-up 2026-11-14: engine-assert pressure 1/2 full native rollback
 # and healthy High PC recovery on all five generated worlds; no publish.
 # P4 2026-11-14 independent exact-SHA admission for all five arenas:
