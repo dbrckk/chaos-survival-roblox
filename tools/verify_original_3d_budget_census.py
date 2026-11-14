@@ -311,7 +311,7 @@ assert 'local limit = math.min(#candidates, cap)' in DISTRICT_FACADES
 assert 'if tier == "Medium" and touch ~= true and stress == 0' in DISTRICT_FACADES
 assert 'local foreground = math.min(limit, 3)' in DISTRICT_FACADES
 assert 'wanted[winner.building] = winner' in DISTRICT_FACADES
-assert 'if tier=="Medium" and touch~=true and stress==0 then' in SIDE
+assert 'if tier~="Low" then' in SIDE
 assert 'if taken<limit then' in SIDE
 assert '"LocalApprovedDistrictFacadeMounted")==true then' in SIDE
 assert 'for i = 1, limit do' in DISTRICT_FACADES
