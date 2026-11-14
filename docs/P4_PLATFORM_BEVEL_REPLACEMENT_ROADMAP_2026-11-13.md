@@ -430,3 +430,24 @@ une régression vers la condition exclusive Medium PC.
 préparées ensemble ; validation automatisée à confirmer sur le SHA exact.
 Les mesures de FPS Android/8 joueurs et la publication Roblox publique ne sont
 pas réalisées par ce correctif GitHub.
+
+## Correctif P0 confirmé dans le moteur — budget High accidentellement commenté (14 novembre)
+
+Le test moteur exact-SHA a découvert une erreur plus ancienne que le lot
+d'appariement : une ligne commentaire contenait deux séquences littérales
+`\\n`, ce qui mettait la ligne `High = {count = 16, distance = 275,
+retention = 28}` **dans un commentaire Luau**. Le profil High des coques
+n'existait donc pas à l'exécution ; le repli `BUDGET.Low` limitait
+silencieusement High PC/Android à **un seul bâtiment latéral 3D**.
+
+La configuration High est rétablie sur une vraie ligne de code. Les contrôles
+statiques n'acceptent désormais plus seulement la présence du texte :
+ils vérifient que l'affectation est en début de ligne Luau active. Le test
+dans le moteur conserve les comparaisons exactes entre 8 façades/coques
+tactiles High, les plafonds PC et le repli natif. Aucune nouvelle primitive
+n'est générée et les budgets restent 1/8/16 maximum selon le profil,
+avec limites tactiles 1/3/8 et relâche sous pression GPU.
+
+**L'état final dépend de la réussite des actions Build Validation et
+Roblox Cloud Engine sur le SHA du correctif** ; pas de publication du jeu
+ni de revendication de FPS Android à partir du seul contrôle source.

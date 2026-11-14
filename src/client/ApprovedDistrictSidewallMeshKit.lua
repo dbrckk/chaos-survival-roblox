@@ -16,7 +16,9 @@ local BUDGET = {
     -- buildings show their whole real six-MeshPart envelope. Touch Medium
     -- remains capped at THREE. No new approved asset or LOD loop.
     Medium = {count = 8, distance = 205, retention = 20},
-    -- Desktop High may complete all sixteen authentic buildings; touch High\n    -- remains capped at eight, pressure High at five.\n    High = {count = 16, distance = 275, retention = 28},
+    -- Desktop High may complete all sixteen authentic buildings; touch High
+    -- remains capped at eight, pressure High at five.
+    High = {count = 16, distance = 275, retention = 28},
 }
 -- Android shares the existing 440/680/900 Parts census with all original
 -- monuments. Medium touch 3 and High touch 8 models max (six MeshParts
@@ -43,10 +45,6 @@ bucket:SetAttribute("CosmeticOnly", true)
 bucket.Parent = workspace
 local activeArena = nil
 local mounted = {}
--- Read-only Engine regression diagnostics; no extra render loop or remote.
-local lastSyncCandidateCount = 0
-local lastSyncPairedCandidates = 0
-local lastSyncWantedCount = 0
 local watchedBase = nil
 local baseConnection = nil
 
@@ -492,14 +490,6 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
             end
         end
     end
-    lastSyncCandidateCount = #candidates
-    lastSyncPairedCandidates = 0
-    for _,candidate in ipairs(candidates) do
-        if candidate.building:GetAttribute(
-            "LocalApprovedDistrictFacadeMounted") == true then
-            lastSyncPairedCandidates += 1
-        end
-    end
     table.sort(candidates,function(a,b)
         if a.priority ~= b.priority then return a.priority < b.priority end
         if a.distance ~= b.distance then return a.distance < b.distance end
@@ -546,8 +536,6 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
             wanted[candidates[i].building]=candidates[i]
         end
     end
-    lastSyncWantedCount = 0
-    for _ in pairs(wanted) do lastSyncWantedCount += 1 end
     local obsolete={}
     for building,entry in pairs(mounted) do
         -- An existing Medium model promoted/demoted to Low must obey
@@ -578,10 +566,6 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
             end
         end
     end
-end
-
-function Kit.lastCandidateDiagnostics()
-    return lastSyncCandidateCount, lastSyncPairedCandidates, lastSyncWantedCount
 end
 
 function Kit.count()

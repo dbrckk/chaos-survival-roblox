@@ -318,8 +318,9 @@ SIDE_ENGINE=(ROOT/"tests/engine/district-sidewall-rollback.spec.luau").read_text
     encoding="utf8")
 assert 'High touch expected 8/8/8, got' in SIDE_ENGINE
 assert 'opaque5=%d' in SIDE_ENGINE
-assert 'lastCandidateDiagnostics()' in SIDE_ENGINE
-assert 'function Kit.lastCandidateDiagnostics()' in SIDE
+assert re.search(
+    r'(?m)^[ \t]*High[ \t]*=[ \t]*\{count = 16, distance = 275, retention = 28\},',
+    SIDE), "High sidewall LOD budget must be active Luau, not escaped into a comment"
 assert 'if taken<limit then' in SIDE
 assert '"LocalApprovedDistrictFacadeMounted")==true then' in SIDE
 assert 'for i = 1, limit do' in DISTRICT_FACADES

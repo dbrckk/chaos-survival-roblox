@@ -296,8 +296,6 @@ describe("Authenticated district sidewall restoration (engine)", function()
             local highShell=ApprovedDistrictSidewallMeshKit.count()
             local highPaired=ApprovedDistrictSidewallMeshKit.completeCount()
             if highFront~=8 or highShell~=8 or highPaired~=8 then
-                local candidates, pairedCandidates, wanted =
-                    ApprovedDistrictSidewallMeshKit.lastCandidateDiagnostics()
                 local doorReady,coreReady,frontReady,fullyOpaque=0,0,0,0
                 local bands={}
                 for _,owner in ipairs(district:GetChildren()) do
@@ -326,11 +324,10 @@ describe("Authenticated district sidewall restoration (engine)", function()
                                 and "S" or "_")
                     end
                 end
-                error(("High touch expected 8/8/8, got %d/%d/%d masks %d/%d; candidates=%d pairedCandidates=%d wanted=%d doors=%d cores=%d frontFlags=%d opaque5=%d | %s")
+                error(("High touch expected 8/8/8, got %d/%d/%d masks %d/%d; doors=%d cores=%d frontFlags=%d opaque5=%d | %s")
                     :format(highFront,highShell,highPaired,
                         PremiumDistrictFacadeMeshKit.residentMask16(),
                         ApprovedDistrictSidewallMeshKit.residentMask16(),
-                        candidates,pairedCandidates,wanted,
                         doorReady,coreReady,frontReady,fullyOpaque,
                         table.concat(bands,",")))
             end

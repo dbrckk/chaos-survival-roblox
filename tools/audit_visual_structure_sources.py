@@ -153,6 +153,9 @@ for clause in (
     'release(building)',
 ):
     assert clause in sidewall, ("district sidewall coverage/safety", clause)
+assert re.search(
+    r'(?m)^[ \t]*High[ \t]*=[ \t]*\{count = 16, distance = 275, retention = 28\},',
+    sidewall), "High sidewall budget must be executable Luau, never a commented literal"
 print("PASS 16 desktop district sidewalls, unchanged touch and pressure caps")
 # On healthy desktop Medium, the genuine facade owner distributes eight
 # sources across real sectors. Every Medium/High sidewall pass then
