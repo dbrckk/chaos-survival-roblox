@@ -79,6 +79,33 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
             expect(building:GetAttribute(
                 "LocalApprovedDistrictSidewallMounted")).toBe(true)
+            -- In-place mutations do not emit DescendantAdded/Removing.
+            -- Both the source and the mounted six-piece clone must
+            -- reveal all five real native masses synchronously.
+            local sourcePiece=source:FindFirstChild("ApprovedMaterial1")
+            local approvedSize=sourcePiece.Size
+            sourcePiece.Size=approvedSize+Vector3.new(.2,0,0)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(core.Transparency).toBe(original)
+            sourcePiece.Size=approvedSize
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(true)
+            local cloneFolder=workspace:FindFirstChild(
+                "ApprovedDistrictSidewallsLocal")
+            local clone=cloneFolder:FindFirstChild(
+                "ApprovedOriginalDistrictSidewall3D")
+            expect(clone~=nil).toBe(true)
+            local clonePiece=clone:FindFirstChild("ApprovedMaterial1")
+            expect(clonePiece~=nil).toBe(true)
+            clonePiece.CanQuery=true
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(core.Transparency).toBe(original)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(true)
             local injected=Instance.new("Part")
             injected.Parent=source
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
