@@ -9,6 +9,9 @@
 # specs including the isolated five-native-sidewall rollback fixture,
 # approved facade/source revocation, full Build and 7 cloud suites
 # on one exact main SHA. Never publish the public Roblox place.
+# P4 source-cohort rollback closeout: assert single asset invalidation
+# restores all eight district owners; single clone corruption restores
+# only its own native building. Keep build/cloud SHA identical.
 # P4 2026-11-14: the exact-main Cloud gate now validates 8 approved
 # facade + rear-shell models on healthy desktop Medium, while keeping
 # three Android Medium models, pressure rollback and original collision.
