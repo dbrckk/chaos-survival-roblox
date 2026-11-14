@@ -1356,9 +1356,28 @@ describe("Original 3D native fallback isolation (engine)", function()
                     end
                 end
                 expect(visibleMobileOwners).toBe(3)
-                -- Restore PC context for the Orbital-specific helix check.
+                -- Verify that increasing healthy desktop density never
+                -- bypasses the former pressure-1 ceiling, and that
+                -- pressure-2 unmasks EVERY native owner synchronously.
+                -- All five REAL worlds exercise the same physical decks.
+                p4Phase="P4 desktop emergency source residency rollback"
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),1,false)
+                expect(RemainingStructureKit.count("arch")<=3).toBe(true)
+                expect(RemainingStructureKit.count("casing")<=2).toBe(true)
+                expect(RemainingStructureKit.count("helix")<=3).toBe(true)
+                expect(entryDeck.CanCollide).toBe(true)
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),2,false)
+                expect(RemainingStructureKit.count()).toBe(0)
+                expect(RemainingStructureKit.nativeCount()).toBe(0)
+                expect(overpass.LocalTransparencyModifier).toBe(0)
+                expect(entryDeck.CanCollide).toBe(true)
+                -- Return to real High PC residency, no new physical Parts.
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")).toBe(10)
+                expect(overpass.LocalTransparencyModifier).toBe(1)
                 if variantId=="Orbital" then
                     p4Phase="genuine Orbital helix residency"
                     expect(RemainingStructureKit.count("helix")>=1).toBe(true)
