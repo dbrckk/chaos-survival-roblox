@@ -555,8 +555,56 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
         return a.building.Name < b.building.Name
     end)
     local wanted = {}
-    for i = 1, math.min(#candidates, cap) do
-        wanted[candidates[i].building] = candidates[i]
+    local limit = math.min(#candidates, cap)
+    local stress = math.clamp(math.floor(tonumber(pressure) or 0), 0, 2)
+    -- The same eight approved facade slots used to cluster along one
+    -- promenade on healthy desktop Medium. Keep the nearest THREE
+    -- authentic models, then complete different visible district sectors
+    -- using their existing validated building/door owners. The following
+    -- sidewall pass prioritizes these resident facades, giving a full
+    -- original 3D envelope rather than eight unrelated half-buildings.
+    -- Touch, Low, High and GPU pressure preserve their prior priorities.
+    if tier == "Medium" and touch ~= true and stress == 0
+        and limit > 3 then
+        local foreground = math.min(limit, 3)
+        for i = 1, foreground do
+            local item = candidates[i]
+            wanted[item.building] = item
+        end
+        local taken = foreground
+        local spacingCap = math.max(base.Size.X, base.Size.Z) * .65
+        while taken < limit do
+            local winner, winnerScore = nil, -math.huge
+            for _, candidate in ipairs(candidates) do
+                if not wanted[candidate.building] then
+                    local nearest = spacingCap
+                    for building in pairs(wanted) do
+                        local otherDoor = building:FindFirstChild(
+                            "ServiceEntryDoor")
+                        if otherDoor and otherDoor:IsA("BasePart") then
+                            local delta = candidate.door.Position
+                                - otherDoor.Position
+                            nearest = math.min(nearest,
+                                Vector3.new(delta.X, delta.Y * .65,
+                                    delta.Z).Magnitude)
+                        end
+                    end
+                    local score = nearest - candidate.priority * .14
+                    if score > winnerScore or (score == winnerScore
+                        and winner and candidate.building.Name
+                            < winner.building.Name) then
+                        winner, winnerScore = candidate, score
+                    end
+                end
+            end
+            if not winner then break end
+            wanted[winner.building] = winner
+            taken += 1
+        end
+    else
+        for i = 1, limit do
+            wanted[candidates[i].building] = candidates[i]
+        end
     end
     for building, entry in pairs(mounted) do
         local desired = wanted[building]
