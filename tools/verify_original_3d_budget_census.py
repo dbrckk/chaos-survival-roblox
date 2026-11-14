@@ -1710,6 +1710,39 @@ print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero
 # owner platforms and leave half the allowed source budget idle. High
 # still uses eight decks with up to two columns each; Low stays at one.
 LARGE=(CLIENT/"PremiumLargeStructureMeshKit.lua").read_text(encoding="utf8")
+# P4 short Sky Spine creator-owned 3D (Approved Model 140716716476069):
+# only a real 16.52-stud underframe, NOT a shrunk 22-stud LongCradle,
+# and never a second module behind the same physical platform.
+LARGE_ASSETS=(ROOT/"src/server/PremiumLargeStructureAssets.lua").read_text(
+    encoding="utf8")
+for key in (
+    'ShortCradle = 140716716476069,',
+    'elseif kind == "ShortCradle" then',
+    'function Kit.shortCradleFit(size,bounds)',
+    'or (spine and shortSource',
+    'and Kit.shortCradleFit(size,shortBounds)',
+    'source,box,count=verified("ShortCradle")',
+    'OriginalShortSkySpineCradle3D',
+    'part:SetAttribute("OriginalLongCradle3D",true)',
+):
+    assert key in LARGE,("genuine 3D short SkySpine identity/fit",key)
+for key in (
+    'ShortCradle = 140716716476069,',
+    'if n ~= 7 then return false end',
+    'elseif name == "ShortCradle" then',
+    'and xzLong >= 16.3 and xzLong <= 17.1',
+    'local ordered = {variant,"LongCradle","ShortCradle"}',
+    'GlobalApprovedImportGate.load',
+):
+    assert key in LARGE_ASSETS,("moderated short SkySpine importer",key)
+assert 'ShortCradle = true' in OWNER
+assert 'or child.Name == "ShortCradle"' in OWNER
+assert 'local longCradleBudget = tier.Name == "High" and 4' in OWNER
+assert 'longCradleBudget-=transferred' not in OWNER
+assert 'longCradleBudget -= 1' in OWNER
+print("PASS approved short SkySpine source consumes existing 7-piece"
+      " LongCradle slot; exact provenance, streamed-native rollback")
+
 # Genuine original LongCradle sources must be reserved for fully
 # streamed, structurally-owned native sets, not a lone PlatformN collider.
 # One selected SkySpine owner has two undercarriages + cross-stiffener;
