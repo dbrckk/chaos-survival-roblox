@@ -1416,7 +1416,7 @@ end)
 local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
-    LongCradle = true, LargeDeckHull = true,
+    LongCradle = true, ShortCradle = true, LargeDeckHull = true,
     Rect = true, Long = true,
 }
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
@@ -1575,7 +1575,8 @@ local function watchLargeStructureTemplates(holder)
             local arena = generated and generated:FindFirstChild("Arena")
             local variant = arena and tostring(
                 arena:GetAttribute("VariantId") or "Classic")
-            if child.Name == variant or child.Name == "LongCradle" then
+            if child.Name == variant or child.Name == "LongCradle"
+                or child.Name == "ShortCradle" then
                 scheduleRebuild()
             end
         end

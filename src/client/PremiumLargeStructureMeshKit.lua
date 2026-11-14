@@ -1,6 +1,6 @@
 -- Authenticated creator-owned 3D replacement of visible primitive deck
 -- support posts and overlong platform underframes. Cosmetic-only.
--- Six moderated Approved Model IDs, verified in upload #41808940118.
+-- Seven creator-approved Model IDs, including short underframe upload #43643193625.
 -- The server still owns every collision route, shrinking platform,
 -- warning label, shutter and native fallback primitive.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,6 +13,7 @@ local IDS = {
     Orbital = 119010829781313,
     Harbor = 76194593490199,
     LongCradle = 128914328933863,
+    ShortCradle = 140716716476069,
 }
 
 local function verified(kind)
@@ -48,6 +49,10 @@ local function verified(kind)
         if not (size.Y > 1.9 and size.Y < 4.7
             and xzLong >= 21.2 and xzLong <= 24.2
             and xzShort >= 9.1 and xzShort <= 11.4) then return nil end
+    elseif kind == "ShortCradle" then
+        if not (size.Y >= 2.1 and size.Y <= 2.8
+            and xzLong >= 16.3 and xzLong <= 17.1
+            and xzShort >= 9.9 and xzShort <= 10.6) then return nil end
     elseif not (size.Y >= 13.4 and size.Y <= 15.1
         and xzLong >= 1.6 and xzLong <= 2.8
         and xzShort >= 1.5 and xzShort <= 2.7) then return nil end
@@ -180,6 +185,27 @@ function Kit.cradleFit(size,sourceBounds)
     return scale
 end
 
+-- Only the short transverse Sky Spine decks (not 22-stud promenades)
+-- may receive the second approved 7-MeshPart undercarriage.
+function Kit.shortCradleFit(size,bounds)
+    if typeof(size)~="Vector3" or typeof(bounds)~="Vector3"
+        or bounds.X<=0 or bounds.Y<=0 or bounds.Z<=0 then
+        return nil
+    end
+    local long=math.max(size.X,size.Z)
+    local short=math.min(size.X,size.Z)
+    if long<16.5 or long>20 or short<10 or short>14 then return nil end
+    local srcLong=math.max(bounds.X,bounds.Z)
+    local srcShort=math.min(bounds.X,bounds.Z)
+    local scale=math.min(1.15,long*.95/srcLong,short*.91/srcShort)
+    if scale<.88 or srcLong*scale<long*.88
+        or srcShort*scale<short*.79
+        or srcLong*scale>long*.97 or bounds.Y*scale>3.5 then
+        return nil
+    end
+    return scale
+end
+
 -- Only replace the *actual streamed server-authoritative decorative
 -- understructure*. A collidable deck may replicate BEFORE its underside,
 -- Sky Spine girders or Promenade truss; reserving a seven-MeshPart cradle
@@ -259,9 +285,9 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         return cradleSet,supportSet
     end
     local cradleSource,cradleBounds,cradleParts=verified("LongCradle")
-    if tier == "Low" and cradleParts ~= 7 then
-        cradleSource=nil
-    end
+    local shortSource,shortBounds,shortParts=verified("ShortCradle")
+    if tier == "Low" and cradleParts ~= 7 then cradleSource=nil end
+    if tier == "Low" and shortParts ~= 7 then shortSource=nil end
     local supportSource,supportBounds,supportParts=nil,nil,nil
     if decor and decor:IsA("Folder") then
         supportSource,supportBounds,supportParts=verified(variant)
@@ -269,7 +295,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     if tier == "Low" and supportParts ~= 7 then
         supportSource=nil
     end
-    if not cradleSource and not supportSource then
+    if not cradleSource and not shortSource and not supportSource then
         return cradleSet,supportSet
     end
     -- Bind by actual named server support ownership; an unstreamed
@@ -358,9 +384,11 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             -- All tiers now check the same geometry as longCradle().
             -- Reject a 30+ stud native deck that the actual 22-stud
             -- original cannot cover, BEFORE spending an approved 3D slot.
-            if cradleSource and (spine or promenade)
+            if (spine or promenade)
                 and Kit.hasNativeCradleFallback(decor,platform)
-                and Kit.cradleFit(size,cradleBounds)
+                and ((cradleSource and Kit.cradleFit(size,cradleBounds))
+                    or (spine and shortSource
+                        and Kit.shortCradleFit(size,shortBounds)))
                 and (tier ~= "Low"
                     or (platform.Position-cameraPoint).Magnitude<=125) then
                 cradles[#cradles+1]={platform=platform,score=score}
@@ -608,11 +636,16 @@ function Kit.longCradle(parent,platform,tier,index,selected,decor)
         return nil
     end
     local source,box,count=verified("LongCradle")
-    if not source or (tier == "Low" and count ~= 7) then return nil end
+    local kind="LongCradle"
+    local scale=source and Kit.cradleFit(platform.Size,box) or nil
+    if not scale and platform:GetAttribute("SkySpineStep")~=nil then
+        source,box,count=verified("ShortCradle")
+        scale=source and Kit.shortCradleFit(platform.Size,box) or nil
+        kind="ShortCradle"
+    end
+    if not source or not scale or count~=7 then return nil end
     local sx,sy,sz=platform.Size.X,platform.Size.Y,platform.Size.Z
     local long=math.max(sx,sz)
-    local scale=Kit.cradleFit(platform.Size,box)
-    if not scale then return nil end
     local yaw=(sz>sx)~=(box.Z>box.X) and math.pi*.5 or 0
     local stage=prepare(source,scale,function(bounds)
         if bounds.Y>5 or math.max(bounds.X,bounds.Z)>long*.97 then
@@ -620,11 +653,15 @@ function Kit.longCradle(parent,platform,tier,index,selected,decor)
         end
         return platform.CFrame*CFrame.new(
             0,-sy*.5-.09-bounds.Y*.5,0)*CFrame.Angles(0,yaw,0)
-    end,platform,"LongCradle",tonumber(platform:GetAttribute("RouteTier"))~=nil)
+    end,platform,kind,tonumber(platform:GetAttribute("RouteTier"))~=nil)
     if not stage then return nil end
-    local parts=commit(parent,stage,"LongCradle",tostring(index))
+    local parts=commit(parent,stage,kind,tostring(index))
     for _,part in ipairs(parts) do
+        -- Existing renderer/native-fallback contracts remain unchanged.
         part:SetAttribute("OriginalLongCradle3D",true)
+        if kind=="ShortCradle" then
+            part:SetAttribute("OriginalShortSkySpineCradle3D",true)
+        end
     end
     return parts
 end

@@ -1,4 +1,4 @@
--- Six creator-owned real 3D sculpted structure models, moderated Approved.
+-- Seven creator-owned real 3D sculpted structure models, moderated Approved.
 -- Evidence: GitHub Actions 41808940118. Never accept a client-selected ID.
 -- All are optional cosmetics; native collision/route/fallback stays untouched.
 local AssetService = game:GetService("AssetService")
@@ -14,8 +14,9 @@ local APPROVED = {
     Orbital = 119010829781313,
     Harbor = 76194593490199,
     LongCradle = 128914328933863,
+    ShortCradle = 140716716476069,
 }
-local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle"}
+local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle","ShortCradle"}
 
 -- Import the real active world's columns FIRST, the shared 22-stud
 -- genuine LongCradle SECOND, then the four inactive worlds. Previously
@@ -32,12 +33,14 @@ local function prioritizedOrder()
         and arena and arena:IsA("Folder") and arena.Parent == generated then
         variant = arena:GetAttribute("VariantId")
     end
-    if not APPROVED[variant] or variant == "LongCradle" then
+    if not APPROVED[variant] or variant == "LongCradle"
+        or variant == "ShortCradle" then
         return ORDER
     end
-    local ordered = {variant,"LongCradle"}
+    local ordered = {variant,"LongCradle","ShortCradle"}
     for _, name in ipairs(ORDER) do
-        if name ~= variant and name ~= "LongCradle" then
+        if name ~= variant and name ~= "LongCradle"
+            and name ~= "ShortCradle" then
             ordered[#ordered + 1] = name
         end
     end
@@ -59,7 +62,7 @@ local function geometryAllowed(model,name)
             return false
         end
     end
-    if n < 1 or n > 12 then return false end
+    if n ~= 7 then return false end
     local _, box = model:GetBoundingBox()
     local xzLong = math.max(box.X,box.Z)
     local xzShort = math.min(box.X,box.Z)
@@ -67,6 +70,11 @@ local function geometryAllowed(model,name)
         return box.Y > 1.9 and box.Y < 4.7
             and xzLong >= 21.2 and xzLong <= 24.2
             and xzShort >= 9.1 and xzShort <= 11.4
+    elseif name == "ShortCradle" then
+        -- Creator-approved original: 10.13 x 2.34 x 16.52.
+        return box.Y >= 2.1 and box.Y <= 2.8
+            and xzLong >= 16.3 and xzLong <= 17.1
+            and xzShort >= 9.9 and xzShort <= 10.6
     end
     return box.Y >= 13.4 and box.Y <= 15.1
         and xzLong >= 1.6 and xzLong <= 2.8
