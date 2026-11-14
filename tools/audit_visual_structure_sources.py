@@ -154,6 +154,30 @@ for clause in (
 ):
     assert clause in sidewall, ("district sidewall coverage/safety", clause)
 print("PASS 16 desktop district sidewalls, unchanged touch and pressure caps")
+# On healthy desktop Medium, use the unchanged eight genuine facade
+# sources across separated sectors. On the following SAME LOD sample,
+# the eight six-MeshPart sidewalls must first finish these real facades,
+# rather than placing a rear sculpt on eight unrelated primitive fronts.
+# Old Android / pressure / Low / High rankings remain unchanged.
+for clause in (
+    'if tier == "Medium" and touch ~= true and stress == 0',
+    'local foreground = math.min(limit, 3)',
+    'local spacingCap = math.max(base.Size.X, base.Size.Z) * .65',
+    'wanted[winner.building] = winner',
+    'selected.door.Position',
+):
+    assert clause in district_facade, ("desktop Medium facade coverage",clause)
+for clause in (
+    'if tier=="Medium" and touch~=true and stress==0 then',
+    '"LocalApprovedDistrictFacadeMounted")==true then',
+    'if taken<limit then',
+    'wanted[candidate.building]=candidate',
+):
+    assert clause in sidewall, ("matching desktop Medium 3D sidewall",clause)
+assert 'if stress >= 2 then cap = 0 end' in sidewall
+assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in sidewall
+print("PASS eight genuinely paired desktop Medium district 3D envelopes, unchanged Android and stress caps")
+
 
 # Both 3D district owners must revoke cloned art immediately if the
 # creator's source loses approval, gains unexpected geometry or if one
