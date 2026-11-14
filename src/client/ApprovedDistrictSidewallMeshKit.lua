@@ -184,6 +184,10 @@ local function valid(entry, arena, district, base)
     if entry.arena ~= arena or entry.model.Parent ~= bucket
         or entry.source.Parent ~= entry.folder
         or entry.folder.Parent ~= ReplicatedStorage
+        or entry.folder:GetAttribute("OwnerVerified") ~= true
+        or entry.source:GetAttribute("OwnerVerified") ~= true
+        or entry.source:GetAttribute("CosmeticOnly") ~= true
+        or entry.source:GetAttribute("OriginalDistrictSidewallShell3D") ~= true
         or entry.source:GetAttribute("Original3DAssetId") ~= ID
         or #entry.pieces ~= 6
         or not authenticBase(base, arena) then return false end
@@ -291,6 +295,41 @@ local function mount(arena, district, base, building, door,
         source.DescendantRemoving:Connect(function(part)
             if part:IsA("MeshPart") then release(building) end
         end)
+    -- Source provenance may be revoked while a clone is resident.
+    -- Unmask immediately: waiting until the next camera LOD interval
+    -- can otherwise leave unauthenticated shells over hidden originals.
+    entry.connections[#entry.connections + 1] =
+        source.DescendantAdded:Connect(function(part)
+            if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then
+                release(building)
+            end
+        end)
+    entry.connections[#entry.connections + 1] =
+        folder:GetAttributeChangedSignal("OwnerVerified"):Connect(reconcile)
+    for _, attribute in ipairs({
+        "OwnerVerified", "CosmeticOnly",
+        "OriginalDistrictSidewallShell3D", "Original3DAssetId",
+    }) do
+        entry.connections[#entry.connections + 1] =
+            source:GetAttributeChangedSignal(attribute):Connect(reconcile)
+    end
+    entry.connections[#entry.connections + 1] =
+        building.ChildRemoved:Connect(function(part)
+            if part == door or entry.originals[part] ~= nil then
+                release(building)
+            end
+        end)
+    -- Five native server volumes own the fallback's exact footprint.
+    -- No Heartbeat or per-frame checks: only property-change signals.
+    for _, native in ipairs(natives) do
+        for _, property in ipairs({
+            "CFrame", "Size", "Anchored",
+            "CanCollide", "CanTouch", "CanQuery",
+        }) do
+            entry.connections[#entry.connections + 1] =
+                native:GetPropertyChangedSignal(property):Connect(reconcile)
+        end
+    end
     entry.connections[#entry.connections + 1] =
         clone.DescendantRemoving:Connect(function(part)
             if part:IsA("MeshPart") then release(building) end
