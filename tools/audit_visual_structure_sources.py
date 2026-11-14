@@ -174,14 +174,24 @@ for clause in (
     'entry.source:GetAttribute("OwnerVerified") ~= true',
     'entry.source:GetAttribute("OriginalDistrictSidewallShell3D") ~= true',
     'source.DescendantAdded:Connect(function(part)',
-    'folder:GetAttributeChangedSignal("OwnerVerified"):Connect(reconcile)',
-    'source:GetAttributeChangedSignal(attribute):Connect(reconcile)',
+    'folder:GetAttributeChangedSignal("OwnerVerified"):Connect(function()',
+    'source:GetAttributeChangedSignal(attribute):Connect(function()',
+    'local function releaseSource(source)',
+    'for _, building in ipairs(owners) do release(building) end',
     'building.ChildRemoved:Connect(function(part)',
     'native:GetPropertyChangedSignal(property):Connect(reconcile)',
     'if not valid(entry, arena, district, base) then',
 ):
     assert clause in sidewall, ("district sidewall native/source revocation", clause)
-print("PASS live district shell approval and native geometry revocation")
+for clause in (
+    'local function revokeSource(source)',
+    'for _, entry in ipairs(cohort) do dispose(entry) end',
+    'source.DescendantRemoving:Connect(function(part)',
+    'if part:IsA("MeshPart") then revokeSource(source) end',
+    'clearMounted()',
+):
+    assert clause in district_facade, ("district shared facade cohort", clause)
+print("PASS atomic source-cohort district 3D rollback and native restoration")
 
 # Four additional desktop High route skins may hide real native panels
 # only when the imported model covers the actual authoritative platform.
