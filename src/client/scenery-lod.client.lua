@@ -2089,9 +2089,11 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalHeroPartsReplaced", nativeHeroPieces)
         end
 
-        -- Five new Roblox Approved original 3D models replace only nine
-        -- nonphysical ascension gateway volumes, eleven casing elements,
-        -- or four true Orbital ramp underframe braces per selected owner.
+        -- Five approved original 3D models replace only FIVE real upper
+        -- arch volumes, ELEVEN authentic casing elements or FOUR genuine
+        -- Orbital-ramp underframe braces per selected physical owner.
+        -- Desktop Medium/High get more near-camera owners, NOT more
+        -- primitives masked per owner. Android + emergency caps unchanged.
         -- This runs AFTER the native architecture/culling owners, on the
         -- SAME LOD cadence: never hides player colliders, hazard signals,
         -- arrows or safe deck boundaries. Streaming/shrink restore natives.
