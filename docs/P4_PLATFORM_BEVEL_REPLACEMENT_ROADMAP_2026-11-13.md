@@ -116,6 +116,46 @@ Validation des sources :
 3. Mesurer une session Android à huit joueurs : `LocalP4VisibleNativePlatformSupportStructure`, compteurs de mesh résidents, mémoire et FPS pendant shrink et catastrophes.
 4. Réserver la publication publique au SHA exact dont le Build et les suites Roblox sont verts.
 
+## Lot P4 suivant — bâtiments premium entièrement sculptés en Medium PC (14 novembre)
+
+**Objectif visuel :** les budgets séparés de façade avant et de coque arrière
+n'autorisaient que **5 modèles chacun** en Medium PC. Alors que les
+16 bâtiments de chaque arène disposent des quatre profils approuvés
+`132020956214241`, `88725004643299`, `84217436280282`,
+`135791763112202` et de la coque approuvée
+`77387019170428`, une grande partie de l'horizon restait sous forme
+de volumes Roblox natifs même sur PC Medium.
+
+**Mise en œuvre :**
+- Autoriser jusqu'à **8 façades et 8 coques** authentiques en qualité
+  Medium **non tactile** dans la même zone de 205 studs. L'augmentation
+  n'affecte pas High (16), Low (1), les collisions ni les sources Roblox.
+- Sur Android/tactile Medium, **3 façades et 3 coques maximum** ; sur High
+  tactile **8 de chaque** ; sous pression visuelle Medium desktop 1, plafonds
+  réduits à 4 ; sous pression 2, **0** avec restauration native. L'algorithme
+  exploite uniquement les mêmes cinq vrais modèles approuvés et la même
+  cadence LOD que précédemment.
+- Capacité nouvelle conditionnelle : **3 bâtiments sculptés complets
+  supplémentaires**, donc **15 volumes natifs de cœur/cassette/support
+  supplémentaires** masqués via le propriétaire de coque, auxquels
+  s'ajoutent les éventuels éléments de toiture redondants déjà masqués
+  par les façades. Il s'agit d'un **plafond théorique**, pas d'une mesure
+  en session ni d'une promesse de FPS.
+- Test moteur : la carte Classic réelle doit présenter 8 coques
+  Medium desktop au centre contre 3 sur tactile ; pression 1 desktop 4,
+  pression 2 zéro avec réapparition native. Les quotas de façade tactiles
+  sont vérifiés dans `native-premium-fallback.spec.luau`.
+- Les vérificateurs de régression statique valident les deux plafonds et
+  leur limitation tactile inchangée ; tout échec de build ou moteur bloque
+  la publication.
+
+**Suites à exécuter :** Build Validation Rojo, recensement P4,
+vérification Android, 7 suites Roblox Cloud Engine sur le SHA final.
+**Mesures Android** toujours requises avant tout changement de plafond
+tactile. Aucun modèle artificiel `Part`/`WedgePart` n'est utilisé comme
+remplacement : seules les sources réellement importées font disparaître
+les natives.
+
 ## Autres chantiers visuels prioritaires
 
 **P0 :** finir les structures de quartiers visibles non couvertes (le
