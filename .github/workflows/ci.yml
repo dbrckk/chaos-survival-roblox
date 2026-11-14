@@ -42,6 +42,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A build is NOT release-ready if the real Roblox Cloud runner
+      # cannot package one of its 88 source specs. Check the identical
+      # composer and per-file 105-KiB limit before reporting green CI.
+      - name: Validate all real Roblox Cloud test bundles fit source limits
+        run: |
+          python3 tools/prepare_cloud_batches.py --self-test
+          python3 tools/prepare_cloud_batches.py
+
       - name: Validate original MeshPart source exports (no Roblox uploads)
         shell: bash
         run: |
