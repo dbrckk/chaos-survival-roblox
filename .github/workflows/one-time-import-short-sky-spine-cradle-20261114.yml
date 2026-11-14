@@ -1,0 +1,29 @@
+# ONE scoped upload to the already verified Chaos Survival Roblox creator.
+# The authored source passed seven-material glTF geometry QA in run
+# 43642984110. No public place publish or registry ID invented here.
+# Do not edit this trigger again: a second push would create a duplicate.
+name: One-time Import Original Short Sky Spine Undercarriage 2026-11-14
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-short-sky-spine-cradle-20261114.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chaos-original-short-sky-spine-20261114-once
+  cancel-in-progress: false
+
+jobs:
+  short-cradle:
+    if: github.repository == 'dbrckk/chaos-survival-roblox' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: short_sky_spine_cradle
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets: inherit
