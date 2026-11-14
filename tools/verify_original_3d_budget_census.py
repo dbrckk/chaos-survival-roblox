@@ -1625,7 +1625,7 @@ assert 'if tier == "Low" and not cameraReady then' in LARGE
 assert 'local segments, scale = Kit.supportFit(support.Size, box)' in LARGE
 assert 'if segments and segments <= available - output.modules then' in LARGE
 assert 'local segments=Kit.supportFit(part.Size,supportBounds)' in LARGE
-assert 'if segments and (tier ~= "Low" or segments == 1) then' in LARGE
+assert 'if segments and (tier~="Low" or segments==1) then' in LARGE
 assert 'cost=supportsAvailable[id]' in LARGE
 assert 'local remaining=moduleBudget or math.huge' in LARGE
 assert 'and (candidate.cost or 1)<=remaining' in LARGE
