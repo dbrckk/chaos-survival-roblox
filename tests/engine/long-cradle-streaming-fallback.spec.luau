@@ -48,6 +48,27 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 part.Parent=source
             end
             source.Parent=templates
+            -- Seven-material test-only fixture matching the exact Roblox
+            -- Approved original created in action 43643193625.
+            local shortBounds=Vector3.new(10.13,2.34,16.52)
+            local shortSource=Instance.new("Model")
+            shortSource.Name="ShortCradle"
+            shortSource:SetAttribute("Original3DAssetId",140716716476069)
+            shortSource:SetAttribute("OwnerVerified",true)
+            shortSource:SetAttribute("CosmeticOnly",true)
+            shortSource:SetAttribute("OriginalLargeStructure3D",true)
+            for i=1,7 do
+                local item=Instance.new("MeshPart")
+                item.Name="ShortMaterial"..i
+                item.Size=i==1 and shortBounds
+                    or Vector3.new(.22,.22,.22)
+                item.Anchored=true
+                item.CanCollide=false
+                item.CanTouch=false
+                item.CanQuery=false
+                item.Parent=shortSource
+            end
+            shortSource.Parent=templates
             models=Instance.new("Folder")
             models.Name="CradleStreamOriginalGeometry"
             models.Parent=workspace
@@ -65,6 +86,12 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             end
             expect(owners.SkySpine~=nil).toBe(true)
             expect(owners.Promenade~=nil).toBe(true)
+            expect(Kit.shortCradleFit(
+                owners.SkySpine.Size,shortBounds)~=nil).toBe(true)
+            expect(Kit.shortCradleFit(
+                owners.Promenade.Size,shortBounds)).toBe(nil)
+            expect(Kit.shortCradleFit(
+                Vector3.new(12,2,25),shortBounds)).toBe(nil)
             for kind,deck in pairs(owners) do
                 local id=tonumber(deck.Name:match("^Platform(%d+)$"))
                 expect(id~=nil and deck.Anchored and deck.CanCollide)
@@ -75,11 +102,22 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                         deck.Position,Vector3.new(0,0,1),0)
                     return cradles[deck] == true
                 end
-                -- A real SkySpine may be too short for the certified
-                -- 22-stud long sculpture. Still verify native streaming
-                -- without stretching the genuine source into false art.
-                local fitted=Kit.cradleFit(deck.Size,bounds)~=nil
+                -- SkySpine is genuinely too short for the older 22-stud
+                -- source; the new Approved 16.52-stud model fits instead.
+                local longFit=Kit.cradleFit(deck.Size,bounds)~=nil
+                local shortFit=kind=="SkySpine" and
+                    Kit.shortCradleFit(deck.Size,shortBounds)~=nil
+                local fitted=longFit or shortFit
                 expect(selected()).toBe(fitted)
+                if shortFit and not longFit then
+                    shortSource:SetAttribute("Original3DAssetId",0)
+                    expect(selected()).toBe(false)
+                    expect(Kit.longCradle(models,deck,
+                        "Medium",id,true,decor)).toBe(nil)
+                    shortSource:SetAttribute(
+                        "Original3DAssetId",140716716476069)
+                    expect(selected()).toBe(true)
+                end
                 local underframe=decor:FindFirstChild(
                     "PlatformUnderFrame"..id)
                 expect(underframe~=nil).toBe(true)
@@ -138,6 +176,12 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                             .toBe(false)
                         expect(piece:GetAttribute("OriginalLongCradle3D"))
                             .toBe(true)
+                        expect(piece:GetAttribute(
+                            "OriginalShortSkySpineCradle3D")==true)
+                            .toBe(shortFit and not longFit)
+                        expect(piece:GetAttribute("Original3DAssetId"))
+                            .toBe(shortFit and not longFit
+                                and 140716716476069 or 128914328933863)
                         piece:Destroy()
                     end
                 else
