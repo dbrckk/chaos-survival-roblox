@@ -466,7 +466,20 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                     or (platform.Position-cameraPoint).Magnitude<=125) then
                 cradles[#cradles+1]={platform=platform,score=score}
             end
+            -- Low has only ONE seven-piece structural slot. An eligible
+            -- full-length authenticated Sky Spine undercarriage outranks
+            -- its own decorative pylons; otherwise the signed route
+            -- landmark bias could steal the near-camera support source
+            -- on a different deck. Medium/High use both ranked families
+            -- inside their already existing independent budgets.
+            local lowHasCompleteSpineCradle=tier=="Low" and spine
+                and Kit.hasNativeCradleFallback(decor,platform)
+                and ((cradleSource
+                    and Kit.cradleFit(size,cradleBounds))
+                    or (shortSource
+                        and Kit.shortCradleFit(size,shortBounds)))
             if supportSource and supportsAvailable[id]
+                and not lowHasCompleteSpineCradle
                 and long>=7 and long<=36 and short>=7
                 and (tier ~= "Low" or (platform.Position-cameraPoint).Magnitude
                     <= 125) then
