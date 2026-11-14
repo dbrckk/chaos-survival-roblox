@@ -375,7 +375,12 @@ for name, code in (
     assert 'clone.DescendantRemoving:Connect(function(part)' in code,name
     assert 'source.AncestryChanged:Connect(function()' in code,name
     assert 'source.DescendantRemoving:Connect(function(part)' in code,name
-    assert 'if part:IsA("MeshPart") then revokeIfMounted() end' in code,name
+    if name == "district":
+        assert 'local function revokeSource(source)' in code,name
+        assert 'if part:IsA("MeshPart") then revokeSource(source) end' in code,name
+        assert 'for _, entry in ipairs(cohort) do dispose(entry) end' in code,name
+    else:
+        assert 'if part:IsA("MeshPart") then revokeIfMounted() end' in code,name
     assert 'for _, connection in ipairs(entry.connections' in code,name
     assert '.RenderStepped:Connect(' not in code,name
     assert '.Heartbeat:Connect(' not in code,name
