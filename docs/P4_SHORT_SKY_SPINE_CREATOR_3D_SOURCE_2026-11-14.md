@@ -27,3 +27,7 @@ réversion native en cas de streaming incomplet.
 Aucun pourcentage de formes remplacées en jeu ni gain FPS n'est
 revendiqué tant que l'asset n'est pas réellement approuvé, monté et
 testé sur les cinq variantes.
+
+## Modèle réellement approuvé et chargé en production (14 novembre)
+
+Le workflow [43643193625](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/43643193625) a retourné le véritable Model Roblox **140716716476069**, avec statut **Approved**. Il rejoint le registre des **111 assets d'origine approuvés**. Le chargeur serveur vérifie ses sept MeshParts et les dimensions publiées (10,13 × 2,34 × 16,52 studs) puis la même file sérialisée de chargement Roblox que les autres modèles. Le kit client ne sélectionne ce modèle que pour un deck Sky Spine réellement collidable et stable, de longueur compatible, avec sous-cadre natif et truss complètement streamés. Il partage le même quota LOD qu'un LongCradle, garde ses conditions de repli et ne crée aucune collision.

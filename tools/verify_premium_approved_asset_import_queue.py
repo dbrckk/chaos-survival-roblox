@@ -99,10 +99,12 @@ assert 'geometryOK(clean, spec)' in APEX
 # the FIFO ahead of currently visible platform undersides.
 STRUCTURES = (SERVER/"PremiumLargeStructureAssets.lua").read_text()
 for clause in (
-    'local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle"}',
-    'local ordered = {variant,"LongCradle"}',
+    'local ORDER = {"Classic","Towers","Crossroads","Orbital","Harbor","LongCradle","ShortCradle"}',
+    'local ordered = {variant,"LongCradle","ShortCradle"}',
     'name ~= variant and name ~= "LongCradle"',
-    'if not APPROVED[variant] or variant == "LongCradle" then',
+    'and name ~= "ShortCradle"',
+    'if not APPROVED[variant] or variant == "LongCradle"',
+    'or variant == "ShortCradle" then',
     'task.wait(29)',
     'GlobalApprovedImportGate.load, AssetService, APPROVED[name]',
     'OriginalMeshScenery.sanitize(raw)',
@@ -111,7 +113,7 @@ for clause in (
     assert clause in STRUCTURES,clause
 assert 'for _, name in ipairs(prioritizedOrder()) do' in STRUCTURES
 assert STRUCTURES.count("GlobalApprovedImportGate.load")==1
-print("PASS active world's source then shared LongCradle then inactive models,"
+print("PASS active world's source then shared Long/Short cradles then inactive models,"
       " same six approved sources, retry schedule and 2-permit import gate")
 
 for source in SOURCES:
