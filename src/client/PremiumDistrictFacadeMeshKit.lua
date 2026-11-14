@@ -9,13 +9,14 @@ local PremiumDistrictFacadeMeshKit = {}
 local NAMES = {"Observatory", "Freight", "Turbine", "Aerial"}
 local IDS = {132020956214241, 88725004643299,
     84217436280282, 135791763112202}
--- On High, twelve of sixteen district profiles can replace their native
--- blockout rooflines with approved true 3D; on Medium five nearer profiles.
+-- Eight nearby complete roofline profiles on desktop Medium instead of
+-- five: same four approved assets, same camera LOD, no added imports.
+-- Android Medium remains capped at THREE by TOUCH_CAP below.
 -- Low Android retains one verified model, keeping its original GPU bound.
 -- Exact camera-ranked residency with exit-only hysteresis, no new loops.
 local BUDGET = {
     Low = {count = 1, distance = 130, retention = 16},
-    Medium = {count = 5, distance = 205, retention = 22},
+    Medium = {count = 8, distance = 205, retention = 22},
     High = {count = 16, distance = 270, retention = 28},
 }
 local holder = Instance.new("Folder")
