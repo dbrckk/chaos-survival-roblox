@@ -147,10 +147,21 @@ local function dispose(entry)
 end
 
 local function clearMounted()
-    for building, entry in pairs(mounted) do
-        dispose(entry)
-        mounted[building] = nil
+    local cohort = {}
+    for _, entry in pairs(mounted) do cohort[#cohort + 1] = entry end
+    for _, entry in ipairs(cohort) do dispose(entry) end
+end
+
+-- A single approved profile is reused across up to four buildings.
+-- Releasing only one entry from each source signal risks leaving other
+-- facades visible over hidden native rooflines during callback teardown.
+-- Snapshot and release the entire source cohort synchronously.
+local function revokeSource(source)
+    local cohort = {}
+    for _, entry in pairs(mounted) do
+        if entry.source == source then cohort[#cohort + 1] = entry end
     end
+    for _, entry in ipairs(cohort) do dispose(entry) end
 end
 
 local function clear()
@@ -360,22 +371,26 @@ local function mount(building, district, base, slot, door, source)
         source.AncestryChanged:Connect(function()
             if source.Parent ~= entry.sourceFolder
                 or entry.sourceFolder.Parent ~= ReplicatedStorage then
-                revokeIfMounted()
+                revokeSource(source)
             end
         end)
     entry.connections[#entry.connections + 1] =
         source.DescendantRemoving:Connect(function(part)
-            if part:IsA("MeshPart") then revokeIfMounted() end
+            if part:IsA("MeshPart") then revokeSource(source) end
         end)
     entry.connections[#entry.connections + 1] =
         source.DescendantAdded:Connect(function(part)
             if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then
-                revokeIfMounted()
+                revokeSource(source)
             end
         end)
     entry.connections[#entry.connections + 1] =
         entry.sourceFolder:GetAttributeChangedSignal(
-            "OwnerVerified"):Connect(revokeIfMounted)
+            "OwnerVerified"):Connect(function()
+                if entry.sourceFolder:GetAttribute("OwnerVerified") ~= true then
+                    clearMounted()
+                end
+            end)
     for _, attribute in ipairs({
         "OwnerVerified", "CosmeticOnly", "DistrictFacade3D",
         "Original3DAssetId",
@@ -383,7 +398,7 @@ local function mount(building, district, base, slot, door, source)
         entry.connections[#entry.connections + 1] =
             source:GetAttributeChangedSignal(attribute):Connect(function()
                 if not valid(entry, district, base) then
-                    revokeIfMounted()
+                    revokeSource(source)
                 end
             end)
     end
@@ -399,7 +414,7 @@ local function mount(building, district, base, slot, door, source)
             }) do
                 entry.connections[#entry.connections + 1] =
                     sourcePiece:GetPropertyChangedSignal(property):Connect(
-                        revokeIfMounted)
+                        function() revokeSource(source) end)
             end
         end
     end
