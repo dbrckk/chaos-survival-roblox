@@ -405,6 +405,17 @@ for clause in (
     "or size.X*scale < sx*.80 or size.Z*scale < sz*.80",
 ):
     assert clause in hull, ("P4 approved large hull native replacement", clause)
+# High/Medium desktop must distribute the SAME six/three validated
+# underframe models to distinct visible sectors; tactile/stress selection
+# stays camera-nearest, and the original server bevels remain the fallback.
+for clause in (
+    'if touch~=true and stress==0 and count>=3 then',
+    'local foreground=tier=="High" and math.min(3,count)',
+    'local spacingCap=math.max(base.Size.X,base.Size.Z)*.65',
+    'chosen[winner.part]=true',
+    'for i=1,count do chosen[ranked[i].part]=true end',
+):
+    assert clause in hull, ("P4 full underdeck hull spread", clause)
 assert "id%8==1" not in hull, "Low original hull cannot remain index-limited"
 for clause in (
     "PremiumLargeDeckHullMeshKit.selectVisibleDecks(",
