@@ -842,7 +842,11 @@ for marker in (
     'reveal(entry)',
 ):
     assert marker in remaining, "P4 safe sculptor diversity lost: " + marker
-assert 'High={arch=6,casing=4,helix=6}' in remaining
+assert 'Medium={arch=6,casing=4,helix=4}' in remaining
+assert 'High={arch=10,casing=4,helix=8}' in remaining
+assert 'local PRESSURE_CAP={' in remaining
+assert 'High={arch=3,casing=2,helix=3}' in remaining
+assert 'return math.min(math.floor(cap*.5),prior)' in remaining
 assert 'High={arch=3,casing=2,helix=3}' in remaining
 assert '.RenderStepped:Connect(' not in remaining
 assert '.Heartbeat:Connect(' not in remaining
