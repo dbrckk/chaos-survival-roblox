@@ -1743,6 +1743,40 @@ assert 'longCradleBudget -= 1' in OWNER
 print("PASS approved short SkySpine source consumes existing 7-piece"
       " LongCradle slot; exact provenance, streamed-native rollback")
 
+# The streaming-safe short Sky Spine source used to miss the exact
+# moment when UNDERDECK native trusses finished replicating, after
+# PlatformN and its imported 7-piece Model were already visible.
+# Now a pure provenance classifier recognizes only actual decorative
+# native underframes/braces, and shares the existing 0.18s/deferred
+# rebuild scheduler. It must also tear down a mounted replacement on
+# native stream-out, not blindly rebuild for ambient/warning parts.
+for clause in (
+    'function Kit.cradleStreamNativeIndex(part)',
+    'part.Name:match("^PlatformUnderFrame(%d+)$")',
+    'part.Name:match("^SkySpine(%d+)_Undercarriage%-?1$")',
+    'part.Name:match("^SkySpine(%d+)_CrossStiffener$")',
+    'part.Name:match("^Promenade(%d+)_UnderdeckTruss$")',
+    'part:GetAttribute("PerimeterPlatformIndex")==tonumber(id)',
+):
+    assert clause in LARGE,("genuine short SkySpine streamed-native index",clause)
+watch=OWNER.split('local function supportChanged(part)',1)[1].split(
+    'decorAddedConnection = decor.ChildAdded',1)[0]
+assert 'PremiumLargeStructureMeshKit.cradleStreamNativeIndex(part)' in watch
+assert 'templates:FindFirstChild("ShortCradle")' in watch
+assert 'PremiumLargeStructureMeshKit\n                                .hasNativeCradleFallback(decor,deck)' in watch
+assert 'mountedLongCradles[deck]' in watch
+assert 'if part.Parent ~= decor then' in watch
+assert 'queueSupportRebuild()' in watch
+assert 'quality=="Low" and 125' in watch
+assert 'quality=="Medium" and 195 or 270' in watch
+assert 'OriginalShortSkySpineCradle3D' in OWNER
+assert 'LocalOriginalShortSkySpineCradleCount' in OWNER
+assert 'mountedShortSkySpineCradles += 1' in OWNER
+assert 'LocalOriginalNearBridgeCradleCount' in OWNER
+assert '.RenderStepped:Connect(' not in OWNER
+print("PASS bounded SkySpine/Promenade streamed-native arrival/eviction"
+      " recomputes authentic 3D coverage, with genuine short-mesh counters")
+
 # Genuine original LongCradle sources must be reserved for fully
 # streamed, structurally-owned native sets, not a lone PlatformN collider.
 # One selected SkySpine owner has two undercarriages + cross-stiffener;

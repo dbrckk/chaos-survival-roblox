@@ -121,7 +121,12 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 local underframe=decor:FindFirstChild(
                     "PlatformUnderFrame"..id)
                 expect(underframe~=nil).toBe(true)
+                -- Exact server-authored nonphysical structural piece
+                -- drives event-based late-stream recovery; not a random
+                -- gameplay or luminous part.
+                expect(Kit.cradleStreamNativeIndex(underframe)).toBe(id)
                 underframe.Parent=nil
+                expect(Kit.cradleStreamNativeIndex(underframe)).toBe(id)
                 expect(Kit.hasNativeCradleFallback(decor,deck)).toBe(false)
                 expect(selected()).toBe(false)
                 expect(Kit.longCradle(models,deck,"Medium",id,true,decor))
@@ -133,14 +138,37 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     or "Promenade"..id.."_UnderdeckTruss"
                 local native=decor:FindFirstChild(nativeName)
                 expect(native~=nil).toBe(true)
+                expect(Kit.cradleStreamNativeIndex(native)).toBe(id)
                 native.Parent=nil
+                expect(Kit.cradleStreamNativeIndex(native)).toBe(id)
                 expect(Kit.hasNativeCradleFallback(decor,deck)).toBe(false)
                 expect(selected()).toBe(false)
                 native.Parent=decor
                 native:SetAttribute("PerimeterPlatformIndex",-1)
+                expect(Kit.cradleStreamNativeIndex(native)).toBe(nil)
                 expect(selected()).toBe(false)
                 native:SetAttribute("PerimeterPlatformIndex",id)
+                expect(Kit.cradleStreamNativeIndex(native)).toBe(id)
                 expect(selected()).toBe(fitted)
+                if kind=="SkySpine" then
+                    for _,suffix in ipairs({"_Undercarriage-1",
+                        "_Undercarriage1"}) do
+                        local side=decor:FindFirstChild(
+                            "SkySpine"..id..suffix)
+                        expect(side~=nil).toBe(true)
+                        expect(Kit.cradleStreamNativeIndex(side)).toBe(id)
+                    end
+                end
+                local decoy=Instance.new("Part")
+                decoy.Name="SkySpine"..id.."_Warning"
+                decoy.Anchored=true
+                decoy.CanCollide=false
+                decoy.CanTouch=false
+                decoy.CanQuery=false
+                decoy:SetAttribute("SkySpineDecor",true)
+                decoy:SetAttribute("PerimeterPlatformIndex",id)
+                expect(Kit.cradleStreamNativeIndex(decoy)).toBe(nil)
+                decoy:Destroy()
                 local parts=Kit.longCradle(models,deck,
                     "Medium",id,true,decor)
                 if fitted then
