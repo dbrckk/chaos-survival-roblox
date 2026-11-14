@@ -359,8 +359,25 @@ for clause in (
     assert clause in rim_owner, ("rim source-mounted visual ownership", clause)
 assert "require(script.PremiumPlatformRimAssets)" in rim_init
 assert "task.defer(PremiumPlatformRimAssets.start)" in rim_init
+# Healthy desktop uses the SAME 4/8 existing approved slots over
+# separated physical routes; Android and pressured clients remain nearest
+# only. Source provenance is sampled once each rebuild, but rechecked at
+# mounting so an invalidated source never masks native WedgeParts.
+for clause in (
+    'local cap=tier=="High" and (touch and 2 or 8)',
+    'or tier=="Medium" and (touch and 1 or 4) or 1',
+    'if touch~=true and stress==0 and tier~="Low" and count>2 then',
+    'local foreground=math.min(count,tier=="High" and 3 or 2)',
+    'local spacingCap=math.max(base.Size.X,base.Size.Z)*.65',
+    'result[winner.deck]=winner.kind',
+    'local boundsByKind={}',
+    'local source,bounds=verified(kind)',
+    'local kind=pickSource(deck,boundsByKind)',
+    'local source,bounds=verified(kind)\\n    if not source then return nil end',
+):
+    assert clause in rim_client, ("genuine rim spatial/source gate", clause)
 assert "RenderStepped" not in rim_client and "Heartbeat:Connect" not in rim_client
-print("PASS two genuine approved perimeter rim assets with camera LOD, bevel-only masks and shrink fallback")
+print("PASS two genuine approved perimeter rim assets: PC four-sector spread, unchanged Android caps, cached epoch auth, shrink/native fallback")
 
 # P4 large-deck bevel coverage must not regress to a hard-coded first-24
 # physical platform gate. Only approved 18-stud, seven-mesh hulls may
