@@ -386,6 +386,32 @@ local function mount(building, district, base, slot, door, source)
                 end
             end)
     end
+    -- In-place source/clone mutation does not emit ancestry or
+    -- descendant events. Never leave the native roof hidden after a
+    -- mesh's geometry, collision or anchoring changes. Bind once per
+    -- resident model; dispose disconnects all of these signals.
+    for _, sourcePiece in ipairs(source:GetDescendants()) do
+        if sourcePiece:IsA("MeshPart") then
+            for _, property in ipairs({
+                "MeshId", "Size", "CFrame", "Anchored",
+                "CanCollide", "CanTouch", "CanQuery",
+            }) do
+                entry.connections[#entry.connections + 1] =
+                    sourcePiece:GetPropertyChangedSignal(property):Connect(
+                        revokeIfMounted)
+            end
+        end
+    end
+    for _, piece in ipairs(pieces) do
+        for _, property in ipairs({
+            "MeshId", "Size", "CFrame", "Anchored", "Massless",
+            "CanCollide", "CanTouch", "CanQuery",
+        }) do
+            entry.connections[#entry.connections + 1] =
+                piece:GetPropertyChangedSignal(property):Connect(
+                    revokeIfMounted)
+        end
+    end
     immediatelyHideUnsafe()
     return entry
 end
