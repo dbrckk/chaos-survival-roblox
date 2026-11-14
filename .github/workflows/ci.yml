@@ -424,6 +424,7 @@ jobs:
           large_support_names = {
               "column_classic", "column_towers", "column_crossroads",
               "column_orbital", "column_harbor", "long_route_cradle",
+              "short_sky_spine_cradle",
           }
           # Owner-Approved premium 3D models added after the original 62-source
           # registry milestone. Keep this explicit, never silently trust any
@@ -449,7 +450,7 @@ jobs:
               "orbital_helix_underframe",
           }
           assert len(premium_extension_names) == 45
-          assert len(models) == 110
+          assert len(models) == 111
           rim_ids = {"platform_rim_rect": "131482590870627",
                      "platform_rim_long": "127617571835277"}
           assert {m["name"]: m["asset_id"] for m in models
@@ -491,6 +492,7 @@ jobs:
                       "platform_rim_long",
                       "column_classic", "column_towers", "column_crossroads",
                       "column_orbital", "column_harbor", "long_route_cradle",
+                      "short_sky_spine_cradle",
                       "harbor_promenade_portal", "harbor_dock_caisson",
                       "harbor_freighter",
                       "harbor_gantry_container", "harbor_gantry_drum",
@@ -538,6 +540,7 @@ jobs:
                           "column_orbital": "tools/generate_original_large_supports.py",
                           "column_harbor": "tools/generate_original_large_supports.py",
                           "long_route_cradle": "tools/generate_original_large_supports.py",
+                          "short_sky_spine_cradle": "tools/generate_original_short_sky_spine_cradle.py",
                           "harbor_promenade_portal": "tools/generate_original_harbor_promenade_portal.py",
                           "harbor_dock_caisson": "tools/generate_original_harbor_dock_caisson.py",
                           "harbor_freighter": "tools/generate_original_harbor_freighter.py",
@@ -716,7 +719,7 @@ jobs:
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
           # 110 Roblox-moderated, creator-owned Models: the previous 108
           # plus the two new approved rectangular/long platform rims.
-          assert len(models) == 110
+          assert len(models) == 111
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
