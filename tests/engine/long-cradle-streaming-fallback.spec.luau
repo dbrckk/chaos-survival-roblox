@@ -53,11 +53,11 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             local owners={}
             for _,deck in ipairs(platforms:GetChildren()) do
                 if deck:IsA("BasePart")
-                    and Kit.cradleFit(deck.Size,bounds)
                     and Kit.hasNativeCradleFallback(decor,deck) then
                     if deck:GetAttribute("SkySpineStep")~=nil then
                         owners.SkySpine=deck
-                    elseif deck:GetAttribute("PromenadeStep")~=nil then
+                    elseif deck:GetAttribute("PromenadeStep")~=nil
+                        and Kit.cradleFit(deck.Size,bounds) then
                         owners.Promenade=deck
                     end
                 end
@@ -74,7 +74,11 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                         deck.Position,Vector3.new(0,0,1),0)
                     return cradles[deck] == true
                 end
-                expect(selected()).toBe(true)
+                -- A real SkySpine may be too short for the certified
+                -- 22-stud long sculpture. Still verify native streaming
+                -- without stretching the genuine source into false art.
+                local fitted=Kit.cradleFit(deck.Size,bounds)~=nil
+                expect(selected()).toBe(fitted)
                 local underframe=decor:FindFirstChild(
                     "PlatformUnderFrame"..id)
                 expect(underframe~=nil).toBe(true)
@@ -84,7 +88,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(Kit.longCradle(models,deck,"Medium",id,true,decor))
                     .toBe(nil)
                 underframe.Parent=decor
-                expect(selected()).toBe(true)
+                expect(selected()).toBe(fitted)
                 local nativeName=kind=="SkySpine"
                     and "SkySpine"..id.."_CrossStiffener"
                     or "Promenade"..id.."_UnderdeckTruss"
@@ -97,17 +101,21 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 native:SetAttribute("PerimeterPlatformIndex",-1)
                 expect(selected()).toBe(false)
                 native:SetAttribute("PerimeterPlatformIndex",id)
-                expect(selected()).toBe(true)
+                expect(selected()).toBe(fitted)
                 local parts=Kit.longCradle(models,deck,
                     "Medium",id,true,decor)
-                expect(parts~=nil and #parts==7).toBe(true)
-                for _,piece in ipairs(parts) do
-                    expect(piece:IsA("MeshPart")).toBe(true)
-                    expect(piece.CanCollide or piece.CanTouch or piece.CanQuery)
-                        .toBe(false)
-                    expect(piece:GetAttribute("OriginalLongCradle3D"))
-                        .toBe(true)
-                    piece:Destroy()
+                if fitted then
+                    expect(parts~=nil and #parts==7).toBe(true)
+                    for _,piece in ipairs(parts) do
+                        expect(piece:IsA("MeshPart")).toBe(true)
+                        expect(piece.CanCollide or piece.CanTouch or piece.CanQuery)
+                            .toBe(false)
+                        expect(piece:GetAttribute("OriginalLongCradle3D"))
+                            .toBe(true)
+                        piece:Destroy()
+                    end
+                else
+                    expect(parts).toBe(nil)
                 end
                 expect(deck.CanCollide).toBe(true)
             end
