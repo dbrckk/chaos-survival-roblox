@@ -807,6 +807,35 @@ local function rebuild()
             local authenticCarapace = carapacePieces[1] ~= nil
                 and carapacePieces[1]:GetAttribute(
                     "Original3DStructuralSide") == true
+            -- Long elevated promenades and the Sky Spine previously
+            -- rested on a solid, square server underframe. Swap up to
+            -- 1/2 compatible decks to the real sculpted 22-stud lattice,
+            -- only after exact owner provenance and dimensions are checked.
+            -- It follows RouteTier shrink via the existing welded snapshot.
+            local authenticLongCradle = false
+            if longCradleBudget > 0 and not authenticCarapace
+                and nearCradles[platform] == true then
+                local cradle = PremiumLargeStructureMeshKit.longCradle(
+                    folder, platform, tier.Name, visualIndex, true, decor)
+                if cradle and #cradle == 7 then
+                    authenticLongCradle = true
+                    replacements[tostring(visualIndex)] = "cradle"
+                    -- Shared cosmetic-only arbitration prevents the old
+                    -- 3K-triangle underdeck chassis from being mounted
+                    -- behind this newer genuine open-frame undercradle.
+                    -- Client-local attribute NEVER grants a gameplay route.
+                    platform:SetAttribute("LocalOriginalLongCradleMounted", true)
+                    mountedLongCradles[platform] = true
+                    longCradleBudget -= 1
+                    mountedRouteCradles += 1
+                    for _, piece in ipairs(cradle) do
+                        registerVisual(platform, piece)
+                        originalLargeCount += 1
+                    end
+                end
+            end
+            local authenticUnderdeck = authenticCarapace
+                or authenticLongCradle
             -- Source ownership is known only after actual 3D mounting.
             -- Never fabricate a fallback-looking keel beneath complete
             -- creator-approved metal. Surface wayfinding remains intact.
@@ -814,7 +843,7 @@ local function rebuild()
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme,
-                    authenticCarapace
+                    authenticUnderdeck
                 )) do
                     registerVisual(platform, piece)
                 end
@@ -849,7 +878,7 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
             if not authenticCarapace and not authenticBridge
-                and not authenticRim then
+                and not authenticRim and not authenticLongCradle then
                 for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(
                     folder, platform, variant, tier.Name, theme
                 )) do
@@ -874,31 +903,6 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
 
-            -- Long elevated promenades and the Sky Spine previously
-            -- rested on a solid, square server underframe. Swap up to
-            -- 1/2 compatible decks to the real sculpted 22-stud lattice,
-            -- only after exact owner provenance and dimensions are checked.
-            -- It follows RouteTier shrink via the existing welded snapshot.
-            if longCradleBudget > 0 and not authenticCarapace
-                and nearCradles[platform] == true then
-                local cradle = PremiumLargeStructureMeshKit.longCradle(
-                    folder, platform, tier.Name, visualIndex, true, decor)
-                if cradle then
-                    replacements[tostring(visualIndex)] = "cradle"
-                    -- Shared cosmetic-only arbitration prevents the old
-                    -- 3K-triangle underdeck chassis from being mounted
-                    -- behind this newer genuine open-frame undercradle.
-                    -- Client-local attribute NEVER grants a gameplay route.
-                    platform:SetAttribute("LocalOriginalLongCradleMounted", true)
-                    mountedLongCradles[platform] = true
-                    longCradleBudget -= 1
-                    mountedRouteCradles += 1
-                    for _, piece in ipairs(cradle) do
-                        registerVisual(platform, piece)
-                        originalLargeCount += 1
-                    end
-                end
-            end
             -- Actual server-authored PlatformSupport instances, NOT new
             -- phantom load-bearing routes, own authentic tall columns.
             -- One sparse support family per map/tier, at most 8/16
@@ -940,14 +944,14 @@ local function rebuild()
             -- an edge-only rim must preserve the native accents.
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier,
-                    authenticCarapace)
+                    authenticUnderdeck)
             elseif variant == "Crossroads" then
                 decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Orbital" then
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Harbor" then
                 decorateHarbor(platform, visualIndex, theme, tier,
-                    authenticCarapace)
+                    authenticUnderdeck)
                 -- Only the four real cardinal terminal decks get authored
                 -- 3D port infrastructure. The existing visual registrar,
                 -- shrink-weld, collapse owner and tier rebuild own it.

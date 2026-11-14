@@ -578,3 +578,7 @@ supports sculptés (20 modules structurels au total, inchangés), au
 lieu d'être immobilisés sur des charpentes incomplètes. Les attentes
 Engine couvrent désormais les six sous-cadres réellement masqués,
 leur restauration sous danger et le dernier garde de streaming.
+
+## Lot P4 — véritables charpentes montées avant les sous-décors (14 novembre)
+
+Auparavant, les charpentes LongCradle étaient installées après les finitions natives de la plateforme. Sur une vraie sculpture approuvée, des blocs rectangulaires de dessous, des renforts de charge et des pièces Towers/Harbor restaient donc superposés. L'installation d'une charpente authentifiée de sept MeshParts est désormais effectuée avant la décision de produire les sous-décors. Seuls les dessous doublonnés sont retirés ; les bordures non couvertes, le guidage supérieur, les avertissements et les collisions restent intacts. Si la charpente est absente/incomplète, tous les décors de secours sont conservés. Aucun quota Android, source, API, listener ou nouvelle primitive n'est ajouté.

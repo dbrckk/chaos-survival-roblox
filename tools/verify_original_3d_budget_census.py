@@ -1635,7 +1635,7 @@ for marker in (
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
-    'authenticCarapace)',
+    'authenticUnderdeck)',
     '"HarborCargoLashing" .. index',
 ):
     assert marker in OWNER, ("no native block overlay on approved hull",marker)
@@ -1657,9 +1657,24 @@ assert 'or (i == 3 and (variant == "Classic"' in FINISH
 assert 'or variant == "Harbor"))) then' in FINISH
 assert OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil') < (
     OWNER.index('for _, piece in ipairs(PlatformFinishKit.build('))
-assert 'folder, platform, variant, tier.Name, theme,\n                    authenticCarapace' in OWNER
+assert 'folder, platform, variant, tier.Name, theme,\n                    authenticUnderdeck' in OWNER
 print("PASS source-verified platform hull eliminates duplicate local underdeck"
       " blocks on Classic/Towers/Harbor while retaining tops/fallback")
+
+# The LongCradle 3D lattice must be fully resident before native
+# underside paint and load braces are chosen, not layered underneath.
+start=OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil')
+cradle=OWNER.index('PremiumLargeStructureMeshKit.longCradle(',start)
+finish=OWNER.index('for _, piece in ipairs(PlatformFinishKit.build(',start)
+braces=OWNER.index('for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(',start)
+assert start < cradle < finish < braces
+assert 'local authenticLongCradle = false' in OWNER[start:finish]
+assert 'if cradle and #cradle == 7 then' in OWNER[start:finish]
+assert 'authenticLongCradle = true' in OWNER[start:finish]
+assert 'local authenticUnderdeck = authenticCarapace' in OWNER[start:finish]
+assert 'and not authenticRim and not authenticLongCradle then' in OWNER
+print("PASS genuine long-cradle mounted before native underside trims, "
+      "fallback retained if real source absent")
 
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger

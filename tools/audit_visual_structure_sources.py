@@ -417,7 +417,7 @@ for clause in (
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
-    'authenticCarapace)',
+    'authenticUnderdeck)',
     '"HarborCargoLashing" .. index',
     '"TowerPlatformLiftCore" .. index',
     '"HarborKeelMount" .. index',
