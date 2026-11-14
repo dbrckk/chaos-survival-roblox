@@ -27,6 +27,25 @@ local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFa
 local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
 
 describe("visual budget rules", function()
+    it("uses all twelve genuine 3D perimeter arch slots on healthy desktop without increasing mobile or GPU stress", function()
+        local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
+        -- Four routes x three authentic stage arches. Each selected owner
+        -- still requires its approved seven-MeshPart model and real deck.
+        expect(Remaining.budget("Low", false, 0, "arch")).toBe(1)
+        expect(Remaining.budget("Medium", false, 0, "arch")).toBe(8)
+        expect(Remaining.budget("High", false, 0, "arch")).toBe(12)
+        expect(Remaining.budget("Medium", true, 0, "arch")).toBe(2)
+        expect(Remaining.budget("High", true, 0, "arch")).toBe(3)
+        expect(Remaining.budget("Medium", false, 1, "arch")).toBe(1)
+        expect(Remaining.budget("High", false, 1, "arch")).toBe(3)
+        expect(Remaining.budget("Medium", true, 1, "arch")).toBe(1)
+        expect(Remaining.budget("High", true, 1, "arch")).toBe(1)
+        expect(Remaining.budget("High", false, 2, "arch")).toBe(0)
+        expect(Remaining.budget("High", true, 2, "arch")).toBe(0)
+        expect(Remaining.budget("High", false, 0, "casing")).toBe(4)
+        expect(Remaining.budget("High", false, 0, "helix")).toBe(8)
+    end)
+
     it("shows one complete verified district 3D envelope on healthy Low and restores all five native masses on budget or facade loss", function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local facadeTemplates = Instance.new("Folder")

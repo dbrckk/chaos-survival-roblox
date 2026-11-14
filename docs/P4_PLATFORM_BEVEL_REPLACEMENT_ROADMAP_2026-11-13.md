@@ -451,3 +451,37 @@ avec limites tactiles 1/3/8 et relâche sous pression GPU.
 **L'état final dépend de la réussite des actions Build Validation et
 Roblox Cloud Engine sur le SHA du correctif** ; pas de publication du jeu
 ni de revendication de FPS Android à partir du seul contrôle source.
+
+## Lot P4 — douze arches originales sur les quatre routes PC (14 novembre)
+
+Le moteur sur le commit `745d9c2` a validé le correctif prioritaire
+des coques de quartier High (workflow Roblox Cloud Engine
+`43614132797` : succès). L'augmentation suivante est **distincte** et
+demande sa propre validation sur le nouveau commit.
+
+Le serveur possède quatre itinéraires périphériques authentiques,
+avec chacun trois étapes `ACCESS / TRANSFER / SUMMIT` : jusqu'à
+**12 arches** éligibles, chacune pouvant remplacer **5 volumes natifs**
+par un modèle de **7 MeshParts approuvées**. Le propriétaire
+`ApprovedRemainingStructureMeshKit` limitait pourtant le rendu sain
+à **6 arches Medium PC** et **10 High PC**, laissant des volumes de
+base non convertis malgré les sources originales déjà disponibles.
+
+- **Medium PC sain : 6 → 8 arches** ; **High PC sain : 10 → 12**.
+  Potentiel supplémentaire par profil : deux arches / dix natives
+  masquées / quatorze MeshParts originales, uniquement si les douze
+  vraies plateformes et modèles sont présents et dans la zone caméra.
+- **Android inchangé : Medium 2, High 3, Low 1**. Sous pression GPU 1,
+  maxima anciens **1 Medium PC / 3 High PC**, et sur touch **1/1** ;
+  pression 2 restaure entièrement les volumes de repli.
+- Aucun nouvel asset, collision, objet serveur, boucle de rendu ou appel
+  réseau. Les arches `Summit` collapsibles, les volets, la signalisation
+  et les volumes porteurs inférieurs conservent leurs gardes existantes.
+- Le test moteur `visual-budget-rules.spec.luau` vérifie les plafonds
+  desktop/tactile/pression et les budgets de casing/helix conservés. Le
+  contrôle source P4 exige que les deux lignes du budget soient **du
+  code Luau actif**, et non un commentaire qui ressemble à une configuration.
+
+**Limite :** budget d'affichage maximal et non 12 arches systématiquement
+visibles. La validation CI et moteur du nouveau SHA, ainsi que les captures
+et FPS en situation de huit joueurs, restent à confirmer avant publication.

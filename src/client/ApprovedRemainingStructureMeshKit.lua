@@ -17,13 +17,15 @@ local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
 -- Desktop-only extra creator-approved sculptures. The authenticated real
 -- platform/casing/ramp and source dimensions still decide actual mounts.
 -- No new assets, physical Parts, import requests or sampling loops.
--- In one fully source-resident map these caps allow three more Medium arches,
--- two more central casings and two more Orbital underframes; High can use
--- four more arches and the last two Helix ramps.
+-- Four genuine perimeter routes each author ACCESS, TRANSFER and SUMMIT:
+-- twelve eligible physical arch owners maximum per fully resident map.
+-- Healthy desktop Medium can finish eight original arch silhouettes, High
+-- can finish all twelve. No import, extra LOD tick or new native geometry.
+-- Mobile/touch and GPU-pressure-1/2 caps remain explicitly unchanged.
 local BUDGET={
     Low={arch=1,casing=1,helix=0},
-    Medium={arch=6,casing=4,helix=4},
-    High={arch=10,casing=4,helix=8},
+    Medium={arch=8,casing=4,helix=4},
+    High={arch=12,casing=4,helix=8},
 }
 -- Preserve EXACT former GPU-pressure-1 ceilings even when healthy desktop
 -- rendering is promoted: active hazards must retain their old relief path.
