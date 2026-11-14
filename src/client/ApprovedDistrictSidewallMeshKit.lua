@@ -12,7 +12,10 @@ local BUDGET = {
     -- is already resident. Six additional approved MeshParts / 1,764
     -- triangles at most on healthy Low, zero under GPU pressure.
     Low = {count = 1, distance = 128, retention = 16},
-    -- Desktop Medium now matches the five approved facade slots; mobile\n    -- Medium still has its existing three-shell touch ceiling.\n    Medium = {count = 5, distance = 205, retention = 20},
+    -- Desktop Medium matches eight existing facade slots, so more
+    -- buildings show their whole real six-MeshPart envelope. Touch Medium
+    -- remains capped at THREE. No new approved asset or LOD loop.
+    Medium = {count = 8, distance = 205, retention = 20},
     -- Desktop High may complete all sixteen authentic buildings; touch High\n    -- remains capped at eight, pressure High at five.\n    High = {count = 16, distance = 275, retention = 28},
 }
 -- Android shares the existing 440/680/900 Parts census with all original
