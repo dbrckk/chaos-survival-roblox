@@ -1121,8 +1121,20 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.budget("Medium",true,0,"helix")).toBe(1)
                 expect(RemainingStructureKit.budget("High",true,0,"arch")).toBe(3)
                 expect(RemainingStructureKit.budget("High",true,0,"casing")).toBe(2)
-                expect(RemainingStructureKit.budget("High",false,0,"arch")).toBe(6)
-                expect(RemainingStructureKit.budget("High",false,0,"helix")).toBe(6)
+                -- Higher desktop-only visible coverage consumes existing approved
+                -- seven-MeshPart source bundles, never Android extras.
+                expect(RemainingStructureKit.budget("Medium",false,0,"arch")).toBe(6)
+                expect(RemainingStructureKit.budget("Medium",false,0,"casing")).toBe(4)
+                expect(RemainingStructureKit.budget("Medium",false,0,"helix")).toBe(4)
+                expect(RemainingStructureKit.budget("High",false,0,"arch")).toBe(10)
+                expect(RemainingStructureKit.budget("High",false,0,"helix")).toBe(8)
+                -- Even on desktop, GPU pressure 1 retains ALL original
+                -- emergency caps. Pressure 2 immediately restores natives.
+                expect(RemainingStructureKit.budget("Medium",false,1,"arch")).toBe(1)
+                expect(RemainingStructureKit.budget("Medium",false,1,"casing")).toBe(1)
+                expect(RemainingStructureKit.budget("Medium",false,1,"helix")).toBe(1)
+                expect(RemainingStructureKit.budget("High",false,1,"arch")).toBe(3)
+                expect(RemainingStructureKit.budget("High",false,1,"casing")).toBe(2)
                 expect(RemainingStructureKit.budget("High",false,1,"helix")).toBe(3)
                 expect(RemainingStructureKit.budget("High",false,2,"arch")).toBe(0)
 
