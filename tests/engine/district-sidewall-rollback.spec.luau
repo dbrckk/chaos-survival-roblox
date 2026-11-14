@@ -117,13 +117,25 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 "LocalApprovedDistrictSidewallMounted")).toBe(true)
             local cloneFolder=workspace:FindFirstChild(
                 "ApprovedDistrictSidewallsLocal")
-            local clone=cloneFolder:FindFirstChild(
-                "ApprovedOriginalDistrictSidewall3D")
+            local clone=nil
+            for _, resident in ipairs(cloneFolder:GetChildren()) do
+                if resident:GetAttribute("DistrictIndex") ==
+                    building:GetAttribute("DistrictIndex") then
+                    clone=resident
+                    break
+                end
+            end
             expect(clone~=nil).toBe(true)
             local clonePiece=clone:FindFirstChild("ApprovedMaterial1")
             expect(clonePiece~=nil).toBe(true)
+            local beforeCloneMutation=ApprovedDistrictSidewallMeshKit.count()
             clonePiece.CanQuery=true
-            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            -- A clone belongs to exactly ONE building: revoke only that
+            -- owner's shell, not other intact approved district models.
+            expect(ApprovedDistrictSidewallMeshKit.count())
+                .toBe(beforeCloneMutation-1)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(nil)
             expect(core.Transparency).toBe(original)
             ApprovedDistrictSidewallMeshKit.sync(
                 arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
