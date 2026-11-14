@@ -373,7 +373,7 @@ for clause in (
     'local boundsByKind={}',
     'local source,bounds=verified(kind)',
     'local kind=pickSource(deck,boundsByKind)',
-    'local source,bounds=verified(kind)\\n    if not source then return nil end',
+    'if not source then return nil end',
 ):
     assert clause in rim_client, ("genuine rim spatial/source gate", clause)
 assert "RenderStepped" not in rim_client and "Heartbeat:Connect" not in rim_client
