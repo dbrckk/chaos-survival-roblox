@@ -810,7 +810,7 @@ for marker in (
     'local route=deck:GetAttribute("PerimeterRoute")',
     'or route<1 or route>4 then return nil end',
     'stage=step,route=route,index=index',
-    'kind=="arch" and tier=="High" and touch~=true',
+    'kind=="arch" and (tier=="High" or tier=="Medium") and touch~=true',
     'if not routes[data.route] then',
     'routes[data.route]=true',
     'for _,stage in ipairs({4,8}) do',
