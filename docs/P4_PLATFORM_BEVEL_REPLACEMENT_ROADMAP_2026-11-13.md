@@ -333,6 +333,58 @@ approuvé et une zone LOD encore valide.
   les gains de silhouettes restent conditionnés à la présence des
   plateformes éligibles et des modèles de source streamés.
 
+## Lot P4 — huit vrais bâtiments 3D entiers en Medium PC (14 novembre)
+
+**Défaut visuel observé dans les propriétaires :** le même quartier
+possède une façade créateur approuvée
+(`PremiumDistrictFacadeMeshKit`) et une vraie coque arrière/latérale
+6-`MeshPart` (`ApprovedDistrictSidewallMeshKit`). En Medium PC,
+les plafonds étaient déjà **8/8**, mais leurs classements propres
+pouvaient consacrer les huit façades et huit coques à des bâtiments
+**différents**. Dans les plans larges, ces demi-silhouettes semblaient
+toujours constituées de volumes de base.
+
+**Implémentation sans augmenter les quotas :**
+
+- Lors d'un échantillon **Medium PC sain**, garder **3 façades proches**,
+  puis distribuer les **5 façades restantes** sur des secteurs visibles
+  distincts parmi les 16 vrais bâtiments de la carte. La source, le
+  profil original, la porte, la distance 205 studs et la caméra
+  conservent leurs vérifications ; chaque modèle est toujours
+  directement un modèle original approuvé (4 profils Roblox connus).
+- Le propriétaire des coques est appelé **après** celui des façades dans
+  la même passe de `scenery-lod.client.lua`. Il sélectionne en premier
+  les bâtiments disposant d'une **façade effectivement montée**,
+  puis utilise ses éventuels slots restants pour d'autres bâtiments
+  admissibles. La petite bonification numérique antérieure ne
+  garantissait pas ce résultat lorsque la façade était distante.
+- Ce couplage est **exclusivement Medium, non tactile, pression 0**.
+  Low conserve le besoin strict d'une façade, High garde les
+  16 modèles de chaque famille, Android garde Medium **3/3** et High
+  **8/8**, et les niveaux de pression GPU continuent à réduire ou
+  évacuer immédiatement les vrais modèles.
+- Aucun nouvel `MeshPart`, `Part`, collider, AssetId, script de
+  rendu ni budget GPU. Une coque remplace toujours exactement
+  **5 volumes primitifs authentiques**. Les portes, fenêtres,
+  fondations, balises et collisions restent non masquées.
+- Test Roblox Engine sur une vraie carte `Classic` de
+  `MapBuilder` à 16 bâtiments, avec les **4 sources de façade
+  authentifiées et la coque approuvée** sous forme de fixtures.
+  Il exige **8 façades + 8 coques réellement montées sur les mêmes
+  bâtiments**, soit 40 volumes latéraux natifs masqués,
+  une diffusion sur au moins 3 secteurs, et la baisse à 3/3 sur
+  Android puis à zéro sous pression 2. La source réelle des
+  AssetId reste validée séparément par le registre d'assets.
+- L'indicateur déjà existant `LocalCompleteDistrict3DCount`
+  mesure l'évolution **en session** sans transformer le recensement
+  historique des primitives serveur en taux de conversion fictif.
+
+**Prochaine étape terrain :** comparer les captures et FPS
+sur PC Medium/High et Android Medium, puis traiter les supports
+d'architecture non couverts qui possèdent une source réellement
+approuvée. Sans métriques client, aucune amélioration de FPS
+ou conversion à 100 % n'est revendiquée.
+
 ## Autres chantiers visuels prioritaires
 
 **P0 :** finir les structures de quartiers visibles non couvertes (le
