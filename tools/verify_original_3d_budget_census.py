@@ -1791,6 +1791,8 @@ for check in (
     'part.Size.Z>=1.65 and part.Size.Z<=1.75',
     'table.sort(group,sortNativeSupports)',
     'table.sort(natives,sortNativeSupports)',
+    'local lowHasCompleteSpineCradle=tier=="Low" and spine',
+    'and not lowHasCompleteSpineCradle',
     'part:SetAttribute("OriginalSkySpinePylon3D",true)',
 ):
     assert check in LARGE,("approved Sky Spine pylon provenance/priority",check)
