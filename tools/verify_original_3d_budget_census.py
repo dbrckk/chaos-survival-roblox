@@ -1818,10 +1818,10 @@ for contract in (
     assert contract in P4_CLIENT,contract
 # Hard guard against a Luau comment accidentally swallowing a budget line.
 # The earlier district sidewall High profile failed in this exact way.
-for name, expected in (("Medium", (8,4,4)), ("High", (12,4,8))):
-    pattern=rf"(?m)^[ \\t]*{name}=\\{{arch={expected[0]},casing={expected[1]},helix={expected[2]}\\}},"
-    assert re.search(pattern,P4_CLIENT), (
-        "P4 desktop arch budget must be executable Luau",name)
+for line in ("Medium={arch=8,casing=4,helix=4},",
+             "High={arch=12,casing=4,helix=8},"):
+    assert any(row.lstrip(" \t")==line for row in P4_CLIENT.splitlines()), (
+        "P4 desktop arch budget must be executable Luau",line)
 for clause in (
     'Medium={arch=2,casing=1,helix=1}',
     'High={arch=3,casing=2,helix=3}',
