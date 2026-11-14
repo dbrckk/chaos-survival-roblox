@@ -247,8 +247,12 @@ assert 'function Kit.supportFit(nativeSize, sourceBounds)' in large
 assert 'local segments = math.clamp(math.ceil(nativeSize.Y / 16.0), 1, 3)' in large
 assert 'scale < .34 or scale > 1.25' in large
 assert 'or width > 3.2' in large
-assert 'local segments = Kit.supportFit(part.Size, supportBounds)' in large
+assert 'local segments=Kit.supportFit(part.Size,supportBounds)' in large
 assert 'local segments, scale = Kit.supportFit(support.Size, box)' in large
+assert 'cost=supportsAvailable[id]' in large
+assert 'local remaining=moduleBudget or math.huge' in large
+assert 'and (candidate.cost or 1)<=remaining' in large
+assert '16-Kit.desktopCradleTransfer(tier,desktopHigh,cradleSet)' in large
 assert 'if count ~= 7 then return nil end' in large
 assert 'tier == "Low" and (tonumber(pressure) or 0) > 0' in large
 assert 'sourceParts ~= 7' in large
