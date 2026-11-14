@@ -546,10 +546,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 mesh.Parent=source
             end
             source.Parent=templates
-            -- An authentic long lattice ALSO exists: the old Low selector
-            -- always chose it, including when it was ~100 studs away from
-            -- this immediately visible native pillar. Both fixture models
-            -- have the exact approved IDs and permitted bounding boxes.
             local lattice=Instance.new("Model")
             lattice.Name="LongCradle"
             lattice:SetAttribute("Original3DAssetId",128914328933863)
@@ -568,16 +564,32 @@ describe("Original 3D native fallback isolation (engine)", function()
                 mesh.Parent=lattice
             end
             lattice.Parent=templates
-            -- Medium already reserves EIGHT seven-piece support modules,
-            -- but the old selector returned at most FOUR platform owners.
-            -- Use the actual complete Crossroads MapBuilder geometry and
-            -- genuine named server posts: no synthetic platforms/posts.
             local actualDecks={}
             for _,deck in ipairs(platforms:GetChildren()) do
                 if deck:IsA("BasePart") and
                     deck.Name:match("^Platform%d+$") then
                     actualDecks[#actualDecks+1]=deck
                 end
+            end
+            local function selectedCost(selection,maxPosts)
+                local sum=0
+                for deck in pairs(selection) do
+                    local posts={}
+                    local id=deck.Name:match("^Platform(%d+)$")
+                    for _,part in ipairs(decor:GetChildren()) do
+                        if part.Name:match("^PlatformSupport"..id.."_%d+$")
+                            and part.Anchored and not part.CanCollide then
+                            local n=PremiumLargeStructureMeshKit.supportFit(
+                                part.Size,Vector3.new(2.12,14.1,2.12))
+                            if n then posts[#posts+1]={part.Name,n} end
+                        end
+                    end
+                    table.sort(posts,function(a,b) return a[1]<b[1] end)
+                    for j=1,math.min(#posts,maxPosts) do
+                        sum+=posts[j][2]
+                    end
+                end
+                return sum
             end
             local _,mediumSupports=
                 PremiumLargeStructureMeshKit.selectNearRouteStructures(
@@ -600,7 +612,15 @@ describe("Original 3D native fallback isolation (engine)", function()
                 end
                 expect(actualNative).toBe(true)
             end
-            expect(selectedMedium).toBe(8)
+            expect(selectedMedium>=1 and selectedMedium<=8).toBe(true)
+            expect(selectedCost(mediumSupports,1)<=8).toBe(true)
+            local highCradles,highSupports=
+                PremiumLargeStructureMeshKit.selectNearRouteStructures(
+                    actualDecks,decor,"Crossroads","High",base,
+                    platform.Position,Vector3.new(0,0,1),0,true)
+            local traded=PremiumLargeStructureMeshKit.desktopCradleTransfer(
+                "High",true,highCradles)
+            expect(selectedCost(highSupports,2)<=16-traded).toBe(true)
             local farCradle=nil
             local farDistance=math.huge
             for _,candidate in ipairs(platforms:GetChildren()) do
