@@ -1121,15 +1121,11 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.budget("Medium",true,0,"helix")).toBe(1)
                 expect(RemainingStructureKit.budget("High",true,0,"arch")).toBe(3)
                 expect(RemainingStructureKit.budget("High",true,0,"casing")).toBe(2)
-                -- Higher desktop-only visible coverage consumes existing approved
-                -- seven-MeshPart source bundles, never Android extras.
                 expect(RemainingStructureKit.budget("Medium",false,0,"arch")).toBe(6)
                 expect(RemainingStructureKit.budget("Medium",false,0,"casing")).toBe(4)
                 expect(RemainingStructureKit.budget("Medium",false,0,"helix")).toBe(4)
                 expect(RemainingStructureKit.budget("High",false,0,"arch")).toBe(10)
                 expect(RemainingStructureKit.budget("High",false,0,"helix")).toBe(8)
-                -- Even on desktop, GPU pressure 1 retains ALL original
-                -- emergency caps. Pressure 2 immediately restores natives.
                 expect(RemainingStructureKit.budget("Medium",false,1,"arch")).toBe(1)
                 expect(RemainingStructureKit.budget("Medium",false,1,"casing")).toBe(1)
                 expect(RemainingStructureKit.budget("Medium",false,1,"helix")).toBe(1)
@@ -1144,8 +1140,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 templates:SetAttribute("OwnerVerified",true)
                 templates.Parent=replicated
                 -- Engine-only stand-ins with EXACT pre-verified source
-                -- metadata. Asset ID / glTF provenance is independently
-                -- certified by creator upload run 43467373476 (Approved).
                 local function specimen(name,size)
                     local model=Instance.new("Model")
                     model.Name=name
@@ -1209,9 +1203,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
                 -- Verify REAL source-masked upper porticos on all FOUR
-                -- physical perimeter escape routes, using the existing six
-                -- High PC slots. This catches camera-only concentration of
-                -- the approved originals without inventing a fake platform.
                 p4Phase="four genuine escape routes visibly sculpted"
                 local sculptedRoutes={}
                 local sculptedStages={}
@@ -1246,17 +1237,11 @@ describe("Original 3D native fallback isolation (engine)", function()
                 p4Phase="warning recovery"
                 entryDeck:SetAttribute("CollapsePhase","Normal")
                 expect(overpass.LocalTransparencyModifier).toBe(1)
-                -- If a single cosmetic MeshPart streams out, restore the
-                -- native immediately. On the next existing LOD sample,
-                -- discard only its damaged clone and remount the complete
-                -- seven-part source. The actual walkable deck never changes.
                 p4Phase="partial 3D clone eviction and remount"
                 local residentFolder=workspace:FindFirstChild(
                     "ApprovedRemainingStructureMeshesLocal")
                 expect(residentFolder~=nil).toBe(true)
                 -- Six high-PC arches can include several identical
-                -- Access imports. Corrupt the clone for THIS actual
-                -- owned deck, not the first same-named sibling.
                 local function ownedAccessClone()
                     for _,model in ipairs(residentFolder:GetChildren()) do
                         if model.Name=="ApprovedP4_Access"
@@ -1282,9 +1267,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(overpass.LocalTransparencyModifier).toBe(1)
                 expect(entryDeck.CanCollide).toBe(true)
 
-                -- An extra unexpected primitive in an imported clone
-                -- cannot be trusted as part of the seven-piece original.
-                -- Restore the native instantly and reject local collision.
                 p4Phase="foreign geometry corruption and native recovery"
                 local restoredClone=ownedAccessClone()
                 expect(restoredClone~=nil).toBe(true)
@@ -1308,8 +1290,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(overpass.LocalTransparencyModifier).toBe(1)
 
                 -- The approved TEMPLATE must remain seven real pieces,
-                -- not just its already-mounted copy. Missing original
-                -- geometry immediately restores all affected native roofs.
                 p4Phase="mutated approved source and recovery"
                 local template=templates:FindFirstChild("Access")
                 local sourcePiece=template:FindFirstChildWhichIsA(
@@ -1321,10 +1301,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(overpass.LocalTransparencyModifier).toBe(0)
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
-                -- Invalid Access source can release its previous slots
-                -- to already-Approved Transfer/Summit meshes. Total arch
-                -- count may stay at its capped budget: the exact Access
-                -- owner and its native warning geometry must be restored.
                 expect(ownedAccessClone()==nil).toBe(true)
                 expect(RemainingStructureKit.count("arch")<=before).toBe(true)
                 sourcePiece.Parent=originalSourceParent
@@ -1336,8 +1312,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(overpass.LocalTransparencyModifier).toBe(1)
 
                 -- Same approved geometry, different client budget: mobile
-                -- High displays at most three distinct real deck owners.
-                -- It must never obtain the six-slot PC allocation.
                 p4Phase="three-slot Android High verified native owners"
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,true)
@@ -1357,9 +1331,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 end
                 expect(visibleMobileOwners).toBe(3)
                 -- Verify that increasing healthy desktop density never
-                -- bypasses the former pressure-1 ceiling, and that
-                -- pressure-2 unmasks EVERY native owner synchronously.
-                -- All five REAL worlds exercise the same physical decks.
                 p4Phase="P4 desktop emergency source residency rollback"
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),1,false)
@@ -1373,7 +1344,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.nativeCount()).toBe(0)
                 expect(overpass.LocalTransparencyModifier).toBe(0)
                 expect(entryDeck.CanCollide).toBe(true)
-                -- Return to real High PC residency, no new physical Parts.
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
                 expect(RemainingStructureKit.count("arch")).toBe(10)
