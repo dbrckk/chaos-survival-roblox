@@ -289,6 +289,18 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 arena,camera,"High",true,look,true,0)
             ApprovedDistrictSidewallMeshKit.sync(
                 arena,camera,"High",true,true,0,look)
+            -- Emit real source/camera ownership counts with the failure.
+            -- The message distinguishes an import/selection miss from
+            -- an actual front-and-shell pairing regression in Cloud.
+            local highFront=PremiumDistrictFacadeMeshKit.count()
+            local highShell=ApprovedDistrictSidewallMeshKit.count()
+            local highPaired=ApprovedDistrictSidewallMeshKit.completeCount()
+            if highFront~=8 or highShell~=8 or highPaired~=8 then
+                error(("High touch healthy expected 8/8/8, got %d/%d/%d, masks %d/%d")
+                    :format(highFront,highShell,highPaired,
+                        PremiumDistrictFacadeMeshKit.residentMask16(),
+                        ApprovedDistrictSidewallMeshKit.residentMask16()))
+            end
             expect(PremiumDistrictFacadeMeshKit.count()).toBe(8)
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(8)
             expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(8)

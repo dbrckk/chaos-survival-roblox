@@ -312,6 +312,11 @@ assert 'if tier == "Medium" and touch ~= true and stress == 0' in DISTRICT_FACAD
 assert 'local foreground = math.min(limit, 3)' in DISTRICT_FACADES
 assert 'wanted[winner.building] = winner' in DISTRICT_FACADES
 assert 'if tier~="Low" then' in SIDE
+# Cloud diagnostics are meaningful only if the HIGH touch paired-budget
+# regression still checks real resident counts from both owners.
+SIDE_ENGINE=(ROOT/"tests/engine/district-sidewall-rollback.spec.luau").read_text(
+    encoding="utf8")
+assert 'High touch healthy expected 8/8/8' in SIDE_ENGINE
 assert 'if taken<limit then' in SIDE
 assert '"LocalApprovedDistrictFacadeMounted")==true then' in SIDE
 assert 'for i = 1, limit do' in DISTRICT_FACADES
