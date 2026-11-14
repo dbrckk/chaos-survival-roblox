@@ -155,6 +155,34 @@ for clause in (
     assert clause in sidewall, ("district sidewall coverage/safety", clause)
 print("PASS 16 desktop district sidewalls, unchanged touch and pressure caps")
 
+# Both 3D district owners must revoke cloned art immediately if the
+# creator's source loses approval, gains unexpected geometry or if one
+# of five original native sidewalls mutates while hidden. A future
+# camera/LOD tick is too late for trusted native fallback.
+for clause in (
+    'entry.sourceFolder:GetAttribute("OwnerVerified") ~= true',
+    'entry.source:GetAttribute("OwnerVerified") ~= true',
+    'entry.source:GetAttribute("CosmeticOnly") ~= true',
+    'entry.source:GetAttribute("DistrictFacade3D") ~= true',
+    'source.DescendantAdded:Connect(function(part)',
+    'source:GetAttributeChangedSignal(attribute):Connect(function()',
+    'entry.sourceFolder:GetAttributeChangedSignal(',
+):
+    assert clause in district_facade, ("district facade source revocation", clause)
+for clause in (
+    'entry.folder:GetAttribute("OwnerVerified") ~= true',
+    'entry.source:GetAttribute("OwnerVerified") ~= true',
+    'entry.source:GetAttribute("OriginalDistrictSidewallShell3D") ~= true',
+    'source.DescendantAdded:Connect(function(part)',
+    'folder:GetAttributeChangedSignal("OwnerVerified"):Connect(reconcile)',
+    'source:GetAttributeChangedSignal(attribute):Connect(reconcile)',
+    'building.ChildRemoved:Connect(function(part)',
+    'native:GetPropertyChangedSignal(property):Connect(reconcile)',
+    'if not valid(entry, arena, district, base) then',
+):
+    assert clause in sidewall, ("district sidewall native/source revocation", clause)
+print("PASS live district shell approval and native geometry revocation")
+
 # Four additional desktop High route skins may hide real native panels
 # only when the imported model covers the actual authoritative platform.
 # Touch and stressed clients retain their previous bounded residency.
