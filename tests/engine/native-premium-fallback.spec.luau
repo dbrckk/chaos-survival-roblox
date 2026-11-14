@@ -574,14 +574,26 @@ describe("Original 3D native fallback isolation (engine)", function()
                     local posts={}
                     local id=deck.Name:match("^Platform(%d+)$")
                     for _,part in ipairs(decor:GetChildren()) do
-                        if part.Name:match("^PlatformSupport"..id.."_%d+$")
-                            and part.Anchored and not part.CanCollide then
+                        if (part.Name:match("^PlatformSupport"..id.."_%d+$")
+                            or PremiumLargeStructureMeshKit.validNativeSkyPylon(
+                                part,tonumber(id)))
+                            and part.Anchored and not part.CanCollide
+                            and not part.CanTouch and not part.CanQuery then
                             local n=PremiumLargeStructureMeshKit.supportFit(
                                 part.Size,Vector3.new(2.12,14.1,2.12))
                             if n then posts[#posts+1]={part.Name,n} end
                         end
                     end
-                    table.sort(posts,function(a,b) return a[1]<b[1] end)
+                    -- Match the actual pylon-first source reservation and
+                    -- fitting order; a real 12.2-stud pylon costs the same
+                    -- single seven-MeshPart module as a short metal post.
+                    table.sort(posts,function(a,b)
+                        local pa=a[1]:match(
+                            "^SkySpine%d+_MonumentalPylon%-?1$") and 0 or 1
+                        local pb=b[1]:match(
+                            "^SkySpine%d+_MonumentalPylon%-?1$") and 0 or 1
+                        return pa==pb and a[1]<b[1] or pa<pb
+                    end)
                     for j=1,math.min(#posts,maxPosts) do
                         sum+=posts[j][2]
                     end
@@ -600,9 +612,12 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(id~=nil).toBe(true)
                 local actualNative=false
                 for _,post in ipairs(decor:GetChildren()) do
-                    if post.Name:match("^PlatformSupport"..id.."_%d+$")
+                    if (post.Name:match("^PlatformSupport"..id.."_%d+$")
+                        or PremiumLargeStructureMeshKit.validNativeSkyPylon(
+                            post,tonumber(id)))
                         and post:IsA("BasePart") and post.Anchored
-                        and not post.CanCollide then
+                        and not post.CanCollide and not post.CanTouch
+                        and not post.CanQuery then
                         actualNative=true
                         break
                     end
@@ -645,12 +660,18 @@ describe("Original 3D native fallback isolation (engine)", function()
                 PremiumLargeStructureMeshKit.selectNearRouteStructures(
                     {platform,farCradle},decor,"Crossroads","Low",base,
                     camera,Vector3.new(0,0,1),0)
+            assert(supports[platform]==true,
+                "Low near real 4.85-stud support must outrank far native "
+                    .."Sky Spine sources")
             expect(supports[platform]).toBe(true)
             expect(cradles[farCradle]).toBe(nil)
             local nearestCradle,demotedSupport=
                 PremiumLargeStructureMeshKit.selectNearRouteStructures(
                     {platform,farCradle},decor,"Crossroads","Low",base,
                     farCradle.Position,Vector3.new(0,0,1),0)
+            assert(nearestCradle[farCradle]==true,
+                "Low near full approved 22-stud cradle must outrank "
+                    .."the far 4.85-stud native support")
             expect(nearestCradle[farCradle]).toBe(true)
             expect(demotedSupport[platform]).toBe(nil)
             local _,pressured=
