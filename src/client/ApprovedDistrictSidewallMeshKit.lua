@@ -340,6 +340,32 @@ local function mount(arena, district, base, building, door,
                 release(building)
             end
         end)
+    -- Source and mounted MeshParts can be mutated in place without
+    -- DescendantAdded/Removing. A changed MeshId, geometry or physics
+    -- property must restore the five real native walls immediately.
+    -- Listen only to the six already-approved pieces, never per frame.
+    for _, sourcePiece in ipairs(source:GetDescendants()) do
+        if sourcePiece:IsA("MeshPart") then
+            for _, property in ipairs({
+                "MeshId", "Size", "CFrame", "Anchored",
+                "CanCollide", "CanTouch", "CanQuery",
+            }) do
+                entry.connections[#entry.connections + 1] =
+                    sourcePiece:GetPropertyChangedSignal(property):Connect(
+                        function() release(building) end)
+            end
+        end
+    end
+    for _, piece in ipairs(pieces) do
+        for _, property in ipairs({
+            "MeshId", "Size", "CFrame", "Anchored", "Massless",
+            "CanCollide", "CanTouch", "CanQuery",
+        }) do
+            entry.connections[#entry.connections + 1] =
+                piece:GetPropertyChangedSignal(property):Connect(
+                    function() release(building) end)
+        end
+    end
     reconcile()
 end
 
