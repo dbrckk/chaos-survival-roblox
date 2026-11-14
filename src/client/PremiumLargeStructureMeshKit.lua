@@ -256,6 +256,38 @@ function Kit.hasNativeCradleFallback(decor,platform)
     return true
 end
 
+-- Streaming events may arrive one native structural Part at a time.
+-- Classify ONLY authentic nonphysical Sky Spine/Promenade/underframe
+-- owners. A warning, glowing route edge, collider or spoofed Part must
+-- never trigger a full visual rebuild or authorize another 3D slot.
+-- This pure classifier also works after ChildRemoved (Parent=nil).
+function Kit.cradleStreamNativeIndex(part)
+    if not part or not part:IsA("BasePart")
+        or not part.Anchored or part.CanCollide or part.CanTouch
+        or part.CanQuery then return nil end
+    local id=part.Name:match("^PlatformUnderFrame(%d+)$")
+    if id then
+        if part:GetAttribute("PremiumArchitecturalSurface")==true then
+            return tonumber(id)
+        end
+        return nil
+    end
+    id=part.Name:match("^SkySpine(%d+)_Undercarriage%-?1$")
+        or part.Name:match("^SkySpine(%d+)_CrossStiffener$")
+    if id then
+        if part:GetAttribute("SkySpineDecor")==true
+            and part:GetAttribute("PerimeterPlatformIndex")==tonumber(id)
+            then return tonumber(id) end
+        return nil
+    end
+    id=part.Name:match("^Promenade(%d+)_UnderdeckTruss$")
+    if id and part:GetAttribute("PromenadeVisualOnly")==true
+        and part:GetAttribute("PerimeterPlatformIndex")==tonumber(id) then
+        return tonumber(id)
+    end
+    return nil
+end
+
 -- Exchange source modules, never create a new GPU allowance. At most
 -- four of High desktop's 16 seven-MeshPart column slots may become four
 -- additional seven-MeshPart original underframes, and ONLY when real

@@ -119,6 +119,9 @@ local function clear()
     if player:GetAttribute("LocalOriginalNearBridgeCradleCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearBridgeCradleCount", 0)
     end
+    if player:GetAttribute("LocalOriginalShortSkySpineCradleCount") ~= 0 then
+        player:SetAttribute("LocalOriginalShortSkySpineCradleCount", 0)
+    end
     if player:GetAttribute("LocalOriginalNearSupportColumnCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearSupportColumnCount", 0)
     end
@@ -711,6 +714,7 @@ local function rebuild()
         supportBudget = 0
     end
     local mountedRouteCradles = 0
+    local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
 
     for _, platform in ipairs(ordered) do
@@ -828,6 +832,10 @@ local function rebuild()
                     mountedLongCradles[platform] = true
                     longCradleBudget -= 1
                     mountedRouteCradles += 1
+                    if cradle[1]:GetAttribute(
+                        "OriginalShortSkySpineCradle3D") == true then
+                        mountedShortSkySpineCradles += 1
+                    end
                     for _, piece in ipairs(cradle) do
                         registerVisual(platform, piece)
                         originalLargeCount += 1
@@ -1078,6 +1086,13 @@ local function rebuild()
         player:SetAttribute("LocalOriginalNearBridgeCradleCount",
             mountedRouteCradles)
     end
+    -- Distinguish real newly mounted SHORT approved Sky Spine meshes
+    -- from older long promenades. This is local diagnostics only.
+    if player:GetAttribute("LocalOriginalShortSkySpineCradleCount")
+        ~= mountedShortSkySpineCradles then
+        player:SetAttribute("LocalOriginalShortSkySpineCradleCount",
+            mountedShortSkySpineCradles)
+    end
     if player:GetAttribute("LocalOriginalNearSupportColumnCount")
         ~= mountedCloseSupports then
         player:SetAttribute("LocalOriginalNearSupportColumnCount",
@@ -1212,6 +1227,58 @@ local function watchDecor(generated)
     decorRebuildPending = false
     if decor and decor:IsA("Folder") then
         local function supportChanged(part)
+            -- The complete short Sky Spine/long Promenade fallback may
+            -- stream AFTER its approved seven-MeshPart source template and
+            -- collidable PlatformN. Watch only genuine native underframes,
+            -- paired Sky Spine braces and one Promenade truss. Reuse the
+            -- existing 0.18s batched rebuild, never a render loop.
+            local cradleIndex =
+                PremiumLargeStructureMeshKit.cradleStreamNativeIndex(part)
+            if cradleIndex then
+                local templates = ReplicatedStorage:FindFirstChild(
+                    "ApprovedLargeStructureTemplates")
+                local arenaNow = workspace:FindFirstChild("GeneratedMap")
+                arenaNow = arenaNow and arenaNow:FindFirstChild("Arena")
+                local decks = arenaNow and arenaNow:FindFirstChild("Platforms")
+                local deck = decks and decks:FindFirstChild(
+                    "Platform"..tostring(cradleIndex))
+                local camera = workspace.CurrentCamera
+                if templates and deck and deck:IsA("BasePart")
+                    and camera and deck.CanCollide
+                    and (deck:GetAttribute("SkySpineStep") ~= nil
+                        or deck:GetAttribute("PromenadeStep") ~= nil) then
+                    local quality=VfxQuality.deviceTier(
+                        player:GetAttribute("VfxQualityTier"),
+                        UserInputService.TouchEnabled).Name
+                    local maxRange=quality=="Low" and 125
+                        or (quality=="Medium" and 195 or 270)
+                    local isSpine=deck:GetAttribute("SkySpineStep")~=nil
+                    local approved=templates:FindFirstChild("LongCradle")
+                        or (isSpine and templates:FindFirstChild(
+                            "ShortCradle"))
+                    if approved
+                        and (deck.Position-camera.CFrame.Position).Magnitude
+                            <= maxRange then
+                        if part.Parent ~= decor then
+                            -- One missing native underframe invalidates
+                            -- ONLY this actually mounted approved owner.
+                            if mountedLongCradles[deck] then
+                                queueSupportRebuild()
+                            end
+                        elseif not mountedLongCradles[deck]
+                            and (quality ~= "Low"
+                                or ((tonumber(player:GetAttribute(
+                                    "OptionalVfxPressure")) or 0)==0
+                                    and (tonumber(player:GetAttribute(
+                                    "LocalOriginalNearBridgeCradleCount"))
+                                        or 0)==0))
+                            and PremiumLargeStructureMeshKit
+                                .hasNativeCradleFallback(decor,deck) then
+                            queueSupportRebuild()
+                        end
+                    end
+                end
+            end
             -- Late-streamed four-edge + underframe fallbacks used to leave
             -- compatible 18-stud decks forever unselected. Rebuild only
             -- when the approved hull exists and one NEAR physical deck
