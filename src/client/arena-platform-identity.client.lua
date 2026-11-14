@@ -764,13 +764,6 @@ local function rebuild()
             -- A camera-selected original carapace, bridge, hatch, cradle
             -- or support can sit on an EVEN-index physical deck. Register
             -- the true approved 3D without reintroducing native Low paint.
-            if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
-                for _, piece in ipairs(PlatformFinishKit.build(
-                    folder, platform, variant, tier.Name, theme
-                )) do
-                    registerVisual(platform, piece)
-                end
-            end
             -- Build authentic 3D structural art first. If it succeeds,
             -- completely avoid the native WedgePart armor/brace/rail layers
             -- that previously occupied the SAME physical deck silhouette.
@@ -814,6 +807,18 @@ local function rebuild()
             local authenticCarapace = carapacePieces[1] ~= nil
                 and carapacePieces[1]:GetAttribute(
                     "Original3DStructuralSide") == true
+            -- Source ownership is known only after actual 3D mounting.
+            -- Never fabricate a fallback-looking keel beneath complete
+            -- creator-approved metal. Surface wayfinding remains intact.
+            -- Even-index Low keeps its original half-density paint rule.
+            if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
+                for _, piece in ipairs(PlatformFinishKit.build(
+                    folder, platform, variant, tier.Name, theme,
+                    authenticCarapace
+                )) do
+                    registerVisual(platform, piece)
+                end
+            end
             local sidePieces = {}
             if not authenticCarapace and not authenticRim then
                 sidePieces = (staged and staged.kind == "bridge"

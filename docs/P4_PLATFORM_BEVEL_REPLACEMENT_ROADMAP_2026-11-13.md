@@ -510,3 +510,30 @@ Un garde de régression dans `tools/audit_visual_structure_sources.py`
 contrôle la liaison des deux décorateurs à l'état réel du montage.
 La qualité perçue et les FPS Android restent à vérifier sur captures
 de l'expérience, séparément des tests statiques et Engine.
+
+## Lot P4 — suppression des pièces de finition inférieures superposées (14 novembre)
+
+L'inspection du rendu client a révélé une deuxième couche de primitives
+que le montage d'une coque originale n'éliminait pas. Le kit
+`PlatformFinishKit.build` créait **avant** le montage final les pièces
+`ClassicArmoredLip`, `TowerHoistMount`, `TowerGuideBracket`,
+`TowerMaintenanceMark` et `HarborUndersideKeel`, même lorsqu'une
+carapace/large coque 3D approuvée occupait déjà ce même dessous.
+
+Le montage de la coque précède maintenant la finition optionnelle. Seul
+un montage effectif identifié par `Original3DStructuralSide` peut
+supprimer ces cinq accents redondants. La finition supprime 1 Part pour
+une coque Classic, 3 pour Towers, 1 pour Harbor ; Crossroads et Orbital
+préservent tous leurs marquages de surface. Sur un deck non remplacé,
+toutes les primitives de secours sont inchangées. Low conserve sa cadence
+d'une plateforme sur deux. Aucun nouveau MeshPart, collision, AssetId,
+propriétaire, passe LOD ou appel réseau.
+
+La porte de provenance `PremiumPlatformSideMeshKit.verified` est aussi
+resserrée : les six modèles publiés comptent **7 MeshParts chacune**.
+Une source partiellement streamée (1..6) ou contenant des éléments
+supplémentaires ne peut plus être reconnue comme coque complète sur PC
+Medium/High. Une fixture Roblox Engine vérifie les cinq variantes,
+la sécurité physique, la restauration des primitives et les marquages
+supérieurs. Les audits source/build et sept suites Engine doivent être
+verts sur ce nouveau commit avant publication du jeu.

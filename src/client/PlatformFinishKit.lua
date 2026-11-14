@@ -930,7 +930,12 @@ function PlatformFinishKit.applyCollapseVisibility(parts, phase)
     end
 end
 
-function PlatformFinishKit.build(parent, platform, variant, tier, theme)
+-- The actual approved full underside owns its structural silhouette.
+-- Omit only redundant primitive underside paint after a complete genuine
+-- 3D carapace/hull mount. Surface guidance and all source-failure native
+-- fallback detail remain unchanged. The optional flag defaults to false.
+function PlatformFinishKit.build(parent, platform, variant, tier, theme,
+    genuineUnderdeck)
     local names = NAMES[variant]
     if not parent or not platform or not platform:IsA("BasePart")
         or not names or not theme
@@ -944,6 +949,14 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme)
     local built = {}
     local function piece(i, localFrame, size, color, material, alpha, shape)
         if i > count then return end
+        if genuineUnderdeck == true and (variant == "Towers"
+            or (i == 3 and (variant == "Classic"
+                or variant == "Harbor"))) then
+            -- Towers' 3 local marks, Classic's armored side lip and
+            -- Harbor's old rectangular keel overlap the true 3D hull.
+            -- Keep all surface markings on the other three variants.
+            return
+        end
         table.insert(built, add(parent, platform, names[i], localFrame, size,
             color, material, alpha, shape))
     end

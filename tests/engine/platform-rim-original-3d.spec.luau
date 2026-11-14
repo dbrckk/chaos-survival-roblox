@@ -7,6 +7,62 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 
 describe("Approved perimeter rim fallback and physics (engine)", function()
+    it("removes only redundant platform underside primitives beneath genuine seven-piece hulls", function()
+        local Finish=require("../../src/client/PlatformFinishKit")
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedPlatformFinishFallbackTest"
+        holder.Parent=workspace
+        local deck=Instance.new("Part")
+        deck.Name="Platform27"
+        deck.Size=Vector3.new(14,2,12)
+        deck.Anchored=true
+        deck.CanCollide=true
+        deck.Parent=holder
+        local theme={
+            Detail=Color3.fromRGB(172,183,196),
+            Secondary=Color3.fromRGB(110,164,188),
+            Structure=Color3.fromRGB(55,75,95),
+            Accent=Color3.fromRGB(112,187,218),
+            Surface=Color3.fromRGB(120,130,142),
+        }
+        for _,row in ipairs({
+            {"Classic",3,2},{"Towers",3,0},{"Harbor",3,2},
+            {"Crossroads",3,3},{"Orbital",3,3},
+        }) do
+            local variant,normalCount,sculptedCount=unpack(row)
+            local regular=Finish.build(holder,deck,variant,"High",theme)
+            expect(#regular).toBe(normalCount)
+            for _,piece in ipairs(regular) do piece:Destroy() end
+            local sculpted=Finish.build(holder,deck,variant,"High",
+                theme,true)
+            expect(#sculpted).toBe(sculptedCount)
+            for _,piece in ipairs(sculpted) do
+                expect(piece.CanCollide or piece.CanTouch or piece.CanQuery)
+                    .toBe(false)
+                expect(piece:FindFirstChild("ChaosPlatformTrimWeld")~=nil)
+                    .toBe(true)
+                piece:Destroy()
+            end
+            -- Failed/evicted approved source returns to the full native
+            -- fallback without changing collision or safety markings.
+            local fallback=Finish.build(holder,deck,variant,"High",
+                theme,false)
+            expect(#fallback).toBe(normalCount)
+            for _,piece in ipairs(fallback) do piece:Destroy() end
+            expect(deck.Anchored and deck.CanCollide).toBe(true)
+        end
+        -- Medium Harbor and Classic preserve their two upper markings.
+        for _,variant in ipairs({"Classic","Harbor","Crossroads","Orbital"}) do
+            local top=Finish.build(holder,deck,variant,"Medium",theme,true)
+            expect(#top).toBe(2)
+            for _,piece in ipairs(top) do piece:Destroy() end
+        end
+        local noHoist=Finish.build(holder,deck,"Towers","Medium",
+            theme,true)
+        expect(#noHoist).toBe(0)
+        holder:Destroy()
+    end)
+
     it("replaces four native platform bevel Wedges with seven approved rect/long MeshParts, never the collision deck", function()
         local Rim = require("../../src/client/ApprovedPlatformRimMeshKit")
         local RS = game:GetService("ReplicatedStorage")

@@ -1638,6 +1638,23 @@ assert OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil') < (
 print("PASS Towers/Harbor full 3D underside removes redundant primitives,"
       " source-failure fallback and top markings preserved")
 
+# True seven-material original side carapaces, including desktop High,
+# must reject partial/unapproved import clones rather than treating one
+# MeshPart as a complete kit and erasing their native visual fallback.
+SIDE=(CLIENT/"PremiumPlatformSideMeshKit.lua").read_text(encoding="utf8")
+FINISH=(CLIENT/"PlatformFinishKit.lua").read_text(encoding="utf8")
+assert 'if pieces ~= 7 then return nil end' in SIDE
+assert 'if pieces < 1 or pieces > 12 then return nil end' not in SIDE
+assert 'function PlatformFinishKit.build(parent, platform, variant, tier, theme,' in FINISH
+assert 'if genuineUnderdeck == true and (variant == "Towers"' in FINISH
+assert 'or (i == 3 and (variant == "Classic"' in FINISH
+assert 'or variant == "Harbor"))) then' in FINISH
+assert OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil') < (
+    OWNER.index('for _, piece in ipairs(PlatformFinishKit.build('))
+assert 'folder, platform, variant, tier.Name, theme,\n                    authenticCarapace' in OWNER
+print("PASS source-verified platform hull eliminates duplicate local underdeck"
+      " blocks on Classic/Towers/Harbor while retaining tops/fallback")
+
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger
 assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER

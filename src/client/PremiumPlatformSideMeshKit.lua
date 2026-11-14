@@ -32,7 +32,10 @@ local function verified(name)
             return nil
         end
     end
-    if pieces < 1 or pieces > 12 then return nil end
+    -- All six published creator originals contain EXACTLY seven real
+    -- material MeshParts. A half-streamed or altered 1..6-piece source
+    -- must not suppress any native fallback in Medium/High either.
+    if pieces ~= 7 then return nil end
     local _, size = model:GetBoundingBox()
     local long, short = math.max(size.X, size.Z), math.min(size.X, size.Z)
     if name == "Bridge" then
