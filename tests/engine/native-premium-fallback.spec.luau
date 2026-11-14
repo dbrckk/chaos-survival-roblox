@@ -1141,10 +1141,10 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(RemainingStructureKit.budget("Medium",true,0,"helix")).toBe(1)
                 expect(RemainingStructureKit.budget("High",true,0,"arch")).toBe(3)
                 expect(RemainingStructureKit.budget("High",true,0,"casing")).toBe(2)
-                expect(RemainingStructureKit.budget("Medium",false,0,"arch")).toBe(6)
+                expect(RemainingStructureKit.budget("Medium",false,0,"arch")).toBe(8)
                 expect(RemainingStructureKit.budget("Medium",false,0,"casing")).toBe(4)
                 expect(RemainingStructureKit.budget("Medium",false,0,"helix")).toBe(4)
-                expect(RemainingStructureKit.budget("High",false,0,"arch")).toBe(10)
+                expect(RemainingStructureKit.budget("High",false,0,"arch")).toBe(12)
                 expect(RemainingStructureKit.budget("High",false,0,"helix")).toBe(8)
                 expect(RemainingStructureKit.budget("Medium",false,1,"arch")).toBe(1)
                 expect(RemainingStructureKit.budget("Medium",false,1,"casing")).toBe(1)
@@ -1215,11 +1215,11 @@ describe("Original 3D native fallback isolation (engine)", function()
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
                 p4Phase="approved arch residency"
-                expect(RemainingStructureKit.count("arch")).toBe(10)
-                expect(RemainingStructureKit.nativeCount("arch")).toBe(50)
+                expect(RemainingStructureKit.count("arch")).toBe(12)
+                expect(RemainingStructureKit.nativeCount("arch")).toBe(60)
                 RemainingStructureKit.sync(arena,base.Position,"Medium",true,
                     Vector3.new(0,0,-1),0,false)
-                expect(RemainingStructureKit.count("arch")).toBe(6)
+                expect(RemainingStructureKit.count("arch")).toBe(8)
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
                 -- Verify REAL source-masked upper porticos on all FOUR
@@ -1261,7 +1261,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 local residentFolder=workspace:FindFirstChild(
                     "ApprovedRemainingStructureMeshesLocal")
                 expect(residentFolder~=nil).toBe(true)
-                -- Six high-PC arches can include several identical
+                -- Twelve high-PC arches can include several identical
                 local function ownedAccessClone()
                     for _,model in ipairs(residentFolder:GetChildren()) do
                         if model.Name=="ApprovedP4_Access"
@@ -1366,7 +1366,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(entryDeck.CanCollide).toBe(true)
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
-                expect(RemainingStructureKit.count("arch")).toBe(10)
+                expect(RemainingStructureKit.count("arch")).toBe(12)
                 expect(overpass.LocalTransparencyModifier).toBe(1)
                 if variantId=="Orbital" then
                     p4Phase="genuine Orbital helix residency"
