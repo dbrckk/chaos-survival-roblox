@@ -400,3 +400,33 @@ catastrophes sur chaque mesh importé.
 
 **P2 :** polissage des animations, effets d'ambiance et optimisation
 visuelle après preuve de stabilité et de fluidité sur smartphone.
+
+
+## Lot du 14 novembre — bâtiments 3D complets sur Android et sous pression GPU
+
+La priorisation des coques latérales sur les vrais bâtiments dotés d'une façade
+3D approuvée s'appliquait seulement à Medium PC sans pression. En Medium tactile,
+High tactile et lors de la réduction du budget GPU, la sélection indépendante
+pouvait dépenser des ressources sur d'autres bâtiments et laisser apparaître
+simultanément une façade 3D sans coque et une coque 3D sans façade.
+
+**Correction intégrée dans le propriétaire existant :** toutes les qualités
+Medium/High choisissent d'abord les bâtiments dont le véritable modèle de
+façade est déjà monté et authentifié pendant la même passe LOD. Les emplacements
+restants sont affectés par le classement caméra normal. Low conserve sa règle
+stricte de montage avec façade obligatoire. Il n'y a **aucune augmentation**
+des quotas Android (Medium 3, High 8), des budgets d'urgence ni du nombre de
+modèles importés. Les collisions, portes, guidages et cinq primitives natives
+de repli par bâtiment restent entièrement conservés.
+
+Le test moteur existant `district-sidewall-rollback.spec.luau` vérifie la
+correspondance exacte des masques 16 bâtiments sur Medium PC/tactile sain,
+Medium PC/tactile sous pression 1 et High tactile sain/sous pression 1 ;
+il vérifie également que les cinq coques High PC sous pression 1 restent
+incluses dans les six façades réelles. Le vérificateur source P4 détecte
+une régression vers la condition exclusive Medium PC.
+
+**État :** modifications du propriétaire, du test moteur et du contrôle source
+préparées ensemble ; validation automatisée à confirmer sur le SHA exact.
+Les mesures de FPS Android/8 joueurs et la publication Roblox publique ne sont
+pas réalisées par ce correctif GitHub.

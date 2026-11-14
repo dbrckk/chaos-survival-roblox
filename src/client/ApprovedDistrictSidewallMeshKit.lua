@@ -496,15 +496,21 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
     local wanted={}
     local limit=math.min(cap,#candidates)
     -- Facade sync runs FIRST in the SAME existing scenery-LOD pass.
-    -- Healthy desktop Medium must finish the eight genuine frontage
-    -- buildings before spending a six-MeshPart shell on a standalone
-    -- rear volume. A mild score bonus is insufficient when the facades
-    -- are spread across sectors farther than nearby native-only owners.
+    -- Complete genuine facade owners first on Medium/High, even when
+    -- mobile and emergency pressure budgets allow only 1/3/4/5 shells.
+    -- A mild score bonus alone cannot guarantee complete envelopes
+    -- when approved fronts span distant physical sectors.
     -- Never invent a facade: the marker is published only after its
     -- verified source is successfully mounted, and every shell retains
     -- its own native, streaming, geometry and source authentication.
-    -- Touch/Low/High and GPU backoff keep the old nearest-first ranking.
-    if tier=="Medium" and touch~=true and stress==0 then
+    -- Complete the same real approved buildings on every Medium/High
+    -- profile, including touch and GPU-pressure relief. The facade pass
+    -- has already run in this LOD tick, so prioritize its authenticated
+    -- resident owners before spending scarce six-MeshPart shell slots
+    -- on otherwise standalone native-front buildings.
+    -- Low remains strict in eligible(): never mount an unpaired shell.
+    -- All source, per-device, pressure and geometry limits are unchanged.
+    if tier~="Low" then
         local taken=0
         for _,candidate in ipairs(candidates) do
             if taken>=limit then break end

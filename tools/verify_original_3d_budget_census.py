@@ -1716,6 +1716,14 @@ for code in ('state[index] = "-"','state[index] = "N"',
              'local sides = bit32.band(loaded, bounded(sidewallMask))'):
     assert code in CENSUS_RULES,code
 assert 'LocalApprovedDistrictFacadeMounted' in SIDE
+# The scarcity-aware source allocation must finish authenticated buildings
+# in ALL Medium/High profiles, not just desktop Medium with zero pressure.
+assert 'if tier~="Low" then' in SIDE
+assert 'if tier=="Medium" and touch~=true and stress==0 then' not in SIDE
+assert 'if candidate.building:GetAttribute(' in SIDE
+assert '"LocalApprovedDistrictFacadeMounted")==true then' in SIDE
+assert 'if taken<limit then' in SIDE
+assert 'tier == "Low")' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
 assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
 assert 'Medium = {count = 8, distance = 205, retention = 20}' in SIDE

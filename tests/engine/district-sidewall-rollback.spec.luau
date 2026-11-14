@@ -262,8 +262,59 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 arena,camera,"Medium",true,true,0,look)
             expect(PremiumDistrictFacadeMeshKit.count()).toBe(3)
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(3)
-            expect(ApprovedDistrictSidewallMeshKit.completeCount()<=3)
-                .toBe(true)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(3)
+            expect(PremiumDistrictFacadeMeshKit.residentMask16())
+                .toBe(ApprovedDistrictSidewallMeshKit.residentMask16())
+            -- Every reduced budget should finish verified real envelopes,
+            -- rather than showing separate front-only and back-only art.
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"Medium",true,look,false,1)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,false,1,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(4)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(4)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(4)
+            expect(PremiumDistrictFacadeMeshKit.residentMask16())
+                .toBe(ApprovedDistrictSidewallMeshKit.residentMask16())
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"Medium",true,look,true,1)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,1,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(1)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
+            expect(PremiumDistrictFacadeMeshKit.residentMask16())
+                .toBe(ApprovedDistrictSidewallMeshKit.residentMask16())
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"High",true,look,true,0)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"High",true,true,0,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(8)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(8)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(8)
+            expect(PremiumDistrictFacadeMeshKit.residentMask16())
+                .toBe(ApprovedDistrictSidewallMeshKit.residentMask16())
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"High",true,look,true,1)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"High",true,true,1,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(4)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(4)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(4)
+            expect(PremiumDistrictFacadeMeshKit.residentMask16())
+                .toBe(ApprovedDistrictSidewallMeshKit.residentMask16())
+            -- Desktop High pressure retains one extra facade; every
+            -- retained shell must still be paired with a real front.
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"High",true,look,false,1)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"High",true,false,1,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(6)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(5)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(5)
+            local fronts=PremiumDistrictFacadeMeshKit.residentMask16()
+            local sides=ApprovedDistrictSidewallMeshKit.residentMask16()
+            expect(bit32.band(fronts,sides)).toBe(sides)
             PremiumDistrictFacadeMeshKit.sync(
                 arena,camera,"Medium",true,look,true,2)
             ApprovedDistrictSidewallMeshKit.sync(
