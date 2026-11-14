@@ -156,6 +156,55 @@ tactile. Aucun modèle artificiel `Part`/`WedgePart` n'est utilisé comme
 remplacement : seules les sources réellement importées font disparaître
 les natives.
 
+## Lot du 14 novembre — densité des vraies sculptures P4 hors Android
+
+**Problème identifié sur les propriétaires réels :** les modèles de
+sculpture approuvés ACCESS/TRANSFER/SUMMIT, Casing et Helix possèdent
+déjà leur géométrie originale complète (sept `MeshPart`/source), mais
+leurs budgets PC bloquaient encore de nombreux propriétaires physiques
+valides. En particulier les 12 arches d'accès des quatre routes
+périmétriques et les quatre casings par arène n'étaient pas tous
+éligibles en Medium PC, et six des huit rampes Orbital pouvaient
+rester primitives en Medium.
+
+**Lot réellement intégré dans `ApprovedRemainingStructureMeshKit.lua` :**
+
+| Résidence de vrais modèles approuvés | Low | Medium PC | High PC | Medium tactile | High tactile |
+|---|---:|---:|---:|---:|---:|
+| Arches d'ascension | 1 | **6** (avant 3) | **10** (avant 6) | 2 | 3 |
+| Carapaces de colonnes | 1 | **4** (avant 2) | 4 | 1 | 2 |
+| Structures sous rampes Orbital | 0 | **4** (avant 2) | **8** (avant 6) | 1 | 3 |
+
+- Les plafonds sont des **maxima de sources pouvant être montées**, pas
+  des objets 3D constatés en session. Il faut toujours que les pièces
+  non physiques natives, les colliders, les dimensions approuvées,
+  la caméra, le streaming et les états de catastrophe soient valides.
+- Par rapport aux plafonds précédents, Medium PC peut masquer jusqu'à
+  **45 volumes natifs supplémentaires** (3 arches × 5, 2 casings × 11,
+  2 sous-rampes × 4), et High PC **28 supplémentaires** (4 arches × 5,
+  2 sous-rampes × 4) dans une carte pouvant accueillir ces modèles.
+  Le véritable total côté client est publié par
+  `LocalP4RemainingStructuralNativePiecesReplaced`.
+- Les **plafonds Android restent identiques** et toute pression GPU de
+  niveau 1 conserve explicitement les ANCIENS plafonds d'urgence :
+  Medium PC (1/1/1), High PC (3/2/3), sans gonfler le mode stress.
+  Au niveau 2, toutes les natives sont restaurées. Les anciens
+  colliders, lumières de route et signaux de danger restent intacts.
+- La répartition des sources sur les quatre routes physiques et les
+  trois stades ACCESS/TRANSFER/SUMMIT s'applique désormais aussi à
+  Medium PC sain, et toujours à High PC. Les autres clients
+  conservent leur sélection locale proche caméra.
+- Aucun nouveau modèle Roblox, timer de rendu, requête réseau, route
+  physique, objet dynamique de collision ni nouveau budget PBR n'a
+  été créé ; les tests Lest/Roblox Cloud vérifient explicitement
+  les quotas sains, tactiles, et sous pression.
+
+**Validation attendue sur le SHA exact :** recensement de source
+`audit_visual_structure_sources.py`, budget
+`verify_original_3d_budget_census.py`, Build Validation et les
+sept suites Roblox Cloud Engine ; la publication publique ne doit
+pas être couplée au workflow de validation.
+
 ## Autres chantiers visuels prioritaires
 
 **P0 :** finir les structures de quartiers visibles non couvertes (le
