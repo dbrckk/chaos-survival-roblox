@@ -160,9 +160,6 @@ describe("Original 3D native fallback isolation (engine)", function()
     end)
 
     it("completes existing approved 3D district shells symmetrically with a true streamed 16-slot census", function()
-        -- Low never receives a reciprocal boost: its one sidewall must
-        -- FIRST have a true mounted facade. Medium/High can use a small
-        -- verified sidewall boost to complete an otherwise split building.
         expect(PremiumDistrictFacadeMeshKit.pairedPriority(
             100, true, "Low")).toBe(100)
         expect(PremiumDistrictFacadeMeshKit.pairedPriority(
@@ -185,8 +182,6 @@ describe("Original 3D native fallback isolation (engine)", function()
         local b16=bit32.lshift(1,15)
         local b8=bit32.lshift(1,7)
         local loaded=bit32.bor(b1,b2,b3,b4,b16)
-        -- Source models outside streamed buildings do not count. No
-        -- native-only building may be counted as a genuine replacement.
         local census=DistrictVisualCensusRules.summarize(
             loaded,bit32.bor(b1,b2,b8),bit32.bor(b2,b3,b8))
         expect(census.states:sub(1,4)).toBe("FBSN")
@@ -211,9 +206,6 @@ describe("Original 3D native fallback isolation (engine)", function()
     end)
 
     it("prioritizes genuinely paired Medium/High district shells without changing GPU caps", function()
-        -- Both legitimate LOD rankers compare an owner-verified front and
-        -- side/back shell on the SAME real server-authored building. At
-        -- most 16 studs of priority, never overriding an offscreen 80.
         expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
             100,true,"Medium")).toBe(84)
         expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
@@ -224,16 +216,12 @@ describe("Original 3D native fallback isolation (engine)", function()
             100,false,"Medium")).toBe(100)
         expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
             100,false,"High")).toBe(100)
-        -- A building 12 studs further away but genuinely complete takes
-        -- the sidewall slot from a partly primitive nearby facade.
         expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
             112,true,"Medium") < ApprovedDistrictSidewallMeshKit
                 .pairedPriority(100,false,"Medium")).toBe(true)
-        -- An actual 25-stud gap still wins in favor of the nearer native.
         expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
             126,true,"Medium") > ApprovedDistrictSidewallMeshKit
                 .pairedPriority(100,false,"Medium")).toBe(true)
-        -- Hidden or distant behind-camera buildings still lose decisively.
         expect(ApprovedDistrictSidewallMeshKit.pairedPriority(
             180,true,"High") > ApprovedDistrictSidewallMeshKit
                 .pairedPriority(100,false,"High")).toBe(true)
@@ -485,9 +473,6 @@ describe("Original 3D native fallback isolation (engine)", function()
         if previous then previous.Parent=nil end
         local generated,templates,meshes
         local result,err=pcall(function()
-            -- The real MapBuilder produces a 4.85-stud source support under
-            -- Platform2 (7-stud deck centre - 1-stud half-height - 1.15).
-            -- No fabricated Roblox native pillars are used for this test.
             local arena=MapBuilder.buildArena(Config,"Crossroads",
                 ArenaVariants,VisualTheme)
             generated=arena.Parent
@@ -501,10 +486,6 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(native.Anchored and not native.CanCollide
                 and not native.CanTouch and not native.CanQuery).toBe(true)
             expect(math.abs(native.Size.Y-4.85)<.001).toBe(true)
-            -- Exhaustive count for this exact Crossroads family: each
-            -- of four first elevated decks owns four real 4.85-stud
-            -- supports. Source eligibility is not sixteen simultaneous
-            -- client MeshParts, nor permission to erase their native art.
             local eligibleNativeCount=0
             for _,route in ipairs({2,4,6,8}) do
                 local owner=platforms:FindFirstChild("Platform"..route)
@@ -584,9 +565,6 @@ describe("Original 3D native fallback isolation (engine)", function()
                             if n then posts[#posts+1]={part.Name,n} end
                         end
                     end
-                    -- Match the actual pylon-first source reservation and
-                    -- fitting order; a real 12.2-stud pylon costs the same
-                    -- single seven-MeshPart module as a short metal post.
                     table.sort(posts,function(a,b)
                         local pa=a[1]:match(
                             "^SkySpine%d+_MonumentalPylon%-?1$") and 0 or 1
@@ -706,8 +684,6 @@ describe("Original 3D native fallback isolation (engine)", function()
             Kit.bind(arena,{},nil,mounted.covered,meshes)
             expect(Kit.count()).toBe(1)
             expect(native.LocalTransparencyModifier).toBe(1)
-            -- A single 7-MeshPart Low mount hides ONE native post, not
-            -- the other fifteen same-height posts or another deck.
             local maskedNativeCount=0
             for _,route in ipairs({2,4,6,8}) do
                 for corner=1,4 do
@@ -722,15 +698,11 @@ describe("Original 3D native fallback isolation (engine)", function()
                 end
             end
             expect(maskedNativeCount).toBe(1)
-            -- Collapse overrides any imported cosmetic; the real
-            -- server-owned collidable deck never becomes intangible.
             platform:SetAttribute("CollapsePhase","Warning")
             expect(Kit.count()).toBe(0)
             expect(native.LocalTransparencyModifier).toBe(0)
             platform:SetAttribute("CollapsePhase","Normal")
             expect(Kit.count()).toBe(1)
-            -- Streaming/destruction of the final source segment always
-            -- unmasks the original anchored, nonphysical server support.
             for _,part in ipairs(mounted.parts) do part:Destroy() end
             expect(Kit.count()).toBe(0)
             expect(native.LocalTransparencyModifier).toBe(0)
