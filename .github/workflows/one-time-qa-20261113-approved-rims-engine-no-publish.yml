@@ -15,6 +15,13 @@
 # P4 2026-11-14: the exact-main Cloud gate now validates 8 approved
 # facade + rear-shell models on healthy desktop Medium, while keeping
 # three Android Medium models, pressure rollback and original collision.
+# P4 2026-11-14: distribute 7-MeshPart approved Rect/Long platform rims
+# across visible desktop sectors within existing Medium=4/High=8 quotas.
+# Preserve Touch Low/Medium/High and pressure selection; amortize two
+# template authentications per rebuild and re-verify source at install.
+# Test four-quadrant 12-deck engine fixture, corrupted-source recovery,
+# native four-WedgePart rollback, complete Build and seven Cloud suites.
+# Exact-main QA only; NEVER publish Roblox place.
 # P4 next batch: the exact main SHA must pass full Build and all
 # seven real Roblox Open Cloud suites after cost-aware 7-MeshPart
 # support selection, lexical per-deck cost and High cradle transfers.
