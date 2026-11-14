@@ -494,8 +494,39 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
         return a.building.Name < b.building.Name
     end)
     local wanted={}
-    for i=1,math.min(cap,#candidates) do
-        wanted[candidates[i].building]=candidates[i]
+    local limit=math.min(cap,#candidates)
+    -- Facade sync runs FIRST in the SAME existing scenery-LOD pass.
+    -- Healthy desktop Medium must finish the eight genuine frontage
+    -- buildings before spending a six-MeshPart shell on a standalone
+    -- rear volume. A mild score bonus is insufficient when the facades
+    -- are spread across sectors farther than nearby native-only owners.
+    -- Never invent a facade: the marker is published only after its
+    -- verified source is successfully mounted, and every shell retains
+    -- its own native, streaming, geometry and source authentication.
+    -- Touch/Low/High and GPU backoff keep the old nearest-first ranking.
+    if tier=="Medium" and touch~=true and stress==0 then
+        local taken=0
+        for _,candidate in ipairs(candidates) do
+            if taken>=limit then break end
+            if candidate.building:GetAttribute(
+                "LocalApprovedDistrictFacadeMounted")==true then
+                wanted[candidate.building]=candidate
+                taken+=1
+            end
+        end
+        if taken<limit then
+            for _,candidate in ipairs(candidates) do
+                if taken>=limit then break end
+                if not wanted[candidate.building] then
+                    wanted[candidate.building]=candidate
+                    taken+=1
+                end
+            end
+        end
+    else
+        for i=1,limit do
+            wanted[candidates[i].building]=candidates[i]
+        end
     end
     local obsolete={}
     for building,entry in pairs(mounted) do
