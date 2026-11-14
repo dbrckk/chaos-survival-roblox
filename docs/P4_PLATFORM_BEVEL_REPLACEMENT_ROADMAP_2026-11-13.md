@@ -205,6 +205,45 @@ rester primitives en Medium.
 sept suites Roblox Cloud Engine ; la publication publique ne doit
 pas être couplée au workflow de validation.
 
+## Lot 14 novembre — coût exact des supports 3D par route
+
+Le recensement des supports existants a mis en évidence un écart entre
+**la sélection caméra** et **le montage réel** : un pilier natif haut
+consomme 2 ou 3 modules authentiques de sept `MeshPart`, mais la
+sélection comptait un emplacement par plateforme, avec au plus un
+coût minimal arbitraire. Sur High PC, la conversion facultative de
+quatre modules de colonnes en berceaux LongCradle n'était pas non
+plus prise en compte lors du choix des supports. Certains supports
+étaient donc sélectionnés sans capacité effective de montage ;
+leurs gros volumes primitifs restaient visibles.
+
+**Correction sur les modèles approuvés déjà présents :**
+
+- Grouper les vrais `PlatformSupportN_x` éligibles, les trier **dans
+  le même ordre lexical que le monteur**, puis additionner leurs coûts
+  vérifiés par `supportFit` (un sur Medium/Low, deux sur High).
+- Le sélecteur spatial continue à privilégier les premiers plans, puis
+  la diversité géographique de la carte, **mais exclut les plateformes
+  dont les modules ne tiennent plus dans le solde**.
+- Medium : 8 modules maximum, High : 16 modules moins les quatre
+  éventuels transferts vers LongCradle, Low : un seul modèle ou aucun
+  si un berceau occupe déjà son slot. **Aucun budget Android, MeshPart,
+  asset 3D ou boucle de rendu n'est ajouté.**
+- Un test Roblox Engine utilise les supports natifs générés par
+  `MapBuilder` sur Crossroads. Il calcule séparément le total de
+  modules des plateformes effectivement sélectionnées et garantit
+  `Medium <= 8`, `High <= 16 - transfert`, sans se contenter
+  du nombre de plateformes sélectionnées.
+- Les contrôles statiques de budget et de propriété source vérifient
+  l'ordre réel, le coût par support et le plafond après transfert ;
+  toute régression bloque le contrôle de publication.
+
+**À mesurer en client Android/PC :** nombre de piliers primitifs
+encore visibles par caméra, modules authentiques réellement montés,
+FPS p50/p95 et latence de reconstruction du propriétaire de plateforme.
+La baisse effective de blocs visibles n'est pas quantifiée sans
+échantillonnage client.
+
 ## Autres chantiers visuels prioritaires
 
 **P0 :** finir les structures de quartiers visibles non couvertes (le
