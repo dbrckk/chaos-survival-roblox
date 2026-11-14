@@ -117,6 +117,29 @@ describe("Original 3D native fallback isolation (engine)", function()
                 arena,position,"Low",true,look,true,0)
             expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
             expect(roof.Transparency).toBe(1)
+            -- A source that loses its owner's approval must not retain
+            -- an invisible native roof until the next camera sample.
+            source:SetAttribute("OwnerVerified",false)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(0)
+            expect(roof.Transparency).toBe(originalAlpha)
+            expect(base.CanCollide).toBe(true)
+            source:SetAttribute("OwnerVerified",true)
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,position,"Low",true,look,true,0)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(roof.Transparency).toBe(1)
+            -- An unexpected source Part immediately revokes the original
+            -- package; it must never be accepted as extra genuine 3D.
+            local injected=Instance.new("Part")
+            injected.Name="UnapprovedSourcePart"
+            injected.Parent=source
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(0)
+            expect(roof.Transparency).toBe(originalAlpha)
+            injected:Destroy()
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,position,"Low",true,look,true,0)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(roof.Transparency).toBe(1)
             -- Severe pressure also evicts even the permitted Medium
             -- front; it cannot remain orphaned while sidewalls fall back.
             PremiumDistrictFacadeMeshKit.sync(
@@ -132,6 +155,91 @@ describe("Original 3D native fallback isolation (engine)", function()
         if previousTemplates then
             previousTemplates.Parent=ReplicatedStorage
         end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
+    it("restores five native district sidewalls immediately on revoked source or native mutation", function()
+        local ReplicatedStorage=game:GetService("ReplicatedStorage")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        local previous=ReplicatedStorage:FindFirstChild(
+            "ApprovedDistrictSidewallShellTemplates")
+        if previousMap then previousMap.Parent=nil end
+        if previous then previous.Parent=nil end
+        ApprovedDistrictSidewallMeshKit.sync(
+            nil,Vector3.zero,"Low",false,false,0)
+        local generated,templates
+        local ok,why=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Classic",
+                ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local district=arena:FindFirstChild("Decor")
+                :FindFirstChild("ArenaDistrictArchitecture3D")
+            local building=district:FindFirstChild("DistrictNorth1")
+            local door=building:FindFirstChild("ServiceEntryDoor")
+            local core=building:FindFirstChild("ServiceCore")
+            expect(door~=nil and core~=nil).toBe(true)
+            local original=core.Transparency
+            local source=Instance.new("Model")
+            source.Name="Sidewall"
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute("OriginalDistrictSidewallShell3D",true)
+            source:SetAttribute("Original3DAssetId",77387019170428)
+            for i=1,6 do
+                local piece=Instance.new("MeshPart")
+                piece.Name="ApprovedMaterial"..i
+                piece.Size=if i==1 then Vector3.new(10.5,13.2,7.4)
+                    else Vector3.new(.35,.35,.35)
+                piece.Anchored=true
+                piece.CanCollide=false
+                piece.CanTouch=false
+                piece.CanQuery=false
+                piece.Parent=source
+            end
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedDistrictSidewallShellTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=ReplicatedStorage
+            source.Parent=templates
+            local camera=door.Position+Vector3.new(0,5,0)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(true)
+            expect(core.Transparency).toBe(1)
+            expect(ApprovedDistrictSidewallMeshKit.count()>0).toBe(true)
+            source:SetAttribute("OwnerVerified",false)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(core.Transparency).toBe(original)
+            source:SetAttribute("OwnerVerified",true)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(true)
+            local originalSize=core.Size
+            core.Size=originalSize+Vector3.new(1,0,0)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(nil)
+            expect(core.Transparency).toBe(original)
+            core.Size=originalSize
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
+            expect(building:GetAttribute(
+                "LocalApprovedDistrictSidewallMounted")).toBe(true)
+            local injected=Instance.new("Part")
+            injected.Parent=source
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(core.Transparency).toBe(original)
+            injected:Destroy()
+            expect(door.CanCollide or door.CanTouch or door.CanQuery)
+                .toBe(false)
+        end)
+        ApprovedDistrictSidewallMeshKit.sync(
+            nil,Vector3.zero,"Low",false,false,0)
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if previous then previous.Parent=ReplicatedStorage end
         if previousMap then previousMap.Parent=workspace end
         if not ok then error(why) end
     end)
