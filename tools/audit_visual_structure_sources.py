@@ -950,6 +950,21 @@ report = {
     "meshkits": client_3d,
     "local_owner_modules": dict(sorted(owner_modules.items())),
 }
+# P4 district shell safety: in-place mesh mutation is not a descendant
+# event. Both authenticated source and resident clone must synchronously
+# restore native volumes when geometry, anchoring or collision is changed.
+for owner in ("ApprovedDistrictSidewallMeshKit.lua",
+              "PremiumDistrictFacadeMeshKit.lua"):
+    code = (ROOT / "src/client" / owner).read_text(encoding="utf8")
+    for signal in (
+        'sourcePiece:GetPropertyChangedSignal(property):Connect(',
+        'piece:GetPropertyChangedSignal(property):Connect(',
+        '"MeshId", "Size", "CFrame", "Anchored"',
+        '"CanCollide", "CanTouch", "CanQuery"',
+    ):
+        assert signal in code, (owner, signal)
+print("PASS district 3D native rollback on source and mounted mesh mutation")
+
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 OUTPUT.write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n",
                   encoding="utf8")
