@@ -170,6 +170,29 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             end
             expect(highDesktop[rectangular]).toBe("Rect")
             expect(highDesktop[elongated]).toBe("Long")
+            -- Source snapshots are valid only for one selection call:
+            -- a newly corrupted imported template must not let an old
+            -- verified bounding box authorize a cosmetic replacement.
+            local sourceRect=templates:FindFirstChild("Rect")
+            local sourcePiece=sourceRect:FindFirstChild("OriginalMaterial_1")
+            sourcePiece.CanQuery=true
+            local withInvalidRect=Rim.selectVisibleDecks(
+                allDecks,"High",base,point,0,false,decor,{}, {})
+            expect(withInvalidRect[rectangular]).toBe(nil)
+            expect(withInvalidRect[elongated]).toBe("Long")
+            for _,kind in pairs(withInvalidRect) do
+                expect(kind).toBe("Long")
+            end
+            sourcePiece.CanQuery=false
+            local restored=Rim.selectVisibleDecks(
+                allDecks,"High",base,point,0,false,decor,{}, {})
+            expect(restored[rectangular]).toBe("Rect")
+            -- Existing carapace arbitration still forbids duplicate
+            -- approved rims on a previously selected physical deck.
+            local reserved=Rim.selectVisibleDecks(
+                allDecks,"High",base,point,0,false,decor,
+                {[rectangular]=true},{})
+            expect(reserved[rectangular]).toBe(nil)
             local rimRect = Rim.install(meshes,rectangular,31,"Rect",decor)
             local rimLong = Rim.install(meshes,elongated,32,"Long",decor)
             expect(rimRect~=nil and #rimRect==7).toBe(true)
