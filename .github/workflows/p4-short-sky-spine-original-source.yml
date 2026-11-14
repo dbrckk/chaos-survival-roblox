@@ -1,0 +1,69 @@
+name: P4 Short Sky Spine Original 3D Source Preview
+
+# Source-quality only: this job does NOT import to Roblox or publish a Place.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_original_short_sky_spine_cradle.py
+      - .github/workflows/p4-short-sky-spine-original-source.yml
+      - tools/obj_to_gltf.py
+      - tools/generate_original_skyfleet_carrier.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate original triangulated short underframe source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_original_short_sky_spine_cradle.py \
+            --output "$RUNNER_TEMP/short_sky_spine_cradle.obj" \
+            > "$RUNNER_TEMP/short_sky_spine_cradle.source.json"
+          cat "$RUNNER_TEMP/short_sky_spine_cradle.source.json"
+      - name: Validate seven-material embedded glTF and real geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/obj_to_gltf.py \
+            --source "$RUNNER_TEMP/short_sky_spine_cradle.obj" \
+            --materials assets/source/chaos_route_kit.mtl \
+            --output "$RUNNER_TEMP/short_sky_spine_cradle.gltf" \
+            > "$RUNNER_TEMP/short_sky_spine_cradle.gltf.json"
+          python3 - <<'PY'
+          import base64, json, os
+          from pathlib import Path
+          d = Path(os.environ["RUNNER_TEMP"])
+          source = json.loads((d/"short_sky_spine_cradle.source.json").read_text())
+          gltf = json.loads((d/"short_sky_spine_cradle.gltf").read_text())
+          assert source["requires_moderated_roblox_id"] is True
+          assert source["original_creator_source_only"] is True
+          assert len(source["materials"]) == 7
+          assert 900 <= source["triangles"] <= 4600
+          assert gltf["asset"]["version"] == "2.0"
+          assert len(gltf["meshes"][0]["primitives"]) == 7
+          buf = gltf["buffers"][0]
+          raw = base64.b64decode(buf["uri"].split(",", 1)[1], validate=True)
+          assert len(raw) == buf["byteLength"] and len(raw) > 10000
+          for v in gltf["bufferViews"]:
+              assert v.get("byteOffset", 0) + v["byteLength"] <= len(raw)
+          print("PASS genuine open underframe, seven materials, self-contained GLTF")
+          PY
+      - name: Preserve actual 3D source preview for review and moderated import
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-short-sky-spine-original-3d-preview
+          path: |
+            ${{ runner.temp }}/short_sky_spine_cradle.obj
+            ${{ runner.temp }}/short_sky_spine_cradle.gltf
+            ${{ runner.temp }}/short_sky_spine_cradle.source.json
+            ${{ runner.temp }}/short_sky_spine_cradle.gltf.json
+          if-no-files-found: error
+          retention-days: 14
