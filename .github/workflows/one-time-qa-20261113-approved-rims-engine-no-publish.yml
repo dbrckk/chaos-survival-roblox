@@ -9,6 +9,9 @@
 # specs including the isolated five-native-sidewall rollback fixture,
 # approved facade/source revocation, full Build and 7 cloud suites
 # on one exact main SHA. Never publish the public Roblox place.
+# P4 in-place mutation closeout: the same 88-spec engine suite must
+# prove synchronous native fallback on source MeshPart geometry edits
+# and mounted clone physics changes, without a new RenderStepped loop.
 name: One-time QA 2026-11-13 Approved Platform Rims Engine No Publish
 on:
   push:
