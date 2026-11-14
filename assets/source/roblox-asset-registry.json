@@ -428,6 +428,14 @@
       "workflow_run_id": 41808940118
     },
     {
+      "name": "short_sky_spine_cradle",
+      "asset_id": "140716716476069",
+      "moderation": "Approved",
+      "source": "tools/generate_original_short_sky_spine_cradle.py",
+      "source_materials": "assets/source/chaos_route_kit.mtl",
+      "workflow_run_id": 43643193625
+    },
+    {
       "name": "harbor_promenade_portal",
       "asset_id": "134157110756659",
       "moderation": "Approved",
