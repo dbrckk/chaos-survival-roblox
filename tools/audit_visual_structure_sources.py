@@ -144,7 +144,7 @@ print("PASS district approved 3D clone rejects foreign geometry/scripts")
 sidewall = (ROOT / "src/client/ApprovedDistrictSidewallMeshKit.lua").read_text(
     encoding="utf8")
 for clause in (
-    "Medium = {count = 5, distance = 205, retention = 20}",
+    "Medium = {count = 8, distance = 205, retention = 20}",
     "High = {count = 16, distance = 275, retention = 28}",
     "local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}",
     "if tier == \"High\" then cap = math.min(cap, 5) end",
