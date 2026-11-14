@@ -5,6 +5,8 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local ApprovedDistrictSidewallMeshKit = require(
     "../../src/client/ApprovedDistrictSidewallMeshKit")
+local PremiumDistrictFacadeMeshKit = require(
+    "../../src/client/PremiumDistrictFacadeMeshKit")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local VisualTheme = require("../../src/shared/VisualTheme")
@@ -155,6 +157,136 @@ describe("Authenticated district sidewall restoration (engine)", function()
         if generated then generated:Destroy() end
         if previous then previous.Parent=ReplicatedStorage end
         if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+    it("completes desktop Medium 3D envelopes across real 16 district owners without raising Android budgets",function()
+        local RS=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldFacade=RS:FindFirstChild("ApprovedDistrictFacadeTemplates")
+        local oldSidewall=RS:FindFirstChild(
+            "ApprovedDistrictSidewallShellTemplates")
+        if oldMap then oldMap.Parent=nil end
+        if oldFacade then oldFacade.Parent=nil end
+        if oldSidewall then oldSidewall.Parent=nil end
+        PremiumDistrictFacadeMeshKit.sync(
+            nil,Vector3.zero,"Low",false)
+        ApprovedDistrictSidewallMeshKit.sync(
+            nil,Vector3.zero,"Low",false,false,0)
+        local generated,facades,shells
+        local ok,why=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Classic",
+                ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            facades=Instance.new("Folder")
+            facades.Name="ApprovedDistrictFacadeTemplates"
+            facades:SetAttribute("OwnerVerified",true)
+            facades.Parent=RS
+            local ids={132020956214241,88725004643299,
+                84217436280282,135791763112202}
+            local names={"Observatory","Freight","Turbine","Aerial"}
+            for i,name in ipairs(names) do
+                local model=Instance.new("Model")
+                model.Name=name
+                model:SetAttribute("OwnerVerified",true)
+                model:SetAttribute("CosmeticOnly",true)
+                model:SetAttribute("DistrictFacade3D",true)
+                model:SetAttribute("Original3DAssetId",ids[i])
+                local piece=Instance.new("MeshPart")
+                piece.Name="VerifiedFacadeMaterial"
+                piece.Size=Vector3.new(12,20,8)
+                piece.Anchored=true
+                piece.CanCollide=false
+                piece.CanTouch=false
+                piece.CanQuery=false
+                piece.Parent=model
+                model.Parent=facades
+            end
+            shells=Instance.new("Folder")
+            shells.Name="ApprovedDistrictSidewallShellTemplates"
+            shells:SetAttribute("OwnerVerified",true)
+            shells.Parent=RS
+            local shell=Instance.new("Model")
+            shell.Name="Sidewall"
+            shell:SetAttribute("OwnerVerified",true)
+            shell:SetAttribute("CosmeticOnly",true)
+            shell:SetAttribute("OriginalDistrictSidewallShell3D",true)
+            shell:SetAttribute("Original3DAssetId",77387019170428)
+            for i=1,6 do
+                local piece=Instance.new("MeshPart")
+                piece.Name="ApprovedMaterial"..i
+                piece.Size=if i==1 then Vector3.new(10.5,13.2,7.4)
+                    else Vector3.new(.35,.35,.35)
+                piece.Anchored=true
+                piece.CanCollide=false
+                piece.CanTouch=false
+                piece.CanQuery=false
+                piece.Parent=shell
+            end
+            shell.Parent=shells
+            local base=arena:FindFirstChild("Base")
+            local district=arena:FindFirstChild("Decor")
+                :FindFirstChild("ArenaDistrictArchitecture3D")
+            local camera=base.Position+Vector3.new(0,7,0)
+            local look=Vector3.new(0,0,1)
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"Medium",true,look,false,0)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,false,0,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(8)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(8)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(8)
+            expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount())
+                .toBe(40)
+            expect(PremiumDistrictFacadeMeshKit.residentMask16())
+                .toBe(ApprovedDistrictSidewallMeshKit.residentMask16())
+            local sides={}
+            local full=0
+            for _,building in ipairs(district:GetChildren()) do
+                if building:GetAttribute(
+                    "LocalApprovedDistrictFacadeMounted")==true then
+                    full+=1
+                    expect(building:GetAttribute(
+                        "LocalApprovedDistrictSidewallMounted")).toBe(true)
+                    sides[building:GetAttribute("DistrictSide")]=true
+                end
+            end
+            expect(full).toBe(8)
+            local sectors=0
+            for _ in pairs(sides) do sectors+=1 end
+            expect(sectors>=3).toBe(true)
+            -- A lower GPU tier preserves the old phone limits, even
+            -- after the desktop distributed 8 authentic models.
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"Medium",true,look,true,0)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(3)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(3)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()<=3)
+                .toBe(true)
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"Medium",true,look,true,2)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,2,look)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(0)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(base.CanCollide).toBe(true)
+            PremiumDistrictFacadeMeshKit.sync(
+                arena,camera,"Medium",true,look,false,0)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,false,0,look)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(8)
+        end)
+        ApprovedDistrictSidewallMeshKit.sync(
+            nil,Vector3.zero,"Low",false,false,0)
+        PremiumDistrictFacadeMeshKit.sync(
+            nil,Vector3.zero,"Low",false)
+        if shells then shells:Destroy() end
+        if facades then facades:Destroy() end
+        if generated then generated:Destroy() end
+        if oldSidewall then oldSidewall.Parent=RS end
+        if oldFacade then oldFacade.Parent=RS end
+        if oldMap then oldMap.Parent=workspace end
         if not ok then error(why) end
     end)
 end)
