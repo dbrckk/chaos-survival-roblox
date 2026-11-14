@@ -5,9 +5,10 @@
 # Final exact-SHA retest: full rectangular/long rim game-engine checks,
 # safe shrinking keel footprint, 6 PC / 4 touch underdeck beam fixtures,
 # and approved five-world structures. No automatic public publication.
-# P4 support pre-fit closeout: require the exact main SHA to pass 7 real
-# engine suites plus full Build Validation after seven-mesh provenance
-# hardening and shared 1/2/3 column-module geometry checks.
+# P4 district ownership closeout (2026-11-14): validate 88 engine
+# specs including the isolated five-native-sidewall rollback fixture,
+# approved facade/source revocation, full Build and 7 cloud suites
+# on one exact main SHA. Never publish the public Roblox place.
 name: One-time QA 2026-11-13 Approved Platform Rims Engine No Publish
 on:
   push:
