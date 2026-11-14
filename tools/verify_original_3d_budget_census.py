@@ -1647,10 +1647,10 @@ print("PASS Towers/Harbor full 3D underside removes redundant primitives,"
 # True seven-material original side carapaces, including desktop High,
 # must reject partial/unapproved import clones rather than treating one
 # MeshPart as a complete kit and erasing their native visual fallback.
-SIDE=(CLIENT/"PremiumPlatformSideMeshKit.lua").read_text(encoding="utf8")
+PLATFORM_SIDE=(CLIENT/"PremiumPlatformSideMeshKit.lua").read_text(encoding="utf8")
 FINISH=(CLIENT/"PlatformFinishKit.lua").read_text(encoding="utf8")
-assert 'if pieces ~= 7 then return nil end' in SIDE
-assert 'if pieces < 1 or pieces > 12 then return nil end' not in SIDE
+assert 'if pieces ~= 7 then return nil end' in PLATFORM_SIDE
+assert 'if pieces < 1 or pieces > 12 then return nil end' not in PLATFORM_SIDE
 assert 'function PlatformFinishKit.build(parent, platform, variant, tier, theme,' in FINISH
 assert 'if genuineUnderdeck == true and (variant == "Towers"' in FINISH
 assert 'or (i == 3 and (variant == "Classic"' in FINISH
