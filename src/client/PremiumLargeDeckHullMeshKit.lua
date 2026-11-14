@@ -132,8 +132,43 @@ function Kit.selectVisibleDecks(platforms, tier, base, cameraPoint,
         end
         return a.part.Name < b.part.Name
     end)
-    for i=1,math.min(cap,#ranked) do
-        chosen[ranked[i].part] = true
+    local count=math.min(cap,#ranked)
+    -- Healthy desktop: keep the authentic near-camera full underside
+    -- shells, then allocate EXISTING remaining slots to separated real
+    -- decks on the same visible map. Otherwise six 18-stud approved
+    -- hulls cluster into one block while remote compatible underframes
+    -- remain primitive. Touch, Low and GPU pressure remain nearest-first.
+    if touch~=true and stress==0 and count>=3 then
+        local foreground=tier=="High" and math.min(3,count)
+            or math.min(2,count)
+        for i=1,foreground do chosen[ranked[i].part]=true end
+        local taken=foreground
+        local spacingCap=math.max(base.Size.X,base.Size.Z)*.65
+        while taken<count do
+            local winner,winnerScore=nil,-math.huge
+            for _,candidate in ipairs(ranked) do
+                if not chosen[candidate.part] then
+                    local nearest=spacingCap
+                    for deck in pairs(chosen) do
+                        local delta=candidate.part.Position-deck.Position
+                        nearest=math.min(nearest,Vector3.new(
+                            delta.X,delta.Y*.65,delta.Z).Magnitude)
+                    end
+                    local score=nearest-candidate.distance*.14
+                    if score>winnerScore or (score==winnerScore
+                        and winner and candidate.part.Name
+                            <winner.part.Name) then
+                        winner=candidate
+                        winnerScore=score
+                    end
+                end
+            end
+            if not winner then break end
+            chosen[winner.part]=true
+            taken+=1
+        end
+    else
+        for i=1,count do chosen[ranked[i].part]=true end
     end
     return chosen
 end
