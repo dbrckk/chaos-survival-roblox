@@ -292,6 +292,47 @@ effectivement masqués sont comptés par
 Ces chiffres et la mesure FPS Android doivent être relevés en session
 avant d'affirmer un pourcentage de conversion ou un gain GPU.
 
+## Lot P4 — underdeck 18 studs sculptés dans plusieurs secteurs (14 novembre)
+
+**Défaut visuel restant :** le modèle original créateur
+`LargeDeckHull` (Roblox Approved **125929150866282**, 7 vrais
+`MeshPart`) était déjà importé et son propriétaire pouvait masquer
+les **quatre `WedgePart` des bordures** et le sous-cadre natif.
+Cependant la sélection PC dépensait toutes ses résidences sur les
+premiers decks au plus près de la caméra. Les plateformes collidables
+compatibles plus éloignées restaient primitives, malgré le modèle
+approuvé et une zone LOD encore valide.
+
+**Amélioration effective :**
+- Medium PC, sans pression GPU : conserver les **2** plus proches puis
+  choisir **1** vraie plateforme éloignée suivant l'écart spatial.
+  Plafond inchangé **3** coques approuvées.
+- High PC, sans pression : conserver les **3** plus proches puis
+  répartir **3** autres modèles sur des zones distantes de la même
+  carte 320×320. Plafond inchangé **6** coques approuvées.
+- Android/Touch conserve **1 Medium / 3 High** coques maximum ;
+  pression GPU 1 réduit les plafonds de moitié et conserve le tri
+  proximité, pression 2 restaure les primitives ; Low inchangé.
+- Pour chaque deck éligible, maintenir l'exigence d'un collidant
+  `PlatformN` authentique, des quatre bordures et du
+  `PlatformUnderFrame` complets, d'un ajustement de géométrie
+  approuvé et d'une empreinte stable. L'installation réauthentifie
+  encore la source et chaque pièce native au moment du montage.
+- Aucun nouvel asset, aucune primitive de remplacement fictive,
+  aucune collision ni nouvelle boucle de rendu : seulement
+  l'allocation spatiale des **mêmes 3/6 modèles** précédemment
+  autorisés. Les formes natives restent en place pour restaurer
+  immédiatement la scène.
+- Le test `platform-rim-original-3d.spec.luau` contient désormais
+  **12 decks collidables** et leurs vrais quatre `WedgePart` de
+  repli. Il vérifie la répartition PC, les caps Android et sous
+  pression, le montage de sept `MeshPart`, et le refus d'un montage
+  si une bordure native disparaît ou si l'asset est révoqué.
+  L'audit statique exige explicitement la logique spatiale.
+- L'impact perçu et les FPS n'ont pas été mesurés en session réelle ;
+  les gains de silhouettes restent conditionnés à la présence des
+  plateformes éligibles et des modèles de source streamés.
+
 ## Autres chantiers visuels prioritaires
 
 **P0 :** finir les structures de quartiers visibles non couvertes (le
