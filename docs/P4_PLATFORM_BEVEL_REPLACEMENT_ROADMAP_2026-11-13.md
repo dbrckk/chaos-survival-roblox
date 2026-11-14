@@ -485,3 +485,28 @@ base non convertis malgré les sources originales déjà disponibles.
 **Limite :** budget d'affichage maximal et non 12 arches systématiquement
 visibles. La validation CI et moteur du nouveau SHA, ainsi que les captures
 et FPS en situation de huit joueurs, restent à confirmer avant publication.
+
+## Lot P4 — élimination de la superposition des primitifs sous les coques approuvées (14 novembre)
+
+Les décors clients `TowerPlatformLiftCore` (cylindre) et
+`TowerPlatformBrace` (barre) sur Towers, ainsi que `HarborKeelMount`
+(bloc rectangulaire sous le quai) sur Harbor, étaient construits même
+lorsqu'une carapace/hull originale **complète** de sept MeshParts était
+effectivement montée sur le même deck. Ces volumes basiques peuvent
+dépasser ou gêner visuellement les silhouettes métalliques sculptées,
+alors qu'ils sont redondants.
+
+`arena-platform-identity.client.lua` supprime désormais ces sous-décors
+**uniquement** si `authenticCarapace` est confirmé à partir de la vraie
+`MeshPart` montée. Un modèle sélectionné mais non installé, un simple
+rim de quatre biseaux, un pont partiel, un import incomplet ou un
+retour aux natives conserve son ancien décor. La bande supérieure
+`HarborCargoLashing` et les marquages d'orientation/navigation restent
+visibles. Aucun nouvel objet/mesh, asset, collider, événement, budget
+ou passe de rendu ajouté : dans les zones déjà sculptées, cela
+**réduit** le nombre de primitives clients simultanément visibles.
+
+Un garde de régression dans `tools/audit_visual_structure_sources.py`
+contrôle la liaison des deux décorateurs à l'état réel du montage.
+La qualité perçue et les FPS Android restent à vérifier sur captures
+de l'expérience, séparément des tests statiques et Engine.

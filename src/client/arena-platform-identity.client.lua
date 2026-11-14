@@ -260,7 +260,12 @@ local function decorateClassic(platform, index, theme, tier)
     end
 end
 
-local function decorateTowers(platform, index, theme, tier)
+local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)
+    -- A complete, already mounted approved carapace/hull owns this
+    -- deck's underside. Do not overlay it with a primitive cylinder and
+    -- rectangular brace; retain both as genuine fallback otherwise.
+    -- Rims/bridge girders alone do not cover the central underside.
+    if genuineUnderdeck then return end
     local bottom = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.18, 0)
     local radius = math.max(2.0, math.min(platform.Size.X, platform.Size.Z) * 0.28)
 
@@ -395,7 +400,7 @@ end
 -- pieces, takeoff chevrons and physical panels still display normally.
 -- All pieces are inside the real deck, linked to its shrink footprint
 -- and inherit collapse visibility from the existing single owner.
-local function decorateHarbor(platform, index, theme, tier)
+local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
     if tier.Name == "Low" then return end
     local width = math.min(platform.Size.X, platform.Size.Z)
     if width < 4.5 then return end
@@ -416,7 +421,9 @@ local function decorateHarbor(platform, index, theme, tier)
         0.26,
         platform
     )
-    if tier.Name == "High" then
+    -- The approved seven-MeshPart underside replaces this flat native
+    -- keel block, but NOT Harbor's useful top-surface cargo lashing.
+    if tier.Name == "High" and not genuineUnderdeck then
         makePart(
             "HarborKeelMount" .. index,
             Vector3.new(
@@ -923,14 +930,19 @@ local function rebuild()
                 registerVisual(platform, piece)
             end
 
+            -- Only the actually mounted full underside can suppress
+            -- duplicate primitive trim; a selected-but-failed source or
+            -- an edge-only rim must preserve the native accents.
             if variant == "Towers" then
-                decorateTowers(platform, visualIndex, theme, tier)
+                decorateTowers(platform, visualIndex, theme, tier,
+                    authenticCarapace)
             elseif variant == "Crossroads" then
                 decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Orbital" then
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Harbor" then
-                decorateHarbor(platform, visualIndex, theme, tier)
+                decorateHarbor(platform, visualIndex, theme, tier,
+                    authenticCarapace)
                 -- Only the four real cardinal terminal decks get authored
                 -- 3D port infrastructure. The existing visual registrar,
                 -- shrink-weld, collapse owner and tier rebuild own it.

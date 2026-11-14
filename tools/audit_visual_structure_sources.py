@@ -403,6 +403,29 @@ for clause in (
 ):
     assert clause in rim_client, ("genuine rim spatial/source gate", clause)
 assert "RenderStepped" not in rim_client and "Heartbeat:Connect" not in rim_client
+# A full approved carapace/hull already replaces platform UNDERside
+# massing. Never overlay it with the old Towers cylinder/brace or Harbor
+# rectangular keel. Keep both native accents when source installation
+# fails, or an edge-only rim is the sole approved source. All navigation
+# engravings and Harbor top-surface cargo markings remain visible.
+identity=(ROOT/"src/client/arena-platform-identity.client.lua").read_text(
+    encoding="utf8")
+for clause in (
+    "local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)",
+    "if genuineUnderdeck then return end",
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
+    'if tier.Name == "High" and not genuineUnderdeck then',
+    'decorateTowers(platform, visualIndex, theme, tier,',
+    'decorateHarbor(platform, visualIndex, theme, tier,',
+    'authenticCarapace)',
+    '"HarborCargoLashing" .. index',
+    '"TowerPlatformLiftCore" .. index',
+    '"HarborKeelMount" .. index',
+):
+    assert clause in identity, ("approved 3D underside/native accent overlap",clause)
+assert 'if not authenticCarapace and not authenticRim then' in identity
+print("PASS no primitive underside overlay on authenticated Towers/Harbor carapaces, native fallback and safe route paint retained")
+
 print("PASS two genuine approved perimeter rim assets: PC four-sector spread, unchanged Android caps, cached epoch auth, shrink/native fallback")
 
 # P4 large-deck bevel coverage must not regress to a hard-coded first-24
