@@ -165,9 +165,53 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
         if a.score~=b.score then return a.score<b.score end
         return a.deck.Name<b.deck.Name
     end)
-    for i=1,math.min(#candidates,cap) do
-        local item=candidates[i]
-        result[item.deck]=item.kind
+    local count=math.min(#candidates,cap)
+    -- Keep the closest original two/three decks fully sculpted, then
+    -- distribute the SAME remaining approved 3D slots across authentic
+    -- platforms in other visible sectors. Previously all eight High PC
+    -- rims could crowd the same walkway while distant foreground-sized
+    -- WedgePart bevels stayed primitive. No extra models, renderer passes
+    -- or unverified geometry; touch and GPU-stressed selection are exact
+    -- nearest-first as before.
+    if touch~=true and stress==0 and tier~="Low" and count>2 then
+        local foreground=math.min(count,tier=="High" and 3 or 2)
+        for i=1,foreground do
+            local item=candidates[i]
+            result[item.deck]=item.kind
+        end
+        local selected=foreground
+        local spacingCap=math.max(base.Size.X,base.Size.Z)*.65
+        while selected<count do
+            local winner,winnerScore=nil,-math.huge
+            for _,candidate in ipairs(candidates) do
+                if result[candidate.deck]==nil then
+                    local distance=spacingCap
+                    for deck in pairs(result) do
+                        local delta=candidate.deck.Position-deck.Position
+                        local spread=Vector3.new(delta.X,delta.Y*.65,
+                            delta.Z).Magnitude
+                        distance=math.min(distance,spread)
+                    end
+                    -- Retain a strong near-camera bias while spreading
+                    -- the finished facades into the same drawable zone.
+                    local score=distance-candidate.score*.14
+                    if score>winnerScore or (score==winnerScore
+                        and winner and candidate.deck.Name
+                            <winner.deck.Name) then
+                        winner=candidate
+                        winnerScore=score
+                    end
+                end
+            end
+            if not winner then break end
+            result[winner.deck]=winner.kind
+            selected+=1
+        end
+    else
+        for i=1,count do
+            local item=candidates[i]
+            result[item.deck]=item.kind
+        end
     end
     return result
 end
