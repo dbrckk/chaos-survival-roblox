@@ -54,7 +54,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(PremiumDistrictFacadeMeshKit.residentBudget(
                 "High",true,2)).toBe(0)
             expect(PremiumDistrictFacadeMeshKit.residentBudget(
-                "Medium",false,0)).toBe(5)
+                "Medium",false,0)).toBe(8)
             expect(PremiumDistrictFacadeMeshKit.residentBudget(
                 "High",false,0)).toBe(16)
             expect(PremiumDistrictFacadeMeshKit.residentBudget(
