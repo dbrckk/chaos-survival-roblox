@@ -206,9 +206,12 @@ assert 'function Kit.cradleFit(size,sourceBounds)' in structure
 assert 'if long<19.5 or long>34 or short<9 or short>18 then return nil end' in structure
 assert 'or sourceShort*scale<short*.76' in structure
 assert 'or sourceBounds.Y*scale>5 then return nil end' in structure
-assert 'and Kit.cradleFit(size,cradleBounds)' in structure
-assert 'local scale=Kit.cradleFit(platform.Size,box)' in structure
-assert 'if not scale then return nil end' in structure
+assert 'and ((cradleSource and Kit.cradleFit(size,cradleBounds))' in structure
+assert 'and Kit.shortCradleFit(size,shortBounds)' in structure
+assert 'function Kit.shortCradleFit(size,bounds)' in structure
+assert 'local scale=source and Kit.cradleFit(platform.Size,box) or nil' in structure
+assert 'scale=source and Kit.shortCradleFit(platform.Size,box) or nil' in structure
+assert 'if not source or not scale or count~=7 then return nil end' in structure
 assert 'local cradleLimit=tier=="High" and' in structure
 assert '(desktopHigh==true and 8 or 4) or (tier=="Medium" and 2 or 1)' in structure
 assert 'function Kit.desktopCradleTransfer(tier,desktopHigh,candidates)' in structure
