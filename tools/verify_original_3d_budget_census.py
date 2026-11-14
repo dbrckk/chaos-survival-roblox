@@ -1677,6 +1677,27 @@ assert 'and not authenticRim and not authenticLongCradle then' in OWNER
 print("PASS genuine long-cradle mounted before native underside trims, "
       "fallback retained if real source absent")
 
+# Platform rim High/Medium desktop coverage uses only genuinely approved
+# seven-MeshPart fit-selected owners. Mobile and pressure-stressed caps
+# are fixed: extra desktop silhouettes must never leak onto a phone.
+RIM=(CLIENT/"ApprovedPlatformRimMeshKit.lua").read_text(encoding="utf8")
+for clause in (
+    'local cap=tier=="High" and (touch and 2 or 12)',
+    'or tier=="Medium" and (touch and 1 or 6) or 1',
+    'if stress==1 then',
+    'cap=math.floor(cap*.5)',
+    'if touch~=true then',
+    'cap=math.min(cap,tier=="High" and 4',
+    'or (tier=="Medium" and 2 or 0))',
+    'if stress>=2 or cap<=0',
+    'and completeNative(decor,deck) then',
+    'local source,bounds=verified(kind)',
+    'if #parts~=7 then copy:Destroy();return nil end',
+):
+    assert clause in RIM,("verified desktop rim coverage/mobile fallback",clause)
+print("PASS 6/12 genuine desktop rim slots, touch 1/2 and pressure-safe"
+      " 2/4 desktop fallback, seven-piece verified source/owner")
+
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger
 assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
