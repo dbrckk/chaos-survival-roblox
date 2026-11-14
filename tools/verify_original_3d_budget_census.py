@@ -1777,6 +1777,37 @@ assert '.RenderStepped:Connect(' not in OWNER
 print("PASS bounded SkySpine/Promenade streamed-native arrival/eviction"
       " recomputes authentic 3D coverage, with genuine short-mesh counters")
 
+# Reuse creator-approved seven-material 14.1-stud column source
+# modules for REAL 12.2-stud Sky Spine monumental native pylons.
+# Original two pylon parts per selected deck, 1/8/16 module budgets
+# remain unchanged. SignalInlay and game collision must never be masked.
+for check in (
+    'function Kit.validNativeSkyPylon(part,index)',
+    'part:GetAttribute("SkySpineDecor")~=true',
+    '"^SkySpine(%d+)_MonumentalPylon(%-?1)$"',
+    'part:GetAttribute("PerimeterPlatformIndex")~=id',
+    'part.Size.Y>=12.15 and part.Size.Y<=12.25',
+    'part.Size.X>=1.45 and part.Size.X<=1.55',
+    'part.Size.Z>=1.65 and part.Size.Z<=1.75',
+    'table.sort(group,sortNativeSupports)',
+    'table.sort(natives,sortNativeSupports)',
+    'part:SetAttribute("OriginalSkySpinePylon3D",true)',
+):
+    assert check in LARGE,("approved Sky Spine pylon provenance/priority",check)
+TRIM=(CLIENT/"PlatformNativeTrimReplacementKit.lua").read_text(
+    encoding="utf8")
+assert '"^SkySpine%d+_MonumentalPylon%-?1$"' in TRIM
+assert 'part:GetAttribute("SkySpineDecor")==true' in TRIM
+assert 'result.pylon += 1' in TRIM
+assert 'verifiedSupports[part] = true' in TRIM
+assert 'LocalSkySpinePylonNativePartsReplaced = family.pylon' in OWNER
+assert 'mountedSkySpinePylons += 1' in OWNER
+assert 'LocalOriginalSkySpinePylon3DCount' in OWNER
+assert 'PremiumLargeStructureMeshKit.validNativeSkyPylon(part)' in OWNER
+assert 'local supportBudget = tier.Name == "High" and 16' in OWNER
+print("PASS genuine Sky Spine monumental pylons sculpted in existing"
+      " seven-material column source quotas, diagnostics and fallback")
+
 # Genuine original LongCradle sources must be reserved for fully
 # streamed, structurally-owned native sets, not a lone PlatformN collider.
 # One selected SkySpine owner has two undercarriages + cross-stiffener;

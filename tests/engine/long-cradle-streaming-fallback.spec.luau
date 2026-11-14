@@ -225,6 +225,148 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if previous then previous.Parent=workspace end
         if not ok then error(err) end
     end)
+
+    it("sculpts genuine nonphysical Sky Spine pylons using old column quota",function()
+        local RS=game:GetService("ReplicatedStorage")
+        local Trim=require("../../src/client/PlatformNativeTrimReplacementKit")
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        local oldTemplates=RS:FindFirstChild("ApprovedLargeStructureTemplates")
+        if previous then previous.Parent=nil end
+        if oldTemplates then oldTemplates.Parent=nil end
+        local generated,templates,art=nil,nil,nil
+        local ok,err=pcall(function()
+            local arena=MapBuilder.buildArena(
+                Config,"Crossroads",ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local platforms=arena:FindFirstChild("Platforms")
+            local decor=arena:FindFirstChild("Decor")
+            local base=arena:FindFirstChild("Base")
+            local owner,pylons=nil,{}
+            for _,deck in ipairs(platforms:GetChildren()) do
+                local step=tonumber(deck:GetAttribute("SkySpineStep"))
+                if deck:IsA("BasePart") and (step==2 or step==5
+                    or step==6 or step==9) then
+                    local id=tonumber(deck.Name:match("^Platform(%d+)$"))
+                    local left=decor:FindFirstChild(
+                        "SkySpine"..id.."_MonumentalPylon-1")
+                    local right=decor:FindFirstChild(
+                        "SkySpine"..id.."_MonumentalPylon1")
+                    if left and right and Kit.validNativeSkyPylon(left,id)
+                        and Kit.validNativeSkyPylon(right,id) then
+                        owner=deck
+                        pylons={left,right}
+                        break
+                    end
+                end
+            end
+            expect(owner~=nil and owner.CanCollide
+                and owner.Anchored).toBe(true)
+            local id=tonumber(owner.Name:match("^Platform(%d+)$"))
+            expect(#pylons).toBe(2)
+            for _,native in ipairs(pylons) do
+                expect(Kit.validNativeSkyPylon(native,id)).toBe(true)
+                expect(native.CanCollide or native.CanTouch
+                    or native.CanQuery).toBe(false)
+                native:SetAttribute("PerimeterPlatformIndex",-1)
+                expect(Kit.validNativeSkyPylon(native,id)).toBe(false)
+                native:SetAttribute("PerimeterPlatformIndex",id)
+                expect(Kit.validNativeSkyPylon(native,id)).toBe(true)
+                local segments,scale=Kit.supportFit(native.Size,
+                    Vector3.new(2.12,14.1,2.12))
+                expect(segments).toBe(1)
+                expect(scale~=nil and scale>.80 and scale<1).toBe(true)
+            end
+            local decoy=Instance.new("Part")
+            decoy.Name="SkySpine"..id.."_SignalInlay-1"
+            decoy.Size=Vector3.new(.30,7.5,.42)
+            decoy.Anchored=true
+            decoy.CanCollide=false
+            decoy.CanTouch=false
+            decoy.CanQuery=false
+            decoy:SetAttribute("SkySpineDecor",true)
+            decoy:SetAttribute("PerimeterPlatformIndex",id)
+            expect(Kit.validNativeSkyPylon(decoy,id)).toBe(false)
+            decoy:Destroy()
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedLargeStructureTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=RS
+            local source=Instance.new("Model")
+            source.Name="Crossroads"
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("Original3DAssetId",93993697329658)
+            source:SetAttribute("OriginalLargeStructure3D",true)
+            source:SetAttribute("CosmeticOnly",true)
+            for i=1,7 do
+                local mesh=Instance.new("MeshPart")
+                mesh.Name="OriginalPylonColumnMaterial"..i
+                mesh.Size=i==1 and Vector3.new(2.12,14.1,2.12)
+                    or Vector3.new(.2,.2,.2)
+                mesh.Anchored=true
+                mesh.CanCollide=false
+                mesh.CanQuery=false
+                mesh.CanTouch=false
+                mesh.Parent=source
+            end
+            source.Parent=templates
+            art=Instance.new("Folder")
+            art.Name="ApprovedPylonVisualOwner"
+            art.Parent=workspace
+            local _,selected=Kit.selectNearRouteStructures(
+                {owner},decor,"Crossroads","High",base,
+                owner.Position,Vector3.new(0,0,1),0,false)
+            expect(selected[owner]).toBe(true)
+            local result=Kit.supports(art,decor,owner,"Crossroads",
+                "High",id,2,true)
+            expect(result~=nil and result.modules==2).toBe(true)
+            expect(#result.covered).toBe(2)
+            expect(#result.parts).toBe(14)
+            expect(result.covered[1]).toBe(pylons[1])
+            expect(result.covered[2]).toBe(pylons[2])
+            for _,mesh in ipairs(result.parts) do
+                expect(mesh:IsA("MeshPart")).toBe(true)
+                expect(mesh:GetAttribute("OriginalSkySpinePylon3D"))
+                    .toBe(true)
+                expect(mesh.CanCollide or mesh.CanTouch
+                    or mesh.CanQuery).toBe(false)
+            end
+            Trim.bind(arena,{},function() end,result.covered,art)
+            expect(Trim.breakdown().pylon).toBe(2)
+            expect(Trim.breakdown().support).toBe(0)
+            for _,native in ipairs(pylons) do
+                expect(native.LocalTransparencyModifier).toBe(1)
+            end
+            -- A real gameplay collapse restores BOTH native originals
+            -- while keeping their owner collidable authority unchanged.
+            owner:SetAttribute("CollapsePhase","Warning")
+            expect(Trim.breakdown().pylon).toBe(0)
+            for _,native in ipairs(pylons) do
+                expect(native.LocalTransparencyModifier).toBe(0)
+            end
+            owner:SetAttribute("CollapsePhase","Normal")
+            expect(Trim.breakdown().pylon).toBe(2)
+            -- One lost imported material revokes ONLY that pylon source.
+            result.parts[1]:Destroy()
+            expect(Trim.breakdown().pylon).toBe(1)
+            expect(pylons[1].LocalTransparencyModifier).toBe(0)
+            expect(pylons[2].LocalTransparencyModifier).toBe(1)
+            Trim.reset()
+            for _,native in ipairs(pylons) do
+                expect(native.LocalTransparencyModifier).toBe(0)
+            end
+            for _,conn in ipairs(result.disconnects) do
+                conn:Disconnect()
+            end
+            expect(owner.CanCollide).toBe(true)
+        end)
+        Trim.reset()
+        if art then art:Destroy() end
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if oldTemplates then oldTemplates.Parent=RS end
+        if previous then previous.Parent=workspace end
+        if not ok then error(err) end
+    end)
 end)
 
 return nil

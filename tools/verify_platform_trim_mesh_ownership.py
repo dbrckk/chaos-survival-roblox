@@ -293,6 +293,26 @@ for i in (2,4,6,8):
 print("PASS four genuine Crossroads low-route support clusters eligible"
       " for approved 7-piece source with preserved native fallback")
 
+# Genuine nonphysical Sky Spine pylons reuse the original seven-piece
+# column source, prioritized in the same module-cost sorted owner set.
+pylons = [
+    'function Kit.validNativeSkyPylon(part,index)',
+    'part:GetAttribute("SkySpineDecor")~=true',
+    '"^SkySpine(%d+)_MonumentalPylon(%-?1)$"',
+    'local function sortNativeSupports(a,b)',
+    'table.sort(group,sortNativeSupports)',
+    'table.sort(natives,sortNativeSupports)',
+    'OriginalSkySpinePylon3D',
+]
+for frag in pylons:
+    assert frag in large,(frag,"source-backed Sky Spine pylon")
+assert '"^SkySpine%d+_MonumentalPylon%-?1$"' in source
+assert 'result.pylon += 1' in source
+assert 'LocalOriginalSkySpinePylon3DCount' in (
+    (root/"src/client/arena-platform-identity.client.lua").read_text())
+print("PASS actual Sky Spine 12.2-stud pylons reuse source-verified"
+      " column residency; luminous wayfinding remains native")
+
 # Source arithmetic contract: approved seven-MeshPart modules stay at
 # exactly 20 across the structural families, even when all 8 real
 # desktop underframe candidates are eligible. Android never trades.
