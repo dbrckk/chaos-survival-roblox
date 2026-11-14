@@ -222,21 +222,31 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     -- or absent support must never consume an authentic mesh slot.
     local supportsAvailable={}
     if supportSource then
+        local grouped={}
         for _,part in ipairs(decor:GetChildren()) do
             local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
             local id=tonumber(suffix)
             if id and validNativeSupport(part,id) then
-                local segments = Kit.supportFit(part.Size, supportBounds)
-                -- Low has only one available source module. Other tiers
-                -- must also reject an impossible fit before reserving a
-                -- finite camera-near owner; taller valid posts cost 2-3.
-                if segments and (tier ~= "Low" or segments == 1) then
-                    local previous = supportsAvailable[id]
-                    if previous == nil or segments < previous then
-                        supportsAvailable[id] = segments
-                    end
+                local segments=Kit.supportFit(part.Size,supportBounds)
+                if segments and (tier~="Low" or segments==1) then
+                    local group=grouped[id]
+                    if not group then group={};grouped[id]=group end
+                    group[#group+1]={name=part.Name,modules=segments}
                 end
             end
+        end
+        -- Mounting consumes the first ONE (Medium/Low) or TWO (High)
+        -- genuine named supports in lexical order. Reserve that exact
+        -- number of seven-MeshPart source modules, never the cheapest
+        -- unrelated pillar. Otherwise the selected deck can exhaust
+        -- the quota before its nominated native posts are mounted.
+        for id,group in pairs(grouped) do
+            table.sort(group,function(x,y) return x.name<y.name end)
+            local cost=0
+            for i=1,math.min(#group,tier=="High" and 2 or 1) do
+                cost+=group[i].modules
+            end
+            if cost>0 then supportsAvailable[id]=cost end
         end
     end
     local focus=base.Position
@@ -304,7 +314,8 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                 and long>=7 and long<=36 and short>=7
                 and (tier ~= "Low" or (platform.Position-cameraPoint).Magnitude
                     <= 125) then
-                supports[#supports+1]={platform=platform,score=score}
+                supports[#supports+1]={platform=platform,score=score,
+                    cost=supportsAvailable[id]}
             end
         end
     end
@@ -321,38 +332,48 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     -- Keep nearby hero silhouettes, then spread unused SAME-budget slots
     -- over real, separated, collidable platform owners on this 320x320 map.
     -- No new 3D assets, Parts, Lua loops per frame, routes or GPU budgets.
-    local function distribute(candidates,limit,foreground)
+    local function distribute(candidates,limit,foreground,moduleBudget)
         local selected={}
         local count=math.min(#candidates,limit)
-        local front=math.min(count,foreground)
-        for i=1,front do
-            local deck=candidates[i].platform
-            selected[deck]=true
+        local remaining=moduleBudget or math.huge
+        local taken=0
+        -- Keep the foreground's camera-prioritized genuine models, but
+        -- never promise more modules than the real renderer can mount.
+        for _,candidate in ipairs(candidates) do
+            if taken>=math.min(count,foreground) then break end
+            local cost=candidate.cost or 1
+            if cost<=remaining then
+                selected[candidate.platform]=true
+                remaining-=cost
+                taken+=1
+            end
         end
-        local taken=front
         local spacingCap=math.max(base.Size.X,base.Size.Z)*.68
-        while taken<count do
+        while taken<count and remaining>0 do
             local winner,winnerScore=nil,-math.huge
             for _,candidate in ipairs(candidates) do
-                if not selected[candidate.platform] then
+                if not selected[candidate.platform]
+                    and (candidate.cost or 1)<=remaining then
                     local nearest=spacingCap
                     for deck in pairs(selected) do
                         local offset=candidate.platform.Position-deck.Position
                         nearest=math.min(nearest,Vector3.new(
                             offset.X,offset.Y*.65,offset.Z).Magnitude)
                     end
-                    -- Retain some preference for genuinely near, busy
-                    -- permanent route segments; spacing itself dominates.
+                    -- Preserve the same camera and route coverage,
+                    -- comparing only physically affordable owners.
                     local score=nearest-candidate.score*.12
                     if score>winnerScore or (score==winnerScore
-                        and winner and candidate.platform.Name<winner.Name) then
-                        winner=candidate.platform
+                        and winner and candidate.platform.Name
+                            <winner.platform.Name) then
+                        winner=candidate
                         winnerScore=score
                     end
                 end
             end
             if not winner then break end
-            selected[winner]=true
+            selected[winner.platform]=true
+            remaining-=winner.cost or 1
             taken+=1
         end
         return selected
@@ -387,8 +408,15 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     -- Never stack a seven-piece tall column behind a seven-piece
     -- underframe on Low. Medium/High keep their independent budgets.
     if tier~="Low" or next(cradleSet)==nil then
+        -- High desktop may have traded up to four column modules to
+        -- authentic long cradles. Reserve against the POST-trade ceiling
+        -- so selected native supports actually fit at install time.
+        local modules=tier=="High" and
+            (16-Kit.desktopCradleTransfer(tier,desktopHigh,cradleSet))
+            or (tier=="Medium" and 8 or 1)
         supportSet=distribute(supports,supportLimit,
-            tier=="High" and 5 or (tier=="Medium" and 2 or 1))
+            tier=="High" and 5 or (tier=="Medium" and 2 or 1),
+            modules)
     end
     return cradleSet,supportSet
 end
