@@ -1584,8 +1584,14 @@ assert OWNER.index('PremiumLargeStructureMeshKit.selectNearRouteStructures(') < 
 assert OWNER.index('PremiumLargeStructureMeshKit.longCradle(',gate_end) > gate_end
 assert OWNER.index('PremiumLargeStructureMeshKit.supports(',gate_end) > gate_end
 assert OWNER.index('registerVisual(platform, piece)',gate_end) > gate_end
+# Native paint now follows the actual approved-mesh mounting decision.
+# It still obeys exactly the former even-index Low paint gate.
+authentic_mount=OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil')
+before_side=OWNER.index('local sidePieces = {}',authentic_mount)
 assert 'if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then' in (
-    OWNER[gate_end:gate_end+900])
+    OWNER[authentic_mount:before_side])
+assert OWNER.index('for _, piece in ipairs(PlatformFinishKit.build(') > (
+    authentic_mount)
 assert 'PlatformFinishKit.bindRouteFootprint(' in OWNER
 assert 'PlatformFinishKit.applyCollapseVisibility(' in OWNER
 assert 'PlatformNativeTrimReplacementKit.bind(' in OWNER
