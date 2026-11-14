@@ -1673,6 +1673,34 @@ print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero
 # owner platforms and leave half the allowed source budget idle. High
 # still uses eight decks with up to two columns each; Low stays at one.
 LARGE=(CLIENT/"PremiumLargeStructureMeshKit.lua").read_text(encoding="utf8")
+# Genuine original LongCradle sources must be reserved for fully
+# streamed, structurally-owned native sets, not a lone PlatformN collider.
+# One selected SkySpine owner has two undercarriages + cross-stiffener;
+# one promenade owns its complete underdeck truss. The authorized
+# seven-MeshPart fallback covers only those declared source families.
+for fragment in (
+    'function Kit.hasNativeCradleFallback(decor,platform)',
+    'decor:FindFirstChild("PlatformUnderFrame"..id)',
+    'frame:GetAttribute("PremiumArchitecturalSurface")~=true',
+    '"SkySpine"..id.."_Undercarriage-1"',
+    '"SkySpine"..id.."_Undercarriage1"',
+    '"SkySpine"..id.."_CrossStiffener"',
+    '"Promenade"..id.."_UnderdeckTruss"',
+    'marker="SkySpineDecor"',
+    'marker="PromenadeVisualOnly"',
+    'native:GetAttribute("PerimeterPlatformIndex")~=id',
+    'and Kit.hasNativeCradleFallback(decor,platform)',
+    'function Kit.longCradle(parent,platform,tier,index,selected,decor)',
+    'if decor~=nil and not Kit.hasNativeCradleFallback(decor,platform)',
+):
+    assert fragment in LARGE, ("stream-backed P4 cradle substitution",fragment)
+assert 'folder, platform, tier.Name, visualIndex, true, decor)' in OWNER
+assert 'local longCradleBudget = tier.Name == "High" and 4' in OWNER
+assert 'longCradleBudget+=transferred' in OWNER
+assert 'supportBudget-=transferred' in OWNER
+print("PASS P4 long cradles target only fully streamed native underframes,"
+      " same existing desktop/mobile 7-MeshPart module quotas")
+
 assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 8 or 1)' in LARGE
 assert 'local maxSupports = tier=="High" and 2 or 1' in LARGE
 assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)' not in LARGE

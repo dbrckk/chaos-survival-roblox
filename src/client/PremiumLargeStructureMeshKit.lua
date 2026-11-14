@@ -176,6 +176,56 @@ function Kit.cradleFit(size,sourceBounds)
     return scale
 end
 
+-- Only replace the *actual streamed server-authoritative decorative
+-- understructure*. A collidable deck may replicate BEFORE its underside,
+-- Sky Spine girders or Promenade truss; reserving a seven-MeshPart cradle
+-- at that point stranded another valid nearby route in bare primitives.
+-- This check is shared by candidate selection and final installation,
+-- and never masks the real walkable platform or hazard/wayfinding rails.
+function Kit.hasNativeCradleFallback(decor,platform)
+    if not decor or not decor:IsA("Folder")
+        or not platform or not platform:IsA("BasePart")
+        or not platform.Parent or not platform.Anchored
+        or not platform.CanCollide or platform.Transparency>=.75 then
+        return false
+    end
+    local id=tonumber(platform.Name:match("^Platform(%d+)$"))
+    if not id then return false end
+    local phase=platform:GetAttribute("CollapsePhase")
+    local shutter=platform:GetAttribute("BridgeShutterPhase")
+    if (phase~=nil and phase~="Normal" and phase~="Safe")
+        or (shutter~=nil and shutter~="Idle") then return false end
+    local frame=decor:FindFirstChild("PlatformUnderFrame"..id)
+    if not frame or not frame:IsA("BasePart")
+        or frame.Parent~=decor or not frame.Anchored
+        or frame.CanCollide or frame.CanTouch or frame.CanQuery
+        or frame:GetAttribute("PremiumArchitecturalSurface")~=true then
+        return false end
+    local names,marker=nil,nil
+    if platform:GetAttribute("SkySpineStep")~=nil then
+        names={"SkySpine"..id.."_Undercarriage-1",
+            "SkySpine"..id.."_Undercarriage1",
+            "SkySpine"..id.."_CrossStiffener"}
+        marker="SkySpineDecor"
+    elseif platform:GetAttribute("PromenadeStep")~=nil then
+        names={"Promenade"..id.."_UnderdeckTruss"}
+        marker="PromenadeVisualOnly"
+    else
+        return false
+    end
+    for _,name in ipairs(names) do
+        local native=decor:FindFirstChild(name)
+        if not native or not native:IsA("BasePart")
+            or native.Parent~=decor or not native.Anchored
+            or native.CanCollide or native.CanTouch or native.CanQuery
+            or native:GetAttribute(marker)~=true
+            or native:GetAttribute("PerimeterPlatformIndex")~=id then
+            return false
+        end
+    end
+    return true
+end
+
 -- Exchange source modules, never create a new GPU allowance. At most
 -- four of High desktop's 16 seven-MeshPart column slots may become four
 -- additional seven-MeshPart original underframes, and ONLY when real
@@ -305,6 +355,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             -- Reject a 30+ stud native deck that the actual 22-stud
             -- original cannot cover, BEFORE spending an approved 3D slot.
             if cradleSource and (spine or promenade)
+                and Kit.hasNativeCradleFallback(decor,platform)
                 and Kit.cradleFit(size,cradleBounds)
                 and (tier ~= "Low"
                     or (platform.Position-cameraPoint).Magnitude<=125) then
@@ -526,7 +577,7 @@ end
 -- and Sky Spine routes, not an invented extra walkable bridge. The source
 -- must cover at least 87% of length and 76% of width BEFORE replacing the
 -- older low-slung rectangular underframe in the LOCAL renderer.
-function Kit.longCradle(parent,platform,tier,index,selected)
+function Kit.longCradle(parent,platform,tier,index,selected,decor)
     if selected == false or (tier == "Low" and selected ~= true) then
         return nil
     end
@@ -546,6 +597,12 @@ function Kit.longCradle(parent,platform,tier,index,selected)
     end
     if platform:GetAttribute("PromenadeStep")==nil
         and platform:GetAttribute("SkySpineStep")==nil then return nil end
+    -- Production passes the real Decor folder. A model selected before
+    -- native streaming completed must not mount or consume a 3D slot.
+    -- Keep the old optional API for callers without a Decor reference.
+    if decor~=nil and not Kit.hasNativeCradleFallback(decor,platform) then
+        return nil
+    end
     local source,box,count=verified("LongCradle")
     if not source or (tier == "Low" and count ~= 7) then return nil end
     local sx,sy,sz=platform.Size.X,platform.Size.Y,platform.Size.Z

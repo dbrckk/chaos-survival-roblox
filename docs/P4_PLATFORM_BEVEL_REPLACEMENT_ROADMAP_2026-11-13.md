@@ -537,3 +537,29 @@ Medium/High. Une fixture Roblox Engine vérifie les cinq variantes,
 la sécurité physique, la restauration des primitives et les marquages
 supérieurs. Les audits source/build et sept suites Engine doivent être
 verts sur ce nouveau commit avant publication du jeu.
+
+## Lot P4 — résidences LongCradle sur vraies sous-structures streamées (14 novembre)
+
+La sélection des charpentes longues (`PremiumLargeStructureMeshKit`) vérifiait
+la géométrie du vrai deck et de la source originale, mais pas la présence
+répliquée du sous-cadre `PlatformUnderFrameN` et des vrais volumes natifs
+qu'elle remplace. Un client Android en streaming pouvait donc réserver
+ses rares sept MeshParts pour un deck sans charpente répliquée tandis
+qu'un voisin entièrement chargé conservait un rectangle de base.
+
+La nouvelle règle `hasNativeCradleFallback` n'admet une sélection que si :
+le deck physique est sûr et ancré, son sous-cadre non physique existe et
+porte le marqueur d'origine, et les vrais propriétaires décoratifs sont
+présents : `Undercarriage-1 / Undercarriage1 / CrossStiffener` pour
+Sky Spine, ou `UnderdeckTruss` pour Promenade. Leur numéro de
+plateforme, provenance, ancrage et absence de collision sont vérifiés.
+Le même garde est contrôlé au dernier instant dans `longCradle`, après
+le streaming et avant l'installation ; le propriétaire client lui passe
+le dossier `Decor` réel.
+
+La sélection réemploie les **mêmes** quotas Low 1, Medium 2 et High 4
+(et transfert PC High déjà existant jusqu'à 8), sans nouvel asset ni
+MeshPart supplémentaire, aucun nouveau listener, et laisse les signaux
+lumineux, les vraies collisions et les primitives de secours intactes.
+Une fixture Engine dédiée doit confirmer sélection, perte/retour d'un
+vrai sous-cadre et montage sur les deux familles.

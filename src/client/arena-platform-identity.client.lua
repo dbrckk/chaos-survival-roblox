@@ -882,7 +882,7 @@ local function rebuild()
             if longCradleBudget > 0 and not authenticCarapace
                 and nearCradles[platform] == true then
                 local cradle = PremiumLargeStructureMeshKit.longCradle(
-                    folder, platform, tier.Name, visualIndex, true)
+                    folder, platform, tier.Name, visualIndex, true, decor)
                 if cradle then
                     replacements[tostring(visualIndex)] = "cradle"
                     -- Shared cosmetic-only arbitration prevents the old
