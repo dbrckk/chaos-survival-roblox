@@ -296,10 +296,40 @@ describe("Authenticated district sidewall restoration (engine)", function()
             local highShell=ApprovedDistrictSidewallMeshKit.count()
             local highPaired=ApprovedDistrictSidewallMeshKit.completeCount()
             if highFront~=8 or highShell~=8 or highPaired~=8 then
-                error(("High touch healthy expected 8/8/8, got %d/%d/%d, masks %d/%d")
+                local doorReady,coreReady,frontReady,fullyOpaque=0,0,0,0
+                local bands={}
+                for _,owner in ipairs(district:GetChildren()) do
+                    local door=owner:FindFirstChild("ServiceEntryDoor")
+                    local core=owner:FindFirstChild("ServiceCore")
+                    local supportL=owner:FindFirstChild("ArmoredSupportL")
+                    local supportR=owner:FindFirstChild("ArmoredSupportR")
+                    local cassetteL=owner:FindFirstChild("SideCassette-1")
+                    local cassetteR=owner:FindFirstChild("SideCassette1")
+                    if door and door.Transparency<.7 and
+                        door.LocalTransparencyModifier<.95 then doorReady+=1 end
+                    if core and core.Transparency<1 then coreReady+=1 end
+                    if owner:GetAttribute("LocalApprovedDistrictFacadeMounted")==true then
+                        frontReady+=1
+                    end
+                    if core and supportL and supportR and cassetteL and cassetteR
+                        and core.Transparency<1 and supportL.Transparency<1
+                        and supportR.Transparency<1 and cassetteL.Transparency<1
+                        and cassetteR.Transparency<1 then fullyOpaque+=1 end
+                    local ix=owner:GetAttribute("DistrictIndex")
+                    if type(ix)=="number" then
+                        bands[#bands+1]=("%d:%s:%s"):format(ix,
+                            owner:GetAttribute("LocalApprovedDistrictFacadeMounted")
+                                and "F" or "_",
+                            owner:GetAttribute("LocalApprovedDistrictSidewallMounted")
+                                and "S" or "_")
+                    end
+                end
+                error(("High touch expected 8/8/8, got %d/%d/%d masks %d/%d; doors=%d cores=%d frontFlags=%d opaque5=%d | %s")
                     :format(highFront,highShell,highPaired,
                         PremiumDistrictFacadeMeshKit.residentMask16(),
-                        ApprovedDistrictSidewallMeshKit.residentMask16()))
+                        ApprovedDistrictSidewallMeshKit.residentMask16(),
+                        doorReady,coreReady,frontReady,fullyOpaque,
+                        table.concat(bands,",")))
             end
             expect(PremiumDistrictFacadeMeshKit.count()).toBe(8)
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(8)
