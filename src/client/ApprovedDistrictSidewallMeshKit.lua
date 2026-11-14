@@ -43,6 +43,10 @@ bucket:SetAttribute("CosmeticOnly", true)
 bucket.Parent = workspace
 local activeArena = nil
 local mounted = {}
+-- Read-only Engine regression diagnostics; no extra render loop or remote.
+local lastSyncCandidateCount = 0
+local lastSyncPairedCandidates = 0
+local lastSyncWantedCount = 0
 local watchedBase = nil
 local baseConnection = nil
 
@@ -488,6 +492,14 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
             end
         end
     end
+    lastSyncCandidateCount = #candidates
+    lastSyncPairedCandidates = 0
+    for _,candidate in ipairs(candidates) do
+        if candidate.building:GetAttribute(
+            "LocalApprovedDistrictFacadeMounted") == true then
+            lastSyncPairedCandidates += 1
+        end
+    end
     table.sort(candidates,function(a,b)
         if a.priority ~= b.priority then return a.priority < b.priority end
         if a.distance ~= b.distance then return a.distance < b.distance end
@@ -534,6 +546,8 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
             wanted[candidates[i].building]=candidates[i]
         end
     end
+    lastSyncWantedCount = 0
+    for _ in pairs(wanted) do lastSyncWantedCount += 1 end
     local obsolete={}
     for building,entry in pairs(mounted) do
         -- An existing Medium model promoted/demoted to Low must obey
@@ -564,6 +578,10 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, touch, pressure, look)
             end
         end
     end
+end
+
+function Kit.lastCandidateDiagnostics()
+    return lastSyncCandidateCount, lastSyncPairedCandidates, lastSyncWantedCount
 end
 
 function Kit.count()
