@@ -107,11 +107,11 @@ function Kit.fit(deck,bounds)
     return scale,yaw,coverLong*coverShort
 end
 
-local function pickSource(deck)
+local function pickSource(deck,boundsByKind)
     local bestKind,bestScore=nil,-math.huge
     for _,kind in ipairs({"Rect","Long"}) do
-        local source,bounds=verified(kind)
-        if source then
+        local bounds=boundsByKind[kind]
+        if bounds then
             local scale,yaw,score=Kit.fit(deck,bounds)
             if scale and score>bestScore then
                 bestKind,bestScore=kind,score
@@ -143,6 +143,15 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
     local range=tier=="Low" and 116
         or tier=="Medium" and (touch and 155 or 230)
         or (touch and 200 or 280)
+    -- Authenticate each source ONCE per existing platform-rebuild
+    -- epoch instead of repeating Model:GetBoundingBox and scanning all
+    -- seven imported MeshParts for every candidate. Installation still
+    -- re-authenticates live provenance to catch mid-epoch invalidation.
+    local boundsByKind={}
+    for _,kind in ipairs({"Rect","Long"}) do
+        local source,bounds=verified(kind)
+        if source then boundsByKind[kind]=bounds end
+    end
     local candidates={}
     local platforms=base.Parent and base.Parent:FindFirstChild("Platforms")
     for _,deck in ipairs(ordered) do
@@ -152,7 +161,7 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
             and completeNative(decor,deck) then
             local distance=(deck.Position-cameraPoint).Magnitude
             if distance<=range then
-                local kind=pickSource(deck)
+                local kind=pickSource(deck,boundsByKind)
                 if kind then
                     candidates[#candidates+1]={
                         deck=deck,kind=kind,score=distance,
