@@ -1690,6 +1690,7 @@ for fragment in (
     'marker="PromenadeVisualOnly"',
     'native:GetAttribute("PerimeterPlatformIndex")~=id',
     'and Kit.hasNativeCradleFallback(decor,platform)',
+    'if #parts ~= 7 then',
     'function Kit.longCradle(parent,platform,tier,index,selected,decor)',
     'if decor~=nil and not Kit.hasNativeCradleFallback(decor,platform)',
 ):

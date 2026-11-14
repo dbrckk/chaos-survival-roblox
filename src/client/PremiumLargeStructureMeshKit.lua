@@ -94,7 +94,11 @@ local function prepare(source,scale,at,native,kind,adjustable)
             parts[#parts+1] = part
         end
     end
-    if #parts < 1 or #parts > 12 then
+    -- verified() requires exactly seven material MeshParts. Preserve
+    -- this same guarantee at the final clone/stage boundary: a changed
+    -- source cannot leave a partial approved underframe while its true
+    -- server-authored structure is masked by the owner.
+    if #parts ~= 7 then
         clone:Destroy()
         return nil
     end

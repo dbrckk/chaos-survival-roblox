@@ -14,9 +14,9 @@ cloud=(ROOT/".github/workflows/roblox-cloud-test.yml").read_text()
 specs={p.as_posix().removeprefix(str(ROOT)+"/")
        for p in (ROOT/"tests/engine").glob("*.spec.luau")}
 assigned=re.findall(r'"(tests/engine/[^"*]+\.spec\.luau)"',cloud)
-assert len(specs)==len(assigned)==len(set(assigned))==88
+assert len(specs)==len(assigned)==len(set(assigned))==89
 assert specs==set(assigned)
-assert "- 88 engine specs assigned exactly once across Open Cloud CI shards" in readme
+assert "- 89 engine specs assigned exactly once across Open Cloud CI shards" in readme
 
 loc=(ROOT/"src/shared/CoreLocalization.lua").read_text()
 tests=(ROOT/"tests/engine/core-localization.spec.luau").read_text()
@@ -44,6 +44,6 @@ assert "publisher = 'publish-existing-public-playtest.yml'" in release
 assert "PUBLISH_EXISTING_10771083668" in release
 assert release.index("Pre-publication tests timed out; NOT published.")<release.index(
     "publisher = 'publish-existing-public-playtest.yml'")
-print("PASS README and Cloud test shard count: 88 genuine engine specs")
+print("PASS README and Cloud test shard count: 89 genuine engine specs")
 print("PASS French Towers Skyrail and Harbor squall gameplay texts match Lest assertions")
 print("PASS exact-main fail-closed release workflow dispatches owner publisher only after green build + engine")
