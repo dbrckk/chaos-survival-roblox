@@ -1617,6 +1617,27 @@ print("PASS Low even-index original undercradle/support adoption, native",
       "half-density retained, late-near support streaming bounded/rebuilt")
 
 
+# P4 visible-result regression: never stack client-created native
+# underside blocks over a fully mounted original seven-material shell.
+# Towers' cylinder/brace and Harbor's keel block remain genuine
+# fallback on unsculpted decks (and on edge-only rims); Harbor cargo
+# markings, physical decks, collapse warnings and wayfinding persist.
+for marker in (
+    'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)',
+    'if genuineUnderdeck then return end',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
+    'if tier.Name == "High" and not genuineUnderdeck then',
+    'decorateTowers(platform, visualIndex, theme, tier,',
+    'decorateHarbor(platform, visualIndex, theme, tier,',
+    'authenticCarapace)',
+    '"HarborCargoLashing" .. index',
+):
+    assert marker in OWNER, ("no native block overlay on approved hull",marker)
+assert OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil') < (
+    OWNER.index('decorateTowers(platform, visualIndex, theme, tier,'))
+print("PASS Towers/Harbor full 3D underside removes redundant primitives,"
+      " source-failure fallback and top markings preserved")
+
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger
 assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
