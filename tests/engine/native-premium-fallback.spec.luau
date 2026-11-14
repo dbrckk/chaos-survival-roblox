@@ -312,10 +312,9 @@ describe("Original 3D native fallback isolation (engine)", function()
                 owner=part
             end
             expect(count).toBe(2)
-            -- On the same REAL MapBuilder route inventory, High Android
-            -- retains four fully source-fitted 22-stud cradles; High
-            -- desktop reuses four existing column slots to mount EIGHT.
-            -- Both keep 20 seven-MeshPart structure modules in total.
+            -- Real native ownership leaves six eligible High PC cradles
+            -- (eight previously reserved, two lacked complete fallback).
+            -- Unused cradle capacity stays with original column modules.
             local mobileCradles=PremiumLargeStructureMeshKit
                 .selectNearRouteStructures(ordered,decor,"Crossroads",
                     "High",base,camera,Vector3.new(0,0,1),0,false)
@@ -333,14 +332,14 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(part:IsA("BasePart") and part.CanCollide).toBe(true)
                 expect(PremiumLargeStructureMeshKit.cradleFit(
                     part.Size,sourceBounds)~=nil).toBe(true)
-                expect(decor:FindFirstChild("PlatformUnderFrame"
-                    ..part.Name:match("^Platform(%d+)$"))~=nil).toBe(true)
+                expect(PremiumLargeStructureMeshKit.hasNativeCradleFallback(
+                    decor,part)).toBe(true)
             end
             expect(mobileCount).toBe(4)
-            expect(desktopCount).toBe(8)
+            expect(desktopCount).toBe(6)
             local moved=PremiumLargeStructureMeshKit.desktopCradleTransfer(
                 "High",true,desktopCradles)
-            expect(moved).toBe(4)
+            expect(moved).toBe(2)
             expect(4+moved+16-moved).toBe(20)
             expect(PremiumLargeStructureMeshKit.desktopCradleTransfer(
                 "High",false,desktopCradles)).toBe(0)
@@ -357,7 +356,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             meshes.Name="OriginalLongCradleUnderframeFixture"
             meshes.Parent=workspace
             local sculpt=PremiumLargeStructureMeshKit.longCradle(
-                meshes,owner,"Medium",id,true)
+                meshes,owner,"Medium",id,true,decor)
             expect(sculpt~=nil and #sculpt==7).toBe(true)
             for _,mesh in ipairs(sculpt) do
                 expect(mesh:IsA("MeshPart")).toBe(true)
@@ -376,10 +375,8 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(underframe.LocalTransparencyModifier).toBe(0)
             expect(owner.CanCollide).toBe(true)
 
-            -- Go beyond an abstract selection: actually mount EIGHT
-            -- individually authored, seven-MeshPart High source fixtures
-            -- on EIGHT real Crossroads promenade collider owners.
-            -- Reuse the same physical MapBuilder Parts, no mock platforms.
+            -- Mount all six truly authenticated, real server-authored
+            -- underframes; unused original slots fund column coverage.
             Kit.reset()
             local highParts={}
             local highReplacements={}
@@ -388,7 +385,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             for deck in pairs(desktopCradles) do
                 local n=tonumber(deck.Name:match("^Platform(%d+)$"))
                 local genuine=PremiumLargeStructureMeshKit.longCradle(
-                    meshes,deck,"High",n,true)
+                    meshes,deck,"High",n,true,decor)
                 expect(genuine~=nil and #genuine==7).toBe(true)
                 installed+=1
                 highParts[deck]=genuine
@@ -396,8 +393,8 @@ describe("Original 3D native fallback isolation (engine)", function()
                 if firstOwner==nil then firstOwner=deck end
                 expect(deck.CanCollide).toBe(true)
             end
-            expect(installed).toBe(8)
-            expect(#meshes:GetChildren()).toBe(56)
+            expect(installed).toBe(6)
+            expect(#meshes:GetChildren()).toBe(42)
             Kit.bind(arena,highReplacements,nil,nil,meshes)
             local masked=0
             for deck in pairs(desktopCradles) do
@@ -406,7 +403,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(native.LocalTransparencyModifier).toBe(1)
                 masked+=1
             end
-            expect(masked).toBe(8)
+            expect(masked).toBe(6)
             -- Warning on ONE real deck restores only its own fallback.
             local firstId=tonumber(firstOwner.Name:match("^Platform(%d+)$"))
             local firstFrame=decor:FindFirstChild(

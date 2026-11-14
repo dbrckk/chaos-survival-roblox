@@ -563,3 +563,18 @@ MeshPart supplémentaire, aucun nouveau listener, et laisse les signaux
 lumineux, les vraies collisions et les primitives de secours intactes.
 Une fixture Engine dédiée doit confirmer sélection, perte/retour d'un
 vrai sous-cadre et montage sur les deux familles.
+
+### Preuve moteur : réservation limitée aux vrais propriétaires (14 novembre)
+
+L'exécution Roblox Cloud Engine `43619061964` sur `c78031af`
+a confirmé que la nouvelle fixture de streaming réussit, mais le test
+historique Crossroads attendait encore 8 LongCradle. En exigeant
+l'existence complète des pièces natives certifiées, ce constructeur
+n'expose en réalité que **6** propriétaires admissibles pour l'asset
+22-stud courant. Le plafond PC High reste **8** si huit véritables
+propriétaires compatibles existent dans une autre situation. Sur
+Crossroads, les **2 modules 3D non transférés** restent au budget des
+supports sculptés (20 modules structurels au total, inchangés), au
+lieu d'être immobilisés sur des charpentes incomplètes. Les attentes
+Engine couvrent désormais les six sous-cadres réellement masqués,
+leur restauration sous danger et le dernier garde de streaming.
