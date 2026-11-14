@@ -173,6 +173,20 @@ local function release(building)
     entry.model:Destroy()
 end
 
+-- One Roblox source Model is shared by up to sixteen building owners.
+-- A property event can skip callbacks as each callback disconnects itself
+-- during release. Snapshot ALL affected owners and restore every native
+-- shell in one source-cohort operation before the source is discarded.
+local function releaseSource(source)
+    local owners = {}
+    for building, entry in pairs(mounted) do
+        if entry.source == source then
+            owners[#owners + 1] = building
+        end
+    end
+    for _, building in ipairs(owners) do release(building) end
+end
+
 local function clear()
     local buildings = {}
     for building in pairs(mounted) do buildings[#buildings+1] = building end
@@ -284,7 +298,7 @@ local function mount(arena, district, base, building, door,
     entry.connections[#entry.connections + 1] =
         building:GetAttributeChangedSignal(
             "LocalApprovedDistrictFacadeMounted"):Connect(reconcile)
-    for _, owner in ipairs({clone, source, building, door, base}) do
+    for _, owner in ipairs({clone, building, door, base}) do
         entry.connections[#entry.connections + 1] =
             owner.AncestryChanged:Connect(reconcile)
     end
@@ -295,8 +309,14 @@ local function mount(arena, district, base, building, door,
     entry.connections[#entry.connections + 1] =
         base:GetPropertyChangedSignal("Size"):Connect(reconcile)
     entry.connections[#entry.connections + 1] =
+        source.AncestryChanged:Connect(function()
+            if source.Parent ~= folder or folder.Parent ~= ReplicatedStorage then
+                releaseSource(source)
+            end
+        end)
+    entry.connections[#entry.connections + 1] =
         source.DescendantRemoving:Connect(function(part)
-            if part:IsA("MeshPart") then release(building) end
+            if part:IsA("MeshPart") then releaseSource(source) end
         end)
     -- Source provenance may be revoked while a clone is resident.
     -- Unmask immediately: waiting until the next camera LOD interval
@@ -304,17 +324,28 @@ local function mount(arena, district, base, building, door,
     entry.connections[#entry.connections + 1] =
         source.DescendantAdded:Connect(function(part)
             if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then
-                release(building)
+                releaseSource(source)
             end
         end)
     entry.connections[#entry.connections + 1] =
-        folder:GetAttributeChangedSignal("OwnerVerified"):Connect(reconcile)
+        folder:GetAttributeChangedSignal("OwnerVerified"):Connect(function()
+            if folder:GetAttribute("OwnerVerified") ~= true then
+                releaseSource(source)
+            end
+        end)
     for _, attribute in ipairs({
         "OwnerVerified", "CosmeticOnly",
         "OriginalDistrictSidewallShell3D", "Original3DAssetId",
     }) do
         entry.connections[#entry.connections + 1] =
-            source:GetAttributeChangedSignal(attribute):Connect(reconcile)
+            source:GetAttributeChangedSignal(attribute):Connect(function()
+                if source:GetAttribute("OwnerVerified") ~= true
+                    or source:GetAttribute("CosmeticOnly") ~= true
+                    or source:GetAttribute("OriginalDistrictSidewallShell3D") ~= true
+                    or source:GetAttribute("Original3DAssetId") ~= ID then
+                    releaseSource(source)
+                end
+            end)
     end
     entry.connections[#entry.connections + 1] =
         building.ChildRemoved:Connect(function(part)
@@ -355,7 +386,7 @@ local function mount(arena, district, base, building, door,
             }) do
                 entry.connections[#entry.connections + 1] =
                     sourcePiece:GetPropertyChangedSignal(property):Connect(
-                        function() release(building) end)
+                        function() releaseSource(source) end)
             end
         end
     end
