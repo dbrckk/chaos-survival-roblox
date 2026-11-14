@@ -125,6 +125,12 @@ local function clear()
     if player:GetAttribute("LocalOriginalNearSupportColumnCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearSupportColumnCount", 0)
     end
+    if player:GetAttribute("LocalOriginalSkySpinePylon3DCount") ~= 0 then
+        player:SetAttribute("LocalOriginalSkySpinePylon3DCount", 0)
+    end
+    if player:GetAttribute("LocalSkySpinePylonNativePartsReplaced") ~= 0 then
+        player:SetAttribute("LocalSkySpinePylonNativePartsReplaced", 0)
+    end
     if player:GetAttribute("LocalOriginalNearRouteCarapaceCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearRouteCarapaceCount", 0)
     end
@@ -716,6 +722,7 @@ local function rebuild()
     local mountedRouteCradles = 0
     local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
+    local mountedSkySpinePylons = 0
 
     for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
@@ -927,6 +934,10 @@ local function rebuild()
                     for _, support in ipairs(columns.covered) do
                         actualSupportParts[#actualSupportParts+1] = support
                         mountedSupportNatives[support] = true
+                        if PremiumLargeStructureMeshKit.validNativeSkyPylon(
+                            support,visualIndex) then
+                            mountedSkySpinePylons += 1
+                        end
                     end
                     for _, connection in ipairs(columns.disconnects) do
                         originalColumnDisconnects[#originalColumnDisconnects+1] =
@@ -1093,6 +1104,11 @@ local function rebuild()
         player:SetAttribute("LocalOriginalShortSkySpineCradleCount",
             mountedShortSkySpineCradles)
     end
+    if player:GetAttribute("LocalOriginalSkySpinePylon3DCount")
+        ~= mountedSkySpinePylons then
+        player:SetAttribute("LocalOriginalSkySpinePylon3DCount",
+            mountedSkySpinePylons)
+    end
     if player:GetAttribute("LocalOriginalNearSupportColumnCount")
         ~= mountedCloseSupports then
         player:SetAttribute("LocalOriginalNearSupportColumnCount",
@@ -1144,6 +1160,7 @@ local function rebuild()
                 LocalBevelNativePartsReplaced = family.bevel,
                 LocalUnderframeNativePartsReplaced = family.underframe,
                 LocalSupportNativePartsReplaced = family.support,
+                LocalSkySpinePylonNativePartsReplaced = family.pylon,
                 LocalOtherStructuralNativePartsReplaced = family.other,
             }
             for name, value in pairs(attributes) do
@@ -1333,8 +1350,11 @@ local function watchDecor(generated)
             -- first-join could remain rectangular forever. Recover only
             -- one camera-near, genuine support on healthy Low; no global
             -- rebuild for hundreds of faraway streamed posts.
+            local actualSkyPylon =
+                PremiumLargeStructureMeshKit.validNativeSkyPylon(part)
             if not part:IsA("BasePart")
-                or not part.Name:match("^PlatformSupport%d+_%d+$") then
+                or (not part.Name:match("^PlatformSupport%d+_%d+$")
+                    and not actualSkyPylon) then
                 return
             end
             local templates = ReplicatedStorage:FindFirstChild(
@@ -1367,6 +1387,8 @@ local function watchDecor(generated)
                 end
                 local index = part.Name:match(
                     "^PlatformSupport(%d+)_%d+$")
+                    or (actualSkyPylon and part.Name:match(
+                        "^SkySpine(%d+)_MonumentalPylon%-?1$"))
                 local platforms = activeArena and
                     activeArena:FindFirstChild("Platforms")
                 local deck = platforms and

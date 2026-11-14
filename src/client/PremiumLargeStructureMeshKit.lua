@@ -129,7 +129,46 @@ end
 -- bare native until a proven approved source fits.
 local MIN_NATIVE_SUPPORT_HEIGHT = 4.75
 
+-- The REAL map authors two 12.2-stud nonphysical silhouette pylons
+-- on Sky Spine steps 2,5,6,9. Reuse the already moderated 7-MeshPart
+-- variant column artwork in EXISTING 1/8/16 column source slots.
+-- Never mistake luminous SignalInlay or a synthetic name-alike for
+-- an eligible structural replacement. Safe on ChildRemoved too.
+function Kit.validNativeSkyPylon(part,index)
+    if not part or not part:IsA("BasePart")
+        or not part.Anchored or part.CanCollide
+        or part.CanTouch or part.CanQuery
+        or part:GetAttribute("SkySpineDecor")~=true then return false end
+    local id,side=part.Name:match(
+        "^SkySpine(%d+)_MonumentalPylon(%-?1)$")
+    id=tonumber(id)
+    if not id or not side or (index and id~=index)
+        or part:GetAttribute("PerimeterPlatformIndex")~=id then
+        return false
+    end
+    -- Tight bounds match SkySpineArchitecture's genuine server original.
+    return part.Size.Y>=12.15 and part.Size.Y<=12.25
+        and part.Size.X>=1.45 and part.Size.X<=1.55
+        and part.Size.Z>=1.65 and part.Size.Z<=1.75
+end
+
+-- Both selector and installer use identical pylon-before-generic-post
+-- ordering, so one source module cannot be reserved for an object the
+-- installer won't reach. Never changes a 7-piece budget.
+local function supportPriority(name)
+    return name:match("^SkySpine%d+_MonumentalPylon%-?1$")
+        and 0 or 1
+end
+
+local function sortNativeSupports(a,b)
+    local nameA=type(a)=="table" and a.name or a.Name
+    local nameB=type(b)=="table" and b.name or b.Name
+    local pa,pb=supportPriority(nameA),supportPriority(nameB)
+    return pa==pb and nameA<nameB or pa<pb
+end
+
 local function validNativeSupport(part,index)
+    if Kit.validNativeSkyPylon(part,index) then return true end
     return part and part:IsA("BasePart")
         and part.Anchored and not part.CanCollide and not part.CanTouch
         and not part.CanQuery and part.Name:match(
@@ -337,6 +376,8 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         local grouped={}
         for _,part in ipairs(decor:GetChildren()) do
             local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
+                or (Kit.validNativeSkyPylon(part) and
+                    part.Name:match("^SkySpine(%d+)_MonumentalPylon%-?1$"))
             local id=tonumber(suffix)
             if id and validNativeSupport(part,id) then
                 local segments=Kit.supportFit(part.Size,supportBounds)
@@ -353,7 +394,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
         -- unrelated pillar. Otherwise the selected deck can exhaust
         -- the quota before its nominated native posts are mounted.
         for id,group in pairs(grouped) do
-            table.sort(group,function(x,y) return x.name<y.name end)
+            table.sort(group,sortNativeSupports)
             local cost=0
             for i=1,math.min(#group,tier=="High" and 2 or 1) do
                 cost+=group[i].modules
@@ -561,11 +602,13 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
 
     local natives = {}
     for _,child in ipairs(decor:GetChildren()) do
-        if validNativeSupport(child,index) then
+        if validNativeSupport(child,index)
+            and (not Kit.validNativeSkyPylon(child,index)
+                or platform:GetAttribute("SkySpineStep")~=nil) then
             natives[#natives+1]=child
         end
     end
-    table.sort(natives,function(a,b) return a.Name<b.Name end)
+    table.sort(natives,sortNativeSupports)
     local maxSupports = tier=="High" and 2 or 1
     -- Low has exactly ONE seven-piece source module (not per-platform).
     local output = {parts={},covered={},disconnects={},modules=0}
@@ -591,6 +634,9 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
                     for _,part in ipairs(commit(parent,stage,variant,
                         tostring(index).."_"..tostring(k))) do
                         part:SetAttribute("OriginalSupportColumn3D",true)
+                        if Kit.validNativeSkyPylon(support,index) then
+                            part:SetAttribute("OriginalSkySpinePylon3D",true)
+                        end
                         -- This imported source follows its actual native
                         -- support, NOT the RouteTier deck shrink snapshot.
                         -- Avoid double resizing by deck and support owners.

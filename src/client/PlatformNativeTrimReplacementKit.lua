@@ -67,6 +67,11 @@ local function eligible(part)
         -- exact server-authored nonphysical support. Never mask another
         -- deck's support, or a Part not explicitly verified/mounted.
         return name:match("^PlatformSupport%d+_%d+$") ~= nil
+            or (name:match(
+                "^SkySpine%d+_MonumentalPylon%-?1$") ~= nil
+                and part:GetAttribute("SkySpineDecor")==true
+                and part:GetAttribute("PerimeterPlatformIndex")
+                    ==tonumber(name:match("^SkySpine(%d+)_")))
     end
     local id = name:match("^PlatformBevel(%d+)_%d+$")
     if id and (active[id] == "carapace" or active[id] == "rim") then
@@ -289,9 +294,16 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                 and part.Parent == arena:FindFirstChild("Decor")
                 and part.Anchored and not part.CanCollide
                 and not part.CanTouch and not part.CanQuery
-                and part.Name:match("^PlatformSupport%d+_%d+$") then
+                and (part.Name:match("^PlatformSupport%d+_%d+$")
+                    or (part.Name:match(
+                        "^SkySpine%d+_MonumentalPylon%-?1$")
+                        and part:GetAttribute("SkySpineDecor")==true
+                        and part:GetAttribute("PerimeterPlatformIndex")
+                            ==tonumber(part.Name:match("^SkySpine(%d+)_"))))
+                then
                 verifiedSupports[part] = true
                 local id = part.Name:match("^PlatformSupport(%d+)_")
+                    or part.Name:match("^SkySpine(%d+)_")
                 if id then verifiedSupportIndices[id] = true end
             end
         end
@@ -484,7 +496,8 @@ end
 -- only on a native-mask change, not on RenderStepped or a new timer.
 function Kit.breakdown()
     local result = {
-        bevel = 0, underframe = 0, support = 0, other = 0,
+        bevel = 0, underframe = 0, support = 0, pylon = 0,
+        other = 0,
     }
     for part in pairs(saved) do
         if part.Parent == activeDecor then
@@ -495,6 +508,8 @@ function Kit.breakdown()
                 result.underframe += 1
             elseif name:match("^PlatformSupport%d+_%d+$") then
                 result.support += 1
+            elseif name:match("^SkySpine%d+_MonumentalPylon%-?1$") then
+                result.pylon += 1
             else
                 result.other += 1
             end
