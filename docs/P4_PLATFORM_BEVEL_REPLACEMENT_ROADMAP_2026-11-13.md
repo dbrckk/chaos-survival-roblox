@@ -244,6 +244,54 @@ FPS p50/p95 et latence de reconstruction du propriétaire de plateforme.
 La baisse effective de blocs visibles n'est pas quantifiée sans
 échantillonnage client.
 
+## Lot P4 — diffusion des vraies bordures 3D sur la carte entière (14 novembre)
+
+**Défaut du propriétaire constaté :** `ApprovedPlatformRimMeshKit.selectVisibleDecks`
+consommait systématiquement ses 4 résidences Medium PC ou 8 résidences
+High PC sur les plateformes **les plus proches les unes des autres**.
+Une première promenade fortement détaillée pouvait côtoyer une seconde
+section du même champ de vision encore en `WedgePart`, bien que les deux
+modèles `Rect` (131482590870627) et `Long` (127617571835277)
+soient approuvés et source-vérifiés.
+
+**Implémentation :**
+
+- **Medium PC, sans pression :** garder les **2** plateformes authentiques
+  les plus proches puis attribuer les **2** résidences restantes aux
+  plateformes éligibles les plus spatialement distinctes de cette carte.
+- **High PC, sans pression :** garder les **3** premières sources de
+  premier plan, répartir les **5** restantes sur les autres secteurs
+  éligibles. Une pénalité de distance caméra préserve la visibilité
+  effective : aucun modèle n'est placé hors de la zone LOD ni sur une
+  plateforme dangereuse, non répliquée ou déjà habillée.
+- **Android/Touch, Low et pression GPU > 0 :** conserver exactement
+  l'ancien choix des plateformes les plus proches et **les plafonds
+  identiques** (Medium tactile 1, High tactile 2 ; pression 2 zéro).
+- L'authentification coûteuse des deux `Model:GetBoundingBox` et sept
+  régions `MeshPart` par source n'est effectuée **qu'une fois par
+  reconstruction**, et non une fois pour chaque plateforme de la carte.
+  `install` vérifie néanmoins de nouveau l'asset au moment réel du
+  montage ; aucune source devenue invalide ne peut masquer les quatre
+  biseaux natifs.
+- **Aucun ajout de MeshPart, Part, AssetId, RenderStepped, Heartbeat,
+  appel réseau, collider ou budget GPU.** Une résidence continue à
+  remplacer précisément les **4 WedgePart** d'un deck. Les
+  `PlatformUnderFrame`, signaux et vraies pièces de collision restent.
+- Fixture Roblox Engine : 12 vrais colliders de deck avec chacun
+  4 biseaux de repli, distribués sur les quatre quadrants d'une
+  base 320 × 320. Le test exige 4 résidences Medium PC dont au moins
+  2 éloignées, 8 High PC dont au moins 3 éloignées ; Android High et
+  PC sous pression continuent à choisir leurs sources locales.
+  La révocation d'une source `Rect` et sa restauration lors du prochain
+  appel sont également couvertes.
+
+**Indicateur existant :** `LocalOriginalPlatformRimDeckCount`
+mesure les sources réellement montées ; les biseaux primitifs
+effectivement masqués sont comptés par
+`PlatformNativeTrimReplacementKit.breakdown().bevel`.
+Ces chiffres et la mesure FPS Android doivent être relevés en session
+avant d'affirmer un pourcentage de conversion ou un gain GPU.
+
 ## Autres chantiers visuels prioritaires
 
 **P0 :** finir les structures de quartiers visibles non couvertes (le
