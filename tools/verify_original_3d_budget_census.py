@@ -307,12 +307,20 @@ assert 'cap = math.min(cap, TOUCH_CAP[tier] or 0)' in DISTRICT_FACADES
 assert 'if stress >= 2 then return 0 end' in DISTRICT_FACADES
 assert 'return tier == "High" and math.min(reduced, 6) or reduced' in DISTRICT_FACADES
 assert 'if cap == 0 or not arena or not cameraReady' in DISTRICT_FACADES
-assert 'for i = 1, math.min(#candidates, cap) do' in DISTRICT_FACADES
+assert 'local limit = math.min(#candidates, cap)' in DISTRICT_FACADES
+assert 'if tier == "Medium" and touch ~= true and stress == 0' in DISTRICT_FACADES
+assert 'local foreground = math.min(limit, 3)' in DISTRICT_FACADES
+assert 'wanted[winner.building] = winner' in DISTRICT_FACADES
+assert 'if tier=="Medium" and touch~=true and stress==0 then' in SIDE
+assert 'if taken<limit then' in SIDE
+assert '"LocalApprovedDistrictFacadeMounted")==true then' in SIDE
+assert 'for i = 1, limit do' in DISTRICT_FACADES
+assert 'for i=1,limit do' in SIDE
 assert 'profile.Name, cameraReady, cameraLook, isTouch,' in TOWERS_LOD
 assert 'player:GetAttribute("OptionalVfxPressure"))' in TOWERS_LOD
 assert 'restoreNative(entry)' in DISTRICT_FACADES
 assert 'markResident(entry, false)' in DISTRICT_FACADES
-for tier, normal, touch in (("Low",1,1),("Medium",5,3),("High",16,8)):
+for tier, normal, touch in (("Low",1,1),("Medium",8,3),("High",16,8)):
     assert touch<=normal
     for pressure in (0,1,2):
         expected=touch if pressure==0 else touch//2 if pressure==1 else 0
