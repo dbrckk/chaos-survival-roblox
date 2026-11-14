@@ -27,3 +27,5 @@ jobs:
       dry_run: false
       confirmation: UPLOAD_CHAOS_ORIGINAL_3D
     secrets: inherit
+
+# Retry after local preflight rejected a too-long asset name before any POST.
