@@ -61,6 +61,29 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 "LocalApprovedDistrictSidewallMounted")).toBe(true)
             expect(core.Transparency).toBe(1)
             expect(ApprovedDistrictSidewallMeshKit.count()>0).toBe(true)
+            -- Actual Classic MapBuilder has 16 physical district owners.
+            -- Healthy desktop Medium completes EIGHT side/back 3D shells
+            -- inside the central camera range; mobile stays capped at 3.
+            -- Pressure 1 halves the desktop limit; pressure 2 revokes
+            -- all shells with immediate five-native restoration.
+            local centralCamera=arena:FindFirstChild("Base").Position
+                + Vector3.new(0,7,0)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,centralCamera,"Medium",true,false,0,Vector3.new(0,0,1))
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(8)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,centralCamera,"Medium",true,true,0,Vector3.new(0,0,1))
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(3)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,centralCamera,"Medium",true,false,1,Vector3.new(0,0,1))
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(4)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,centralCamera,"Medium",true,true,2,Vector3.new(0,0,1))
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(core.Transparency).toBe(original)
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena,camera,"Medium",true,true,0,door.CFrame.LookVector)
+            expect(core.Transparency).toBe(1)
             source:SetAttribute("OwnerVerified",false)
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
             expect(core.Transparency).toBe(original)
