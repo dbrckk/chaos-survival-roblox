@@ -1762,7 +1762,7 @@ for clause in (
 watch=OWNER.split('local function supportChanged(part)',1)[1].split(
     'decorAddedConnection = decor.ChildAdded',1)[0]
 assert 'PremiumLargeStructureMeshKit.cradleStreamNativeIndex(part)' in watch
-assert 'templates:FindFirstChild("ShortCradle")' in watch
+assert 'templates:FindFirstChild(\n                            "ShortCradle")' in watch
 assert 'PremiumLargeStructureMeshKit\n                                .hasNativeCradleFallback(decor,deck)' in watch
 assert 'mountedLongCradles[deck]' in watch
 assert 'if part.Parent ~= decor then' in watch
