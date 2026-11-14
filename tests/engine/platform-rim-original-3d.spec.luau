@@ -87,6 +87,31 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             Vector3.new(0,12,0))
         local elongated, longFrame = platform(32,Vector3.new(26,2,8),
             Vector3.new(24,12,0))
+        -- All extra candidates are REAL collidable deck Parts with
+        -- their own four fully replicated, nonphysical native Wedges.
+        -- In High PC, nearby originals retain priority while the
+        -- remaining authentic seven-MeshPart source slots must reach
+        -- remote visible sectors of a 320-stud map.
+        local allDecks={rectangular,elongated}
+        local nearCoords={
+            Vector3.new(6,12,28),Vector3.new(12,12,26),
+            Vector3.new(18,12,25),Vector3.new(26,12,16),
+            Vector3.new(20,12,-17),Vector3.new(-15,12,15),
+        }
+        for i,point in ipairs(nearCoords) do
+            local deck=platform(32+i,Vector3.new(17,2,10),point)
+            allDecks[#allDecks+1]=deck
+        end
+        local farDecks={}
+        local remoteCoords={
+            Vector3.new(95,12,70),Vector3.new(-92,12,65),
+            Vector3.new(-96,12,-70),Vector3.new(92,12,-83),
+        }
+        for i,point in ipairs(remoteCoords) do
+            local deck=platform(38+i,Vector3.new(26,2,8),point)
+            allDecks[#allDecks+1]=deck
+            farDecks[#farDecks+1]=deck
+        end
         local meshes = Instance.new("Folder")
         meshes.Name = "TestVerifiedRimMeshes"
         meshes.Parent = arena
@@ -111,6 +136,40 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 {rectangular,elongated},"High",base,point,
                 2,false,decor,{}, {})
             expect(next(maxStress)).toBe(nil)
+            local mediumDesktop=Rim.selectVisibleDecks(
+                allDecks,"Medium",base,point,0,false,decor,{}, {})
+            local highDesktop=Rim.selectVisibleDecks(
+                allDecks,"High",base,point,0,false,decor,{}, {})
+            local highTouch=Rim.selectVisibleDecks(
+                allDecks,"High",base,point,0,true,decor,{}, {})
+            local stressedDesktop=Rim.selectVisibleDecks(
+                allDecks,"High",base,point,1,false,decor,{}, {})
+            local function checkSpread(owners,expectedCount,minFar)
+                local count,far=0,0
+                for deck,kind in pairs(owners) do
+                    count+=1
+                    expect(deck.Anchored and deck.CanCollide).toBe(true)
+                    expect(kind=="Rect" or kind=="Long").toBe(true)
+                    for _,remote in ipairs(farDecks) do
+                        if remote==deck then far+=1 end
+                    end
+                end
+                expect(count).toBe(expectedCount)
+                expect(far>=minFar).toBe(true)
+            end
+            checkSpread(mediumDesktop,4,2)
+            checkSpread(highDesktop,8,3)
+            checkSpread(highTouch,2,0)
+            checkSpread(stressedDesktop,4,0)
+            -- Android and GPU pressure retain the old foreground
+            -- nearest-first selection, rather than paying for skyline
+            -- coverage under constrained render budgets.
+            for _,remote in ipairs(farDecks) do
+                expect(highTouch[remote]).toBe(nil)
+                expect(stressedDesktop[remote]).toBe(nil)
+            end
+            expect(highDesktop[rectangular]).toBe("Rect")
+            expect(highDesktop[elongated]).toBe("Long")
             local rimRect = Rim.install(meshes,rectangular,31,"Rect",decor)
             local rimLong = Rim.install(meshes,elongated,32,"Long",decor)
             expect(rimRect~=nil and #rimRect==7).toBe(true)
