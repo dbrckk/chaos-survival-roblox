@@ -578,16 +578,15 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
             for _, candidate in ipairs(candidates) do
                 if not wanted[candidate.building] then
                     local nearest = spacingCap
-                    for building in pairs(wanted) do
-                        local otherDoor = building:FindFirstChild(
-                            "ServiceEntryDoor")
-                        if otherDoor and otherDoor:IsA("BasePart") then
-                            local delta = candidate.door.Position
-                                - otherDoor.Position
-                            nearest = math.min(nearest,
-                                Vector3.new(delta.X, delta.Y * .65,
-                                    delta.Z).Magnitude)
-                        end
+                    for _, selected in pairs(wanted) do
+                        -- Each candidate already carries the exact
+                        -- authenticated original door; avoid repeat
+                        -- hierarchy traversals during sector selection.
+                        local delta = candidate.door.Position
+                            - selected.door.Position
+                        nearest = math.min(nearest,
+                            Vector3.new(delta.X, delta.Y * .65,
+                                delta.Z).Magnitude)
                     end
                     local score = nearest - candidate.priority * .14
                     if score > winnerScore or (score == winnerScore
