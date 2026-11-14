@@ -162,11 +162,14 @@ end
 
 local function template(slot)
     local root = ReplicatedStorage:FindFirstChild("ApprovedDistrictFacadeTemplates")
-    if not root or root:GetAttribute("OwnerVerified") ~= true then
+    if not root or not root:IsA("Folder")
+        or root.Parent ~= ReplicatedStorage
+        or root:GetAttribute("OwnerVerified") ~= true then
         return nil
     end
     local source = root:FindFirstChild(NAMES[slot])
     if not source or not source:IsA("Model")
+        or source.Parent ~= root
         or source:GetAttribute("OwnerVerified") ~= true
         or source:GetAttribute("CosmeticOnly") ~= true
         or source:GetAttribute("DistrictFacade3D") ~= true
@@ -224,6 +227,10 @@ local function valid(entry, district, base)
         or entry.source.Parent ~= entry.sourceFolder
         or entry.sourceFolder.Parent ~= ReplicatedStorage
         or entry.sourceFolder.Name ~= "ApprovedDistrictFacadeTemplates"
+        or entry.sourceFolder:GetAttribute("OwnerVerified") ~= true
+        or entry.source:GetAttribute("OwnerVerified") ~= true
+        or entry.source:GetAttribute("CosmeticOnly") ~= true
+        or entry.source:GetAttribute("DistrictFacade3D") ~= true
         or entry.source:GetAttribute("Original3DAssetId") ~= IDS[entry.slot]
         or #entry.pieces < 1 or #entry.pieces > 24 then
         return false
@@ -359,6 +366,26 @@ local function mount(building, district, base, slot, door, source)
         source.DescendantRemoving:Connect(function(part)
             if part:IsA("MeshPart") then revokeIfMounted() end
         end)
+    entry.connections[#entry.connections + 1] =
+        source.DescendantAdded:Connect(function(part)
+            if part:IsA("BasePart") or part:IsA("LuaSourceContainer") then
+                revokeIfMounted()
+            end
+        end)
+    entry.connections[#entry.connections + 1] =
+        entry.sourceFolder:GetAttributeChangedSignal(
+            "OwnerVerified"):Connect(revokeIfMounted)
+    for _, attribute in ipairs({
+        "OwnerVerified", "CosmeticOnly", "DistrictFacade3D",
+        "Original3DAssetId",
+    }) do
+        entry.connections[#entry.connections + 1] =
+            source:GetAttributeChangedSignal(attribute):Connect(function()
+                if not valid(entry, district, base) then
+                    revokeIfMounted()
+                end
+            end)
+    end
     immediatelyHideUnsafe()
     return entry
 end
