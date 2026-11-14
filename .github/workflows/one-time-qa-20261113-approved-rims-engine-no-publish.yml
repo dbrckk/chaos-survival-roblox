@@ -15,6 +15,10 @@
 # P4 2026-11-14: the exact-main Cloud gate now validates 8 approved
 # facade + rear-shell models on healthy desktop Medium, while keeping
 # three Android Medium models, pressure rollback and original collision.
+# Cloud gate 2026-11-14: Build now independently preflights every
+# real engine spec via the same 105000-byte Cloud composer without
+# relying on workflow-generated lest.ci.toml. Re-run same-SHA 7 Cloud
+# suites and Build; never deploy the public experience.
 # P4 Cloud source-limit incident: previously 106,219B spec rejected by
 # composer before engine launch. Source now 104,013B and Build Validation
 # independently executes identical batch generator; run whole cloud gate
