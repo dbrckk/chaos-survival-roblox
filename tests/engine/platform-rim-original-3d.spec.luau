@@ -213,8 +213,8 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 expect(count).toBe(expectedCount)
                 expect(far>=minFar).toBe(true)
             end
-            checkSpread(mediumDesktop,4,2)
-            checkSpread(highDesktop,8,3)
+            checkSpread(mediumDesktop,6,2)
+            checkSpread(highDesktop,12,4)
             checkSpread(highTouch,2,0)
             checkSpread(stressedDesktop,4,0)
             -- Android and GPU pressure retain the old foreground

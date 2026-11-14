@@ -127,10 +127,21 @@ end
 function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
     touch,decor,reservedCarapaces,reservedHulls)
     local result={}
-    local cap=tier=="High" and (touch and 2 or 8)
-        or tier=="Medium" and (touch and 1 or 4) or 1
+    -- Existing seven-material rims can now finish twelve actual eligible
+    -- decks on healthy desktop High (six on Medium), without creating any
+    -- extra model, uploader, renderer pass, or mobile residency. Stress
+    -- 1 keeps the *old* 4/2 desktop ceilings, even after the healthy
+    -- profile increases; touch 2/1 and critical pressure are unchanged.
+    local cap=tier=="High" and (touch and 2 or 12)
+        or tier=="Medium" and (touch and 1 or 6) or 1
     local stress=math.clamp(math.floor(tonumber(pressure) or 0),0,2)
-    if stress==1 then cap=math.floor(cap*.5) end
+    if stress==1 then
+        cap=math.floor(cap*.5)
+        if touch~=true then
+            cap=math.min(cap,tier=="High" and 4
+                or (tier=="Medium" and 2 or 0))
+        end
+    end
     if stress>=2 or cap<=0 or type(ordered)~="table"
         or not base or not base:IsA("BasePart")
         or not base.Anchored or not base.CanCollide

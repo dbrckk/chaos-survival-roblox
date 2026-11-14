@@ -390,8 +390,10 @@ assert "task.defer(PremiumPlatformRimAssets.start)" in rim_init
 # only. Source provenance is sampled once each rebuild, but rechecked at
 # mounting so an invalidated source never masks native WedgeParts.
 for clause in (
-    'local cap=tier=="High" and (touch and 2 or 8)',
-    'or tier=="Medium" and (touch and 1 or 4) or 1',
+    'local cap=tier=="High" and (touch and 2 or 12)',
+    'or tier=="Medium" and (touch and 1 or 6) or 1',
+    'cap=math.min(cap,tier=="High" and 4',
+    'or (tier=="Medium" and 2 or 0))',
     'if touch~=true and stress==0 and tier~="Low" and count>2 then',
     'local foreground=math.min(count,tier=="High" and 3 or 2)',
     'local spacingCap=math.max(base.Size.X,base.Size.Z)*.65',
