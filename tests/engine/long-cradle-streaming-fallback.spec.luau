@@ -316,6 +316,14 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 {owner},decor,"Crossroads","High",base,
                 owner.Position,Vector3.new(0,0,1),0,false)
             expect(selected[owner]).toBe(true)
+            -- If no complete 3D underframe source is available, Low
+            -- can still sculpt ONE authentic nearby pylon, and never
+            -- spends a source column in addition to a full cradle.
+            local lowCradles,lowSupports=Kit.selectNearRouteStructures(
+                {owner},decor,"Crossroads","Low",base,
+                owner.Position,Vector3.new(0,0,1),0,false)
+            expect(next(lowCradles)).toBe(nil)
+            expect(lowSupports[owner]).toBe(true)
             local result=Kit.supports(art,decor,owner,"Crossroads",
                 "High",id,2,true)
             expect(result~=nil and result.modules==2).toBe(true)
