@@ -814,7 +814,7 @@ local function rebuild()
             -- It follows RouteTier shrink via the existing welded snapshot.
             local authenticLongCradle = false
             if longCradleBudget > 0 and not authenticCarapace
-                and nearCradles[platform] == true then
+                and not authenticRim and nearCradles[platform] == true then
                 local cradle = PremiumLargeStructureMeshKit.longCradle(
                     folder, platform, tier.Name, visualIndex, true, decor)
                 if cradle and #cradle == 7 then

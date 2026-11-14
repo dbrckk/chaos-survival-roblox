@@ -1670,6 +1670,7 @@ braces=OWNER.index('for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(',s
 assert start < cradle < finish < braces
 assert 'local authenticLongCradle = false' in OWNER[start:finish]
 assert 'if cradle and #cradle == 7 then' in OWNER[start:finish]
+assert 'and not authenticRim and nearCradles[platform] == true' in OWNER[start:finish]
 assert 'authenticLongCradle = true' in OWNER[start:finish]
 assert 'local authenticUnderdeck = authenticCarapace' in OWNER[start:finish]
 assert 'and not authenticRim and not authenticLongCradle then' in OWNER

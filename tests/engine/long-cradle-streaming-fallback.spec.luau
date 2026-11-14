@@ -9,6 +9,7 @@ local Config=require("../../src/shared/Config")
 local ArenaVariants=require("../../src/server/ArenaVariants")
 local VisualTheme=require("../../src/shared/VisualTheme")
 local Kit=require("../../src/client/PremiumLargeStructureMeshKit")
+local Finish=require("../../src/client/PlatformFinishKit")
 
 describe("P4 approved long cradle streaming fallback (engine)",function()
     it("uses complete genuine Promenade and SkySpine native underframes only",function()
@@ -106,6 +107,31 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     "Medium",id,true,decor)
                 if fitted then
                     expect(parts~=nil and #parts==7).toBe(true)
+                    -- Real source is now mounted. Confirm native underside
+                    -- fallback details disappear, but upper route paint
+                    -- and the physical collision deck stay authoritative.
+                    local palette={
+                        Detail=Color3.fromRGB(176,186,193),
+                        Secondary=Color3.fromRGB(112,157,187),
+                        Structure=Color3.fromRGB(55,76,94),
+                        Accent=Color3.fromRGB(112,194,221),
+                        Surface=Color3.fromRGB(117,132,144),
+                    }
+                    local fallback=Finish.build(models,deck,"Towers",
+                        "High",palette,false)
+                    expect(#fallback).toBe(3)
+                    for _,piece in ipairs(fallback) do piece:Destroy() end
+                    local sculpted=Finish.build(models,deck,"Towers",
+                        "High",palette,true)
+                    expect(#sculpted).toBe(0)
+                    local harbor=Finish.build(models,deck,"Harbor",
+                        "High",palette,true)
+                    expect(#harbor).toBe(2)
+                    for _,piece in ipairs(harbor) do
+                        expect(piece.CanCollide or piece.CanQuery
+                            or piece.CanTouch).toBe(false)
+                        piece:Destroy()
+                    end
                     for _,piece in ipairs(parts) do
                         expect(piece:IsA("MeshPart")).toBe(true)
                         expect(piece.CanCollide or piece.CanTouch or piece.CanQuery)
