@@ -1201,7 +1201,13 @@ describe("Original 3D native fallback isolation (engine)", function()
                 RemainingStructureKit.sync(arena,base.Position,"High",true,
                     Vector3.new(0,0,-1),0,false)
                 p4Phase="approved arch residency"
-                expect(RemainingStructureKit.count("arch")>=1).toBe(true)
+                expect(RemainingStructureKit.count("arch")).toBe(10)
+                expect(RemainingStructureKit.nativeCount("arch")).toBe(50)
+                RemainingStructureKit.sync(arena,base.Position,"Medium",true,
+                    Vector3.new(0,0,-1),0,false)
+                expect(RemainingStructureKit.count("arch")).toBe(6)
+                RemainingStructureKit.sync(arena,base.Position,"High",true,
+                    Vector3.new(0,0,-1),0,false)
                 -- Verify REAL source-masked upper porticos on all FOUR
                 -- physical perimeter escape routes, using the existing six
                 -- High PC slots. This catches camera-only concentration of
