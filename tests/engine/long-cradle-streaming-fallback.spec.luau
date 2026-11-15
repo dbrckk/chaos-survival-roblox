@@ -724,11 +724,10 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     local endpoint=ends[lane]
                     local endpointFrame=endpoint.CFrame
                     local truss=trusses[lane]
-                    local trussAlpha=truss.LocalTransparencyModifier
                     endpoint.CFrame=endpointFrame*CFrame.new(50,0,0)
                     task.wait()
                     assert(Remaining.nativeCount("junction")==1,variant.." disconnected joint "..lane.." retained its mesh")
-                    assert(math.abs(truss.LocalTransparencyModifier-(lane==1 and baseline or trussAlpha))<.001,
+                    assert(math.abs(truss.LocalTransparencyModifier-(lane==1 and baseline or 0))<.001,
                         variant.." disconnected joint "..lane.." failed to restore its native truss")
                     endpoint.CFrame=endpointFrame
                     task.wait()
