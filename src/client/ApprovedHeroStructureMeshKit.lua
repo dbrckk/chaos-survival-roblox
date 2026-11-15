@@ -22,7 +22,8 @@ local CLASSIC = {holder="ApprovedClassicSignatureObservatoryTemplates",
     name="DualDishObservatory", id=112493873850364, tag="OriginalClassicDualDishObservatory3D",
     bounds=Vector3.new(9.105,15.0875,1.03), pieces={
         Vector3.new(1.71,15.0875,1.03),Vector3.new(9.105,12.085,.6975),
-        Vector3.new(9.07,5.1625,.7338),Vector3.new(6.6175,13.8531,.4594)}}
+        Vector3.new(9.07,5.1625,.7338),Vector3.new(6.6175,13.8531,.4594),
+        Vector3.new(8.9772,14.1883,.7155)}}
 local HARBOR = {holder="ApprovedSouthHarborDrydockTemplates",name="SculptedDrydock",
     id=125428569657840,tag="OriginalSouthHarborSculptedDrydock3D",
     bounds=Vector3.new(16.53571,18.36429,4.60071),pieces={
@@ -479,8 +480,8 @@ local function sculptDetails(entry,key,model,assets,parts)
             Vector3.new(29.4,4.64,5.84),color)
             and sculpt(model,assets[1],origin*CFrame.new(0,bottom+2.32,0)*CFrame.Angles(0,math.pi*.5,0),
                 Vector3.new(24.7,4.64,5.84),color)
-            and sculpt(model,assets[2],origin*CFrame.new(0,29.85,0),
-                Vector3.new(3.65,10.7,3.65),parts[7].Color)
+            and sculpt(model,assets[2],origin*CFrame.new(0,bottom+4.64-.20+12.75*.5,0),
+                Vector3.new(3.65,12.75,3.65),parts[7].Color)
     else
         local center = origin*CFrame.new(-.72,entry.bodyTop-origin.Position.Y-13.25,0)
             *CFrame.Angles(0,math.pi*.5,0)

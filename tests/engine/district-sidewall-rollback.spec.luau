@@ -52,6 +52,7 @@ describe("Authenticated district sidewall restoration (engine)", function()
             112493873850364,"OriginalClassicDualDishObservatory3D",{
                 {1.03,15.0875,1.71},{.6975,12.085,9.105,0,-.2312},
                 {.7338,5.1625,9.07,.1344,4.0025},{.4594,13.8531,6.6175,.2259,.6141},
+                {.7155,14.1883,8.9772,.1227,.3503},
             })
         body.Harbor = make("ApprovedSouthHarborDrydockTemplates","SculptedDrydock",
             125428569657840,"OriginalSouthHarborSculptedDrydock3D",{
@@ -119,6 +120,16 @@ describe("Authenticated district sidewall restoration (engine)", function()
             end
             if variant == "Classic" then
                 assert(sculpture.Mesh4.Position.X < origin.Position.X, "dish glazing points away from arena")
+                assert(sculpture:FindFirstChild("Mesh5"), "dish bracing is missing")
+            elseif variant == "Crossroads" then
+                local pieces = sculpture.ForgedHeroFittings:GetChildren()
+                local mastBottom = math.huge
+                for _,piece in ipairs(pieces) do
+                    if piece:GetAttribute("Original3DAssetId") == 86423178125318 then
+                        mastBottom = math.min(mastBottom,piece.Position.Y-piece.Size.Y*.5)
+                    end
+                end
+                assert(math.abs(mastBottom-origin.Position.Y-22.34) < .12)
             elseif variant == "Orbital" or variant == "Harbor" then
                 local _,bounds = sculpture:GetBoundingBox()
                 assert(bounds.Z > bounds.X,variant.." monument faces edge-on")
