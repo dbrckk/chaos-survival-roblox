@@ -995,6 +995,78 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                         "Promenade"..index.."_MonumentalCrosshead")
                     if native then crossheads[deck]=native end
                 end
+                local checked=0
+                for _,deck in ipairs(platforms:GetChildren()) do
+                    if deck:GetAttribute("PerimeterRoute")==2
+                        and table.find({1,4,8},deck:GetAttribute("PerimeterStep")) then
+                        local prefix="SkyRouteMonument"..deck.Name:match("%d+").."_"
+                        local originals={}
+                        for _,name in ipairs({"ExteriorAbutment-1","ExteriorAbutment1",
+                            "LoadBearingKeel","RecessedCentralGirder"}) do
+                            table.insert(originals,assert(decor:FindFirstChild(prefix..name)))
+                        end
+                        local signal=assert(decor:FindFirstChild(prefix.."RouteStageBeacon"))
+                        local alpha=signal.LocalTransparencyModifier
+                        local camera=deck.Position-Vector3.new(6,deck.Size.Y*.5,0)
+                        Remaining.sync(arena,camera,"Low",true,nil,0,true)
+                        expect(Remaining.nativeCount("archBase")).toBe(4)
+                        for _,part in ipairs(originals) do expect(part.LocalTransparencyModifier).toBe(1) end
+                        local found=0
+                        local rendered
+                        for _,model in ipairs(workspace.ApprovedRemainingStructureMeshesLocal:GetChildren()) do
+                            if model.Name=="ApprovedP4_ArchAbutment" or model.Name=="ApprovedP4_ArchGirder" then
+                                found+=1
+                                rendered=model
+                                expect(model:GetAttribute("OriginalP4OwnerPlatform")).toBe(deck.Name)
+                                local frame,size=model:GetBoundingBox()
+                                expect(frame.Position.Y-size.Y*.5>=base.Position.Y+base.Size.Y*.5-.08).toBe(true)
+                                expect(frame.Position.Y+size.Y*.5<deck.Position.Y+deck.Size.Y*.5-.27).toBe(true)
+                                expect(frame.Position.X<deck.Position.X-deck.Size.X*.5).toBe(true)
+                                for _,mesh in ipairs(model:GetChildren()) do
+                                    expect(mesh:IsA("MeshPart") and not mesh.CanCollide and not mesh.CanQuery).toBe(true)
+                                end
+                            end
+                        end
+                        expect(found).toBe(3)
+                        deck:SetAttribute("CollapsePhase","Warning")
+                        expect(Remaining.nativeCount("archBase")).toBe(0)
+                        deck:SetAttribute("CollapsePhase",nil)
+                        expect(Remaining.nativeCount("archBase")).toBe(4)
+                        assert(rendered):Destroy()
+                        task.wait()
+                        for _,part in ipairs(originals) do expect(part.LocalTransparencyModifier).toBe(0) end
+                        Remaining.sync(arena,camera,"Low",true,nil,0,true)
+                        expect(Remaining.nativeCount("archBase")).toBe(4)
+                        Remaining.sync(arena,camera,"Low",true,nil,1,true)
+                        expect(Remaining.nativeCount("archBase")).toBe(0)
+                        expect(signal.LocalTransparencyModifier).toBe(alpha)
+                        expect(deck.CanCollide).toBe(true)
+                        checked+=1
+                    end
+                end
+                expect(checked).toBe(3)
+                if variant=="Towers" then
+                    local summit
+                    for _,deck in ipairs(platforms:GetChildren()) do
+                        if deck:GetAttribute("PerimeterRoute")==2
+                            and deck:GetAttribute("PerimeterStep")==8 then summit=deck; break end
+                    end
+                    Remaining.sync(arena,summit.Position,"Low",true,nil,0,true)
+                    local rounds,restore=true,{}
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.18,Cleanup={},OnCleanup=restore,
+                        Active=function() return rounds end})
+                    local untilTime=os.clock()+1.4
+                    repeat task.wait() until base.Size.X<=144.05 or os.clock()>untilTime
+                    rounds=false
+                    expect(base.Size.X<=144.05).toBe(true)
+                    expect(Remaining.nativeCount("archBase")).toBe(4)
+                    local templates=equipmentHolders.ApprovedPerimeterArmorTemplates
+                    templates.Cap:SetAttribute("OwnerVerified",false)
+                    expect(Remaining.nativeCount("archBase")).toBe(0)
+                    templates.Cap:SetAttribute("OwnerVerified",true)
+                    expect(Remaining.nativeCount("archBase")).toBe(4)
+                    for _,callback in ipairs(restore) do callback() end
+                end
                 local total=0
                 for _ in pairs(crossheads) do total+=1 end
                 expect(total).toBe(6)

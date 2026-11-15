@@ -2171,6 +2171,8 @@ task.spawn(function()
         local p4Counts = {
             LocalOriginalAscensionArch3DCount =
                 ApprovedRemainingStructureMeshKit.count("arch"),
+            LocalAscensionArchBaseNativePiecesReplaced =
+                ApprovedRemainingStructureMeshKit.nativeCount("archBase"),
             LocalOriginalColumnCasing3DCount =
                 ApprovedRemainingStructureMeshKit.count("casing"),
             LocalOriginalOrbitalHelixUnderframe3DCount =

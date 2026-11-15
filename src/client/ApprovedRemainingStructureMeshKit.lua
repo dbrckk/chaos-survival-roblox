@@ -28,6 +28,12 @@ local SOURCE={
     JunctionTruss={id=108452611210970,major=8.94,minor=1.12,height=.5675,
         centerY=0,holder="ApprovedPerimeterStructuresTemplates",
         template="Brace",tag="OriginalPerimeterStructure3D"},
+    ArchAbutment={id=88962643359267,major=2.7699,minor=2.34,height=2.14,
+        centerY=0,holder="ApprovedPerimeterArmorTemplates",
+        template="Cap",tag="OriginalPerimeterArmor3D"},
+    ArchGirder={id=122766792774607,major=9.62,minor=.6175,height=1.505,
+        centerY=0,holder="ApprovedPlatformSideTemplates",
+        template="Bridge",tag="OriginalStructuralSide3D"},
     Stay={id=122766792774607,major=9.62,minor=.6175,height=1.505,
         centerY=0,holder="ApprovedPlatformSideTemplates",
         template="Bridge",tag="OriginalStructuralSide3D"},
@@ -167,6 +173,8 @@ local FITTING_DISTANCE={Low=100,Medium=145,High=210}
 local FITTING_BUDGET={Low=1,Medium=2,High=6}
 local SIDES={-1,1}
 local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
+local ARCH_BASE_CAP={Low=1,Medium=2,High=4}
+local ARCH_BASE_RANGE={Low=105,Medium=145,High=190}
 -- Desktop-only extra creator-approved sculptures. The authenticated real
 -- platform/casing/ramp and source dimensions still decide actual mounts.
 -- No new assets, physical Parts, import requests or sampling loops.
@@ -198,14 +206,15 @@ local DISTANCE={
     High={arch=325,casing=275,helix=265,promenade=280},
 }
 local ARCH_NATIVE={
-    -- Five upper volumes are genuinely occluded by the authored canopy.
-    -- Keep BOTH deep abutments and lower keel/girder server-native: these
-    -- decks have variable genuine thickness 3 / 13.8 / 28.2 studs; the
-    -- approved seven-MeshPart roof sculpture does not span to the bottom
-    -- of all three floors, and masking their lower support would leave
-    -- the high SUMMIT platform looking dangerously unsupported.
+    -- The upper arch owns only its five canopy pieces.
     "VerticalBridgePylon-1","VerticalBridgePylon1",
     "TaperedFin-1","TaperedFin1","MonumentalOverpass",
+}
+local ARCH_BASE_NATIVE={
+    {name="ExteriorAbutment-1", size=Vector3.new(2.4,3.4,2.8), y=-1.65, side=-1},
+    {name="ExteriorAbutment1", size=Vector3.new(2.4,3.4,2.8), y=-1.65, side=1},
+    {name="LoadBearingKeel", size=Vector3.new(0,1.25,.9), y=-1.45, trim=1},
+    {name="RecessedCentralGirder", size=Vector3.new(0,.7,1.15), y=-.72, trim=1.2},
 }
 local CASING_NATIVE={
     "FoundationFoot","ArmoredFrontShell","ArmoredRearShell",
@@ -284,7 +293,7 @@ local function visualNative(part,parent)
         and part.Transparency<.95
 end
 
-local function collectArch(arena,deck,decor,scale)
+local function archDeck(arena,deck,scale)
     if not deck:IsA("BasePart") or not deck.Name:match("^Platform%d+$")
         or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("PerimeterRoute")==nil
@@ -315,7 +324,13 @@ local function collectArch(arena,deck,decor,scale)
     if phase~=nil and phase~="Normal" and phase~="Safe" then return nil end
     local shutter=deck:GetAttribute("BridgeShutterPhase")
     if shutter~=nil and shutter~="Idle" then return nil end
-    local index=tonumber(deck.Name:match("%d+"))
+    return key,step,route,tonumber(deck.Name:match("%d+"))
+end
+
+local function collectArch(arena,deck,decor,scale)
+    local key,step,route,index=archDeck(arena,deck,scale)
+    if not key then return nil end
+    local size=deck.Size
     local originals={}
     for _,suffix in ipairs(ARCH_NATIVE) do
         local part=decor:FindFirstChild("SkyRouteMonument"..index.."_"..suffix)
@@ -340,10 +355,65 @@ local function collectArch(arena,deck,decor,scale)
         originals=originals,center=deck.Position,
         -- The approved arch stands ON the actual top of the thick
         -- collidable platform; its source upper crosshead is +1 above
-        -- the native overpass offset. Deep lower steel stays native.
+        -- the native overpass offset. The plinth has its own footprint.
         orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0),
         scaleZ=overpass.Size.Z/17.6,
         stage=step,route=route,index=index,expectedParent=decor}
+end
+
+local function collectArchBase(arena,deck,decor,scale)
+    if decor~=arena:FindFirstChild("Decor") then return nil end
+    local stage,_,_,index=archDeck(arena,deck,scale)
+    if not stage then return nil end
+    local size=deck.Size
+    local bottom=-size.Y*.5
+    local halfZ=size.Z*.5
+    local natives={}
+    for slot,partSpec in ipairs(ARCH_BASE_NATIVE) do
+        local part=decor:FindFirstChild("SkyRouteMonument"..index.."_"..partSpec.name)
+        if not visualNative(part,decor) or not part:IsA("Part")
+            or part.Shape~=Enum.PartType.Block
+            or part:GetAttribute("SkyRouteMonument")~=true
+            or part:GetAttribute("PerimeterPlatformIndex")~=index
+            or part:GetAttribute("SkyRouteStage")~=stage:upper() then return nil end
+        local src=partSpec.size
+        local width=partSpec.trim and size.X-partSpec.trim*scale or src.X*scale
+        local z=partSpec.side and partSpec.side*(halfZ+scale) or 0
+        local expected=deck.CFrame*CFrame.new(0,bottom+partSpec.y,z)
+        if (part.Size-Vector3.new(width,src.Y,src.Z*scale)).Magnitude>.14
+            or (part.Position-expected.Position).Magnitude>.16
+            or part.CFrame.UpVector:Dot(expected.UpVector)<.999
+            or part.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+        natives[slot]=part
+    end
+    -- The original blocks are under the floor plane. Put the castings
+    -- against the approach-facing wall, grounded below the landing.
+    local base=arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then return nil end
+    local dx=deck.Position.X-base.Position.X
+    if math.abs(dx)<1 then return nil end
+    local facing=dx<0 and 1 or -1
+    local wall=deck.CFrame*CFrame.new(facing*(size.X*.5+.13*scale),bottom,0)
+    local height=math.min(3.4,size.Y-.38)
+    local crest=height-.59
+    local center=wall.Position
+    local pieces={}
+    for i,side in ipairs(SIDES) do
+        pieces[i]={category="archBase",name="ArchAbutment",owner=deck,
+            key=natives[i],arena=arena,expectedParent=decor,
+            originals={natives[i]},component=i,center=center,
+            orientation=wall*CFrame.new(0,height*.5-.035,side*(halfZ-.30*scale))
+                * CFrame.Angles(0,side==facing and math.pi or 0,0),
+            fitSize=Vector3.new(1.35*scale,height,2.45*scale)}
+    end
+    pieces[3]={category="archBase",name="ArchGirder",owner=deck,
+        key=natives[3],arena=arena,expectedParent=decor,
+        originals={natives[3],natives[4]},component=3,center=center,
+        orientation=wall*CFrame.new(facing*.17*scale,crest,0)
+            * CFrame.Angles(0,facing==-1 and math.pi or 0,0),
+        fitSize=Vector3.new(.93*scale,1.05,size.Z-.42*scale)}
+    for _,data in ipairs(pieces) do data.group=pieces end
+    return pieces
 end
 
 local function porticoStep(arena,deck,scale)
@@ -670,7 +740,7 @@ local function reveal(entry)
         elseif entry.category=="junction" then
             Trim.setJunctionTrussMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
-            or (isPortico(entry.category) and entry.visible))
+            or ((isPortico(entry.category) or entry.category=="archBase") and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
         end
@@ -747,7 +817,20 @@ local function refresh(entry)
     local scale=realFloorScale(entry.arena)
     local data=nil
     if scale and sourceIntact(entry) then
-        if entry.category=="arch" or isPortico(entry.category) then
+        if entry.category=="archBase" then
+            local group=collectArchBase(entry.arena,entry.owner,entry.expectedParent,scale)
+            data=group and group[entry.component]
+            if data then
+                for _,member in ipairs(group) do
+                    local peer=mounted[member.key]
+                    if not peer or peer.owner~=entry.owner or not sameOriginals(peer,member)
+                        or (peer~=entry and not sourceIntact(peer)) then
+                        data=nil
+                        break
+                    end
+                end
+            end
+        elseif entry.category=="arch" or isPortico(entry.category) then
             local decor=entry.arena:FindFirstChild("Decor")
             if decor==entry.expectedParent then
                 if entry.category=="arch" then
@@ -874,6 +957,10 @@ folder.ChildRemoved:Connect(function(child)
         if entry.model==child and not entry.disposing then
             mounted[owner]=nil
             dispose(entry)
+            for _,key in ipairs(entry.groupKeys or {}) do
+                local peer=mounted[key]
+                if peer then refresh(peer) end
+            end
             local other=entry.other and mounted[entry.other]
             if other then refresh(other) end
         end
@@ -882,9 +969,11 @@ end)
 
 local function mount(data,source)
     local clone=source:Clone()
+    if not clone then return nil end
     local cf,b=clone:GetBoundingBox()
     local entry={category=data.category,name=data.name,spec=data.spec or SOURCE[data.name],
         owner=data.owner,side=data.side,other=data.other,arena=data.arena,
+        component=data.component,
         otherDeck=data.otherDeck,
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,anchor=data.anchor,
@@ -894,6 +983,12 @@ local function mount(data,source)
         -- Route owners may need Roblox import's X/Z axis swap corrected.
         longX=data.category~="casing" and b.X>b.Z,
         visible=false,disposing=false}
+    if data.group then
+        entry.groupKeys={}
+        for _,member in ipairs(data.group) do
+            entry.groupKeys[#entry.groupKeys+1]=member.key
+        end
+    end
     for _,native in ipairs(data.originals) do
         entry.native[#entry.native+1]={
             part=native,alpha=native.LocalTransparencyModifier}
@@ -924,6 +1019,10 @@ local function mount(data,source)
     clone.Parent=folder
     local function changed()
         refresh(entry)
+        for _,key in ipairs(entry.groupKeys or {}) do
+            local peer=mounted[key]
+            if peer and peer~=entry then refresh(peer) end
+        end
         local other=entry.other and mounted[entry.other]
         if other then refresh(other) end
     end
@@ -944,7 +1043,7 @@ local function mount(data,source)
         entry.connections[#entry.connections+1]=
             data.owner.AncestryChanged:Connect(changed)
     end
-    if data.category=="arch" or isPortico(data.category) then
+    if data.category=="arch" or data.category=="archBase" or isPortico(data.category) then
         -- A collapsing/shutter warning takes precedence over decorative
         -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
         entry.connections[#entry.connections+1]=
@@ -989,13 +1088,28 @@ local function mount(data,source)
         end
     end
     for _,native in ipairs(data.originals) do
-        if isPortico(data.category) then
+        if data.category=="archBase" then
+            watch(native,{"CFrame","Size","Transparency","Anchored",
+                "CanCollide","CanTouch","CanQuery","Name","Shape"})
+            for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex"}) do
+                entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
+            end
+        elseif isPortico(data.category) then
             watchPorticoNative(native)
         else
             watch(native,{"CFrame","Size","Transparency"})
         end
     end
     if data.anchor then watchPorticoNative(data.anchor) end
+    if data.category=="archBase" then
+        for _,tag in ipairs({"PerimeterRoute","PerimeterStep","RouteTier"}) do
+            entry.connections[#entry.connections+1]=data.owner:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",entry.spec.tag}) do
+            entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        entry.connections[#entry.connections+1]=entry.sourceFolder:GetAttributeChangedSignal("OwnerVerified"):Connect(changed)
+    end
     entry.connections[#entry.connections+1]=
         source.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections+1]=
@@ -1041,11 +1155,15 @@ local function mount(data,source)
                 changed()
             end
         end)
-    if not entry.other then refresh(entry) end
+    if not entry.other and not data.group then refresh(entry) end
     return entry
 end
 
 local function caps(tier,touch,pressure,kind)
+    if kind=="archBase" then
+        if (tonumber(pressure) or 0)>=1 then return 0 end
+        return touch==true and 1 or (ARCH_BASE_CAP[tier] or ARCH_BASE_CAP.Low)
+    end
     if kind=="junction" then
         if (tonumber(pressure) or 0)>=1 then return 0 end
         return tier~="Low" and touch~=true and 2 or 1
@@ -1120,10 +1238,13 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     local src={}
     local variant=arena:GetAttribute("VariantId")
     local promenadeVariant=PROMENADE_VARIANTS[variant]
+    local archBaseCap=caps(tier,touch,pressure,"archBase")
     for name in pairs(SOURCE) do
         local kind=name=="Crosshead" and "promenade" or (name=="Stay" and "stay")
             or (name=="JunctionTruss" and "junction")
-        if not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
+        if name=="ArchAbutment" or name=="ArchGirder" then
+            if archBaseCap>0 then src[name]=sourceFor(name) end
+        elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
     end
@@ -1148,11 +1269,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
     end
     local desired={}
-    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={},fitting={},command={},junction={}}
+    local candidates={arch={},archBase={},casing={},helix={},promenade={},stay={},equipment={},fitting={},command={},junction={}}
     local function queuePair(pair,limit,pool)
         if not pair then return end
         local first=pair[1]
-        local resident=mounted[first.key]~=nil and (#pair==1 or mounted[pair[2].key]~=nil)
+        local resident=true
+        for _,part in ipairs(pair) do
+            if not mounted[part.key] then resident=false; break end
+        end
         local priority,distance=score(first,cameraPoint,cameraLook,resident)
         if distance<=limit+(resident and 18 or 0) then
             first.priority=priority
@@ -1182,6 +1306,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                 queuePair(truss and {truss},(DISTANCE[tier] or DISTANCE.Low).promenade,candidates.junction)
             end
             local data=collectArch(arena,deck,decor,scale)
+            if src.ArchAbutment and src.ArchGirder and deck:GetAttribute("PerimeterStep") then
+                local range=ARCH_BASE_RANGE[tier] or ARCH_BASE_RANGE.Low
+                queuePair(collectArchBase(arena,deck,decor,scale),range,candidates.archBase)
+            end
             if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
                 data=collectPorticoPart(arena,deck,decor,scale)
             end
@@ -1251,7 +1379,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         end
     end
-    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment","fitting","command","junction"}) do
+    for _,kind in ipairs({"arch","archBase","casing","helix","promenade","stay","equipment","fitting","command","junction"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
@@ -1354,7 +1482,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             or data.category~=entry.category or data.arena~=entry.arena
             or data.otherDeck~=entry.otherDeck
             or src[entry.name]~=entry.source
-            or (isPortico(entry.category) and not sameOriginals(entry,data))
+            or ((isPortico(entry.category) or entry.category=="archBase")
+                and not sameOriginals(entry,data))
             or not sourceIntact(entry) then
             -- A streamed/lost local MeshPart is not a valid seven-piece
             -- sculpture. refresh() already restores the real native trim;

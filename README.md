@@ -1,3 +1,7 @@
+## P4 — Culées et poutres sculptées sous les arches d’ascension
+
+Les terrasses ACCESS, TRANSFER et SUMMIT des cinq arènes réutilisent les modèles approuvés de culée et de poutre. Les deux culées et le treillis couvrent la façade orientée vers l’approche, au-dessous du palier. Chaque ensemble représente 21 MeshParts et masque quatre blocs d’origine. Le budget partagé compte un ensemble sur mobile, deux en Medium PC et quatre en High PC. Une alerte, une source incomplète ou une pression graphique active restaure le décor natif.
+
 ## P4 — Appuis hydrauliques des passerelles Towers
 
 Les huit poteaux décoratifs sous les quatre passerelles sont éligibles au [modèle hydraulique Towers approuvé](assets/source/roblox-asset-registry.json). Sur Low, un appui très proche peut prendre la priorité sur le treillis du pont et occuper un des deux emplacements de sept MeshParts. En Medium/High, les deux appuis d’un pont sélectionné entrent dans le quota de colonnes existant. Les sculptures sont soudées aux poteaux d’origine, qui se déplacent avec les tabliers pendant le rétrécissement. Une alerte ou la perte d’une pièce restaure le décor natif.

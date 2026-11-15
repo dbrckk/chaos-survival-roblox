@@ -2158,10 +2158,7 @@ assert 'HelixUnderframe' in P4_HELIX
 for disallowed in ("RunService.RenderStepped", "RunService.Heartbeat",
                    "AssetService.LoadAssetAsync", "Instance.new(\"RemoteEvent\")"):
     assert disallowed not in P4_CLIENT,disallowed
-# Authentic perimeter stages use a thick 3 / 13.8 / 28.2-stud
-# physical collider, NOT a 2-stud generic route slab. Mask only five
-# genuinely sculpted UPPER pieces: deep underdeck abutments/keel/girder
-# remain native rather than exposing a floating high SUMMIT platform.
+# Physical arch stages and their separate fitted below-landing art.
 for required in (
     'local height=step==1 and 3 or 6.6+(step-2)*3.6',
     'local sourceWidth=step==1 and 12 or (step==4 and 11.6 or 10)',
@@ -2172,12 +2169,23 @@ for required in (
     '"TaperedFin-1","TaperedFin1","MonumentalOverpass"',
 ):
     assert required in P4_CLIENT, required
-ascension_collector = P4_CLIENT.split("local function collectArch", 1)[1].split(
+ascension_collector = P4_CLIENT.split("local function archDeck", 1)[1].split(
     "local function porticoStep", 1)[0]
 assert 'deck:GetAttribute("ChaosPermanentRoute")~=true' not in ascension_collector
 assert 'local overpass=originals[8]' not in P4_CLIENT
-print("PASS P4 upper arch fits true 3/13.8/28.2 height, retains deep load-bearing"
-      " native beams and accepts genuine collapsible Summit stage")
+for required in (
+    'name="ExteriorAbutment-1"', 'name="ExteriorAbutment1"',
+    'name="LoadBearingKeel"', 'name="RecessedCentralGirder"',
+    'local stage,_,_,index=archDeck(arena,deck,scale)',
+    'originals={natives[3],natives[4]}',
+    'local height=math.min(3.4,size.Y-.38)',
+    'or (peer~=entry and not sourceIntact(peer))',
+    'queuePair(collectArchBase(arena,deck,decor,scale),range,candidates.archBase)',
+):
+    assert required in P4_CLIENT, required
+assert 'ApprovedRemainingStructureMeshKit.nativeCount("archBase")' in SIDE_LOD
+print("PASS P4 arches retain the genuine 3/13.8/28.2-stud collider and"
+      " four native blocks are replaced only by a complete fitted lower assembly")
 print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
 
@@ -2270,7 +2278,8 @@ for clause in (
     assert clause in equipment_collector,clause
 assert 'local EQUIPMENT_TOUCH_CAP={Low=1,Medium=1,High=2}' in P4_CLIENT
 assert 'if data.anchor then watchPorticoNative(data.anchor) end' in P4_CLIENT
-assert 'or (isPortico(entry.category) and not sameOriginals(entry,data))' in P4_CLIENT
+assert 'or ((isPortico(entry.category) or entry.category=="archBase")' in P4_CLIENT
+assert 'and not sameOriginals(entry,data))' in P4_CLIENT
 assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
 assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD
 print("PASS four approved promenade equipment sources, exact native owners and shared touch budget")
