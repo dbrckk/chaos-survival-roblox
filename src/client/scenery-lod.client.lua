@@ -2024,6 +2024,10 @@ task.spawn(function()
             LocalDistrict3DNativeOnlyCount = census.nativeOnly,
             LocalDistrict3DFacadeOnlyCount = census.facadeOnly,
             LocalDistrict3DSidewallOnlyCount = census.sidewallOnly,
+            LocalDistrict3DPartialCount = census.partial,
+            -- nil means no streamed district owner: never report 0% as
+            -- if an unloaded arena had failed its visual replacements.
+            LocalDistrict3DCompleteCoveragePercent = census.coveragePercent,
         }
         for name, value in pairs(audit) do
             if player:GetAttribute(name) ~= value then
