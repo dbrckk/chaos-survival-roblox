@@ -2377,3 +2377,8 @@ print("PASS ten authored junction trusses use one approved source, proved deck o
 junction_integration=(ROOT/"tests/engine/long-cradle-streaming-fallback.spec.luau").read_text(encoding="utf8")
 assert 'expect(count).toBe(10)' in junction_integration
 assert 'endpointFrame*CFrame.new(50,0,0)' in junction_integration
+assert 'for lane=1,2 do' in junction_integration
+assert 'disconnected joint ' in junction_integration
+assert 'reconnected joint ' in junction_integration
+assert 'exposed overlapping native geometry' in junction_integration
+print("PASS both promenade joints independently disconnect, restore and recover across five arenas")
