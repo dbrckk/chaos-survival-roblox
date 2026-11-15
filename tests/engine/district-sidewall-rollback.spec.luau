@@ -9,6 +9,8 @@ local PremiumDistrictFacadeMeshKit = require(
     "../../src/client/PremiumDistrictFacadeMeshKit")
 local ApprovedDistrictFoundationMeshKit = require(
     "../../src/client/ApprovedDistrictFoundationMeshKit")
+local ApprovedDistrictRoofMeshKit = require(
+    "../../src/client/ApprovedDistrictRoofMeshKit")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local VisualTheme = require("../../src/shared/VisualTheme")
@@ -488,6 +490,7 @@ describe("Authenticated district sidewall restoration (engine)", function()
         ApprovedDistrictSidewallMeshKit.sync(
             nil,Vector3.zero,"Low",false,false,0)
         local generated,facades,shells,caissons
+        local roofFixtures, previousRoofSources = {}, {}
         local ok,why=pcall(function()
             local arena=MapBuilder.buildArena(Config,"Classic",
                 ArenaVariants,VisualTheme)
@@ -809,7 +812,104 @@ describe("Authenticated district sidewall restoration (engine)", function()
             ApprovedDistrictSidewallMeshKit.sync(
                 arena,camera,"Medium",true,false,0,look)
             expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(8)
+
+            -- Exercise the actual five MapBuilder districts and their
+            -- approved-roof ownership independently of renderer assets.
+            local roofProfiles = {
+                Classic = {"ApprovedClassicSignatureObservatoryTemplates", "DualDishObservatory",
+                    "OriginalClassicDualDishObservatory3D", 112493873850364,
+                    Vector3.new(9.105,15.0875,1.03), "StormSensor", 5},
+                Towers = {"ApprovedSouthTowersSkytransferTemplates", "ForgedSkytransfer",
+                    "OriginalSouthTowersForgedSkytransfer3D", 120959181274080,
+                    Vector3.new(19.65,4.42948,2.94874), "TransitCab", 6},
+                Crossroads = {"ApprovedCrossroadsSignatureInterchangeTemplates", "ForgedInterchange",
+                    "OriginalCrossroadsSignatureInterchange3D", 96622579843060,
+                    Vector3.new(47.68,11.73404,6.76), "SwitchboardPanel", 6},
+                Orbital = {"ApprovedOrbitalReactorLandmarkTemplates", "Node",
+                    "OriginalOrbitalReactorLandmark3D", 104654294187035,
+                    Vector3.new(4.36,4.36,4.36), "ReactorSphere", 6},
+                Harbor = {"ApprovedHarborKineticGantryTemplates", "ContainerGantry",
+                    "OriginalHarborKineticGantry3D", 75684193304551,
+                    Vector3.new(21.86,36.08949,44), "HarborCargoHousing", 5},
+            }
+            local roofBucket = workspace:FindFirstChild("ApprovedDistrictRoofsLocal")
+            for variant, profile in pairs(roofProfiles) do
+                local previous = RS:FindFirstChild(profile[1])
+                if previous then
+                    table.insert(previousRoofSources, previous)
+                    previous.Parent = nil
+                end
+                local holder = Instance.new("Folder")
+                holder.Name = profile[1]
+                holder:SetAttribute("OwnerVerified", true)
+                holder.Parent = RS
+                table.insert(roofFixtures, holder)
+                local source = Instance.new("Model")
+                source.Name = profile[2]
+                source:SetAttribute("CosmeticOnly", true)
+                source:SetAttribute("OwnerVerified", true)
+                source:SetAttribute(profile[3], true)
+                source:SetAttribute("Original3DAssetId", profile[4])
+                for i = 1, 7 do
+                    local piece = Instance.new("MeshPart")
+                    piece.Size = if i == 1 then profile[5] else Vector3.one * .3
+                    piece.Anchored = true
+                    piece.Massless = true
+                    piece.CanCollide = false
+                    piece.CanTouch = false
+                    piece.CanQuery = false
+                    piece.Parent = source
+                end
+                source.Parent = holder
+                local world = MapBuilder.buildArena(Config, variant, ArenaVariants, VisualTheme)
+                local building = world.Decor.ArenaDistrictArchitecture3D.DistrictNorth1
+                local door = building.ServiceEntryDoor
+                local native = building:FindFirstChild(profile[6])
+                local nativeAlpha = native.Transparency
+                local eye = door.Position + door.CFrame.LookVector * 14 + Vector3.new(0, 17, 0)
+                local function update(pressure)
+                    ApprovedDistrictRoofMeshKit.sync(world, eye, "Low", true, true, pressure,
+                        -door.CFrame.LookVector)
+                end
+                PremiumDistrictFacadeMeshKit.sync(world, eye, "Low", true,
+                    -door.CFrame.LookVector, true, 0)
+                expect(building:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(true)
+                update(0)
+                expect(ApprovedDistrictRoofMeshKit.replacedNativeCount()).toBe(profile[7])
+                expect(native.Transparency).toBe(1)
+                assert(math.abs(building.RecessedSignal.Transparency - .32) < .001)
+                local model = roofBucket:FindFirstChild("ApprovedOriginalDistrictRoof3D")
+                local pose, bounds = model:GetBoundingBox()
+                local floorY = world.Base.Position.Y + world.Base.Size.Y * .5
+                assert(pose.Y - bounds.Y * .5 > floorY + 14.45, variant .. " roof overlaps ground")
+                assert(pose.Y + bounds.Y * .5 < floorY + 31, variant .. " roof exceeds clearance")
+                expect(model:GetAttribute("Original3DAssetId")).toBe(profile[4])
+                expect(#model:GetChildren()).toBe(7)
+                for _, part in ipairs(model:GetChildren()) do
+                    assert(part:IsA("MeshPart") and not part.CanCollide
+                        and not part.CanTouch and not part.CanQuery)
+                end
+                world.Base.Size *= Vector3.new(.65, 1, .65)
+                update(0)
+                expect(ApprovedDistrictRoofMeshKit.replacedNativeCount()).toBe(profile[7])
+                model:FindFirstChildWhichIsA("MeshPart"):Destroy()
+                task.wait()
+                assert(math.abs(native.Transparency-nativeAlpha) < .001, variant)
+                update(0)
+                update(1)
+                expect(ApprovedDistrictRoofMeshKit.replacedNativeCount()).toBe(0)
+                update(0)
+                building:SetAttribute("LocalApprovedDistrictFacadeMounted", nil)
+                task.wait()
+                assert(math.abs(native.Transparency-nativeAlpha) < .001, variant)
+                building:SetAttribute("LocalApprovedDistrictFacadeMounted", true)
+                update(0)
+                holder:SetAttribute("OwnerVerified", false)
+                task.wait()
+                assert(math.abs(native.Transparency-nativeAlpha) < .001, variant)
+            end
         end)
+        ApprovedDistrictRoofMeshKit.sync(nil,Vector3.zero,"Low",false,true,0)
         ApprovedDistrictFoundationMeshKit.sync(nil,Vector3.zero,"Low",false,true,0)
         ApprovedDistrictSidewallMeshKit.sync(
             nil,Vector3.zero,"Low",false,false,0)
@@ -818,6 +918,8 @@ describe("Authenticated district sidewall restoration (engine)", function()
         if shells then shells:Destroy() end
         if caissons then caissons:Destroy() end
         if facades then facades:Destroy() end
+        for _, holder in ipairs(roofFixtures) do holder:Destroy() end
+        for _, holder in ipairs(previousRoofSources) do holder.Parent = RS end
         if generated then generated:Destroy() end
         if oldSidewall then oldSidewall.Parent=RS end
         if oldCaisson then oldCaisson.Parent=RS end
