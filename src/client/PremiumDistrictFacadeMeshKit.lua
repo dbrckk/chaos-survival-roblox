@@ -15,7 +15,7 @@ local IDS = {132020956214241, 88725004643299,
 -- Low Android retains one verified model, keeping its original GPU bound.
 -- Exact camera-ranked residency with exit-only hysteresis, no new loops.
 local BUDGET = {
-    Low = {count = 1, distance = 130, retention = 16},
+    Low = {count = 1, distance = 145, retention = 16},
     Medium = {count = 8, distance = 205, retention = 22},
     High = {count = 16, distance = 270, retention = 28},
 }
@@ -470,7 +470,7 @@ function PremiumDistrictFacadeMeshKit.residentBudget(tier, touch, pressure)
     return cap
 end
 
-function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, touch, pressure)
+function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, touch, pressure, lowPairingCheck)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -538,6 +538,11 @@ function PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint, tier, cameraReady
                     -- Prefer true original 3D facades on screen rather
                     -- than spending precious Android meshes behind camera.
                     priority += 80
+                elseif tier == "Low" and lowPairingCheck
+                    and lowPairingCheck(building, district, distance) then
+                    -- Give a nearby complete building the only Low slot
+                    -- when the nearest facade cannot receive its shell.
+                    priority -= 24
                 end
                 priority = PremiumDistrictFacadeMeshKit.pairedPriority(
                     priority, building:GetAttribute(

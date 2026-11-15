@@ -11,7 +11,7 @@ local BUDGET = {
     -- One near-camera complete building, only if its genuine facade
     -- is already resident. Six additional approved MeshParts / 1,764
     -- triangles at most on healthy Low, zero under GPU pressure.
-    Low = {count = 1, distance = 128, retention = 16},
+    Low = {count = 1, distance = 145, retention = 16},
     -- Desktop Medium matches eight existing facade slots, so more
     -- buildings show their whole real six-MeshPart envelope. Touch Medium
     -- remains capped at THREE. No new approved asset or LOD loop.
@@ -139,6 +139,19 @@ local function eligible(building, district, requiresFacade)
         natives[#natives + 1] = part
     end
     return door, origin, natives
+end
+
+-- Predict whether the Low shell can use the same building as the facade.
+-- Check the approved source once for this selection pass. The actual shell
+-- sync still verifies the source, all five natives and the mounted facade.
+function Kit.lowPairingCheck()
+    if not approved() then return nil end
+    local budget = BUDGET.Low
+    return function(building, district, distance)
+        local retention = if mounted[building] then budget.retention else 0
+        return distance <= budget.distance + retention
+            and eligible(building, district, false) ~= nil
+    end
 end
 
 -- A local, diagnostic-only signal for the matching genuine facade kit.

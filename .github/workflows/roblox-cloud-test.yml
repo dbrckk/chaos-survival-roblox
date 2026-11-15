@@ -163,6 +163,7 @@ jobs:
             "tests/engine/parkour-flow.spec.luau",
             "tests/engine/native-premium-fallback.spec.luau",
             "tests/engine/district-sidewall-rollback.spec.luau",
+            "tests/engine/district-visual-coverage.spec.luau",
             "tests/engine/platform-rim-original-3d.spec.luau",
             "tests/engine/long-cradle-streaming-fallback.spec.luau",
             "tests/engine/sky-network-physical-wayfinding.spec.luau",

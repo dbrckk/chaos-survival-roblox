@@ -20,3 +20,9 @@ Dans les cinq mondes, les 16 grandes structures `ArenaDistrictArchitecture3D` di
 Le scénario d'intégration Roblox Engine déjà présent dans `tests/engine/visual-budget-rules.spec.luau` est étendu : il génère les **16 bâtiments du véritable générateur serveur**, monte une façade client source-approuvée, puis la coque de six véritables `MeshParts` dans les limites originales et vérifie les **cinq primitives retirées**, l'absence de collision, la réduction immédiate GPU, la pérennité pendant Shrinking Arena et le retour natif instantané après perte de la façade.
 
 Les scénarios moteur de cette suite restent à exécuter dans Roblox Open Cloud. Le code ne prouve pas la présence physique ou le niveau artistique sur Android ; vérifier visuellement en vraie session un district avec façade + murs Low et la restauration sous pression.
+
+## Suivi du 15 novembre 2026
+
+En qualité Low et sans pression graphique, la sélection de la façade peut désormais donner l'unique emplacement à un bâtiment voisin dont la façade et les cinq volumes latéraux peuvent être remplacés ensemble. La façade et la coque partagent désormais une portée d'entrée de 145 studs (auparavant 130 et 128), dans la zone de visibilité native. La préférence de classement équivaut à 24 studs, avec validation de la source approuvée, de la portée de la coque et des cinq formes natives avant sélection. La pénalité de 80 studs pour un bâtiment derrière la caméra reste prioritaire. Si la source latérale manque, la façade peut toujours être montée seule.
+
+Le scénario moteur existant utilise deux vrais bâtiments de la carte Classic pour vérifier le montage de l'enveloppe voisine, le retour à la façade la plus proche quand la source latérale est révoquée et la restauration des natives sous pression. Il vérifie aussi un montage au-delà de l'ancienne portée. Le pourcentage des bâtiments complets est effacé lorsque le dernier bâtiment sort du streaming client.

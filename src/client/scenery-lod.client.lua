@@ -1947,9 +1947,13 @@ task.spawn(function()
         -- Facades and six-MeshPart sidewalls use the SAME touch/pressure
         -- snapshot, so a mobile GPU fallback releases both authentic
         -- surfaces and reveals original native geometry in one LOD tick.
+        local districtPressure = player:GetAttribute("OptionalVfxPressure")
         PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady, cameraLook, isTouch,
-            player:GetAttribute("OptionalVfxPressure"))
+            profile.Name, cameraReady, cameraLook, isTouch, districtPressure,
+            if profile.Name == "Low" and cameraReady
+                and (tonumber(districtPressure) or 0) < 1 then
+                ApprovedDistrictSidewallMeshKit.lowPairingCheck()
+            else nil)
         lodDistrictTotalMs += (os.clock() - districtSyncStartedAt) * 1000
         local facadeMeshCount = PremiumDistrictFacadeMeshKit.count()
         if player:GetAttribute("LocalOriginalDistrictFacadeMeshCount")
@@ -1963,8 +1967,7 @@ task.spawn(function()
         -- no extra render loop. Native doors and windows remain readable.
         local sidewallSyncStartedAt = os.clock()
         ApprovedDistrictSidewallMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady, isTouch,
-            player:GetAttribute("OptionalVfxPressure"), cameraLook)
+            profile.Name, cameraReady, isTouch, districtPressure, cameraLook)
         lodDistrictTotalMs += (os.clock() - sidewallSyncStartedAt) * 1000
         local sidewallMeshCount = ApprovedDistrictSidewallMeshKit.count()
         if player:GetAttribute("LocalOriginalDistrictSidewallMeshCount")
@@ -2025,14 +2028,18 @@ task.spawn(function()
             LocalDistrict3DFacadeOnlyCount = census.facadeOnly,
             LocalDistrict3DSidewallOnlyCount = census.sidewallOnly,
             LocalDistrict3DPartialCount = census.partial,
-            -- nil means no streamed district owner: never report 0% as
-            -- if an unloaded arena had failed its visual replacements.
-            LocalDistrict3DCompleteCoveragePercent = census.coveragePercent,
         }
         for name, value in pairs(audit) do
             if player:GetAttribute(name) ~= value then
                 player:SetAttribute(name, value)
             end
+        end
+        -- Assign nil explicitly when all districts have streamed out.
+        -- A nil member in the audit table would leave the old percentage.
+        if player:GetAttribute("LocalDistrict3DCompleteCoveragePercent")
+            ~= census.coveragePercent then
+            player:SetAttribute("LocalDistrict3DCompleteCoveragePercent",
+                census.coveragePercent)
         end
         local sidewallPartsReplaced =
             ApprovedDistrictSidewallMeshKit.replacedNativeCount()

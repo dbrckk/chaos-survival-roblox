@@ -537,6 +537,71 @@ describe("Authenticated district sidewall restoration (engine)", function()
             local base=arena:FindFirstChild("Base")
             local district=arena:FindFirstChild("Decor")
                 :FindFirstChild("ArenaDistrictArchitecture3D")
+            local near = district.DistrictNorth2
+            local complete = district.DistrictNorth3
+            local nearDoor = near.ServiceEntryDoor
+            local completeDoor = complete.ServiceEntryDoor
+            local pairCamera = nearDoor.Position:Lerp(completeDoor.Position, .42)
+                + Vector3.new(0, 7, 0)
+            local pairLook = -nearDoor.CFrame.LookVector
+            local nearCore = near.ServiceCore
+            local originalSize = nearCore.Size
+            local completeCore = complete.ServiceCore
+            local originalAlpha = completeCore.Transparency
+            -- An incompatible streamed native prevents a complete shell
+            -- on the nearer building. The other building still fits Low.
+            nearCore.Size = originalSize + Vector3.new(1, 0, 0)
+            local function syncLow(pressure)
+                PremiumDistrictFacadeMeshKit.sync(
+                    arena, pairCamera, "Low", true, pairLook, true, pressure,
+                    if pressure == 0
+                        then ApprovedDistrictSidewallMeshKit.lowPairingCheck() else nil)
+                ApprovedDistrictSidewallMeshKit.sync(
+                    arena, pairCamera, "Low", true, true, pressure, pairLook)
+            end
+            syncLow(0)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(near:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(nil)
+            expect(complete:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(true)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
+            expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(5)
+            expect(completeCore.Transparency).toBe(1)
+
+            -- A revoked shell source leaves the nearest facade eligible.
+            shells:SetAttribute("OwnerVerified", false)
+            syncLow(0)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
+            expect(near:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(true)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(completeCore.Transparency).toBe(originalAlpha)
+            shells:SetAttribute("OwnerVerified", true)
+            syncLow(0)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
+            syncLow(1)
+            expect(PremiumDistrictFacadeMeshKit.count()).toBe(0)
+            expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
+            expect(completeCore.Transparency).toBe(originalAlpha)
+            nearCore.Size = originalSize
+
+            -- At this elevation, even the closest authentic door is
+            -- beyond the old Low range but within the new shared range.
+            local highCamera = Vector3.new(base.Position.X,
+                nearDoor.Position.Y + 70, base.Position.Z)
+            local closest = math.huge
+            for _, owner in ipairs(district:GetChildren()) do
+                closest = math.min(closest,
+                    (owner.ServiceEntryDoor.Position - highCamera).Magnitude)
+            end
+            assert(closest > 130 and closest <= 145, "Low range fixture drifted")
+            PremiumDistrictFacadeMeshKit.sync(
+                arena, highCamera, "Low", true, Vector3.zero, true, 0,
+                ApprovedDistrictSidewallMeshKit.lowPairingCheck())
+            ApprovedDistrictSidewallMeshKit.sync(
+                arena, highCamera, "Low", true, true, 0)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
+            expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(5)
+            syncLow(1)
+
             local camera=base.Position+Vector3.new(0,7,0)
             local look=Vector3.new(0,0,1)
             PremiumDistrictFacadeMeshKit.sync(

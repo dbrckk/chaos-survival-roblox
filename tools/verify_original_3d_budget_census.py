@@ -180,7 +180,7 @@ for guard in (
     'mounted[building] = nil',
     'restore(entry)',
     'entry.model:Destroy()',
-    'Low = {count = 1, distance = 128, retention = 16}',
+    'Low = {count = 1, distance = 145, retention = 16}',
     'Medium = {count = 8, distance = 205, retention = 20}',
     'High = {count = 16, distance = 275, retention = 28}',
     'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}',
@@ -234,7 +234,7 @@ assert 'LocalCompleteDistrict3DCount' in SIDE_LOD
 assert 'LocalUnpairedDistrictSidewall3DCount' in SIDE_LOD
 assert 'sidewallMeshCount - completeDistricts' in SIDE_LOD
 assert 'ApprovedDistrictSidewallMeshKit.completeCount()' in SIDE_LOD
-assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
+assert 'Low = {count = 1, distance = 145, retention = 16}' in SIDE
 assert 'Medium = {count = 8, distance = 205, retention = 20}' in SIDE
 assert 'High = {count = 16, distance = 275, retention = 28}' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
@@ -288,7 +288,7 @@ for label, code, bucket in (
     assert '"AssetService"' not in code,label
     assert '.RenderStepped:Connect(' not in code,label
     assert '.Heartbeat:Connect(' not in code,label
-assert 'Low = {count = 1, distance = 130, retention = 16}' in DISTRICT_FACADES
+assert 'Low = {count = 1, distance = 145, retention = 16}' in DISTRICT_FACADES
 assert 'Medium = {count = 8, distance = 205, retention = 22}' in DISTRICT_FACADES
 assert 'High = {count = 16, distance = 270, retention = 28}' in DISTRICT_FACADES
 assert 'Low = {count = 1, distance = 145, retention = 16}' in CORNER_MONUMENTS
@@ -1993,6 +1993,13 @@ assert 'DistrictVisualCensusRules' in SIDE_LOD
 assert 'PremiumDistrictFacadeMeshKit.residentMask16()' in SIDE_LOD
 assert 'ApprovedDistrictSidewallMeshKit.residentMask16()' in SIDE_LOD
 assert 'DistrictVisualCensusRules.summarize(' in SIDE_LOD
+assert 'ApprovedDistrictSidewallMeshKit.lowPairingCheck()' in SIDE_LOD
+assert 'function Kit.lowPairingCheck()' in SIDE
+assert 'and eligible(building, district, false) ~= nil' in SIDE
+assert 'elseif tier == "Low" and lowPairingCheck' in FRONT
+assert 'and lowPairingCheck(building, district, distance)' in FRONT
+assert 'player:SetAttribute("LocalDistrict3DCompleteCoveragePercent",' in SIDE_LOD
+assert 'LocalDistrict3DCompleteCoveragePercent = census.coveragePercent' not in SIDE_LOD
 for attribute in (
     'LocalDistrict3DStates16',
     'LocalDistrict3DLoadedCount',
@@ -2020,7 +2027,7 @@ assert '"LocalApprovedDistrictFacadeMounted")==true then' in SIDE
 assert 'if taken<limit then' in SIDE
 assert 'tier == "Low")' in SIDE
 assert 'local TOUCH_CAP = {Low = 1, Medium = 3, High = 8}' in SIDE
-assert 'Low = {count = 1, distance = 128, retention = 16}' in SIDE
+assert 'Low = {count = 1, distance = 145, retention = 16}' in SIDE
 assert 'Medium = {count = 8, distance = 205, retention = 20}' in SIDE
 assert 'High = {count = 16, distance = 275, retention = 28}' in SIDE
 print("PASS authentic reverse-paired 3D district and exact streamed N/F/S/B"
