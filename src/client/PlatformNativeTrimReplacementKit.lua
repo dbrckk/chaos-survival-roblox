@@ -15,6 +15,7 @@ local Kit = {}
 local saved = {}
 local nativeBaselines = {}
 local crownPylons = {}
+local routeUnderdecks = {}
 local pylonPieces = {}
 local pylonsOutsideLod = setmetatable({}, {__mode = "k"})
 local watchers = {}
@@ -37,7 +38,7 @@ local promenadePylonsByDeck = {}
 local function setNativeMask(part, claims, masked)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
-    if saved[part] or crownPylons[part] then
+    if saved[part] or crownPylons[part] or routeUnderdecks[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
@@ -46,6 +47,11 @@ local function setNativeMask(part, claims, masked)
         part.LocalTransparencyModifier = original
         nativeBaselines[part] = nil
     end
+end
+
+function Kit.setRouteUnderdeckMask(part, masked)
+    if (routeUnderdecks[part] == true) == masked then return end
+    setNativeMask(part, routeUnderdecks, masked)
 end
 
 local function refreshPylon(part)

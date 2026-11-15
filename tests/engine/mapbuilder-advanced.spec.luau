@@ -6,6 +6,7 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
+local Trim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local SkySpineCrownMeshKit = require("../../src/client/SkySpineCrownMeshKit")
 local ArenaKeelMeshKit = require("../../src/client/ArenaKeelMeshKit")
 local UnderstructureBeamMeshKit = require("../../src/client/UnderstructureBeamMeshKit")
@@ -27,17 +28,23 @@ describe("Chaos Survival engine", function()
         holder.Name = "PremiumRouteMeshTemplates"
         holder:SetAttribute("OwnerVerified", true)
         holder.Parent = ReplicatedStorage
-        local function template(name, id, size)
+        local function template(name, id, size, pieces)
             local model = Instance.new("Model")
             model.Name = name
             model:SetAttribute("OwnerVerified", true)
             model:SetAttribute("CosmeticOnly", true)
             model:SetAttribute("Original3DAssetId", id)
-            local geometry = Instance.new("MeshPart")
-            geometry.Size = size
-            geometry.Anchored = true
-            geometry.Parent = model
+            for i = 1, pieces or 1 do
+                local geometry = Instance.new("MeshPart")
+                geometry.Size = i == 1 and size or Vector3.one * .2
+                geometry.Anchored = true
+                geometry.CanCollide = false
+                geometry.CanTouch = false
+                geometry.CanQuery = false
+                geometry.Parent = model
+            end
             model.Parent = holder
+            return model
         end
         template("PremiumJumpDeck", 98478693994864, Vector3.new(11.9, 1.5, 11.9))
         -- Approved-source stand-in footprint: a 12x9 crossroad module
@@ -50,8 +57,9 @@ describe("Chaos Survival engine", function()
         -- 3,072-triangle original production source. In-engine stand-in
         -- here tests the placement contract, not network moderation:
         -- 7-source-material/real-ID guards are enforced by release CI.
-        template("OriginalUnderdeckChassis", 84582262145054,
-            Vector3.new(23.3, 4.0, 10.0))
+        local chassis = template("OriginalUnderdeckChassis", 84582262145054,
+            Vector3.new(23.3, 4.0, 10.0), 7)
+        chassis:SetAttribute("PremiumUnderdeck3D", true)
         -- Mirror MapBuilder's real parentage and signed 320-stud floor.
         -- Source-authenticated 3D correctly refuses a detached smoke arena.
         local generated = Instance.new("Folder")
@@ -136,8 +144,30 @@ describe("Chaos Survival engine", function()
         crossing.CanCollide = true
         crossing:SetAttribute("ChaosPermanentRoute", true)
         crossing:SetAttribute("PromenadeLane", 1)
-        crossing:SetAttribute("PromenadeStep", 3)
+        crossing:SetAttribute("PromenadeStep", 2)
+        crossing:SetAttribute("RouteTier", 4)
         crossing.Parent = platforms
+        local function cosmetic(name, tag, size, offset)
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.Size = size
+            part.CFrame = crossing.CFrame * offset
+            part:SetAttribute(tag, true)
+            part:SetAttribute("PerimeterPlatformIndex", 3)
+            part.Parent = decor
+            return part
+        end
+        local thinFrame = cosmetic("PlatformUnderFrame3", "PremiumArchitecturalSurface",
+            Vector3.new(26.5, .42, 12.5), CFrame.new(0, -1.18, 0))
+        thinFrame.LocalTransparencyModifier = .25
+        local truss = cosmetic("Promenade3_UnderdeckTruss", "PromenadeVisualOnly",
+            Vector3.new(5.6, 1.7, 11), CFrame.new(0, -.3, 0))
+        local guide = cosmetic("Promenade3_Guide", "PromenadeVisualOnly",
+            Vector3.one, CFrame.new(0, 1.2, 0))
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
         -- Source-footprint adaptive fit uses TWO full-width approved
@@ -147,6 +177,10 @@ describe("Chaos Survival engine", function()
         expect(narrowPanel.LocalTransparencyModifier).toBe(0)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
         expect(crossing.CanCollide).toBe(true)
+        expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(2)
+        expect(thinFrame.LocalTransparencyModifier).toBe(1)
+        expect(truss.LocalTransparencyModifier).toBe(1)
+        expect(guide.LocalTransparencyModifier).toBe(0)
         local underfolder = workspace:FindFirstChild("PremiumRouteMeshLocal")
         local machine = underfolder:FindFirstChild("OriginalEngineeredUnderdeck3D")
         expect(machine ~= nil).toBe(true)
@@ -158,19 +192,76 @@ describe("Chaos Survival engine", function()
         local frame, dimensions = machine:GetBoundingBox()
         expect(frame.Position.Y + dimensions.Y * 0.5
             < crossing.Position.Y - crossing.Size.Y * 0.5).toBe(true)
+        -- A shared platform trim claim must keep its own baseline through
+        -- chassis source removal and reattachment, whichever releases first.
+        Trim.bind(arena, {["3"] = "cradle"})
+        local missing = chassis:FindFirstChildWhichIsA("MeshPart")
+        missing.Parent = nil
+        task.wait()
+        expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(0)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
+        expect(truss.LocalTransparencyModifier).toBe(1)
+        Trim.reset()
+        expect(thinFrame.LocalTransparencyModifier).toBe(.25)
+        expect(truss.LocalTransparencyModifier).toBe(0)
+        missing.Parent = chassis
+        expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(2)
+        truss.Parent = nil
+        expect(thinFrame.LocalTransparencyModifier).toBe(.25)
+        expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
+        truss.Parent = decor
+        expect(thinFrame.LocalTransparencyModifier).toBe(1)
+        local weld = meshPart:FindFirstChild("OriginalUnderdeckSafeCosmeticWeld")
+        weld.Part0 = nil
+        expect(truss.LocalTransparencyModifier).toBe(0)
+        weld.Part0 = crossing
+        expect(truss.LocalTransparencyModifier).toBe(1)
+        crossing:SetAttribute("CollapsePhase", "Warning")
+        expect(thinFrame.LocalTransparencyModifier).toBe(.25)
+        crossing:SetAttribute("CollapsePhase", "Normal")
+        expect(thinFrame.LocalTransparencyModifier).toBe(1)
+
+        PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
+        expect(thinFrame.LocalTransparencyModifier).toBe(.25)
         crossing:SetAttribute("PromenadeLane", nil)
         crossing:SetAttribute("PromenadeStep", nil)
         crossing:SetAttribute("SkySpineStep", 5)
         crossing:SetAttribute("SkySpineInterchange", true)
+        crossing.Size = Vector3.new(12, 2, 26)
+        thinFrame.Size = Vector3.new(12.5, .42, 26.5)
+        local first = cosmetic("SkySpine3_Undercarriage-1", "SkySpineDecor",
+            Vector3.new(.66, .6, 25.2), CFrame.new(-3.9, -1.28, 0))
+        local second = cosmetic("SkySpine3_Undercarriage1", "SkySpineDecor",
+            Vector3.new(.66, .6, 25.2), CFrame.new(3.9, -1.28, 0))
+        local stiffener = cosmetic("SkySpine3_CrossStiffener", "SkySpineDecor",
+            Vector3.new(12.6, .48, .64), CFrame.new(0, -1.42, 0))
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
         expect(PremiumRouteMeshKit.count()).toBe(3)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
+        expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(4)
+        local scale = .75
+        base.Size = Vector3.new(320 * scale, 2, 320 * scale)
+        expect(thinFrame.LocalTransparencyModifier).toBe(.25)
+        expect(first.LocalTransparencyModifier).toBe(0)
+        for _, part in ipairs({crossing, thinFrame, first, second, stiffener}) do
+            local relative = crossing.CFrame:ToObjectSpace(part.CFrame)
+            local pos = relative.Position
+            part.CFrame = crossing.CFrame * CFrame.new(pos.X * scale, pos.Y, pos.Z * scale)
+            part.Size = Vector3.new(part.Size.X * scale, part.Size.Y, part.Size.Z * scale)
+        end
+        expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(4)
+        expect(first.LocalTransparencyModifier).toBe(1)
+        expect(stiffener.LocalTransparencyModifier).toBe(1)
+        expect(truss.LocalTransparencyModifier).toBe(0)
+        expect(guide.LocalTransparencyModifier).toBe(0)
         crossing:SetAttribute("ChaosPermanentRoute", false)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0),
             "Medium", true, Vector3.new(1, 0, 0))
         expect(PremiumRouteMeshKit.count()).toBe(0)
         expect(PremiumRouteMeshKit.underdeckCount()).toBe(0)
+        expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(0)
+        expect(thinFrame.LocalTransparencyModifier).toBe(.25)
         base.Size = Vector3.new(230, 2, 230)
         PremiumRouteMeshKit.sync(arena, Vector3.new(0, 12, 0), "Medium", true)
         expect(PremiumRouteMeshKit.count()).toBe(0)
@@ -179,6 +270,33 @@ describe("Chaos Survival engine", function()
         expect(bridge.CanCollide).toBe(true)
         PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
         generated:Destroy()
+        for _, variant in ipairs({"Classic", "Orbital"}) do
+            local realArena = MapBuilder.buildArena(Config, variant, ArenaVariants, VisualTheme)
+            local realDecks = realArena:FindFirstChild("Platforms")
+            local realDecor = realArena:FindFirstChild("Decor")
+            local target = nil
+            for _, candidate in ipairs(realDecks:GetChildren()) do
+                if candidate:GetAttribute("PromenadeLane") == 1
+                    and candidate:GetAttribute("PromenadeStep") == 4 then
+                    target = candidate
+                    break
+                end
+            end
+            assert(target, variant .. " real promenade is missing")
+            local id = target.Name:match("%d+")
+            local realTruss = realDecor:FindFirstChild("Promenade" .. id .. "_UnderdeckTruss")
+            local camera = target.Position + Vector3.new(0, 6, 0)
+            PremiumRouteMeshKit.sync(realArena, camera, "Low", true, nil, 0, true)
+            expect(PremiumRouteMeshKit.underdeckCount()).toBe(1)
+            expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(2)
+            expect(realTruss.LocalTransparencyModifier).toBe(1)
+            expect(target.CanCollide).toBe(true)
+            PremiumRouteMeshKit.sync(realArena, camera, "Low", true, nil, 1, true)
+            expect(PremiumRouteMeshKit.coveredUnderdeckNativeCount()).toBe(0)
+            expect(realTruss.LocalTransparencyModifier).toBe(0)
+            PremiumRouteMeshKit.sync(nil, Vector3.zero, "Low", false)
+            realArena.Parent:Destroy()
+        end
         holder:Destroy()
     end)
     it("places owner-approved Sky Spine 3D only on real center interchange decks, preserving safe native fallback", function()

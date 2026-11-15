@@ -1164,6 +1164,10 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalUnderdeckMeshCount") ~= underdecks then
             player:SetAttribute("LocalOriginalUnderdeckMeshCount", underdecks)
         end
+        local coveredUnderdecks = PremiumRouteMeshKit.coveredUnderdeckNativeCount()
+        if player:GetAttribute("LocalRouteUnderdeckNativePartsReplaced") ~= coveredUnderdecks then
+            player:SetAttribute("LocalRouteUnderdeckNativePartsReplaced", coveredUnderdecks)
+        end
 
         -- Rank at most eight approved, creator-owned imported Models by
         -- actual camera proximity. This makes REAL meshes visible on Android

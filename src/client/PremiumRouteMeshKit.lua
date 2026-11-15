@@ -9,7 +9,14 @@ local PremiumRoutePbrKit = if script and script.Parent
     then require(script.Parent.PremiumRoutePbrKit)
     else require("./PremiumRoutePbrKit")
 
+local PlatformNativeTrimReplacementKit = if script and script.Parent
+    and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
+    then require(script.Parent.PlatformNativeTrimReplacementKit)
+    else require("./PlatformNativeTrimReplacementKit")
+
 local PremiumRouteMeshKit = {}
+local PROMENADE_TRUSS_SPAN = {[2] = 11, [4] = 13, [7] = 15}
+
 
 local ASSETS = {
     PremiumJumpDeck = 98478693994864,
@@ -44,10 +51,19 @@ local activeArena = nil
 local watchedBase = nil
 local baseChanged = nil
 
+local function releaseUnderdeckMask(entry)
+    for _, part in ipairs(entry.underdeckMasked) do
+        PlatformNativeTrimReplacementKit.setRouteUnderdeckMask(part, false)
+    end
+    table.clear(entry.underdeckMasked)
+end
+
 local function restore(entry)
     if entry.restoring then return end
     entry.restoring = true
     PremiumRoutePbrKit.detach(entry)
+    releaseUnderdeckMask(entry)
+    if entry.clearUnderdeckWatchers then entry.clearUnderdeckWatchers() end
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
@@ -128,6 +144,11 @@ local function modelsIntact(entry)
         for _, piece in ipairs(parts) do
             if not piece:IsA("MeshPart")
                 or not piece:IsDescendantOf(model) then return false end
+            if model == entry.underdeckModel then
+                local weld = entry.joints[piece]
+                if weld.Parent ~= piece or weld.Part0 ~= entry.platform
+                    or weld.Part1 ~= piece then return false end
+            end
         end
     end
     return true
@@ -385,26 +406,21 @@ local function fitUnderdeck(platform, sourceSize)
     return {scale=scale,yaw=yaw}
 end
 
-local function addUnderdeckModel(entry, platform, template)
-    if not template then return false end
-    -- Low only permits the approved seven-material 3K-triangle Model.
-    -- An importer split, partial source or streaming-gap must never
-    -- silently increase a phone's scarce optional MeshPart allowance.
-    if entry.strictLowUnderdeck then
-        if template:GetAttribute("PremiumUnderdeck3D") ~= true then
-            return false
-        end
-        local parts = 0
-        for _, descendant in ipairs(template:GetDescendants()) do
-            if descendant:IsA("BasePart") then
-                if not descendant:IsA("MeshPart") then return false end
-                parts += 1
-            elseif descendant:IsA("LuaSourceContainer") then
-                return false
-            end
-        end
-        if parts ~= 7 then return false end
+local function completeChassisSource(source)
+    if not source or source:GetAttribute("PremiumUnderdeck3D") ~= true then return false end
+    local count = 0
+    for _, child in ipairs(source:GetDescendants()) do
+        if child:IsA("BasePart") then
+            if not child:IsA("MeshPart") or not child.Anchored
+                or child.CanCollide or child.CanTouch or child.CanQuery then return false end
+            count += 1
+        elseif child:IsA("LuaSourceContainer") then return false end
     end
+    return count == 7
+end
+
+local function addUnderdeckModel(entry, platform, template)
+    if not completeChassisSource(template) then return false end
     if platform:GetAttribute("LocalOriginalLongCradleMounted") == true then
         return false
     end
@@ -448,11 +464,12 @@ local function addUnderdeckModel(entry, platform, template)
             pieces[#pieces + 1] = part
         end
     end
-    if #pieces == 0 or #pieces > 16
-        or (entry.strictLowUnderdeck and #pieces ~= 7) then
+    if #pieces ~= 7 then
         clone:Destroy()
         return false
     end
+    entry.underdeckModel = clone
+    entry.underdeckSource = template
     clone.Name = "OriginalEngineeredUnderdeck3D"
     clone:SetAttribute("OriginalUnderdeckArt", true)
     clone:SetAttribute("CosmeticOnly", true)
@@ -512,8 +529,120 @@ local function refit(entry,platform)
     return true
 end
 
+-- Physically walkable, permanent connector decks have always used native
+-- cuboids, even though real owner-approved UV/tangent bridge MeshParts are
+-- already in ReplicatedStorage. The five maps have two eight-deck sky
+-- promenades and a ten-deck Sky Spine supported by true server collisions.
+-- Only those named, server-authored, safe route structures can share the
+-- very same authenticated skybridge kit as Towers' four gated bridges.
+-- NEVER label an arbitrary fake bridge or local cosmetic Part as walkable.
+local function isPermanentConnector(platform)
+    if not platform.Name:match("^Platform%d+$")
+        or platform:GetAttribute("ChaosPermanentRoute") ~= true then
+        return false
+    end
+    local lane = platform:GetAttribute("PromenadeLane")
+    local step = platform:GetAttribute("PromenadeStep")
+    if type(lane) == "number" and lane % 1 == 0
+        and lane >= 1 and lane <= 2
+        and type(step) == "number" and step % 1 == 0
+        and step >= 1 and step <= 8 then
+        return true
+    end
+    local spine = platform:GetAttribute("SkySpineStep")
+    return platform:GetAttribute("SkySpineInterchange") == true
+        and type(spine) == "number"
+        and spine % 1 == 0 and spine >= 1 and spine <= 10
+end
+
+local function usesNativeUnderdeck(platform)
+    return platform:GetAttribute("RouteTier") == 4 and isPermanentConnector(platform)
+end
+
+local function harborPortico(arena, platform)
+    return arena:GetAttribute("VariantId") == "Harbor"
+        and PROMENADE_TRUSS_SPAN[platform:GetAttribute("PromenadeStep")] ~= nil
+end
+
+local function collectUnderdeckNative(decor, platform, scale)
+    local id = platform.Name:match("^Platform(%d+)$")
+    if not id or not decor or not usesNativeUnderdeck(platform)
+        or math.abs(platform.Size.Y - 2) > .12 then return nil end
+    local sx, sz = platform.Size.X, platform.Size.Z
+    local top = platform.Size.Y * .5
+    local parts = {}
+    local function take(name, tag, size, offset)
+        local part = decor:FindFirstChild(name)
+        if not part or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+            or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
+            or part.Transparency >= .95 or part:GetAttribute(tag) ~= true
+            or (tag ~= "PremiumArchitecturalSurface"
+                and part:GetAttribute("PerimeterPlatformIndex") ~= tonumber(id))
+            or (part.Size - size).Magnitude > .14
+            or (part.Position - (platform.CFrame * offset).Position).Magnitude > .16
+            or part.CFrame.UpVector:Dot(platform.CFrame.UpVector) < .999
+            or part.CFrame.LookVector:Dot(platform.CFrame.LookVector) < .999 then
+            return false
+        end
+        parts[#parts + 1] = part
+        return true
+    end
+    if not take("PlatformUnderFrame" .. id, "PremiumArchitecturalSurface",
+        Vector3.new(sx + .5 * scale, .42, sz + .5 * scale), CFrame.new(0, -top - .18, 0)) then
+        return nil
+    end
+    if platform:GetAttribute("SkySpineInterchange") == true then
+        for _, side in ipairs({-1, 1}) do
+            if not take("SkySpine" .. id .. "_Undercarriage" .. side, "SkySpineDecor",
+                Vector3.new(.66 * scale, .6, sz - .8 * scale),
+                CFrame.new(side * 3.9 * scale, -top - .28, 0)) then return nil end
+        end
+        if not take("SkySpine" .. id .. "_CrossStiffener", "SkySpineDecor",
+            Vector3.new(sx + .6 * scale, .48, .64 * scale),
+            CFrame.new(0, -top - .42, 0)) then return nil end
+    else
+        local span = PROMENADE_TRUSS_SPAN[platform:GetAttribute("PromenadeStep")]
+        if span and not take("Promenade" .. id .. "_UnderdeckTruss", "PromenadeVisualOnly",
+            Vector3.new(5.6 * scale, 1.7, span * scale),
+            CFrame.new(0, top - 1.3, 0)) then return nil end
+    end
+    return parts
+end
+
+local function reconcileUnderdeck(entry, platform, safe)
+    if not entry.underdeck then return false end
+    local source = entry.underdeckSource
+    local show = safe and not harborPortico(entry.arena, platform)
+        and platform:GetAttribute("LocalOriginalLongCradleMounted") ~= true
+        and source == getTemplate("OriginalUnderdeckChassis")
+        and completeChassisSource(source)
+    if not entry.replacesNativeUnderdeck then return show end
+    local native = show and collectUnderdeckNative(entry.arena:FindFirstChild("Decor"),
+        platform, realFloorScale(entry.base, entry.arena))
+    local masked = entry.underdeckMasked
+    if not native or #native ~= #masked then
+        releaseUnderdeckMask(entry)
+    else
+        for i, part in ipairs(native) do
+            if masked[i] ~= part then
+                releaseUnderdeckMask(entry)
+                break
+            end
+        end
+    end
+    if native and #masked == 0 then
+        for _, part in ipairs(native) do
+            PlatformNativeTrimReplacementKit.setRouteUnderdeckMask(part, true)
+            masked[#masked + 1] = part
+        end
+    end
+    return native ~= nil and native ~= false
+end
+
 local function syncVisibility(entry, platform)
     local safe = refit(entry,platform)
+    local showUnderdeck = reconcileUnderdeck(entry, platform, safe)
+    entry.underdeckVisible = safe and showUnderdeck
     -- An active collapse/shutter must release optional GPU-heavy 2K
     -- overlays on the SAME server-property event that restores the real
     -- native landing paint; never wait for another 0.65s camera pass.
@@ -523,7 +652,8 @@ local function syncVisibility(entry, platform)
     for _, model in ipairs(entry.models) do
         for _, piece in ipairs(model:GetDescendants()) do
             if piece:IsA("BasePart") then
-                local wanted = safe and 0 or 1
+                local show = safe and (model ~= entry.underdeckModel or showUnderdeck)
+                local wanted = show and 0 or 1
                 if piece.LocalTransparencyModifier ~= wanted then
                     piece.LocalTransparencyModifier = wanted
                 end
@@ -539,7 +669,7 @@ local function syncVisibility(entry, platform)
     end
 end
 
-local function mount(platform, template, count, bridgeCandidate, underdeckTemplate, strictLowUnderdeck)
+local function mount(platform, template, count, bridgeCandidate, underdeckTemplate)
     local arena=platform.Parent and platform.Parent.Parent
     local base=arena and arena:FindFirstChild("Base")
     local initialFloorScale=realFloorScale(base,arena)
@@ -563,6 +693,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         initialFloorScale = initialFloorScale,
         arena = arena,
         base = base,
+        platform = platform,
         resizeKind = tonumber(platform:GetAttribute("RouteTier"))~=nil
             and "compact" or (platform:GetAttribute("ChaosSkybridge")==true
             and "skybridge" or "static"),
@@ -577,7 +708,8 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         -- or rebuild the expensive route top every LOD sample.
         underdeckRequested = underdeckTemplate ~= nil,
         underdeck = false,
-        strictLowUnderdeck = strictLowUnderdeck == true,
+        underdeckMasked = {},
+        replacesNativeUnderdeck = underdeckTemplate ~= nil and usesNativeUnderdeck(platform),
         -- The native landing paint is masked ONLY when the owner-approved
         -- model's actual bounding box covers both walkable axes.
         panelCovered = fit.panelCovered,
@@ -606,6 +738,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         -- safe optional fallback: never invalidate the real route art.
         entry.underdeck=addUnderdeckModel(
             entry, platform, underdeckTemplate)
+        entry.replacesNativeUnderdeck = entry.replacesNativeUnderdeck and entry.underdeck
     end
 
     -- A Model can remain resident while an internal MeshPart streams
@@ -677,6 +810,44 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         syncVisibility(entry, platform)
     end
 
+    local underdeckWatchers = {}
+    local nativeNames = {}
+    if entry.replacesNativeUnderdeck then
+        nativeNames = {
+            ["PlatformUnderFrame" .. index] = true,
+            ["Promenade" .. index .. "_UnderdeckTruss"] = true,
+            ["SkySpine" .. index .. "_Undercarriage-1"] = true,
+            ["SkySpine" .. index .. "_Undercarriage1"] = true,
+            ["SkySpine" .. index .. "_CrossStiffener"] = true,
+        }
+    end
+    local function watchUnderdeckNative(part)
+        if not part or not nativeNames[part.Name] or not part:IsA("Part")
+            or underdeckWatchers[part] then return end
+        local connections = {}
+        local function changed() syncVisibility(entry, platform) end
+        for _, prop in ipairs({"CFrame", "Size", "CanCollide", "CanTouch",
+            "CanQuery", "Transparency", "Anchored", "Name", "Shape"}) do
+            connections[#connections + 1] = part:GetPropertyChangedSignal(prop):Connect(changed)
+        end
+        for _, tag in ipairs({"PremiumArchitecturalSurface", "PromenadeVisualOnly",
+            "SkySpineDecor", "PerimeterPlatformIndex"}) do
+            connections[#connections + 1] = part:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        underdeckWatchers[part] = connections
+        return true
+    end
+    local function unwatchUnderdeckNative(part)
+        local connections = underdeckWatchers[part]
+        if not connections then return end
+        for _, connection in ipairs(connections) do connection:Disconnect() end
+        underdeckWatchers[part] = nil
+    end
+    local function clearUnderdeckWatchers()
+        for part in pairs(underdeckWatchers) do unwatchUnderdeckNative(part) end
+    end
+    entry.clearUnderdeckWatchers = clearUnderdeckWatchers
+
     local function bindDecor(nextDecor)
         if decor == nextDecor then return end
         -- A streamed folder can be replaced. Disconnect its exact two
@@ -686,20 +857,33 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         end
         table.clear(entry.decorConnections)
         releaseNativePanel()
+        clearUnderdeckWatchers()
         decor = nextDecor and nextDecor:IsA("Folder")
             and nextDecor or nil
-        if not decor or not panelName then return end
+        if not decor or not panelName then
+            syncVisibility(entry, platform)
+            return
+        end
+        if entry.replacesNativeUnderdeck then
+            for name in pairs(nativeNames) do watchUnderdeckNative(decor:FindFirstChild(name)) end
+            syncVisibility(entry, platform)
+        end
         attachNativePanel(decor:FindFirstChild(panelName))
         entry.decorConnections[#entry.decorConnections + 1] =
             decor.ChildAdded:Connect(function(child)
                 if child.Name == panelName then
                     attachNativePanel(child)
+                elseif watchUnderdeckNative(child) then
+                    syncVisibility(entry, platform)
                 end
             end)
         entry.decorConnections[#entry.decorConnections + 1] =
             decor.ChildRemoved:Connect(function(child)
                 if child == entry.panel then
                     releaseNativePanel()
+                elseif underdeckWatchers[child] then
+                    unwatchUnderdeckNative(child)
+                    syncVisibility(entry, platform)
                 end
             end)
     end
@@ -737,20 +921,33 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             end)
     end
     local function refresh()
-        if platform.Parent then
-            syncVisibility(entry, platform)
-        end
+        if not entry.restoring then syncVisibility(entry, platform) end
     end
+    entry.connections[#entry.connections + 1] = platform.AncestryChanged:Connect(refresh)
     for _, prop in ipairs({"CanCollide", "Transparency", "Size", "Anchored"}) do
         entry.connections[#entry.connections + 1] =
             platform:GetPropertyChangedSignal(prop):Connect(refresh)
     end
     for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase",
-        "RouteTier", "ChaosSkybridge"}) do
+        "RouteTier", "ChaosSkybridge", "ChaosPermanentRoute", "SkySpineInterchange",
+        "SkySpineStep", "PromenadeLane", "PromenadeStep"}) do
         entry.connections[#entry.connections + 1] =
             platform:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
     if entry.underdeck then
+        for _, piece in ipairs(entry.modelParts[entry.underdeckModel]) do
+            local weld = entry.joints[piece]
+            entry.connections[#entry.connections + 1] = weld.AncestryChanged:Connect(refresh)
+            for _, prop in ipairs({"Part0", "Part1"}) do
+                entry.connections[#entry.connections + 1] = weld:GetPropertyChangedSignal(prop):Connect(refresh)
+            end
+        end
+        local source = entry.underdeckSource
+        entry.connections[#entry.connections + 1] = source.AncestryChanged:Connect(refresh)
+        entry.connections[#entry.connections + 1] = source.DescendantAdded:Connect(refresh)
+        entry.connections[#entry.connections + 1] = source.DescendantRemoving:Connect(function()
+            task.defer(refresh)
+        end)
         -- The event-driven true LongCradle owner can mount AFTER the
         -- camera LOD sampler. Tear down our entire optional route skin
         -- immediately rather than stacking two 3K-triangle chassis; the
@@ -770,32 +967,6 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     end
     refresh()
     return entry
-end
-
--- Physically walkable, permanent connector decks have always used native
--- cuboids, even though real owner-approved UV/tangent bridge MeshParts are
--- already in ReplicatedStorage. The five maps have two eight-deck sky
--- promenades and a ten-deck Sky Spine supported by true server collisions.
--- Only those named, server-authored, safe route structures can share the
--- very same authenticated skybridge kit as Towers' four gated bridges.
--- NEVER label an arbitrary fake bridge or local cosmetic Part as walkable.
-local function isPermanentConnector(platform)
-    if not platform.Name:match("^Platform%d+$")
-        or platform:GetAttribute("ChaosPermanentRoute") ~= true then
-        return false
-    end
-    local lane = platform:GetAttribute("PromenadeLane")
-    local step = platform:GetAttribute("PromenadeStep")
-    if type(lane) == "number" and lane % 1 == 0
-        and lane >= 1 and lane <= 2
-        and type(step) == "number" and step % 1 == 0
-        and step >= 1 and step <= 8 then
-        return true
-    end
-    local spine = platform:GetAttribute("SkySpineStep")
-    return platform:GetAttribute("SkySpineInterchange") == true
-        and type(spine) == "number"
-        and spine % 1 == 0 and spine >= 1 and spine <= 10
 end
 
 -- Only two VERIFIED permanent sky corridors may form a cosmetic joint:
@@ -1005,7 +1176,8 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
             end
         end)
     end
-    if not realFloorScale(base,arena) then
+    local floorScale = realFloorScale(base, arena)
+    if not floorScale then
         clearMounted()
         return
     end
@@ -1132,31 +1304,11 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         -- variants the one Low chassis is reserved for an elongated REAL
         -- route with existing camera-selected authentic top art; no
         -- additional phantom floor or competing square-deck hull.
-        if stress > 0 or arena:GetAttribute("VariantId") == "Harbor"
-            or not underdeckTemplate or
-            underdeckTemplate:GetAttribute("PremiumUnderdeck3D") ~= true then
+        if stress > 0 or arena:GetAttribute("VariantId") == "Harbor" then
             underdeckSlots = 0
-        else
-            -- Source preflight BEFORE consuming the one mobile slot.
-            -- No partial import, non-mesh surrogate or embedded script.
-            local authentic=0
-            for _,child in ipairs(underdeckTemplate:GetDescendants()) do
-                if child:IsA("BasePart") then
-                    if not child:IsA("MeshPart")
-                        or child.CanCollide or child.CanTouch
-                        or child.CanQuery then
-                        authentic=-100
-                        break
-                    end
-                    authentic+=1
-                elseif child:IsA("LuaSourceContainer") then
-                    authentic=-100
-                    break
-                end
-            end
-            if authentic~=7 then underdeckSlots=0 end
         end
     end
+    if not completeChassisSource(underdeckTemplate) then underdeckSlots = 0 end
     if underdeckTemplate and underdeckSlots > 0 then
         local ranked = {}
         for _, item in ipairs(bridges) do
@@ -1167,6 +1319,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         end
         table.sort(ranked, byDistance)
         local _,underdeckBounds=underdeckTemplate:GetBoundingBox()
+        local nativeDecor = arena:FindFirstChild("Decor")
         for _, item in ipairs(ranked) do
             if underdeckSlots <= 0 then break end
             local size = item.platform.Size
@@ -1179,6 +1332,9 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
                 and (quality ~= "Low"
                     or (length/width >= 1.35
                         and item.platform:GetAttribute("ChaosSkybridge") ~= true))
+                and (not usesNativeUnderdeck(item.platform)
+                    or collectUnderdeckNative(nativeDecor, item.platform, floorScale))
+                and not harborPortico(arena, item.platform)
                 and item.platform:GetAttribute(
                     "LocalOriginalLongCradleMounted") ~= true then
                 -- One approved open-frame model already provides this
@@ -1194,6 +1350,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         local desired = wanted[platform]
         if not desired or desired.count ~= entry.count
             or (desired.underdeck ~= nil) ~= entry.underdeckRequested
+            or (entry.underdeck and desired.underdeck ~= entry.underdeckSource)
             or not modelsIntact(entry) then
             restore(entry)
             mounted[platform] = nil
@@ -1202,13 +1359,14 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     for platform, desired in pairs(wanted) do
         if not mounted[platform] then
             mounted[platform] = mount(platform, desired.template, desired.count,
-                desired.bridge, desired.underdeck, quality == "Low")
+                desired.bridge, desired.underdeck)
         end
     end
     -- Late-streamed panel/geometry alignment is reconciled by this SAME
     -- 0.65/0.90-second camera owner; no extra heartbeat or per-Part polling.
     for platform, entry in pairs(mounted) do
         if entry.refreshNativePanel then entry.refreshNativePanel() end
+        if entry.underdeck then syncVisibility(entry, platform) end
     end
     -- Give the nearest REAL contiguous bridge one coherent 2K PBR finish,
     -- not just its first segment. Healthy desktop can keep two; Android
@@ -1278,6 +1436,12 @@ function PremiumRouteMeshKit.pbrCount()
     return models, appearances
 end
 
+function PremiumRouteMeshKit.coveredUnderdeckNativeCount()
+    local count = 0
+    for _, entry in pairs(mounted) do count += #entry.underdeckMasked end
+    return count
+end
+
 -- Diagnostics count REAL imported additional Model instances (not a
 -- pretended on-device screenshot or guessed complete texture residency).
 -- Pure footprint contract, also exercised in real Roblox Engine on actual
@@ -1312,11 +1476,8 @@ end
 function PremiumRouteMeshKit.underdeckCount()
     local n = 0
     for _, entry in pairs(mounted) do
-        for _, model in ipairs(entry.models) do
-            if model.Parent and model:GetAttribute("OriginalUnderdeckArt") == true then
-                n += 1
-            end
-        end
+        if entry.underdeck and entry.underdeckModel.Parent == folder
+            and entry.underdeckVisible then n += 1 end
     end
     return n
 end

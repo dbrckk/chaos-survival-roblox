@@ -634,14 +634,12 @@ assert 'underdeckCap = math.floor(underdeckCap*.50)' in ROUTE
 assert 'underdeckCap = 0' in ROUTE
 assert 'if quality == "Low" then' in ROUTE
 assert 'if stress > 0 or arena:GetAttribute("VariantId") == "Harbor"' in ROUTE
-assert 'underdeckTemplate:GetAttribute("PremiumUnderdeck3D") ~= true' in ROUTE
-assert 'underdeckTemplate:GetDescendants()' in ROUTE
-assert 'if authentic~=7 then underdeckSlots=0 end' in ROUTE
+assert 'source:GetAttribute("PremiumUnderdeck3D") ~= true' in ROUTE
+assert 'if not completeChassisSource(underdeckTemplate) then underdeckSlots = 0 end' in ROUTE
 assert 'or child.CanCollide or child.CanTouch' in ROUTE
 assert 'elseif child:IsA("LuaSourceContainer") then' in ROUTE
-assert 'if entry.strictLowUnderdeck then' in ROUTE
-assert 'if parts ~= 7 then return false end' in ROUTE
-assert '(entry.strictLowUnderdeck and #pieces ~= 7)' in ROUTE
+assert 'if not completeChassisSource(template) then return false end' in ROUTE
+assert 'if #pieces ~= 7 then' in ROUTE
 assert 'if platform:GetAttribute("LocalOriginalLongCradleMounted") == true then' in ROUTE
 assert 'platform:GetAttributeChangedSignal(' in ROUTE
 assert '"LocalOriginalLongCradleMounted"):Connect(function()' in ROUTE
@@ -693,7 +691,7 @@ for px,pz,sx,sz in ((12,12,24,10),(22,12,32,10),(22,8,24,10)):
     valid=20<=sourceLong<=26 and 8<=sourceShort<=13 and (
         length>=17 and width>=9.5)
     assert not valid,(px,pz,sx,sz)
-assert 'desired.underdeck, quality == "Low")' in ROUTE
+assert 'desired.bridge, desired.underdeck)' in ROUTE
 # A requested source is NOT the same as a successful import. If a
 # clone fails, do not claim a 3D undercarriage and do not tear down valid
 # top-cover meshes repeatedly on each 0.65-second LOD sample.
@@ -1810,7 +1808,7 @@ assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
 assert 'saved[part] and not crownPylons[part]' in TRIM
 mask = TRIM[TRIM.index("local function setNativeMask("):
             TRIM.index("local function refreshPylon(")]
-assert 'if saved[part] or crownPylons[part] then' in mask
+assert 'if saved[part] or crownPylons[part] or routeUnderdecks[part] then' in mask
 assert 'nativeBaselines[part] = part.LocalTransparencyModifier' in mask
 assert 'function Kit.setPylonLodVisible(part, visible)' in TRIM
 assert 'PlatformNativeTrimReplacementKit.setPylonLodVisible(native, visible)' in SIDE_LOD
@@ -2213,3 +2211,21 @@ fitting_integration = (ROOT/"tests/engine/long-cradle-streaming-fallback.spec.lu
     encoding="utf8")
 assert 'variant.." first fitting is missing at its native center"' in fitting_integration
 print("PASS Towers and Orbital portico fittings use complete approved pairs within the mobile budget")
+
+# Approved chassis replace their existing below-deck silhouettes using a
+# reversible native claim shared with the platform-identity owner.
+for clause in (
+    'collectUnderdeckNative(nativeDecor, item.platform, floorScale)',
+    '"PlatformUnderFrame" .. id',
+    '"_UnderdeckTruss"',
+    '"_Undercarriage" .. side',
+    '"_CrossStiffener"',
+    'not harborPortico(arena, item.platform)',
+    'PlatformNativeTrimReplacementKit.setRouteUnderdeckMask(part, true)',
+    'PlatformNativeTrimReplacementKit.setRouteUnderdeckMask(part, false)',
+    'weld.AncestryChanged:Connect(refresh)',
+):
+    assert clause in ROUTE, clause
+assert 'function Kit.setRouteUnderdeckMask(part, masked)' in TRIM
+assert 'LocalRouteUnderdeckNativePartsReplaced' in LOD
+print("PASS authenticated route chassis replace exact promenade/Sky Spine native underdecks with shared rollback")
