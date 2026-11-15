@@ -749,16 +749,15 @@ describe("visual budget rules", function()
             source:SetAttribute("CosmeticOnly", true)
             source:SetAttribute("OriginalHarborPromenadePortal3D", true)
             source:SetAttribute("Original3DAssetId", 134157110756659)
-            local sourceMesh = Instance.new("MeshPart")
-            sourceMesh.Name = "Approved_ARMOR"
-            sourceMesh.Size = Vector3.new(19.4,20.1,12.6)
-            sourceMesh.Parent = source
+            for i = 1, 7 do
+                local mesh = Instance.new("MeshPart")
+                mesh.Size = i == 1 and Vector3.new(19.4,20.1,12.6)
+                    or Vector3.one * .2
+                mesh.Parent = source
+            end
             source.Parent = holder
             createdSource = true
         end
-        -- This is an actual Roblox engine integration fixture. Mirror the
-        -- MapBuilder's signed GeneratedMap/Arena parentage, not a detached
-        -- Folder that correctly fails the import provenance contract.
         local generated = Instance.new("Folder")
         generated.Name = "GeneratedMap"
         generated.Parent = workspace
@@ -791,8 +790,6 @@ describe("visual budget rules", function()
         deck:SetAttribute("PromenadeLane",1)
         deck:SetAttribute("PromenadeStep",2)
         deck.Parent = platforms
-        -- All nine actual authored ornament names must unmask as a group.
-        -- Merely testing one pylon would miss a partial nine-piece fallback.
         local native = {}
         for _, suffix in ipairs({
             "LoadPylon-1", "LoadPylon1", "DiagonalStay-1",
