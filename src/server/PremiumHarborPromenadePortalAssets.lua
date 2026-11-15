@@ -23,7 +23,7 @@ local function matches(model)
             n += 1
         elseif part:IsA("LuaSourceContainer") then return false end
     end
-    if n < 1 or n > 12 then return false end
+    if n ~= 7 then return false end
     local _, b = model:GetBoundingBox()
     local short = math.min(b.X, b.Z)
     local long = math.max(b.X, b.Z)

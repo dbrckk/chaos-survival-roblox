@@ -55,7 +55,7 @@ local function modelSource()
             n += 1
         elseif piece:IsA("LuaSourceContainer") then return nil end
     end
-    if n < 1 or n > 12 then return nil end
+    if n ~= 7 then return nil end
     local _, b = source:GetBoundingBox()
     if math.min(b.X,b.Z) < 10.8 or math.min(b.X,b.Z) > 15.5
         or math.max(b.X,b.Z) < 18.2 or math.max(b.X,b.Z) > 21.6

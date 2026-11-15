@@ -1082,6 +1082,8 @@ assert 'source:GetAttribute("Original3DAssetId") ~= ID' in HARBOR
 assert 'source:GetAttribute("OriginalHarborPromenadePortal3D") ~= true' in HARBOR
 assert 'if not piece:IsA("MeshPart") then return nil end' in HARBOR
 assert 'part:IsA("LuaSourceContainer")' in HARBOR or 'piece:IsA("LuaSourceContainer")' in HARBOR
+assert 'if n ~= 7 then return nil end' in HARBOR
+assert 'if n ~= 7 then return false end' in HARBOR_SERVER
 assert 'if #pieces ~= expected then copy:Destroy(); return nil end' in HARBOR
 for name in ('LoadPylon-1','LoadPylon1','DiagonalStay-1','DiagonalStay1',
     'MonumentalCrosshead','UnderdeckTruss','FreightHoistArm',
