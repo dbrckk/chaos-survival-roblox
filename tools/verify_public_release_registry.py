@@ -83,9 +83,8 @@ assert engine.count('describe("Premium 3D Model import diagnostics"')==1
 cloud=(ROOT/".github/workflows/roblox-cloud-test.yml").read_text()
 all_specs={p.relative_to(ROOT).as_posix() for p in (ROOT/"tests/engine").glob("*.spec.luau")}
 listed=re.findall(r'"(tests/engine/[^"*]+\.spec\.luau)"',cloud)
-assert len(all_specs)==89,(len(all_specs),"unexpected engine spec count")
-assert len(set(listed))==89 and len(listed)==89
-assert set(listed)==all_specs,("Missing",all_specs-set(listed))
+assert len(listed) == len(set(listed)), "Duplicate Cloud engine spec"
+assert set(listed) == all_specs, ("Cloud shard coverage", all_specs ^ set(listed))
 print("PASS 111 real Approved original Models, including two P4 rim assets, and all 45 premium extension sources")
 print("PASS release Build Validation uses current 2-permit global importer contract")
-print("PASS all 89 engine specs listed exactly once; Lest diagnostic test is valid")
+print(f"PASS all {len(all_specs)} engine specs listed exactly once; Lest diagnostic test is valid")

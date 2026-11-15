@@ -1998,6 +1998,9 @@ assert 'function Kit.lowPairingCheck()' in SIDE
 assert 'and eligible(building, district, false) ~= nil' in SIDE
 assert 'elseif tier == "Low" and lowPairingCheck' in FRONT
 assert 'and lowPairingCheck(building, district, distance)' in FRONT
+for code in (SIDE, FRONT):
+    assert 'Low = {count = 1, distance = 145, retention = 16}' in code
+assert 'priority -= 24' in FRONT
 assert 'player:SetAttribute("LocalDistrict3DCompleteCoveragePercent",' in SIDE_LOD
 assert 'LocalDistrict3DCompleteCoveragePercent = census.coveragePercent' not in SIDE_LOD
 for attribute in (
