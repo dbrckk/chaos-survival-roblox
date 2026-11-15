@@ -488,7 +488,9 @@ for guard in ('id=112493873850364', 'id=125428569657840', 'id=96622579843060',
               'id=101457508594609','native:GetAttribute("HeroOrigin")',
               'variant == "Crossroads" and 0 or math.pi*.5',
               'syncDetail(entry,"foundation"', 'syncDetail(entry,"fittings"',
-              'asset.model.ChildRemoved', 'stress >= 2'):
+              'asset.model.ChildRemoved', 'stress >= 2',
+              'Vector3.new(8.9772,14.1883,.7155)',
+              'bottom+4.64-.20+12.75*.5'):
     assert guard in HERO_SKYLINE,guard
 print("PASS hero profiles retain five silhouettes with independent source-authenticated foundations and fittings")
 assert 'AERIAL_ID = 105555650820011' in DEPTH_SKYLINE
