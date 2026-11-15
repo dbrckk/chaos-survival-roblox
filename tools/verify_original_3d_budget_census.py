@@ -2014,10 +2014,11 @@ assert 'require("./PremiumApprovedAssetImportGate")' in P4_IMPORT
 for contract in (
     'local folder=Instance.new("Folder")',
     'folder.Name="ApprovedRemainingStructureMeshesLocal"',
-    'for name in pairs(SOURCE) do src[name]=sourceFor(name) end',
+    'src[name]=sourceFor(name)',
     'model:GetAttribute("Original3DAssetId")',
     'realFloorScale(entry.arena)',
-    'collectArch(entry.arena,entry.owner,decor,scale)',
+    'local collect=entry.category=="arch" and collectArch or collectCrosshead',
+    'data=collect(entry.arena,entry.owner,decor,scale)',
     'collectCasing(entry.arena,entry.owner,group)',
     'collectHelix(entry.arena,entry.owner,circuit)',
     'if #entry.pieces~=7 then clone:Destroy();return nil end',
@@ -2027,10 +2028,10 @@ for contract in (
     'clone.DescendantRemoving:Connect(function(child)',
     'piece.CanCollide=false',
     'visible=false,disposing=false',
-    'Low={arch=1,casing=1,helix=0}',
-    'Medium={arch=8,casing=4,helix=4}',
-    'High={arch=12,casing=4,helix=8}',
-    'High={arch=3,casing=2,helix=3}',
+    'Low={arch=1,casing=1,helix=0,promenade=1}',
+    'Medium={arch=8,casing=4,helix=4,promenade=3}',
+    'High={arch=12,casing=4,helix=8,promenade=6}',
+    'High={arch=3,casing=2,helix=3,promenade=2}',
     'if p==2 then return 0 end',
     'local ax,az=sx,sz',
     'longX=data.category~="casing" and b.X>b.Z',
@@ -2039,13 +2040,13 @@ for contract in (
     assert contract in P4_CLIENT,contract
 # Hard guard against a Luau comment accidentally swallowing a budget line.
 # The earlier district sidewall High profile failed in this exact way.
-for line in ("Medium={arch=8,casing=4,helix=4},",
-             "High={arch=12,casing=4,helix=8},"):
+for line in ("Medium={arch=8,casing=4,helix=4,promenade=3},",
+             "High={arch=12,casing=4,helix=8,promenade=6},"):
     assert any(row.lstrip(" \t")==line for row in P4_CLIENT.splitlines()), (
         "P4 desktop arch budget must be executable Luau",line)
 for clause in (
-    'Medium={arch=2,casing=1,helix=1}',
-    'High={arch=3,casing=2,helix=3}',
+    'Medium={arch=2,casing=1,helix=1,promenade=2}',
+    'High={arch=3,casing=2,helix=3,promenade=3}',
     'if p==2 then return 0 end',
 ):
     assert clause in P4_CLIENT, ("P4 touch/stress cap",clause)
@@ -2054,6 +2055,7 @@ assert 'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,' in SIDE_LOD
 for name in ("LocalOriginalAscensionArch3DCount",
              "LocalOriginalColumnCasing3DCount",
              "LocalOriginalOrbitalHelixUnderframe3DCount",
+             "LocalOriginalPromenadeCrosshead3DCount",
              "LocalP4RemainingStructuralNativePiecesReplaced"):
     assert name in SIDE_LOD,name
 for phrase in ("MonumentalOverpass","VerticalBridgePylon",
@@ -2079,9 +2081,33 @@ for required in (
     '"TaperedFin-1","TaperedFin1","MonumentalOverpass"',
 ):
     assert required in P4_CLIENT, required
-assert 'deck:GetAttribute("ChaosPermanentRoute")~=true' not in P4_CLIENT
+ascension_collector = P4_CLIENT.split("local function collectArch", 1)[1].split(
+    "local function collectCrosshead", 1)[0]
+assert 'deck:GetAttribute("ChaosPermanentRoute")~=true' not in ascension_collector
 assert 'local overpass=originals[8]' not in P4_CLIENT
 print("PASS P4 upper arch fits true 3/13.8/28.2 height, retains deep load-bearing"
       " native beams and accepts genuine collapsible Summit stage")
 print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
+
+
+promenade_collector = P4_CLIENT.split("local function collectCrosshead", 1)[1].split(
+    "local function collectCasing", 1)[0]
+brace = P4_MODELS["perimeter_crossbrace"]
+assert brace["asset_id"]=="108452611210970" and brace["moderation"]=="Approved"
+assert brace["workflow_run_id"]==42696898936
+assert 'holder="ApprovedPerimeterStructuresTemplates"' in P4_CLIENT
+for contract in (
+    'PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]',
+    '"_MonumentalCrosshead"',
+    'native:GetAttribute("PromenadeVisualOnly")~=true',
+    'native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index)',
+    'size.Z-span*scale',
+    'native.Shape~=Enum.PartType.Block',
+    'originals={native}',
+):
+    assert contract in promenade_collector,contract
+assert 'UnderdeckTruss' not in promenade_collector
+assert 'LoadPylon' not in promenade_collector
+assert 'Low={arch=0,casing=0,helix=0,promenade=0}' in P4_CLIENT
+print("PASS four promenade variants use the approved truss with exact native footprint and Low backoff")

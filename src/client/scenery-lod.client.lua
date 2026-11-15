@@ -2100,9 +2100,8 @@ task.spawn(function()
             player:SetAttribute("LocalOriginalHeroPartsReplaced", nativeHeroPieces)
         end
 
-        -- Five approved original 3D models replace only FIVE real upper
-        -- arch volumes, ELEVEN authentic casing elements or FOUR genuine
-        -- Orbital-ramp underframe braces per selected physical owner.
+        -- Approved 3D sources replace selected native arch, casing,
+        -- Orbital-ramp brace and promenade crosshead geometry.
         -- Desktop Medium/High get more near-camera owners, NOT more
         -- primitives masked per owner. Android + emergency caps unchanged.
         -- This runs AFTER the native architecture/culling owners, on the
@@ -2118,6 +2117,8 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.count("casing"),
             LocalOriginalOrbitalHelixUnderframe3DCount =
                 ApprovedRemainingStructureMeshKit.count("helix"),
+            LocalOriginalPromenadeCrosshead3DCount =
+                ApprovedRemainingStructureMeshKit.count("promenade"),
             LocalP4RemainingStructuralNativePiecesReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount(),
         }

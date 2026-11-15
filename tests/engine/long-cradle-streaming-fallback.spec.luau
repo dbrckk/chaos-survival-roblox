@@ -12,6 +12,7 @@ local Kit=require("../../src/client/PremiumLargeStructureMeshKit")
 local Finish=require("../../src/client/PlatformFinishKit")
 local Crown=require("../../src/client/SkySpineCrownMeshKit")
 local IdentityLod=require("../../src/shared/PlatformIdentityLodRules")
+local Remaining=require("../../src/client/ApprovedRemainingStructureMeshKit")
 
 describe("P4 approved long cradle streaming fallback (engine)",function()
     it("uses complete genuine Promenade and SkySpine native underframes only",function()
@@ -224,6 +225,140 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if templates then templates:Destroy() end
         if generated then generated:Destroy() end
         if oldTemplates then oldTemplates.Parent=RS end
+        if previous then previous.Parent=workspace end
+        if not ok then error(err) end
+    end)
+
+    it("fits the approved truss to genuine promenade crossheads through shrink and streaming",function()
+        local rs=game:GetService("ReplicatedStorage")
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        local old=rs:FindFirstChild("ApprovedPerimeterStructuresTemplates")
+        if previous then previous.Parent=nil end
+        if old then old.Parent=nil end
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedPerimeterStructuresTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=rs
+        local source=Instance.new("Model")
+        source.Name="Brace"
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("OriginalPerimeterStructure3D",true)
+        source:SetAttribute("Original3DAssetId",108452611210970)
+        local main,detachable=nil,nil
+        for i=1,7 do
+            local part=Instance.new("MeshPart")
+            part.Size=i==1 and Vector3.new(8.94,.5675,1.12)
+                or Vector3.new(.16,.16,.16)
+            part.Anchored=true
+            part.Massless=true
+            part.CanCollide=false
+            part.CanTouch=false
+            part.CanQuery=false
+            part.Parent=source
+            if i==1 then main=part end
+            if i==7 then detachable=part end
+        end
+        source.Parent=holder
+        local generated=nil
+        local ok,err=pcall(function()
+            for _,variant in ipairs({"Classic","Towers","Crossroads","Orbital","Harbor"}) do
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated=arena.Parent
+                local platforms=arena:FindFirstChild("Platforms")
+                local decor=arena:FindFirstChild("Decor")
+                local base=arena:FindFirstChild("Base")
+                local crossheads={}
+                for _,deck in ipairs(platforms:GetChildren()) do
+                    local index=deck.Name:match("^Platform(%d+)$")
+                    local native=index and decor:FindFirstChild(
+                        "Promenade"..index.."_MonumentalCrosshead")
+                    if native then crossheads[deck]=native end
+                end
+                local total=0
+                for _ in pairs(crossheads) do total+=1 end
+                expect(total).toBe(6)
+                Remaining.sync(arena,base.Position,"High",true,nil,0,false)
+                expect(Remaining.count("promenade")).toBe(variant=="Harbor" and 0 or 6)
+                for deck,native in pairs(crossheads) do
+                    expect(native.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
+                    local index=deck.Name:match("^Platform(%d+)$")
+                    local pylon=decor:FindFirstChild("Promenade"..index.."_LoadPylon1")
+                    local underdeck=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
+                    expect(pylon.LocalTransparencyModifier).toBe(0)
+                    expect(underdeck.LocalTransparencyModifier).toBe(0)
+                    expect(deck.CanCollide).toBe(true)
+                end
+                if variant~="Crossroads" then continue end
+                local deck,native=next(crossheads)
+                Remaining.sync(arena,deck.Position,"High",true,nil,0,true)
+                expect(Remaining.count("promenade")).toBe(3)
+                Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                expect(Remaining.nativeCount("promenade")).toBe(1)
+                expect(native.LocalTransparencyModifier).toBe(1)
+                local bucket=workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
+                local model=bucket:FindFirstChild("ApprovedP4_Crosshead")
+                expect(model:GetAttribute("Original3DAssetId")).toBe(108452611210970)
+                local function verifyFit()
+                    local meshCount=0
+                    for _,piece in ipairs(model:GetDescendants()) do
+                        if piece:IsA("MeshPart") then
+                            meshCount+=1
+                            expect(piece.CanCollide or piece.CanQuery or piece.CanTouch).toBe(false)
+                        end
+                    end
+                    expect(meshCount).toBe(7)
+                    local frame,size=model:GetBoundingBox()
+                    local major=math.max(size.X,size.Z)
+                    expect((frame.Position-native.Position).Magnitude<.03).toBe(true)
+                    expect(math.abs(major-native.Size.Z*.98)<.04).toBe(true)
+                    expect(math.abs(size.Y-native.Size.Y*.975)<.02).toBe(true)
+                end
+                verifyFit()
+                local deckSize,nativeSize=deck.Size,native.Size
+                base.Size=Vector3.new(base.Size.X*.75,base.Size.Y,base.Size.Z*.75)
+                expect(native.LocalTransparencyModifier).toBe(0)
+                deck.Size=Vector3.new(deckSize.X*.75,deckSize.Y,deckSize.Z*.75)
+                native.Size=Vector3.new(nativeSize.X*.75,nativeSize.Y,nativeSize.Z*.75)
+                expect(native.LocalTransparencyModifier).toBe(1)
+                verifyFit()
+                deck:SetAttribute("BridgeShutterPhase","Warning")
+                expect(native.LocalTransparencyModifier).toBe(0)
+                deck:SetAttribute("BridgeShutterPhase","Idle")
+                expect(native.LocalTransparencyModifier).toBe(1)
+                native.Parent=nil
+                expect(native.LocalTransparencyModifier).toBe(0)
+                local replacement=native:Clone()
+                replacement.LocalTransparencyModifier=.25
+                replacement.Parent=decor
+                native:Destroy()
+                Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                expect(replacement.LocalTransparencyModifier).toBe(1)
+                detachable.Parent=nil
+                task.wait()
+                expect(replacement.LocalTransparencyModifier).toBe(.25)
+                -- A new template identity is required to refit an import
+                -- with changed axes after a streaming replacement.
+                source.Parent=nil
+                detachable.Parent=source
+                main.Size=Vector3.new(1.12,.5675,8.94)
+                local reimport=source:Clone()
+                source:Destroy()
+                reimport.Parent=holder
+                Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                expect(replacement.LocalTransparencyModifier).toBe(1)
+                local rotated=bucket:FindFirstChild("ApprovedP4_Crosshead")
+                local _,rotatedSize=rotated:GetBoundingBox()
+                expect(math.abs(math.max(rotatedSize.X,rotatedSize.Z)-replacement.Size.Z*.98)<.04).toBe(true)
+                Remaining.sync(arena,deck.Position,"Low",true,nil,1,true)
+                expect(Remaining.count("promenade")).toBe(0)
+                expect(replacement.LocalTransparencyModifier).toBe(.25)
+            end
+        end)
+        Remaining.sync(nil,Vector3.zero,"Low",false)
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if old then old.Parent=rs end
         if previous then previous.Parent=workspace end
         if not ok then error(err) end
     end)

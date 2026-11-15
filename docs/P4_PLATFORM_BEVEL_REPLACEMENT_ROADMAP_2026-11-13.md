@@ -604,3 +604,9 @@ La première exécution des 89 specs Roblox Engine après remplacement des pylô
 La couronne complète reprend les deux montants dans sa propre géométrie. Tant qu’elle est valide et visible sur le portique, les pylônes 3D individuels déjà chargés restent masqués. Une perte de couronne, de soudure ou une éviction Low leur rend la main. Si un pylône perd à son tour une pièce ou si le tablier passe en avertissement, sa forme native retrouve sa transparence locale d’origine. Les compteurs de remplacement individuel s’appuient sur les pylônes réellement visibles. Le test d’intégration existant couvre les deux ordres de montage, le retrait d’une soudure, la réplication tardive et le retour au natif.
 
 Le LOD de distance utilise maintenant la vraie soudure du pylône. En dehors de sa portée, le masque du pylône individuel est lui aussi libéré, sans écraser le masque éventuel de la couronne.
+
+### Traverses ajourées des promenades — 15 novembre 2026
+
+Les promenades de Classic, Towers, Crossroads et Orbital ont chacune six traverses éligibles, réparties entre les deux voies et les marches 2, 4 et 7. Le treillis à deux longerons utilise les sept MeshParts du modèle créateur approuvé `108452611210970` ([import Roblox](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42696898936)). Sa géométrie est ajustée à la traverse réelle de 18,4, 19,6 ou 21,2 studs et suit le rétrécissement horizontal. Les pylônes, instruments propres aux arènes, tabliers et sous-châssis gardent leur gestion existante. Harbor conserve ses portiques de fret.
+
+Plafonds en pression normale, par arène active : 1/3/6 sur PC et 1/2/3 sur écran tactile selon la qualité Low/Medium/High. En Low, la portée initiale est de 118 studs et le premier niveau de pression restitue la traverse native. Chaque modèle compte dans le budget visuel mobile existant. Le compteur `LocalOriginalPromenadeCrosshead3DCount` dénombre les treillis montés et valides côté client.

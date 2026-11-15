@@ -1,6 +1,5 @@
--- Five creator-owned, Roblox Approved source sculpts replace TRUE native
--- geometry only: three original perimeter ascension arches, the twenty
--- structural casing ornaments and the eight orbital helix underframes.
+-- Original approved cosmetic geometry for perimeter ascension arches,
+-- casing ornaments, Orbital helix underframes and promenade crossheads.
 -- Real colliders/route lights/warnings remain server-owned, never masked.
 -- Exactly ONE existing scenery-lod sampler owns source residency. Event
 -- callbacks are only for genuine streaming / shrink / collapse changes.
@@ -12,7 +11,13 @@ local SOURCE={
     Summit={id=127049813505254,major=17.6,minor=5.2,height=19.73,centerY=7.955},
     Casing={id=130196548599769,major=8.58,minor=5.3,height=10.378,centerY=1.1492},
     Helix={id=106863534763803,major=23.6,minor=5.08,height=1.453,centerY=-.97125},
+    Crosshead={id=108452611210970,major=8.94,minor=1.12,height=.5675,
+        centerY=0,holder="ApprovedPerimeterStructuresTemplates",
+        template="Brace",tag="OriginalPerimeterStructure3D"},
 }
+local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true}
+local CROSSHEAD_SPAN={[2]=18.4,[4]=19.6,[7]=21.2}
+local CROSSHEAD_RISE={[2]=13.25,[4]=14.5,[7]=16.2}
 local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
 -- Desktop-only extra creator-approved sculptures. The authenticated real
 -- platform/casing/ramp and source dimensions still decide actual mounts.
@@ -23,26 +28,26 @@ local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
 -- can finish all twelve. No import, extra LOD tick or new native geometry.
 -- Mobile/touch and GPU-pressure-1/2 caps remain explicitly unchanged.
 local BUDGET={
-    Low={arch=1,casing=1,helix=0},
-    Medium={arch=8,casing=4,helix=4},
-    High={arch=12,casing=4,helix=8},
+    Low={arch=1,casing=1,helix=0,promenade=1},
+    Medium={arch=8,casing=4,helix=4,promenade=3},
+    High={arch=12,casing=4,helix=8,promenade=6},
 }
 -- Preserve EXACT former GPU-pressure-1 ceilings even when healthy desktop
 -- rendering is promoted: active hazards must retain their old relief path.
 local PRESSURE_CAP={
-    Low={arch=0,casing=0,helix=0},
-    Medium={arch=1,casing=1,helix=1},
-    High={arch=3,casing=2,helix=3},
+    Low={arch=0,casing=0,helix=0,promenade=0},
+    Medium={arch=1,casing=1,helix=1,promenade=1},
+    High={arch=3,casing=2,helix=3,promenade=2},
 }
 local TOUCH_CAP={
-    Low={arch=1,casing=1,helix=0},
-    Medium={arch=2,casing=1,helix=1},
-    High={arch=3,casing=2,helix=3},
+    Low={arch=1,casing=1,helix=0,promenade=1},
+    Medium={arch=2,casing=1,helix=1,promenade=2},
+    High={arch=3,casing=2,helix=3,promenade=3},
 }
 local DISTANCE={
-    Low={arch=135,casing=115,helix=0},
-    Medium={arch=215,casing=180,helix=170},
-    High={arch=325,casing=275,helix=265},
+    Low={arch=135,casing=115,helix=0,promenade=118},
+    Medium={arch=215,casing=180,helix=170,promenade=195},
+    High={arch=325,casing=275,helix=265,promenade=280},
 }
 local ARCH_NATIVE={
     -- Five upper volumes are genuinely occluded by the authored canopy.
@@ -94,14 +99,14 @@ end
 local function sourceFor(name)
     local spec=SOURCE[name]
     local templates=ReplicatedStorage:FindFirstChild(
-        "ApprovedRemainingStructureTemplates")
-    if not spec or not templates or not templates:IsA("Folder")
+        spec.holder or "ApprovedRemainingStructureTemplates")
+    if not templates or not templates:IsA("Folder")
         or templates.Parent~=ReplicatedStorage
         or templates:GetAttribute("OwnerVerified")~=true then return nil end
-    local model=templates:FindFirstChild(name)
+    local model=templates:FindFirstChild(spec.template or name)
     if not model or not model:IsA("Model") or model.Parent~=templates
         or model:GetAttribute("Original3DAssetId")~=spec.id
-        or model:GetAttribute("P4OriginalRemainingStructure3D")~=true
+        or model:GetAttribute(spec.tag or "P4OriginalRemainingStructure3D")~=true
         or model:GetAttribute("OwnerVerified")~=true
         or model:GetAttribute("CosmeticOnly")~=true then return nil end
     local count=0
@@ -117,9 +122,10 @@ local function sourceFor(name)
     end
     if count~=7 then return nil end
     local _,b=model:GetBoundingBox()
-    if math.abs(math.max(b.X,b.Z)-spec.major)>.75
-        or math.abs(math.min(b.X,b.Z)-spec.minor)>.75
-        or math.abs(b.Y-spec.height)>.8 then return nil end
+    local brace=name=="Crosshead"
+    if math.abs(math.max(b.X,b.Z)-spec.major)>(brace and .30 or .75)
+        or math.abs(math.min(b.X,b.Z)-spec.minor)>(brace and .22 or .75)
+        or math.abs(b.Y-spec.height)>(brace and .16 or .8) then return nil end
     return model
 end
 
@@ -190,6 +196,46 @@ local function collectArch(arena,deck,decor,scale)
         orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0),
         scaleZ=overpass.Size.Z/17.6,
         stage=step,route=route,index=index,expectedParent=decor}
+end
+
+local function collectCrosshead(arena,deck,decor,scale)
+    if not PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
+        or not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
+        or deck:GetAttribute("ChaosPermanentRoute")~=true
+        or deck:GetAttribute("RouteTier")~=4
+        or not deck.Anchored or not deck.CanCollide or deck.Transparency>=.75
+        or math.abs(deck.Size.Z/scale-12)>.22 or math.abs(deck.Size.Y-2)>.12 then
+        return nil
+    end
+    local fullLength=deck.Size.X/scale
+    if fullLength<=14.6 or fullLength>=29.6 then return nil end
+    local lane=deck:GetAttribute("PromenadeLane")
+    local step=deck:GetAttribute("PromenadeStep")
+    local span=CROSSHEAD_SPAN[step]
+    local index=deck.Name:match("^Platform(%d+)$")
+    if not index or not span or (lane~=1 and lane~=2) then return nil end
+    local collapse=deck:GetAttribute("CollapsePhase")
+    if collapse~=nil and collapse~="Normal" and collapse~="Safe" then return nil end
+    local shutter=deck:GetAttribute("BridgeShutterPhase")
+    if shutter~=nil and shutter~="Idle" then return nil end
+
+    local native=decor:FindFirstChild("Promenade"..index.."_MonumentalCrosshead")
+    if not visualNative(native,decor) or not native:IsA("Part")
+        or native.Shape~=Enum.PartType.Block
+        or native:GetAttribute("PromenadeVisualOnly")~=true
+        or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then
+        return nil
+    end
+    local size=native.Size
+    local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+CROSSHEAD_RISE[step],0)
+    if math.abs(size.X-4*scale)>.10 or math.abs(size.Y-1.2)>.06
+        or math.abs(size.Z-span*scale)>.18
+        or (expected.Position-native.Position).Magnitude>.16
+        or expected.LookVector:Dot(native.CFrame.LookVector)<.999
+        or expected.UpVector:Dot(native.CFrame.UpVector)<.999 then return nil end
+    return {category="promenade",name="Crosshead",owner=deck,arena=arena,
+        originals={native},center=native.Position,orientation=native.CFrame,
+        crossheadSize=size,expectedParent=decor}
 end
 
 local function collectCasing(arena,casing,group)
@@ -265,7 +311,8 @@ end
 
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
-        if n.part.Parent==entry.expectedParent
+        if (n.part.Parent==entry.expectedParent
+            or (entry.category=="promenade" and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
         end
@@ -279,16 +326,17 @@ local function reveal(entry)
 end
 
 local function sourceIntact(entry)
+    local spec=SOURCE[entry.name]
     if entry.disposing or entry.corrupt or not entry.model
         or entry.model.Parent~=folder
         or not entry.source or entry.source.Parent~=entry.sourceFolder
         or entry.sourceFolder.Parent~=ReplicatedStorage
         or entry.sourceFolder:GetAttribute("OwnerVerified")~=true
         or entry.source:GetAttribute("OwnerVerified")~=true
-        or entry.source:GetAttribute("P4OriginalRemainingStructure3D")~=true
+        or entry.source:GetAttribute(spec.tag or "P4OriginalRemainingStructure3D")~=true
         or entry.source:GetAttribute("CosmeticOnly")~=true
         or entry.source:GetAttribute("Original3DAssetId")
-            ~= SOURCE[entry.name].id
+            ~= spec.id
         or not entry.pieces or #entry.pieces~=7 then return false end
     -- A streamed-in eighth mesh, stray Part or injected script must NEVER
     -- survive hidden inside a supposedly approved seven-piece sculpture.
@@ -332,10 +380,11 @@ local function refresh(entry)
     local scale=realFloorScale(entry.arena)
     local data=nil
     if scale and sourceIntact(entry) then
-        if entry.category=="arch" then
+        if entry.category=="arch" or entry.category=="promenade" then
             local decor=entry.arena:FindFirstChild("Decor")
+            local collect=entry.category=="arch" and collectArch or collectCrosshead
             if decor==entry.expectedParent then
-                data=collectArch(entry.arena,entry.owner,decor,scale)
+                data=collect(entry.arena,entry.owner,decor,scale)
             end
         elseif entry.category=="casing" then
             local group=entry.arena:FindFirstChild("Decor")
@@ -362,9 +411,16 @@ local function refresh(entry)
         end
     end
     local rule=SOURCE[entry.name]
-    local sx=data.scaleX or 1
-    local sz=data.scaleZ or 1
-    if sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
+    local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
+    if data.crossheadSize then
+        local size=data.crossheadSize
+        local bounds=entry.bounds
+        -- Match the real crosshead span. Inset the web and ends
+        -- slightly so the themed equipment has no coplanar faces.
+        sx=size.X*.85/math.min(bounds.X,bounds.Z)
+        sy=size.Y*.975/bounds.Y
+        sz=size.Z*.98/math.max(bounds.X,bounds.Z)
+    elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
         reveal(entry)
         return false
     end
@@ -372,14 +428,22 @@ local function refresh(entry)
     if entry.longX then ax,az=sz,sx end
     local aim=data.orientation*CFrame.new(0,rule.centerY,0)
         * CFrame.Angles(0,entry.longX and math.pi*.5 or 0,0)
+    local crossheadChanged=data.crossheadSize~=entry.lastCrossheadSize
+        or aim~=entry.lastCrossheadFrame
     for _,piece in ipairs(entry.pieces) do
-        local p=piece.frame.Position
-        local rotation=piece.frame-p
-        piece.part.Size=Vector3.new(
-            math.max(.025,piece.size.X*ax),piece.size.Y,
-            math.max(.025,piece.size.Z*az))
-        piece.part.CFrame=aim*CFrame.new(p.X*ax,p.Y,p.Z*az)*rotation
+        if not data.crossheadSize or crossheadChanged then
+            local p=piece.frame.Position
+            local rotation=piece.frame-p
+            piece.part.Size=Vector3.new(
+                math.max(.025,piece.size.X*ax),math.max(.025,piece.size.Y*sy),
+                math.max(.025,piece.size.Z*az))
+            piece.part.CFrame=aim*CFrame.new(p.X*ax,p.Y*sy,p.Z*az)*rotation
+        end
         piece.part.LocalTransparencyModifier=0
+    end
+    if data.crossheadSize then
+        entry.lastCrossheadSize=data.crossheadSize
+        entry.lastCrossheadFrame=aim
     end
     for _,n in ipairs(entry.native) do
         if n.part.Parent==entry.expectedParent then
@@ -424,11 +488,10 @@ local function mount(data,source)
         owner=data.owner,arena=data.arena,
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,
-        native={},model=clone,pieces={},connections={},
+        native={},model=clone,pieces={},connections={},bounds=b,
         -- Architectural casings have an intentional X-wide front: rotating
         -- that source to Z would put the machined service front on a SIDE.
-        -- Only the two longitudinal route owners may need Roblox import's
-        -- X/Z axis swap corrected.
+        -- Route owners may need Roblox import's X/Z axis swap corrected.
         longX=data.category~="casing" and b.X>b.Z,
         visible=false,disposing=false}
     for _,native in ipairs(data.originals) do
@@ -477,7 +540,7 @@ local function mount(data,source)
         entry.connections[#entry.connections+1]=
             data.owner.AncestryChanged:Connect(changed)
     end
-    if data.category=="arch" then
+    if data.category=="arch" or data.category=="promenade" then
         -- A collapsing/shutter warning takes precedence over decorative
         -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
         entry.connections[#entry.connections+1]=
@@ -485,8 +548,24 @@ local function mount(data,source)
         entry.connections[#entry.connections+1]=
             data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
     end
+    if data.category=="promenade" then
+        for _,attribute in ipairs({"PromenadeLane","PromenadeStep",
+            "ChaosPermanentRoute","RouteTier"}) do
+            entry.connections[#entry.connections+1]=
+                data.owner:GetAttributeChangedSignal(attribute):Connect(changed)
+        end
+    end
     for _,native in ipairs(data.originals) do
-        watch(native,{"CFrame","Size","Transparency"})
+        if data.category=="promenade" then
+            watch(native,{"CFrame","Size","Transparency","Anchored",
+                "CanCollide","CanTouch","CanQuery","Shape","Name"})
+            for _,attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
+                entry.connections[#entry.connections+1]=
+                    native:GetAttributeChangedSignal(attribute):Connect(changed)
+            end
+        else
+            watch(native,{"CFrame","Size","Transparency"})
+        end
     end
     entry.connections[#entry.connections+1]=
         source.AncestryChanged:Connect(changed)
@@ -585,25 +664,34 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             for _,entry in pairs(mounted) do refresh(entry) end
         end)
     end
-    -- Validate only FIVE owner IDs once per camera LOD sample; no permanent
-    -- trusted cache across moderation template eviction or streaming.
+    -- Recheck approved templates on the existing camera pass, with no
+    -- permanent trusted cache across eviction or streaming.
     local src={}
-    for name in pairs(SOURCE) do src[name]=sourceFor(name) end
+    for name in pairs(SOURCE) do
+        if name~="Crosshead" or (PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
+            and caps(tier,touch,pressure,"promenade")>0) then
+            src[name]=sourceFor(name)
+        end
+    end
     local desired={}
-    local candidates={arch={},casing={},helix={}}
+    local candidates={arch={},casing={},helix={},promenade={}}
     local decor=arena:FindFirstChild("Decor")
     local platforms=arena:FindFirstChild("Platforms")
     if decor and decor:IsA("Folder")
         and platforms and platforms:IsA("Folder") then
         for _,deck in ipairs(platforms:GetChildren()) do
             local data=collectArch(arena,deck,decor,scale)
+            if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
+                data=collectCrosshead(arena,deck,decor,scale)
+            end
             if data and src[data.name] then
                 local priority,distance=score(data,cameraPoint,cameraLook,
                     mounted[deck]~=nil)
-                if distance<=(DISTANCE[tier] or DISTANCE.Low).arch+
+                if distance<=(DISTANCE[tier] or DISTANCE.Low)[data.category]+
                     (mounted[deck] and 22 or 0) then
                     data.priority=priority
-                    candidates.arch[#candidates.arch+1]=data
+                    local pool=candidates[data.category]
+                    pool[#pool+1]=data
                 end
             end
         end
@@ -639,7 +727,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         end
     end
-    for _,kind in ipairs({"arch","casing","helix"}) do
+    for _,kind in ipairs({"arch","casing","helix","promenade"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
@@ -736,6 +824,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if not data or data.name~=entry.name
             or data.category~=entry.category or data.arena~=entry.arena
             or src[entry.name]~=entry.source
+            or (entry.category=="promenade" and
+                (data.originals[1]~=entry.native[1].part
+                    or data.expectedParent~=entry.expectedParent))
             or not sourceIntact(entry) then
             -- A streamed/lost local MeshPart is not a valid seven-piece
             -- sculpture. refresh() already restores the real native trim;
