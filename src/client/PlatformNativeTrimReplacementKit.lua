@@ -29,6 +29,7 @@ local junctionObservers = {}
 local crownTrim = {}
 local commandTrim = {}
 local pylonPieces = {}
+local bridgePieces = {}
 local pylonsOutsideLod = setmetatable({}, {__mode = "k"})
 local watchers = {}
 local decorWatcher = nil
@@ -293,6 +294,12 @@ function Kit.reset()
     decorRemovedWatcher = nil
     activeDecor = nil
     restore()
+    for _, entry in pairs(bridgePieces) do
+        for piece in pairs(entry.pieces) do
+            piece.LocalTransparencyModifier = 1
+        end
+    end
+    table.clear(bridgePieces)
     table.clear(pylonPieces)
     table.clear(active)
     table.clear(hiddenPlatformTrim)
@@ -351,7 +358,8 @@ local function eligible(part)
         -- Keep SkybridgeRailN_±1 luminous wayfinding plus ALL shutter
         -- warnings. Only these three decorative under-deck block ribs
         -- have a genuine imported structural replacement.
-        return part.Name:match("^SkybridgeRib%d+_%-?%d+$") ~= nil
+        return part.Name:match("^SkybridgeRib%d+_[01]$") ~= nil
+            or part.Name:match("^SkybridgeRib%d+_%-1$") ~= nil
     end
     return false
 end
@@ -393,6 +401,22 @@ local function ownerSafe(owner, platforms)
     return shutter == nil or shutter == "Idle"
 end
 
+local function bridgeSafe(owner)
+    local original = ownerBaselines[owner]
+    if not original or not ownerSafe(owner, activePlatforms)
+        or owner:GetAttribute("ChaosSkybridge") ~= true then return false end
+    local size = owner.Size
+    -- ShrinkingArena changes only the longitudinal axis. The existing
+    -- welded follower refits the approved side trusses to that span.
+    -- Other size changes invalidate the edge clearance of the mount.
+    local alongX = original.X >= original.Z
+    local width = alongX and size.Z or size.X
+    local originalWidth = alongX and original.Z or original.X
+    local span = alongX and size.X or size.Z
+    return span >= width and math.abs(width - originalWidth) < .09
+        and math.abs(size.Y - original.Y) < .09
+end
+
 function Kit.authorizesMask(owner, original, platforms)
     -- Most imports require their original footprint. Promenade pylons
     -- are refitted to the actual resized native part as a separate case.
@@ -406,6 +430,9 @@ local function physicalSafe(native)
     if hiddenPlatformTrim[owner]
         and (native.Name:match("^PlatformBevel%d+_[1-4]$")
             or native.Name:match("^PlatformUnderFrame%d+$")) then return false end
+    if native.Name:match("^SkybridgeRib%d+_") then
+        return bridgePieces[owner] ~= nil and bridgeSafe(owner)
+    end
     if PlatformIdentityLodRules.promenadePylonIndex(native) then
         return ownerSafe(owner, activePlatforms)
             and PlatformIdentityLodRules.matchesPromenadePylon(native, owner)
@@ -463,6 +490,17 @@ end
 -- A server collapse warning or shutter must restore the native fallback
 -- even if the approved 3D clone itself is merely faded, not destroyed.
 local function reconcile()
+    for deck, entry in pairs(bridgePieces) do
+        local visible = activeDecor ~= nil
+            and active[entry.id] == "bridge" and bridgeSafe(deck)
+        local alpha = visible and 0 or 1
+        if entry.alpha ~= alpha then
+            entry.alpha = alpha
+            for piece in pairs(entry.pieces) do
+                piece.LocalTransparencyModifier = alpha
+            end
+        end
+    end
     local changed = false
     for part in pairs(saved) do
         if part.Parent ~= activeDecor or not eligible(part)
@@ -530,6 +568,10 @@ local function watchOwner(part)
         watchers[#watchers+1] =
             part:GetAttributeChangedSignal(attribute):Connect(reconcile)
     end
+    if bridgeId then
+        watchers[#watchers+1] =
+            part:GetAttributeChangedSignal("ChaosSkybridge"):Connect(reconcile)
+    end
     local pylons = promenadePylonsByDeck[id]
     if pylons then
         local function refreshPylons()
@@ -581,12 +623,10 @@ local function attachDecor(folder)
     -- Restore masks on old Instances before reattaching a new folder.
     restore()
     activeDecor = nil
-    if not folder or not folder:IsA("Folder") then return end
-    activeDecor = folder
-    for _, child in ipairs(folder:GetChildren()) do
-        tryMask(child)
-    end
+    if folder and folder:IsA("Folder") then activeDecor = folder end
+    reconcile()
     report()
+    if not activeDecor then return end
     decorWatcher = folder.ChildAdded:Connect(function(part)
         if tryMask(part) then report() end
     end)
@@ -760,6 +800,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local required = requiredPiecesByOwner[key]
             return required ~= nil and required >= 7
                 and required % 7 == 0
+                and (approvedKinds[key] ~= "bridge" or required == 14 or required == 28)
                 and (livePiecesByOwner[key] or 0) == required
         end
         local function refreshOwner(key, owner)
@@ -775,11 +816,22 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             -- once per source material while scanning all native Decor.
             if not initializing then reconcile() end
         end
+        local bridgeOwnerByPiece = {}
         local function registerSourcePiece(piece)
             if sourceOwnerByPiece[piece] ~= nil then return end
             local key, owner = sourceOwner(piece)
             if not key then return end
             sourceOwnerByPiece[piece] = key
+            if approvedKinds[key] == "bridge" then
+                local entry = bridgePieces[owner]
+                if not entry then
+                    entry = {id = key, pieces = {}}
+                    bridgePieces[owner] = entry
+                end
+                bridgeOwnerByPiece[piece] = owner
+                entry.pieces[piece] = true
+                piece.LocalTransparencyModifier = entry.alpha or 1
+            end
             local skyPylon = piece:GetAttribute("OriginalSkySpinePylon3D") == true
                 and Kit.isSkySpinePylon(owner)
             local promenadePylon = piece:GetAttribute("OriginalPromenadePylon3D") == true
@@ -825,6 +877,14 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             -- A decorative MeshPart without an approved welded server
             -- owner never affects a native platform silhouette.
             if owner == nil then return end
+            local bridge = bridgeOwnerByPiece[piece]
+            if bridge then
+                local entry = bridgePieces[bridge]
+                entry.pieces[piece] = nil
+                bridgeOwnerByPiece[piece] = nil
+                piece.LocalTransparencyModifier = 1
+                if next(entry.pieces) == nil then bridgePieces[bridge] = nil end
+            end
             local pieces = pylonPieces[owner]
             if pieces and pieces[piece] then
                 piece.LocalTransparencyModifier = 1

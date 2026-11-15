@@ -77,7 +77,7 @@ local function preparedParts(copy, sourceFrame, target, platform, name)
             list[#list + 1] = obj
         end
     end
-    if #list < 1 or #list > 12 then return nil end
+    if #list ~= 7 then return nil end
     return list
 end
 
@@ -285,6 +285,14 @@ function Kit.selectCarapaceDecks(platforms, variant, tier, base, cameraPoint, ca
     return chosen
 end
 
+local function bridgeScale(size, bounds)
+    local length, width = math.max(size.X, size.Z), math.min(size.X, size.Z)
+    if length < 14 or length > 125 or width < 4 then return nil end
+    local scale = math.min(1.1, width * .24,
+        width * .35 / math.min(bounds.X, bounds.Z), 3.1 / bounds.Y)
+    return scale >= .75 and scale or nil
+end
+
 -- The previous modulo 3/6 index gate could give no real truss to a
 -- nearby physically walkable Towers bridge. Low may reserve the SAME
 -- 14 actual source MeshParts already allowed in its small+large structural
@@ -300,8 +308,6 @@ function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint,cameraLook,pres
     if not source or (tier=="Low" and partCount~=7) then
         return chosen
     end
-    local sourceLength=math.max(bounds.X,bounds.Z)
-    local sourceShort=math.min(bounds.X,bounds.Z)
     local focus=base.Position
     local cameraReady=false
     if typeof(cameraPoint)=="Vector3" then
@@ -323,21 +329,10 @@ function Kit.selectBridgeGirders(platforms,tier,base,cameraPoint,cameraLook,pres
             and platform.Transparency<.75 then
             local collapse=platform:GetAttribute("CollapsePhase")
             local shutter=platform:GetAttribute("BridgeShutterPhase")
-            local length=math.max(platform.Size.X,platform.Size.Z)
-            local width=math.min(platform.Size.X,platform.Size.Z)
-            local scale=math.min(1.1,width*.24,
-                length*.32/sourceLength)
             if (collapse==nil or collapse=="Normal" or collapse=="Safe")
                 and (shutter==nil or shutter=="Idle")
-                and length>=14 and length<=125 and width>=4.0
-                and scale>=.75
-                -- Low rejects geometry that the final imported
-                -- bridge stage would refuse anyway. No useless reservation
-                -- of the one 14-MeshPart visual slot on a narrow deck.
-                and (tier~="Low" or (sourceLength*scale<=length*.40
-                    and sourceShort*scale<=width*.35
-                    and bounds.Y*scale<=3.1
-                    and (platform.Position-cameraPoint).Magnitude<=125))
+                and bridgeScale(platform.Size, bounds)
+                and (tier~="Low" or (platform.Position-cameraPoint).Magnitude<=125)
                 then
                 local delta=platform.Position-focus
                 local score=Vector3.new(delta.X,delta.Y*.6,delta.Z).Magnitude
@@ -422,13 +417,43 @@ function Kit.carapace(parent, platform, variant, tier, index, selected)
     return parts
 end
 
--- Authored side-only bridge truss hardware replaces selected native
--- rectangular local side rails; server glow/danger rails remain untouched.
--- Two pieces (Medium) or four pieces (High), on two real bridge flanks.
--- Route shrink adjusts individual MeshPart Weld.C1/Size in existing owner.
+-- The source is a seven-material side truss. Scale only along its
+-- imported length so the web spans the native ribs without bulking up
+-- sideways or rising into the walkable surface.
+local function stretchBridge(copy, frame, longZ, factor)
+    local direction = longZ and frame.LookVector or frame.RightVector
+    for _, piece in ipairs(copy:GetDescendants()) do
+        if piece:IsA("MeshPart") then
+            local localFrame = frame:ToObjectSpace(piece.CFrame)
+            local point = localFrame.Position
+            local size = piece.Size
+            local axis
+            if math.abs(direction:Dot(piece.CFrame.RightVector)) > .999 then
+                axis = "X"
+                piece.Size = Vector3.new(size.X * factor, size.Y, size.Z)
+            elseif math.abs(direction:Dot(piece.CFrame.LookVector)) > .999 then
+                axis = "Z"
+                piece.Size = Vector3.new(size.X, size.Y, size.Z * factor)
+            else
+                return false
+            end
+            local stretched = longZ
+                and Vector3.new(point.X, point.Y, point.Z * factor)
+                or Vector3.new(point.X * factor, point.Y, point.Z)
+            piece.CFrame = frame * CFrame.new(stretched) * localFrame.Rotation
+            piece:SetAttribute("OriginalBridgeLongAxis", axis)
+        end
+    end
+    return true
+end
+
+-- Two modules on Low/Medium, four on High, with the same side clearance
+-- and source budget. Commit the complete set or retain the native trim.
 function Kit.bridgeGirders(parent, platform, tier, index, selected)
-    if selected == false or (tier=="Low" and selected~=true)
-        or platform:GetAttribute("ChaosSkybridge") ~= true then
+    if not platform or not platform:IsA("BasePart")
+        or not platform.Name:match("^Skybridge%d+$")
+        or platform:GetAttribute("ChaosSkybridge") ~= true
+        or selected == false or (tier=="Low" and selected~=true) then
         return nil
     end
     local id = tonumber(index)
@@ -439,24 +464,20 @@ function Kit.bridgeGirders(parent, platform, tier, index, selected)
     end
     local source, original, partCount = verified("Bridge")
     if not source or (tier=="Low" and partCount~=7)
-        or not parent or not platform or not platform:IsA("BasePart")
-        or not platform.Parent or not platform.CanCollide
-        or platform.Transparency >= .75 then return nil end
+        or not parent or not platform.Parent or not platform.Anchored
+        or not platform.CanCollide or platform.Transparency >= .75 then return nil end
 
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
     local length = math.max(sx, sz)
     local width = math.min(sx, sz)
-    if length < 14 or length > 125 or width < 4.0 then return nil end
     if tier=="Low" then
         local phase=platform:GetAttribute("CollapsePhase")
         local shutter=platform:GetAttribute("BridgeShutterPhase")
-        if not platform.Anchored
-            or (phase~=nil and phase~="Normal" and phase~="Safe")
+        if (phase~=nil and phase~="Normal" and phase~="Safe")
             or (shutter~=nil and shutter~="Idle") then return nil end
     end
-    local sourceLength = math.max(original.X, original.Z)
-    local scale = math.min(1.1, width*.24, length*.32/sourceLength)
-    if scale < .75 then return nil end
+    local scale = bridgeScale(platform.Size, original)
+    if not scale then return nil end
 
     -- Roblox may import a long-X glTF as a long-Z Model. All bridge
     -- placements must follow the *imported source long axis*, not assume
@@ -466,13 +487,14 @@ function Kit.bridgeGirders(parent, platform, tier, index, selected)
     local along = platform.CFrame * CFrame.Angles(
         0, (sz > sx) ~= sourceLongZ and math.pi*.5 or 0, 0)
     local perSide = tier == "High" and 2 or 1
+    local moduleLength = length * (perSide == 1 and .64 or .43)
     local all = {}
     -- All clones are staged before any original local rails are removed.
     -- Any failure rolls back every new piece, retaining native fallback.
     for side = -1, 1, 2 do
         for k = 1, perSide do
             local fraction = perSide == 1 and 0
-                or (k == 1 and -.27 or .27)
+                or (k == 1 and -.23 or .23)
             local copy = source:Clone()
             if not pcall(function() copy:ScaleTo(scale) end) then
                 copy:Destroy()
@@ -480,8 +502,9 @@ function Kit.bridgeGirders(parent, platform, tier, index, selected)
                 return nil
             end
             local frame, bounds = copy:GetBoundingBox()
-            if bounds.Y > 3.1 or math.max(bounds.X,bounds.Z) > length*.40
-                or math.min(bounds.X,bounds.Z) > width*.35 then
+            local factor = moduleLength / (sourceLongZ and bounds.Z or bounds.X)
+            if bounds.Y > 3.11 or math.min(bounds.X,bounds.Z) > width*.35 + .01
+                or not stretchBridge(copy, frame, sourceLongZ, factor) then
                 copy:Destroy()
                 for _, p in ipairs(all) do p:Destroy() end
                 return nil
@@ -494,16 +517,6 @@ function Kit.bridgeGirders(parent, platform, tier, index, selected)
                 sy*.5 - .20 - bounds.Y*.5,
                 sourceLongZ and longOffset or edgeOffset)
             local parts = preparedParts(copy, frame, target, platform, "Bridge")
-            if parts then
-                -- Imported glTF long axis can be X or Z. The existing
-                -- platform shrink follower needs the MESH-LOCAL long
-                -- axis to resize actual 3D girders with the real span,
-                -- even when their world orientation was yaw-rotated.
-                for _, part in ipairs(parts) do
-                    part:SetAttribute("OriginalBridgeLongAxis",
-                        sourceLongZ and "Z" or "X")
-                end
-            end
             if not parts then
                 copy:Destroy()
                 for _, p in ipairs(all) do p:Destroy() end

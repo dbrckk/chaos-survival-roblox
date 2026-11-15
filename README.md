@@ -1,3 +1,7 @@
+## P4 — Poutres latérales sculptées sur les passerelles Towers — 15 novembre 2026
+
+Les poutres du [modèle bridge_side_girder approuvé](assets/source/roblox-asset-registry.json) couvrent 64 % de chaque flanc sur Low/Medium et 86 % avec deux modules par flanc sur High. Elles suivent la longueur du tablier pendant le rétrécissement. Sur Android Low, un pont proche peut remplacer ses trois renforts rectangulaires avec 14 MeshParts, dans le budget existant. Les renforts natifs réapparaissent lors d’une alerte, d’une déformation incompatible ou de la perte d’une des pièces du treillis. Les rails lumineux et les collisions restent sous le contrôle du serveur.
+
 ## P4 — Station monumentale Harbor : sculpture originale 3D sur Android Low — 12 novembre 2026
 
 La [station de signalisation Harbor originale](docs/P4_LOW_HARBOR_HERO_STATION_ORIGINAL_3D_2026-11-12.md) peut remplacer ses grandes pièces rectangulaires non physiques par **un modèle créateur approuvé de sept MeshParts** (`73237902371094`) sur Android Low, à **≤170 studs** de la caméra, pression graphique zéro. Les éléments animés Radar/Cable/Weight suivent les mouvements natifs ; la lentille de tempête reste visible. Pression graphique 1/2 ou éviction du modèle par le budget Android : retour immédiat aux formes natives. Medium/High inchangés ; aucun nouveau modèle, collider, éclairage ou timer. Rendu Roblox Engine, FPS Android et publication publique restent à vérifier.

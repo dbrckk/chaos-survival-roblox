@@ -9,6 +9,7 @@ local MapVisualReadiness = require("../../src/shared/MapVisualReadiness")
 local ArenaSignatureKit = require("../../src/client/ArenaSignatureKit")
 local ArenaDetailKit = require("../../src/client/ArenaDetailKit")
 local PlatformFinishKit = require("../../src/client/PlatformFinishKit")
+local PlatformSide = require("../../src/client/PremiumPlatformSideMeshKit")
 local ArenaEdgeFinishKit = require("../../src/client/ArenaEdgeFinishKit")
 local ArenaSilhouetteAccentKit = require("../../src/client/ArenaSilhouetteAccentKit")
 local ArenaDeckFinishKit = require("../../src/client/ArenaDeckFinishKit")
@@ -1242,6 +1243,41 @@ describe("Moving platform premium trim kit", function()
         expect((rails[1].Size - sizeBeforeStop).Magnitude < 0.005)
             .toBe(true)
 
+        local templates = Instance.new("Folder")
+        templates.Name = "ApprovedPlatformSideTemplates"
+        templates:SetAttribute("OwnerVerified", true)
+        templates.Parent = game:GetService("ReplicatedStorage")
+        local source = Instance.new("Model")
+        source.Name = "Bridge"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("Original3DAssetId", 122766792774607)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("OriginalStructuralSide3D", true)
+        source.Parent = templates
+        for index = 1, 7 do
+            local material = Instance.new("MeshPart")
+            material.Anchored = true
+            material.Size = Vector3.new(.8, 1.8, 9.8)
+            material.Position = Vector3.new(0, 0, 0.02 * index)
+            material.Parent = source
+        end
+        platform.Size = Vector3.new(49, 1, 4.5)
+        local girders = assert(PlatformSide.bridgeGirders(
+            visual, platform, "Low", 18, true))
+        expect(#girders).toBe(14)
+        for _, girder in ipairs(girders) do
+            assertNear("authored girder length", girder.Size.Z, 31.36, 0.5)
+            expect(girder:GetAttribute("OriginalBridgeLongAxis")).toBe("Z")
+            expect(girder.CanCollide).toBe(false)
+        end
+        local girderSnapshot = PlatformFinishKit.captureSkybridgeFootprint(
+            platform, girders)
+        local girderLength = girders[1].Size.Z
+        platform.Size = Vector3.new(24.5, 1, 4.5)
+        expect(PlatformFinishKit.applySkybridgeFootprint(girderSnapshot)).toBe(14)
+        assertNear("shrunk girder length", girders[1].Size.Z,
+            girderLength * 0.5, 0.01)
+        templates:Destroy()
         root:Destroy()
     end)
 

@@ -1972,9 +1972,9 @@ describe("Original 3D native fallback isolation (engine)", function()
             part.Parent = decor
             return part
         end
-        local function genuine(anchor, name, large)
+        local function genuine(anchor, name, large, total)
             local first
-            for i=1,7 do
+            for i=1,total or 7 do
                 local piece = Instance.new("MeshPart")
                 piece.Name = name .. "_" .. i
                 piece.CanCollide = false
@@ -1999,6 +1999,8 @@ describe("Original 3D native fallback isolation (engine)", function()
         local platform2 = physical("Platform2")
         local platform4 = physical("Platform4")
         local bridge3 = physical("Skybridge3")
+        bridge3.Size = Vector3.new(49, 1, 4.5)
+        bridge3:SetAttribute("ChaosSkybridge", true)
         local frame1 = native("PlatformUnderFrame1")
         local frame2 = native("PlatformUnderFrame2")
         local rib3 = native("SkybridgeRib3_1")
@@ -2006,7 +2008,7 @@ describe("Original 3D native fallback isolation (engine)", function()
         support4.Size = Vector3.new(2, 18, 2)
         local shell1 = genuine(platform1, "OwnedCarapace1", false)
         local shell2 = genuine(platform2, "OwnedCarapace2", false)
-        local girder3 = genuine(bridge3, "OwnedGirder3", false)
+        local girder3 = genuine(bridge3, "OwnedGirder3", false, 14)
         local column4 = genuine(support4, "OwnedColumn4", true)
 
         Kit.bind(arena, {
@@ -2055,13 +2057,29 @@ describe("Original 3D native fallback isolation (engine)", function()
         expect(rib3.LocalTransparencyModifier).toBe(1)
         expect(Kit.count()).toBe(2)
 
+        bridge3.Size = Vector3.new(25, 1, 4.5)
+        expect(rib3.LocalTransparencyModifier).toBe(1)
+        expect(girder3.LocalTransparencyModifier).toBe(0)
+        bridge3.Size = Vector3.new(25, 1, 5)
+        expect(rib3.LocalTransparencyModifier).toBe(0)
+        expect(girder3.LocalTransparencyModifier).toBe(1)
+        bridge3.Size = Vector3.new(25, 1, 4.5)
+
         -- A disaster shutter wins immediately over any surviving 3D art.
         bridge3:SetAttribute("BridgeShutterPhase", "Warning")
         expect(rib3.LocalTransparencyModifier).toBe(0)
+        expect(girder3.LocalTransparencyModifier).toBe(1)
         expect(frame2.LocalTransparencyModifier).toBe(1)
         bridge3:SetAttribute("BridgeShutterPhase", "Idle")
         expect(rib3.LocalTransparencyModifier).toBe(1)
         expect(Kit.count()).toBe(2)
+        local sibling = meshes:FindFirstChild("OwnedGirder3_14")
+        sibling.Parent = nil
+        expect(rib3.LocalTransparencyModifier).toBe(0)
+        expect(girder3.LocalTransparencyModifier).toBe(1)
+        sibling.Parent = meshes
+        expect(rib3.LocalTransparencyModifier).toBe(1)
+        expect(girder3.LocalTransparencyModifier).toBe(0)
 
         -- A native server Part can stream out without its Decor folder.
         -- Do not count or retain a mask for a destroyed instance.

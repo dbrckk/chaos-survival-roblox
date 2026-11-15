@@ -1874,7 +1874,15 @@ assert 'verifiedSupports[part] = true' in TRIM
 assert 'LocalSkySpinePylonNativePartsReplaced = family.pylon' in OWNER
 assert 'LocalOriginalSkySpinePylon3DCount = family.pylon' in OWNER
 assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
-assert 'saved[part] and not crownPylons[part]' in TRIM
+support_visibility = TRIM[TRIM.index("local function refreshPylon("):
+                          TRIM.index("function Kit.isSkySpinePylon(")]
+for guard in (
+    'saved[part] == true',
+    'verifiedSupports[part] == true',
+    'part.Parent == activeDecor',
+    'not crownPylons[part]',
+):
+    assert guard in support_visibility, guard
 mask = TRIM[TRIM.index("local function setNativeMask("):
             TRIM.index("local function refreshPylon(")]
 assert 'if saved[part] or crownPylons[part] or routeUnderdecks[part]' in mask
