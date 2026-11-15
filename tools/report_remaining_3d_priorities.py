@@ -17,6 +17,7 @@ ARENAS = ("classic", "towers", "crossroads", "orbital", "harbor")
 
 def main() -> None:
     by_priority = defaultdict(int)
+    by_arena = defaultdict(int)
     candidates = []
     with MATRIX.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -32,6 +33,9 @@ def main() -> None:
             raise SystemExit(f"{family}: negative count")
         priority = row["priority"]
         by_priority[priority] += total
+        if priority in ("P0", "P1", "P2"):
+            for arena, count in zip(ARENAS, counts):
+                by_arena[arena] += count
         if priority in ("P0", "P1", "P2"):
             candidates.append((priority, -total, family, row["coverage_status"]))
     print("Historical 3D visual census (raw natives, NOT live primitives remaining)")
