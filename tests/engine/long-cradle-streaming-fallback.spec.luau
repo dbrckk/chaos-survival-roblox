@@ -229,7 +229,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if not ok then error(err) end
     end)
 
-    it("fits approved crossheads and paired diagonal stays through promenade shrink and streaming",function()
+    it("fits approved promenade structures and equipment through shrink and streaming",function()
         local rs=game:GetService("ReplicatedStorage")
         local previous=workspace:FindFirstChild("GeneratedMap")
         local old=rs:FindFirstChild("ApprovedPerimeterStructuresTemplates")
@@ -254,6 +254,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         local main,detachable=nil,nil
         for i=1,7 do
             local part=Instance.new("MeshPart")
+            part.Name="BraceMesh"..i
             part.Size=i==1 and Vector3.new(8.94,.5675,1.12)
                 or Vector3.new(.16,.16,.16)
             part.Anchored=true
@@ -274,6 +275,43 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             if piece.Size.X>8 then piece.Size=Vector3.new(9.62,1.505,.6175) end
         end
         girder.Parent=sideHolder
+        local profiles={
+            Classic={"ApprovedServiceEquipmentTemplates","Classic",
+                "OriginalService3D",108954400662606,Vector3.new(2,3.712,1.625),
+                {"SurveyDish","SurveyMast","SurveyTip"}},
+            Towers={"ApprovedServiceEquipmentTemplates","Towers",
+                "OriginalService3D",106083832432833,Vector3.new(3.08,2.32,2.6351),
+                {"HoistMachine"}},
+            Crossroads={"ApprovedCrossroadsGantryTemplates","Gantry",
+                "OriginalCrossroadsGantry3D",90844491148907,Vector3.new(27.92,3.6,2.74),
+                {"SignalConcourse","SwitchFin-1","SwitchFin1"}},
+            Orbital={"ApprovedOrbitalReactorLandmarkTemplates","Node",
+                "OriginalOrbitalReactorLandmark3D",104654294187035,Vector3.new(4.36,4.36,4.36),
+                {"GyroCore"}},
+        }
+        local equipmentHolders,previousEquipment={},{}
+        for _,profile in pairs(profiles) do
+            local folderName,name,tag,id,size=table.unpack(profile)
+            local equipmentFolder=equipmentHolders[folderName]
+            if not equipmentFolder then
+                local existing=rs:FindFirstChild(folderName)
+                if existing then
+                    previousEquipment[folderName]=existing
+                    existing.Parent=nil
+                end
+                equipmentFolder=Instance.new("Folder")
+                equipmentFolder.Name=folderName
+                equipmentFolder:SetAttribute("OwnerVerified",true)
+                equipmentFolder.Parent=rs
+                equipmentHolders[folderName]=equipmentFolder
+            end
+            local gear=source:Clone()
+            gear.Name=name
+            gear:SetAttribute(tag,true)
+            gear:SetAttribute("Original3DAssetId",id)
+            gear:FindFirstChild("BraceMesh1").Size=size
+            gear.Parent=equipmentFolder
+        end
         local generated=nil
         local ok,err=pcall(function()
             for _,variant in ipairs({"Classic","Towers","Crossroads","Orbital","Harbor"}) do
@@ -283,6 +321,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 local decor=arena:FindFirstChild("Decor")
                 local base=arena:FindFirstChild("Base")
                 local crossheads={}
+                local profile=profiles[variant]
                 for _,deck in ipairs(platforms:GetChildren()) do
                     local index=deck.Name:match("^Platform(%d+)$")
                     local native=index and decor:FindFirstChild(
@@ -295,6 +334,8 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 Remaining.sync(arena,base.Position,"High",true,nil,0,false)
                 expect(Remaining.count("promenade")).toBe(variant=="Harbor" and 0 or 6)
                 expect(Remaining.count("stay")).toBe(variant=="Harbor" and 0 or 12)
+                expect(Remaining.count("equipment")).toBe(profile and 6 or 0)
+                expect(Remaining.nativeCount("equipment")).toBe(profile and 6*#profile[6] or 0)
                 for deck,native in pairs(crossheads) do
                     expect(native.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
                     local index=deck.Name:match("^Platform(%d+)$")
@@ -302,6 +343,16 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     local underdeck=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
                     expect(pylon.LocalTransparencyModifier).toBe(0)
                     expect(underdeck.LocalTransparencyModifier).toBe(0)
+                    for _,name in ipairs(profile and profile[6] or {}) do
+                        local primitive=decor:FindFirstChild("Promenade"..index.."_"..name)
+                        expect(primitive.LocalTransparencyModifier).toBe(1)
+                    end
+                    local retained=({Towers="HoistBeacon",Orbital="ContainmentFin1",
+                        Harbor="SuspendedCrate"})[variant]
+                    if retained then
+                        local detail=decor:FindFirstChild("Promenade"..index.."_"..retained)
+                        expect(detail.LocalTransparencyModifier).toBe(0)
+                    end
                     for _,side in ipairs({-1,1}) do
                         local diagonal=decor:FindFirstChild("Promenade"..index.."_DiagonalStay"..side)
                         expect(diagonal.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
@@ -358,7 +409,25 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(Remaining.count("stay")).toBe(0)
                 Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
                 expect(Remaining.count("stay")).toBe(0)
+                expect(Remaining.count("equipment")).toBe(1)
                 expect(Remaining.nativeCount("promenade")).toBe(1)
+                local gear=bucket:FindFirstChild("ApprovedP4_PromenadeCrossroads")
+                local gearPrefix="Promenade"..gear:GetAttribute("OriginalP4OwnerPlatform"):match("%d+").."_"
+                local fin=decor:FindFirstChild(gearPrefix.."SwitchFin1")
+                local concourse=decor:FindFirstChild(gearPrefix.."SignalConcourse")
+                expect(gear:GetAttribute("Original3DAssetId")).toBe(90844491148907)
+                expect(fin.LocalTransparencyModifier).toBe(1)
+                fin.Parent=nil
+                task.wait()
+                expect(fin.LocalTransparencyModifier).toBe(0)
+                expect(concourse.LocalTransparencyModifier).toBe(0)
+                fin.Parent=decor
+                expect(concourse.LocalTransparencyModifier).toBe(1)
+                gear:FindFirstChildWhichIsA("MeshPart"):Destroy()
+                task.wait()
+                expect(concourse.LocalTransparencyModifier).toBe(0)
+                Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                expect(concourse.LocalTransparencyModifier).toBe(1)
                 expect(native.LocalTransparencyModifier).toBe(1)
                 local model=bucket:FindFirstChild("ApprovedP4_Crosshead")
                 expect(model:GetAttribute("Original3DAssetId")).toBe(108452611210970)
@@ -383,6 +452,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 local deckSize,nativeSize=deck.Size,native.Size
                 base.Size=Vector3.new(base.Size.X*.75,base.Size.Y,base.Size.Z*.75)
                 expect(native.LocalTransparencyModifier).toBe(0)
+                expect(Remaining.count("equipment")).toBe(0)
                 expect(Remaining.count("stay")).toBe(0)
                 deck.Size=Vector3.new(deckSize.X*.75,deckSize.Y,deckSize.Z*.75)
                 native.Size=Vector3.new(nativeSize.X*.75,nativeSize.Y,nativeSize.Z*.75)
@@ -396,11 +466,26 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(native.LocalTransparencyModifier).toBe(1)
                 verifyFit()
                 verifyStays()
+                for _,name in ipairs(profile[6]) do
+                    local detail=decor:FindFirstChild(gearPrefix..name)
+                    local frame=deck.CFrame:ToObjectSpace(detail.CFrame)
+                    local offset=frame.Position
+                    detail.CFrame=deck.CFrame*CFrame.new(offset.X*.75,offset.Y,offset.Z*.75)
+                        *(frame-offset)
+                    detail.Size=Vector3.new(detail.Size.X*.75,detail.Size.Y,detail.Size.Z*.75)
+                end
+                expect(concourse.LocalTransparencyModifier).toBe(1)
+                local resizedEquipment=bucket:FindFirstChild("ApprovedP4_PromenadeCrossroads")
+                local gearFrame,gearSize=resizedEquipment:GetBoundingBox()
+                expect(math.abs(math.max(gearSize.X,gearSize.Z)-16.2*.75)<.06).toBe(true)
+                expect(gearFrame.Position.Y-gearSize.Y*.5>deck.Position.Y+11).toBe(true)
                 deck:SetAttribute("BridgeShutterPhase","Warning")
                 expect(native.LocalTransparencyModifier).toBe(0)
+                expect(concourse.LocalTransparencyModifier).toBe(0)
                 expect(Remaining.count("stay")).toBe(0)
                 deck:SetAttribute("BridgeShutterPhase","Idle")
                 expect(native.LocalTransparencyModifier).toBe(1)
+                expect(concourse.LocalTransparencyModifier).toBe(1)
                 verifyStays()
                 native.Parent=nil
                 expect(native.LocalTransparencyModifier).toBe(0)
@@ -469,6 +554,10 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if generated then generated:Destroy() end
         holder:Destroy()
         sideHolder:Destroy()
+        for name,instance in pairs(equipmentHolders) do
+            instance:Destroy()
+            if previousEquipment[name] then previousEquipment[name].Parent=rs end
+        end
         if previousSide then previousSide.Parent=rs end
         if old then old.Parent=rs end
         if previous then previous.Parent=workspace end

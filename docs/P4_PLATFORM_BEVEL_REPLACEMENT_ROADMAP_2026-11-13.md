@@ -620,3 +620,18 @@ Le masque local dépend de la vraie plateforme, de la position du montant et des
 ### Renforts diagonaux des promenades — 15 novembre 2026
 
 Les 48 diagonales de Classic, Towers, Crossroads et Orbital utilisent le treillis de pont approuvé `122766792774607` à la place du bloc d'origine sur les portiques sélectionnés. La paire suit les deux diagonales natives à ±16°, avec une section légèrement rentrée. En fin de rétrécissement, la longueur diminue pour garder le treillis hors du tablier. Le rendu natif reprend si la longueur visible tombe sous 70 % d'origine. Elle contribue au compteur `LocalOriginalPromenadeDiagonalStay3DCount`. En pression graphique normale, le plafond est de deux portiques en Medium PC, six en High PC et un en Medium ou High tactile. Low et les niveaux de pression 1 et 2 gardent les diagonales natives. Chaque côté utilise sept MeshParts comptés dans le budget visuel existant. La perte d'une seule pièce, un avertissement ou une désynchronisation de rétrécissement restitue les deux montants d'origine. Harbor conserve son portique de fret.
+
+### Équipements des promenades — 15 novembre 2026
+
+Les six portiques de chaque variante peuvent maintenant afficher un équipement distinct à la place des volumes d'origine.
+
+| Arène | Équipement approuvé | Portiques | Formes de base éligibles |
+|:--|:--|--:|--:|
+| Classic | Station optique à deux lentilles `108954400662606` | 6 | 18 |
+| Towers | Coffret blindé à grilles de ventilation et verrou moulé `106083832432833` | 6 | 6 |
+| Crossroads | Concourse à treillis forgé `90844491148907` | 6 | 18 |
+| Orbital | Cœur gyroscopique à trois anneaux `104654294187035` | 6 | 6 |
+
+Les 48 formes sont éligibles sur 24 portiques répartis entre quatre arènes. Le client vérifie la traverse d'origine, la position et la taille de chaque élément natif ainsi que les sept MeshParts du modèle créateur avant le remplacement. Les limites Low/Medium/High sont de 1/3/6 modèles sur PC et de 1/1/2 sur écran tactile. Le premier niveau de pression graphique restitue le décor natif. Le même repli intervient si la traverse ou une pièce disparaît, si un danger s'annonce ou tant que le rétrécissement de la plateforme et celui du décor sont désynchronisés.
+
+Le rail et la balise Towers, les ailettes de confinement Orbital et les portiques de fret Harbor gardent leur rendu actuel. `LocalOriginalPromenadeEquipment3DCount` et `LocalPromenadeEquipmentNativePartsReplaced` distinguent le nombre d'équipements visibles du nombre de formes réellement masquées. La lisibilité et les performances sur Android restent à mesurer dans Roblox.

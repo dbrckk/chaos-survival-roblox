@@ -2085,7 +2085,7 @@ for required in (
 ):
     assert required in P4_CLIENT, required
 ascension_collector = P4_CLIENT.split("local function collectArch", 1)[1].split(
-    "local function collectPorticoPart", 1)[0]
+    "local function porticoStep", 1)[0]
 assert 'deck:GetAttribute("ChaosPermanentRoute")~=true' not in ascension_collector
 assert 'local overpass=originals[8]' not in P4_CLIENT
 print("PASS P4 upper arch fits true 3/13.8/28.2 height, retains deep load-bearing"
@@ -2094,7 +2094,7 @@ print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
 
 
-promenade_collector = P4_CLIENT.split("local function collectPorticoPart", 1)[1].split(
+promenade_collector = P4_CLIENT.split("local function porticoStep", 1)[1].split(
     "local function collectCasing", 1)[0]
 brace = P4_MODELS["perimeter_crossbrace"]
 assert brace["asset_id"]=="108452611210970" and brace["moderation"]=="Approved"
@@ -2159,3 +2159,29 @@ for clause in (
     assert clause in P4_CLIENT,clause
 assert 'LocalOriginalPromenadeDiagonalStay3DCount' in SIDE_LOD
 print("PASS 48 native diagonal stays use fitted girder pairs with zero Low or GPU-pressure residency")
+
+# Mount roof equipment only on a fully streamed, authenticated portico.
+for name,asset_id in (
+    ("service_camera","108954400662606"),
+    ("service_maintenance","106083832432833"),
+    ("variant_crossroads_forged_gantry","90844491148907"),
+    ("variant_orbital_sculpted_node","104654294187035"),
+):
+    equipment = P4_MODELS[name]
+    assert equipment["asset_id"] == asset_id and equipment["moderation"] == "Approved"
+    assert asset_id in P4_CLIENT
+equipment_collector = P4_CLIENT.split("local function collectEquipment", 1)[1].split(
+    "local function collectCasing", 1)[0]
+for clause in (
+    'collectPorticoPart(arena,deck,decor,scale)',
+    'promenadeNative(decor,index,"_"..spec.name,spec.wedge)',
+    'native.CFrame.UpVector:Dot(expected.UpVector)<.999',
+    'anchor=crosshead.originals[1]',
+):
+    assert clause in equipment_collector,clause
+assert 'local EQUIPMENT_TOUCH_CAP={Low=1,Medium=1,High=2}' in P4_CLIENT
+assert 'if data.anchor then watchPorticoNative(data.anchor) end' in P4_CLIENT
+assert 'or (isPortico(entry.category) and not sameOriginals(entry,data))' in P4_CLIENT
+assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
+assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD
+print("PASS four approved promenade equipment sources, exact native owners and shared touch budget")

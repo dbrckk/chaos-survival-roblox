@@ -2102,9 +2102,9 @@ task.spawn(function()
         end
 
         -- Approved 3D sources replace selected native arch, casing,
-        -- Orbital-ramp brace and promenade crosshead geometry.
+        -- Orbital-ramp brace and promenade geometry.
         -- Desktop Medium/High get more near-camera owners, NOT more
-        -- primitives masked per owner. Android + emergency caps unchanged.
+        -- primitives masked per owner. Touch caps keep the equipment local.
         -- This runs AFTER the native architecture/culling owners, on the
         -- SAME LOD cadence: never hides player colliders, hazard signals,
         -- arrows or safe deck boundaries. Streaming/shrink restore natives.
@@ -2122,6 +2122,10 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.count("promenade"),
             LocalOriginalPromenadeDiagonalStay3DCount =
                 ApprovedRemainingStructureMeshKit.count("stay"),
+            LocalOriginalPromenadeEquipment3DCount =
+                ApprovedRemainingStructureMeshKit.count("equipment"),
+            LocalPromenadeEquipmentNativePartsReplaced =
+                ApprovedRemainingStructureMeshKit.nativeCount("equipment"),
             LocalP4RemainingStructuralNativePiecesReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount(),
         }
