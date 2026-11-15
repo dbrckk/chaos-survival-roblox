@@ -8,6 +8,11 @@ local PremiumRoutePbrKit = if script and script.Parent
     then require(script.Parent.PremiumRoutePbrKit)
     else require("./PremiumRoutePbrKit")
 
+local PlatformNativeTrimReplacementKit = if script and script.Parent
+    and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
+    then require(script.Parent.PlatformNativeTrimReplacementKit)
+    else require("./PlatformNativeTrimReplacementKit")
+
 local Kit = {}
 local ASSET_ID = 71492051540032
 local BUDGET = {
@@ -171,7 +176,7 @@ local function safeAfterMount(entry)
     -- event-driven fallback, PBR/light decision, and existing LOD sample.
     if entry.restoring or not entry.model
         or entry.model.Parent ~= folder
-        or entry.arena ~= activeArena
+        or entry.arena ~= activeArena or entry.decor.Parent ~= entry.arena
         or not authentic(entry.deck, entry.arena, entry.base)
         or not entry.pieces or #entry.pieces < 1
         or #entry.pieces > 12 then
@@ -274,6 +279,14 @@ local function refit(entry)
     return true
 end
 
+local function setNativeVisibility(saved, visible)
+    if saved.pylon then
+        PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)
+    else
+        saved.part.LocalTransparencyModifier = visible and 1 or saved.original
+    end
+end
+
 local function updateVisibility(entry)
     local visible = refit(entry)
     if not visible then PremiumRoutePbrKit.detach(entry) end
@@ -283,11 +296,8 @@ local function updateVisibility(entry)
             part.LocalTransparencyModifier = visible and 0 or 1
         end
     end
-    for _, saved in ipairs(entry.native) do
-        if saved.part.Parent then
-            saved.part.LocalTransparencyModifier =
-                visible and 1 or saved.original
-        end
+    for _, saved in pairs(entry.native) do
+        setNativeVisibility(saved, visible)
     end
 end
 
@@ -299,12 +309,10 @@ local function restore(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
-    for _, saved in ipairs(entry.native) do
-        if saved.part.Parent then
-            saved.part.LocalTransparencyModifier = saved.original
-        end
-    end
     entry.model:Destroy()
+    for _, saved in pairs(entry.native) do
+        setNativeVisibility(saved, false)
+    end
 end
 
 -- A genuine imported Model that streams out between camera samples must
@@ -365,25 +373,29 @@ local function mount(deck, arena, base, decor, template)
         return nil
     end
     local entry = {
-        deck = deck, arena = arena, base = base,
+        deck = deck, arena = arena, base = base, decor = decor,
         model = clone, pieces = pieces, native = {}, connections = {},
         joints = {}, frames = {}, sizes = {}, lastScale = nil,
     }
-    local knownNative = {}
     local function watchNative(part)
         -- StreamingEnabled may replicate the real server crown AFTER the
         -- approved mesh was mounted. Never show overlapping native blocks
         -- above the new sculpted 3D silhouette on a late streaming packet.
-        if knownNative[part] or not isOriginalUpperPart(part, deck) then
+        if part.Parent ~= decor or entry.native[part]
+            or not isOriginalUpperPart(part, deck) then
             return
         end
-        knownNative[part] = true
-        entry.native[#entry.native + 1] = {
-            part = part, original = part.LocalTransparencyModifier,
-        }
-        if entry.model.Parent == folder and safeAfterMount(entry) then
-            part.LocalTransparencyModifier = 1
+        local isPylon = part.Name:match("_MonumentalPylon%-?1$") ~= nil
+        if isPylon
+            and not PlatformNativeTrimReplacementKit.isSkySpinePylon(part) then
+            return
         end
+        local saved = {
+            part = part, pylon = isPylon,
+            original = if isPylon then nil else part.LocalTransparencyModifier,
+        }
+        entry.native[part] = saved
+        if safeAfterMount(entry) then setNativeVisibility(saved, true) end
     end
     for _, part in ipairs(originalUpperParts(decor, deck)) do
         watchNative(part)
@@ -426,18 +438,27 @@ local function mount(deck, arena, base, decor, template)
         deck.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections + 1] =
         decor.ChildAdded:Connect(watchNative)
-    -- DescendantRemoving fires BEFORE the MeshPart leaves its Model.
-    -- Re-evaluate on defer so the original, nonphysical portico is revealed
-    -- immediately after a partial StreamingEnabled loss, not after the
-    -- next 0.65/0.90-second scenery residency sample.
+    entry.connections[#entry.connections + 1] =
+        decor.ChildRemoved:Connect(function(part)
+            local saved = entry.native[part]
+            if saved then
+                entry.native[part] = nil
+                setNativeVisibility(saved, false)
+            end
+        end)
+    entry.connections[#entry.connections + 1] =
+        decor.AncestryChanged:Connect(changed)
+    -- DescendantRemoving fires before the part or weld leaves its Model.
+    -- Recheck after the change without waiting for the next LOD sample.
     entry.connections[#entry.connections + 1] =
         clone.DescendantRemoving:Connect(function(child)
-            if not entry.restoring and child:IsA("MeshPart")
-                and table.find(entry.pieces, child) then
-                task.defer(function()
-                    if not entry.restoring then updateVisibility(entry) end
-                end)
-            end
+            local removedPiece = table.find(entry.pieces, child) ~= nil
+            local removedWeld = child:IsA("Weld")
+                and child.Name == "SkySpineCrownCosmeticWeld"
+            if entry.restoring or not (removedPiece or removedWeld) then return end
+            task.defer(function()
+                if not entry.restoring then updateVisibility(entry) end
+            end)
         end)
     updateVisibility(entry)
     return entry

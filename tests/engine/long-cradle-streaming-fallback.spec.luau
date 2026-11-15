@@ -10,6 +10,7 @@ local ArenaVariants=require("../../src/server/ArenaVariants")
 local VisualTheme=require("../../src/shared/VisualTheme")
 local Kit=require("../../src/client/PremiumLargeStructureMeshKit")
 local Finish=require("../../src/client/PlatformFinishKit")
+local Crown=require("../../src/client/SkySpineCrownMeshKit")
 
 describe("P4 approved long cradle streaming fallback (engine)",function()
     it("uses complete genuine Promenade and SkySpine native underframes only",function()
@@ -231,9 +232,11 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         local Trim=require("../../src/client/PlatformNativeTrimReplacementKit")
         local previous=workspace:FindFirstChild("GeneratedMap")
         local oldTemplates=RS:FindFirstChild("ApprovedLargeStructureTemplates")
+        local oldCrowns=RS:FindFirstChild("PremiumRouteMeshTemplates")
         if previous then previous.Parent=nil end
         if oldTemplates then oldTemplates.Parent=nil end
-        local generated,templates,art=nil,nil,nil
+        if oldCrowns then oldCrowns.Parent=nil end
+        local generated,templates,art,crownTemplates=nil,nil,nil,nil
         local ok,err=pcall(function()
             local arena=MapBuilder.buildArena(
                 Config,"Crossroads",ArenaVariants,VisualTheme)
@@ -338,36 +341,93 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(mesh.CanCollide or mesh.CanTouch
                     or mesh.CanQuery).toBe(false)
             end
+            -- Keep the real baseline through both possible ownership orders.
+            pylons[1].LocalTransparencyModifier=.25
             Trim.bind(arena,{},function() end,result.covered,art)
             expect(Trim.breakdown().pylon).toBe(2)
             expect(Trim.breakdown().support).toBe(0)
             for _,native in ipairs(pylons) do
                 expect(native.LocalTransparencyModifier).toBe(1)
             end
+            crownTemplates=Instance.new("Folder")
+            crownTemplates.Name="PremiumRouteMeshTemplates"
+            crownTemplates:SetAttribute("OwnerVerified",true)
+            crownTemplates.Parent=RS
+            local crownSource=Instance.new("Model")
+            crownSource.Name="OriginalSkySpineCrown"
+            crownSource:SetAttribute("OwnerVerified",true)
+            crownSource:SetAttribute("CosmeticOnly",true)
+            crownSource:SetAttribute("PremiumSkySpineCrown3D",true)
+            crownSource:SetAttribute("Original3DAssetId",71492051540032)
+            local crownMesh=Instance.new("MeshPart")
+            crownMesh.Size=Vector3.new(18.8,20.52,3.86)
+            crownMesh.Parent=crownSource
+            crownSource.Parent=crownTemplates
+
+            Crown.sync(arena,owner.Position,"Low",true)
+            expect(Crown.count()).toBe(1)
+            expect(Trim.count()).toBe(0)
+            expect(Trim.breakdown().pylon).toBe(0)
+            for _,mesh in ipairs(result.parts) do
+                expect(mesh.LocalTransparencyModifier).toBe(1)
+            end
+            Trim.reset()
+            expect(pylons[1].LocalTransparencyModifier).toBe(1)
+            Trim.bind(arena,{},function() end,result.covered,art)
+            expect(Trim.breakdown().pylon).toBe(0)
+            -- Losing a weld only invalidates the complete crown. The
+            -- two verified columns immediately resume their fallback.
+            local crownFolder=workspace:FindFirstChild("OriginalSkySpineCrownLocal")
+            local crownWeld=crownFolder:FindFirstChild("SkySpineCrownCosmeticWeld",true)
+            expect(crownWeld~=nil).toBe(true)
+            crownWeld:Destroy()
+            task.wait()
+            expect(Crown.count()).toBe(0)
+            expect(Trim.count()).toBe(2)
+            expect(Trim.breakdown().pylon).toBe(2)
+            for _,mesh in ipairs(result.parts) do
+                expect(mesh.LocalTransparencyModifier).toBe(0)
+            end
+            Crown.sync(arena,owner.Position,"Low",true)
+            expect(Crown.count()).toBe(1)
+            local streamed=pylons[1]:Clone()
+            streamed.LocalTransparencyModifier=.5
+            streamed.Parent=decor
+            expect(streamed.LocalTransparencyModifier).toBe(1)
+            streamed.Parent=nil
+            expect(streamed.LocalTransparencyModifier).toBe(.5)
+            streamed:Destroy()
+            -- Low pressure eviction releases the crown while the
+            -- next platform-owner pass can update its own quota.
+            Crown.sync(arena,owner.Position,"Low",true,nil,2)
+            expect(Crown.count()).toBe(0)
+            expect(Trim.breakdown().pylon).toBe(2)
             -- A real gameplay collapse restores BOTH native originals
             -- while keeping their owner collidable authority unchanged.
             owner:SetAttribute("CollapsePhase","Warning")
             expect(Trim.breakdown().pylon).toBe(0)
-            for _,native in ipairs(pylons) do
-                expect(native.LocalTransparencyModifier).toBe(0)
-            end
+            expect(pylons[1].LocalTransparencyModifier).toBe(.25)
+            expect(pylons[2].LocalTransparencyModifier).toBe(0)
             owner:SetAttribute("CollapsePhase","Normal")
             expect(Trim.breakdown().pylon).toBe(2)
             -- One lost imported material revokes ONLY that pylon source.
             result.parts[1]:Destroy()
             expect(Trim.breakdown().pylon).toBe(1)
-            expect(pylons[1].LocalTransparencyModifier).toBe(0)
+            expect(pylons[1].LocalTransparencyModifier).toBe(.25)
             expect(pylons[2].LocalTransparencyModifier).toBe(1)
+            expect(result.parts[8].LocalTransparencyModifier).toBe(0)
             Trim.reset()
-            for _,native in ipairs(pylons) do
-                expect(native.LocalTransparencyModifier).toBe(0)
-            end
+            expect(pylons[1].LocalTransparencyModifier).toBe(.25)
+            expect(pylons[2].LocalTransparencyModifier).toBe(0)
             for _,conn in ipairs(result.disconnects) do
                 conn:Disconnect()
             end
             expect(owner.CanCollide).toBe(true)
         end)
+        Crown.sync(nil,Vector3.zero,"Low",false)
         Trim.reset()
+        if crownTemplates then crownTemplates:Destroy() end
+        if oldCrowns then oldCrowns.Parent=RS end
         if art then art:Destroy() end
         if templates then templates:Destroy() end
         if generated then generated:Destroy() end

@@ -6,6 +6,9 @@
 local Kit = {}
 
 local saved = {}
+local nativeBaselines = {}
+local crownPylons = {}
+local pylonPieces = {}
 local watchers = {}
 local decorWatcher = nil
 local decorRemovedWatcher = nil
@@ -22,16 +25,57 @@ local ownerBaselines = {}
 local watchedOwners = {}
 local verifiedSupportIndices = {}
 
+
+local function setNativeMask(part, claims, masked)
+    claims[part] = masked and true or nil
+    if saved[part] or crownPylons[part] then
+        if nativeBaselines[part] == nil then
+            nativeBaselines[part] = part.LocalTransparencyModifier
+        end
+        part.LocalTransparencyModifier = 1
+    elseif nativeBaselines[part] ~= nil then
+        part.LocalTransparencyModifier = nativeBaselines[part]
+        nativeBaselines[part] = nil
+    end
+end
+
+local function refreshPylon(part)
+    local pieces = pylonPieces[part]
+    if not pieces then return end
+    local visible = saved[part] and not crownPylons[part]
+    for piece in pairs(pieces) do
+        piece.LocalTransparencyModifier = visible and 0 or 1
+    end
+end
+
+function Kit.isSkySpinePylon(part)
+    return part:IsA("BasePart") and part.Anchored
+        and not part.CanCollide and not part.CanTouch and not part.CanQuery
+        and part.Name:match("^SkySpine%d+_MonumentalPylon%-?1$") ~= nil
+        and part:GetAttribute("SkySpineDecor") == true
+        and part:GetAttribute("PerimeterPlatformIndex")
+            == tonumber(part.Name:match("^SkySpine(%d+)_"))
+end
 local function report()
     if notify then notify(count) end
 end
 
+-- Both approved models claim the same native pylon. The crown has visual
+-- priority; the column stays ready to take over if the crown disappears.
+function Kit.setCrownPylonMask(part, masked)
+    if (crownPylons[part] == true) == masked then return end
+    setNativeMask(part, crownPylons, masked)
+    refreshPylon(part)
+    if saved[part] then
+        count += masked and -1 or 1
+        report()
+    end
+end
+
 local function restore()
-    for part, original in pairs(saved) do
-        if part and part.Parent then
-            part.LocalTransparencyModifier = original
-        end
-        saved[part] = nil
+    for part in pairs(saved) do
+        setNativeMask(part, saved, false)
+        refreshPylon(part)
     end
     count = 0
     report()
@@ -46,6 +90,7 @@ function Kit.reset()
     decorRemovedWatcher = nil
     activeDecor = nil
     restore()
+    table.clear(pylonPieces)
     table.clear(active)
     table.clear(verifiedSupports)
     table.clear(verifiedSupportIndices)
@@ -67,11 +112,7 @@ local function eligible(part)
         -- exact server-authored nonphysical support. Never mask another
         -- deck's support, or a Part not explicitly verified/mounted.
         return name:match("^PlatformSupport%d+_%d+$") ~= nil
-            or (name:match(
-                "^SkySpine%d+_MonumentalPylon%-?1$") ~= nil
-                and part:GetAttribute("SkySpineDecor")==true
-                and part:GetAttribute("PerimeterPlatformIndex")
-                    ==tonumber(name:match("^SkySpine(%d+)_")))
+            or Kit.isSkySpinePylon(part)
     end
     local id = name:match("^PlatformBevel(%d+)_%d+$")
     if id and (active[id] == "carapace" or active[id] == "rim") then
@@ -162,30 +203,32 @@ end
 local function tryMask(part)
     if not eligible(part) or saved[part] ~= nil
         or not physicalSafe(part) then return end
-    saved[part] = part.LocalTransparencyModifier
-    part.LocalTransparencyModifier = 1
-    count += 1
+    setNativeMask(part, saved, true)
+    refreshPylon(part)
+    if not crownPylons[part] then count += 1 end
+    return true
 end
 
 -- Event-based reconciliation; does not poll a frame or create Parts.
 -- A server collapse warning or shutter must restore the native fallback
 -- even if the approved 3D clone itself is merely faded, not destroyed.
 local function reconcile()
-    local before = count
-    for part, original in pairs(saved) do
+    local changed = false
+    for part in pairs(saved) do
         if part.Parent ~= activeDecor or not eligible(part)
             or not physicalSafe(part) then
-            if part.Parent then part.LocalTransparencyModifier = original end
-            saved[part] = nil
-            count -= 1
+            setNativeMask(part, saved, false)
+            refreshPylon(part)
+            if not crownPylons[part] then count -= 1 end
+            changed = true
         end
     end
     if activeDecor then
         for _, part in ipairs(activeDecor:GetChildren()) do
-            if part:IsA("BasePart") then tryMask(part) end
+            if tryMask(part) then changed = true end
         end
     end
-    if count ~= before then report() end
+    if changed then report() end
 end
 
 local function watchOwner(part)
@@ -202,7 +245,7 @@ local function watchOwner(part)
     if bridgeId and kind ~= "bridge" then return end
     watchedOwners[part] = true
     ownerBaselines[part] = part.Size
-    for _, property in ipairs({"CanCollide","Transparency","Size"}) do
+    for _, property in ipairs({"CanCollide","Transparency","Size","Anchored"}) do
         watchers[#watchers+1] =
             part:GetPropertyChangedSignal(property):Connect(reconcile)
     end
@@ -252,24 +295,17 @@ local function attachDecor(folder)
     end
     report()
     decorWatcher = folder.ChildAdded:Connect(function(part)
-        if part:IsA("BasePart") then
-            local before = count
-            tryMask(part)
-            if before ~= count then report() end
-        end
+        if tryMask(part) then report() end
     end)
     watchers[#watchers + 1] = decorWatcher
     -- Streaming can remove an already-masked native part without changing
     -- the Platforms or Decor FOLDER. Drop that exact stale baseline/count
     -- immediately; never retain a phantom replacement in diagnostics.
     decorRemovedWatcher = folder.ChildRemoved:Connect(function(part)
-        local original = saved[part]
-        if original == nil then return end
-        if part.Parent then
-            part.LocalTransparencyModifier = original
-        end
-        saved[part] = nil
-        count -= 1
+        if not saved[part] then return end
+        setNativeMask(part, saved, false)
+        refreshPylon(part)
+        if not crownPylons[part] then count -= 1 end
         report()
     end)
     watchers[#watchers + 1] = decorRemovedWatcher
@@ -295,11 +331,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                 and part.Anchored and not part.CanCollide
                 and not part.CanTouch and not part.CanQuery
                 and (part.Name:match("^PlatformSupport%d+_%d+$")
-                    or (part.Name:match(
-                        "^SkySpine%d+_MonumentalPylon%-?1$")
-                        and part:GetAttribute("SkySpineDecor")==true
-                        and part:GetAttribute("PerimeterPlatformIndex")
-                            ==tonumber(part.Name:match("^SkySpine(%d+)_"))))
+                    or Kit.isSkySpinePylon(part))
                 then
                 verifiedSupports[part] = true
                 local id = part.Name:match("^PlatformSupport(%d+)_")
@@ -404,6 +436,14 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local key, owner = sourceOwner(piece)
             if not key then return end
             sourceOwnerByPiece[piece] = key
+            if piece:GetAttribute("OriginalSkySpinePylon3D") == true
+                and approvedSupports[owner] == true
+                and Kit.isSkySpinePylon(owner) then
+                local pieces = pylonPieces[owner] or {}
+                pylonPieces[owner] = pieces
+                pieces[piece] = true
+                piece.LocalTransparencyModifier = 1
+            end
             livePiecesByOwner[key] = (livePiecesByOwner[key] or 0) + 1
             refreshOwner(key, owner)
         end
@@ -438,6 +478,11 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             -- A decorative MeshPart without an approved welded server
             -- owner never affects a native platform silhouette.
             if owner == nil then return end
+            local pieces = pylonPieces[owner]
+            if pieces and pieces[piece] then
+                piece.LocalTransparencyModifier = 1
+                pieces[piece] = nil
+            end
             local remaining = math.max(0,
                 (livePiecesByOwner[owner] or 1) - 1)
             livePiecesByOwner[owner] =
@@ -509,7 +554,7 @@ function Kit.breakdown()
             elseif name:match("^PlatformSupport%d+_%d+$") then
                 result.support += 1
             elseif name:match("^SkySpine%d+_MonumentalPylon%-?1$") then
-                result.pylon += 1
+                if not crownPylons[part] then result.pylon += 1 end
             else
                 result.other += 1
             end

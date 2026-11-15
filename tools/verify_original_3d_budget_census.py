@@ -1799,12 +1799,16 @@ for check in (
 TRIM=(CLIENT/"PlatformNativeTrimReplacementKit.lua").read_text(
     encoding="utf8")
 assert '"^SkySpine%d+_MonumentalPylon%-?1$"' in TRIM
-assert 'part:GetAttribute("SkySpineDecor")==true' in TRIM
+assert 'part:GetAttribute("SkySpineDecor") == true' in TRIM
 assert 'result.pylon += 1' in TRIM
 assert 'verifiedSupports[part] = true' in TRIM
 assert 'LocalSkySpinePylonNativePartsReplaced = family.pylon' in OWNER
-assert 'mountedSkySpinePylons += 1' in OWNER
-assert 'LocalOriginalSkySpinePylon3DCount' in OWNER
+assert 'LocalOriginalSkySpinePylon3DCount = family.pylon' in OWNER
+assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
+assert 'saved[part] and not crownPylons[part]' in TRIM
+assert 'saved[part] or crownPylons[part]' in TRIM
+assert 'PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)' in (
+    CLIENT/"SkySpineCrownMeshKit.lua").read_text(encoding="utf8")
 assert 'PremiumLargeStructureMeshKit.validNativeSkyPylon(part)' in OWNER
 assert 'local supportBudget = tier.Name == "High" and 16' in OWNER
 print("PASS genuine Sky Spine monumental pylons sculpted in existing"
