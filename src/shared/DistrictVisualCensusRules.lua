@@ -45,6 +45,12 @@ function Rules.summarize(loadedMask, facadeMask, sidewallMask)
             end
         end
     end
+    -- Coverage is meaningful only among buildings actually streamed to
+    -- this client. A zero-loaded arena has no measurable coverage.
+    totals.coveragePercent = if totals.loaded > 0
+        then math.floor(totals.complete * 100 / totals.loaded + .5)
+        else nil
+    totals.partial = totals.facadeOnly + totals.sidewallOnly
     totals.states = table.concat(state)
     return totals
 end
