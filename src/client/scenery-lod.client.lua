@@ -607,6 +607,13 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
             continue
         end
 
+        if native and descendant:IsA("MeshPart")
+            and (descendant:GetAttribute("NearCameraCarapace3D") == true
+                or descendant:GetAttribute("OriginalLargeDeckHull") == true
+                or descendant:GetAttribute("OriginalPlatformRim3D") == true) then
+            PlatformNativeTrimReplacementKit.setPlatformTrimLodVisible(native, visible)
+        end
+
         local minimumTier = descendant:GetAttribute("SceneryMinimumTier")
         if minimumTier == "Medium" and profile.Name == "Low"
             or minimumTier == "High" and profile.Name ~= "High" then
@@ -673,8 +680,9 @@ end
 -- rebuild. After crossing the 320-stud arena, the old 8/16 approved-mesh
 -- slots stay concentrated near the spawn even while the camera moves.
 -- Retarget that existing bounded owner when the camera crosses a genuine
--- large distance, reusing THIS 0.65/0.90s LOD pass. Never rebuild for
--- camera rotation, low-end devices, off-map views or every frame.
+-- large distance, reusing THIS 0.65/0.90s LOD pass. Low also moves its
+-- single approved foreground slot when healthy. Pure rotation and
+-- off-map views never request rebuilds.
 -- The hard 12-second cooldown avoids cloning hundreds of cosmetic welds
 -- during fast avatar motion or noisy StreamingEnabled replication.
 local nearFieldArena = nil
@@ -689,9 +697,7 @@ local function retargetOriginalNearField(arena, cameraPoint, cameraReady,
         nearFieldFocus = nil
         nearFieldLastChange = 0
     end
-    if not cameraReady or tier == "Low"
-        or (tonumber(pressure) or 0) >= 2
-        or not arena or not arena:IsA("Folder") then return end
+    if not cameraReady or not arena or not arena:IsA("Folder") then return end
     local base = arena:FindFirstChild("Base")
     if not base or not base:IsA("BasePart")
         or base.Size.X < 318 or base.Size.Z < 318 then return end
@@ -705,10 +711,8 @@ local function retargetOriginalNearField(arena, cameraPoint, cameraReady,
         nearFieldLastChange = now
         return
     end
-    local dx = cameraPoint.X - nearFieldFocus.X
-    local dz = cameraPoint.Z - nearFieldFocus.Z
-    if dx * dx + dz * dz < 88 * 88
-        or now - nearFieldLastChange < 12 then return end
+    if not PlatformIdentityLodRules.nearFieldRetarget(tier, pressure,
+        nearFieldFocus, cameraPoint, now - nearFieldLastChange) then return end
     nearFieldFocus = cameraPoint
     nearFieldLastChange = now
     -- Client-local epoch only: no remote traffic or gameplay authority.

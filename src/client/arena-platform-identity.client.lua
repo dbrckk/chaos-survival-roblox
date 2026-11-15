@@ -1291,53 +1291,49 @@ local function watchDecor(generated)
                     end
                 end
             end
-            -- Late-streamed four-edge + underframe fallbacks used to leave
-            -- compatible 18-stud decks forever unselected. Rebuild only
-            -- when the approved hull exists and one NEAR physical deck
-            -- has become complete, or a mounted hull loses a native edge.
-            -- The existing 0.18s batch avoids one rebuild per wedge.
+            -- The four native bevels and their frame can stream after
+            -- the physical deck. Apply the real eligibility check before
+            -- letting the last missing native trigger the existing batch.
             local id = part:IsA("BasePart") and
                 (part.Name:match("^PlatformBevel(%d+)_[1-4]$")
                     or part.Name:match("^PlatformUnderFrame(%d+)$"))
             if id then
-                local templates = ReplicatedStorage:FindFirstChild(
-                    "ApprovedLargeDeckHullTemplates")
-                local source = templates and templates:FindFirstChild(
-                    "LargeDeckHull")
-                local rims = ReplicatedStorage:FindFirstChild(
-                    "ApprovedPlatformRimTemplates")
-                local rimReady = rims and (rims:FindFirstChild("Rect")
-                    or rims:FindFirstChild("Long"))
-                if not source and not rimReady then return end
-                local currentArena = workspace:FindFirstChild("GeneratedMap")
-                currentArena = currentArena and
-                    currentArena:FindFirstChild("Arena")
-                local platforms = currentArena and
-                    currentArena:FindFirstChild("Platforms")
-                local deck = platforms and platforms:FindFirstChild(
-                    "Platform" .. id)
-                local camera = workspace.CurrentCamera
-                if not deck or not deck:IsA("BasePart")
-                    or not camera or not deck.CanCollide
-                    or (deck.Position-camera.CFrame.Position).Magnitude > 220 then
-                    return
-                end
-                if part.Parent == decor then
-                    if PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
-                        decor, deck) then
-                        queueSupportRebuild()
-                    end
-                else
+                local activeArena = decor.Parent
+                local platforms = activeArena and activeArena:FindFirstChild("Platforms")
+                local deck = platforms and platforms:FindFirstChild("Platform" .. id)
+                if not deck or not deck:IsA("BasePart") then return end
+                if part.Parent ~= decor then
                     for _, piece in ipairs(visualsByPlatform[deck] or {}) do
                         if piece.Parent == folder and piece:IsA("MeshPart")
-                            and (piece:GetAttribute("OriginalLargeDeckHull")
-                                == true or piece:GetAttribute(
-                                    "OriginalPlatformRim3D") == true) then
+                            and (piece:GetAttribute("NearCameraCarapace3D") == true
+                                or piece:GetAttribute("OriginalLargeDeckHull") == true
+                                or piece:GetAttribute("OriginalPlatformRim3D") == true) then
                             queueSupportRebuild()
                             break
                         end
                     end
+                    return
                 end
+                local camera = workspace.CurrentCamera
+                if not camera or not deck.CanCollide
+                    or (deck.Position - camera.CFrame.Position).Magnitude > 220
+                    or not PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
+                        decor, deck) then return end
+                local hulls = ReplicatedStorage:FindFirstChild("ApprovedLargeDeckHullTemplates")
+                local rims = ReplicatedStorage:FindFirstChild("ApprovedPlatformRimTemplates")
+                if (hulls and hulls:FindFirstChild("LargeDeckHull"))
+                    or (rims and (rims:FindFirstChild("Rect") or rims:FindFirstChild("Long"))) then
+                    queueSupportRebuild()
+                    return
+                end
+                local quality = VfxQuality.deviceTier(
+                    player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled).Name
+                local variant = tostring(activeArena:GetAttribute("VariantId") or "Classic")
+                local candidates = PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                    {deck}, variant, quality, activeArena:FindFirstChild("Base"),
+                    camera.CFrame.Position, camera.CFrame.LookVector,
+                    player:GetAttribute("OptionalVfxPressure"), decor)
+                if candidates[deck] == true then queueSupportRebuild() end
                 return
             end
             -- Low used to ignore ALL late native support arrivals.
@@ -1722,9 +1718,10 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 -- pressure rises. Reuse the existing debounced rebuild, never a new loop.
 player:GetAttributeChangedSignal("OptionalVfxPressure")
     :Connect(scheduleRebuild)
--- The EXISTING scenery-LOD camera sampler requests a bounded retarget
--- only after traversing 88 studs and a 12-second cooldown. No camera loop
--- or premium source/model quota is added to this owner.
+-- The existing scenery sampler requests a retarget after a substantial
+-- camera move and a 12-second cooldown. Camera creation also reuses the
+-- same batched rebuild when the script starts before CurrentCamera.
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("LocalPremiumNearFieldEpoch")
     :Connect(scheduleRebuild)
 -- Accessibility changes affect at most four existing instrument tweens;

@@ -6,7 +6,120 @@ local Lest = require("@lest")
 local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 
+
+local PlatformIdentityLodRules = require("../../src/shared/PlatformIdentityLodRules")
+local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
+local MapBuilder = require("../../src/server/MapBuilder")
+local ArenaVariants = require("../../src/server/ArenaVariants")
+local Config = require("../../src/shared/Config")
+local VisualTheme = require("../../src/shared/VisualTheme")
+
 describe("Approved perimeter rim fallback and physics (engine)", function()
+    it("moves the single Low carapace between real Crossroads decks and restores their trim", function()
+        Kit.reset()
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        local storage = game:GetService("ReplicatedStorage")
+        local previousTemplates = storage:FindFirstChild("ApprovedPlatformSideTemplates")
+        if previousTemplates then previousTemplates.Parent = nil end
+        local generated,templates,meshes
+        local ok,failure=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Crossroads",ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            local base=arena:FindFirstChild("Base")
+            local platforms=arena:FindFirstChild("Platforms")
+            local decor=arena:FindFirstChild("Decor")
+            local nearby=platforms:FindFirstChild("Platform2")
+            expect(nearby.Size).toBe(Vector3.new(14,2,12))
+            local underside = decor.PlatformUnderFrame2
+            templates=Instance.new("Folder")
+            templates.Name="ApprovedPlatformSideTemplates"
+            templates:SetAttribute("OwnerVerified",true)
+            templates.Parent=storage
+            local approved=Instance.new("Model")
+            -- Exact dimension range of creator-approved Crossroads
+            -- original. The 14x12 real physical deck can host it; square
+            -- 10x10 decks in Classic do not pass the source-fit guard.
+            approved.Name="Crossroads"
+            approved:SetAttribute("Original3DAssetId",116452624086023)
+            approved:SetAttribute("OwnerVerified",true)
+            approved:SetAttribute("CosmeticOnly",true)
+            approved:SetAttribute("OriginalStructuralSide3D",true)
+            for i=1,7 do
+                local source=Instance.new("MeshPart")
+                source.Name="ApprovedDeckMaterial"..i
+                source.Size=if i==1 then Vector3.new(11.04,3,8.36)
+                    else Vector3.new(1,1,1)
+                source.Anchored=true
+                source.CanCollide=false
+                source.CanTouch=false
+                source.CanQuery=false
+                source.Parent=approved
+            end
+            approved.Parent=templates
+            local eastDeck = platforms:FindFirstChild("Platform4")
+            local westCamera = nearby.Position - Vector3.new(18, 0, 0)
+            local eastCamera = eastDeck.Position + Vector3.new(18, 0, 0)
+            expect(PlatformIdentityLodRules.nearFieldRetarget(
+                "Low", 0, westCamera, eastCamera, 11)).toBe(false)
+            expect(PlatformIdentityLodRules.nearFieldRetarget(
+                "Low", 1, westCamera, eastCamera, 12)).toBe(false)
+            expect(PlatformIdentityLodRules.nearFieldRetarget(
+                "Low", 0, westCamera, eastCamera, 12)).toBe(true)
+            expect(PlatformIdentityLodRules.nearFieldRetarget(
+                "Medium", 0, westCamera, eastCamera, 12)).toBe(false)
+            local west = PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                {nearby, eastDeck}, "Crossroads", "Low", base, westCamera,
+                Vector3.xAxis, 0, decor)
+            local east = PremiumPlatformSideMeshKit.selectCarapaceDecks(
+                {nearby, eastDeck}, "Crossroads", "Low", base, eastCamera,
+                -Vector3.xAxis, 0, decor)
+            expect(west[nearby] and east[eastDeck]).toBe(true)
+            expect(west[eastDeck] or east[nearby]).toBe(nil)
+            meshes=Instance.new("Folder")
+            meshes.Name="OriginalCarapaceEvenDeckFixture"
+            meshes.Parent=workspace
+            local parts=PremiumPlatformSideMeshKit.carapace(
+                meshes,nearby,"Crossroads","Low",2,west[nearby])
+            expect(parts~=nil and #parts==7).toBe(true)
+            Kit.bind(arena, {["2"] = "carapace"}, nil, nil, meshes)
+            expect(Kit.count()).toBe(5)
+            expect(underside.LocalTransparencyModifier).toBe(1)
+            for _, piece in ipairs(parts) do piece:Destroy() end
+            expect(Kit.count()).toBe(0)
+            -- The budget can migrate to the other real route deck. The
+            -- new welded bundle may mask only that deck's five natives.
+            local eastParts = PremiumPlatformSideMeshKit.carapace(
+                meshes, eastDeck, "Crossroads", "Low", 4, east[eastDeck])
+            expect(eastParts and #eastParts).toBe(7)
+            Kit.bind(arena, {["4"] = "carapace"}, nil, nil, meshes)
+            expect(Kit.count()).toBe(5)
+            expect(underside.LocalTransparencyModifier).toBe(0)
+            local eastFrame = decor.PlatformUnderFrame4
+            expect(eastFrame.LocalTransparencyModifier).toBe(1)
+            Kit.setPlatformTrimLodVisible(eastDeck, false)
+            expect(Kit.count()).toBe(0)
+            expect(eastFrame.LocalTransparencyModifier).toBe(0)
+            expect(decor.PlatformBevel4_1.LocalTransparencyModifier).toBe(0)
+            -- A native arriving while the genuine shell is out of LOD
+            -- must remain visible until that whole shell is drawn again.
+            eastFrame.Parent = nil
+            eastFrame.Parent = decor
+            expect(Kit.count()).toBe(0)
+            Kit.setPlatformTrimLodVisible(eastDeck, true)
+            expect(Kit.count()).toBe(5)
+            expect(eastFrame.LocalTransparencyModifier).toBe(1)
+            expect(eastDeck.CanCollide and nearby.CanCollide).toBe(true)
+        end)
+        Kit.reset()
+        if meshes then meshes:Destroy() end
+        if templates then templates:Destroy() end
+        if generated then generated:Destroy() end
+        if previousTemplates then previousTemplates.Parent = storage end
+        if previous then previous.Parent=workspace end
+        if not ok then error(failure) end
+    end)
+
     it("removes only redundant platform underside primitives beneath genuine seven-piece hulls", function()
         local Finish=require("../../src/client/PlatformFinishKit")
         local holder=Instance.new("Folder")

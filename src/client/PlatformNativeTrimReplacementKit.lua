@@ -35,6 +35,7 @@ local decorWatcher = nil
 local decorRemovedWatcher = nil
 local activeDecor = nil
 local active = {}
+local hiddenPlatformTrim = {}
 local verifiedSupports = {}
 local notify = nil
 local count = 0
@@ -277,6 +278,7 @@ function Kit.reset()
     restore()
     table.clear(pylonPieces)
     table.clear(active)
+    table.clear(hiddenPlatformTrim)
     table.clear(verifiedSupports)
     table.clear(verifiedSupportIndices)
     table.clear(promenadePylonsByDeck)
@@ -301,7 +303,7 @@ local function eligible(part)
             or Kit.isSkySpinePylon(part)
             or PlatformIdentityLodRules.promenadePylonIndex(part) ~= nil
     end
-    local id = name:match("^PlatformBevel(%d+)_%d+$")
+    local id = name:match("^PlatformBevel(%d+)_[1-4]$")
     if id and (active[id] == "carapace" or active[id] == "rim") then
         -- Sloped WedgePart server edge, now replaced by a real sculpted
         -- SIDE face, not a gameplay warning or a walkable landing.
@@ -384,6 +386,9 @@ end
 
 local function physicalSafe(native)
     local owner = physicalOwner(native)
+    if hiddenPlatformTrim[owner]
+        and (native.Name:match("^PlatformBevel%d+_[1-4]$")
+            or native.Name:match("^PlatformUnderFrame%d+$")) then return false end
     if PlatformIdentityLodRules.promenadePylonIndex(native) then
         return ownerSafe(owner, activePlatforms)
             and PlatformIdentityLodRules.matchesPromenadePylon(native, owner)
@@ -451,6 +456,35 @@ local function reconcile()
     if changed then report() end
 end
 
+-- Scenery LOD can hide a whole platform shell between rebuilds.
+-- Reconcile only that deck's four bevels and underframe, using the
+-- same source and physical owner checks as the existing mask binder.
+function Kit.setPlatformTrimLodVisible(deck, visible)
+    if not activePlatforms or deck.Parent ~= activePlatforms then return end
+    local id = deck.Name:match("^Platform(%d+)$")
+    if not id or (active[id] ~= "carapace" and active[id] ~= "rim") then return end
+    local hidden = not visible or nil
+    if hiddenPlatformTrim[deck] == hidden then return end
+    hiddenPlatformTrim[deck] = hidden
+    if not activeDecor then return end
+    local changed = false
+    local function refresh(name)
+        local part = activeDecor:FindFirstChild(name)
+        if not part then return end
+        if hidden and saved[part] then
+            unmask(part)
+            changed = true
+        elseif not hidden and tryMask(part) then
+            changed = true
+        end
+    end
+    for edge = 1, 4 do
+        refresh("PlatformBevel" .. id .. "_" .. edge)
+    end
+    if active[id] == "carapace" then refresh("PlatformUnderFrame" .. id) end
+    if changed then report() end
+end
+
 local function watchOwner(part)
     if not part or not part:IsA("BasePart")
         or watchedOwners[part] then return end
@@ -503,7 +537,10 @@ local function attachPlatforms(folder)
         watchOwner(part)
         reconcile()
     end)
-    watchers[#watchers+1] = folder.ChildRemoved:Connect(reconcile)
+    watchers[#watchers+1] = folder.ChildRemoved:Connect(function(part)
+        hiddenPlatformTrim[part] = nil
+        reconcile()
+    end)
     reconcile()
 end
 

@@ -206,11 +206,11 @@ assert 'function Kit.cradleFit(size,sourceBounds)' in structure
 assert 'if long<19.5 or long>34 or short<9 or short>18 then return nil end' in structure
 assert 'or sourceShort*scale<short*.76' in structure
 assert 'or sourceBounds.Y*scale>5 then return nil end' in structure
-assert 'and ((cradleSource and Kit.cradleFit(size,cradleBounds))' in structure
-assert 'and Kit.shortCradleFit(size,shortBounds)' in structure
+assert 'and ((cradleSource and Kit.cradleFit(fitSize,cradleBounds))' in structure
+assert 'and Kit.shortCradleFit(fitSize,shortBounds)' in structure
 assert 'function Kit.shortCradleFit(size,bounds)' in structure
-assert 'local scale=source and Kit.cradleFit(platform.Size,box) or nil' in structure
-assert 'scale=source and Kit.shortCradleFit(platform.Size,box) or nil' in structure
+assert 'local scale=source and Kit.cradleFit(fitSize,box) or nil' in structure
+assert 'scale=source and Kit.shortCradleFit(fitSize,box) or nil' in structure
 assert 'if not source or not scale or count~=7 then return nil end' in structure
 assert 'local cradleLimit=tier=="High" and' in structure
 assert '(desktopHigh==true and 8 or 4) or (tier=="Medium" and 2 or 1)' in structure
@@ -324,3 +324,20 @@ for eligible in range(0,15):
         assert traded==0
 print("PASS High desktop 4-to-8 genuine LongCradle capacity trades column"
       " modules at fixed 20 source models; Android budgets unchanged")
+
+scenery=(root / "src/client/scenery-lod.client.lua").read_text()
+retarget=(root / "src/shared/PlatformIdentityLodRules.lua").read_text()
+assert "PlatformIdentityLodRules.nearFieldRetarget(tier, pressure," in scenery
+assert 'local distance = low and 64 or 88' in retarget
+assert 'stress >= (low and 1 or 2) or elapsed < 12' in retarget
+assert 'workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(scheduleRebuild)' in identity
+watch = identity.split('local function supportChanged(part)',1)[1]
+assert 'piece:GetAttribute("NearCameraCarapace3D") == true' in watch
+assert 'local candidates = PremiumPlatformSideMeshKit.selectCarapaceDecks(' in watch
+assert 'if candidates[deck] == true then queueSupportRebuild() end' in watch
+assert 'PlatformNativeTrimReplacementKit.setPlatformTrimLodVisible(native, visible)' in scenery
+assert 'function Kit.setPlatformTrimLodVisible(deck, visible)' in source
+assert 'if hiddenPlatformTrim[owner]' in source
+assert 'for edge = 1, 4 do' in source
+assert 'refresh("PlatformUnderFrame" .. id)' in source
+print("PASS camera retarget and late native streaming recover the single genuine Low platform slot")

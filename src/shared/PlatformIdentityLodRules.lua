@@ -93,6 +93,16 @@ function Rules.owner(visual, platforms, decor)
     return nil
 end
 
+function Rules.nearFieldRetarget(tier, pressure, focus, cameraPoint, elapsed)
+    local low = tier == "Low"
+    local stress = tonumber(pressure) or 0
+    if stress >= (low and 1 or 2) or elapsed < 12 then return false end
+    local dx = cameraPoint.X - focus.X
+    local dz = cameraPoint.Z - focus.Z
+    local distance = low and 64 or 88
+    return dx * dx + dz * dz >= distance * distance
+end
+
 function Rules.distance(cameraPoint, arenaOrigin, ownerPosition)
     if typeof(cameraPoint) ~= "Vector3"
         or typeof(arenaOrigin) ~= "Vector3"
