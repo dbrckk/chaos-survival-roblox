@@ -745,14 +745,27 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     assert(truss.LocalTransparencyModifier==1,
                         variant.." reconnected joint "..lane.." exposed overlapping native geometry")
                 end
-                for _,useHarbor in ipairs({false,true}) do
-                    if useHarbor then Trim.setJunctionTrussMask(trusses[1],true,true)
-                    else Trim.setRouteUnderdeckMask(trusses[1],true) end
-                    assert(Remaining.nativeCount("junction")==1 and mesh.LocalTransparencyModifier==1
-                        and trusses[1].LocalTransparencyModifier==1)
-                    if useHarbor then Trim.setJunctionTrussMask(trusses[1],true,false)
-                    else Trim.setRouteUnderdeckMask(trusses[1],false) end
-                    assert(Remaining.nativeCount("junction")==2 and mesh.LocalTransparencyModifier==0)
+                -- An existing long-cradle or Harbor crane may own either
+                -- underdeck truss. The competing mesh must disappear without
+                -- affecting the independently eligible opposite lane.
+                for lane=1,2 do
+                    for _,useHarbor in ipairs({false,true}) do
+                        local truss=trusses[lane]
+                        if useHarbor then Trim.setJunctionTrussMask(truss,true,true)
+                        else Trim.setRouteUnderdeckMask(truss,true) end
+                        assert(Remaining.nativeCount("junction")==1,
+                            variant.." duplicate reinforcement on lane "..lane)
+                        assert(meshes[lane].LocalTransparencyModifier==1
+                            and meshes[3-lane].LocalTransparencyModifier==0,
+                            variant.." wrong mesh ownership during lane "..lane.." takeover")
+                        assert(truss.LocalTransparencyModifier==1,
+                            variant.." native overlap during lane "..lane.." takeover")
+                        if useHarbor then Trim.setJunctionTrussMask(truss,true,false)
+                        else Trim.setRouteUnderdeckMask(truss,false) end
+                        assert(Remaining.nativeCount("junction")==2
+                            and meshes[lane].LocalTransparencyModifier==0,
+                            variant.." failed to restore lane "..lane.." after takeover")
+                    end
                 end
                 local round=true
                 local cleanup={}
