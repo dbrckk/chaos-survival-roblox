@@ -1,3 +1,7 @@
+## P4 — Colonnes de fondation sculptées et ancrées au sol
+
+Les quatre colonnes de chaque arène orientent leur face détaillée vers le centre. Le socle en 3D est ajusté au dessus de la dalle, et les cantilevers s’adaptent aux profils plus larges de Towers et Harbor. Le noyau et sa balise suivent l’habillage pendant le rétrécissement et reviennent à leur position au terme du désastre. Sur Low, la portée de sélection est de 155 studs pour montrer une colonne depuis le centre. Chaque habillage réutilise sept MeshParts pour onze pièces d’origine, dans les quotas existants.
+
 ## P4 — Culées et poutres sculptées sous les arches d’ascension
 
 Les terrasses ACCESS, TRANSFER et SUMMIT des cinq arènes réutilisent les modèles approuvés de culée et de poutre. Les deux culées et le treillis couvrent la façade orientée vers l’approche, au-dessous du palier. Chaque ensemble représente 21 MeshParts et masque quatre blocs d’origine. Le budget partagé compte un ensemble sur mobile, deux en Medium PC et quatre en High PC. Une alerte, une source incomplète ou une pression graphique active restaure le décor natif.

@@ -65,17 +65,17 @@ function ArchitecturalCladding.build(decor, base, variantId, theme)
         casing:SetAttribute("FrameColumnIndex", index)
         casing.Parent = group
 
-        local facing = (index == 1 or index == 4) and 1 or -1
-        local origin = base.CFrame * CFrame.new(offset + Vector3.new(0, 4.2, 0))
-            * CFrame.Angles(0, math.rad(45 * facing), 0)
+        local origin = base.CFrame * CFrame.lookAt(
+            offset + Vector3.new(0, 4.2, 0), Vector3.new(0, 4.2, 0))
         local shell = theme.Structure:Lerp(theme.Surface, 0.28)
         local dark = theme.Surface:Lerp(Color3.fromRGB(23, 29, 38), 0.38)
         local machined = theme.Detail:Lerp(theme.Structure, 0.48)
 
         -- Architectural mass, not a single unsupported straight cuboid.
-        piece(casing, origin, "FoundationFoot", "Part",
+        local foot = piece(casing, origin, "FoundationFoot", "Part",
             Vector3.new(5.5, 1.0, 5.5),
-            CFrame.new(0, -3.55, 0), dark, finish.shell, 0.03)
+            CFrame.new(0, base.Size.Y*.5 - 3.68, 0), dark, finish.shell, 0.03)
+        casing.PrimaryPart = foot
         piece(casing, origin, "ArmoredFrontShell", "Part",
             Vector3.new(3.35, 6.4, 0.65),
             CFrame.new(0, 0, -1.7), shell, finish.shell, 0.04)

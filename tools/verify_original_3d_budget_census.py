@@ -2125,7 +2125,10 @@ for contract in (
     'High={arch=3,casing=2,helix=3,promenade=2}',
     'if p==2 then return 0 end',
     'local ax,az=sx,sz',
-    'longX=data.category~="casing" and b.X>b.Z',
+    'longX=(data.category=="casing" and b.Z>b.X)',
+    'or (data.category~="casing" and b.X>b.Z)',
+    'orientation=CFrame.lookAt(center,center+toward)',
+    'fitSize=Vector3.new(math.clamp(width,8.58,11.6),top-bottom,5.3)',
     'function Kit.nativeCount(category)',
 ):
     assert contract in P4_CLIENT,contract
@@ -2153,6 +2156,13 @@ for phrase in ("MonumentalOverpass","VerticalBridgePylon",
                "RouteStageBeacon","AscendChevron","SummitSignal"):
     assert phrase in P4_ARCH,phrase
 assert 'OriginalPremiumColumnCladding' in P4_CASING
+assert 'casing.PrimaryPart = foot' in P4_CASING
+assert 'local origin = base.CFrame * CFrame.lookAt(' in P4_CASING
+assert 'Low={arch=135,casing=155,helix=0,promenade=118}' in P4_CLIENT
+shrink_columns=(ROOT/"src/server/Disasters/ShrinkingArena.lua").read_text(encoding="utf8")
+assert 'column.model:PivotTo(column.pivot + offset)' in shrink_columns
+assert 'moveColumns(scale)' in shrink_columns and 'moveColumns(1)' in shrink_columns
+print("PASS forged column casings fit the visible slab and face inward with shared shrink/restore")
 assert 'OrbitalHelixRamp' in P4_HELIX
 assert 'HelixUnderframe' in P4_HELIX
 for disallowed in ("RunService.RenderStepped", "RunService.Heartbeat",
@@ -2278,7 +2288,7 @@ for clause in (
     assert clause in equipment_collector,clause
 assert 'local EQUIPMENT_TOUCH_CAP={Low=1,Medium=1,High=2}' in P4_CLIENT
 assert 'if data.anchor then watchPorticoNative(data.anchor) end' in P4_CLIENT
-assert 'or ((isPortico(entry.category) or entry.category=="archBase")' in P4_CLIENT
+assert 'or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing")' in P4_CLIENT
 assert 'and not sameOriginals(entry,data))' in P4_CLIENT
 assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
 assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD

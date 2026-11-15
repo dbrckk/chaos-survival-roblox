@@ -20,7 +20,7 @@ local SOURCE={
     Access={id=110243423264048,major=17.6,minor=3.9,height=17.53,centerY=6.855},
     Transfer={id=107273631120961,major=17.6,minor=4.1,height=18.33,centerY=7.255},
     Summit={id=127049813505254,major=17.6,minor=5.2,height=19.73,centerY=7.955},
-    Casing={id=130196548599769,major=8.58,minor=5.3,height=10.378,centerY=1.1492},
+    Casing={id=130196548599769,major=8.58,minor=5.3,height=10.378,centerY=0},
     Helix={id=106863534763803,major=23.6,minor=5.08,height=1.453,centerY=-.97125},
     Crosshead={id=108452611210970,major=8.94,minor=1.12,height=.5675,
         centerY=0,holder="ApprovedPerimeterStructuresTemplates",
@@ -201,7 +201,7 @@ local TOUCH_CAP={
     High={arch=3,casing=2,helix=3,promenade=3},
 }
 local DISTANCE={
-    Low={arch=135,casing=115,helix=0,promenade=118},
+    Low={arch=135,casing=155,helix=0,promenade=118},
     Medium={arch=215,casing=180,helix=170,promenade=195},
     High={arch=325,casing=275,helix=265,promenade=280},
 }
@@ -673,13 +673,45 @@ local function collectCasing(arena,casing,group)
         if not visualNative(part,casing) then return nil end
         natives[#natives+1]=part
     end
-    local foot=natives[1]
-    if foot.Size.X<5.3 or foot.Size.X>5.7 or
-        foot.Size.Z<5.3 or foot.Size.Z>5.7 then return nil end
-    local origin=foot.CFrame*CFrame.new(0,3.55,0)
+    local foot,front=natives[1],natives[2]
+    if not foot:IsA("Part") or foot.Shape~=Enum.PartType.Block
+        or (foot.Size-Vector3.new(5.5,1,5.5)).Magnitude>.13
+        or not front:IsA("Part") or front.Shape~=Enum.PartType.Block
+        or (front.Size-Vector3.new(3.35,6.4,.65)).Magnitude>.13
+        or foot.CFrame.LookVector:Dot(front.CFrame.LookVector)<.999
+        or foot.CFrame.UpVector:Dot(front.CFrame.UpVector)<.999 then return nil end
+    local origin=front.CFrame*CFrame.new(0,0,1.7)
+    local localFoot=origin:PointToObjectSpace(foot.Position)
+    if math.abs(localFoot.X)>.08 or math.abs(localFoot.Z)>.08
+        or localFoot.Y< -3.65 or localFoot.Y> -2.55 then return nil end
+
+    -- Fit bottom to the actual slab without raising the crown into the
+    -- separate navigation head. Yaw the detailed front toward the center
+    -- even when joining a place built with the older mirrored shells.
+    local base=arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then return nil end
+    local toward=base.Position-origin.Position
+    toward=Vector3.new(toward.X,0,toward.Z)
+    if toward.Magnitude<1 then return nil end
+    local width=0
+    for i=10,11 do
+        local part=natives[i]
+        local relative=origin:ToObjectSpace(part.CFrame)
+        local half=.5*(math.abs(relative.RightVector.X)*part.Size.X
+            +math.abs(relative.UpVector.X)*part.Size.Y
+            +math.abs(relative.LookVector.X)*part.Size.Z)
+        width=math.max(width,2*(math.abs(relative.X)+half))
+    end
+    -- The caster's original proportions are the minimum envelope; long
+    -- Towers and Harbor cantilevers need more horizontal coverage.
+    local bottom=math.max(foot.Position.Y-foot.Size.Y*.5,base.Position.Y+base.Size.Y*.5+.015)
+    local top=origin.Position.Y+6.3384
+    if top-bottom<8.8 then return nil end
+    local center=Vector3.new(origin.Position.X,(top+bottom)*.5,origin.Position.Z)
     return {category="casing",name="Casing",owner=casing,arena=arena,
-        originals=natives,center=foot.Position,orientation=origin,
-        scaleZ=1,expectedParent=casing}
+        originals=natives,center=front.Position,orientation=CFrame.lookAt(center,center+toward),
+        fitSize=Vector3.new(math.clamp(width,8.58,11.6),top-bottom,5.3),
+        expectedParent=casing}
 end
 
 local function collectHelix(arena,ramp,circuit)
@@ -740,7 +772,8 @@ local function reveal(entry)
         elseif entry.category=="junction" then
             Trim.setJunctionTrussMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
-            or ((isPortico(entry.category) or entry.category=="archBase") and entry.visible))
+            or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing")
+                and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
         end
@@ -891,9 +924,10 @@ local function refresh(entry)
     local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
     if data.fitSize then
         local size,bounds=data.fitSize,entry.bounds
-        sx=size.X/math.min(bounds.X,bounds.Z)
+        local major,minor=math.max(bounds.X,bounds.Z),math.min(bounds.X,bounds.Z)
+        sx=size.X/(entry.category=="casing" and major or minor)
         sy=size.Y/bounds.Y
-        sz=size.Z/math.max(bounds.X,bounds.Z)
+        sz=size.Z/(entry.category=="casing" and minor or major)
     elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
         reveal(entry)
         return false
@@ -978,10 +1012,10 @@ local function mount(data,source)
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,anchor=data.anchor,
         native={},model=clone,pieces={},connections={},bounds=b,
-        -- Architectural casings have an intentional X-wide front: rotating
-        -- that source to Z would put the machined service front on a SIDE.
-        -- Route owners may need Roblox import's X/Z axis swap corrected.
-        longX=data.category~="casing" and b.X>b.Z,
+        -- The casing is authored X-wide, while route fits are Z-long.
+        -- Correct either imported axis before applying its local fit.
+        longX=(data.category=="casing" and b.Z>b.X)
+            or (data.category~="casing" and b.X>b.Z),
         visible=false,disposing=false}
     if data.group then
         entry.groupKeys={}
@@ -1068,7 +1102,8 @@ local function mount(data,source)
                 data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
         end
         entry.disconnectTruss=Trim.observePrimaryJunctionTruss(data.originals[1],changed)
-        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",entry.spec.tag}) do
+        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
+            entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
         end
         entry.connections[#entry.connections+1]=
@@ -1088,11 +1123,16 @@ local function mount(data,source)
         end
     end
     for _,native in ipairs(data.originals) do
-        if data.category=="archBase" then
+        if data.category=="casing" or data.category=="archBase" then
             watch(native,{"CFrame","Size","Transparency","Anchored",
-                "CanCollide","CanTouch","CanQuery","Name","Shape"})
-            for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex"}) do
-                entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
+                "CanCollide","CanTouch","CanQuery","Name"})
+            if native:IsA("Part") then
+                entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("Shape"):Connect(changed)
+            end
+            if data.category=="archBase" then
+                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex"}) do
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
+                end
             end
         elseif isPortico(data.category) then
             watchPorticoNative(native)
@@ -1101,11 +1141,15 @@ local function mount(data,source)
         end
     end
     if data.anchor then watchPorticoNative(data.anchor) end
-    if data.category=="archBase" then
-        for _,tag in ipairs({"PerimeterRoute","PerimeterStep","RouteTier"}) do
+    if data.category=="archBase" or data.category=="casing" then
+        local tags=data.category=="casing"
+            and {"FrameColumnIndex","OriginalFrameCladding","SourceIsOriginal","CosmeticOnly"}
+            or {"PerimeterRoute","PerimeterStep","RouteTier"}
+        for _,tag in ipairs(tags) do
             entry.connections[#entry.connections+1]=data.owner:GetAttributeChangedSignal(tag):Connect(changed)
         end
-        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",entry.spec.tag}) do
+        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
+            entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
         end
         entry.connections[#entry.connections+1]=entry.sourceFolder:GetAttributeChangedSignal("OwnerVerified"):Connect(changed)
@@ -1482,7 +1526,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             or data.category~=entry.category or data.arena~=entry.arena
             or data.otherDeck~=entry.otherDeck
             or src[entry.name]~=entry.source
-            or ((isPortico(entry.category) or entry.category=="archBase")
+            or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing")
                 and not sameOriginals(entry,data))
             or not sourceIntact(entry) then
             -- A streamed/lost local MeshPart is not a valid seven-piece

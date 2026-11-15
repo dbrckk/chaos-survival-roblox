@@ -6,6 +6,7 @@ local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local LargeStructure = require("../../src/client/PremiumLargeStructureMeshKit")
+local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
 local NativeTrim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
@@ -73,6 +74,72 @@ describe("Shrinking Arena mobility integration", function()
             }
         end
 
+        local columns = decor:FindFirstChild("OriginalPremiumColumnCladding")
+        local columnParts = {}
+        for i = 1, 4 do
+            local casing = columns:FindFirstChild("ClassicArchitecturalCasing" .. i)
+            local foot = casing:FindFirstChild("FoundationFoot")
+            local core = decor:FindFirstChild("FrameColumn" .. i)
+            local light = decor:FindFirstChild("FrameColumnGlow" .. i)
+            local front = casing:FindFirstChild("ArmoredFrontShell")
+            expect(casing.PrimaryPart).toBe(foot)
+            expect(front.CFrame.LookVector:Dot((base.Position-foot.Position).Unit)>.999).toBe(true)
+            expect(foot.Position.Y-foot.Size.Y*.5>=base.Position.Y+base.Size.Y*.5).toBe(true)
+            columnParts[i] = {foot,core,light,casing:FindFirstChild("LandmarkNavigationHead")}
+        end
+        local columnFrames = {}
+        for _, group in ipairs(columnParts) do
+            for _,part in ipairs(group) do columnFrames[part]=part.CFrame end
+        end
+
+        local storage = game:GetService("ReplicatedStorage")
+        local prior = storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if prior then prior.Parent = nil end
+        local templates = Instance.new("Folder")
+        templates.Name = "ApprovedRemainingStructureTemplates"
+        templates:SetAttribute("OwnerVerified", true)
+        templates.Parent = storage
+        local source = Instance.new("Model")
+        source.Name = "Casing"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("Original3DAssetId", 130196548599769)
+        source:SetAttribute("P4OriginalRemainingStructure3D", true)
+        for i = 1, 7 do
+            local part = Instance.new("MeshPart")
+            part.Name = "CasingMaterial" .. i
+            -- Simulate the same approved source imported long in Z.
+            part.Size = Vector3.new(5.3, 10.378, 8.58)
+            part.Anchored = true
+            part.Massless = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.Parent = source
+        end
+        source.Parent = templates
+        Remaining.sync(arena, base.Position, "Low", true, nil, 0, true)
+        expect(Remaining.count("casing")).toBe(1)
+        expect(Remaining.nativeCount("casing")).toBe(11)
+        local localArt = workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
+        local sculpt = assert(localArt:FindFirstChild("ApprovedP4_Casing"))
+        local casingName = sculpt:GetAttribute("OriginalP4OwnerPlatform")
+        local owned = columns:FindFirstChild(casingName)
+        local foot = owned:FindFirstChild("FoundationFoot")
+        local mesh = sculpt:FindFirstChildWhichIsA("MeshPart")
+        local head = owned:FindFirstChild("LandmarkNavigationHead")
+        local function verifyFit()
+            expect(foot.LocalTransparencyModifier).toBe(1)
+            expect(head.LocalTransparencyModifier).toBe(0)
+            expect(mesh.LocalTransparencyModifier).toBe(0)
+            expect(math.abs(mesh.Size.Z-8.58)<.03).toBe(true)
+            expect(math.abs(mesh.Position.Y-mesh.Size.Y*.5
+                -(foot.Position.Y-foot.Size.Y*.5))<.03).toBe(true)
+            expect((Vector3.new(mesh.Position.X,foot.Position.Y,mesh.Position.Z)
+                -foot.Position).Magnitude<.03).toBe(true)
+        end
+        verifyFit()
+
         local active = true
         local callbacks = {}
         ShrinkingArena.start({
@@ -124,6 +191,26 @@ describe("Shrinking Arena mobility integration", function()
             expect(piece.CanCollide).toBe(false)
         end
 
+        for _, group in ipairs(columnParts) do
+            local start = columnFrames[group[1]].Position
+            local expected = Vector3.new(start.X*(scale-1),0,start.Z*(scale-1))
+            for _,part in ipairs(group) do
+                expect((part.Position-columnFrames[part].Position-expected).Magnitude<.03).toBe(true)
+            end
+        end
+        verifyFit()
+        source:SetAttribute("OwnerVerified",false)
+        expect(foot.LocalTransparencyModifier).toBe(0)
+        expect(mesh.LocalTransparencyModifier).toBe(1)
+        source:SetAttribute("OwnerVerified",true)
+        verifyFit()
+        local shell = owned:FindFirstChild("ArmoredFrontShell")
+        shell.Parent=nil
+        expect(shell.LocalTransparencyModifier).toBe(0)
+        expect(foot.LocalTransparencyModifier).toBe(0)
+        shell.Parent=owned
+        verifyFit()
+
         active = false
         cleanup(callbacks, {})
         expect((deck.Position - originalDeck.Position).Magnitude < 0.001)
@@ -141,6 +228,17 @@ describe("Shrinking Arena mobility integration", function()
             expect((piece.Size - original.size).Magnitude < 0.001)
                 .toBe(true)
         end
+        for part,original in pairs(columnFrames) do
+            expect((part.Position-original.Position).Magnitude<.02).toBe(true)
+        end
+        verifyFit()
+        Remaining.sync(arena,base.Position,"Low",true,nil,1,true)
+        expect(Remaining.count("casing")).toBe(0)
+        expect(foot.LocalTransparencyModifier).toBe(0)
+        expect(base.CanCollide).toBe(true)
+        Remaining.sync(nil,Vector3.zero,"Low",false)
+        templates:Destroy()
+        if prior then prior.Parent=storage end
         root:Destroy()
     end)
 

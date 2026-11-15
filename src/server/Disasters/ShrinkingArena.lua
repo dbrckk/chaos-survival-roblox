@@ -141,6 +141,47 @@ function D.start(ctx)
         end
     end
 
+    -- Foundation towers keep their architectural proportions as their
+    -- four ground anchors move inward. Move native shells, cores and slits
+    -- together so restored art still matches the same foundation.
+    local columns = {}
+    local cladding = decor and decor:FindFirstChild("OriginalPremiumColumnCladding")
+    if cladding then
+        for _, casing in ipairs(cladding:GetChildren()) do
+            local index = casing:GetAttribute("FrameColumnIndex")
+            local foot = casing:FindFirstChild("FoundationFoot")
+            if casing:IsA("Model") and casing:GetAttribute("CosmeticOnly") == true
+                and casing:GetAttribute("OriginalFrameCladding") == true
+                and type(index) == "number" and index >= 1 and index <= 4
+                and foot and foot == casing.PrimaryPart and not foot.CanCollide then
+                local pivot = casing:GetPivot()
+                local localPoint = originalCFrame:PointToObjectSpace(pivot.Position)
+                local details = {}
+                for _, name in ipairs({"FrameColumn", "FrameColumnGlow"}) do
+                    local detail = decor:FindFirstChild(name .. index)
+                    if detail and detail:IsA("BasePart") and detail.Anchored
+                        and not detail.CanCollide and not detail.CanTouch and not detail.CanQuery then
+                        details[detail] = detail.CFrame
+                    end
+                end
+                columns[#columns+1] = {model=casing,pivot=pivot,point=localPoint,details=details}
+            end
+        end
+    end
+    local function moveColumns(scale)
+        for _, column in ipairs(columns) do
+            local point = column.point
+            local offset = originalCFrame:VectorToWorldSpace(
+                Vector3.new(point.X*(scale-1),0,point.Z*(scale-1)))
+            if column.model.Parent == cladding then
+                column.model:PivotTo(column.pivot + offset)
+            end
+            for part, original in pairs(column.details) do
+                if part.Parent == decor then part.CFrame = original + offset end
+            end
+        end
+    end
+
     local movableParts = {}
     local platformStates = {}
     local platforms = arena:FindFirstChild("Platforms")
@@ -279,6 +320,7 @@ function D.start(ctx)
             local scale = 1 - 0.55 * a
             base.Size = Vector3.new(originalSize.X * scale, originalSize.Y, originalSize.Z * scale)
             base.CFrame = originalCFrame
+            moveColumns(scale)
 
             for _, state in ipairs(edges) do
                 local edge = state.part
@@ -398,6 +440,8 @@ function D.start(ctx)
             base.Size = originalSize
             base.CFrame = originalCFrame
         end
+
+        moveColumns(1)
 
         for _, state in ipairs(edges) do
             local edge = state.part
