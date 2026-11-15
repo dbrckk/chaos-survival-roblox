@@ -705,19 +705,29 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 sync("High",0,false)
                 assert(Remaining.nativeCount("junction")==2,variant.." missing forged trusses")
                 count += Remaining.nativeCount("junction")
-                local mesh
+                local meshes={}
                 for _,model in ipairs(folder:GetChildren()) do
-                    if model.Name=="ApprovedP4_JunctionTruss"
-                        and model:GetAttribute("OriginalP4OwnerPlatform")==promenade[1].Name then
-                        mesh=model:FindFirstChild("Layer1")
-                        for _,piece in ipairs(model:GetChildren()) do
-                            assert(piece:IsA("MeshPart") and piece.Anchored and piece.Massless
-                                and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                    if model.Name=="ApprovedP4_JunctionTruss" then
+                        for lane=1,2 do
+                            if model:GetAttribute("OriginalP4OwnerPlatform")==promenade[lane].Name then
+                                assert(not meshes[lane],variant.." duplicate mesh owner on lane "..lane)
+                                meshes[lane]=model:FindFirstChild("Layer1")
+                                for _,piece in ipairs(model:GetChildren()) do
+                                    assert(piece:IsA("MeshPart") and piece.Anchored and piece.Massless
+                                        and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                                end
+                            end
                         end
                     end
                 end
-                assert(mesh and trusses[1].LocalTransparencyModifier==1)
-                assert(mesh.Position.Y < promenade[1].Position.Y-promenade[1].Size.Y*.5)
+                local mesh=meshes[1]
+                for lane=1,2 do
+                    assert(meshes[lane],variant.." missing approved mesh on lane "..lane)
+                    assert(trusses[lane].LocalTransparencyModifier==1,
+                        variant.." native truss overlaps approved mesh on lane "..lane)
+                    assert(meshes[lane].Position.Y < promenade[lane].Position.Y-promenade[lane].Size.Y*.5,
+                        variant.." approved truss is not below its deck on lane "..lane)
+                end
                 -- Both independently-authored promenade joints must roll back
                 -- when their own physical endpoint is disconnected.
                 for lane=1,2 do
