@@ -2374,3 +2374,6 @@ assert 'Trim.hasPrimaryJunctionTruss(native)' in P4_CLIENT
 assert 'observePrimaryJunctionTruss(data.originals[1],changed)' in P4_CLIENT
 assert 'LocalSkySpineJunctionTrussesReplaced' in SIDE_LOD
 print("PASS ten authored junction trusses use one approved source, proved deck overlap and shared rollback")
+junction_integration=(ROOT/"tests/engine/long-cradle-streaming-fallback.spec.luau").read_text(encoding="utf8")
+assert 'expect(count).toBe(10)' in junction_integration
+assert 'endpointFrame*CFrame.new(50,0,0)' in junction_integration

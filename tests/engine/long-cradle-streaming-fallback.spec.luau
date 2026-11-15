@@ -720,7 +720,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 assert(mesh.Position.Y < promenade[1].Position.Y-promenade[1].Size.Y*.5)
                 local endpoint=ends[1]
                 local endpointFrame=endpoint.CFrame
-                endpoint.CFrame=endpointFrame*CFrame.new(18,0,0)
+                endpoint.CFrame=endpointFrame*CFrame.new(50,0,0)
                 task.wait()
                 assert(Remaining.nativeCount("junction")==1 and mesh.LocalTransparencyModifier==1)
                 assert(math.abs(trusses[1].LocalTransparencyModifier-baseline)<.001)
@@ -908,7 +908,8 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     local pylon=decor:FindFirstChild("Promenade"..index.."_LoadPylon1")
                     local underdeck=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
                     expect(pylon.LocalTransparencyModifier).toBe(0)
-                    expect(underdeck.LocalTransparencyModifier).toBe(0)
+                    local hasJunction=deck:GetAttribute("PromenadeStep")==4
+                    expect(underdeck.LocalTransparencyModifier).toBe(hasJunction and 1 or 0)
                     for _,name in ipairs(profile and profile[6] or {}) do
                         local primitive=decor:FindFirstChild("Promenade"..index.."_"..name)
                         expect(primitive.LocalTransparencyModifier).toBe(1)
