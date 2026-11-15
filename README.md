@@ -1,3 +1,9 @@
+## P4 — Socles forgés des bâtiments des quartiers
+
+Les 16 bâtiments de chaque arène peuvent afficher un socle en acier à pans biseautés avec verrous, évents et plaques de service. Le caisson original approuvé `101457508594609` remplace le disque de fondation et son anneau métallique quand la façade et les parois 3D du bâtiment sont chargées. Il s'ajuste aux 15,5 studs du socle et s'arrête à 0,88 stud au-dessus du sol. La porte, les vitrages et les panneaux de secteur restent visibles.
+
+Chaque socle compte sept MeshParts dans le budget visuel adaptatif. Les plafonds Low/Medium/High sont de 1/2/4 socles sur PC et de 1/1/2 sur écran tactile. Le décor natif reprend dès la première pression graphique, si le bâtiment sort du LOD ou si le modèle perd une pièce. `LocalOriginalDistrictFoundationPartsReplaced` compte les pièces natives effectivement masquées.
+
 ## P4 — Colonnes de fondation sculptées et ancrées au sol
 
 Les quatre colonnes de chaque arène orientent leur face détaillée vers le centre. Le socle en 3D est ajusté au dessus de la dalle, et les cantilevers s’adaptent aux profils plus larges de Towers et Harbor. Le noyau et sa balise suivent l’habillage pendant le rétrécissement et reviennent à leur position au terme du désastre. Sur Low, la portée de sélection est de 155 studs pour montrer une colonne depuis le centre. Chaque habillage réutilise sept MeshParts pour onze pièces d’origine, dans les quotas existants.
