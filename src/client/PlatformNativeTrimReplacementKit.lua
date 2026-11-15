@@ -25,16 +25,16 @@ local ownerBaselines = {}
 local watchedOwners = {}
 local verifiedSupportIndices = {}
 
-
 local function setNativeMask(part, claims, masked)
     claims[part] = masked and true or nil
+    local original = nativeBaselines[part]
     if saved[part] or crownPylons[part] then
-        if nativeBaselines[part] == nil then
+        if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
         part.LocalTransparencyModifier = 1
-    elseif nativeBaselines[part] ~= nil then
-        part.LocalTransparencyModifier = nativeBaselines[part]
+    elseif original ~= nil then
+        part.LocalTransparencyModifier = original
         nativeBaselines[part] = nil
     end
 end
@@ -56,6 +56,7 @@ function Kit.isSkySpinePylon(part)
         and part:GetAttribute("PerimeterPlatformIndex")
             == tonumber(part.Name:match("^SkySpine(%d+)_"))
 end
+
 local function report()
     if notify then notify(count) end
 end
