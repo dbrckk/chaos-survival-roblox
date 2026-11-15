@@ -1,16 +1,19 @@
--- Replaces camera-selected nonphysical SkylineDepth roof wedges with the
--- genuine creator-approved original 2156-triangle skyline roof sculpture.
--- On Low, one nearest verified sculpt replaces a native wedge; when
--- quality pressure rises, every fallback native roof returns.
--- Never alters DistantAerial cues,
--- gameplay collision, server map generation, or the Roblox asset registry.
--- Shared scenery LOD sampler owns this module: NO new frame loop / asset load.
+-- Camera-selected distant roofs and their forged aerials share the existing
+-- scenery sampler and Android residency limits. Both have a native fallback.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
+local SceneryLodRules = if script then require(ReplicatedStorage.Shared.SceneryLodRules)
+    else require("../shared/SceneryLodRules")
 
 local Kit = {}
 local SOURCE_ID = 80692067525256
 local SOURCE_SIZE = Vector3.new(11.4,33.95,7.19)
+local AERIAL_ID = 105555650820011
+local AERIAL_HOLDER = "ApprovedVariantIdentitySpineTemplates"
+local AERIAL_TAG = "OriginalVariantIdentitySpine3D"
+local AERIAL_SIZE = Vector3.new(2.16,11.92,2.16)
+-- Exact bounds from the approved OBJ's ARMOR hull and BRUSHED end sockets.
+-- Their combined 384 source triangles carry the entire distant silhouette.
+local AERIAL_HULL = Vector3.new(1.9388,11.52,1.8788)
 local DIRECTIONS = {
     {id="North",x=-22,z=-1,yaw=0},
     {id="East",x=1,z=-22,yaw=math.pi*.5},
@@ -31,6 +34,19 @@ bucket:SetAttribute("CosmeticOnly",true)
 bucket.Parent = workspace
 local activeArena = nil
 local mounted = {}
+
+local function releaseAerial(entry)
+    local aerial = entry.aerial
+    if not aerial then return end
+    entry.aerial = nil
+    for _,connection in ipairs(aerial.connections) do
+        connection:Disconnect()
+    end
+    if aerial.native.Transparency == 1 then
+        aerial.native.Transparency = aerial.alpha
+    end
+    aerial.model:Destroy()
+end
 
 -- The eight SkylineDepth source roof masses are stationary OUTBOARD
 -- sculptures authored at the unshrunk 320-stud playfield perimeter.
@@ -57,8 +73,9 @@ local function restore(owner)
     for _,connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    releaseAerial(entry)
     local body = entry.body
-    if body.Parent == owner and body.Transparency == 1 then
+    if body.Transparency == 1 then
         body.Transparency = entry.original
     end
     entry.model:Destroy()
@@ -114,6 +131,64 @@ local function approved()
     return template,holder,SOURCE_ID,yaw
 end
 
+local function trustedAerial(source, holder)
+    return holder and holder:IsA("Folder") and holder.Parent == ReplicatedStorage
+        and holder.Name == AERIAL_HOLDER and holder:GetAttribute("OwnerVerified") == true
+        and source and source:IsA("Model") and source.Parent == holder
+        and source.Name == "Classic" and source:GetAttribute("OwnerVerified") == true
+        and source:GetAttribute("CosmeticOnly") == true
+        and source:GetAttribute(AERIAL_TAG) == true
+        and source:GetAttribute("Original3DAssetId") == AERIAL_ID
+end
+
+local function approvedAerial()
+    local holder = ReplicatedStorage:FindFirstChild(AERIAL_HOLDER)
+    local source = holder and holder:FindFirstChild("Classic")
+    if not trustedAerial(source, holder) then return nil end
+    local children = source:GetChildren()
+    if #children ~= 7 then return nil end
+    local frame, size = source:GetBoundingBox()
+    if (size-AERIAL_SIZE).Magnitude > .30 then return nil end
+    local hull, sockets
+    for _,part in ipairs(children) do
+        if not part:IsA("MeshPart") or not part.Anchored or part.CanCollide
+            or part.CanTouch or part.CanQuery or part.Transparency >= 1 then
+            return nil
+        end
+        for _,detail in ipairs(part:GetDescendants()) do
+            if not detail:IsA("SurfaceAppearance") and not detail:IsA("Decal")
+                and not detail:IsA("Texture") then return nil end
+        end
+        local dims = Vector3.new(math.max(part.Size.X,part.Size.Z),part.Size.Y,
+            math.min(part.Size.X,part.Size.Z))
+        if (frame.Position-part.Position).Magnitude < .16
+            and math.abs(part.CFrame.UpVector:Dot(frame.UpVector)) > .999 then
+            if (dims-AERIAL_HULL).Magnitude < .13 then
+                if hull then return nil end
+                hull = part
+            elseif (dims-AERIAL_SIZE).Magnitude < .16 then
+                if sockets then return nil end
+                sockets = part
+            end
+        end
+    end
+    if not hull or not sockets then return nil end
+    return {source=source,holder=holder,frame=frame,hull=hull,sockets=sockets}
+end
+
+local function genuineAerial(owner, body, layer)
+    local aerial = owner:FindFirstChild("DistantAerial")
+    local size = Vector3.new(.38,4+layer*2,.38)
+    local position = body.Position+Vector3.new(0,(body.Size.Y+size.Y)*.5,0)
+    if not aerial or not aerial:IsA("Part") or aerial.Shape ~= Enum.PartType.Block
+        or not aerial.Anchored or aerial.CanCollide or aerial.CanTouch or aerial.CanQuery
+        or (aerial.Size-size).Magnitude > .08 or (aerial.Position-position).Magnitude > .20
+        or aerial.CFrame.UpVector:Dot(Vector3.yAxis) < .999
+        or aerial.LocalTransparencyModifier >= .95
+        or aerial:GetAttribute("SceneryLodHidden") == true then return nil end
+    return aerial
+end
+
 local function realOwner(arena,decor,base,direction,index,layer)
     local originalX, originalZ = authenticFootprint(base, arena)
     if not originalX or not originalZ then return nil end
@@ -123,7 +198,6 @@ local function realOwner(arena,decor,base,direction,index,layer)
         return nil
     end
     local body = owner:FindFirstChild("DistantRoofMass")
-    local aerial = owner:FindFirstChild("DistantAerial")
     local variant = arena:GetAttribute("VariantId")
     local height = (variant == "Towers" and 31 or 22)
         + layer*5 + ((index+layer)%3)*3
@@ -154,16 +228,10 @@ local function realOwner(arena,decor,base,direction,index,layer)
         or body.CFrame.LookVector:Dot(expected.LookVector) < .999
         or body.CFrame.UpVector:Dot(expected.UpVector) < .999
         or (math.abs(body.Transparency-original) > .035
-            and body.Transparency ~= 1)
-        or not aerial or not aerial:IsA("Part")
-        or aerial.Parent ~= owner or not aerial.Anchored
-        or aerial.CanCollide or aerial.CanTouch or aerial.CanQuery
-        or (aerial.Size-Vector3.new(.38,4+layer*2,.38)).Magnitude > .08
-        or (aerial.Position-
-            (origin+Vector3.new(0,height+2+layer,0))).Magnitude > .20 then
+            and body.Transparency ~= 1) then
         return nil
     end
-    return owner,body,height,original
+    return owner,body,original
 end
 
 local function valid(entry)
@@ -188,9 +256,92 @@ local function valid(entry)
     return true
 end
 
+local function mountAerial(entry, native, layer, approved)
+    if native.Transparency >= 1 then return end
+    local clone = Instance.new("Model")
+    clone.Name = "ForgedDistantAerial"
+    clone:SetAttribute("CosmeticOnly",true)
+    clone:SetAttribute("Original3DAssetId",AERIAL_ID)
+    local height = native.Size.Y
+    local width = layer == 1 and .94 or 1.08
+    local frame = entry.body.CFrame * CFrame.new(0,
+        entry.roofHeight-entry.body.Size.Y*.5+height*.5-.16,0)
+    local scale = Vector3.new(width/AERIAL_SIZE.X,height/AERIAL_SIZE.Y,width/AERIAL_SIZE.Z)
+    for _,part in ipairs({approved.hull,approved.sockets}) do
+        local mesh = part:Clone()
+        if not mesh then clone:Destroy();return end
+        local offset = approved.frame:ToObjectSpace(part.CFrame)
+        mesh.Size *= scale
+        mesh.CFrame = frame*CFrame.new(offset.Position*scale)*offset.Rotation
+        mesh.Massless = true
+        mesh.CastShadow = false
+        mesh.LocalTransparencyModifier = 0
+        mesh.Color = mesh.Color:Lerp(native.Color,.60)
+        mesh.Transparency = native.Transparency*.8
+        mesh.Parent = clone
+    end
+    clone.Parent = entry.model
+    local aerial = {model=clone,native=native,source=approved.source,
+        hull=approved.hull,sockets=approved.sockets,alpha=native.Transparency,connections={}}
+    entry.aerial = aerial
+    local function revoke()
+        if entry.aerial == aerial then releaseAerial(entry) end
+    end
+    local function checkSource()
+        if not trustedAerial(approved.source,approved.holder) then revoke() end
+    end
+    local function checkNative()
+        if genuineAerial(entry.owner,entry.body,layer) ~= native then revoke() end
+    end
+    local function watch(signal,callback)
+        table.insert(aerial.connections,signal:Connect(callback))
+    end
+    watch(clone.ChildRemoved,revoke)
+    watch(clone.AncestryChanged,function()
+        if clone.Parent ~= entry.model then revoke() end
+    end)
+    watch(approved.source.ChildAdded,revoke)
+    watch(approved.source.ChildRemoved,revoke)
+    watch(approved.source.AncestryChanged,checkSource)
+    watch(approved.source:GetPropertyChangedSignal("Name"),checkSource)
+    watch(approved.holder:GetPropertyChangedSignal("Name"),checkSource)
+    watch(approved.holder:GetAttributeChangedSignal("OwnerVerified"),checkSource)
+    for _,attribute in ipairs({"OwnerVerified","CosmeticOnly",AERIAL_TAG,"Original3DAssetId"}) do
+        watch(approved.source:GetAttributeChangedSignal(attribute),checkSource)
+    end
+    watch(native.AncestryChanged,checkNative)
+    watch(native:GetAttributeChangedSignal("SceneryLodHidden"),checkNative)
+    for _,property in ipairs({"Name","CFrame","Size","Shape","Anchored","CanCollide",
+        "CanTouch","CanQuery","LocalTransparencyModifier"}) do
+        watch(native:GetPropertyChangedSignal(property),checkNative)
+    end
+    native.Transparency = 1
+end
+
+local function syncAerial(entry, layer, approved)
+    local native = approved and genuineAerial(entry.owner,entry.body,layer)
+    local aerial = entry.aerial
+    if aerial and (not native or aerial.native ~= native
+        or aerial.source ~= approved.source or aerial.hull ~= approved.hull
+        or aerial.sockets ~= approved.sockets or aerial.model.Parent ~= entry.model
+        or #aerial.model:GetChildren() ~= 2) then
+        releaseAerial(entry)
+        aerial = nil
+    end
+    if aerial then
+        if native.Transparency < 1 then
+            aerial.alpha = native.Transparency
+            native.Transparency = 1
+        end
+    elseif native then
+        mountAerial(entry,native,layer,approved)
+    end
+end
+
 local function mount(arena,decor,base,owner,body,original,source,
         holder,id,yaw)
     local clone = source:Clone()
+    if not clone then return end
     local _,bounds = clone:GetBoundingBox()
     -- Preserve a single sculpt's proportions across all 27..47 stud
     -- native heights; bounded uniform scaling prevents a cheap stretched
@@ -243,7 +394,7 @@ local function mount(arena,decor,base,owner,body,original,source,
         arena=arena,decor=decor,base=base,owner=owner,body=body,
         original=original,source=source,holder=holder,model=clone,
         pieces=pieces,connections={},size=body.Size,
-        position=body.Position,look=body.CFrame.LookVector,
+        position=body.Position,look=body.CFrame.LookVector,roofHeight=scaled.Y,
     }
     mounted[owner] = entry
     if not valid(entry) then restore(owner);return end
@@ -258,6 +409,11 @@ local function mount(arena,decor,base,owner,body,original,source,
         source.AncestryChanged,base.AncestryChanged,
         body:GetPropertyChangedSignal("CFrame"),
         body:GetPropertyChangedSignal("Size"),
+        body:GetPropertyChangedSignal("Anchored"),
+        body:GetPropertyChangedSignal("CanCollide"),
+        body:GetPropertyChangedSignal("CanTouch"),
+        body:GetPropertyChangedSignal("CanQuery"),
+        clone.AncestryChanged,
     }) do
         entry.connections[#entry.connections+1] = signal:Connect(changed)
     end
@@ -267,7 +423,7 @@ local function mount(arena,decor,base,owner,body,original,source,
         end)
     entry.connections[#entry.connections+1] =
         clone.DescendantRemoving:Connect(function(part)
-            if part:IsA("MeshPart") then restore(owner) end
+            if table.find(pieces,part) then restore(owner) end
         end)
 end
 
@@ -277,7 +433,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
         activeArena = arena
     end
     local spec = BUDGET[tier] or BUDGET.Low
-    local stress = math.clamp(math.floor(tonumber(pressure) or 0),0,2)
+    local pressureValue = tonumber(pressure) or 0
+    local stress = pressureValue == pressureValue and math.clamp(math.floor(pressureValue),0,2) or 0
     local cap = spec.cap
     if tier == "High" and touch then cap = 3 end
     if stress == 1 then cap = math.floor(cap*.5) end
@@ -302,7 +459,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
     local source,holder,id,yaw = approved()
     for index,direction in ipairs(DIRECTIONS) do
         for layer=1,2 do
-            local owner,body,height,original =
+            local owner,body,original =
                 realOwner(arena,decor,base,direction,index,layer)
             if owner then
                 -- Exactly one approved model across all eight heights.
@@ -317,7 +474,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
                         score=SceneryLodRules.sceneryViewScore(
                             distance-(held and RETENTION*.55 or 0),
                             body.Position-cameraPoint,cameraLook),
-                        index=(index-1)*2+layer,
+                        index=(index-1)*2+layer,layer=layer,
                     }
                 end
             end
@@ -342,12 +499,15 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure,touch,cameraLook)
         end
     end
     for _,owner in ipairs(old) do restore(owner) end
+    local aerialSource = stress == 0 and source and approvedAerial() or nil
     for owner,candidate in pairs(wanted) do
         if not mounted[owner] then
             mount(arena,decor,base,owner,candidate.body,
                 candidate.original,candidate.source,candidate.holder,
                 candidate.id,candidate.yaw)
         end
+        local entry = mounted[owner]
+        if entry then syncAerial(entry,candidate.layer,aerialSource) end
     end
 end
 
@@ -360,13 +520,17 @@ function Kit.count()
 end
 
 function Kit.replacedNativeCount()
-    local n = 0
+    local roofs, aerials = 0, 0
     for _,entry in pairs(mounted) do
-        if valid(entry) and entry.body.Transparency == 1 then
-            n += 1
+        if valid(entry) then
+            if entry.body.Transparency == 1 then roofs += 1 end
+            local aerial = entry.aerial
+            if aerial and aerial.model.Parent == entry.model
+                and aerial.native.Parent == entry.owner
+                and aerial.native.Transparency == 1 then aerials += 1 end
         end
     end
-    return n
+    return roofs,aerials
 end
 
 return Kit

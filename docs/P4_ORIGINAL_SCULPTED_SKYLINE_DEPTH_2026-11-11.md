@@ -103,3 +103,21 @@ checks all five variants × eight heights/positions, genuine registry
 provenance, 3D bounds, fallback behavior and strict client import
 separation. Actual Model residency still requires Roblox engine QA and
 Android snapshots **before public publication**.
+
+## Antennes forgées sur les huit toits de chaque arène
+
+Le fût facetté et ses deux embouts proviennent du modèle original approuvé
+`105555650820011`. À la distance de l’horizon, ces deux MeshParts
+conservent la silhouette du mât avec 384 triangles source. Ils se fixent
+au sommet du toit sculpté, dont la hauteur peut différer du toit natif.
+Les deux rangées gardent leurs hauteurs d’antenne de 6 et 8 studs.
+
+Les cinq arènes fournissent 40 emplacements. L’antenne suit la sélection
+du toit par la caméra, avec un maximum simultané de 1 en Low, 2 en Medium,
+3 en High tactile et 4 en High sur ordinateur. Dès le premier niveau de
+pression graphique, les antennes natives reprennent le relais. La perte du
+maillage d’une antenne restaure sa forme d’origine indépendamment du toit.
+
+`LocalSkylineDepthPrimitivesReplaced` compte les toits et
+`LocalSkylineDepthAerialsReplaced` compte les antennes. La télémétrie
+paysage couvre désormais 68 emplacements ciblés par arène.

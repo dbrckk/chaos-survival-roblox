@@ -483,6 +483,12 @@ assert 'base:SetAttribute("OriginalSizeX", base.Size.X)' in ORIGINAL_MAP
 assert 'base:SetAttribute("OriginalSizeZ", base.Size.Z)' in ORIGINAL_MAP
 print("PASS five hero, four skyline and eight outboard sculpted roofs",
       "retain real source 3D during arena shrink with no new GPU slots")
+assert 'AERIAL_ID = 105555650820011' in DEPTH_SKYLINE
+assert 'approved.hull,approved.sockets' in DEPTH_SKYLINE
+assert 'stress == 0 and source and approvedAerial()' in DEPTH_SKYLINE
+assert 'LocalSkylineDepthAerialsReplaced' in TOWERS_LOD
+print("PASS distant aerials reuse two source MeshParts per resident roof",
+      "and leave the optional geometry budget under pressure")
 
 # The original four giant 36-stud Harbor cranes already have two
 # creator-approved seven-material kinetic assets. Low native crane LOD is

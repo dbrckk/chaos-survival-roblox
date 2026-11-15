@@ -61,10 +61,10 @@ additionne les seuls compteurs déjà calculés par cinq kits
 | --- | ---: |
 | ExteriorSilhouette (4 tours × 4 corps) | 16 |
 | SkylineStructure (4 × 4 corps) | 16 |
-| SkylineDepth (8 toits) | 8 |
+| SkylineDepth (8 toits et 8 antennes) | 16 |
 | ExteriorRidges (4 coins × 3 wedges) | 12 |
 | Atmosphere (4 piliers + 4 spines) | 8 |
-| **Total des seules cinq familles** | **60** |
+| **Total des cinq familles** | **68** |
 
 Trois attributs locaux : `LocalP4LandscapeTargetSourceSlots`,
 `LocalP4LandscapeReplacedSourceSlots`,

@@ -13,6 +13,7 @@ local ArenaKeelMeshKit = require("../../src/client/ArenaKeelMeshKit")
 local UnderstructureBeamMeshKit = require("../../src/client/UnderstructureBeamMeshKit")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
 local CornerMonument = require("../../src/client/ApprovedCornerMonumentMeshKit")
+local SkylineDepth = require("../../src/client/ApprovedSkylineDepthMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
@@ -848,6 +849,118 @@ describe("Chaos Survival engine", function()
         for _, model in ipairs(crownTemplates) do model.Parent:Destroy() end
         routes:Destroy()
         facades:Destroy()
+    end)
+    it("fits forty aerial silhouettes to real skyline roofs and restores each under streaming or pressure", function()
+        local storage = game:GetService("ReplicatedStorage")
+        local function template(folder, name, id, tag, size)
+            local holder = Instance.new("Folder")
+            holder.Name = folder
+            holder:SetAttribute("OwnerVerified", true)
+            holder.Parent = storage
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("Original3DAssetId", id)
+            model:SetAttribute("CosmeticOnly", true)
+            model:SetAttribute("OwnerVerified", true)
+            model:SetAttribute(tag, true)
+            for index = 1, 7 do
+                local mesh = Instance.new("MeshPart")
+                mesh.Name = "Mesh" .. index
+                mesh.Size = size[index] or Vector3.one * .3
+                mesh.Position = Vector3.new(0, index > #size and index * .2 or 0, 0)
+                mesh.Anchored = true
+                mesh.CanCollide = false
+                mesh.CanTouch = false
+                mesh.CanQuery = false
+                mesh.Parent = model
+            end
+            model.Parent = holder
+            return model, holder
+        end
+        local roof, roofs = template("ApprovedSkylineDepthSculptTemplates", "Roof",
+            80692067525256, "OriginalSkylineDepthSculpt3D", {Vector3.new(7.19, 33.95, 11.4)})
+        local mast, masts = template("ApprovedVariantIdentitySpineTemplates", "Classic",
+            105555650820011, "OriginalVariantIdentitySpine3D",
+            {Vector3.new(2.16, 11.92, 2.16), Vector3.new(1.9388, 11.52, 1.8788)})
+        local bucket = assert(workspace:FindFirstChild("ApprovedSkylineDepthLocal"))
+        local total = 0
+        for _, variant in ipairs(ArenaVariants.Order) do
+            local arena = MapBuilder.buildArena(Config, variant, ArenaVariants, VisualTheme)
+            local base = arena.Base
+            local decor = arena.Decor
+            for _, direction in ipairs({"North", "East", "South", "West"}) do
+                for layer = 1, 2 do
+                    local owner = decor:FindFirstChild("SkylineDepth" .. direction .. layer)
+                    local body = owner.DistantRoofMass
+                    local aerial = owner.DistantAerial
+                    local alpha = aerial.Transparency
+                    -- Reset camera-retention before selecting another roof.
+                    SkylineDepth.sync(nil, Vector3.zero, "Low", false)
+                    SkylineDepth.sync(arena, body.Position, "Low", true, 0, true)
+                    local depth, aerials = SkylineDepth.replacedNativeCount()
+                    assert(depth == 1 and aerials == 1, variant .. " " .. owner.Name)
+                    assert(body.Transparency == 1 and aerial.Transparency == 1)
+                    local sculpture = assert(bucket:FindFirstChild("Sculpted" .. owner.Name))
+                    local fitted = assert(sculpture:FindFirstChild("ForgedDistantAerial"))
+                    assert(#fitted:GetChildren() == 2 and fitted:GetAttribute("Original3DAssetId") == 105555650820011)
+                    local envelope = fitted.Mesh1
+                    local top = sculpture.Mesh1.Position.Y + sculpture.Mesh1.Size.Y * .5
+                    assert(math.abs(envelope.Position.Y - envelope.Size.Y * .5 - top + .16) < .015)
+                    assert(math.abs(envelope.Position.X - body.Position.X) < .015
+                        and math.abs(envelope.Position.Z - body.Position.Z) < .015)
+                    assert(math.abs(envelope.Size.Y - aerial.Size.Y) < .015)
+                    for _, part in ipairs(fitted:GetChildren()) do
+                        assert(part:IsA("MeshPart") and part.Anchored and part.Massless
+                            and not part.CanCollide and not part.CanTouch and not part.CanQuery and not part.CastShadow)
+                    end
+                    total += 1
+                    if layer == 1 and direction == "North" then
+                        local size = base.Size
+                        base.Size = Vector3.new(size.X * .75, size.Y, size.Z * .75)
+                        SkylineDepth.sync(arena, body.Position, "Low", true, 0, true)
+                        assert(aerial.Transparency == 1 and base.CanCollide)
+                        fitted.Mesh1:Destroy()
+                        task.wait()
+                        assert(math.abs(aerial.Transparency - alpha) < .001 and sculpture.Parent == bucket)
+                        SkylineDepth.sync(arena, body.Position, "Low", true, 0, true)
+                        local sourcePiece = mast.Mesh2
+                        sourcePiece.Parent = nil
+                        task.wait()
+                        assert(math.abs(aerial.Transparency - alpha) < .001 and body.Transparency == 1)
+                        sourcePiece.Parent = mast
+                        SkylineDepth.sync(arena, body.Position, "Low", true, 0, true)
+                        assert(aerial.Transparency == 1)
+                        SkylineDepth.sync(arena, body.Position, "Low", true, 1, true)
+                        assert(body.Transparency < 1 and math.abs(aerial.Transparency - alpha) < .001)
+                    end
+                end
+            end
+            SkylineDepth.sync(arena, base.Position, "High", true, 0, true)
+            local depth, aerials = SkylineDepth.replacedNativeCount()
+            assert(depth == 3 and aerials == 3)
+            SkylineDepth.sync(arena, base.Position, "High", true, 1, true)
+            depth, aerials = SkylineDepth.replacedNativeCount()
+            assert(depth == 1 and aerials == 0)
+            if variant == "Classic" then
+                SkylineDepth.sync(arena, base.Position, "High", true, 0, false)
+                local target = bucket:GetChildren()[1]
+                local owner = decor:FindFirstChild(target.Name:sub(9))
+                target:Destroy()
+                task.wait()
+                assert(owner.DistantRoofMass.Transparency < 1 and owner.DistantAerial.Transparency < 1)
+                SkylineDepth.sync(arena, base.Position, "High", true, 0, false)
+                local part = roof.Mesh1
+                part.Parent = nil
+                task.wait()
+                assert(SkylineDepth.count() == 0 and owner.DistantAerial.Transparency < 1)
+                part.Parent = roof
+            end
+            SkylineDepth.sync(nil, Vector3.zero, "Low", false)
+            arena.Parent:Destroy()
+        end
+        expect(total).toBe(40)
+        roofs:Destroy()
+        masts:Destroy()
     end)
     it("mounts genuine approved suspended arena keel only BELOW real collision base, tiered and shrink safe", function()
         -- Source #41669929967 was moderation Approved. The CI registry

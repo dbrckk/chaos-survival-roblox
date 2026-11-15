@@ -1415,8 +1415,8 @@ task.spawn(function()
             player:SetAttribute("LocalPrimarySkylinePrimitivesReplaced",
                 primaryNative)
         end
-        -- Eight distant wedge roofs per arena: original approved sculpted
-        -- tower art, camera-ranked and pressure-budgeted; native aerials stay.
+        -- Eight distant roof and antenna pairs per arena share the same
+        -- camera order and pressure budget.
         ApprovedSkylineDepthMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,
             player:GetAttribute("OptionalVfxPressure"),isTouch,cameraLook)
@@ -1426,17 +1426,20 @@ task.spawn(function()
             player:SetAttribute("LocalApprovedSkylineDepthModelCount",
                 depthModels)
         end
-        local depthReplaced=ApprovedSkylineDepthMeshKit.replacedNativeCount()
+        local depthReplaced,depthAerials=ApprovedSkylineDepthMeshKit.replacedNativeCount()
         if player:GetAttribute("LocalSkylineDepthPrimitivesReplaced")
             ~=depthReplaced then
             player:SetAttribute("LocalSkylineDepthPrimitivesReplaced",
                 depthReplaced)
         end
+        if player:GetAttribute("LocalSkylineDepthAerialsReplaced") ~= depthAerials then
+            player:SetAttribute("LocalSkylineDepthAerialsReplaced",depthAerials)
+        end
         -- P4 targeted source-slot replacement ratio, NOT global game
         -- mesh coverage or a guarantee of resident rendered geometry.
-        -- These five disjoint generator families define 60 nonphysical
+        -- These five disjoint generator families define 68 nonphysical
         -- native visual bodies per variant: exterior towers 16,
-        -- skyline primary 16, skyline depth 8, outboard ridges 12,
+        -- skyline primary 16, skyline depth 16, outboard ridges 12,
         -- and atmospheric columns 8. Use already sampled owner counts,
         -- no Workspace traversal or extra loop on Android.
         local generatedSkyline = workspace:FindFirstChild("GeneratedMap")
@@ -1445,10 +1448,10 @@ task.spawn(function()
             and arena:FindFirstChild("Base")
             and arena:FindFirstChild("Decor")
             and arena:FindFirstChild("Atmosphere")
-        local skylineTargetSlots = skylineActive and 60 or 0
+        local skylineTargetSlots = skylineActive and 68 or 0
         local skylineSourceReplaced = skylineTargetSlots > 0
             and math.clamp(nativeTowersReplaced + ridgesHidden
-                + primaryNative + depthReplaced + atmosphereNatives,
+                + primaryNative + depthReplaced + depthAerials + atmosphereNatives,
                 0, skylineTargetSlots) or 0
         local skylineSourcePercent = skylineTargetSlots > 0
             and math.floor(skylineSourceReplaced

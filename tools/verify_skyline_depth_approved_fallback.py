@@ -92,8 +92,16 @@ assert "High={cap=4,distance=570}" in KIT
 assert "if stress >= 2 then cap = 0 end" in KIT
 assert 'if tier == "High" and touch then cap = 3 end' in KIT
 assert KIT.index("clone.Parent = bucket")<KIT.index("body.Transparency = 1")
-assert "DistantAerial.Transparency" not in KIT
-assert "aerial.Transparency" not in KIT
+assert 'AERIAL_ID = 105555650820011' in KIT
+assert MODELS["variant_classic_grid_marker_sculpt"]["asset_id"] == "105555650820011"
+assert MODELS["variant_classic_grid_marker_sculpt"]["moderation"] == "Approved"
+for guard in ('trustedAerial(source, holder)', 'local function genuineAerial',
+              'approved.hull,approved.sockets', 'entry.roofHeight-entry.body.Size.Y',
+              'clone.Parent = entry.model', 'stress == 0 and source and approvedAerial()',
+              'aerial.native.Transparency = aerial.alpha', 'return roofs,aerials'):
+    assert guard in KIT,guard
+assert 'LocalSkylineDepthAerialsReplaced' in LOD
+assert 'local skylineTargetSlots = skylineActive and 68 or 0' in LOD
 
 # Compute all 8 possible owner silhouettes in each of the 5 variants,
 # including 27-stud Classic roofs and 47-stud Towers roofs. Only nearby
@@ -105,7 +113,7 @@ for variant in ("Classic","Towers","Crossroads","Orbital","Harbor"):
         for layer in (1,2):
             height=(31 if variant=="Towers" else 22)+5*layer+3*((direction+layer)%3)
             width=10+3*layer
-            scale=min(height/33.95,width*1.35/11.4,8*2/7.19)
+            scale=min(height/33.95,width*1.15/11.4,8*1.28/7.19)
             fitted_y=33.95*scale
             assert .72<=scale<=1.55,(variant,direction,layer,scale)
             assert fitted_y>=height*.79,(variant,direction,layer,fitted_y)
@@ -114,7 +122,7 @@ for variant in ("Classic","Towers","Crossroads","Orbital","Harbor"):
             assert 7.19*scale<=8*1.28
             count+=1
     assert count==8
-    print("PASS",variant,"8 approved skyline candidates; LOD cap unchanged")
+    print("PASS",variant,"8 approved roof and aerial pairs; LOD cap unchanged")
 
 print("PASS approved original asset, map provenance, no physics or external client fetch")
 print("PASS native rollback, 7-MeshPart integrity, one Low mesh and Android pressure budgets")
