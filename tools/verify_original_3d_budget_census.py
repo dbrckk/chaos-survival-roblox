@@ -2162,6 +2162,8 @@ assert 'Low={arch=135,casing=155,helix=0,promenade=118}' in P4_CLIENT
 shrink_columns=(ROOT/"src/server/Disasters/ShrinkingArena.lua").read_text(encoding="utf8")
 assert 'column.model:PivotTo(column.pivot + offset)' in shrink_columns
 assert 'moveColumns(scale)' in shrink_columns and 'moveColumns(1)' in shrink_columns
+assert 'local expected = math.max(8.58,2*limits[1],2*limits[2])' in (
+    ROOT/"tests/engine/shrinking-arena.spec.luau").read_text(encoding="utf8")
 print("PASS forged column casings fit the visible slab and face inward with shared shrink/restore")
 assert 'OrbitalHelixRamp' in P4_HELIX
 assert 'HelixUnderframe' in P4_HELIX

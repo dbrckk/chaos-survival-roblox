@@ -83,8 +83,12 @@ describe("Shrinking Arena mobility integration", function()
             local light = decor:FindFirstChild("FrameColumnGlow" .. i)
             local front = casing:FindFirstChild("ArmoredFrontShell")
             expect(casing.PrimaryPart).toBe(foot)
-            expect(front.CFrame.LookVector:Dot((base.Position-foot.Position).Unit)>.999).toBe(true)
-            expect(foot.Position.Y-foot.Size.Y*.5>=base.Position.Y+base.Size.Y*.5).toBe(true)
+            local toward = base.Position-foot.Position
+            toward = Vector3.new(toward.X,0,toward.Z)
+            assert(front.CFrame.LookVector:Dot(toward.Unit)>.999,
+                "column front faces away from the arena: "..casing.Name)
+            assert(foot.Position.Y-foot.Size.Y*.5>=base.Position.Y+base.Size.Y*.5,
+                "native casing foot is below the floor: "..casing.Name)
             columnParts[i] = {foot,core,light,casing:FindFirstChild("LandmarkNavigationHead")}
         end
         local columnFrames = {}
@@ -132,11 +136,25 @@ describe("Shrinking Arena mobility integration", function()
             expect(foot.LocalTransparencyModifier).toBe(1)
             expect(head.LocalTransparencyModifier).toBe(0)
             expect(mesh.LocalTransparencyModifier).toBe(0)
-            expect(math.abs(mesh.Size.Z-8.58)<.03).toBe(true)
-            expect(math.abs(mesh.Position.Y-mesh.Size.Y*.5
-                -(foot.Position.Y-foot.Size.Y*.5))<.03).toBe(true)
-            expect((Vector3.new(mesh.Position.X,foot.Position.Y,mesh.Position.Z)
-                -foot.Position).Magnitude<.03).toBe(true)
+            local widthAxis = owned.ArmoredFrontShell.CFrame.RightVector
+            assert(math.abs(mesh.CFrame.LookVector:Dot(widthAxis))>.999,
+                "long-Z casing was not rotated onto the native fascia")
+            local limits = {}
+            for _,name in ipairs({"AerialCantilever-1","AerialCantilever1"}) do
+                local spar = owned:FindFirstChild(name)
+                local offset = (spar.Position-foot.Position):Dot(widthAxis)
+                local half = (math.abs(spar.CFrame.RightVector:Dot(widthAxis))*spar.Size.X
+                    + math.abs(spar.CFrame.UpVector:Dot(widthAxis))*spar.Size.Y
+                    + math.abs(spar.CFrame.LookVector:Dot(widthAxis))*spar.Size.Z)*.5
+                table.insert(limits, math.abs(offset)+half)
+            end
+            local expected = math.max(8.58,2*limits[1],2*limits[2])
+            assert(math.abs(mesh.Size.Z-expected)<.03, string.format(
+                "casing width is %.3f, expected %.3f",mesh.Size.Z,expected))
+            assert(math.abs(mesh.Position.Y-mesh.Size.Y*.5
+                -(foot.Position.Y-foot.Size.Y*.5))<.03, "casing foot does not meet the slab")
+            assert((Vector3.new(mesh.Position.X,foot.Position.Y,mesh.Position.Z)
+                -foot.Position).Magnitude<.03, "casing and native foot are misaligned")
         end
         verifyFit()
 
