@@ -380,7 +380,11 @@ local function physicalOwner(native)
         or name:match("^SkySpine(%d+)_")
         or name:match("^Promenade(%d+)_")
     if not id then return nil end
-    return activePlatforms:FindFirstChild("Platform"..id)
+    local deck = activePlatforms:FindFirstChild("Platform"..id)
+    if not deck and name:match("^PlatformSupport%d+_") then
+        return activePlatforms:FindFirstChild("Skybridge"..id)
+    end
+    return deck
 end
 
 -- A pure condition on REAL Roblox Parts, also checked in the
@@ -432,6 +436,10 @@ local function physicalSafe(native)
             or native.Name:match("^PlatformUnderFrame%d+$")) then return false end
     if native.Name:match("^SkybridgeRib%d+_") then
         return bridgePieces[owner] ~= nil and bridgeSafe(owner)
+    end
+    if owner and owner.Name:match("^Skybridge%d+$") then
+        return ownerSafe(owner, activePlatforms)
+            and LargeStructure.matchesSkybridgeSupport(native,owner)
     end
     if PlatformIdentityLodRules.promenadePylonIndex(native) then
         return ownerSafe(owner, activePlatforms)
@@ -557,26 +565,33 @@ local function watchOwner(part)
     if platformId and not (kind == "carapace" or kind == "cradle"
         or kind == "rim"
         or verifiedSupportIndices[id] == true) then return end
-    if bridgeId and kind ~= "bridge" then return end
+    if bridgeId and kind ~= "bridge" and verifiedSupportIndices[id] ~= true then return end
     watchedOwners[part] = true
     ownerBaselines[part] = part.Size
+    local pylons = promenadePylonsByDeck[id]
+    local function refreshPylons()
+        for _, pylon in ipairs(pylons) do reconcilePylon(pylon) end
+    end
+    local function refresh()
+        if bridgeId and active[id] ~= "bridge" and pylons then
+            refreshPylons()
+        else
+            reconcile()
+        end
+    end
     for _, property in ipairs({"CanCollide","Transparency","Size","Anchored"}) do
         watchers[#watchers+1] =
-            part:GetPropertyChangedSignal(property):Connect(reconcile)
+            part:GetPropertyChangedSignal(property):Connect(refresh)
     end
     for _, attribute in ipairs({"CollapsePhase","BridgeShutterPhase"}) do
         watchers[#watchers+1] =
-            part:GetAttributeChangedSignal(attribute):Connect(reconcile)
+            part:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
     if bridgeId then
         watchers[#watchers+1] =
-            part:GetAttributeChangedSignal("ChaosSkybridge"):Connect(reconcile)
+            part:GetAttributeChangedSignal("ChaosSkybridge"):Connect(refresh)
     end
-    local pylons = promenadePylonsByDeck[id]
     if pylons then
-        local function refreshPylons()
-            for _, pylon in ipairs(pylons) do reconcilePylon(pylon) end
-        end
         watchers[#watchers+1] =
             part:GetPropertyChangedSignal("CFrame"):Connect(refreshPylons)
         for _, attribute in ipairs({"PromenadeLane","PromenadeStep",
@@ -677,10 +692,13 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     or part.Name:match("^Promenade(%d+)_")
                 if id then verifiedSupportIndices[id] = true end
                 local deck = id and platforms and platforms:FindFirstChild("Platform"..id)
+                local bridge = id and platforms and not deck
+                    and platforms:FindFirstChild("Skybridge"..id)
                 local routeSupport = deck and part.Name:match("^PlatformSupport%d+_%d+$")
                     and (deck:GetAttribute("PromenadeStep") ~= nil
                         or deck:GetAttribute("SkySpineInterchange") == true)
-                if isPromenadePylon or routeSupport then
+                if isPromenadePylon or routeSupport
+                    or (bridge and LargeStructure.matchesSkybridgeSupport(part,bridge)) then
                     local pylons = promenadePylonsByDeck[id] or {}
                     promenadePylonsByDeck[id] = pylons
                     pylons[#pylons + 1] = part

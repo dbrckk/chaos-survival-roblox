@@ -555,6 +555,15 @@ local function rebuild()
         UserInputService.TouchEnabled, decor,
         nearCameraCarapaces, nearLargeDeckHulls)
 
+    local nearCradles,nearSupports,lowBridgePier =
+        PremiumLargeStructureMeshKit.selectNearRouteStructures(
+            ordered,decor,variant,tier.Name,base,cameraPoint,cameraLook,
+            player:GetAttribute("OptionalVfxPressure"),
+            tier.Name == "High" and not UserInputService.TouchEnabled)
+    -- A deep column next to the viewer can share Low's two seven-piece
+    -- slots with a foreground finish. Mid-span retains the complete truss.
+    if lowBridgePier then nearBridgeGirders = {} end
+
     -- Low visual source reservation is an actual successful MODEL mount,
     -- never a speculative source/size check. A missing or malformed clone
     -- must release its exclusive budget for the next approved art family
@@ -687,16 +696,6 @@ local function rebuild()
     local mountedLargeDeckHulls = 0
     local mountedRimDecks = 0
     local mountedServiceHatches3D = 0
-    local nearCradles,nearSupports={},{}
-    if not lowBridgeChosen then
-        nearCradles,nearSupports =
-            PremiumLargeStructureMeshKit.selectNearRouteStructures(
-                ordered,decor,variant,tier.Name,base,
-                camera and camera.CFrame.Position or nil,
-                camera and camera.CFrame.LookVector or nil,
-                player:GetAttribute("OptionalVfxPressure"),
-                tier.Name == "High" and not UserInputService.TouchEnabled)
-    end
     -- On HIGH DESKTOP only, exchange up to four seven-piece approved
     -- COLUMN source slots for the same number of seven-piece, broad
     -- open-lattice underframes. The aggregate structural module ceiling
@@ -917,7 +916,7 @@ local function rebuild()
                 and nearSupports[platform] == true then
                 local columns = PremiumLargeStructureMeshKit.supports(
                     folder, decor, platform, variant, tier.Name,
-                    visualIndex, supportBudget, true)
+                    visualIndex, supportBudget, true, cameraPoint)
                 if columns then
                     supportBudget -= columns.modules
                     mountedCloseSupports += #columns.covered
@@ -1379,6 +1378,14 @@ local function watchDecor(generated)
                 local deck = platforms and
                     platforms:FindFirstChild("Platform"..tostring(index))
                 local camera = workspace.CurrentCamera
+                if not deck and platforms and variant == "Towers" then
+                    local bridge = platforms:FindFirstChild("Skybridge"..tostring(index))
+                    if camera and PremiumLargeStructureMeshKit.matchesSkybridgeSupport(part,bridge)
+                        and (part.Position-camera.CFrame.Position).Magnitude <= 125 then
+                        queueSupportRebuild()
+                    end
+                    return
+                end
                 if not deck or not deck:IsA("BasePart")
                     or not deck.CanCollide or not camera
                     or (deck.Position-camera.CFrame.Position).Magnitude > 125 then

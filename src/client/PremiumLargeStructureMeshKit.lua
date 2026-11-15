@@ -189,6 +189,44 @@ local function validNativeSupport(part,index)
         and part.Size.Y <= 47
 end
 
+-- MapBuilder places two .72-stud square posts at the ends of each
+-- Towers span. ShrinkingArena moves their longitudinal offset by the
+-- same ratio as the 49-stud deck and keeps their cross-section constant.
+function Kit.matchesSkybridgeSupport(part, deck)
+    if not part or not deck or not deck:IsA("BasePart")
+        or deck:GetAttribute("ChaosSkybridge") ~= true then return false end
+    local id = deck.Name:match("^Skybridge(%d+)$")
+    local side = id and part.Name:match("^PlatformSupport"..id.."_([12])$")
+    local platforms = deck.Parent
+    local arena = platforms and platforms.Parent
+    if not side or not arena or arena:GetAttribute("VariantId") ~= "Towers"
+        or arena:FindFirstChild("Platforms") ~= platforms
+        or arena:FindFirstChild("Decor") ~= part.Parent
+        or not validNativeSupport(part, tonumber(id))
+        or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+        or part.Transparency >= .95 then return false end
+
+    local size = deck.Size
+    local alongX = size.X > size.Z
+    local span = math.max(size.X, size.Z)
+    if span < 18.15 or span > 49.09 or math.abs(math.min(size.X,size.Z)-4.5) > .09
+        or math.abs(size.Y-1) > .09 then return false end
+    local height = deck.Position.Y - size.Y*.5 - 1.15
+    local sign = side == "1" and -1 or 1
+    local along = 22.5 * span/49 * sign
+    local across = .25 * sign
+    local expected = deck.CFrame*CFrame.new(alongX and along or across,
+        -(size.Y + height)*.5, alongX and across or along)
+    return (part.Position-expected.Position).Magnitude < .15
+        and (part.Size-Vector3.new(.72,height,.72)).Magnitude < .10
+        and part.CFrame.UpVector:Dot(expected.UpVector) > .999
+        and part.CFrame.LookVector:Dot(expected.LookVector) > .999
+end
+
+local function supportSlots(tier, bridge)
+    return (tier == "High" or (bridge and tier == "Medium")) and 2 or 1
+end
+
 -- Source-fit and module cost for ONE genuine native support. This is
 -- intentionally shared by candidate selection and mounting: a 42-stud
 -- column consumes three seven-MeshPart modules and a too-narrow native
@@ -519,6 +557,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     -- Bind by actual named server support ownership; an unstreamed
     -- or absent support must never consume an authentic mesh slot.
     local supportsAvailable={}
+    local bridgeSupports={}
     if supportSource then
         local grouped={}
         local arena = decor.Parent
@@ -531,8 +570,20 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local segments
             if id and validNativeSupport(part,id) then
                 local owner = platformFolder and platformFolder:FindFirstChild("Platform"..id)
-                local fitSize = supportFitSize(part,owner)
-                if fitSize then segments=Kit.supportFit(fitSize,supportBounds) end
+                if owner then
+                    local fitSize = supportFitSize(part,owner)
+                    if fitSize then segments=Kit.supportFit(fitSize,supportBounds) end
+                elseif variant == "Towers" and platformFolder and (tonumber(pressure) or 0)==0 then
+                    local bridge = platformFolder:FindFirstChild("Skybridge"..id)
+                    if Kit.matchesSkybridgeSupport(part,bridge) then
+                        segments=Kit.supportFit(part.Size,supportBounds)
+                        if segments then
+                            local posts = bridgeSupports[id] or {}
+                            table.insert(posts,part)
+                            bridgeSupports[id] = posts
+                        end
+                    end
+                end
             elseif variant~="Harbor" and platformFolder then
                 id=PlatformIdentityLodRules.promenadePylonIndex(part)
                 local owner=id and platformFolder:FindFirstChild("Platform"..id)
@@ -546,15 +597,13 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                 group[#group+1]={name=part.Name,modules=segments}
             end
         end
-        -- Mounting consumes the first ONE (Medium/Low) or TWO (High)
-        -- genuine named supports in lexical order. Reserve that exact
-        -- number of seven-MeshPart source modules, never the cheapest
-        -- unrelated pillar. Otherwise the selected deck can exhaust
-        -- the quota before its nominated native posts are mounted.
+        -- Reserve the number of modules the installer will consume.
+        -- Both Towers bridge posts have the same height and module cost.
+        -- Other support families use their existing authored order.
         for id,group in pairs(grouped) do
             table.sort(group,sortNativeSupports)
             local cost=0
-            for i=1,math.min(#group,tier=="High" and 2 or 1) do
+            for i=1,math.min(#group,supportSlots(tier,bridgeSupports[id] ~= nil)) do
                 cost+=group[i].modules
             end
             if cost>0 then supportsAvailable[id]=cost end
@@ -592,12 +641,15 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     local cradles,supports={},{}
 
     for _,platform in ipairs(platforms) do
-        local id=platform.Name:match("^Platform(%d+)$")
-        id=id and tonumber(id) or nil
+        local bridgeId=platform.Name:match("^Skybridge(%d+)$")
+        local id=tonumber(bridgeId or platform.Name:match("^Platform(%d+)$"))
+        local posts=bridgeId and bridgeSupports[id]
+        local shutter=posts and platform:GetAttribute("BridgeShutterPhase")
         if id and platform:IsA("BasePart") and platform.Parent
             and platform.Anchored and platform.CanCollide
             and platform.Transparency < .75
-            and platform:GetAttribute("ChaosSkybridge")~=true
+            and (platform:GetAttribute("ChaosSkybridge")~=true
+                or (posts and (not shutter or shutter=="Idle")))
             and (platform:GetAttribute("CollapsePhase")==nil
                 or platform:GetAttribute("CollapsePhase")=="Normal"
                 or platform:GetAttribute("CollapsePhase")=="Safe") then
@@ -634,13 +686,29 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             -- inside their already existing independent budgets.
             local lowHasCompleteSpineCradle=tier=="Low" and spine
                 and hasCradle
+            local supportDistance=delta.Magnitude
+            local supportScore=score
+            local nearPier=false
+            if posts then
+                supportScore,supportDistance=math.huge,math.huge
+                for _,post in ipairs(posts) do
+                    local offset=post.Position-focus
+                    supportDistance=math.min(supportDistance,offset.Magnitude)
+                    supportScore=math.min(supportScore,
+                        Vector3.new(offset.X,offset.Y*.65,offset.Z).Magnitude
+                            +cameraFacingBias(offset))
+                end
+                -- A shrinking bridge must still retain a midspan zone.
+                local localFocus=platform.CFrame:PointToObjectSpace(focus)
+                local longitudinal=size.X>size.Z and localFocus.X or localFocus.Z
+                nearPier=supportDistance<=18 and math.abs(longitudinal)>=long*.23
+            end
             if supportSource and supportsAvailable[id]
                 and not lowHasCompleteSpineCradle
-                and long>=7 and long<=36 and short>=7
-                and (tier ~= "Low" or (platform.Position-cameraPoint).Magnitude
-                    <= 125) then
-                supports[#supports+1]={platform=platform,score=score,
-                    cost=supportsAvailable[id]}
+                and (posts or (long>=7 and long<=36 and short>=7))
+                and (tier ~= "Low" or supportDistance <= 125) then
+                supports[#supports+1]={platform=platform,score=supportScore,
+                    cost=supportsAvailable[id],nearPier=nearPier}
             end
         end
     end
@@ -743,7 +811,10 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             tier=="High" and 5 or (tier=="Medium" and 2 or 1),
             modules)
     end
-    return cradleSet,supportSet
+    local closest=supports[1]
+    local lowBridgePier=tier=="Low" and closest and supportSet[closest.platform]
+        and closest.nearPier and closest.platform or nil
+    return cradleSet,supportSet,lowBridgePier
 end
 
 -- Returns {parts,covered,disconnects,modules} or nil. A support is masked
@@ -751,11 +822,19 @@ end
 -- Each named native server support remains anchored and drives its Welds.
 -- Shrink changes the ORIGINAL Part.Size; the only connection is event-based,
 -- and scales the imported art X/Z while preserving its full vertical length.
-function Kit.supports(parent,decor,platform,variant,tier,index,available,selected)
+function Kit.supports(parent,decor,platform,variant,tier,index,available,selected,cameraPoint)
     if available <= 0 or not parent
         or not decor or not decor:IsA("Folder") or not platform
-        or platform:GetAttribute("ChaosSkybridge") == true
         or (tier == "Low" and selected ~= true) then return nil end
+    local bridge = platform:GetAttribute("ChaosSkybridge") == true
+    if bridge then
+        local collapse = platform:GetAttribute("CollapsePhase")
+        local shutter = platform:GetAttribute("BridgeShutterPhase")
+        if variant ~= "Towers" or selected ~= true or not platform.Anchored
+            or not platform.CanCollide or platform.Transparency >= .75
+            or (collapse and collapse ~= "Normal" and collapse ~= "Safe")
+            or (shutter and shutter ~= "Idle") then return nil end
+    end
     local source,box,sourceParts = verified(variant)
     if not source or (tier == "Low" and sourceParts ~= 7)
         or not platform.Parent
@@ -772,7 +851,11 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
     local natives = {}
     local promenadePylons = {}
     for _,child in ipairs(decor:GetChildren()) do
-        if validNativeSupport(child,index)
+        if bridge then
+            if Kit.matchesSkybridgeSupport(child,platform) then
+                natives[#natives+1]=child
+            end
+        elseif validNativeSupport(child,index)
             and (not Kit.validNativeSkyPylon(child,index)
                 or platform:GetAttribute("SkySpineStep")~=nil) then
             natives[#natives+1]=child
@@ -784,8 +867,15 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             natives[#natives+1]=child
         end
     end
-    table.sort(natives,sortNativeSupports)
-    local maxSupports = tier=="High" and 2 or 1
+    if bridge and typeof(cameraPoint) == "Vector3" then
+        table.sort(natives,function(a,b)
+            local da,db=(a.Position-cameraPoint).Magnitude,(b.Position-cameraPoint).Magnitude
+            return da<db or (da==db and a.Name<b.Name)
+        end)
+    else
+        table.sort(natives,sortNativeSupports)
+    end
+    local maxSupports = supportSlots(tier,bridge)
     -- Low has exactly ONE seven-piece source module (not per-platform).
     local output = {parts={},covered={},disconnects={},modules=0}
     for _,support in ipairs(natives) do

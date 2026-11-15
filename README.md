@@ -1,3 +1,7 @@
+## P4 — Appuis hydrauliques des passerelles Towers
+
+Les huit poteaux décoratifs sous les quatre passerelles sont éligibles au [modèle hydraulique Towers approuvé](assets/source/roblox-asset-registry.json). Sur Low, un appui très proche peut prendre la priorité sur le treillis du pont et occuper un des deux emplacements de sept MeshParts. En Medium/High, les deux appuis d’un pont sélectionné entrent dans le quota de colonnes existant. Les sculptures sont soudées aux poteaux d’origine, qui se déplacent avec les tabliers pendant le rétrécissement. Une alerte ou la perte d’une pièce restaure le décor natif.
+
 ## P4 — Poutres latérales sculptées sur les passerelles Towers — 15 novembre 2026
 
 Les poutres du [modèle bridge_side_girder approuvé](assets/source/roblox-asset-registry.json) couvrent 64 % de chaque flanc sur Low/Medium et 86 % avec deux modules par flanc sur High. Elles suivent la longueur du tablier pendant le rétrécissement. Sur Android Low, un pont proche peut remplacer ses trois renforts rectangulaires avec 14 MeshParts, dans le budget existant. Les renforts natifs réapparaissent lors d’une alerte, d’une déformation incompatible ou de la perte d’une des pièces du treillis. Les rails lumineux et les collisions restent sous le contrôle du serveur.

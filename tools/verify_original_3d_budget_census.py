@@ -1923,7 +1923,11 @@ print("PASS P4 long cradles target only fully streamed native underframes,"
       " same existing desktop/mobile 7-MeshPart module quotas")
 
 assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 8 or 1)' in LARGE
-assert 'local maxSupports = tier=="High" and 2 or 1' in LARGE
+assert 'local maxSupports = supportSlots(tier,bridge)' in LARGE
+assert '(tier == "High" or (bridge and tier == "Medium")) and 2 or 1' in LARGE
+assert 'Kit.matchesSkybridgeSupport(part,bridge)' in LARGE
+assert 'LargeStructure.matchesSkybridgeSupport(native,owner)' in TRIM
+assert 'if lowBridgePier then nearBridgeGirders = {} end' in OWNER
 assert 'local supportLimit=tier=="High" and 8 or (tier=="Medium" and 4 or 1)' not in LARGE
 assert 'local supportBudget = tier.Name == "High" and 16' in OWNER
 assert 'or (tier.Name == "Medium" and 8' in OWNER

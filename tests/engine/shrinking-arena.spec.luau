@@ -5,6 +5,8 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Config = require("../../src/shared/Config")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local LargeStructure = require("../../src/client/PremiumLargeStructureMeshKit")
+local NativeTrim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
@@ -462,11 +464,63 @@ describe("Shrinking Arena mobility integration", function()
 
         expect(ShrinkingArena.skybridgeSpan(49, 1)).toBe(49)
         expect(math.abs(ShrinkingArena.skybridgeSpan(49, 0.45) - 18.2) < 0.01).toBe(true)
+        local templates = Instance.new("Folder")
+        templates.Name = "ApprovedLargeStructureTemplates"
+        templates:SetAttribute("OwnerVerified", true)
+        templates.Parent = game:GetService("ReplicatedStorage")
+        local towers = Instance.new("Model")
+        towers.Name = "Towers"
+        towers:SetAttribute("OwnerVerified", true)
+        towers:SetAttribute("CosmeticOnly", true)
+        towers:SetAttribute("Original3DAssetId", 107521411452905)
+        towers:SetAttribute("OriginalLargeStructure3D", true)
+        for i = 1, 7 do
+            local mesh = Instance.new("MeshPart")
+            mesh.Name = "Material" .. i
+            mesh.Size = Vector3.new(1.93, 13.91, 1.93)
+            mesh.Anchored = true
+            mesh.CanCollide = false
+            mesh.CanTouch = false
+            mesh.CanQuery = false
+            mesh.Parent = towers
+        end
+        towers.Parent = templates
+        local bridge18 = platforms:FindFirstChild("Skybridge18")
+        local pier2 = decor:FindFirstChild("PlatformSupport18_2")
+        local visual = Instance.new("Folder")
+        visual.Parent = root
+        local _, selected, preferred = LargeStructure.selectNearRouteStructures(
+            {bridge18}, decor, "Towers", "Low", base, pier2.Position, nil, 0, false)
+        expect(selected[bridge18]).toBe(true)
+        expect(preferred).toBe(bridge18)
+        local _, _, midspanPreference = LargeStructure.selectNearRouteStructures(
+            {bridge18}, decor, "Towers", "Low", base, bridge18.Position, nil, 0, false)
+        expect(midspanPreference).toBe(nil)
+        local _, pressured = LargeStructure.selectNearRouteStructures(
+            {bridge18}, decor, "Towers", "Medium", base, pier2.Position, nil, 1, false)
+        expect(pressured[bridge18]).toBe(nil)
+
+        local columns = assert(LargeStructure.supports(
+            visual, decor, bridge18, "Towers", "Low", 18, 1, true, pier2.Position))
+        expect(#columns.parts).toBe(7)
+        expect(columns.covered[1]).toBe(pier2)
+        NativeTrim.bind(arena, {}, nil, columns.covered, visual)
+        expect(pier2.LocalTransparencyModifier).toBe(1)
+        bridge18:SetAttribute("BridgeShutterPhase", "Warning")
+        expect(pier2.LocalTransparencyModifier).toBe(0)
+        expect(columns.parts[1].LocalTransparencyModifier).toBe(1)
+        bridge18:SetAttribute("BridgeShutterPhase", "Idle")
+        expect(pier2.LocalTransparencyModifier).toBe(1)
+
         for index = 18, 21 do
             local bridge = platforms:FindFirstChild("Skybridge" .. index)
             expect(bridge ~= nil).toBe(true)
             expect(bridge.CanCollide).toBe(true)
             expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+            for side = 1, 2 do
+                local post = decor:FindFirstChild("PlatformSupport" .. index .. "_" .. side)
+                expect(LargeStructure.matchesSkybridgeSupport(post,bridge)).toBe(true)
+            end
             local prefix = {
                 "SkybridgeRail" .. index .. "_1",
                 "SkybridgeRib" .. index .. "_0",
@@ -496,6 +550,12 @@ describe("Shrinking Arena mobility integration", function()
             Active = function() return running end,
         })
         task.wait(0.22)
+        expect(LargeStructure.matchesSkybridgeSupport(pier2,bridge18)).toBe(true)
+        expect(pier2.LocalTransparencyModifier).toBe(1)
+        expect(columns.parts[1].LocalTransparencyModifier).toBe(0)
+        columns.parts[1]:Destroy()
+        expect(pier2.LocalTransparencyModifier).toBe(0)
+        expect(columns.parts[2].LocalTransparencyModifier).toBe(1)
 
         local shrinkScale = base.Size.X / baseOriginalX
         expect(shrinkScale < 1).toBe(true)
@@ -551,6 +611,9 @@ describe("Shrinking Arena mobility integration", function()
             expect((part.Position - old.cf.Position).Magnitude < 0.001).toBe(true)
             expect((part.Size - old.size).Magnitude < 0.001).toBe(true)
         end
+        NativeTrim.reset()
+        for _, connection in ipairs(columns.disconnects) do connection:Disconnect() end
+        templates:Destroy()
         root:Destroy()
     end)
 
