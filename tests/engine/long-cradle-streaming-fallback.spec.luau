@@ -718,15 +718,24 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 end
                 assert(mesh and trusses[1].LocalTransparencyModifier==1)
                 assert(mesh.Position.Y < promenade[1].Position.Y-promenade[1].Size.Y*.5)
-                local endpoint=ends[1]
-                local endpointFrame=endpoint.CFrame
-                endpoint.CFrame=endpointFrame*CFrame.new(50,0,0)
-                task.wait()
-                assert(Remaining.nativeCount("junction")==1 and mesh.LocalTransparencyModifier==1)
-                assert(math.abs(trusses[1].LocalTransparencyModifier-baseline)<.001)
-                endpoint.CFrame=endpointFrame
-                task.wait()
-                assert(Remaining.nativeCount("junction")==2)
+                -- Both independently-authored promenade joints must roll back
+                -- when their own physical endpoint is disconnected.
+                for lane=1,2 do
+                    local endpoint=ends[lane]
+                    local endpointFrame=endpoint.CFrame
+                    local truss=trusses[lane]
+                    local trussAlpha=truss.LocalTransparencyModifier
+                    endpoint.CFrame=endpointFrame*CFrame.new(50,0,0)
+                    task.wait()
+                    assert(Remaining.nativeCount("junction")==1,variant.." disconnected joint "..lane.." retained its mesh")
+                    assert(math.abs(truss.LocalTransparencyModifier-(lane==1 and baseline or trussAlpha))<.001,
+                        variant.." disconnected joint "..lane.." failed to restore its native truss")
+                    endpoint.CFrame=endpointFrame
+                    task.wait()
+                    assert(Remaining.nativeCount("junction")==2,variant.." reconnected joint "..lane.." did not recover")
+                    assert(truss.LocalTransparencyModifier==1,
+                        variant.." reconnected joint "..lane.." exposed overlapping native geometry")
+                end
                 for _,useHarbor in ipairs({false,true}) do
                     if useHarbor then Trim.setJunctionTrussMask(trusses[1],true,true)
                     else Trim.setRouteUnderdeckMask(trusses[1],true) end
