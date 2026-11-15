@@ -9,6 +9,7 @@ local saved = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local pylonPieces = {}
+local pylonsOutsideLod = setmetatable({}, {__mode = "k"})
 local watchers = {}
 local decorWatcher = nil
 local decorRemovedWatcher = nil
@@ -202,12 +203,27 @@ local function physicalSafe(native)
 end
 
 local function tryMask(part)
-    if not eligible(part) or saved[part] ~= nil
-        or not physicalSafe(part) then return end
+    if pylonsOutsideLod[part] or not eligible(part)
+        or saved[part] ~= nil or not physicalSafe(part) then return end
     setNativeMask(part, saved, true)
     refreshPylon(part)
     if not crownPylons[part] then count += 1 end
     return true
+end
+
+-- The existing scenery pass reports one distance decision per real pylon.
+-- Apply it to the complete bundle and its native fallback together.
+function Kit.setPylonLodVisible(part, visible)
+    if (pylonsOutsideLod[part] ~= true) == visible then return end
+    pylonsOutsideLod[part] = not visible or nil
+    if not visible and saved[part] then
+        setNativeMask(part, saved, false)
+        refreshPylon(part)
+        if not crownPylons[part] then count -= 1 end
+        report()
+    elseif visible and tryMask(part) then
+        report()
+    end
 end
 
 -- Event-based reconciliation; does not poll a frame or create Parts.

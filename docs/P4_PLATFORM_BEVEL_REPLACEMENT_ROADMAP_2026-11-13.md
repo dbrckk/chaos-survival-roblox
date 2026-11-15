@@ -602,3 +602,5 @@ La première exécution des 89 specs Roblox Engine après remplacement des pylô
 ### Relais entre couronne et pylônes du Sky Spine — 15 novembre 2026
 
 La couronne complète reprend les deux montants dans sa propre géométrie. Tant qu’elle est valide et visible sur le portique, les pylônes 3D individuels déjà chargés restent masqués. Une perte de couronne, de soudure ou une éviction Low leur rend la main. Si un pylône perd à son tour une pièce ou si le tablier passe en avertissement, sa forme native retrouve sa transparence locale d’origine. Les compteurs de remplacement individuel s’appuient sur les pylônes réellement visibles. Le test d’intégration existant couvre les deux ordres de montage, le retrait d’une soudure, la réplication tardive et le retour au natif.
+
+Le LOD de distance utilise maintenant la vraie soudure du pylône. En dehors de sa portée, le masque du pylône individuel est lui aussi libéré, sans écraser le masque éventuel de la couronne.

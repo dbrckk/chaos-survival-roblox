@@ -11,6 +11,7 @@ local VisualTheme=require("../../src/shared/VisualTheme")
 local Kit=require("../../src/client/PremiumLargeStructureMeshKit")
 local Finish=require("../../src/client/PlatformFinishKit")
 local Crown=require("../../src/client/SkySpineCrownMeshKit")
+local IdentityLod=require("../../src/shared/PlatformIdentityLodRules")
 
 describe("P4 approved long cradle streaming fallback (engine)",function()
     it("uses complete genuine Promenade and SkySpine native underframes only",function()
@@ -402,6 +403,17 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             Crown.sync(arena,owner.Position,"Low",true,nil,2)
             expect(Crown.count()).toBe(0)
             expect(Trim.breakdown().pylon).toBe(2)
+            -- Existing scenery LOD must restore the native silhouette and
+            -- leave no cached opacity when the camera returns.
+            local nativeOwner=IdentityLod.owner(result.parts[1],platforms,decor)
+            expect(nativeOwner).toBe(pylons[1])
+            Trim.setPylonLodVisible(nativeOwner,false)
+            expect(Trim.breakdown().pylon).toBe(1)
+            expect(pylons[1].LocalTransparencyModifier).toBe(.25)
+            expect(result.parts[1].LocalTransparencyModifier).toBe(1)
+            Trim.setPylonLodVisible(nativeOwner,true)
+            expect(Trim.breakdown().pylon).toBe(2)
+            expect(result.parts[1].LocalTransparencyModifier).toBe(0)
             -- A real gameplay collapse restores BOTH native originals
             -- while keeping their owner collidable authority unchanged.
             owner:SetAttribute("CollapsePhase","Warning")

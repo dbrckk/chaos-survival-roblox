@@ -28,11 +28,21 @@ function Rules.owner(visual, platforms, decor)
             if native and native:IsA("BasePart")
                 and native.Parent == decor
                 and decor ~= nil
-                and native.Name:match("^PlatformSupport%d+_%d+$")
                 and native.Anchored
                 and not native.CanCollide and not native.CanTouch
                 and not native.CanQuery then
-                return native
+                if native.Name:match("^PlatformSupport%d+_%d+$") then
+                    return native
+                end
+                local pylonIndex = native.Name:match(
+                    "^SkySpine(%d+)_MonumentalPylon%-?1$")
+                if pylonIndex
+                    and visual:GetAttribute("OriginalSkySpinePylon3D") == true
+                    and native:GetAttribute("SkySpineDecor") == true
+                    and native:GetAttribute("PerimeterPlatformIndex")
+                        == tonumber(pylonIndex) then
+                    return native
+                end
             end
         end
     end

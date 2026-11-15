@@ -9,6 +9,7 @@ local DistrictVisualCensusRules = require(ReplicatedStorage.Shared.DistrictVisua
 local SceneryLodCache = require(script.Parent.SceneryLodCache)
 local MidgroundOutboardLodRules = require(ReplicatedStorage.Shared.MidgroundOutboardLodRules)
 local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
+local PlatformNativeTrimReplacementKit = require(script.Parent.PlatformNativeTrimReplacementKit)
 local DistrictFacadeDetailKit = require(script.Parent.DistrictFacadeDetailKit)
 local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
@@ -584,6 +585,16 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
                 owners[native] = known
             end
             visible = known
+        end
+
+        if descendant:IsA("MeshPart")
+            and descendant:GetAttribute("OriginalSkySpinePylon3D") == true then
+            -- The trim kit reconciles the whole pylon's native fallback,
+            -- crown priority and LOD together from the same decision.
+            if native then
+                PlatformNativeTrimReplacementKit.setPylonLodVisible(native, visible)
+            end
+            continue
         end
 
         local minimumTier = descendant:GetAttribute("SceneryMinimumTier")
