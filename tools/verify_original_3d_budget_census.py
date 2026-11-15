@@ -2322,3 +2322,35 @@ for clause in (
 assert "or crownTrim[part] or commandTrim[part] then" in mask
 assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
 print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
+
+# The complete north signature uses approved structural/fitting sources,
+# independently of the six existing landmark sculptures. Preserve its
+# accounting and exercise real MapBuilder native rollback in the engine suite.
+NORTH=(CLIENT/"ApprovedNorthSignatureFinishingMeshKit.lua").read_text(encoding="utf8")
+for name, asset_id in (
+    ("harbor_dock_caisson", "101457508594609"),
+    ("exterior_tower_21", "137744886537150"),
+    ("variant_orbital_trussed_strut", "138666009076890"),
+    ("perimeter_cap", "88962643359267"),
+    ("variant_towers_spine_sculpt", "86423178125318"),
+    ("variant_orbital_sculpted_node", "104654294187035"),
+):
+    assert P4_MODELS[name]["moderation"] == "Approved", name
+    assert P4_MODELS[name]["asset_id"] == asset_id and asset_id in NORTH, name
+for clause in (
+    "Low={parts=8,", "Medium={parts=16,", "High={parts=24,",
+    'base:GetAttribute("OriginalSizeX")',
+    'owner:GetAttribute("NorthSignatureOrigin")',
+    'Enum.ModelStreamingMode.Atomic',
+    'part.Transparency = group.alphas[index]',
+    'part.Transparency = 1',
+    '(tonumber(pressure) or 0) >= 1',
+):
+    assert clause in NORTH,clause
+assert 'ApprovedNorthSignatureFinishingMeshKit.sync(arena,cameraPoint' in LOD
+assert 'LocalNorthSignatureFinishingNativePartsReplaced' in LOD
+assert '"ApprovedNorthSignatureFinishingLocal"' in (
+    ROOT/"src/shared/VisualBudgetRules.lua").read_text(encoding="utf8")
+assert 'expect(total).toBe(43)' in (
+    ROOT/"tests/engine/district-sidewall-rollback.spec.luau").read_text(encoding="utf8")
+print("PASS north signature refinements use six approved sources and reversible budgeted groups")

@@ -141,6 +141,9 @@ VisualBudgetRules.LocalFolders = {
     -- rectangular ReactorArcs in one visual swap. Shared existing
     -- Android 440/680/900 census. Low/pressure fallback retains natives.
     "ApprovedOrbitalSignatureTorusLocal",
+    -- North monument foundations, supports and equipment. Includes every
+    -- local clone in the shared Android budget, up to 8/16/24 MeshParts.
+    "ApprovedNorthSignatureFinishingLocal",
     -- Separate southern observation ring, 7 creator-owned 3D MeshParts
     -- replace 14 nonphysical ObservationArc primitives, under SAME
     -- shared mobile visual budget and camera-pressure gating.

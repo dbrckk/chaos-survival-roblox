@@ -50,6 +50,7 @@ local ApprovedSouthClassicObservatoryMeshKit = require(script.Parent.ApprovedSou
 local ApprovedTowersSignatureBridgeMeshKit = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local ApprovedCrossroadsSignatureInterchangeMeshKit = require(script.Parent.ApprovedCrossroadsSignatureInterchangeMeshKit)
 local ApprovedHarborSignatureGantryMeshKit = require(script.Parent.ApprovedHarborSignatureGantryMeshKit)
+local ApprovedNorthSignatureFinishingMeshKit = require(script.Parent.ApprovedNorthSignatureFinishingMeshKit)
 local ApprovedClassicSignatureObservatoryMeshKit = require(script.Parent.ApprovedClassicSignatureObservatoryMeshKit)
 local ApprovedClassicForgedSupportsMeshKit = require(script.Parent.ApprovedClassicForgedSupportsMeshKit)
 local PremiumRouteMeshKit = require(script.Parent.PremiumRouteMeshKit)
@@ -1656,8 +1657,8 @@ task.spawn(function()
                 crossroadsPrimitives)
         end
         -- P4 Harbor: authentic sculpted full-size 3D gantry replaces the
-        -- giant nonphysical beam, cab and counterweight only. Native hoists,
-        -- support legs, cargo stack and playable floor are preserved.
+        -- giant nonphysical beam, cab and counterweight. The separate
+        -- north finishing kit owns the hoists, legs and cargo.
         -- Existing LOD camera/pressure sampler; no new frame loop.
         ApprovedHarborSignatureGantryMeshKit.sync(
             arena,cameraPoint,profile.Name,cameraReady,
@@ -1716,6 +1717,16 @@ task.spawn(function()
             ~=classicSupportNatives then
             player:SetAttribute("LocalClassicSupportPrimitivePartsReplaced",
                 classicSupportNatives)
+        end
+        ApprovedNorthSignatureFinishingMeshKit.sync(arena,cameraPoint,profile.Name,
+            cameraReady,player:GetAttribute("OptionalVfxPressure"))
+        local northMeshes=ApprovedNorthSignatureFinishingMeshKit.count()
+        if player:GetAttribute("LocalNorthSignatureFinishingMeshParts") ~= northMeshes then
+            player:SetAttribute("LocalNorthSignatureFinishingMeshParts",northMeshes)
+        end
+        local northNativeParts=ApprovedNorthSignatureFinishingMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalNorthSignatureFinishingNativePartsReplaced") ~= northNativeParts then
+            player:SetAttribute("LocalNorthSignatureFinishingNativePartsReplaced",northNativeParts)
         end
         -- True SOUTH horizon ring: replaces exactly 14 original Orbital
         -- ObservationArc native Parts after full owner-approved 3D mount.

@@ -17,7 +17,7 @@ ground,Modules de finition au sol,P1,SOURCE_3D_EXISTANTE,36,36,36,36,36,180,180,
 stations,Stations périphériques,P2,SOURCE_3D_17_SUR_23,92,92,92,92,92,460,20,124,"17/23 objets éligibles, 6 signalétiques par station conservées"
 south,Monuments de l'horizon sud,P2,SOURCE_3D_EXISTANTE,13,13,13,20,14,73,34,8,"73/73 éligibles dans la famille, résidence LOD conditionnelle"
 hero,Architecture héro des arènes,P2,SOURCE_3D_APPROUVEE_LOD_PARTIEL,25,28,21,31,19,124,33,5,"Cinq silhouettes adaptées avec modèles approuvés. Socles, équipement de Towers, échangeur de Crossroads et lentille d’Orbital ciblés; retour des formes natives selon pression, distance ou source manquante."
-signature,Monuments signatures nord,P2,PARTIEL_SOURCE_3D,14,13,13,24,16,80,43,3,"Sculptures signées, socles/natifs et signaux distincts"
+signature,Monuments signatures nord,P2,COUVERT_SOURCE_3D_LOD,14,13,13,24,16,80,43,3,"80 cibles éligibles sur les cinq arènes. 43 ajouts couverts par six modèles originaux approuvés. Repli natif par sous-ensemble."
 depth,Profondeur de skyline,P2,SOURCE_3D_APPROUVEE_LOD_PARTIEL,16,16,16,16,16,80,40,0,"40 toits et 40 antennes éligibles sur cinq arènes. Le montage suit la caméra et le budget graphique."
 ridges,Crêtes extérieures,P2,SOURCE_3D_EXISTANTE,12,12,12,12,12,60,60,0,60/60 wedges cibles éligibles sous LOD
 floorinlays,Incrustations du sol,P2,FINITION_A_CONSERVER,12,12,12,12,12,60,60,0,Fines bandes; remplacer seulement si améliore réellement le sol

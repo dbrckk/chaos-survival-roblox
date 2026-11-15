@@ -12,6 +12,7 @@ local ArenaVariants = require("../../src/server/ArenaVariants")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local Config = require("../../src/shared/Config")
 local Hero = require("../../src/client/ApprovedHeroStructureMeshKit")
+local NorthSignature = require("../../src/client/ApprovedNorthSignatureFinishingMeshKit")
 
 describe("Authenticated district sidewall restoration (engine)", function()
     it("maintains each hero identity and independently restores its forged foundation and skyline fittings", function()
@@ -172,6 +173,155 @@ describe("Authenticated district sidewall restoration (engine)", function()
             arena.Parent:Destroy()
         end
         expect(hidden).toBe(124)
+        for _,holder in pairs(holders) do holder:Destroy() end
+    end)
+    it("finishes the five north signatures and restores only the affected native assemblies", function()
+        local storage = game:GetService("ReplicatedStorage")
+        local holders = {}
+        local function make(folder,name,id,tag,rows)
+            local holder = holders[folder]
+            if not holder then
+                holder = Instance.new("Folder")
+                holder.Name = folder
+                holder:SetAttribute("OwnerVerified",true)
+                holder.Parent = storage
+                holders[folder] = holder
+            end
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("OwnerVerified",true)
+            model:SetAttribute("CosmeticOnly",true)
+            model:SetAttribute("Original3DAssetId",id)
+            model:SetAttribute(tag,true)
+            for i=1,7 do
+                local row = rows[i] or {.1,.1,.1}
+                local part = Instance.new("MeshPart")
+                part.Name = "Mesh"..i
+                part.Size = Vector3.new(row[1],row[2],row[3])
+                part.Position = Vector3.new(row[4] or 0,row[5] or 0,row[6] or 0)
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanTouch = false
+                part.CanQuery = false
+                part.Parent = model
+            end
+            model.Parent = holder
+            return model
+        end
+        local foot = make("ApprovedHarborDockCaissonTemplates","DockCaisson",101457508594609,
+            "OriginalHarborDockCaisson3D",{
+                {12.82,2.69,12.82,0,.29378},{13.54,2.95755,13.54,0,-.175},
+                {14.07,.1,14.07},
+            })
+        local tower = make("ApprovedExteriorTowerTemplates","Tower21",137744886537150,
+            "OriginalExteriorTower3D",{
+                {8.96,21,7.8,0,-.6},{11.84,19.47912,9.84,0,1.36044},
+                {10.86,1.2275,7.85,0,10.47875},{2.2,.009,.12,0,11.095,-4.43},
+            })
+        make("ApprovedPerimeterArmorTemplates","Cap",88962643359267,
+            "OriginalPerimeterArmor3D",{{2.7699,2.14,2.34},{2.4566,.4494,1.7784,0,-.5564}})
+        make("ApprovedVariantIdentitySpineTemplates","Towers",86423178125318,
+            "OriginalVariantIdentitySpine3D",{
+                {2.52,19.92,2.52,0,-.02781},{2.29954,19.52,2.23955,0,-.02781},
+                {.1,.1,.1,0,9.93781},
+            })
+        make("ApprovedOrbitalReactorLandmarkTemplates","Node",104654294187035,
+            "OriginalOrbitalReactorLandmark3D",{{4.36,4.36,4.36},{2.96,2.9503,2.96},{4.11,4.11,.39}})
+        local strut = make("ApprovedOrbitalReactorLandmarkTemplates","Strut",138666009076890,
+            "OriginalOrbitalReactorLandmark3D",{{1.1,1.24,8.46},{.872,.8638,7.96}})
+        local bucket = assert(workspace:FindFirstChild("ApprovedNorthSignatureFinishingLocal"))
+        local counts = {Classic=2,Towers=11,Crossroads=9,Orbital=8,Harbor=13}
+        local existing = {
+            Classic="ReceiverDishWest",Towers="OverheadServiceBridge",
+            Crossroads="UpperExchange",Orbital="ReactorArc1",Harbor="QuayCraneSpanningBeam",
+        }
+        local total = 0
+        for _,variant in ipairs(ArenaVariants.Order) do
+            local arena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+            local base = arena.Base
+            local owner = arena.Decor.ArenaSignatureMegastructure
+            local originals = {}
+            for _,part in ipairs(owner:GetChildren()) do originals[part] = part.Transparency end
+            local function sync(tier,pressure)
+                NorthSignature.sync(arena,base.Position,tier,true,pressure)
+            end
+            sync("High",0)
+            assert(NorthSignature.replacedNativeCount() == counts[variant],
+                variant.." masked "..NorthSignature.replacedNativeCount().." north native parts")
+            assert(NorthSignature.count() <= 24 and NorthSignature.count() >= counts[variant])
+            assert(owner[existing[variant]].Transparency == originals[owner[existing[variant]]])
+            assert(owner.Foundation.Transparency == 1 and owner.InsetBase.Transparency == 1)
+            total += NorthSignature.replacedNativeCount()
+            for _,group in ipairs(bucket:GetChildren()) do
+                assert(group:IsA("Model"))
+                for _,part in ipairs(group:GetChildren()) do
+                    assert(part:IsA("MeshPart") and part.Anchored and part.Massless
+                        and not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                end
+            end
+
+            local foundation = bucket.ForgedFoundation
+            local originalSize = base.Size
+            base.Size = Vector3.new(originalSize.X*.62,originalSize.Y,originalSize.Z*.62)
+            task.wait()
+            sync("High",0)
+            assert(foundation.Parent == bucket and NorthSignature.replacedNativeCount() == counts[variant])
+            if variant == "Harbor" then
+                local hoist = bucket.QuayHoistPort:FindFirstChildWhichIsA("MeshPart")
+                local axis = hoist.Size.X > hoist.Size.Z and hoist.CFrame.RightVector or hoist.CFrame.LookVector
+                assert(math.abs(axis:Dot(Vector3.yAxis)) > .999 and math.max(hoist.Size.X,hoist.Size.Z) >= 16.9)
+                assert((hoist.Position-owner.QuayHoistPort.Position).Magnitude < .12)
+                tower:SetAttribute("Original3DAssetId",1)
+                task.wait()
+                assert(owner.QuayPortLeg.Transparency < 1 and owner.QuayStarboardLeg.Transparency < 1)
+                assert(owner.Foundation.Transparency == 1 and owner.QuayHoistPort.Transparency == 1)
+                tower:SetAttribute("Original3DAssetId",137744886537150)
+                local strutMesh = strut.Mesh1
+                strutMesh.Parent = nil
+                task.wait()
+                assert(owner.QuayHoistPort.Transparency < 1 and owner.QuayRakerPort.Transparency < 1
+                    and owner.QuaySpreader.Transparency < 1 and owner.QuayWinchPort.Transparency == 1)
+                strutMesh.Parent = strut
+                sync("High",0)
+                assert(NorthSignature.replacedNativeCount() == 13)
+                sync("Medium",0)
+                assert(NorthSignature.count() <= 16 and owner.QuayStormMast.Transparency < 1)
+                sync("Low",0)
+                assert(NorthSignature.count() == 8 and owner.QuayPortLeg.Transparency == 1)
+                sync("High",0)
+                local leg = owner.QuayPortLeg
+                leg.CanQuery = true
+                task.wait()
+                assert(leg.Transparency < 1 and owner.QuayStarboardLeg.Transparency == 1)
+                leg.CanQuery = false
+            end
+
+            local forgedMesh = foundation:FindFirstChildWhichIsA("MeshPart")
+            forgedMesh:Destroy()
+            task.wait()
+            assert(owner.Foundation.Transparency == originals[owner.Foundation]
+                and owner.InsetBase.Transparency == originals[owner.InsetBase])
+            foot.Parent:SetAttribute("OwnerVerified",false)
+            sync("High",0)
+            assert(not bucket:FindFirstChild("ForgedFoundation"))
+            foot.Parent:SetAttribute("OwnerVerified",true)
+            sync("High",0)
+            NorthSignature.sync(arena,base.Position+Vector3.new(900,0,0),"High",true,0)
+            assert(NorthSignature.count() == 0 and owner.Foundation.Transparency < 1)
+            sync("High",0)
+            sync("High",1)
+            assert(NorthSignature.count() == 0 and #bucket:GetChildren() == 0)
+            for part,alpha in pairs(originals) do
+                assert(part.Transparency == alpha,variant.." incomplete fallback for "..part.Name)
+            end
+            sync("High",0)
+            owner.Parent = nil
+            task.wait()
+            assert(NorthSignature.replacedNativeCount() == 0 and owner.Foundation.Transparency < 1)
+            owner:Destroy()
+            arena.Parent:Destroy()
+        end
+        expect(total).toBe(43)
         for _,holder in pairs(holders) do holder:Destroy() end
     end)
     it("restores five native district sidewalls immediately on revoked source or native mutation", function()

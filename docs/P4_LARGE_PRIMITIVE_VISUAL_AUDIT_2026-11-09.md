@@ -1,5 +1,19 @@
 # P4 — Audit statique des grosses formes encore primitives, hors stations
 
+## Monuments du nord
+
+Les cinq variantes de `ArenaSignatureMegastructure` disposent d'un remplacement 3D éligible pour leurs **80 pièces natives**, au cumul des cinq arènes. Les six kits déjà en place couvrent 37 pièces. Les nouveaux socles, tours, jambes, renforts, treuils, caisses et accessoires sculptés couvrent les **43 restantes**.
+
+| Arène | Socles, supports et équipements ajoutés | Couverture du monument |
+|---|---:|---:|
+| Classic | 2 | 14/14 |
+| Towers | 11 | 13/13 |
+| Crossroads | 9 | 13/13 |
+| Orbital | 8 | 24/24 |
+| Harbor | 13 | 16/16 |
+
+Ces finitions réemploient six modèles originaux approuvés et montent selon la qualité, la distance et la pression graphique. Le plafond supplémentaire est de 8, 16 ou 24 MeshParts sur la carte active. Le kit restaure la transparence native de chaque sous-ensemble à la disparition de son modèle ou de sa source. Le monument se charge de façon atomique et reste ancré à l'emprise d'origine lorsque le sol rétrécit. Les attributs client `LocalNorthSignatureFinishingMeshParts` et `LocalNorthSignatureFinishingNativePartsReplaced` mesurent la couverture effectivement montée.
+
 ## Avancement vérifié au 10 novembre 2026 — nouvelles crêtes extérieures
 
 Les **12 `WedgePart`** `ExteriorRidgeNW/NE/SW/SE/Ridge1..3` ont désormais quatre modèles 3D originaux de **6 252 triangles chacun**, sept matériaux, avec leurs quatre importations Roblox **Moderation: Approved** : NW `123836720232695`, NE `83853948389204`, SW `108491064314671`, SE `83023096720529`. Le kit `ApprovedExteriorRidgeMeshKit.lua` valide les vrais angles/hauteurs/positions et les remplace sous LOD selon l'appareil ; sur Low, les 12 `WedgePart` restent visibles volontairement. [Import #42854203855](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42854203855) et [validation runtime statique #42855465813](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/42855465813) réussis. **C'est la couverture source de 12 formes par carte (60 occurrences sur les cinq variantes), pas un pourcentage global ni un test de rendu Roblox.**

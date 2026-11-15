@@ -390,7 +390,7 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
     model.Name = "ArenaSignatureMegastructure"
     model:SetAttribute("ChaosDistantScenery", true)
     model:SetAttribute("SignatureVariant", variant.Id)
-    model.Parent = decor
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 
     local origin = CFrame.new(
         config.ArenaCenter + Vector3.new(
@@ -399,6 +399,7 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
             -(variant.BaseSize.Z * 0.5 + 66)
         )
     )
+    model:SetAttribute("NorthSignatureOrigin", origin)
     local hull = theme.Structure:Lerp(Color3.fromRGB(21, 28, 38), 0.37)
     local metal = theme.Detail:Lerp(theme.Structure, 0.55)
     local rim = theme.Accent:Lerp(theme.Structure, 0.68)
@@ -593,6 +594,7 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
         piece("ServicePanel", "Part", Vector3.new(5, 3.2, 0.55),
             CFrame.new(0, 35, -2.25), Enum.Material.Metal, glint, 0.17)
     end
+    model.Parent = decor
 end
 
 -- Give the southern horizon a second, independently authored silhouette.
