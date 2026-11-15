@@ -19,6 +19,8 @@ local ExteriorRetrofit=require("../../src/client/ApprovedExteriorRetrofitMeshKit
 local Trim=require("../../src/client/PlatformNativeTrimReplacementKit")
 local ShrinkingArena=require("../../src/server/Disasters/ShrinkingArena")
 
+local Route=require("../../src/client/PremiumRouteMeshKit")
+
 describe("P4 approved long cradle streaming fallback (engine)",function()
     it("replaces the complete exterior retrofit structures in five worlds while preserving original landmark signals",function()
         local storage = game:GetService("ReplicatedStorage")
@@ -636,6 +638,136 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if previousSource then previousSource.Parent=storage end
         if previousMap then previousMap.Parent=workspace end
         if not ok then error(err) end
+    end)
+
+    it("mounts the two forged Sky Spine junction trusses only across real promenade overlaps",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        local previousSource=storage:FindFirstChild("ApprovedPerimeterStructuresTemplates")
+        if previousMap then previousMap.Parent=nil end
+        if previousSource then previousSource.Parent=nil end
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedPerimeterStructuresTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="Brace"
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("OriginalPerimeterStructure3D",true)
+        source:SetAttribute("Original3DAssetId",108452611210970)
+        for i=1,7 do
+            local piece=Instance.new("MeshPart")
+            piece.Name="Layer"..i
+            piece.Size=i==1 and Vector3.new(8.94,.5675,1.12) or Vector3.new(.2,.2,.2)
+            piece.Anchored=true
+            piece.Massless=true
+            piece.CanCollide=false
+            piece.CanTouch=false
+            piece.CanQuery=false
+            piece.Parent=source
+        end
+        source.Parent=holder
+        local generated
+        local okay,why=pcall(function()
+            local count=0
+            local folder=workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
+            for _,variant in ipairs(ArenaVariants.Order) do
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated=arena.Parent
+                local decor,base=arena.Decor,arena.Base
+                local promenade,ends,trusses,lights={},{},{},{}
+                for _,part in ipairs(arena.Platforms:GetChildren()) do
+                    local step=part:GetAttribute("SkySpineStep")
+                    local lane=part:GetAttribute("PromenadeLane")
+                    if step==1 or step==10 then
+                        ends[step==1 and 1 or 2]=part
+                        local index=part.Name:match("^Platform(%d+)$")
+                        lights[step==1 and 1 or 2]=decor:FindFirstChild("SkySpine"..index.."_LightedEdge1")
+                    elseif lane and part:GetAttribute("PromenadeStep")==4 then
+                        promenade[lane]=part
+                        local index=part.Name:match("^Platform(%d+)$")
+                        trusses[lane]=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
+                    end
+                end
+                local real=Route.realRouteJunction
+                assert(real(ends[1],promenade[1]) and real(promenade[2],ends[2]),variant.." missing physical junction")
+                local authored=promenade[2].CFrame
+                promenade[2].CFrame=promenade[1].CFrame
+                assert(not real(ends[1],promenade[2]),"the wrong lane qualified at the north joint")
+                promenade[2].CFrame=authored
+                local baseline=.17
+                trusses[1].LocalTransparencyModifier=baseline
+                local lightAlpha=lights[1].LocalTransparencyModifier
+                local function sync(tier,pressure,touch)
+                    Remaining.sync(arena,promenade[1].Position,tier,true,Vector3.zAxis,pressure,touch)
+                end
+                sync("High",0,false)
+                assert(Remaining.nativeCount("junction")==2,variant.." missing forged trusses")
+                count += Remaining.nativeCount("junction")
+                local mesh
+                for _,model in ipairs(folder:GetChildren()) do
+                    if model.Name=="ApprovedP4_JunctionTruss"
+                        and model:GetAttribute("OriginalP4OwnerPlatform")==promenade[1].Name then
+                        mesh=model:FindFirstChild("Layer1")
+                        for _,piece in ipairs(model:GetChildren()) do
+                            assert(piece:IsA("MeshPart") and piece.Anchored and piece.Massless
+                                and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                        end
+                    end
+                end
+                assert(mesh and trusses[1].LocalTransparencyModifier==1)
+                assert(mesh.Position.Y < promenade[1].Position.Y-promenade[1].Size.Y*.5)
+                local endpoint=ends[1]
+                local endpointFrame=endpoint.CFrame
+                endpoint.CFrame=endpointFrame*CFrame.new(18,0,0)
+                task.wait()
+                assert(Remaining.nativeCount("junction")==1 and mesh.LocalTransparencyModifier==1)
+                assert(math.abs(trusses[1].LocalTransparencyModifier-baseline)<.001)
+                endpoint.CFrame=endpointFrame
+                task.wait()
+                assert(Remaining.nativeCount("junction")==2)
+                for _,useHarbor in ipairs({false,true}) do
+                    if useHarbor then Trim.setJunctionTrussMask(trusses[1],true,true)
+                    else Trim.setRouteUnderdeckMask(trusses[1],true) end
+                    assert(Remaining.nativeCount("junction")==1 and mesh.LocalTransparencyModifier==1
+                        and trusses[1].LocalTransparencyModifier==1)
+                    if useHarbor then Trim.setJunctionTrussMask(trusses[1],true,false)
+                    else Trim.setRouteUnderdeckMask(trusses[1],false) end
+                    assert(Remaining.nativeCount("junction")==2 and mesh.LocalTransparencyModifier==0)
+                end
+                local round=true
+                local cleanup={}
+                ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=cleanup,
+                    Active=function() return round end})
+                local deadline=os.clock()+1.5
+                repeat task.wait() until base.Size.X<=144.05 or os.clock()>deadline
+                round=false
+                task.wait()
+                assert(base.Size.X<=144.05 and Remaining.nativeCount("junction")==2,variant.." failed during shrink")
+                assert(real(ends[1],promenade[1]) and real(ends[2],promenade[2]))
+                assert(lights[1].LocalTransparencyModifier==lightAlpha and promenade[1].CanCollide)
+                source:SetAttribute("OwnerVerified",false)
+                task.wait()
+                assert(Remaining.nativeCount("junction")==0 and mesh.LocalTransparencyModifier==1)
+                assert(math.abs(trusses[1].LocalTransparencyModifier-baseline)<.001)
+                source:SetAttribute("OwnerVerified",true)
+                sync("High",0,true)
+                assert(Remaining.nativeCount("junction")==1)
+                sync("High",1,true)
+                assert(Remaining.nativeCount("junction")==0)
+                for _,restore in ipairs(cleanup) do restore() end
+                generated:Destroy()
+                generated=nil
+            end
+            expect(count).toBe(10)
+        end)
+        Remaining.sync(nil,Vector3.zero,"Low",false,nil,0,true)
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if previousSource then previousSource.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not okay then error(why) end
     end)
 
     it("fits approved promenade structures and equipment through shrink and streaming",function()

@@ -44,3 +44,10 @@ Le diagnostic joueur `LocalOriginalShortSkySpineCradleCount` reflète désormais
 Les châssis courts et longs sont sélectionnés à partir de l'emprise d'origine du tablier. Ils suivent ensuite sa contraction sur X/Z jusqu'à 45 % de sa taille, en gardant la profondeur du treillis. Le client peut les monter aussi quand le tablier est déjà rétréci.
 
 Chaque tablier peut masquer quatre pièces d'origine après validation du châssis complet et de leur alignement. Le sous-cadre, les deux longerons et la traverse reviennent lorsque le maillage, sa soudure ou sa source disparaît, au changement de LOD, ou pendant un écart de réplication. Les marquages et la collision du chemin restent pilotés par le serveur. Les quotas de maillages restent ceux du profil existant. `LocalSkySpineUnderdeckNativePartsReplaced` indique le nombre réellement masqué sur l'arène active.
+
+
+## Jonctions avec les promenades
+
+Les dix raccords des cinq arènes sont identifiés par leurs deux vrais tabliers, l'extrémité du Sky Spine et le quatrième tablier de la promenade correspondante. Les deux surfaces doivent être au même niveau, sûres et se recouvrir. Le rendu 3D n'ajoute aucune surface jouable à un bord proche ou à un raccord incomplet.
+
+Une traverse forgée tirée du modèle approuvé `108452611210970` remplace le bloc sous chaque raccord éligible. Si un châssis complet ou le portique Harbor couvre cette même traverse, il a la priorité. L'apparence native revient avec sa transparence d'origine si la géométrie, le maillage ou sa source disparaît. Un seul raccord est sélectionné en tactile ou en Low. Medium et High sur ordinateur peuvent en monter deux sans pression graphique. Les modèles comptent dans le budget visuel existant.

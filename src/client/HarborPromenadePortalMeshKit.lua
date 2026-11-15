@@ -8,6 +8,11 @@ local PremiumRoutePbrKit = if script and script.Parent
     then require(script.Parent.PremiumRoutePbrKit)
     else require("./PremiumRoutePbrKit")
 
+local Trim = if script and script.Parent
+    and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
+    then require(script.Parent.PlatformNativeTrimReplacementKit)
+    else require("./PlatformNativeTrimReplacementKit")
+
 local Kit = {}
 local ID = 134157110756659
 local BUDGET = {
@@ -194,7 +199,9 @@ local function refresh(entry)
         end
     end
     for _, native in ipairs(entry.native) do
-        if native.part.Parent then
+        if native.truss then
+            Trim.setJunctionTrussMask(native.part,true,visible and native.part.Parent ~= nil)
+        elseif native.part.Parent then
             native.part.LocalTransparencyModifier =
                 visible and 1 or native.original
         end
@@ -209,7 +216,9 @@ local function dismantle(entry)
         connection:Disconnect()
     end
     for _, saved in ipairs(entry.native) do
-        if saved.part.Parent then
+        if saved.truss then
+            Trim.setJunctionTrussMask(saved.part,true,false)
+        elseif saved.part.Parent then
             saved.part.LocalTransparencyModifier = saved.original
         end
     end
@@ -299,10 +308,9 @@ local function mount(arena,base,decor,deck,template,expected)
         seen[part]=true
         entry.native[#entry.native+1]={
             part=part, original=part.LocalTransparencyModifier,
+            truss=part.Name:match("_UnderdeckTruss$") ~= nil,
         }
-        if entry.model.Parent == folder and isAlive(entry) then
-            part.LocalTransparencyModifier=1
-        end
+        if entry.model.Parent == folder and isAlive(entry) then refresh(entry) end
     end
     for _, part in ipairs(decor:GetChildren()) do watchNative(part) end
 

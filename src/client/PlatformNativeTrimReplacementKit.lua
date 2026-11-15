@@ -23,6 +23,9 @@ local spineClaims = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local routeUnderdecks = {}
+local harborTrusses = {}
+local junctionTrusses = {}
+local junctionObservers = {}
 local crownTrim = {}
 local commandTrim = {}
 local pylonPieces = {}
@@ -44,11 +47,25 @@ local watchedOwners = {}
 local verifiedSupportIndices = {}
 local promenadePylonsByDeck = {}
 
+function Kit.hasPrimaryJunctionTruss(part)
+    return saved[part] == true or routeUnderdecks[part] == true or harborTrusses[part] == true
+end
+
+function Kit.observePrimaryJunctionTruss(part,callback)
+    junctionObservers[part] = callback
+    return function()
+        if junctionObservers[part] == callback then junctionObservers[part] = nil end
+    end
+end
+
 local function setNativeMask(part, claims, masked)
+    local observer = claims ~= junctionTrusses and junctionObservers[part]
+    local wasPrimary = observer and Kit.hasPrimaryJunctionTruss(part)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
     if saved[part] or crownPylons[part] or routeUnderdecks[part]
-        or crownTrim[part] or commandTrim[part] or spineClaims[part] then
+        or crownTrim[part] or commandTrim[part] or spineClaims[part]
+        or harborTrusses[part] or junctionTrusses[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
@@ -57,11 +74,17 @@ local function setNativeMask(part, claims, masked)
         part.LocalTransparencyModifier = original
         nativeBaselines[part] = nil
     end
+    if observer and Kit.hasPrimaryJunctionTruss(part) ~= wasPrimary then observer() end
 end
 
 function Kit.setRouteUnderdeckMask(part, masked)
     if (routeUnderdecks[part] == true) == masked then return end
     setNativeMask(part, routeUnderdecks, masked)
+end
+
+function Kit.setJunctionTrussMask(part,isHarbor,masked)
+    local claims = isHarbor and harborTrusses or junctionTrusses
+    if (claims[part] == true) ~= masked then setNativeMask(part,claims,masked) end
 end
 
 -- The generic crown and the variant equipment can both obscure the same

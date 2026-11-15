@@ -11,6 +11,10 @@ local Trim=if script and script.Parent
 local Crown=if script and script.Parent and script.Parent:FindFirstChild("SkySpineCrownMeshKit")
     then require(script.Parent.SkySpineCrownMeshKit)
     else require("./SkySpineCrownMeshKit")
+local shared=ReplicatedStorage:FindFirstChild("Shared")
+local connectionModule=shared and shared:FindFirstChild("SkyRouteConnectionRules")
+local Connection=if connectionModule then require(connectionModule)
+    else require("../shared/SkyRouteConnectionRules")
 local Kit={}
 local SOURCE={
     Access={id=110243423264048,major=17.6,minor=3.9,height=17.53,centerY=6.855},
@@ -19,6 +23,9 @@ local SOURCE={
     Casing={id=130196548599769,major=8.58,minor=5.3,height=10.378,centerY=1.1492},
     Helix={id=106863534763803,major=23.6,minor=5.08,height=1.453,centerY=-.97125},
     Crosshead={id=108452611210970,major=8.94,minor=1.12,height=.5675,
+        centerY=0,holder="ApprovedPerimeterStructuresTemplates",
+        template="Brace",tag="OriginalPerimeterStructure3D"},
+    JunctionTruss={id=108452611210970,major=8.94,minor=1.12,height=.5675,
         centerY=0,holder="ApprovedPerimeterStructuresTemplates",
         template="Brace",tag="OriginalPerimeterStructure3D"},
     Stay={id=122766792774607,major=9.62,minor=.6175,height=1.505,
@@ -418,6 +425,33 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
         fitSize=Vector3.new(size.X*.85,size.Y*.975,size.Z*.98),expectedParent=decor}
 end
 
+-- Two real central trusses already exist in the five maps. Cover each
+-- with a forged coupler only while its own Sky Spine endpoint overlaps.
+-- The full promenade cradle/Harbor gantry has priority over this inset.
+local function collectJunctionTruss(arena,deck,spine,decor,scale)
+    if not spine or deck.Parent~=arena:FindFirstChild("Platforms")
+        or deck:GetAttribute("PromenadeStep")~=4
+        or deck:GetAttribute("RouteTier")~=4 or spine:GetAttribute("RouteTier")~=4
+        or math.abs(deck.Size.Z-12*scale)>.12
+        or math.abs(spine.Size.X-12*scale)>.12
+        or math.abs(deck.Size.Y-2)>.08 or math.abs(spine.Size.Y-2)>.08
+        or not Connection.spineJunction(spine,deck) then return nil end
+    local index=deck.Name:match("^Platform(%d+)$")
+    local native=promenadeNative(decor,index,"_UnderdeckTruss")
+    if not native or Trim.hasPrimaryJunctionTruss(native) then return nil end
+    local expected=deck.CFrame*CFrame.new(0,-.3,0)
+    if (native.Position-expected.Position).Magnitude>.14
+        or (native.Size-Vector3.new(5.6*scale,1.7,13*scale)).Magnitude>.13
+        or expected.UpVector:Dot(native.CFrame.UpVector)<.999
+        or expected.LookVector:Dot(native.CFrame.LookVector)<.999 then return nil end
+    -- The shoulder remains underneath the real two-stud collision deck,
+    -- with a flange at its underside and visible structural depth below.
+    return {category="junction",name="JunctionTruss",key=native,owner=deck,
+        otherDeck=spine,arena=arena,originals={native},center=deck.Position,
+        orientation=native.CFrame*CFrame.new(0,-1.02,0),
+        fitSize=Vector3.new(native.Size.X*.97,1.7,native.Size.Z*.98),expectedParent=decor}
+end
+
 local function collectStayPair(arena,deck,decor,scale)
     local pair={}
     for _,side in ipairs(SIDES) do
@@ -626,12 +660,15 @@ end
 local function isPortico(category)
     return category=="promenade" or category=="stay"
         or category=="equipment" or category=="fitting" or category=="command"
+        or category=="junction"
 end
 
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
         if entry.category=="command" then
             Trim.setSkySpineRoofMask(n.part,true,false)
+        elseif entry.category=="junction" then
+            Trim.setJunctionTrussMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
             or (isPortico(entry.category) and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
@@ -715,6 +752,8 @@ local function refresh(entry)
             if decor==entry.expectedParent then
                 if entry.category=="arch" then
                     data=collectArch(entry.arena,entry.owner,decor,scale)
+                elseif entry.category=="junction" then
+                    data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale)
                 elseif entry.category=="equipment" then
                     local equipment=EQUIPMENT[entry.arena:GetAttribute("VariantId")]
                     if equipment then
@@ -800,6 +839,8 @@ local function refresh(entry)
         if n.part.Parent==entry.expectedParent then
             if entry.category=="command" then
                 Trim.setSkySpineRoofMask(n.part,true,true)
+            elseif entry.category=="junction" then
+                Trim.setJunctionTrussMask(n.part,false,true)
             else
                 n.part.LocalTransparencyModifier=1
             end
@@ -812,6 +853,7 @@ end
 local function dispose(entry)
     if entry.disposing then return end
     entry.disposing=true
+    if entry.disconnectTruss then entry.disconnectTruss() end
     reveal(entry)
     for _,c in ipairs(entry.connections) do c:Disconnect() end
     if entry.model then entry.model:Destroy() end
@@ -843,6 +885,7 @@ local function mount(data,source)
     local cf,b=clone:GetBoundingBox()
     local entry={category=data.category,name=data.name,spec=data.spec or SOURCE[data.name],
         owner=data.owner,side=data.side,other=data.other,arena=data.arena,
+        otherDeck=data.otherDeck,
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,anchor=data.anchor,
         native={},model=clone,pieces={},connections={},bounds=b,
@@ -918,6 +961,20 @@ local function mount(data,source)
                 data.owner:GetAttributeChangedSignal(attribute):Connect(changed)
         end
     end
+    if data.otherDeck then
+        watch(data.otherDeck,{"CFrame","Size","Transparency","CanCollide","Anchored","Name"})
+        for _,name in ipairs({"SkySpineStep","SkySpineInterchange","RouteTier",
+            "ChaosPermanentRoute","CollapsePhase","BridgeShutterPhase"}) do
+            entry.connections[#entry.connections+1]=
+                data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
+        end
+        entry.disconnectTruss=Trim.observePrimaryJunctionTruss(data.originals[1],changed)
+        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",entry.spec.tag}) do
+            entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        entry.connections[#entry.connections+1]=
+            entry.sourceFolder:GetAttributeChangedSignal("OwnerVerified"):Connect(changed)
+    end
     local function watchPorticoNative(native)
         watch(native,{"CFrame","Size","Transparency","Anchored",
             "CanCollide","CanTouch","CanQuery","Name"})
@@ -989,6 +1046,10 @@ local function mount(data,source)
 end
 
 local function caps(tier,touch,pressure,kind)
+    if kind=="junction" then
+        if (tonumber(pressure) or 0)>=1 then return 0 end
+        return tier~="Low" and touch~=true and 2 or 1
+    end
     if kind=="stay" then
         local cap=STAY_BUDGET[tier] or 0
         if (tonumber(pressure) or 0)>=1 then return 0 end
@@ -1061,7 +1122,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     local promenadeVariant=PROMENADE_VARIANTS[variant]
     for name in pairs(SOURCE) do
         local kind=name=="Crosshead" and "promenade" or (name=="Stay" and "stay")
-        if not kind or (promenadeVariant and caps(tier,touch,pressure,kind)>0) then
+            or (name=="JunctionTruss" and "junction")
+        if not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
     end
@@ -1086,7 +1148,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
     end
     local desired={}
-    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={},fitting={},command={}}
+    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={},fitting={},command={},junction={}}
     local function queuePair(pair,limit,pool)
         if not pair then return end
         local first=pair[1]
@@ -1102,7 +1164,23 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     local platforms=arena:FindFirstChild("Platforms")
     if decor and decor:IsA("Folder")
         and platforms and platforms:IsA("Folder") then
-        for _,deck in ipairs(platforms:GetChildren()) do
+        local decks=platforms:GetChildren()
+        local spineEnds={}
+        if src.JunctionTruss then
+            for _,deck in ipairs(decks) do
+                local step=deck:GetAttribute("SkySpineStep")
+                if step==1 or step==10 then
+                    local lane=step==1 and 1 or 2
+                    spineEnds[lane]=spineEnds[lane]==nil and deck or false
+                end
+            end
+        end
+        for _,deck in ipairs(decks) do
+            local lane=deck:GetAttribute("PromenadeLane")
+            if src.JunctionTruss and lane then
+                local truss=collectJunctionTruss(arena,deck,spineEnds[lane],decor,scale)
+                queuePair(truss and {truss},(DISTANCE[tier] or DISTANCE.Low).promenade,candidates.junction)
+            end
             local data=collectArch(arena,deck,decor,scale)
             if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
                 data=collectPorticoPart(arena,deck,decor,scale)
@@ -1173,7 +1251,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         end
     end
-    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment","fitting","command"}) do
+    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment","fitting","command","junction"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
@@ -1274,6 +1352,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         local data=desired[owner]
         if not data or data.name~=entry.name
             or data.category~=entry.category or data.arena~=entry.arena
+            or data.otherDeck~=entry.otherDeck
             or src[entry.name]~=entry.source
             or (isPortico(entry.category) and not sameOriginals(entry,data))
             or not sourceIntact(entry) then

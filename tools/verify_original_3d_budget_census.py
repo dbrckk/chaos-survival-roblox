@@ -2172,7 +2172,8 @@ for contract in (
     'originals={native}',
 ):
     assert contract in promenade_collector,contract
-assert 'UnderdeckTruss' not in promenade_collector
+crosshead_collector=promenade_collector.split("local function collectJunctionTruss",1)[0]
+assert 'UnderdeckTruss' not in crosshead_collector
 assert 'LoadPylon' not in promenade_collector
 assert 'Low={arch=0,casing=0,helix=0,promenade=0}' in P4_CLIENT
 print("PASS four promenade variants use the approved truss with exact native footprint and Low backoff")
@@ -2314,7 +2315,7 @@ for clause in (
     'return tier=="High" and touch~=true and 2 or 1',
 ):
     assert clause in P4_CLIENT, clause
-assert "or crownTrim[part] or commandTrim[part] or spineClaims[part] then" in mask
+assert "or crownTrim[part] or commandTrim[part] or spineClaims[part]" in mask
 assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
 print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
 
@@ -2362,3 +2363,14 @@ assert 'PlatformNativeTrimReplacementKit.spineCradleRefitted' in OWNER
 assert 'PlatformNativeTrimReplacementKit.setSpineCradleLodVisible(native, visible)' in SIDE_LOD
 assert 'LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck' in OWNER
 print("PASS genuine Sky Spine underframes retain one complete shrink-safe LOD owner")
+
+
+connections=(ROOT/"src/shared/SkyRouteConnectionRules.lua").read_text(encoding="utf8")
+assert '(step == 1 and lane == 1) or (step == 10 and lane == 2)' in connections
+assert 'half-math.abs(delta:Dot(axis)) < .20' in connections
+assert 'SkyRouteConnectionRules.spineJunction(first,second)' in ROUTE
+assert 'not Connection.spineJunction(spine,deck)' in P4_CLIENT
+assert 'Trim.hasPrimaryJunctionTruss(native)' in P4_CLIENT
+assert 'observePrimaryJunctionTruss(data.originals[1],changed)' in P4_CLIENT
+assert 'LocalSkySpineJunctionTrussesReplaced' in SIDE_LOD
+print("PASS ten authored junction trusses use one approved source, proved deck overlap and shared rollback")

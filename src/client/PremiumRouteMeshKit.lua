@@ -14,6 +14,11 @@ local PlatformNativeTrimReplacementKit = if script and script.Parent
     then require(script.Parent.PlatformNativeTrimReplacementKit)
     else require("./PlatformNativeTrimReplacementKit")
 
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local connectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
+local SkyRouteConnectionRules = if connectionModule
+    then require(connectionModule) else require("../shared/SkyRouteConnectionRules")
+
 local PremiumRouteMeshKit = {}
 local PROMENADE_TRUSS_SPAN = {[2] = 11, [4] = 13, [7] = 15}
 
@@ -1031,32 +1036,8 @@ local function realRouteJunction(first, second)
                 math.min(first.Size.X,first.Size.Z),
                 math.min(second.Size.X,second.Size.Z))*0.25
     end
-    -- The only genuine transverse interchange joins the first/last
-    -- Sky Spine step to steps 4/5 on either of two sky promenades.
-    local spineStep = familyA == "spine" and stepA
-        or (familyB == "spine" and stepB or nil)
-    local promenadeStep = familyA:match("^promenade") and stepA
-        or (familyB:match("^promenade") and stepB or nil)
-    if not spineStep or not promenadeStep
-        or (spineStep ~= 1 and spineStep ~= 10)
-        or (promenadeStep ~= 4 and promenadeStep ~= 5)
-        or math.abs(alongA:Dot(alongB)) > 0.20 then
-        return false
-    end
-    -- Exact oriented physical rectangle overlap, not merely arbitrary
-    -- proximity or matching metadata on a disconnected high platform.
-    local right = first.CFrame.RightVector
-    local forward = first.CFrame.LookVector
-    local widthX = math.abs(right:Dot(second.CFrame.RightVector))
-            * second.Size.X*0.5
-        + math.abs(right:Dot(second.CFrame.LookVector))
-            * second.Size.Z*0.5
-    local widthZ = math.abs(forward:Dot(second.CFrame.RightVector))
-            * second.Size.X*0.5
-        + math.abs(forward:Dot(second.CFrame.LookVector))
-            * second.Size.Z*0.5
-    return math.abs(delta.X) <= first.Size.X*0.5 + widthX + 0.25
-        and math.abs(delta.Z) <= first.Size.Z*0.5 + widthZ + 0.25
+    if familyA == "spine" then return SkyRouteConnectionRules.spineJunction(first,second) end
+    return SkyRouteConnectionRules.spineJunction(second,first)
 end
 
 -- Exposed for the real-engine geometry regression only. The helper never
