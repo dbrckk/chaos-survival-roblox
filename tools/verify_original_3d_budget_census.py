@@ -299,13 +299,13 @@ assert 'ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 print("PASS genuine 16 facade + 4 corner 3D owners survive shrinking Base",
       "while preserving authenticated geometry, existing caps and fallback")
 for required in (
-    'local FOUNDATION_ID = 72507987666671',
-    'local FOUNDATION_PARTS = 7',
+    'local FOUNDATION = {id = 72507987666671',
+    'local OPTIONAL_PARTS = 7',
     'local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}',
     'local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}',
-    'source:GetAttribute("PremiumGround3D") == true',
-    'local function nativeFoundationPart(part, parent, size)',
-    'local function releaseFoundation(entry)',
+    'tag = "PremiumGround3D"',
+    'local function nativeDetailPart(part, parent, class, size)',
+    'local function releaseDetail(entry, key)',
     'and 0 or (caps[tier] or caps.Low)',
     'clone.Parent = entry.model',
 ):
@@ -313,6 +313,20 @@ for required in (
 assert 'LocalCornerFoundationNativePartsReplaced' in TOWERS_LOD
 print("PASS four sculpted corner foundations per map share the scenery",
       "pass, with separate native rollback and a capped touch budget")
+for required in (
+    'id = 105555650820011, holder = "ApprovedVariantIdentitySpineTemplates"',
+    'id = 123049626693705, holder = "ApprovedClassicBroadcastFinTemplates"',
+    'native = "LightningRod"',
+    'native = "SignalFin"',
+    'height = 35.2',
+    'height = 33.65',
+    'size.Z > size.X',
+    'syncDetail(entry, "crown", crown, crownSource, spec)',
+):
+    assert required in CORNER_MONUMENTS, required
+assert 'LocalCornerCrownNativePartsReplaced' in TOWERS_LOD
+print("PASS two approved sculpted corner crowns per world use sized",
+      "connections and restore independently of their foundations")
 # P0: Android approved facades now share the SAME pressure and touch
 # limits as genuine six-MeshPart sidewalls. Prevent orphan front assets
 # from consuming the 440/680/900-piece mobile budgets under GPU pressure.

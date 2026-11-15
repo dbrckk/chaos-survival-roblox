@@ -5,9 +5,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
+-- Grounded facade heights put the forged antenna and split fin in contact
+-- with the imported observatory needle and freight hoist forks.
 local PROFILE = {
-    [1] = {name = "Observatory", id = 132020956214241},
-    [2] = {name = "Freight", id = 88725004643299},
+    [1] = {name = "Observatory", id = 132020956214241, height = 35.2},
+    [2] = {name = "Freight", id = 88725004643299, height = 33.65},
     [3] = {name = "Turbine", id = 84217436280282},
     [4] = {name = "Aerial", id = 135791763112202},
 }
@@ -22,11 +24,24 @@ local BUDGET = {
     Medium = {count = 4, distance = 280, retention = 22},
     High = {count = 4, distance = 330, retention = 26},
 }
-local FOUNDATION_ID = 72507987666671
-local FOUNDATION_PARTS = 7
+local FOUNDATION = {id = 72507987666671, holder = "PremiumRouteMeshTemplates",
+    name = "PremiumGroundTile", tag = "PremiumGround3D"}
+local OPTIONAL_PARTS = 7
 local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}
 local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}
 local FOUNDATION_SIZE = Vector3.new(19.6, 1.76, 19.6)
+local CROWN = {
+    [1] = {id = 105555650820011, holder = "ApprovedVariantIdentitySpineTemplates",
+        name = "Classic", tag = "OriginalVariantIdentitySpine3D",
+        bounds = Vector3.new(2.16, 11.92, 2.16), native = "LightningRod",
+        class = "Part", size = Vector3.new(.55, 7, .55), y = 38,
+        fit = Vector3.new(.93, 7.05, .93), offset = Vector3.new(0, -.025, -.25)},
+    [2] = {id = 123049626693705, holder = "ApprovedClassicBroadcastFinTemplates",
+        name = "BroadcastFin", tag = "OriginalClassicBroadcastFin3D",
+        bounds = Vector3.new(5.46, 15.92, 1.76), native = "SignalFin",
+        class = "WedgePart", size = Vector3.new(6, 5.5, 3), y = 36,
+        fit = Vector3.new(5.8, 5.45, 2.75), offset = Vector3.new(0, -.025, .34)},
+}
 
 local bucket = Instance.new("Folder")
 bucket.Name = "ApprovedOriginalCornerMonumentsLocal"
@@ -52,8 +67,7 @@ local function authenticBase(base, arena)
         and base.Size.X <= sx + 0.2 and base.Size.Z <= sz + 0.2
 end
 
--- The facade profiles cover the tower bodies. The lightning rod and the
--- cargo signal fin still distinguish their skylines.
+-- The facade owns the tower body. Each crown masks its own native separately.
 local function redundant(slot, name)
     if slot == 1 then
         return name == "WeatherMast" or name == "ScannerLens"
@@ -105,23 +119,23 @@ local function suppressNative(entry)
     end
 end
 
-local function releaseFoundation(entry)
-    local foundation = entry.foundation
-    if not foundation then return end
-    entry.foundation = nil
-    for _, connection in ipairs(foundation.connections) do
+local function releaseDetail(entry, key)
+    local detail = entry[key]
+    if not detail then return end
+    entry[key] = nil
+    for _, connection in ipairs(detail.connections) do
         connection:Disconnect()
     end
-    for part, alpha in pairs(foundation.originals) do
+    for part, alpha in pairs(detail.originals) do
         if part.Transparency == 1 then part.Transparency = alpha end
     end
-    foundation.model:Destroy()
+    detail.model:Destroy()
 end
 
-local function maskFoundation(foundation)
-    for part in pairs(foundation.originals) do
+local function maskDetail(detail)
+    for part in pairs(detail.originals) do
         if part.Transparency < 1 then
-            foundation.originals[part] = part.Transparency
+            detail.originals[part] = part.Transparency
             part.Transparency = 1
         end
     end
@@ -138,7 +152,8 @@ local function dispose(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
-    releaseFoundation(entry)
+    releaseDetail(entry, "foundation")
+    releaseDetail(entry, "crown")
     restoreNative(entry)
     entry.model:Destroy()
 end
@@ -191,25 +206,25 @@ local function template(slot)
     return source
 end
 
-local function trustedFoundation(source, holder)
+local function trustedDetail(source, holder, spec)
     return holder and holder:IsA("Folder")
-        and holder.Parent == ReplicatedStorage
-        and holder.Name == "PremiumRouteMeshTemplates"
+        and holder.Parent == ReplicatedStorage and holder.Name == spec.holder
         and holder:GetAttribute("OwnerVerified") == true
         and source and source:IsA("Model") and source.Parent == holder
-        and source.Name == "PremiumGroundTile"
+        and source.Name == spec.name
         and source:GetAttribute("OwnerVerified") == true
-        and source:GetAttribute("PremiumGround3D") == true
         and source:GetAttribute("CosmeticOnly") == true
-        and source:GetAttribute("Original3DAssetId") == FOUNDATION_ID
+        and source:GetAttribute(spec.tag) == true
+        and source:GetAttribute("Original3DAssetId") == spec.id
 end
 
-local function foundationTemplate()
-    local holder = ReplicatedStorage:FindFirstChild("PremiumRouteMeshTemplates")
-    local source = holder and holder:FindFirstChild("PremiumGroundTile")
-    if not trustedFoundation(source, holder) then return nil end
-    if #source:GetChildren() ~= FOUNDATION_PARTS then return nil end
-    for _, part in ipairs(source:GetChildren()) do
+local function detailTemplate(spec)
+    local holder = ReplicatedStorage:FindFirstChild(spec.holder)
+    local source = holder and holder:FindFirstChild(spec.name)
+    if not trustedDetail(source, holder, spec) then return nil end
+    local parts = source:GetChildren()
+    if #parts ~= OPTIONAL_PARTS then return nil end
+    for _, part in ipairs(parts) do
         if not part:IsA("MeshPart") or not part.Anchored
             or part.CanCollide or part.CanTouch or part.CanQuery
             or part.Transparency >= 1 then return nil end
@@ -219,116 +234,180 @@ local function foundationTemplate()
         end
     end
     local _, size = source:GetBoundingBox()
-    if size.X < 40 or size.X > 55 or size.Z < 40 or size.Z > 55
-        or math.abs(size.X - size.Z) > 1
-        or size.Y < .16 or size.Y > .50 then return nil end
+    if spec == FOUNDATION then
+        if size.X < 40 or size.X > 55 or size.Z < 40 or size.Z > 55
+            or math.abs(size.X - size.Z) > 1
+            or size.Y < .16 or size.Y > .50 then return nil end
+    else
+        local canonical = Vector3.new(math.max(size.X, size.Z), size.Y,
+            math.min(size.X, size.Z))
+        if (canonical - spec.bounds).Magnitude > .48 then return nil end
+    end
     return source
 end
 
-local function nativeFoundationPart(part, parent, size)
-    return part and part:IsA("Part") and part.Parent == parent
-        and part.Shape == Enum.PartType.Block and part.Anchored
-        and not part.CanCollide and not part.CanTouch and not part.CanQuery
-        and part:GetAttribute("SceneryLodHidden") ~= true
+local function nativeDetailPart(part, parent, class, size)
+    return part and part:IsA(class) and part.Parent == parent
+        and (class ~= "Part" or part.Shape == Enum.PartType.Block)
+        and part.Anchored and not part.CanCollide and not part.CanTouch
+        and not part.CanQuery and part:GetAttribute("SceneryLodHidden") ~= true
         and part.LocalTransparencyModifier < .95
         and (part.Size - size).Magnitude < .08
+end
+
+local function matchesFrame(part, host, offset)
+    return (host.CFrame:PointToObjectSpace(part.Position) - offset).Magnitude < .075
+        and part.CFrame.LookVector:Dot(host.CFrame.LookVector) > .999
+        and part.CFrame.UpVector:Dot(host.CFrame.UpVector) > .999
 end
 
 local function foundationRim(entry)
     local native, plinth = entry.native, entry.plinth
     local rim = native:FindFirstChild("PlinthRim")
-    if nativeFoundationPart(plinth, native, Vector3.new(20, 1.4, 20))
-        and nativeFoundationPart(rim, native, Vector3.new(17.8, .4, 17.8))
-        and (plinth.CFrame:PointToObjectSpace(rim.Position)
-            - Vector3.new(0, .9, 0)).Magnitude < .08
-        and rim.CFrame.LookVector:Dot(plinth.CFrame.LookVector) > .999
-        and rim.CFrame.UpVector:Dot(plinth.CFrame.UpVector) > .999 then
-        return rim
+    if nativeDetailPart(plinth, native, "Part", Vector3.new(20, 1.4, 20))
+        and nativeDetailPart(rim, native, "Part", Vector3.new(17.8, .4, 17.8))
+        and matchesFrame(rim, plinth, Vector3.new(0, .9, 0)) then return rim end
+    return nil
+end
+
+local function nativeCrown(entry)
+    local spec = CROWN[entry.slot]
+    if not spec then return nil end
+    local native = entry.native:FindFirstChild(spec.native)
+    if nativeDetailPart(native, entry.native, spec.class, spec.size)
+        and matchesFrame(native, entry.plinth, Vector3.new(0, spec.y - .7, 0)) then
+        return native
     end
     return nil
 end
 
-local function mountFoundation(entry, rim, source)
-    local plinth = entry.plinth
-    if plinth.Transparency >= 1 or rim.Transparency >= 1 then return false end
+local function scaleAxis(axis, scale)
+    -- Valid scaling must preserve each axis of the imported MeshPart.
+    -- Equal horizontal factors allow arbitrary yaw on the square base.
+    local direction = Vector3.new(math.abs(axis.X), math.abs(axis.Y), math.abs(axis.Z))
+    if direction.X > .9999 then return scale.X end
+    if direction.Y > .9999 then return scale.Y end
+    if direction.Z > .9999 then return scale.Z end
+    if scale.X == scale.Z and direction.Y < .0001 then return scale.X end
+    return nil
+end
+
+local function fitPiece(part, origin, target, scale)
+    local relative = origin:ToObjectSpace(part.CFrame)
+    local x = scaleAxis(relative.RightVector, scale)
+    local y = scaleAxis(relative.UpVector, scale)
+    local z = scaleAxis(relative.LookVector, scale)
+    if not x or not y or not z then return false end
+    if scale ~= Vector3.one then
+        -- Very thin cross sections may reach Roblox's size floor. Keep
+        -- their original center so the aggregate silhouette stays fitted.
+        part.Size *= Vector3.new(x, y, z)
+    end
+    part.CFrame = target * CFrame.new(relative.Position * scale) * relative.Rotation
+    return true
+end
+
+local function mountDetail(entry, key, native, source, spec)
+    local originals = {[native] = native.Transparency}
+    if key == "foundation" then originals[entry.plinth] = entry.plinth.Transparency end
+    for _, alpha in pairs(originals) do
+        if alpha >= 1 then return end
+    end
     local clone = source:Clone()
-    if not clone then return false end
+    if not clone then return end
     local origin, size = clone:GetBoundingBox()
-    local horizontalScale = FOUNDATION_SIZE.X / math.max(size.X, size.Z)
-    local verticalScale = FOUNDATION_SIZE.Y / size.Y
-    local scale = Vector3.new(horizontalScale, verticalScale, horizontalScale)
-    local target = plinth.CFrame * CFrame.new(0,
-        (FOUNDATION_SIZE.Y - plinth.Size.Y) * .5, 0)
+    local fit = spec.fit or FOUNDATION_SIZE
+    local target, scale
+    if spec == FOUNDATION then
+        local plinth = entry.plinth
+        target = plinth.CFrame * CFrame.new(0, (fit.Y - plinth.Size.Y) * .5, 0)
+        local horizontal = fit.X / math.max(size.X, size.Z)
+        scale = Vector3.new(horizontal, fit.Y / size.Y, horizontal)
+    else
+        target = native.CFrame * CFrame.new(spec.offset)
+        if entry.slot == 2 and size.Z > size.X then
+            target *= CFrame.Angles(0, math.pi * .5, 0)
+            fit = Vector3.new(fit.Z, fit.Y, fit.X)
+        end
+        scale = fit / size
+    end
     local parts = clone:GetChildren()
-    if #parts ~= FOUNDATION_PARTS then
+    if #parts ~= OPTIONAL_PARTS then
         clone:Destroy()
-        return false
+        return
     end
     for _, part in ipairs(parts) do
-        local relative = origin:ToObjectSpace(part.CFrame)
-        local verticalAxes = Vector3.new(math.abs(relative.RightVector.Y),
-            math.abs(relative.UpVector.Y), math.abs(relative.LookVector.Y))
-        -- The importer can permute local axes. Stretch along the actual
-        -- bounds' vertical axis, rejecting a skewed transform.
-        if math.max(verticalAxes.X, verticalAxes.Y, verticalAxes.Z) < .9999 then
+        if not fitPiece(part, origin, target, scale) then
             clone:Destroy()
-            return false
+            return
         end
-        local partScale = Vector3.new(
-            verticalAxes.X > .9999 and verticalScale or horizontalScale,
-            verticalAxes.Y > .9999 and verticalScale or horizontalScale,
-            verticalAxes.Z > .9999 and verticalScale or horizontalScale)
-        part.Size *= partScale
-        part.CFrame = target * CFrame.new(relative.Position * scale)
-            * relative.Rotation
         part.Massless = true
         part.CastShadow = false
         part.LocalTransparencyModifier = 0
-        part.Color = part.Color:Lerp(rim.Color, .16)
+        part.Color = part.Color:Lerp(native.Color, key == "crown" and .30 or .16)
     end
-    clone.Name = "Original3DCornerMonumentFoundation"
+    clone.Name = key == "crown" and "Original3DCornerMonumentCrown"
+        or "Original3DCornerMonumentFoundation"
     clone:SetAttribute("CornerLandmarkIndex", entry.slot)
     clone.Parent = entry.model
     local holder = source.Parent
-    local foundation = {
-        model = clone, source = source, rim = rim, connections = {},
-        originals = {[plinth] = plinth.Transparency, [rim] = rim.Transparency},
-    }
-    entry.foundation = foundation
+    local detail = {model = clone, source = source, native = native,
+        connections = {}, originals = originals}
+    entry[key] = detail
     local function revoke()
-        if entry.foundation == foundation then releaseFoundation(entry) end
+        if entry[key] == detail then releaseDetail(entry, key) end
     end
     local function checkSource()
-        if not trustedFoundation(source, holder) then revoke() end
+        if not trustedDetail(source, holder, spec) then revoke() end
     end
+    local identify = key == "crown" and nativeCrown or foundationRim
     local function checkNative()
-        if foundationRim(entry) ~= rim then revoke() end
+        if identify(entry) ~= native then revoke() end
     end
     local function watch(signal, handler)
-        table.insert(foundation.connections, signal:Connect(handler))
+        table.insert(detail.connections, signal:Connect(handler))
     end
     watch(source.AncestryChanged, checkSource)
+    watch(source:GetPropertyChangedSignal("Name"), checkSource)
+    watch(holder:GetPropertyChangedSignal("Name"), checkSource)
     watch(source.ChildAdded, revoke)
     watch(source.ChildRemoved, revoke)
     watch(holder:GetAttributeChangedSignal("OwnerVerified"), checkSource)
-    for _, name in ipairs({"OwnerVerified", "PremiumGround3D", "CosmeticOnly",
-        "Original3DAssetId"}) do
+    for _, name in ipairs({"OwnerVerified", spec.tag, "CosmeticOnly", "Original3DAssetId"}) do
         watch(source:GetAttributeChangedSignal(name), checkSource)
     end
     watch(clone.ChildRemoved, revoke)
     watch(clone.AncestryChanged, function()
         if clone.Parent ~= entry.model then revoke() end
     end)
-    for _, part in ipairs({plinth, rim}) do
+    for part in pairs(originals) do
         watch(part.AncestryChanged, checkNative)
         watch(part:GetAttributeChangedSignal("SceneryLodHidden"), checkNative)
-        for _, property in ipairs({"CFrame", "Size", "Shape", "Anchored",
+        for _, property in ipairs({"Name", "CFrame", "Size", "Anchored",
             "CanCollide", "CanTouch", "CanQuery", "LocalTransparencyModifier"}) do
             watch(part:GetPropertyChangedSignal(property), checkNative)
         end
+        if part:IsA("Part") then watch(part:GetPropertyChangedSignal("Shape"), checkNative) end
     end
-    maskFoundation(foundation)
-    return true
+    maskDetail(detail)
+    return detail
+end
+
+local function syncDetail(entry, key, native, source, spec)
+    local detail = entry[key]
+    if detail and (not native or detail.native ~= native
+        or detail.source ~= source or detail.model.Parent ~= entry.model
+        or #detail.model:GetChildren() ~= OPTIONAL_PARTS) then
+        releaseDetail(entry, key)
+        detail = nil
+    end
+    if detail then
+        maskDetail(detail)
+        return detail
+    elseif native and source then
+        return mountDetail(entry, key, native, source, spec)
+    end
+    return nil
 end
 
 local function eligible(native, corners, variant)
@@ -379,12 +458,16 @@ local function valid(entry, corners, base, variant)
 end
 
 local function mount(native, corners, base, variant, slot, plinth, source)
+    if not source then return nil end
     local clone = source:Clone()
+    if not clone then return nil end
     local sourceFrame, size = clone:GetBoundingBox()
+    local height = PROFILE[slot].height or size.Y
+    local scale = Vector3.new(1, height / size.Y, 1)
     -- GroundPlinth is at origin + (0, 0.7, 0), and is rotated by the
     -- server's authored per-corner yaw. Mesh bottom therefore meets the
     -- ORIGINAL terrain without adding a phantom walkable platform.
-    local target = plinth.CFrame * CFrame.new(0, size.Y * .5 - .7, 0)
+    local target = plinth.CFrame * CFrame.new(0, height * .5 - .7, 0)
     local pieces = {}
     for _, part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -392,7 +475,12 @@ local function mount(native, corners, base, variant, slot, plinth, source)
                 clone:Destroy()
                 return nil
             end
-            part.CFrame = target * sourceFrame:ToObjectSpace(part.CFrame)
+            if scale == Vector3.one then
+                part.CFrame = target * sourceFrame:ToObjectSpace(part.CFrame)
+            elseif not fitPiece(part, sourceFrame, target, scale) then
+                clone:Destroy()
+                return nil
+            end
             part.Anchored = true
             part.Massless = true
             part.CanCollide = false
@@ -421,7 +509,8 @@ local function mount(native, corners, base, variant, slot, plinth, source)
     local function reconcile()
         if entry.disposed then return end
         if not valid(entry, corners, base, variant) then
-            releaseFoundation(entry)
+            releaseDetail(entry, "foundation")
+            releaseDetail(entry, "crown")
             restoreNative(entry)
             for _, part in ipairs(pieces) do
                 if part.Parent then part.LocalTransparencyModifier = 1 end
@@ -434,10 +523,13 @@ local function mount(native, corners, base, variant, slot, plinth, source)
         end
     end
     entry.reconcile = reconcile
-    for _, property in ipairs({"Size", "CFrame"}) do
+    for _, property in ipairs({"Size", "CFrame", "Anchored", "CanCollide",
+        "CanTouch", "CanQuery", "LocalTransparencyModifier"}) do
         entry.connections[#entry.connections + 1] =
             plinth:GetPropertyChangedSignal(property):Connect(reconcile)
     end
+    entry.connections[#entry.connections + 1] =
+        plinth:GetAttributeChangedSignal("SceneryLodHidden"):Connect(reconcile)
     entry.connections[#entry.connections + 1] =
         native.AncestryChanged:Connect(reconcile)
     entry.connections[#entry.connections + 1] =
@@ -555,24 +647,20 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure, t
     end
     local caps = touch and TOUCH_FOUNDATION_CAP or FOUNDATION_CAP
     local cap = (tonumber(pressure) or 0) >= 1 and 0 or (caps[tier] or caps.Low)
-    local source = cap > 0 and foundationTemplate() or nil
-    local active = 0
+    local foundationSource = cap > 0 and detailTemplate(FOUNDATION) or nil
+    local crownCap = cap > 0 and (touch and tier ~= "High" and 1 or 2) or 0
+    local activeFoundations, activeCrowns = 0, 0
     for _, selected in ipairs(ranked) do
         local entry = mounted[selected.native]
         if not entry then continue end
-        local rim = source and active < cap and foundationRim(entry)
-        local foundation = entry.foundation
-        if foundation and (not rim or foundation.rim ~= rim
-            or foundation.source ~= source or foundation.model.Parent ~= entry.model
-            or #foundation.model:GetChildren() ~= FOUNDATION_PARTS) then
-            releaseFoundation(entry)
+        local rim = foundationSource and activeFoundations < cap and foundationRim(entry)
+        if syncDetail(entry, "foundation", rim, foundationSource, FOUNDATION) then
+            activeFoundations += 1
         end
-        if rim and entry.foundation then
-            maskFoundation(entry.foundation)
-            active += 1
-        elseif rim and mountFoundation(entry, rim, source) then
-            active += 1
-        end
+        local crown = activeCrowns < crownCap and nativeCrown(entry)
+        local spec = CROWN[entry.slot]
+        local crownSource = crown and detailTemplate(spec) or nil
+        if syncDetail(entry, "crown", crown, crownSource, spec) then activeCrowns += 1 end
     end
 end
 
@@ -598,13 +686,13 @@ function Kit.replacedNativeCount()
     return n
 end
 
-function Kit.foundationCount()
+local function detailCount(key)
     local models, replaced = 0, 0
     for _, entry in pairs(mounted) do
-        local foundation = entry.foundation
-        if foundation and foundation.model.Parent == entry.model then
+        local detail = entry[key]
+        if detail and detail.model.Parent == entry.model then
             models += 1
-            for part in pairs(foundation.originals) do
+            for part in pairs(detail.originals) do
                 if part.Parent == entry.native and part.Transparency == 1 then
                     replaced += 1
                 end
@@ -612,6 +700,14 @@ function Kit.foundationCount()
         end
     end
     return models, replaced
+end
+
+function Kit.foundationCount()
+    return detailCount("foundation")
+end
+
+function Kit.crownCount()
+    return detailCount("crown")
 end
 
 return Kit

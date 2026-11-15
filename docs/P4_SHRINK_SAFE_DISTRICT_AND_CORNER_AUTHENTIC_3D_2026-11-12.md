@@ -83,6 +83,20 @@ streaming ou la perte du modèle rendent les dalles natives visibles.
 Les attributs `LocalOriginalCornerFoundationCount` et
 `LocalCornerFoundationNativePartsReplaced` exposent les quantités résidentes.
 
+## Pointes sculptées sur les cinq arènes
+
+Le paratonnerre de l’observatoire utilise le mât forgé approuvé
+`105555650820011`. Le portique de fret reçoit l’ailette à deux carénages
+`123049626693705`. Les deux profils de tour sont ajustés à la hauteur de
+leur raccord. L’ailette corrige aussi l’inversion X/Z possible à l’import.
+Cela couvre dix formes natives sur les cinq arènes.
+
+En Low, le monument le plus proche peut porter sa pointe détaillée.
+En Medium tactile, une pointe peut être montée. En Medium bureau et
+en High, le plafond est de deux. La pression graphique ou la perte du
+modèle restaure la pointe native indépendamment de son socle.
+`LocalCornerCrownNativePartsReplaced` compte les formes effectivement masquées.
+
 ## Contrats et validation
 
 Le vérificateur source déjà existant

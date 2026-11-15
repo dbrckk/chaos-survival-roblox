@@ -640,7 +640,7 @@ describe("Chaos Survival engine", function()
         end
         holder:Destroy()
     end)
-    it("covers the forty real corner foundation pieces with bounded original mesh and restores the native socles on loss", function()
+    it("fits original corner foundations and crowns in all five real arenas and restores each native on loss", function()
         local storage = game:GetService("ReplicatedStorage")
         local facades = Instance.new("Folder")
         facades.Name = "ApprovedDistrictFacadeTemplates"
@@ -672,11 +672,33 @@ describe("Chaos Survival engine", function()
             return mesh
         end
         for _, profile in ipairs({
-            {"Observatory", 132020956214241}, {"Freight", 88725004643299},
-            {"Turbine", 84217436280282}, {"Aerial", 135791763112202},
+            {"Observatory", 132020956214241, Vector3.new(14.7, 34.55, 8.6)},
+            {"Freight", 88725004643299, Vector3.new(15.8, 24.35, 8.6)},
+            {"Turbine", 84217436280282, Vector3.new(14.7, 26.05, 8.6)},
+            {"Aerial", 135791763112202, Vector3.new(14.7, 43.85, 8.6)},
         }) do
             geometry(makeTemplate(facades, profile[1], profile[2], "DistrictFacade3D"),
-                Vector3.new(13, 28, 9), CFrame.identity)
+                profile[3], CFrame.identity)
+        end
+        local crownTemplates = {}
+        for _, crown in ipairs({
+            {"ApprovedVariantIdentitySpineTemplates", "Classic",
+                105555650820011, "OriginalVariantIdentitySpine3D", Vector3.new(2.16, 11.92, 2.16)},
+            {"ApprovedClassicBroadcastFinTemplates", "BroadcastFin",
+                123049626693705, "OriginalClassicBroadcastFin3D", Vector3.new(1.76, 15.92, 5.46)},
+        }) do
+            local holder = Instance.new("Folder")
+            holder.Name = crown[1]
+            holder:SetAttribute("OwnerVerified", true)
+            holder.Parent = storage
+            local model = makeTemplate(holder, crown[2], crown[3], crown[4])
+            table.insert(crownTemplates, model)
+            -- The second source deliberately uses the importer's swapped X/Z.
+            geometry(model, crown[5], CFrame.identity).Name = "Envelope"
+            for _ = 1, 6 do
+                geometry(model, Vector3.one * .25, CFrame.new(.4, 1, 0)
+                    * CFrame.Angles(0, math.pi * .5, 0))
+            end
         end
         local source = makeTemplate(routes, "PremiumGroundTile", 72507987666671,
             "PremiumGround3D")
@@ -687,7 +709,7 @@ describe("Chaos Survival engine", function()
             geometry(source, Vector3.new(.8, .026, 2), CFrame.new(index, .020, -1))
         end
         local bucket = assert(workspace:FindFirstChild("ApprovedOriginalCornerMonumentsLocal"))
-        local total = 0
+        local total, totalCrowns = 0, 0
         for _, variant in ipairs(ArenaVariants.Order) do
             local arena = MapBuilder.buildArena(Config, variant, ArenaVariants, VisualTheme)
             local base = arena.Base
@@ -696,6 +718,7 @@ describe("Chaos Survival engine", function()
             local initial = base.Size
             first.GroundPlinth.Transparency = .2
             first.PlinthRim.Transparency = .35
+            first.LightningRod.Transparency = .16
             CornerMonument.sync(arena, base.Position, "High", true, nil, 0, false)
             local models, covered = CornerMonument.foundationCount()
             assert(models == 4 and covered == 8, variant .. " desktop corner coverage")
@@ -726,18 +749,39 @@ describe("Chaos Survival engine", function()
                 end
                 assert(math.abs(lowest + .7) < .015 and math.abs(highest - 1.06) < .015)
             end
-            assert(first.LightningRod.Transparency < 1 and corners.CornerLandmark2.SignalFin.Transparency < 1)
+            local crowns, coveredCrowns = CornerMonument.crownCount()
+            assert(crowns == 2 and coveredCrowns == 2, variant .. " roof crown coverage")
+            totalCrowns += coveredCrowns
+            for index, native in ipairs({first.LightningRod, corners.CornerLandmark2.SignalFin}) do
+                local body = assert(bucket:FindFirstChild("ApprovedOriginalCornerMonument3D_" .. index))
+                local crown = assert(body:FindFirstChild("Original3DCornerMonumentCrown"))
+                assert(crown:GetAttribute("Original3DAssetId") == crownTemplates[index]:GetAttribute("Original3DAssetId"))
+                assert(native.Transparency == 1 and #crown:GetChildren() == 7)
+                local envelope = crown.Envelope
+                local worldTop = body:FindFirstChildWhichIsA("MeshPart")
+                local join = envelope.Position.Y - envelope.Size.Y * .5
+                assert(worldTop.Position.Y + worldTop.Size.Y * .5 >= join,
+                    variant .. " crown floats above its supporting body")
+                if index == 2 then
+                    assert(envelope.Size.Z > envelope.Size.X)
+                    assert(math.abs(envelope.CFrame.LookVector:Dot(native.CFrame.RightVector)) > .999)
+                end
+            end
             base.Size = Vector3.new(initial.X * .72, initial.Y, initial.Z * .72)
             CornerMonument.sync(arena, base.Position, "High", true, nil, 0, false)
-            assert(CornerMonument.foundationCount() == 4 and base.CanCollide)
+            assert(CornerMonument.foundationCount() == 4 and CornerMonument.crownCount() == 2 and base.CanCollide)
+            CornerMonument.sync(arena, base.Position, "Medium", true, nil, 0, true)
+            assert(CornerMonument.crownCount() == 1)
             CornerMonument.sync(arena, first.GroundPlinth.Position, "High", true, nil, 0, true)
             assert(CornerMonument.foundationCount() == 2)
             CornerMonument.sync(arena, first.GroundPlinth.Position, "Medium", true, nil, 0, true)
             assert(CornerMonument.foundationCount() == 1)
             CornerMonument.sync(arena, first.GroundPlinth.Position, "Low", true, nil, 0, true)
-            assert(CornerMonument.foundationCount() == 1)
+            assert(CornerMonument.foundationCount() == 1 and CornerMonument.crownCount() == 1)
             CornerMonument.sync(arena, first.GroundPlinth.Position, "Low", true, nil, 1, true)
-            assert(CornerMonument.foundationCount() == 0 and CornerMonument.count() == 1)
+            assert(CornerMonument.foundationCount() == 0 and CornerMonument.crownCount() == 0
+                and CornerMonument.count() == 1)
+            assert(math.abs(first.LightningRod.Transparency - .16) < .001)
             assert(math.abs(first.GroundPlinth.Transparency - .2) < .001
                 and math.abs(first.PlinthRim.Transparency - .35) < .001)
             if variant == "Classic" then
@@ -747,9 +791,30 @@ describe("Chaos Survival engine", function()
                 syncNear()
                 local body = assert(bucket:FindFirstChild("ApprovedOriginalCornerMonument3D_1"))
                 local pedestal = assert(body:FindFirstChild("Original3DCornerMonumentFoundation"))
+                local crown = assert(body:FindFirstChild("Original3DCornerMonumentCrown"))
+                local rod = first.LightningRod
+                local initialFrame = rod.CFrame
+                rod.CFrame *= CFrame.new(1, 0, 0)
+                task.wait()
+                assert(CornerMonument.crownCount() == 0 and pedestal.Parent == body)
+                assert(math.abs(rod.Transparency - .16) < .001)
+                rod.CFrame = initialFrame
+                syncNear()
+                crown = assert(body:FindFirstChild("Original3DCornerMonumentCrown"))
+                crown.Envelope:Destroy()
+                task.wait()
+                assert(CornerMonument.crownCount() == 0 and pedestal.Parent == body)
+                syncNear()
+                local mast = crownTemplates[1]
+                mast.Parent:SetAttribute("OwnerVerified", false)
+                task.wait()
+                assert(CornerMonument.crownCount() == 0 and pedestal.Parent == body)
+                mast.Parent:SetAttribute("OwnerVerified", true)
+                syncNear()
                 pedestal:GetChildren()[1]:Destroy()
                 task.wait()
-                assert(CornerMonument.foundationCount() == 0 and body.Parent == bucket)
+                assert(CornerMonument.foundationCount() == 0 and body.Parent == bucket
+                    and CornerMonument.crownCount() == 1)
                 assert(math.abs(first.PlinthRim.Transparency - .35) < .001)
                 syncNear()
                 first.PlinthRim.CanCollide = true
@@ -779,6 +844,8 @@ describe("Chaos Survival engine", function()
             arena.Parent:Destroy()
         end
         expect(total).toBe(40)
+        expect(totalCrowns).toBe(10)
+        for _, model in ipairs(crownTemplates) do model.Parent:Destroy() end
         routes:Destroy()
         facades:Destroy()
     end)

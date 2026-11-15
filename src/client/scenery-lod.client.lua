@@ -2044,8 +2044,8 @@ task.spawn(function()
                 end
             end
         end
-        -- The same camera pass owns the four corner silhouettes and their
-        -- sculpted bases. The bases share Android's optional geometry budget.
+        -- Corner silhouettes, sculpted bases and crowns use one camera pass
+        -- and the existing optional mobile geometry budget.
         ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch)
@@ -2073,6 +2073,11 @@ task.spawn(function()
             ~= nativeFoundationPieces then
             player:SetAttribute("LocalCornerFoundationNativePartsReplaced",
                 nativeFoundationPieces)
+        end
+        local _, nativeCrownsReplaced = ApprovedCornerMonumentMeshKit.crownCount()
+        if player:GetAttribute("LocalCornerCrownNativePartsReplaced")
+            ~= nativeCrownsReplaced then
+            player:SetAttribute("LocalCornerCrownNativePartsReplaced", nativeCrownsReplaced)
         end
         -- Four original peripheral facade retrofits have genuine individual
         -- positions; reuse the existing district architecture LOD sampler.
