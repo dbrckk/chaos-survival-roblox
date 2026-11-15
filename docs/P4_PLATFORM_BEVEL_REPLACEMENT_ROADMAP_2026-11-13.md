@@ -647,3 +647,19 @@ Le client vérifie le tablier, la traverse, les deux pièces natives et les deux
 Le châssis original approuvé `84582262145054` possède sept MeshParts et 3 072 triangles. Il masque désormais la plaque rectangulaire sous un tablier éligible de promenade. Aux marches 2, 4 et 7, il remplace aussi le bloc transversal du portique hors Harbor. Sous un tablier du Sky Spine, il remplace ensemble la plaque, les deux longerons et la traverse, soit quatre pièces natives.
 
 Le client valide les vrais tabliers, les dimensions et l'alignement des pièces natives avant de réserver un châssis. Les sept MeshParts et leurs soudures sont requises pour garder les pièces de base masquées. La perte d'une source, le streaming incomplet, une alerte ou un décalage pendant le rétrécissement rétablit le décor d'origine. Les châssis longs déjà montés gardent la priorité, et le portique cargo Harbor conserve son propriétaire. Le nouveau compteur `LocalRouteUnderdeckNativePartsReplaced` relève les pièces réellement masquées dans la session. Les créneaux existants de 1/2/4 châssis en Low/Medium/High sont conservés.
+
+### Silhouettes propres aux cinq centres du Sky Spine — 15 novembre 2026
+
+Les deux portiques centraux de chaque arène ont leur propre signature sculptée au-dessus de la couronne commune.
+
+| Arène | Équipement au sommet | Formes natives couvertes par portique |
+|:--|:--|--:|
+| Classic | Station optique à double objectif | 2 |
+| Towers | Traverse d'acier forgé et cabine suspendue vitrée | 2 |
+| Crossroads | Traverse ajourée de routage | 2 |
+| Orbital | Réacteur à anneaux concentriques | 2 |
+| Harbor | Grue de fret à contrepoids et poste de commande | 3 |
+
+Le lot couvre 22 formes natives sur les dix portiques des cinq cartes. Les six modèles créateur approuvés sont réutilisés dans le dossier déjà compté par le budget adaptatif. Une couronne visible, le vrai tablier, le bon emplacement et les sept MeshParts de chaque source sont requis. Towers monte ses deux modèles ensemble. Low, Medium et le tactile ont au plus un portique équipé par arène active. High PC peut afficher les deux. Dès la première pression graphique, la couronne commune reprend seule le rendu. Si les deux couches d'art disparaissent, le masque partagé restitue l'opacité d'origine. Aucun nouveau collider ni luminaire n'est créé.
+
+Les compteurs `LocalOriginalSkySpineCommandArtCount` et `LocalSkySpineCommandNativePartsReplaced` mesurent les modèles et les pièces masquées de la session.

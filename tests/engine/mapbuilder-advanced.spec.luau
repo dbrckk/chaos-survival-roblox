@@ -8,6 +8,7 @@ local OriginalMeshScenery = require("../../src/server/OriginalMeshScenery")
 local PremiumRouteMeshKit = require("../../src/client/PremiumRouteMeshKit")
 local Trim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local SkySpineCrownMeshKit = require("../../src/client/SkySpineCrownMeshKit")
+local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
 local ArenaKeelMeshKit = require("../../src/client/ArenaKeelMeshKit")
 local UnderstructureBeamMeshKit = require("../../src/client/UnderstructureBeamMeshKit")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
@@ -366,6 +367,8 @@ describe("Chaos Survival engine", function()
             crown.Name = "SkySpine" .. index .. "_InterchangeCrown"
             crown.Anchored = true
             crown.CanCollide = false
+            crown.CanTouch = false
+            crown.CanQuery = false
             crown:SetAttribute("SkySpineDecor", true)
             crown:SetAttribute("PerimeterPlatformIndex", index)
             crown.Parent = decor
@@ -441,7 +444,10 @@ describe("Chaos Survival engine", function()
         -- StreamingEnabled can deliver these native Parts after the mesh.
         local streamedNative = Instance.new("Part")
         streamedNative.Name = "SkySpine201_CommandRadar"
+        streamedNative.Anchored = true
         streamedNative.CanCollide = false
+        streamedNative.CanTouch = false
+        streamedNative.CanQuery = false
         streamedNative:SetAttribute("SkySpineDecor", true)
         streamedNative:SetAttribute("PerimeterPlatformIndex", 201)
         streamedNative.Parent = decor
@@ -524,6 +530,113 @@ describe("Chaos Survival engine", function()
         expect(SkySpineCrownMeshKit.lightCount()).toBe(0)
         SkySpineCrownMeshKit.setDarknessGuard(true)
         generated:Destroy()
+
+        local function sourceFixture(folderName, name, tag, asset, size)
+            local templates = ReplicatedStorage:FindFirstChild(folderName)
+            if not templates then
+                templates = Instance.new("Folder")
+                templates.Name = folderName
+                templates:SetAttribute("OwnerVerified", true)
+                templates.Parent = ReplicatedStorage
+            end
+            local fixture = Instance.new("Model")
+            fixture.Name = name
+            fixture:SetAttribute("OwnerVerified", true)
+            fixture:SetAttribute("CosmeticOnly", true)
+            fixture:SetAttribute(tag, true)
+            fixture:SetAttribute("Original3DAssetId", asset)
+            for i=1,7 do
+                local piece = Instance.new("MeshPart")
+                piece.Size = i==1 and size or Vector3.one * .15
+                piece.Anchored = true
+                piece.Massless = true
+                piece.CanCollide = false
+                piece.CanTouch = false
+                piece.CanQuery = false
+                piece.Parent = fixture
+            end
+            fixture.Parent = templates
+            return fixture
+        end
+        local variants = {
+            Classic = {"ApprovedServiceEquipmentTemplates", "Classic", "OriginalService3D",
+                108954400662606, Vector3.new(2,3.712,1.625), "CommandRadar", 2},
+            Towers = {"ApprovedTowersSignatureBridgeTemplates", "ForgedBridge", "OriginalTowersSignatureBridge3D",
+                126298311664881, Vector3.new(40.64,4.87784,6.77), "CargoOverpass", 2},
+            Crossroads = {"ApprovedCrossroadsGantryTemplates", "Gantry", "OriginalCrossroadsGantry3D",
+                90844491148907, Vector3.new(27.92,3.6,2.74), "RoutingAileron-1", 2},
+            Orbital = {"ApprovedOrbitalReactorLandmarkTemplates", "Node", "OriginalOrbitalReactorLandmark3D",
+                104654294187035, Vector3.one*4.36, "OrbitalPowerOrb", 2},
+            Harbor = {"ApprovedHarborSignatureGantryTemplates", "SculptedGantry", "OriginalHarborSignatureGantry3D",
+                124368710235343, Vector3.new(40.8,14.0425,9.141), "DryDockHighCrane", 3},
+        }
+        local artFolder = workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
+        for _, variant in ipairs(ArenaVariants.Order) do
+            local row = variants[variant]
+            local variantSource = sourceFixture(row[1],row[2],row[3],row[4],row[5])
+            local cabin = nil
+            if variant=="Towers" then
+                cabin=sourceFixture("ApprovedAmbientMotionTemplates","Towers","ApprovedAmbientMotion3D",
+                    72210530094580,Vector3.new(2.455,5.005,2.449))
+            end
+            local realArena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+            local realDecor = realArena:FindFirstChild("Decor")
+            local center = nil
+            for _, candidate in ipairs(realArena:FindFirstChild("Platforms"):GetChildren()) do
+                if candidate:GetAttribute("SkySpineStep")==5 then center=candidate; break end
+            end
+            assert(center,variant.." has no real command deck")
+            local id = center.Name:match("%d+")
+            local prefix = "SkySpine"..id.."_"
+            local primitive = realDecor:FindFirstChild(prefix..row[6])
+            local pulse = realDecor:FindFirstChild(prefix.."OverheadPulse")
+            primitive.LocalTransparencyModifier=.25
+            local point = center.Position
+            SkySpineCrownMeshKit.sync(realArena,point,"Low",true,nil,0,true)
+            Remaining.sync(realArena,point,"Low",true,nil,0,true)
+            expect(Remaining.count("command")).toBe(cabin and 2 or 1)
+            expect(Remaining.nativeCount("command")).toBe(row[7])
+            expect(primitive.LocalTransparencyModifier).toBe(1)
+            expect(center.CanCollide).toBe(true)
+            local command = nil
+            for _, candidate in ipairs(artFolder:GetChildren()) do
+                if candidate:GetAttribute("Original3DAssetId")==row[4]
+                    and candidate:GetAttribute("OriginalP4OwnerPlatform")==center.Name then
+                    command=candidate
+                    break
+                end
+            end
+            assert(command,variant.." has no mounted command sculpture")
+            local frame,bounds=command:GetBoundingBox()
+            assert(frame.Position.Y-bounds.Y*.5>point.Y+19,
+                variant.." command sculpture overlaps the player lane")
+            for _,piece in ipairs(command:GetChildren()) do
+                expect(piece.CanCollide or piece.CanTouch or piece.CanQuery).toBe(false)
+            end
+            expect(pulse.LocalTransparencyModifier).toBe(1)
+            -- Command loss preserves the crown's mask. Crown loss then
+            -- restores the native alpha, even when command art had masked it.
+            command:FindFirstChildWhichIsA("MeshPart"):Destroy()
+            task.wait()
+            expect(Remaining.count("command")).toBe(0)
+            expect(primitive.LocalTransparencyModifier).toBe(1)
+            Remaining.sync(realArena,point,"Low",true,nil,0,true)
+            expect(Remaining.nativeCount("command")).toBe(row[7])
+            SkySpineCrownMeshKit.sync(nil,Vector3.zero,"Low",false)
+            expect(Remaining.count("command")).toBe(0)
+            expect(primitive.LocalTransparencyModifier).toBe(.25)
+            SkySpineCrownMeshKit.sync(realArena,point,"High",true,nil,0,false)
+            Remaining.sync(realArena,point,"High",true,nil,0,false)
+            expect(Remaining.nativeCount("command")).toBe(row[7]*2)
+            Remaining.sync(realArena,point,"High",true,nil,1,false)
+            expect(Remaining.count("command")).toBe(0)
+            SkySpineCrownMeshKit.sync(nil,Vector3.zero,"Low",false)
+            expect(primitive.LocalTransparencyModifier).toBe(.25)
+            Remaining.sync(nil,Vector3.zero,"Low",false)
+            realArena.Parent:Destroy()
+            variantSource.Parent:Destroy()
+            if cabin then cabin.Parent:Destroy() end
+        end
         holder:Destroy()
     end)
     it("mounts genuine approved suspended arena keel only BELOW real collision base, tiered and shrink safe", function()

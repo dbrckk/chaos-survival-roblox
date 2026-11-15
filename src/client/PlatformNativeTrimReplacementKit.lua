@@ -16,6 +16,8 @@ local saved = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local routeUnderdecks = {}
+local crownTrim = {}
+local commandTrim = {}
 local pylonPieces = {}
 local pylonsOutsideLod = setmetatable({}, {__mode = "k"})
 local watchers = {}
@@ -38,7 +40,8 @@ local promenadePylonsByDeck = {}
 local function setNativeMask(part, claims, masked)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
-    if saved[part] or crownPylons[part] or routeUnderdecks[part] then
+    if saved[part] or crownPylons[part] or routeUnderdecks[part]
+        or crownTrim[part] or commandTrim[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
@@ -52,6 +55,14 @@ end
 function Kit.setRouteUnderdeckMask(part, masked)
     if (routeUnderdecks[part] == true) == masked then return end
     setNativeMask(part, routeUnderdecks, masked)
+end
+
+-- The generic crown and the variant equipment can both obscure the same
+-- authored roof detail. Release the original alpha only after both leave.
+function Kit.setSkySpineRoofMask(part, isCommand, masked)
+    local claims = isCommand and commandTrim or crownTrim
+    if (claims[part] == true) == masked then return end
+    setNativeMask(part, claims, masked)
 end
 
 local function refreshPylon(part)

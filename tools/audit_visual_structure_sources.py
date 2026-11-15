@@ -774,7 +774,7 @@ for clause in (
     "entry.joints[piece].C0=CFrame.new(",
     "piece.Size=Vector3.new(original.X*scale,",
     "local visible = refit(entry)",
-    "visible and 1 or saved.original",
+    "PlatformNativeTrimReplacementKit.setSkySpineRoofMask(saved.part, false, visible)",
     "if not visible then PremiumRoutePbrKit.detach(entry) end",
     "darknessGuard",
     "or not piece:IsDescendantOf(entry.model)",
@@ -786,7 +786,7 @@ for clause in (
     "if safeAfterMount(entry) then count += 1 end",
     "if not realFloorScale(base, arena) then",
     "updateVisibility(entry)",
-    "visible and 1 or saved.original",
+    "PlatformNativeTrimReplacementKit.setSkySpineRoofMask(saved.part, false, visible)",
 ):
     assert clause in crown, clause
 assert not re.search(r'base\.Size\.[XZ]\s*<\s*318', crown)

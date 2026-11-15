@@ -4,6 +4,13 @@
 -- Exactly ONE existing scenery-lod sampler owns source residency. Event
 -- callbacks are only for genuine streaming / shrink / collapse changes.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local Trim=if script and script.Parent
+    and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
+    then require(script.Parent.PlatformNativeTrimReplacementKit)
+    else require("./PlatformNativeTrimReplacementKit")
+local Crown=if script and script.Parent and script.Parent:FindFirstChild("SkySpineCrownMeshKit")
+    then require(script.Parent.SkySpineCrownMeshKit)
+    else require("./SkySpineCrownMeshKit")
 local Kit={}
 local SOURCE={
     Access={id=110243423264048,major=17.6,minor=3.9,height=17.53,centerY=6.855},
@@ -87,6 +94,53 @@ local ROOF_FITTINGS={
             fitSize=Vector3.new(.86,5.39,3.12)},
     },
 }
+-- These approved add-ons occupy the space above the common gateway crown.
+-- Heights are measured from the actual physical deck's top.
+local COMMAND_ART={
+    Classic={{name="CommandOptics",source=EQUIPMENT.Classic.source,
+        fit=Vector3.new(4.3,5.3,5.2),y=22.22,natives={
+            {name="CommandRadar",shape=Enum.PartType.Cylinder,
+                size=Vector3.new(.8,6.8,6.8),y=17,roll=24},
+            {name="SurveyBeacon",size=Vector3.new(1.7,2.2,1.7),y=18.1,z=-.35},
+        }}},
+    Towers={
+        {name="CommandBridge",
+            source={id=126298311664881,major=40.64,minor=6.77,height=4.87784,centerY=0,
+                holder="ApprovedTowersSignatureBridgeTemplates",
+                template="ForgedBridge",tag="OriginalTowersSignatureBridge3D"},
+            fit=Vector3.new(3.82,2.22,13.9),y=24.1,natives={
+                {name="CargoOverpass",size=Vector3.new(14,2.2,3.7),y=17.3},
+            }},
+        {name="CommandCabin",
+            source={id=72210530094580,major=2.455,minor=2.449,height=5.005,centerY=0,
+                holder="ApprovedAmbientMotionTemplates",
+                template="Towers",tag="ApprovedAmbientMotion3D"},
+            fit=Vector3.new(3.18,3.55,3.76),y=21.28,natives={
+                {name="HangingTransitCabin",size=Vector3.new(3.8,3.8,3.2),y=14},
+            }},
+    },
+    Crossroads={{name="CommandConcourse",source=EQUIPMENT.Crossroads.source,
+        fit=Vector3.new(2.66,3.55,14.3),y=21.3,natives={
+            {name="RoutingAileron-1",size=Vector3.new(6.8,2.1,1),x=-4.1,y=16.8,roll=-26,wedge=true},
+            {name="RoutingAileron1",size=Vector3.new(6.8,2.1,1),x=4.1,y=16.8,roll=26,wedge=true},
+        }}},
+    Orbital={{name="CommandReactor",source=EQUIPMENT.Orbital.source,
+        fit=Vector3.new(6.25,6.25,6.25),y=22.63,natives={
+            {name="OrbitalPowerOrb",shape=Enum.PartType.Ball,size=Vector3.new(5.8,5.8,5.8),y=17.3},
+            {name="OrbitRing",shape=Enum.PartType.Cylinder,
+                size=Vector3.new(.55,8.4,8.4),y=17.3,roll=90},
+        }}},
+    Harbor={{name="CommandCrane",
+        source={id=124368710235343,major=40.8,minor=9.141,height=14.0425,centerY=0,
+            holder="ApprovedHarborSignatureGantryTemplates",
+            template="SculptedGantry",tag="OriginalHarborSignatureGantry3D"},
+        fit=Vector3.new(4.35,7.12,16.4),x=2.2,y=23.16,natives={
+            {name="DryDockHighCrane",size=Vector3.new(16,1.7,2.9),x=3,y=17.3},
+            {name="CableLift",size=Vector3.new(.36,4.6,.36),x=9.1,y=14.2},
+            {name="FreightPod",size=Vector3.new(4.1,3.1,3.5),x=9.1,y=10.4},
+        }}},
+}
+local COMMAND_DISTANCE={Low=112,Medium=165,High=240}
 local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true}
 local CROSSHEAD_SPAN={[2]=18.4,[4]=19.6,[7]=21.2}
 local CROSSHEAD_RISE={[2]=13.25,[4]=14.5,[7]=16.2}
@@ -439,6 +493,65 @@ local function collectFittingPair(arena,deck,decor,scale,fittings)
     return pair
 end
 
+local function collectCommandArt(arena,deck,decor,scale,profiles)
+    local index=deck.Name:match("^Platform(%d+)$")
+    local step=deck:GetAttribute("SkySpineStep")
+    if not index or not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
+        or (step~=5 and step~=6) or deck:GetAttribute("SkySpineInterchange")~=true
+        or deck:GetAttribute("ChaosPermanentRoute")~=true or deck:GetAttribute("RouteTier")~=4
+        or not Crown.supportsCommandArt(deck)
+        or not deck.Anchored or not deck.CanCollide or deck.Transparency>=.75
+        or math.abs(deck.Size.X/scale-12)>.22 or math.abs(deck.Size.Y-2)>.12
+        or deck.Size.Z/scale<14.3 or deck.Size.Z/scale>33.2 then return nil end
+    local phase=deck:GetAttribute("CollapsePhase")
+    local shutter=deck:GetAttribute("BridgeShutterPhase")
+    if (phase and phase~="Normal" and phase~="Safe")
+        or (shutter and shutter~="Idle") then return nil end
+
+    local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
+    local prefix="SkySpine"..index.."_"
+    local function nativePart(spec)
+        local native=decor:FindFirstChild(prefix..spec.name)
+        if not visualNative(native,decor) or native:GetAttribute("SkySpineDecor")~=true
+            or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
+        if spec.wedge then
+            if not native:IsA("WedgePart") then return nil end
+        elseif not native:IsA("Part") or native.Shape~=(spec.shape or Enum.PartType.Block) then
+            return nil
+        end
+        local size=spec.size
+        local aim=top*CFrame.new((spec.x or 0)*scale,spec.y,(spec.z or 0)*scale)
+            *CFrame.Angles(0,0,math.rad(spec.roll or 0))
+        if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.11
+            or (native.Position-aim.Position).Magnitude>.15
+            or native.CFrame.UpVector:Dot(aim.UpVector)<.999
+            or native.CFrame.LookVector:Dot(aim.LookVector)<.999 then return nil end
+        return native
+    end
+    local crown=nativePart({name="InterchangeCrown",size=Vector3.new(17.2,1.4,2.5),y=13})
+    if not crown then return nil end
+    local group={}
+    for i,profile in ipairs(profiles) do
+        local natives={}
+        for _,spec in ipairs(profile.natives) do
+            local native=nativePart(spec)
+            if not native then return nil end
+            natives[#natives+1]=native
+        end
+        local fit=profile.fit
+        group[i]={category="command",name=profile.name,spec=profile.source,
+            owner=deck,key=natives[1],arena=arena,originals=natives,anchor=crown,
+            center=top.Position,orientation=top*CFrame.new((profile.x or 0)*scale,profile.y,0)
+                * CFrame.Angles(0,-math.pi*.5,0),
+            fitSize=Vector3.new(fit.X*scale,fit.Y,fit.Z*scale),expectedParent=decor}
+    end
+    if #group==2 then
+        group[1].side,group[2].side=-1,1
+        group[1].other,group[2].other=group[2].key,group[1].key
+    end
+    return group
+end
+
 local function collectCasing(arena,casing,group)
     if not casing:IsA("Model") or casing.Parent~=group
         or casing:GetAttribute("OriginalFrameCladding")~=true
@@ -512,12 +625,14 @@ end
 
 local function isPortico(category)
     return category=="promenade" or category=="stay"
-        or category=="equipment" or category=="fitting"
+        or category=="equipment" or category=="fitting" or category=="command"
 end
 
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
-        if (n.part.Parent==entry.expectedParent
+        if entry.category=="command" then
+            Trim.setSkySpineRoofMask(n.part,true,false)
+        elseif (n.part.Parent==entry.expectedParent
             or (isPortico(entry.category) and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
@@ -605,9 +720,14 @@ local function refresh(entry)
                     if equipment then
                         data=collectEquipment(entry.arena,entry.owner,decor,scale,equipment)
                     end
-                elseif entry.side then
+                elseif entry.category=="command" or entry.side then
                     local pair
-                    if entry.category=="stay" then
+                    if entry.category=="command" then
+                        local profiles=COMMAND_ART[entry.arena:GetAttribute("VariantId")]
+                        if profiles then
+                            pair=collectCommandArt(entry.arena,entry.owner,decor,scale,profiles)
+                        end
+                    elseif entry.category=="stay" then
                         pair=collectStayPair(entry.arena,entry.owner,decor,scale)
                     else
                         local fittings=ROOF_FITTINGS[entry.arena:GetAttribute("VariantId")]
@@ -615,12 +735,14 @@ local function refresh(entry)
                             pair=collectFittingPair(entry.arena,entry.owner,decor,scale,fittings)
                         end
                     end
-                    data=pair and pair[entry.side<0 and 1 or 2]
-                    local other=mounted[entry.other]
-                    if data and (data.other~=entry.other or not other
-                        or other.other~=entry.native[1].part
-                        or other.anchor~=data.anchor or not sourceIntact(other)) then
-                        data=nil
+                    data=pair and pair[entry.side==1 and 2 or 1]
+                    if data and entry.other then
+                        local other=mounted[entry.other]
+                        if data.other~=entry.other or not other
+                            or other.other~=entry.native[1].part
+                            or other.anchor~=data.anchor or not sourceIntact(other) then
+                            data=nil
+                        end
                     end
                 else
                     data=collectPorticoPart(entry.arena,entry.owner,decor,scale)
@@ -676,7 +798,11 @@ local function refresh(entry)
     end
     for _,n in ipairs(entry.native) do
         if n.part.Parent==entry.expectedParent then
-            n.part.LocalTransparencyModifier=1
+            if entry.category=="command" then
+                Trim.setSkySpineRoofMask(n.part,true,true)
+            else
+                n.part.LocalTransparencyModifier=1
+            end
         end
     end
     entry.visible=true
@@ -784,8 +910,10 @@ local function mount(data,source)
             data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
     end
     if isPortico(data.category) then
-        for _,attribute in ipairs({"PromenadeLane","PromenadeStep",
-            "ChaosPermanentRoute","RouteTier"}) do
+        local routeAttributes=data.category=="command"
+            and {"SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier","LocalSkySpineCrownVisible"}
+            or {"PromenadeLane","PromenadeStep","ChaosPermanentRoute","RouteTier"}
+        for _,attribute in ipairs(routeAttributes) do
             entry.connections[#entry.connections+1]=
                 data.owner:GetAttributeChangedSignal(attribute):Connect(changed)
         end
@@ -797,7 +925,8 @@ local function mount(data,source)
             entry.connections[#entry.connections+1]=
                 native:GetPropertyChangedSignal("Shape"):Connect(changed)
         end
-        for _,attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
+        local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
+        for _,attribute in ipairs({marker,"PerimeterPlatformIndex"}) do
             entry.connections[#entry.connections+1]=
                 native:GetAttributeChangedSignal(attribute):Connect(changed)
         end
@@ -868,6 +997,10 @@ local function caps(tier,touch,pressure,kind)
     if kind=="equipment" then
         if (tonumber(pressure) or 0)>=1 then return 0 end
         return (touch==true and EQUIPMENT_TOUCH_CAP or EQUIPMENT_BUDGET)[tier] or 0
+    end
+    if kind=="command" then
+        if (tonumber(pressure) or 0)>=1 then return 0 end
+        return tier=="High" and touch~=true and 2 or 1
     end
     if kind=="fitting" then
         local cap=FITTING_BUDGET[tier] or 0
@@ -944,16 +1077,24 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if second~=first then src[second]=sourceFor(second,FITTING_SOURCE[second]) end
         fittingSourcesReady=src[first]~=nil and src[second]~=nil
     end
+    local commandProfiles=COMMAND_ART[variant]
+    local commandReady=commandProfiles~=nil and caps(tier,touch,pressure,"command")>0
+    if commandReady then
+        for _,profile in ipairs(commandProfiles) do
+            src[profile.name]=sourceFor(profile.name,profile.source)
+            if not src[profile.name] then commandReady=false end
+        end
+    end
     local desired={}
-    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={},fitting={}}
+    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={},fitting={},command={}}
     local function queuePair(pair,limit,pool)
         if not pair then return end
         local first=pair[1]
-        local resident=mounted[first.key]~=nil and mounted[pair[2].key]~=nil
+        local resident=mounted[first.key]~=nil and (#pair==1 or mounted[pair[2].key]~=nil)
         local priority,distance=score(first,cameraPoint,cameraLook,resident)
         if distance<=limit+(resident and 18 or 0) then
             first.priority=priority
-            first.pair=pair
+            if #pair>1 then first.pair=pair end
             pool[#pool+1]=first
         end
     end
@@ -965,6 +1106,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             local data=collectArch(arena,deck,decor,scale)
             if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
                 data=collectPorticoPart(arena,deck,decor,scale)
+            end
+            if commandReady and deck:GetAttribute("SkySpineStep") then
+                queuePair(collectCommandArt(arena,deck,decor,scale,commandProfiles),
+                    COMMAND_DISTANCE[tier] or COMMAND_DISTANCE.Low,candidates.command)
             end
             if src.Stay and deck:GetAttribute("PromenadeStep") then
                 queuePair(collectStayPair(arena,deck,decor,scale),
@@ -1028,7 +1173,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         end
     end
-    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment","fitting"}) do
+    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment","fitting","command"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name

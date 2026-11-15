@@ -149,6 +149,7 @@ end
 local function isOriginalUpperPart(piece, deck)
     local index = deck.Name:match("^Platform(%d+)$")
     if not index or not piece:IsA("BasePart")
+        or not piece.Anchored or piece.CanCollide or piece.CanTouch or piece.CanQuery
         or piece:GetAttribute("SkySpineDecor") ~= true
         or piece:GetAttribute("PerimeterPlatformIndex") ~= tonumber(index) then
         return false
@@ -283,7 +284,7 @@ local function setNativeVisibility(saved, visible)
     if saved.pylon then
         PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)
     else
-        saved.part.LocalTransparencyModifier = visible and 1 or saved.original
+        PlatformNativeTrimReplacementKit.setSkySpineRoofMask(saved.part, false, visible)
     end
 end
 
@@ -299,11 +300,15 @@ local function updateVisibility(entry)
     for _, saved in pairs(entry.native) do
         setNativeVisibility(saved, visible)
     end
+    if entry.deck:GetAttribute("LocalSkySpineCrownVisible")~=visible then
+        entry.deck:SetAttribute("LocalSkySpineCrownVisible",visible)
+    end
 end
 
 local function restore(entry)
     if entry.restoring then return end
     entry.restoring = true
+    entry.deck:SetAttribute("LocalSkySpineCrownVisible",nil)
     setSignalLight(entry, false)
     PremiumRoutePbrKit.detach(entry)
     for _, connection in ipairs(entry.connections) do
@@ -392,7 +397,6 @@ local function mount(deck, arena, base, decor, template)
         end
         local saved = {
             part = part, pylon = isPylon,
-            original = if isPylon then nil else part.LocalTransparencyModifier,
         }
         entry.native[part] = saved
         if safeAfterMount(entry) then setNativeVisibility(saved, true) end
@@ -612,6 +616,11 @@ function Kit.pbrCount()
         end
     end
     return models, appearances
+end
+
+function Kit.supportsCommandArt(deck)
+    local entry=mounted[deck]
+    return entry~=nil and safeAfterMount(entry)
 end
 
 function Kit.count()

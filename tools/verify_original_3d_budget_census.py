@@ -1808,7 +1808,7 @@ assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
 assert 'saved[part] and not crownPylons[part]' in TRIM
 mask = TRIM[TRIM.index("local function setNativeMask("):
             TRIM.index("local function refreshPylon(")]
-assert 'if saved[part] or crownPylons[part] or routeUnderdecks[part] then' in mask
+assert 'if saved[part] or crownPylons[part] or routeUnderdecks[part]' in mask
 assert 'nativeBaselines[part] = part.LocalTransparencyModifier' in mask
 assert 'function Kit.setPylonLodVisible(part, visible)' in TRIM
 assert 'PlatformNativeTrimReplacementKit.setPylonLodVisible(native, visible)' in SIDE_LOD
@@ -2229,3 +2229,27 @@ for clause in (
 assert 'function Kit.setRouteUnderdeckMask(part, masked)' in TRIM
 assert 'LocalRouteUnderdeckNativePartsReplaced' in LOD
 print("PASS authenticated route chassis replace exact promenade/Sky Spine native underdecks with shared rollback")
+
+# Sky Spine variants reuse already moderated originals and release their
+# masks in concert with the existing generic crown and Android budget.
+for name, asset_id in (
+    ("service_camera", "108954400662606"),
+    ("signature_towers_forged_bridge", "126298311664881"),
+    ("ambient_lift", "72210530094580"),
+    ("variant_crossroads_forged_gantry", "90844491148907"),
+    ("variant_orbital_sculpted_node", "104654294187035"),
+    ("signature_harbor_sculpted_gantry", "124368710235343"),
+):
+    assert P4_MODELS[name]["moderation"] == "Approved", name
+    assert P4_MODELS[name]["asset_id"] == asset_id and asset_id in P4_CLIENT, name
+for clause in (
+    "not Crown.supportsCommandArt(deck)",
+    "(step~=5 and step~=6)",
+    "Trim.setSkySpineRoofMask(n.part,true,false)",
+    "Trim.setSkySpineRoofMask(n.part,true,true)",
+    'return tier=="High" and touch~=true and 2 or 1',
+):
+    assert clause in P4_CLIENT, clause
+assert "or crownTrim[part] or commandTrim[part] then" in mask
+assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
+print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
