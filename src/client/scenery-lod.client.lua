@@ -1398,9 +1398,8 @@ task.spawn(function()
             player:SetAttribute("LocalExteriorRidgePrimitivesReplaced",
                 ridgesHidden)
         end
-        -- Four real SkylineStructure cores/caps/rib pairs per arena.
-        -- Preserve their original foundation, insets, antennas and physics.
-        -- Reuse owner-approved seven-MeshPart source on existing LOD tick.
+        -- Four primary towers, their foundations and their variant roofs
+        -- share the existing camera and pressure limits.
         ApprovedPrimarySkylineMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,isTouch,
             player:GetAttribute("OptionalVfxPressure"),cameraLook)
@@ -1409,11 +1408,14 @@ task.spawn(function()
             ~=primaryMeshes then
             player:SetAttribute("LocalPrimarySkylineMeshCount",primaryMeshes)
         end
-        local primaryNative=ApprovedPrimarySkylineMeshKit.replacedNativeCount()
+        local primaryNative,primaryDetails=ApprovedPrimarySkylineMeshKit.replacedNativeCount()
         if player:GetAttribute("LocalPrimarySkylinePrimitivesReplaced")
             ~=primaryNative then
             player:SetAttribute("LocalPrimarySkylinePrimitivesReplaced",
                 primaryNative)
+        end
+        if player:GetAttribute("LocalPrimarySkylineDetailsReplaced") ~= primaryDetails then
+            player:SetAttribute("LocalPrimarySkylineDetailsReplaced",primaryDetails)
         end
         -- Eight distant roof and antenna pairs per arena share the same
         -- camera order and pressure budget.
@@ -1437,21 +1439,19 @@ task.spawn(function()
         end
         -- P4 targeted source-slot replacement ratio, NOT global game
         -- mesh coverage or a guarantee of resident rendered geometry.
-        -- These five disjoint generator families define 68 nonphysical
-        -- native visual bodies per variant: exterior towers 16,
-        -- skyline primary 16, skyline depth 16, outboard ridges 12,
-        -- and atmospheric columns 8. Use already sampled owner counts,
-        -- no Workspace traversal or extra loop on Android.
+        -- Target source slots are generated per variant. Crossroads has
+        -- two rooftop fittings per tower, the other worlds each have one.
         local generatedSkyline = workspace:FindFirstChild("GeneratedMap")
         local skylineActive = arena and arena:IsA("Folder")
             and arena.Name == "Arena" and arena.Parent == generatedSkyline
             and arena:FindFirstChild("Base")
             and arena:FindFirstChild("Decor")
             and arena:FindFirstChild("Atmosphere")
-        local skylineTargetSlots = skylineActive and 68 or 0
+        local skylineTargetSlots = skylineActive
+            and (arena:GetAttribute("VariantId") == "Crossroads" and 88 or 84) or 0
         local skylineSourceReplaced = skylineTargetSlots > 0
             and math.clamp(nativeTowersReplaced + ridgesHidden
-                + primaryNative + depthReplaced + depthAerials + atmosphereNatives,
+                + primaryNative + primaryDetails + depthReplaced + depthAerials + atmosphereNatives,
                 0, skylineTargetSlots) or 0
         local skylineSourcePercent = skylineTargetSlots > 0
             and math.floor(skylineSourceReplaced

@@ -12,7 +12,7 @@ helix,Circuit orbital (hors colliders),P1,SOURCE_3D_APPROUVEE_LOD_PARTIEL,0,0,0,
 harborfleet,Flotte grues / navire Harbor,P1,PARTIEL_SOURCE_3D,0,0,0,0,207,207,80,4,4 grues + cargo; freighter et gantry 3D déjà validés selon LOD
 corners,Monuments des 4 coins,P1,SOURCE_3D_APPROUVEE_LOD_PARTIEL,57,57,57,57,57,285,100,30,"Quatre silhouettes 3D par arène. 40 dalles de socle et 10 pointes couvertes sur cinq arènes, selon les quotas caméra et pression. Totaux natifs bruts historiques."
 exterior,Rétrofits extérieurs,P1,PARTIEL_A_VERIFIER,52,52,68,52,52,276,48,20,Vérifier volumes non masqués après vrais propriétaires 3D
-skyline,Structures skyline,P1,PARTIEL_SOURCE_3D,32,32,36,32,32,164,56,0,"Sources approuvées de masses skyline, couverture de détail selon LOD"
+skyline,Structures skyline,P1,SOURCE_3D_APPROUVEE_LOD_PARTIEL,32,32,36,32,32,164,56,0,"164 formes éligibles sur 20 tours, dont 84 bandes, socles et équipements ajoutés. Rendu selon caméra, source disponible et pression."
 ground,Modules de finition au sol,P1,SOURCE_3D_EXISTANTE,36,36,36,36,36,180,180,0,36 par arène; résidence normale Low2/Medium16/High36
 stations,Stations périphériques,P2,SOURCE_3D_17_SUR_23,92,92,92,92,92,460,20,124,"17/23 objets éligibles, 6 signalétiques par station conservées"
 south,Monuments de l'horizon sud,P2,SOURCE_3D_EXISTANTE,13,13,13,20,14,73,34,8,"73/73 éligibles dans la famille, résidence LOD conditionnelle"

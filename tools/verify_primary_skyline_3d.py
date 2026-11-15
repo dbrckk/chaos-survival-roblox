@@ -40,7 +40,7 @@ for name in ("Foundation","InsetL","InsetR","ReceiverHead",
              "CrossAntenna","ExchangeMast","ServiceMast","RelayAerial"):
     assert f'"{name}"' in CLIENT and f'"{name}"' in BUILDER
 
-assert 'REPLACE = {"StructuralCore","TopCap","OuterRibL","OuterRibR"}' in CLIENT
+assert 'REPLACE = {"StructuralCore","TopCap","OuterRibL","OuterRibR","InsetL","InsetR"}' in CLIENT
 assert "height = (variant.Id == \"Towers\" and 25" in BUILDER
 assert "index % 2" in BUILDER
 assert '"SkylineStructure" .. direction.id' in BUILDER
@@ -123,4 +123,23 @@ assert "ApprovedPrimarySkylineMeshKit.sync(arena,cameraPoint," in LOD
 assert "LocalPrimarySkylineMeshCount" in LOD
 assert "LocalPrimarySkylinePrimitivesReplaced" in LOD
 print("PASS 20 eligible grouped originals / 80 native visual bodies;")
+DETAIL_SOURCES={
+    "harbor_dock_caisson":"101457508594609",
+    "perimeter_cap":"88962643359267",
+    "perimeter_rotor":"133526819668194",
+    "variant_classic_grid_marker_sculpt":"105555650820011",
+    "variant_towers_spine_sculpt":"86423178125318",
+    "variant_orbital_trussed_strut":"138666009076890",
+}
+for model, asset in DETAIL_SOURCES.items():
+    assert MODEL[model]["asset_id"] == asset and MODEL[model]["moderation"] == "Approved"
+    assert f"id={asset}" in CLIENT
+for guard in ('and detailTemplate(FOOT)', 'detailTemplate(CROSSBAR)', 'entry.roofHeight',
+              'swapped and center.X or center.Z','index % 2 == 1 and math.pi or 0',
+              'syncDetail(entry,"foot",foot)','syncDetail(entry,"roof",roof,bar)'):
+    assert guard in CLIENT,guard
+assert 'LocalPrimarySkylineDetailsReplaced' in LOD
+assert 'and (arena:GetAttribute("VariantId") == "Crossroads" and 88 or 84) or 0' in LOD
+assert sum(4*(2+1+(2 if variant=="Crossroads" else 1)) for variant in variants)==84
+print("PASS 84 additional foundation, facade and rooftop native shapes across 20 skyline towers")
 print("PASS LOD/camera pressure caps, safe rollback and unchanged gameplay")

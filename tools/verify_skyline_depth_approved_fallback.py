@@ -101,7 +101,7 @@ for guard in ('trustedAerial(source, holder)', 'local function genuineAerial',
               'aerial.native.Transparency = aerial.alpha', 'return roofs,aerials'):
     assert guard in KIT,guard
 assert 'LocalSkylineDepthAerialsReplaced' in LOD
-assert 'local skylineTargetSlots = skylineActive and 68 or 0' in LOD
+assert '+ primaryNative + primaryDetails + depthReplaced + depthAerials' in LOD
 
 # Compute all 8 possible owner silhouettes in each of the 5 variants,
 # including 27-stud Classic roofs and 47-stud Towers roofs. Only nearby

@@ -69,3 +69,25 @@ demande 24/27 avant la tour 21. Le nombre de requêtes ne change pas,
 les chargements restent strictement séquentiels et le fallback
 natif demeure disponible. Ceci ne constitue pas une garantie de
 résidence 3D ou de FPS Android sans test moteur.
+
+## Façades, socles et équipements des vingt tours
+
+La face ouvragée de chaque tour est orientée vers le centre de l’arène.
+Les reliefs du maillage approuvé remplacent ses deux bandes de façade.
+Le socle est un caisson à deux maillages. Les équipements conservent leur
+silhouette par variante, avec un capot forgé sur Classic et Harbor, un
+mât sur Towers, un récepteur circulaire sur Orbital et une antenne
+renforcée à traverse sur Crossroads. Chaque équipement repose sur le
+toit réellement affiché, même si sa hauteur diffère de la pièce native.
+
+Ces finitions couvrent **84 formes supplémentaires** sur les cinq arènes
+(40 bandes, 20 socles et 24 équipements). La sélection reste à une tour
+en Low, deux en Medium et quatre en High sur ordinateur, avec les plafonds
+tactiles de une tour en Medium et deux en High. Une tour utilise jusqu’à
+13 MeshParts, dont sept pour le corps. Sous pression graphique, les socles
+et pointes natives reprennent le relais. La perte d’une source secondaire
+restaure uniquement l’ensemble concerné.
+
+`LocalPrimarySkylinePrimitivesReplaced` compte les quatre pièces du
+corps et les deux bandes. `LocalPrimarySkylineDetailsReplaced` compte
+les socles et équipements effectivement masqués.

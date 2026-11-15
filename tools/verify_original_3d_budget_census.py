@@ -489,6 +489,11 @@ assert 'stress == 0 and source and approvedAerial()' in DEPTH_SKYLINE
 assert 'LocalSkylineDepthAerialsReplaced' in TOWERS_LOD
 print("PASS distant aerials reuse two source MeshParts per resident roof",
       "and leave the optional geometry budget under pressure")
+assert 'syncDetail(entry,"foot",foot)' in PRIMARY_SKYLINE
+assert 'syncDetail(entry,"roof",roof,bar)' in PRIMARY_SKYLINE
+assert 'LocalPrimarySkylineDetailsReplaced' in TOWERS_LOD
+print("PASS primary skyline finishes share the authentic tower and",
+      "the same mobile residency limits with independent rollback")
 
 # The original four giant 36-stud Harbor cranes already have two
 # creator-approved seven-material kinetic assets. Low native crane LOD is
