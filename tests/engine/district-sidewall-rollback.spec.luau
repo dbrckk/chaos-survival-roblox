@@ -131,8 +131,12 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 end
                 assert(math.abs(mastBottom-origin.Position.Y-22.34) < .12)
             elseif variant == "Orbital" or variant == "Harbor" then
-                local _,bounds = sculpture:GetBoundingBox()
-                assert(bounds.Z > bounds.X,variant.." monument faces edge-on")
+                -- GetBoundingBox can express bounds in the model's pivot
+                -- axes. Project the long side of the body onto world axes.
+                local mass = sculpture.Mesh1
+                local long = mass.Size.X > mass.Size.Z and mass.CFrame.RightVector
+                    or mass.CFrame.LookVector
+                assert(math.abs(long:Dot(Vector3.zAxis)) > .999,variant.." monument faces edge-on")
             end
             local size = base.Size
             base.Size = Vector3.new(size.X*.7,size.Y,size.Z*.7)

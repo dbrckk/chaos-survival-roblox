@@ -493,6 +493,7 @@ for guard in ('id=112493873850364', 'id=125428569657840', 'id=96622579843060',
               'bottom+4.64-.20+12.75*.5'):
     assert guard in HERO_SKYLINE,guard
 print("PASS hero profiles retain five silhouettes with independent source-authenticated foundations and fittings")
+assert 'long:Dot(Vector3.zAxis)' in (ROOT/"tests/engine/district-sidewall-rollback.spec.luau").read_text(encoding="utf8")
 assert 'AERIAL_ID = 105555650820011' in DEPTH_SKYLINE
 assert 'approved.hull,approved.sockets' in DEPTH_SKYLINE
 assert 'stress == 0 and source and approvedAerial()' in DEPTH_SKYLINE
