@@ -22,6 +22,11 @@ local BUDGET = {
     Medium = {count = 4, distance = 280, retention = 22},
     High = {count = 4, distance = 330, retention = 26},
 }
+local FOUNDATION_ID = 72507987666671
+local FOUNDATION_PARTS = 7
+local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}
+local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}
+local FOUNDATION_SIZE = Vector3.new(19.6, 1.76, 19.6)
 
 local bucket = Instance.new("Folder")
 bucket.Name = "ApprovedOriginalCornerMonumentsLocal"
@@ -47,10 +52,8 @@ local function authenticBase(base, arena)
         and base.Size.X <= sx + 0.2 and base.Size.Z <= sz + 0.2
 end
 
--- Only native sculptural silhouettes DUPLICATED by the approved imported
--- profiles are suppressed. GroundPlinth and PlinthRim always remain, as do
--- the observatory's tall lightning tip and cargo's signal fin to distinguish
--- the original arena silhouette from the underlying manufactured facade.
+-- The facade profiles cover the tower bodies. The lightning rod and the
+-- cargo signal fin still distinguish their skylines.
 local function redundant(slot, name)
     if slot == 1 then
         return name == "WeatherMast" or name == "ScannerLens"
@@ -102,6 +105,28 @@ local function suppressNative(entry)
     end
 end
 
+local function releaseFoundation(entry)
+    local foundation = entry.foundation
+    if not foundation then return end
+    entry.foundation = nil
+    for _, connection in ipairs(foundation.connections) do
+        connection:Disconnect()
+    end
+    for part, alpha in pairs(foundation.originals) do
+        if part.Transparency == 1 then part.Transparency = alpha end
+    end
+    foundation.model:Destroy()
+end
+
+local function maskFoundation(foundation)
+    for part in pairs(foundation.originals) do
+        if part.Transparency < 1 then
+            foundation.originals[part] = part.Transparency
+            part.Transparency = 1
+        end
+    end
+end
+
 local function dispose(entry)
     if entry.disposed then return end
     entry.disposed = true
@@ -113,6 +138,7 @@ local function dispose(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    releaseFoundation(entry)
     restoreNative(entry)
     entry.model:Destroy()
 end
@@ -165,6 +191,146 @@ local function template(slot)
     return source
 end
 
+local function trustedFoundation(source, holder)
+    return holder and holder:IsA("Folder")
+        and holder.Parent == ReplicatedStorage
+        and holder.Name == "PremiumRouteMeshTemplates"
+        and holder:GetAttribute("OwnerVerified") == true
+        and source and source:IsA("Model") and source.Parent == holder
+        and source.Name == "PremiumGroundTile"
+        and source:GetAttribute("OwnerVerified") == true
+        and source:GetAttribute("PremiumGround3D") == true
+        and source:GetAttribute("CosmeticOnly") == true
+        and source:GetAttribute("Original3DAssetId") == FOUNDATION_ID
+end
+
+local function foundationTemplate()
+    local holder = ReplicatedStorage:FindFirstChild("PremiumRouteMeshTemplates")
+    local source = holder and holder:FindFirstChild("PremiumGroundTile")
+    if not trustedFoundation(source, holder) then return nil end
+    if #source:GetChildren() ~= FOUNDATION_PARTS then return nil end
+    for _, part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") or not part.Anchored
+            or part.CanCollide or part.CanTouch or part.CanQuery
+            or part.Transparency >= 1 then return nil end
+        for _, detail in ipairs(part:GetDescendants()) do
+            if not detail:IsA("SurfaceAppearance") and not detail:IsA("Decal")
+                and not detail:IsA("Texture") then return nil end
+        end
+    end
+    local _, size = source:GetBoundingBox()
+    if size.X < 40 or size.X > 55 or size.Z < 40 or size.Z > 55
+        or math.abs(size.X - size.Z) > 1
+        or size.Y < .16 or size.Y > .50 then return nil end
+    return source
+end
+
+local function nativeFoundationPart(part, parent, size)
+    return part and part:IsA("Part") and part.Parent == parent
+        and part.Shape == Enum.PartType.Block and part.Anchored
+        and not part.CanCollide and not part.CanTouch and not part.CanQuery
+        and part:GetAttribute("SceneryLodHidden") ~= true
+        and part.LocalTransparencyModifier < .95
+        and (part.Size - size).Magnitude < .08
+end
+
+local function foundationRim(entry)
+    local native, plinth = entry.native, entry.plinth
+    local rim = native:FindFirstChild("PlinthRim")
+    if nativeFoundationPart(plinth, native, Vector3.new(20, 1.4, 20))
+        and nativeFoundationPart(rim, native, Vector3.new(17.8, .4, 17.8))
+        and (plinth.CFrame:PointToObjectSpace(rim.Position)
+            - Vector3.new(0, .9, 0)).Magnitude < .08
+        and rim.CFrame.LookVector:Dot(plinth.CFrame.LookVector) > .999
+        and rim.CFrame.UpVector:Dot(plinth.CFrame.UpVector) > .999 then
+        return rim
+    end
+    return nil
+end
+
+local function mountFoundation(entry, rim, source)
+    local plinth = entry.plinth
+    if plinth.Transparency >= 1 or rim.Transparency >= 1 then return false end
+    local clone = source:Clone()
+    if not clone then return false end
+    local origin, size = clone:GetBoundingBox()
+    local horizontalScale = FOUNDATION_SIZE.X / math.max(size.X, size.Z)
+    local verticalScale = FOUNDATION_SIZE.Y / size.Y
+    local scale = Vector3.new(horizontalScale, verticalScale, horizontalScale)
+    local target = plinth.CFrame * CFrame.new(0,
+        (FOUNDATION_SIZE.Y - plinth.Size.Y) * .5, 0)
+    local parts = clone:GetChildren()
+    if #parts ~= FOUNDATION_PARTS then
+        clone:Destroy()
+        return false
+    end
+    for _, part in ipairs(parts) do
+        local relative = origin:ToObjectSpace(part.CFrame)
+        local verticalAxes = Vector3.new(math.abs(relative.RightVector.Y),
+            math.abs(relative.UpVector.Y), math.abs(relative.LookVector.Y))
+        -- The importer can permute local axes. Stretch along the actual
+        -- bounds' vertical axis, rejecting a skewed transform.
+        if math.max(verticalAxes.X, verticalAxes.Y, verticalAxes.Z) < .9999 then
+            clone:Destroy()
+            return false
+        end
+        local partScale = Vector3.new(
+            verticalAxes.X > .9999 and verticalScale or horizontalScale,
+            verticalAxes.Y > .9999 and verticalScale or horizontalScale,
+            verticalAxes.Z > .9999 and verticalScale or horizontalScale)
+        part.Size *= partScale
+        part.CFrame = target * CFrame.new(relative.Position * scale)
+            * relative.Rotation
+        part.Massless = true
+        part.CastShadow = false
+        part.LocalTransparencyModifier = 0
+        part.Color = part.Color:Lerp(rim.Color, .16)
+    end
+    clone.Name = "Original3DCornerMonumentFoundation"
+    clone:SetAttribute("CornerLandmarkIndex", entry.slot)
+    clone.Parent = entry.model
+    local holder = source.Parent
+    local foundation = {
+        model = clone, source = source, rim = rim, connections = {},
+        originals = {[plinth] = plinth.Transparency, [rim] = rim.Transparency},
+    }
+    entry.foundation = foundation
+    local function revoke()
+        if entry.foundation == foundation then releaseFoundation(entry) end
+    end
+    local function checkSource()
+        if not trustedFoundation(source, holder) then revoke() end
+    end
+    local function checkNative()
+        if foundationRim(entry) ~= rim then revoke() end
+    end
+    local function watch(signal, handler)
+        table.insert(foundation.connections, signal:Connect(handler))
+    end
+    watch(source.AncestryChanged, checkSource)
+    watch(source.ChildAdded, revoke)
+    watch(source.ChildRemoved, revoke)
+    watch(holder:GetAttributeChangedSignal("OwnerVerified"), checkSource)
+    for _, name in ipairs({"OwnerVerified", "PremiumGround3D", "CosmeticOnly",
+        "Original3DAssetId"}) do
+        watch(source:GetAttributeChangedSignal(name), checkSource)
+    end
+    watch(clone.ChildRemoved, revoke)
+    watch(clone.AncestryChanged, function()
+        if clone.Parent ~= entry.model then revoke() end
+    end)
+    for _, part in ipairs({plinth, rim}) do
+        watch(part.AncestryChanged, checkNative)
+        watch(part:GetAttributeChangedSignal("SceneryLodHidden"), checkNative)
+        for _, property in ipairs({"CFrame", "Size", "Shape", "Anchored",
+            "CanCollide", "CanTouch", "CanQuery", "LocalTransparencyModifier"}) do
+            watch(part:GetPropertyChangedSignal(property), checkNative)
+        end
+    end
+    maskFoundation(foundation)
+    return true
+end
+
 local function eligible(native, corners, variant)
     if not native:IsA("Model") or native.Parent ~= corners
         or native:GetAttribute("ArenaDistrictArchitecture") ~= true
@@ -208,6 +374,7 @@ local function valid(entry, corners, base, variant)
         and slot == entry.slot and plinth == entry.plinth
         and (plinth.CFrame.Position - entry.plinthFrame.Position).Magnitude < .08
         and plinth.CFrame.LookVector:Dot(entry.plinthFrame.LookVector) > .999
+        and plinth.CFrame.UpVector:Dot(entry.plinthFrame.UpVector) > .999
         and (plinth.Size - entry.plinthSize).Magnitude < .08
 end
 
@@ -254,6 +421,7 @@ local function mount(native, corners, base, variant, slot, plinth, source)
     local function reconcile()
         if entry.disposed then return end
         if not valid(entry, corners, base, variant) then
+            releaseFoundation(entry)
             restoreNative(entry)
             for _, part in ipairs(pieces) do
                 if part.Parent then part.LocalTransparencyModifier = 1 end
@@ -266,7 +434,7 @@ local function mount(native, corners, base, variant, slot, plinth, source)
         end
     end
     entry.reconcile = reconcile
-    for _, property in ipairs({"Size", "CFrame", "Transparency"}) do
+    for _, property in ipairs({"Size", "CFrame"}) do
         entry.connections[#entry.connections + 1] =
             plinth:GetPropertyChangedSignal(property):Connect(reconcile)
     end
@@ -286,7 +454,7 @@ local function mount(native, corners, base, variant, slot, plinth, source)
         end)
     entry.connections[#entry.connections + 1] =
         clone.DescendantRemoving:Connect(function(part)
-            if part:IsA("MeshPart") then revokeIfMounted() end
+            if table.find(pieces, part) then revokeIfMounted() end
         end)
     entry.connections[#entry.connections + 1] =
         source.AncestryChanged:Connect(function()
@@ -303,7 +471,7 @@ local function mount(native, corners, base, variant, slot, plinth, source)
     return entry
 end
 
-function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
+function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook, pressure, touch)
     if arena ~= activeArena then
         clear()
         activeArena = arena
@@ -385,6 +553,27 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady, cameraLook)
             mounted[native].reconcile()
         end
     end
+    local caps = touch and TOUCH_FOUNDATION_CAP or FOUNDATION_CAP
+    local cap = (tonumber(pressure) or 0) >= 1 and 0 or (caps[tier] or caps.Low)
+    local source = cap > 0 and foundationTemplate() or nil
+    local active = 0
+    for _, selected in ipairs(ranked) do
+        local entry = mounted[selected.native]
+        if not entry then continue end
+        local rim = source and active < cap and foundationRim(entry)
+        local foundation = entry.foundation
+        if foundation and (not rim or foundation.rim ~= rim
+            or foundation.source ~= source or foundation.model.Parent ~= entry.model
+            or #foundation.model:GetChildren() ~= FOUNDATION_PARTS) then
+            releaseFoundation(entry)
+        end
+        if rim and entry.foundation then
+            maskFoundation(entry.foundation)
+            active += 1
+        elseif rim and mountFoundation(entry, rim, source) then
+            active += 1
+        end
+    end
 end
 
 function Kit.count()
@@ -407,6 +596,22 @@ function Kit.replacedNativeCount()
         end
     end
     return n
+end
+
+function Kit.foundationCount()
+    local models, replaced = 0, 0
+    for _, entry in pairs(mounted) do
+        local foundation = entry.foundation
+        if foundation and foundation.model.Parent == entry.model then
+            models += 1
+            for part in pairs(foundation.originals) do
+                if part.Parent == entry.native and part.Transparency == 1 then
+                    replaced += 1
+                end
+            end
+        end
+    end
+    return models, replaced
 end
 
 return Kit

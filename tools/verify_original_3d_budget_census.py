@@ -298,6 +298,21 @@ assert 'PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 assert 'ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,' in TOWERS_LOD
 print("PASS genuine 16 facade + 4 corner 3D owners survive shrinking Base",
       "while preserving authenticated geometry, existing caps and fallback")
+for required in (
+    'local FOUNDATION_ID = 72507987666671',
+    'local FOUNDATION_PARTS = 7',
+    'local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}',
+    'local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}',
+    'source:GetAttribute("PremiumGround3D") == true',
+    'local function nativeFoundationPart(part, parent, size)',
+    'local function releaseFoundation(entry)',
+    'and 0 or (caps[tier] or caps.Low)',
+    'clone.Parent = entry.model',
+):
+    assert required in CORNER_MONUMENTS, required
+assert 'LocalCornerFoundationNativePartsReplaced' in TOWERS_LOD
+print("PASS four sculpted corner foundations per map share the scenery",
+      "pass, with separate native rollback and a capped touch budget")
 # P0: Android approved facades now share the SAME pressure and touch
 # limits as genuine six-MeshPart sidewalls. Prevent orphan front assets
 # from consuming the 440/680/900-piece mobile budgets under GPU pressure.

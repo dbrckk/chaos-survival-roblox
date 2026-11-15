@@ -12,6 +12,7 @@ local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
 local ArenaKeelMeshKit = require("../../src/client/ArenaKeelMeshKit")
 local UnderstructureBeamMeshKit = require("../../src/client/UnderstructureBeamMeshKit")
 local PremiumGroundMeshKit = require("../../src/client/PremiumGroundMeshKit")
+local CornerMonument = require("../../src/client/ApprovedCornerMonumentMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
@@ -638,6 +639,148 @@ describe("Chaos Survival engine", function()
             if cabin then cabin.Parent:Destroy() end
         end
         holder:Destroy()
+    end)
+    it("covers the forty real corner foundation pieces with bounded original mesh and restores the native socles on loss", function()
+        local storage = game:GetService("ReplicatedStorage")
+        local facades = Instance.new("Folder")
+        facades.Name = "ApprovedDistrictFacadeTemplates"
+        facades:SetAttribute("OwnerVerified", true)
+        facades.Parent = storage
+        local routes = Instance.new("Folder")
+        routes.Name = "PremiumRouteMeshTemplates"
+        routes:SetAttribute("OwnerVerified", true)
+        routes.Parent = storage
+        local function makeTemplate(parent, name, id, flag)
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("Original3DAssetId", id)
+            model:SetAttribute("CosmeticOnly", true)
+            model:SetAttribute("OwnerVerified", true)
+            model:SetAttribute(flag, true)
+            model.Parent = parent
+            return model
+        end
+        local function geometry(model, size, frame)
+            local mesh = Instance.new("MeshPart")
+            mesh.Size = size
+            mesh.CFrame = frame
+            mesh.Anchored = true
+            mesh.CanCollide = false
+            mesh.CanTouch = false
+            mesh.CanQuery = false
+            mesh.Parent = model
+            return mesh
+        end
+        for _, profile in ipairs({
+            {"Observatory", 132020956214241}, {"Freight", 88725004643299},
+            {"Turbine", 84217436280282}, {"Aerial", 135791763112202},
+        }) do
+            geometry(makeTemplate(facades, profile[1], profile[2], "DistrictFacade3D"),
+                Vector3.new(13, 28, 9), CFrame.identity)
+        end
+        local source = makeTemplate(routes, "PremiumGroundTile", 72507987666671,
+            "PremiumGround3D")
+        geometry(source, Vector3.new(48.48, .16, 48.48), CFrame.new(0, -.118, 0))
+        local offsetPiece = geometry(source, Vector3.new(.16, 39, 3),
+            CFrame.new(0, -.034, 1.2) * CFrame.Angles(0, 0, math.pi * .5))
+        for index = 1, 5 do
+            geometry(source, Vector3.new(.8, .026, 2), CFrame.new(index, .020, -1))
+        end
+        local bucket = assert(workspace:FindFirstChild("ApprovedOriginalCornerMonumentsLocal"))
+        local total = 0
+        for _, variant in ipairs(ArenaVariants.Order) do
+            local arena = MapBuilder.buildArena(Config, variant, ArenaVariants, VisualTheme)
+            local base = arena.Base
+            local corners = arena.Decor.ArenaCornerLandmarks3D
+            local first = corners.CornerLandmark1
+            local initial = base.Size
+            first.GroundPlinth.Transparency = .2
+            first.PlinthRim.Transparency = .35
+            CornerMonument.sync(arena, base.Position, "High", true, nil, 0, false)
+            local models, covered = CornerMonument.foundationCount()
+            assert(models == 4 and covered == 8, variant .. " desktop corner coverage")
+            total += covered
+            for index = 1, 4 do
+                local body = assert(bucket:FindFirstChild("ApprovedOriginalCornerMonument3D_" .. index))
+                local pedestal = assert(body:FindFirstChild("Original3DCornerMonumentFoundation"))
+                local corner = corners:FindFirstChild("CornerLandmark" .. index)
+                local plinth = corner.GroundPlinth
+                assert(plinth.Transparency == 1 and corner.PlinthRim.Transparency == 1)
+                assert(#pedestal:GetChildren() == 7)
+                local lowest, highest = math.huge, -math.huge
+                local axisLimit = 9.81
+                for _, piece in ipairs(pedestal:GetChildren()) do
+                    assert(piece:IsA("MeshPart") and piece.Anchored and piece.Massless
+                        and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                    for _, x in ipairs({-.5, .5}) do
+                        for _, y in ipairs({-.5, .5}) do
+                            for _, z in ipairs({-.5, .5}) do
+                                local point = plinth.CFrame:PointToObjectSpace(
+                                    piece.CFrame:PointToWorldSpace(piece.Size * Vector3.new(x, y, z)))
+                                assert(math.abs(point.X) < axisLimit and math.abs(point.Z) < axisLimit)
+                                lowest = math.min(lowest, point.Y)
+                                highest = math.max(highest, point.Y)
+                            end
+                        end
+                    end
+                end
+                assert(math.abs(lowest + .7) < .015 and math.abs(highest - 1.06) < .015)
+            end
+            assert(first.LightningRod.Transparency < 1 and corners.CornerLandmark2.SignalFin.Transparency < 1)
+            base.Size = Vector3.new(initial.X * .72, initial.Y, initial.Z * .72)
+            CornerMonument.sync(arena, base.Position, "High", true, nil, 0, false)
+            assert(CornerMonument.foundationCount() == 4 and base.CanCollide)
+            CornerMonument.sync(arena, first.GroundPlinth.Position, "High", true, nil, 0, true)
+            assert(CornerMonument.foundationCount() == 2)
+            CornerMonument.sync(arena, first.GroundPlinth.Position, "Medium", true, nil, 0, true)
+            assert(CornerMonument.foundationCount() == 1)
+            CornerMonument.sync(arena, first.GroundPlinth.Position, "Low", true, nil, 0, true)
+            assert(CornerMonument.foundationCount() == 1)
+            CornerMonument.sync(arena, first.GroundPlinth.Position, "Low", true, nil, 1, true)
+            assert(CornerMonument.foundationCount() == 0 and CornerMonument.count() == 1)
+            assert(math.abs(first.GroundPlinth.Transparency - .2) < .001
+                and math.abs(first.PlinthRim.Transparency - .35) < .001)
+            if variant == "Classic" then
+                local function syncNear()
+                    CornerMonument.sync(arena, first.GroundPlinth.Position, "Low", true, nil, 0, true)
+                end
+                syncNear()
+                local body = assert(bucket:FindFirstChild("ApprovedOriginalCornerMonument3D_1"))
+                local pedestal = assert(body:FindFirstChild("Original3DCornerMonumentFoundation"))
+                pedestal:GetChildren()[1]:Destroy()
+                task.wait()
+                assert(CornerMonument.foundationCount() == 0 and body.Parent == bucket)
+                assert(math.abs(first.PlinthRim.Transparency - .35) < .001)
+                syncNear()
+                first.PlinthRim.CanCollide = true
+                task.wait()
+                assert(first.PlinthRim.Transparency < 1 and CornerMonument.foundationCount() == 0)
+                first.PlinthRim.CanCollide = false
+                syncNear()
+                offsetPiece.Parent = nil
+                task.wait()
+                assert(CornerMonument.foundationCount() == 0 and body.Parent == bucket)
+                syncNear()
+                assert(CornerMonument.foundationCount() == 0)
+                offsetPiece.Parent = source
+                syncNear()
+                assert(CornerMonument.foundationCount() == 1)
+                source:SetAttribute("OwnerVerified", false)
+                task.wait()
+                assert(CornerMonument.foundationCount() == 0 and body.Parent == bucket)
+                source:SetAttribute("OwnerVerified", true)
+                syncNear()
+                first.GroundPlinth:SetAttribute("SceneryLodHidden", true)
+                task.wait()
+                assert(CornerMonument.foundationCount() == 0 and first.GroundPlinth.Transparency < 1)
+            end
+            CornerMonument.sync(nil, Vector3.zero, "Low", false)
+            assert(#bucket:GetChildren() == 0)
+            arena.Parent:Destroy()
+        end
+        expect(total).toBe(40)
+        routes:Destroy()
+        facades:Destroy()
     end)
     it("mounts genuine approved suspended arena keel only BELOW real collision base, tiered and shrink safe", function()
         -- Source #41669929967 was moderation Approved. The CI registry

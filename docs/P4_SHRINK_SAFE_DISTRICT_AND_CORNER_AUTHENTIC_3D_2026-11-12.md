@@ -62,6 +62,27 @@ Part, lumière ou mouvement. Les MeshParts restent `Anchored`,
 `CastShadow=false`. Les vraies structures jouables,
 portes, fondations et les signaux de navigation ne sont pas remplacés.
 
+## Socles des monuments d’angle
+
+Chaque monument peut désormais monter le maillage original `PremiumGroundTile`
+(modèle Roblox approuvé `72507987666671`) à la place de ses deux dalles
+décoratives, soit 40 pièces couvertes sur les cinq variantes. Les sept
+MeshParts forment un socle de 19,6 × 1,76 × 19,6 studs, au niveau d’origine
+et teinté selon le monument. Le maillage conserve ses plaques biseautées,
+ses attaches et ses joints. Chaque socle reste sous le monument dans le
+dossier déjà compté par le budget graphique.
+
+| Qualité | Bureau | Écran tactile |
+| --- | ---: | ---: |
+| Low | 1 | 1 |
+| Medium | 2 | 1 |
+| High | 4 | 2 |
+
+La caméra détermine les socles prioritaires. La pression graphique, le
+streaming ou la perte du modèle rendent les dalles natives visibles.
+Les attributs `LocalOriginalCornerFoundationCount` et
+`LocalCornerFoundationNativePartsReplaced` exposent les quantités résidentes.
+
 ## Contrats et validation
 
 Le vérificateur source déjà existant

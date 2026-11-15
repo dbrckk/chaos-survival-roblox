@@ -2044,12 +2044,11 @@ task.spawn(function()
                 end
             end
         end
-        -- On the same camera pass, replace the four corner towers'
-        -- primitive silhouettes with REAL approved observatory/freight/
-        -- turbine/aerial MeshParts. Preserve foundation and original
-        -- native fallback if source, streaming or shrink is unavailable.
+        -- The same camera pass owns the four corner silhouettes and their
+        -- sculpted bases. The bases share Android's optional geometry budget.
         ApprovedCornerMonumentMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady, cameraLook)
+            profile.Name, cameraReady, cameraLook,
+            player:GetAttribute("OptionalVfxPressure"), isTouch)
         local cornerModels = ApprovedCornerMonumentMeshKit.count()
         if player:GetAttribute("LocalOriginalCornerMonumentCount")
             ~= cornerModels then
@@ -2062,6 +2061,18 @@ task.spawn(function()
             ~= nativeCornersReplaced then
             player:SetAttribute("LocalOriginalCornerPiecesReplaced",
                 nativeCornersReplaced)
+        end
+        local cornerFoundations, nativeFoundationPieces =
+            ApprovedCornerMonumentMeshKit.foundationCount()
+        if player:GetAttribute("LocalOriginalCornerFoundationCount")
+            ~= cornerFoundations then
+            player:SetAttribute("LocalOriginalCornerFoundationCount",
+                cornerFoundations)
+        end
+        if player:GetAttribute("LocalCornerFoundationNativePartsReplaced")
+            ~= nativeFoundationPieces then
+            player:SetAttribute("LocalCornerFoundationNativePartsReplaced",
+                nativeFoundationPieces)
         end
         -- Four original peripheral facade retrofits have genuine individual
         -- positions; reuse the existing district architecture LOD sampler.
