@@ -1,5 +1,5 @@
 -- Original approved cosmetic geometry for perimeter ascension arches,
--- casing ornaments, Orbital helix underframes and promenade crossheads.
+-- casing ornaments, Orbital helix underframes and promenade porticos.
 -- Real colliders/route lights/warnings remain server-owned, never masked.
 -- Exactly ONE existing scenery-lod sampler owns source residency. Event
 -- callbacks are only for genuine streaming / shrink / collapse changes.
@@ -14,10 +14,22 @@ local SOURCE={
     Crosshead={id=108452611210970,major=8.94,minor=1.12,height=.5675,
         centerY=0,holder="ApprovedPerimeterStructuresTemplates",
         template="Brace",tag="OriginalPerimeterStructure3D"},
+    Stay={id=122766792774607,major=9.62,minor=.6175,height=1.505,
+        centerY=0,holder="ApprovedPlatformSideTemplates",
+        template="Bridge",tag="OriginalStructuralSide3D"},
 }
 local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true}
 local CROSSHEAD_SPAN={[2]=18.4,[4]=19.6,[7]=21.2}
 local CROSSHEAD_RISE={[2]=13.25,[4]=14.5,[7]=16.2}
+-- Source Z becomes the height along the tilted native stay. The open
+-- web faces up the walkway, within the native support's cross-section.
+local STAY_AXES=CFrame.fromMatrix(Vector3.zero, -Vector3.xAxis,
+    Vector3.zAxis, Vector3.yAxis)
+-- Stay budget counts complete pairs (14 parts), not individual sides.
+local STAY_ANGLE=math.rad(16)
+local STAY_DISTANCE={Medium=150,High=265}
+local STAY_BUDGET={Medium=2,High=6}
+local SIDES={-1,1}
 local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
 -- Desktop-only extra creator-approved sculptures. The authenticated real
 -- platform/casing/ramp and source dimensions still decide actual mounts.
@@ -122,10 +134,10 @@ local function sourceFor(name)
     end
     if count~=7 then return nil end
     local _,b=model:GetBoundingBox()
-    local brace=name=="Crosshead"
-    if math.abs(math.max(b.X,b.Z)-spec.major)>(brace and .30 or .75)
-        or math.abs(math.min(b.X,b.Z)-spec.minor)>(brace and .22 or .75)
-        or math.abs(b.Y-spec.height)>(brace and .16 or .8) then return nil end
+    local portico=spec.holder~=nil
+    if math.abs(math.max(b.X,b.Z)-spec.major)>(portico and .30 or .75)
+        or math.abs(math.min(b.X,b.Z)-spec.minor)>(portico and .22 or .75)
+        or math.abs(b.Y-spec.height)>(portico and .16 or .8) then return nil end
     return model
 end
 
@@ -198,7 +210,7 @@ local function collectArch(arena,deck,decor,scale)
         stage=step,route=route,index=index,expectedParent=decor}
 end
 
-local function collectCrosshead(arena,deck,decor,scale)
+local function collectPorticoPart(arena,deck,decor,scale,side)
     if not PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
         or not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("ChaosPermanentRoute")~=true
@@ -219,7 +231,8 @@ local function collectCrosshead(arena,deck,decor,scale)
     local shutter=deck:GetAttribute("BridgeShutterPhase")
     if shutter~=nil and shutter~="Idle" then return nil end
 
-    local native=decor:FindFirstChild("Promenade"..index.."_MonumentalCrosshead")
+    local suffix=side and "_DiagonalStay"..side or "_MonumentalCrosshead"
+    local native=decor:FindFirstChild("Promenade"..index..suffix)
     if not visualNative(native,decor) or not native:IsA("Part")
         or native.Shape~=Enum.PartType.Block
         or native:GetAttribute("PromenadeVisualOnly")~=true
@@ -227,7 +240,28 @@ local function collectCrosshead(arena,deck,decor,scale)
         return nil
     end
     local size=native.Size
-    local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+CROSSHEAD_RISE[step],0)
+    local rise=CROSSHEAD_RISE[step]
+    if side then
+        local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise*.66,
+            side*8.3*scale)*CFrame.Angles(side*STAY_ANGLE,0,0)
+        if math.abs(size.X-.65*scale)>.045 or math.abs(size.Y-rise*.55)>.06
+            or math.abs(size.Z-1.1*scale)>.055
+            or (expected.Position-native.Position).Magnitude>.16
+            or expected.LookVector:Dot(native.CFrame.LookVector)<.999
+            or expected.UpVector:Dot(native.CFrame.UpVector)<.999 then return nil end
+        local depth=size.Z*.94
+        -- Shrink narrows the route but preserves native vertical length.
+        -- Shorten the tilted girder just enough to keep its inside corner
+        -- outboard of the walkable edge. Preserve native art if too short.
+        local maxHalfSpan=((8.3-6)*scale-depth*.5*math.cos(STAY_ANGLE)-.025)
+            /math.sin(STAY_ANGLE)
+        local length=math.min(size.Y*.985,maxHalfSpan*2)
+        if length<size.Y*.70 then return nil end
+        return {category="stay",name="Stay",owner=deck,key=native,side=side,arena=arena,
+            originals={native},center=deck.Position,orientation=native.CFrame*STAY_AXES,
+            fitSize=Vector3.new(size.X*.94,depth,length),expectedParent=decor}
+    end
+    local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise,0)
     if math.abs(size.X-4*scale)>.10 or math.abs(size.Y-1.2)>.06
         or math.abs(size.Z-span*scale)>.18
         or (expected.Position-native.Position).Magnitude>.16
@@ -235,7 +269,22 @@ local function collectCrosshead(arena,deck,decor,scale)
         or expected.UpVector:Dot(native.CFrame.UpVector)<.999 then return nil end
     return {category="promenade",name="Crosshead",owner=deck,arena=arena,
         originals={native},center=native.Position,orientation=native.CFrame,
-        crossheadSize=size,expectedParent=decor}
+        fitSize=Vector3.new(size.X*.85,size.Y*.975,size.Z*.98),expectedParent=decor}
+end
+
+local function collectStayPair(arena,deck,decor,scale)
+    local pair={}
+    for _,side in ipairs(SIDES) do
+        local stay=collectPorticoPart(arena,deck,decor,scale,side)
+        if not stay then return nil end
+        pair[#pair+1]=stay
+    end
+    -- Require both exact native instances to stay resident before either
+    -- mask remains authorized. This also handles asynchronous shrink.
+    for _,stay in ipairs(pair) do
+        stay.other=pair[stay.side<0 and 2 or 1].key
+    end
+    return pair
 end
 
 local function collectCasing(arena,casing,group)
@@ -309,10 +358,14 @@ local function collectHelix(arena,ramp,circuit)
         expectedParent=circuit,index=index}
 end
 
+local function isPortico(category)
+    return category=="promenade" or category=="stay"
+end
+
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
         if (n.part.Parent==entry.expectedParent
-            or (entry.category=="promenade" and entry.visible))
+            or (isPortico(entry.category) and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
         end
@@ -380,11 +433,22 @@ local function refresh(entry)
     local scale=realFloorScale(entry.arena)
     local data=nil
     if scale and sourceIntact(entry) then
-        if entry.category=="arch" or entry.category=="promenade" then
+        if entry.category=="arch" or isPortico(entry.category) then
             local decor=entry.arena:FindFirstChild("Decor")
-            local collect=entry.category=="arch" and collectArch or collectCrosshead
             if decor==entry.expectedParent then
-                data=collect(entry.arena,entry.owner,decor,scale)
+                if entry.category=="arch" then
+                    data=collectArch(entry.arena,entry.owner,decor,scale)
+                elseif entry.side then
+                    local pair=collectStayPair(entry.arena,entry.owner,decor,scale)
+                    data=pair and pair[entry.side<0 and 1 or 2]
+                    local other=mounted[entry.other]
+                    if data and (data.other~=entry.other or not other
+                        or other.other~=entry.native[1].part or not sourceIntact(other)) then
+                        data=nil
+                    end
+                else
+                    data=collectPorticoPart(entry.arena,entry.owner,decor,scale)
+                end
             end
         elseif entry.category=="casing" then
             local group=entry.arena:FindFirstChild("Decor")
@@ -412,14 +476,11 @@ local function refresh(entry)
     end
     local rule=SOURCE[entry.name]
     local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
-    if data.crossheadSize then
-        local size=data.crossheadSize
-        local bounds=entry.bounds
-        -- Match the real crosshead span. Inset the web and ends
-        -- slightly so the themed equipment has no coplanar faces.
-        sx=size.X*.85/math.min(bounds.X,bounds.Z)
-        sy=size.Y*.975/bounds.Y
-        sz=size.Z*.98/math.max(bounds.X,bounds.Z)
+    if data.fitSize then
+        local size,bounds=data.fitSize,entry.bounds
+        sx=size.X/math.min(bounds.X,bounds.Z)
+        sy=size.Y/bounds.Y
+        sz=size.Z/math.max(bounds.X,bounds.Z)
     elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
         reveal(entry)
         return false
@@ -428,10 +489,9 @@ local function refresh(entry)
     if entry.longX then ax,az=sz,sx end
     local aim=data.orientation*CFrame.new(0,rule.centerY,0)
         * CFrame.Angles(0,entry.longX and math.pi*.5 or 0,0)
-    local crossheadChanged=data.crossheadSize~=entry.lastCrossheadSize
-        or aim~=entry.lastCrossheadFrame
+    local fitChanged=data.fitSize~=entry.lastFitSize or aim~=entry.lastFitFrame
     for _,piece in ipairs(entry.pieces) do
-        if not data.crossheadSize or crossheadChanged then
+        if not data.fitSize or fitChanged then
             local p=piece.frame.Position
             local rotation=piece.frame-p
             piece.part.Size=Vector3.new(
@@ -441,9 +501,9 @@ local function refresh(entry)
         end
         piece.part.LocalTransparencyModifier=0
     end
-    if data.crossheadSize then
-        entry.lastCrossheadSize=data.crossheadSize
-        entry.lastCrossheadFrame=aim
+    if data.fitSize then
+        entry.lastFitSize=data.fitSize
+        entry.lastFitFrame=aim
     end
     for _,n in ipairs(entry.native) do
         if n.part.Parent==entry.expectedParent then
@@ -477,6 +537,8 @@ folder.ChildRemoved:Connect(function(child)
         if entry.model==child and not entry.disposing then
             mounted[owner]=nil
             dispose(entry)
+            local other=entry.other and mounted[entry.other]
+            if other then refresh(other) end
         end
     end
 end)
@@ -485,7 +547,7 @@ local function mount(data,source)
     local clone=source:Clone()
     local cf,b=clone:GetBoundingBox()
     local entry={category=data.category,name=data.name,
-        owner=data.owner,arena=data.arena,
+        owner=data.owner,side=data.side,other=data.other,arena=data.arena,
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,
         native={},model=clone,pieces={},connections={},bounds=b,
@@ -522,7 +584,11 @@ local function mount(data,source)
     clone:SetAttribute("P4OriginalRemainingStructure3D",true)
     clone:SetAttribute("Original3DAssetId",SOURCE[data.name].id)
     clone.Parent=folder
-    local function changed() refresh(entry) end
+    local function changed()
+        refresh(entry)
+        local other=entry.other and mounted[entry.other]
+        if other then refresh(other) end
+    end
     local function watch(o,properties)
         entry.connections[#entry.connections+1]=o.AncestryChanged:Connect(changed)
         for _,name in ipairs(properties) do
@@ -540,7 +606,7 @@ local function mount(data,source)
         entry.connections[#entry.connections+1]=
             data.owner.AncestryChanged:Connect(changed)
     end
-    if data.category=="arch" or data.category=="promenade" then
+    if data.category=="arch" or isPortico(data.category) then
         -- A collapsing/shutter warning takes precedence over decorative
         -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
         entry.connections[#entry.connections+1]=
@@ -548,7 +614,7 @@ local function mount(data,source)
         entry.connections[#entry.connections+1]=
             data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
     end
-    if data.category=="promenade" then
+    if isPortico(data.category) then
         for _,attribute in ipairs({"PromenadeLane","PromenadeStep",
             "ChaosPermanentRoute","RouteTier"}) do
             entry.connections[#entry.connections+1]=
@@ -556,7 +622,7 @@ local function mount(data,source)
         end
     end
     for _,native in ipairs(data.originals) do
-        if data.category=="promenade" then
+        if isPortico(data.category) then
             watch(native,{"CFrame","Size","Transparency","Anchored",
                 "CanCollide","CanTouch","CanQuery","Shape","Name"})
             for _,attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
@@ -574,7 +640,7 @@ local function mount(data,source)
             if (child:IsA("BasePart") or child:IsA("LuaSourceContainer"))
                 and not entry.disposing then
                 task.defer(function()
-                    if not entry.disposing then refresh(entry) end
+                    if not entry.disposing then changed() end
                 end)
             end
         end)
@@ -583,7 +649,7 @@ local function mount(data,source)
             if (child:IsA("BasePart") or child:IsA("LuaSourceContainer"))
                 and not entry.disposing then
                 task.defer(function()
-                    if not entry.disposing then refresh(entry) end
+                    if not entry.disposing then changed() end
                 end)
             end
         end)
@@ -591,7 +657,7 @@ local function mount(data,source)
         clone.DescendantRemoving:Connect(function(child)
             if child:IsA("MeshPart") and not entry.disposing then
                 task.defer(function()
-                    if not entry.disposing then refresh(entry) end
+                    if not entry.disposing then changed() end
                 end)
             end
         end)
@@ -609,14 +675,19 @@ local function mount(data,source)
                     child.CanQuery=false
                     child.LocalTransparencyModifier=1
                 end
-                reveal(entry)
+                changed()
             end
         end)
-    refresh(entry)
+    if not entry.other then refresh(entry) end
     return entry
 end
 
 local function caps(tier,touch,pressure,kind)
+    if kind=="stay" then
+        local cap=STAY_BUDGET[tier] or 0
+        if (tonumber(pressure) or 0)>=1 then return 0 end
+        return touch==true and math.min(cap,1) or cap
+    end
     local t=BUDGET[tier] or BUDGET.Low
     local cap=t[kind] or 0
     if touch==true then
@@ -667,14 +738,15 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     -- Recheck approved templates on the existing camera pass, with no
     -- permanent trusted cache across eviction or streaming.
     local src={}
+    local promenadeVariant=PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
     for name in pairs(SOURCE) do
-        if name~="Crosshead" or (PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
-            and caps(tier,touch,pressure,"promenade")>0) then
+        local kind=name=="Crosshead" and "promenade" or (name=="Stay" and "stay")
+        if not kind or (promenadeVariant and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
     end
     local desired={}
-    local candidates={arch={},casing={},helix={},promenade={}}
+    local candidates={arch={},casing={},helix={},promenade={},stay={}}
     local decor=arena:FindFirstChild("Decor")
     local platforms=arena:FindFirstChild("Platforms")
     if decor and decor:IsA("Folder")
@@ -682,7 +754,20 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         for _,deck in ipairs(platforms:GetChildren()) do
             local data=collectArch(arena,deck,decor,scale)
             if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
-                data=collectCrosshead(arena,deck,decor,scale)
+                data=collectPorticoPart(arena,deck,decor,scale)
+            end
+            if src.Stay and deck:GetAttribute("PromenadeStep") then
+                local pair=collectStayPair(arena,deck,decor,scale)
+                if pair then
+                    local stay=pair[1]
+                    local resident=mounted[stay.key]~=nil and mounted[pair[2].key]~=nil
+                    local priority,distance=score(stay,cameraPoint,cameraLook,resident)
+                    if distance<=STAY_DISTANCE[tier]+(resident and 18 or 0) then
+                        stay.priority=priority
+                        stay.pair=pair
+                        candidates.stay[#candidates.stay+1]=stay
+                    end
+                end
             end
             if data and src[data.name] then
                 local priority,distance=score(data,cameraPoint,cameraLook,
@@ -727,7 +812,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         end
     end
-    for _,kind in ipairs({"arch","casing","helix","promenade"}) do
+    for _,kind in ipairs({"arch","casing","helix","promenade","stay"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
@@ -813,8 +898,13 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
         for _,data in ipairs(candidates[kind]) do
             if taken>=cap then break end
-            if not desired[data.owner] then
-                desired[data.owner]=data
+            local key=data.key or data.owner
+            if not desired[key] then
+                if data.pair then
+                    for _,side in ipairs(data.pair) do desired[side.key]=side end
+                else
+                    desired[key]=data
+                end
                 taken+=1
             end
         end
@@ -824,7 +914,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if not data or data.name~=entry.name
             or data.category~=entry.category or data.arena~=entry.arena
             or src[entry.name]~=entry.source
-            or (entry.category=="promenade" and
+            or (isPortico(entry.category) and
                 (data.originals[1]~=entry.native[1].part
                     or data.expectedParent~=entry.expectedParent))
             or not sourceIntact(entry) then
@@ -843,10 +933,9 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if not entry then
             entry=mount(data,src[data.name])
             if entry then mounted[owner]=entry end
-        else
-            refresh(entry)
         end
     end
+    for _,entry in pairs(mounted) do refresh(entry) end
 end
 
 function Kit.count(category)

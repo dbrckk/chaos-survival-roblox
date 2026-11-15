@@ -2018,8 +2018,8 @@ for contract in (
     'src[name]=sourceFor(name)',
     'model:GetAttribute("Original3DAssetId")',
     'realFloorScale(entry.arena)',
-    'local collect=entry.category=="arch" and collectArch or collectCrosshead',
-    'data=collect(entry.arena,entry.owner,decor,scale)',
+    'collectArch(entry.arena,entry.owner,decor,scale)',
+    'collectPorticoPart(entry.arena,entry.owner,decor,scale)',
     'collectCasing(entry.arena,entry.owner,group)',
     'collectHelix(entry.arena,entry.owner,circuit)',
     'if #entry.pieces~=7 then clone:Destroy();return nil end',
@@ -2083,7 +2083,7 @@ for required in (
 ):
     assert required in P4_CLIENT, required
 ascension_collector = P4_CLIENT.split("local function collectArch", 1)[1].split(
-    "local function collectCrosshead", 1)[0]
+    "local function collectPorticoPart", 1)[0]
 assert 'deck:GetAttribute("ChaosPermanentRoute")~=true' not in ascension_collector
 assert 'local overpass=originals[8]' not in P4_CLIENT
 print("PASS P4 upper arch fits true 3/13.8/28.2 height, retains deep load-bearing"
@@ -2092,7 +2092,7 @@ print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
 
 
-promenade_collector = P4_CLIENT.split("local function collectCrosshead", 1)[1].split(
+promenade_collector = P4_CLIENT.split("local function collectPorticoPart", 1)[1].split(
     "local function collectCasing", 1)[0]
 brace = P4_MODELS["perimeter_crossbrace"]
 assert brace["asset_id"]=="108452611210970" and brace["moderation"]=="Approved"
@@ -2139,3 +2139,21 @@ assert 'reconcilePylon(part)' in TRIM
 assert 'LocalOriginalPromenadePylon3DCount = family.promenadePylon' in OWNER
 assert 'descendant:GetAttribute("OriginalPromenadePylon3D") == true' in SIDE_LOD
 print("PASS 48 genuine promenade pylons eligible inside the existing column budget")
+
+
+girder=P4_MODELS["bridge_side_girder"]
+assert girder["asset_id"]=="122766792774607" and girder["moderation"]=="Approved"
+for clause in (
+    'local STAY_BUDGET={Medium=2,High=6}',
+    'if (tonumber(pressure) or 0)>=1 then return 0 end',
+    'return touch==true and math.min(cap,1) or cap',
+    'local function collectStayPair(arena,deck,decor,scale)',
+    'side*8.3*scale)*CFrame.Angles(side*STAY_ANGLE,0,0)',
+    'orientation=native.CFrame*STAY_AXES',
+    'fitSize=Vector3.new(size.X*.94,depth,length)',
+    'if length<size.Y*.70 then return nil end',
+    'for _,side in ipairs(data.pair) do desired[side.key]=side end',
+):
+    assert clause in P4_CLIENT,clause
+assert 'LocalOriginalPromenadeDiagonalStay3DCount' in SIDE_LOD
+print("PASS 48 native diagonal stays use fitted girder pairs with zero Low or GPU-pressure residency")

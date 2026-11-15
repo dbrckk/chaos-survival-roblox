@@ -229,12 +229,18 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if not ok then error(err) end
     end)
 
-    it("fits the approved truss to genuine promenade crossheads through shrink and streaming",function()
+    it("fits approved crossheads and paired diagonal stays through promenade shrink and streaming",function()
         local rs=game:GetService("ReplicatedStorage")
         local previous=workspace:FindFirstChild("GeneratedMap")
         local old=rs:FindFirstChild("ApprovedPerimeterStructuresTemplates")
         if previous then previous.Parent=nil end
         if old then old.Parent=nil end
+        local previousSide=rs:FindFirstChild("ApprovedPlatformSideTemplates")
+        if previousSide then previousSide.Parent=nil end
+        local sideHolder=Instance.new("Folder")
+        sideHolder.Name="ApprovedPlatformSideTemplates"
+        sideHolder:SetAttribute("OwnerVerified",true)
+        sideHolder.Parent=rs
         local holder=Instance.new("Folder")
         holder.Name="ApprovedPerimeterStructuresTemplates"
         holder:SetAttribute("OwnerVerified",true)
@@ -260,6 +266,14 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             if i==7 then detachable=part end
         end
         source.Parent=holder
+        local girder=source:Clone()
+        girder.Name="Bridge"
+        girder:SetAttribute("Original3DAssetId",122766792774607)
+        girder:SetAttribute("OriginalStructuralSide3D",true)
+        for _,piece in ipairs(girder:GetChildren()) do
+            if piece.Size.X>8 then piece.Size=Vector3.new(9.62,1.505,.6175) end
+        end
+        girder.Parent=sideHolder
         local generated=nil
         local ok,err=pcall(function()
             for _,variant in ipairs({"Classic","Towers","Crossroads","Orbital","Harbor"}) do
@@ -280,6 +294,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(total).toBe(6)
                 Remaining.sync(arena,base.Position,"High",true,nil,0,false)
                 expect(Remaining.count("promenade")).toBe(variant=="Harbor" and 0 or 6)
+                expect(Remaining.count("stay")).toBe(variant=="Harbor" and 0 or 12)
                 for deck,native in pairs(crossheads) do
                     expect(native.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
                     local index=deck.Name:match("^Platform(%d+)$")
@@ -287,16 +302,64 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     local underdeck=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
                     expect(pylon.LocalTransparencyModifier).toBe(0)
                     expect(underdeck.LocalTransparencyModifier).toBe(0)
+                    for _,side in ipairs({-1,1}) do
+                        local diagonal=decor:FindFirstChild("Promenade"..index.."_DiagonalStay"..side)
+                        expect(diagonal.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
+                    end
                     expect(deck.CanCollide).toBe(true)
                 end
                 if variant~="Crossroads" then continue end
-                local deck,native=next(crossheads)
+                local deck,native=nil,nil
+                for owner,part in pairs(crossheads) do
+                    if owner:GetAttribute("PromenadeStep")==2
+                        and owner:GetAttribute("PromenadeLane")==1 then
+                        deck,native=owner,part
+                        break
+                    end
+                end
+                local bucket=workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
+                local prefix="Promenade"..deck.Name:match("%d+").."_DiagonalStay"
+                local stays={decor:FindFirstChild(prefix.."-1"),decor:FindFirstChild(prefix.."1")}
                 Remaining.sync(arena,deck.Position,"High",true,nil,0,true)
                 expect(Remaining.count("promenade")).toBe(3)
+                expect(Remaining.count("stay")).toBe(2)
+                local lost=bucket:FindFirstChild("ApprovedP4_Stay")
+                local mesh=lost:FindFirstChildWhichIsA("MeshPart")
+                mesh:Destroy()
+                task.wait()
+                expect(Remaining.count("stay")).toBe(0)
+                for _,stay in ipairs(stays) do expect(stay.LocalTransparencyModifier).toBe(0) end
+                Remaining.sync(arena,deck.Position,"Medium",true,nil,0,true)
+                expect(Remaining.count("stay")).toBe(2)
+                local function verifyStays()
+                    for _,stay in ipairs(stays) do
+                        expect(stay.LocalTransparencyModifier).toBe(1)
+                        local fitted=nil
+                        for _,model in ipairs(bucket:GetChildren()) do
+                            if model.Name=="ApprovedP4_Stay" then
+                                for _,piece in ipairs(model:GetChildren()) do
+                                    if piece.Size.Magnitude>5
+                                        and (piece.Position-stay.Position).Magnitude<.05 then
+                                        expect(model:GetAttribute("Original3DAssetId")).toBe(122766792774607)
+                                        local size=piece.Size
+                                        expect(math.abs(math.max(size.X,size.Y,size.Z)
+                                            -stay.Size.Y*.985)<.07).toBe(true)
+                                        expect(math.abs(piece.CFrame.RightVector:Dot(stay.CFrame.UpVector))>.999).toBe(true)
+                                        fitted=model
+                                    end
+                                end
+                            end
+                        end
+                        expect(fitted~=nil).toBe(true)
+                    end
+                end
+                verifyStays()
+                Remaining.sync(arena,deck.Position,"Medium",true,nil,1,true)
+                expect(Remaining.count("stay")).toBe(0)
                 Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                expect(Remaining.count("stay")).toBe(0)
                 expect(Remaining.nativeCount("promenade")).toBe(1)
                 expect(native.LocalTransparencyModifier).toBe(1)
-                local bucket=workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
                 local model=bucket:FindFirstChild("ApprovedP4_Crosshead")
                 expect(model:GetAttribute("Original3DAssetId")).toBe(108452611210970)
                 local function verifyFit()
@@ -315,17 +378,30 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     expect(math.abs(size.Y-native.Size.Y*.975)<.02).toBe(true)
                 end
                 verifyFit()
+                Remaining.sync(arena,deck.Position,"Medium",true,nil,0,true)
+                verifyStays()
                 local deckSize,nativeSize=deck.Size,native.Size
                 base.Size=Vector3.new(base.Size.X*.75,base.Size.Y,base.Size.Z*.75)
                 expect(native.LocalTransparencyModifier).toBe(0)
+                expect(Remaining.count("stay")).toBe(0)
                 deck.Size=Vector3.new(deckSize.X*.75,deckSize.Y,deckSize.Z*.75)
                 native.Size=Vector3.new(nativeSize.X*.75,nativeSize.Y,nativeSize.Z*.75)
+                for _,stay in ipairs(stays) do
+                    local frame=deck.CFrame:ToObjectSpace(stay.CFrame)
+                    local offset=frame.Position
+                    stay.CFrame=deck.CFrame*CFrame.new(offset.X*.75,offset.Y,offset.Z*.75)
+                        *(frame-offset)
+                    stay.Size=Vector3.new(stay.Size.X*.75,stay.Size.Y,stay.Size.Z*.75)
+                end
                 expect(native.LocalTransparencyModifier).toBe(1)
                 verifyFit()
+                verifyStays()
                 deck:SetAttribute("BridgeShutterPhase","Warning")
                 expect(native.LocalTransparencyModifier).toBe(0)
+                expect(Remaining.count("stay")).toBe(0)
                 deck:SetAttribute("BridgeShutterPhase","Idle")
                 expect(native.LocalTransparencyModifier).toBe(1)
+                verifyStays()
                 native.Parent=nil
                 expect(native.LocalTransparencyModifier).toBe(0)
                 local replacement=native:Clone()
@@ -353,11 +429,47 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 Remaining.sync(arena,deck.Position,"Low",true,nil,1,true)
                 expect(Remaining.count("promenade")).toBe(0)
                 expect(replacement.LocalTransparencyModifier).toBe(.25)
+                local newScale=.45/.75
+                base.Size=Vector3.new(base.Size.X*newScale,base.Size.Y,base.Size.Z*newScale)
+                deck.Size=Vector3.new(deckSize.X*.45,deckSize.Y,deckSize.Z*.45)
+                for _,stay in ipairs(stays) do
+                    local frame=deck.CFrame:ToObjectSpace(stay.CFrame)
+                    local offset=frame.Position
+                    stay.CFrame=deck.CFrame*CFrame.new(offset.X*newScale,offset.Y,offset.Z*newScale)
+                        *(frame-offset)
+                    stay.Size=Vector3.new(stay.Size.X*newScale,stay.Size.Y,stay.Size.Z*newScale)
+                end
+                Remaining.sync(arena,deck.Position,"Medium",true,nil,0,true)
+                local ownStays=0
+                for _,model in ipairs(bucket:GetChildren()) do
+                    if model.Name=="ApprovedP4_Stay"
+                        and model:GetAttribute("OriginalP4OwnerPlatform")==deck.Name then
+                        ownStays+=1
+                        for _,piece in ipairs(model:GetChildren()) do
+                            if piece:IsA("MeshPart") then
+                                local relative=deck.CFrame:ToObjectSpace(piece.CFrame)
+                                local zExtent=(
+                                    math.abs(relative.RightVector.Z)*piece.Size.X
+                                    +math.abs(relative.UpVector.Z)*piece.Size.Y
+                                    +math.abs(relative.LookVector.Z)*piece.Size.Z)*.5
+                                expect(math.abs(relative.Position.Z)-zExtent
+                                    > deck.Size.Z*.5).toBe(true)
+                            end
+                        end
+                    end
+                end
+                local hasClearance=deck:GetAttribute("PromenadeStep")~=7
+                expect(ownStays).toBe(hasClearance and 2 or 0)
+                for _,stay in ipairs(stays) do
+                    expect(stay.LocalTransparencyModifier).toBe(hasClearance and 1 or 0)
+                end
             end
         end)
         Remaining.sync(nil,Vector3.zero,"Low",false)
         if generated then generated:Destroy() end
         holder:Destroy()
+        sideHolder:Destroy()
+        if previousSide then previousSide.Parent=rs end
         if old then old.Parent=rs end
         if previous then previous.Parent=workspace end
         if not ok then error(err) end

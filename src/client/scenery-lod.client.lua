@@ -2120,6 +2120,8 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.count("helix"),
             LocalOriginalPromenadeCrosshead3DCount =
                 ApprovedRemainingStructureMeshKit.count("promenade"),
+            LocalOriginalPromenadeDiagonalStay3DCount =
+                ApprovedRemainingStructureMeshKit.count("stay"),
             LocalP4RemainingStructuralNativePiecesReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount(),
         }
