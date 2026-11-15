@@ -42,6 +42,9 @@ def main() -> None:
     print(f"Families: {len(rows)}")
     for priority in ("P0", "P1", "P2", "CONSERVER", "AUDITER"):
         print(f"{priority}: {by_priority[priority]:,}")
+    print("\nHistorical improvement candidates by arena (P0/P1/P2 only):")
+    for arena in ARENAS:
+        print(f"{arena:12} {by_arena[arena]:,}")
     print("\nPriority-ranked families (historical exposure, not unfinished count):")
     for priority, neg_total, family, coverage in sorted(candidates):
         print(f"{priority} {family:18} {-neg_total:5}  {coverage}")
