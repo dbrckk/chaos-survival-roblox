@@ -10,6 +10,20 @@ Trois autres systèmes, pourtant équipés de MeshParts originales créateur app
 - `ApprovedPrimarySkylineMeshKit` : **4 grandes tours d'horizon** par variante, dont les corps `StructuralCore`, `TopCap` et `OuterRibL/R` sont remplacés par de vrais modèles 3D ;
 - `ApprovedSkylineDepthMeshKit` : **8 toitures d'horizon** par variante avec remplacement d'authentiques `DistantRoofMass` en maillages, sans modifier les repères `DistantAerial`.
 
+### Monuments emblématiques des cinq arènes
+
+L’observatoire de Classic affiche deux paraboles tournées vers le terrain.
+Le monument de Harbor prend la silhouette d’une cale sèche, avec un mât
+et ses équipements. Towers reçoit un mât et une girouette au-dessus de
+la gare. Les deux axes de Crossroads portent des traverses, et le halo
+d’Orbital présente sa lentille vers les joueurs.
+
+Un seul monument est monté par client. Les socles et les équipements
+réapparaissent sous leur forme native dès le premier niveau de pression
+graphique. Au deuxième niveau, le monument entier revient à sa forme
+native. Les changements de source, mutations des maillages et changements
+d’arène libèrent les éléments locaux et restaurent leur transparence.
+
 Effet : les sculptures pouvaient être démontées en quelques instants et les Parts/WedgeParts de secours réapparaître malgré des modèles correctement chargés, au pire moment de la manche.
 
 ## Correction appliquée

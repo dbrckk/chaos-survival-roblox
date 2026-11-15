@@ -1,8 +1,5 @@
--- Five creator-approved, real 3D hero structures replace the primitive
--- skyline architecture on the active arena. Only the source-owner server
--- publishes these sanitized MeshPart templates; clients never fetch assets.
--- Existing 0.65/0.90-second scenery sampler owns lifecycle and tier budgets.
--- The original static Roblox structures remain fully reversible fallbacks.
+-- Arena-specific hero bodies, foundations and fittings use the same scenery
+-- sampler. Replicated owner-approved templates are the only mesh sources.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
@@ -10,9 +7,6 @@ local Kit = {}
 -- Model package IDs from assets/source/roblox-asset-registry.json.
 -- These are NOT MeshPart.MeshId strings; verify the server's source identity.
 local PROFILE = {
-    Classic = {name = "reactor_spire", id = 102992487644269,
-        majorMin = 10, majorMax = 18, minorMin = 10, minorMax = 18,
-        heightMin = 22, heightMax = 34},
     Towers = {name = "sky_transit_exchange", id = 95878714550124,
         majorMin = 27, majorMax = 39, minorMin = 12, minorMax = 21,
         heightMin = 23, heightMax = 35},
@@ -22,15 +16,59 @@ local PROFILE = {
     Orbital = {name = "orbital_halo_array", id = 135985134195364,
         majorMin = 19, majorMax = 29, minorMin = 9, minorMax = 17,
         heightMin = 25, heightMax = 37},
-    Harbor = {name = "service_crane", id = 119468460691888,
-        majorMin = 18, majorMax = 29, minorMin = 7, minorMax = 16,
-        heightMin = 14, heightMax = 24},
 }
 
--- One actual original Model on screen: 1,220 / 620 / 992 / 1,616 /
--- 504 triangles respectively in creator-authored source OBJ files.
--- Low remains one small landmark, with no additional render/network loop.
-local DISTANCE = {Low = 175, Medium = 275, High = 370}
+local CLASSIC = {holder="ApprovedClassicSignatureObservatoryTemplates",
+    name="DualDishObservatory", id=112493873850364, tag="OriginalClassicDualDishObservatory3D",
+    bounds=Vector3.new(9.105,15.0875,1.03), pieces={
+        Vector3.new(1.71,15.0875,1.03),Vector3.new(9.105,12.085,.6975),
+        Vector3.new(9.07,5.1625,.7338),Vector3.new(6.6175,13.8531,.4594)}}
+local HARBOR = {holder="ApprovedSouthHarborDrydockTemplates",name="SculptedDrydock",
+    id=125428569657840,tag="OriginalSouthHarborSculptedDrydock3D",
+    bounds=Vector3.new(16.53571,18.36429,4.60071),pieces={
+        Vector3.new(16.5357,18.3643,4.4107),Vector3.new(15.215,17.9729,4.6007),
+        Vector3.new(14.6429,17.1089,3.2214)}}
+local CROSSROADS = {holder="ApprovedCrossroadsSignatureInterchangeTemplates",
+    name="ForgedInterchange",id=96622579843060,tag="OriginalCrossroadsSignatureInterchange3D",
+    bounds=Vector3.new(47.68,11.73404,6.76),pieces={
+        Vector3.new(45.04,11.12,5.9),Vector3.new(47.68,2.3458,5.3),
+        Vector3.new(46.409,9.4952,5.244)}}
+local MAST = {holder="ApprovedVariantIdentitySpineTemplates",name="Towers",
+    id=86423178125318,tag="OriginalVariantIdentitySpine3D",
+    bounds=Vector3.new(2.52,19.97562,2.52),pieces={
+        Vector3.new(2.52,19.92,2.52),Vector3.new(2.29954,19.52,2.23955)}}
+local VANE = {holder="ApprovedOrbitalReactorLandmarkTemplates",name="Strut",
+    id=138666009076890,tag="OriginalOrbitalReactorLandmark3D",
+    bounds=Vector3.new(8.46,1.24,1.10),pieces={
+        Vector3.new(8.46,1.24,1.10),Vector3.new(7.96,.8638,.872)}}
+local LENS = {holder=VANE.holder,name="Node",id=104654294187035,
+    tag=VANE.tag,bounds=Vector3.new(4.36,4.36,4.36),pieces={
+        Vector3.new(2.96,2.9503,2.96),Vector3.new(4.11,4.11,.39)}}
+local FOOT = {holder="ApprovedHarborDockCaissonTemplates",name="DockCaisson",
+    id=101457508594609,tag="OriginalHarborDockCaisson3D",
+    bounds=Vector3.new(14.07,3.30755,14.07),pieces={
+        Vector3.new(12.82,2.69,12.82),Vector3.new(13.54,2.95755,13.54)}}
+
+local MAIN_PROFILE = {
+    Classic = {premium=CLASSIC,size=Vector3.new(21.8,38,4.3)},
+    Towers = {size=Vector3.new(31,26.25,14.7)},
+    Crossroads = {size=Vector3.new(24.3,23.2,13.5)},
+    Orbital = {size=Vector3.new(26,35.4,14)},
+    Harbor = {premium=HARBOR,size=Vector3.new(31.6,32,13.2)},
+}
+-- Mounts fit the authored outboard safety line after the room-facing yaw.
+local FOOT_NAME = {Classic="ObservatoryFoundation",Towers="TransitFoundation",
+    Crossroads="SwitchyardFoundation",Orbital="MagneticPlatform",Harbor="HarborDrydockFoundation"}
+local FITTING_NAMES = {
+    Towers={"SkyTransitSignalCrown","SkyTransitWeatherVane"},
+    Crossroads={"NorthConduit","EastConduit","ExchangeCoupler1","ExchangeCoupler2",
+        "ExchangeCoupler3","ExchangeCoupler4","DataTower","RoutingHeadHousing",
+        "SwitchAntenna-1","SwitchAntenna1","RoutingSwitchFin-1","RoutingSwitchFin1"},
+    Orbital={"HaloLens"},
+}
+
+-- Only one landmark is mounted. The base and fittings are pressure-limited.
+local DISTANCE = {Low = 242, Medium = 275, High = 370}
 local RETENTION = 24
 
 local bucket = Instance.new("Folder")
@@ -41,6 +79,22 @@ local activeArena = nil
 local mounted = nil
 local watchedBase = nil
 local baseConnection = nil
+
+local function restore(parts)
+    for part, alpha in pairs(parts) do
+        if part.Transparency == 1 then part.Transparency = alpha end
+    end
+    table.clear(parts)
+end
+
+local function releaseDetail(entry,key)
+    local detail = entry[key]
+    if not detail then return end
+    entry[key] = nil
+    for _,connection in ipairs(detail.connections) do connection:Disconnect() end
+    restore(detail.replaced)
+    detail.model:Destroy()
+end
 
 -- The hero lives OUTSIDE the unchanged original arena. The playable
 -- Base shrinks during survival; authenticate its immutable footprint
@@ -61,14 +115,7 @@ local function authenticFootprint(base, arena)
 end
 
 local function restoreNative(entry)
-    for part, originalAlpha in pairs(entry.replaced) do
-        if part.Parent == entry.native and part.Transparency == 1
-            and part.Anchored and not part.CanCollide and not part.CanTouch
-            and not part.CanQuery then
-            part.Transparency = originalAlpha
-        end
-        entry.replaced[part] = nil
-    end
+    restore(entry.replaced)
 end
 
 local function dispose()
@@ -78,6 +125,8 @@ local function dispose()
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
+    releaseDetail(entry,"foundation")
+    releaseDetail(entry,"fittings")
     restoreNative(entry)
     entry.model:Destroy()
 end
@@ -95,7 +144,7 @@ local function verifiedTemplate(variant)
     local profile = PROFILE[variant]
     if not profile then return nil end
     local holder = ReplicatedStorage:FindFirstChild("ApprovedHeroStructureTemplates")
-    if not holder or not holder:IsA("Folder")
+    if not holder or not holder:IsA("Folder") or holder.Parent ~= ReplicatedStorage
         or holder:GetAttribute("OwnerVerified") ~= true then
         return nil
     end
@@ -110,7 +159,8 @@ local function verifiedTemplate(variant)
     local count = 0
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
+            if not item:IsA("MeshPart") or not item.Anchored or item.CanCollide
+                or item.CanTouch or item.CanQuery then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then
             return nil
@@ -129,8 +179,11 @@ local function verifiedTemplate(variant)
 end
 
 local function nativeOrigin(arena, base, variant)
-    local originalX = authenticFootprint(base, arena)
+    local originalX,originalZ = authenticFootprint(base, arena)
     if not originalX then return nil end
+    if arena.Name ~= "Arena" or arena.Parent ~= workspace:FindFirstChild("GeneratedMap") then
+        return nil
+    end
     local decor = arena:FindFirstChild("Decor")
     local native = decor and decor:FindFirstChild("ArenaHeroArchitecture3D")
     if not native or not native:IsA("Model") or native.Parent ~= decor
@@ -152,6 +205,7 @@ local function nativeOrigin(arena, base, variant)
         end
     end
     if count < 8 or count > 125 then return nil end
+    if native:GetAttribute("HeroArchitectureParts") ~= count then return nil end
     local frame, size = native:GetBoundingBox()
     if size.X <= 0 or size.Y < 12 or size.Z <= 0
         or size.X > 65 or size.Y > 65 or size.Z > 65 then
@@ -163,134 +217,341 @@ local function nativeOrigin(arena, base, variant)
         < originalX * .5 + size.X * .5 + 15 then
         return nil
     end
-    return native, frame, size
+    local origin = CFrame.new(base.Position+Vector3.new(
+        originalX*.5+68,base.Size.Y*.5,originalZ*.22))
+    local signed = native:GetAttribute("HeroOrigin")
+    if typeof(signed) ~= "CFrame" or (signed.Position-origin.Position).Magnitude > .08
+        or signed.LookVector:Dot(origin.LookVector) < .999
+        or signed.UpVector:Dot(origin.UpVector) < .999 then return nil end
+    return native, frame, size, origin
 end
 
-local function valid(entry, base, arena, variant)
-    if not authenticFootprint(base, arena) or not arena.Parent
-        or entry.variant ~= variant or entry.native.Parent ~= entry.decor then
-        return false
-    end
-    local native, frame, size = nativeOrigin(arena, base, variant)
-    return native == entry.native and frame ~= nil
-        and (frame.Position - entry.nativeFrame.Position).Magnitude < .12
-        and (size - entry.nativeSize).Magnitude < .12
+local function sortedSize(size)
+    return Vector3.new(math.max(size.X,size.Z),size.Y,math.min(size.X,size.Z))
 end
 
-local function hidePrimitiveSkyline(entry)
-    for _, part in ipairs(entry.native:GetDescendants()) do
-        if part:IsA("BasePart") and part:IsDescendantOf(entry.native)
-            and part.Anchored and not part.CanCollide and not part.CanTouch
-            and not part.CanQuery and part.Transparency < 1 then
-            if entry.replaced[part] == nil then
-                entry.replaced[part] = part.Transparency
-            end
-            -- Transparency, not LocalTransparencyModifier: the latter is
-            -- owned by scenery-lod and must be left unchanged.
-            part.Transparency = 1
-        end
-    end
-end
-
-local function mount(arena, base, decor, native, frame, size, variant, source)
-    local clone = source:Clone()
-    local sourceFrame, sourceSize = clone:GetBoundingBox()
-    if sourceSize.X <= 0 or sourceSize.Y <= 0 or sourceSize.Z <= 0 then
-        clone:Destroy()
+local function checkedAsset(spec)
+    local holder = ReplicatedStorage:FindFirstChild(spec.holder)
+    local source = holder and holder:FindFirstChild(spec.name)
+    if not holder or not holder:IsA("Folder") or holder.Parent ~= ReplicatedStorage
+        or holder:GetAttribute("OwnerVerified") ~= true or not source or not source:IsA("Model")
+        or source:GetAttribute("OwnerVerified") ~= true or source:GetAttribute("CosmeticOnly") ~= true
+        or source:GetAttribute(spec.tag) ~= true or source:GetAttribute("Original3DAssetId") ~= spec.id then
         return nil
     end
-    -- Respect the original outboard architecture footprint. Different
-    -- source assets are 18..30 studs tall and must not be stretched into
-    -- a billboard or turned into an apparent walkable platform.
-    local scale = math.min(1.40,
-        size.X * 1.06 / sourceSize.X,
-        size.Z * 1.06 / sourceSize.Z,
-        size.Y * .96 / sourceSize.Y)
-    if scale < .58 or not pcall(function() clone:ScaleTo(scale) end) then
-        clone:Destroy()
-        return nil
-    end
-    local cloneFrame, bounds = clone:GetBoundingBox()
-    if bounds.X > 45 or bounds.Z > 45 or bounds.Y > 55 then
-        clone:Destroy()
-        return nil
-    end
-    local target = CFrame.new(frame.Position.X,
-        frame.Position.Y - size.Y * .5 + bounds.Y * .5,
-        frame.Position.Z)
+    local children = source:GetChildren()
+    if #children ~= 7 then return nil end
+    local frame,bounds = source:GetBoundingBox()
+    if (sortedSize(bounds)-spec.bounds).Magnitude > .47 then return nil end
     local pieces = {}
-    for _, part in ipairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if not part:IsA("MeshPart") then
-                clone:Destroy()
-                return nil
+    for _,piece in ipairs(children) do
+        if not piece:IsA("MeshPart") or not piece.Anchored or piece.CanCollide
+            or piece.CanTouch or piece.CanQuery or piece.Transparency >= 1 then return nil end
+        for _,detail in ipairs(piece:GetDescendants()) do
+            if not detail:IsA("SurfaceAppearance") and not detail:IsA("Decal")
+                and not detail:IsA("Texture") then return nil end
+        end
+        for index,size in ipairs(spec.pieces) do
+            if (sortedSize(piece.Size)-sortedSize(size)).Magnitude < .08 then
+                if pieces[index] then return nil end
+                pieces[index] = piece
             end
-            part.CFrame = target * cloneFrame:ToObjectSpace(part.CFrame)
-            part.LocalTransparencyModifier = 0
-            part.Anchored = true
-            part.Massless = true
-            part.CanCollide = false
-            part.CanTouch = false
-            part.CanQuery = false
-            part.CastShadow = false
-            pieces[#pieces + 1] = part
         end
     end
-    if #pieces < 1 or #pieces > 24 then
+    for index=1,#spec.pieces do if not pieces[index] then return nil end end
+    return {model=source,holder=holder,pieces=pieces,frame=frame,bounds=bounds,spec=spec}
+end
+
+local function legacyAsset(variant)
+    local model = verifiedTemplate(variant)
+    if not model then return nil end
+    local frame,bounds = model:GetBoundingBox()
+    local pieces = {}
+    for _,piece in ipairs(model:GetDescendants()) do
+        if piece:IsA("MeshPart") then pieces[#pieces+1] = piece end
+    end
+    return {model=model,holder=model.Parent,pieces=pieces,frame=frame,bounds=bounds,
+        spec={id=PROFILE[variant].id,tag="ApprovedHero3D"}}
+end
+
+local function axisScale(axis,scale)
+    if math.abs(axis.X) > .9999 then return scale.X end
+    if math.abs(axis.Y) > .9999 then return scale.Y end
+    if math.abs(axis.Z) > .9999 then return scale.Z end
+    return nil
+end
+
+local function inwardYaw(asset)
+    local swapped = asset.bounds.Z > asset.bounds.X + .12
+    local yaw = swapped and -math.pi*.5 or 0
+    -- The Classic receiver faces the SIGNAL material's signed depth.
+    -- Recover its direction even when Roblox swaps the horizontal axes.
+    if asset.spec == CLASSIC then
+        local signal = asset.frame:PointToObjectSpace(asset.pieces[4].Position)
+        if (swapped and signal.X or signal.Z) > 0 then yaw += math.pi end
+    end
+    return yaw
+end
+
+local function sculpt(parent,asset,frame,size,color)
+    local swapped = asset.bounds.Z > asset.bounds.X + .12
+    frame *= CFrame.Angles(0,inwardYaw(asset),0)
+    if swapped then size = Vector3.new(size.Z,size.Y,size.X) end
+    local scale = size/asset.bounds
+    for _,original in ipairs(asset.pieces) do
+        local relative = asset.frame:ToObjectSpace(original.CFrame)
+        local x,y,z = axisScale(relative.RightVector,scale),axisScale(relative.UpVector,scale),
+            axisScale(relative.LookVector,scale)
+        if not x or not y or not z then return false end
+        local mesh = original:Clone()
+        if not mesh then return false end
+        mesh.Size *= Vector3.new(x,y,z)
+        mesh.CFrame = frame*CFrame.new(relative.Position*scale)*relative.Rotation
+        mesh.Anchored = true
+        mesh.Massless = true
+        mesh.CanCollide = false
+        mesh.CanTouch = false
+        mesh.CanQuery = false
+        mesh.CastShadow = false
+        mesh.LocalTransparencyModifier = 0
+        mesh.Color = mesh.Color:Lerp(color,.24)
+        mesh:SetAttribute("Original3DAssetId",asset.spec.id)
+        mesh.Parent = parent
+    end
+    return true
+end
+
+local function maskPart(replaced,part)
+    if part.Transparency < 1 then
+        replaced[part] = part.Transparency
+        part.Transparency = 1
+    end
+end
+
+local function watchAsset(connections,asset,revoke)
+    local function watch(signal) connections[#connections+1] = signal:Connect(revoke) end
+    watch(asset.model.AncestryChanged)
+    watch(asset.model.ChildAdded)
+    watch(asset.model.ChildRemoved)
+    watch(asset.model:GetPropertyChangedSignal("Name"))
+    watch(asset.holder:GetPropertyChangedSignal("Name"))
+    watch(asset.holder:GetAttributeChangedSignal("OwnerVerified"))
+    for _,name in ipairs({"OwnerVerified","CosmeticOnly","Original3DAssetId",asset.spec.tag}) do
+        watch(asset.model:GetAttributeChangedSignal(name))
+    end
+    for _,part in ipairs(asset.pieces) do
+        for _,property in ipairs({"MeshId","Size","CFrame","Anchored","CanCollide","CanTouch","CanQuery"}) do
+            watch(part:GetPropertyChangedSignal(property))
+        end
+    end
+end
+
+local function ownedParts(native,names)
+    local parts = {}
+    for _,name in ipairs(names) do
+        local part = native:FindFirstChild(name)
+        if not part or not part:IsA("BasePart") or not part.Anchored
+            or part.CanCollide or part.CanTouch or part.CanQuery then return nil end
+        parts[#parts+1] = part
+    end
+    return parts
+end
+
+local function maskMain(entry)
+    for _,part in ipairs(entry.natives) do maskPart(entry.replaced,part) end
+end
+
+local function valid(entry,base,arena,variant)
+    if not authenticFootprint(base, arena) or entry.variant ~= variant
+        or entry.model.Parent ~= bucket or entry.native.Parent ~= entry.decor
+        or entry.source.model.Parent ~= entry.source.holder
+        or entry.source.holder.Parent ~= ReplicatedStorage then return false end
+    local native,frame,size,origin = nativeOrigin(arena,base,variant)
+    return native == entry.native and frame ~= nil
+        and (frame.Position-entry.nativeFrame.Position).Magnitude < .12
+        and (size-entry.nativeSize).Magnitude < .12
+        and (origin.Position-entry.origin.Position).Magnitude < .08
+end
+
+local function mount(arena,base,decor,native,frame,size,origin,variant,asset)
+    local profile = MAIN_PROFILE[variant]
+    local names = FITTING_NAMES[variant]
+    local excluded = {[FOOT_NAME[variant]]=true}
+    for _,name in ipairs(names or {}) do excluded[name] = true end
+    local foundation = native:FindFirstChild(FOOT_NAME[variant])
+    if not foundation or not foundation:IsA("BasePart") then return nil end
+    local bodyParts = {}
+    for _,part in ipairs(native:GetChildren()) do
+        if part:IsA("BasePart") and not excluded[part.Name] then bodyParts[#bodyParts+1] = part end
+    end
+    local clone = Instance.new("Model")
+    clone.Name = "ApprovedOriginalHero3D_"..variant
+    clone:SetAttribute("CosmeticOnly",true)
+    clone:SetAttribute("ApprovedHero3D",true)
+    clone:SetAttribute("Original3DAssetId",asset.spec.id)
+    clone:SetAttribute("SignatureVariant",variant)
+    -- These monuments sit east of the arena. Face the dish, halo and
+    -- fitted towers toward the players. Crossroads keeps its two conduits.
+    local yaw = variant == "Crossroads" and 0 or math.pi*.5
+    local target = origin*CFrame.new(0,foundation.Size.Y-.08+profile.size.Y*.5,0)
+        *CFrame.Angles(0,yaw,0)
+    local eastWidth = yaw == 0 and profile.size.X or profile.size.Z
+    if target.Position.X-eastWidth*.5 < base.Position.X+base:GetAttribute("OriginalSizeX")*.5+15 then
         clone:Destroy()
         return nil
     end
-    clone.Name = "ApprovedOriginalHero3D_" .. variant
-    clone:SetAttribute("CosmeticOnly", true)
-    clone:SetAttribute("ApprovedHero3D", true)
-    clone:SetAttribute("Original3DAssetId", PROFILE[variant].id)
-    clone:SetAttribute("SignatureVariant", variant)
-    clone.WorldPivot = target
+    if not sculpt(clone,asset,target,profile.size,foundation.Color) then
+        clone:Destroy()
+        return nil
+    end
+    local pieces = {}
+    for _,piece in ipairs(clone:GetChildren()) do pieces[piece] = true end
     clone.Parent = bucket
-
-    local entry = {
-        model = clone, native = native, decor = decor, variant = variant,
-        nativeFrame = frame, nativeSize = size, replaced = {},
-        connections = {}, pieces = pieces,
-    }
-    local function reconcile()
-        if not valid(entry, base, arena, variant) then
-            restoreNative(entry)
-            for _, part in ipairs(entry.pieces) do
-                if part.Parent then part.LocalTransparencyModifier = 1 end
-            end
-        else
-            for _, part in ipairs(entry.pieces) do
-                if part.Parent then part.LocalTransparencyModifier = 0 end
-            end
-            hidePrimitiveSkyline(entry)
+    local entry = {model=clone,native=native,decor=decor,variant=variant,source=asset,
+        nativeFrame=frame,nativeSize=size,origin=origin,natives=bodyParts,replaced={},connections={},
+        bodyTop=target.Position.Y+profile.size.Y*.5,bodyYaw=yaw}
+    mounted = entry
+    local function revoke()
+        if mounted == entry then dispose() end
+    end
+    watchAsset(entry.connections,asset,revoke)
+    local function watch(signal,handler)
+        table.insert(entry.connections,signal:Connect(handler or revoke))
+    end
+    watch(clone.AncestryChanged,function() if clone.Parent ~= bucket then revoke() end end)
+    watch(clone.DescendantRemoving,function(mesh) if pieces[mesh] then revoke() end end)
+    watch(native.AncestryChanged)
+    watch(native.ChildAdded)
+    watch(native.ChildRemoved)
+    watch(native:GetAttributeChangedSignal("HeroOrigin"))
+    watch(native:GetAttributeChangedSignal("SignatureVariant"))
+    watch(base.AncestryChanged)
+    watch(base:GetPropertyChangedSignal("CFrame"))
+    watch(base:GetPropertyChangedSignal("CanCollide"))
+    watch(base:GetPropertyChangedSignal("Anchored"))
+    for _,part in ipairs(bodyParts) do
+        for _,property in ipairs({"Name","CFrame","Size","CanCollide","CanTouch","CanQuery","Anchored"}) do
+            watch(part:GetPropertyChangedSignal(property))
         end
     end
-    entry.reconcile = reconcile
-    entry.connections[#entry.connections + 1] =
-        native.AncestryChanged:Connect(reconcile)
-    entry.connections[#entry.connections + 1] =
-        base:GetPropertyChangedSignal("Size"):Connect(reconcile)
-    reconcile()
+    for _,name in ipairs({"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery"}) do
+        watch(foundation:GetPropertyChangedSignal(name))
+    end
+    maskMain(entry)
     return entry
 end
 
-function Kit.sync(arena, cameraPoint, tier, cameraReady)
-    if arena ~= activeArena then
-        clear()
-        activeArena = arena
+local function fittingAssets(variant)
+    if variant == "Towers" then
+        local mast,vane = checkedAsset(MAST),checkedAsset(VANE)
+        if mast and vane then return {mast,vane} end
+    elseif variant == "Crossroads" then
+        local bridge,mast = checkedAsset(CROSSROADS),checkedAsset(MAST)
+        if bridge and mast then return {bridge,mast} end
+    elseif variant == "Orbital" then
+        local lens = checkedAsset(LENS)
+        if lens then return {lens} end
     end
+    return nil
+end
+
+local function sculptDetails(entry,key,model,assets,parts)
+    local origin = entry.origin
+    local color = parts[1].Color
+    if key == "foundation" then
+        local size = parts[1].Size * 1.043
+        local target = parts[1].CFrame*CFrame.new(0,.16,0)
+        if entry.variant == "Harbor" then
+            size = Vector3.new(32.1,size.Y,17.7)
+            target *= CFrame.Angles(0,entry.bodyYaw,0)
+        end
+        return sculpt(model,assets[1],target,size,color)
+    elseif entry.variant == "Towers" then
+        local top = entry.bodyTop-origin.Position.Y
+        local bottom = top-.18
+        local center = origin*CFrame.new(0,bottom+3.52,0)
+        return sculpt(model,assets[1],center,Vector3.new(1.20,7.2,1.20),color)
+            and sculpt(model,assets[2],origin*CFrame.new(0,bottom+7.16,0)
+                *CFrame.Angles(0,math.pi*.5,0),Vector3.new(6.05,.65,.72),parts[2].Color)
+    elseif entry.variant == "Crossroads" then
+        local bottom = 17.9
+        return sculpt(model,assets[1],origin*CFrame.new(0,bottom+2.32,0),
+            Vector3.new(29.4,4.64,5.84),color)
+            and sculpt(model,assets[1],origin*CFrame.new(0,bottom+2.32,0)*CFrame.Angles(0,math.pi*.5,0),
+                Vector3.new(24.7,4.64,5.84),color)
+            and sculpt(model,assets[2],origin*CFrame.new(0,29.85,0),
+                Vector3.new(3.65,10.7,3.65),parts[7].Color)
+    else
+        local center = origin*CFrame.new(-.72,entry.bodyTop-origin.Position.Y-13.25,0)
+            *CFrame.Angles(0,math.pi*.5,0)
+        return sculpt(model,assets[1],center,Vector3.one*5.05,color)
+    end
+end
+
+local function syncDetail(entry,key,assets,names)
+    local old = entry[key]
+    local parts = assets and names and ownedParts(entry.native,names)
+    if old then
+        local intact = parts and old.model.Parent == entry.model and #old.sources == #assets
+        if intact then
+            for i,asset in ipairs(assets) do
+                if asset.model ~= old.sources[i] then intact = false;break end
+            end
+        end
+        if intact then
+            for _,part in ipairs(parts) do
+                if old.replaced[part] == nil then intact = false;break end
+            end
+        end
+        if intact then
+            for _,part in ipairs(parts) do maskPart(old.replaced,part) end
+            return
+        end
+        releaseDetail(entry,key)
+    end
+    if not parts then return end
+    for _,part in ipairs(parts) do if part.Transparency >= 1 then return end end
+    local model = Instance.new("Model")
+    model.Name = key == "foundation" and "ForgedHeroFoundation" or "ForgedHeroFittings"
+    model:SetAttribute("CosmeticOnly",true)
+    if not sculptDetails(entry,key,model,assets,parts) then model:Destroy();return end
+    model.Parent = entry.model
+    local detail = {model=model,replaced={},connections={},sources={}}
+    entry[key] = detail
+    local function revoke()
+        if entry[key] == detail then releaseDetail(entry,key) end
+    end
+    for _,asset in ipairs(assets) do
+        detail.sources[#detail.sources+1] = asset.model
+        watchAsset(detail.connections,asset,revoke)
+    end
+    detail.connections[#detail.connections+1] = model.ChildRemoved:Connect(revoke)
+    detail.connections[#detail.connections+1] = model.AncestryChanged:Connect(function()
+        if model.Parent ~= entry.model then revoke() end
+    end)
+    for _,part in ipairs(parts) do
+        detail.connections[#detail.connections+1] = part.AncestryChanged:Connect(revoke)
+        for _,property in ipairs({"Name","CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery"}) do
+            detail.connections[#detail.connections+1] = part:GetPropertyChangedSignal(property):Connect(revoke)
+        end
+        maskPart(detail.replaced,part)
+    end
+end
+
+function Kit.sync(arena,cameraPoint,tier,cameraReady,pressure)
+    if arena ~= activeArena then clear();activeArena = arena end
     local maximum = DISTANCE[tier] or DISTANCE.Low
-    if not arena or not cameraReady or typeof(cameraPoint) ~= "Vector3" then
+    local stress = tonumber(pressure) or 0
+    if stress ~= stress then stress = 0 end
+    if stress >= 2 or not arena or not cameraReady or typeof(cameraPoint) ~= "Vector3" then
         dispose()
         return
     end
     local base = arena:FindFirstChild("Base")
     local decor = arena:FindFirstChild("Decor")
     local variant = arena:GetAttribute("VariantId")
-    if not authenticFootprint(base, arena)
-        or not decor or not decor:IsA("Folder")
-        or not PROFILE[variant] then
+    local profile = MAIN_PROFILE[variant]
+    if not authenticFootprint(base, arena) or not decor or not decor:IsA("Folder") or not profile then
         dispose()
         return
     end
@@ -298,30 +559,25 @@ function Kit.sync(arena, cameraPoint, tier, cameraReady)
         if baseConnection then baseConnection:Disconnect() end
         watchedBase = base
         baseConnection = base:GetPropertyChangedSignal("Size"):Connect(function()
-            -- Ordinary shrinking never invalidates an exterior authored hero.
-            if not authenticFootprint(base, activeArena) then dispose() end
+            if not authenticFootprint(base,activeArena) then dispose() end
         end)
     end
-    local native, frame, size = nativeOrigin(arena, base, variant)
-    local distance = frame and (frame.Position - cameraPoint).Magnitude
-        or math.huge
-    if not native or distance > maximum + (mounted and RETENTION or 0) then
+    local native,frame,size,origin = nativeOrigin(arena,base,variant)
+    if not native or (frame.Position-cameraPoint).Magnitude > maximum+(mounted and RETENTION or 0) then
         dispose()
         return
     end
-    if mounted and (not valid(mounted, base, arena, variant)
-        or mounted.native ~= native) then
-        dispose()
-    end
-    if mounted then
-        mounted.reconcile()
-        return
-    end
-    local source = verifiedTemplate(variant)
-    if source then
-        mounted = mount(arena, base, decor, native, frame, size,
-            variant, source)
-    end
+    local desired = profile.premium and checkedAsset(profile.premium) or legacyAsset(variant)
+    if mounted and (not desired or mounted.source.model ~= desired.model
+        or not valid(mounted,base,arena,variant)) then dispose() end
+    if not desired then return end
+    if not mounted then mount(arena,base,decor,native,frame,size,origin,variant,desired) end
+    local entry = mounted
+    if not entry then return end
+    maskMain(entry)
+    local foot = stress < 1 and checkedAsset(FOOT) or nil
+    syncDetail(entry,"foundation",foot and {foot}, {FOOT_NAME[variant]})
+    syncDetail(entry,"fittings",stress < 1 and fittingAssets(variant),FITTING_NAMES[variant])
 end
 
 function Kit.count()
@@ -331,10 +587,15 @@ end
 function Kit.replacedNativeCount()
     if not mounted or not mounted.model.Parent then return 0 end
     local count = 0
-    for part in pairs(mounted.replaced) do
-        if part.Parent == mounted.native and part.Transparency == 1 then
-            count += 1
+    local function masked(replaced)
+        for part in pairs(replaced) do
+            if part.Parent == mounted.native and part.Transparency == 1 then count += 1 end
         end
+    end
+    masked(mounted.replaced)
+    for _, key in ipairs({"foundation","fittings"}) do
+        local detail = mounted[key]
+        if detail and detail.model.Parent == mounted.model then masked(detail.replaced) end
     end
     return count
 end

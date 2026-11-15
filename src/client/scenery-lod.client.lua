@@ -2112,13 +2112,9 @@ task.spawn(function()
             applyFolder(hero, HERO_ARCHITECTURE_LOD,
                 profile, hero:GetPivot().Position, cameraPoint)
         end
-        -- Genuine approved source-authored 3D now REPLACES the five huge
-        -- primitive skyline heroes, one distinct asset per arena variant.
-        -- Sync after native LOD: the mounted kit owns only the static
-        -- noncolliding transparency fallback, never LocalTransparencyModifier.
-        -- Reuse this exact camera pass; no additional heartbeat or API calls.
+        -- Authenticated hero bodies and fittings share this scenery pass.
         ApprovedHeroStructureMeshKit.sync(arena, cameraPoint,
-            profile.Name, cameraReady)
+            profile.Name, cameraReady, player:GetAttribute("OptionalVfxPressure"))
         local authenticHeroes = ApprovedHeroStructureMeshKit.count()
         if player:GetAttribute("LocalApprovedHeroStructure3DCount")
             ~= authenticHeroes then

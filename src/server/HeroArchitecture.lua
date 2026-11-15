@@ -73,6 +73,7 @@ function HeroArchitecture.build(decor, base, variantId, theme)
         base.Position.Y + base.Size.Y * 0.5,
         base.Position.Z + base.Size.Z * 0.22
     )
+    model:SetAttribute("HeroOrigin", origin)
     local dark = theme.Structure:Lerp(Color3.fromRGB(14, 20, 29), 0.32)
     local metal = theme.Detail:Lerp(theme.Structure, 0.40)
     local trim = theme.Accent:Lerp(theme.Structure, 0.67)

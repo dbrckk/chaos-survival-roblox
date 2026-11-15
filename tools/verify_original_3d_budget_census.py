@@ -483,6 +483,14 @@ assert 'base:SetAttribute("OriginalSizeX", base.Size.X)' in ORIGINAL_MAP
 assert 'base:SetAttribute("OriginalSizeZ", base.Size.Z)' in ORIGINAL_MAP
 print("PASS five hero, four skyline and eight outboard sculpted roofs",
       "retain real source 3D during arena shrink with no new GPU slots")
+for guard in ('id=112493873850364', 'id=125428569657840', 'id=96622579843060',
+              'id=86423178125318', 'id=138666009076890', 'id=104654294187035',
+              'id=101457508594609','native:GetAttribute("HeroOrigin")',
+              'variant == "Crossroads" and 0 or math.pi*.5',
+              'syncDetail(entry,"foundation"', 'syncDetail(entry,"fittings"',
+              'asset.model.ChildRemoved', 'stress >= 2'):
+    assert guard in HERO_SKYLINE,guard
+print("PASS hero profiles retain five silhouettes with independent source-authenticated foundations and fittings")
 assert 'AERIAL_ID = 105555650820011' in DEPTH_SKYLINE
 assert 'approved.hull,approved.sockets' in DEPTH_SKYLINE
 assert 'stress == 0 and source and approvedAerial()' in DEPTH_SKYLINE

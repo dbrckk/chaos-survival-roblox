@@ -11,8 +11,154 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local VisualTheme = require("../../src/shared/VisualTheme")
 local Config = require("../../src/shared/Config")
+local Hero = require("../../src/client/ApprovedHeroStructureMeshKit")
 
 describe("Authenticated district sidewall restoration (engine)", function()
+    it("maintains each hero identity and independently restores its forged foundation and skyline fittings", function()
+        local storage = game:GetService("ReplicatedStorage")
+        local holders = {}
+        local function make(folder,name,id,tag,rows)
+            local holder = holders[folder]
+            if not holder then
+                holder = Instance.new("Folder")
+                holder.Name = folder
+                holder:SetAttribute("OwnerVerified",true)
+                holder.Parent = storage
+                holders[folder] = holder
+            end
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("OwnerVerified",true)
+            model:SetAttribute("CosmeticOnly",true)
+            model:SetAttribute("Original3DAssetId",id)
+            model:SetAttribute(tag,true)
+            for i=1,7 do
+                local row = rows[i] or {.1,.1,.1,0,0,0}
+                local part = Instance.new("MeshPart")
+                part.Name = "Mesh"..i
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanTouch = false
+                part.CanQuery = false
+                part.Size = Vector3.new(row[1],row[2],row[3])
+                part.Position = Vector3.new(row[4] or 0,row[5] or 0,row[6] or 0)
+                part.Parent = model
+            end
+            model.Parent = holder
+            return model
+        end
+        local body = {}
+        body.Classic = make("ApprovedClassicSignatureObservatoryTemplates","DualDishObservatory",
+            112493873850364,"OriginalClassicDualDishObservatory3D",{
+                {1.03,15.0875,1.71},{.6975,12.085,9.105,0,-.2312},
+                {.7338,5.1625,9.07,.1344,4.0025},{.4594,13.8531,6.6175,.2259,.6141},
+            })
+        body.Harbor = make("ApprovedSouthHarborDrydockTemplates","SculptedDrydock",
+            125428569657840,"OriginalSouthHarborSculptedDrydock3D",{
+                {16.5357,18.3643,4.4107},{15.215,17.9729,4.6007,0,-.04566},
+                {14.6429,17.1089,3.2214,0,.13484},
+            })
+        body.Towers = make("ApprovedHeroStructureTemplates","sky_transit_exchange",
+            95878714550124,"ApprovedHero3D",{{32,27.8,15},{12,2,1,0,4,-6}})
+        body.Crossroads = make("ApprovedHeroStructureTemplates","plasma_foundry",
+            95926792159328,"ApprovedHero3D",{{30,27.615,14}})
+        body.Orbital = make("ApprovedHeroStructureTemplates","orbital_halo_array",
+            135985134195364,"ApprovedHero3D",{{22.748,30.213,12},{25*.5,2,1,0,4,-4}})
+        local mast = make("ApprovedVariantIdentitySpineTemplates","Towers",
+            86423178125318,"OriginalVariantIdentitySpine3D",{
+                {2.52,19.92,2.52,0,-.02781},{2.29954,19.52,2.23955,0,-.02781},
+                {.1,.1,.1,0,9.93781},
+            })
+        make("ApprovedOrbitalReactorLandmarkTemplates","Strut",138666009076890,
+            "OriginalOrbitalReactorLandmark3D",{{1.10,1.24,8.46},{.872,.8638,7.96}})
+        local lens = make("ApprovedOrbitalReactorLandmarkTemplates","Node",104654294187035,
+            "OriginalOrbitalReactorLandmark3D",{{4.36,4.36,4.36},{2.96,2.9503,2.96},{4.11,4.11,.39}})
+        local bridge = make("ApprovedCrossroadsSignatureInterchangeTemplates","ForgedInterchange",
+            96622579843060,"OriginalCrossroadsSignatureInterchange3D",{
+                {45.04,11.12,5.9,0,-.43},{47.68,2.3458,5.3,0,2.9871},
+                {46.409,9.4952,5.244,0,.9964},{47.42,6.8,6.76,0,-.71},
+                {44.93,2.3475,5.26,0,4.57029},
+            })
+        local foot = make("ApprovedHarborDockCaissonTemplates","DockCaisson",101457508594609,
+            "OriginalHarborDockCaisson3D",{
+                {12.82,2.69,12.82,0,.29378},{13.54,2.95755,13.54,0,-.175},
+                {14.07,1.865,14.07,0,-.6937},{13.54,.35,13.54,0,1.47878},
+            })
+        local signature = {
+            Classic={"ObservatoryFoundation","StormDishArc1",nil,nil},
+            Towers={"TransitFoundation","SuspendedTransitCabin-1","SkyTransitSignalCrown",mast},
+            Crossroads={"SwitchyardFoundation","ExchangeCore","NorthConduit",bridge},
+            Orbital={"MagneticPlatform","OrbitalOuterArc1","HaloLens",lens},
+            Harbor={"HarborDrydockFoundation","CargoHull",nil,nil},
+        }
+        local bucket = assert(workspace:FindFirstChild("ApprovedOriginalHeroStructuresLocal"))
+        local hidden = 0
+        for _,variant in ipairs(ArenaVariants.Order) do
+            local arena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+            local base,decor = arena.Base,arena.Decor
+            local native = decor.ArenaHeroArchitecture3D
+            local names = signature[variant]
+            local foundation,landmark = native[names[1]],native[names[2]]
+            local origin = native:GetAttribute("HeroOrigin")
+            local partCount = native:GetAttribute("HeroArchitectureParts")
+            local nativeAlpha = landmark.Transparency
+            local point = base.Position
+            local function sync(pressure)
+                Hero.sync(arena,point,"Low",true,pressure)
+            end
+            sync(0)
+            local sculpture = assert(bucket:FindFirstChild("ApprovedOriginalHero3D_"..variant),variant.." missing hero")
+            assert(Hero.replacedNativeCount() == partCount and foundation.Transparency == 1,variant.." native coverage")
+            hidden += partCount
+            assert(sculpture:GetAttribute("Original3DAssetId") == body[variant]:GetAttribute("Original3DAssetId"))
+            for _,part in ipairs(sculpture:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    assert(part:IsA("MeshPart") and part.Anchored and part.Massless
+                        and not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                end
+            end
+            if variant == "Classic" then
+                assert(sculpture.Mesh4.Position.X < origin.Position.X, "dish glazing points away from arena")
+            elseif variant == "Orbital" or variant == "Harbor" then
+                local _,bounds = sculpture:GetBoundingBox()
+                assert(bounds.Z > bounds.X,variant.." monument faces edge-on")
+            end
+            local size = base.Size
+            base.Size = Vector3.new(size.X*.7,size.Y,size.Z*.7)
+            sync(0)
+            assert(sculpture.Parent == bucket and Hero.replacedNativeCount() == partCount)
+            foot.Parent:SetAttribute("OwnerVerified",false)
+            task.wait()
+            assert(foundation.Transparency < 1 and landmark.Transparency == 1)
+            foot.Parent:SetAttribute("OwnerVerified",true)
+            if names[3] then
+                local fitting = native[names[3]]
+                local source = names[4]
+                local piece = source.Mesh1
+                piece.Parent = nil
+                task.wait()
+                assert(fitting.Transparency < 1 and landmark.Transparency == 1)
+                piece.Parent = source
+            end
+            sync(0)
+            assert(foundation.Transparency == 1 and Hero.replacedNativeCount() == partCount)
+            sync(1)
+            assert(foundation.Transparency < 1 and landmark.Transparency == 1)
+            sync(0)
+            local mesh = sculpture:FindFirstChildWhichIsA("MeshPart")
+            mesh:Destroy()
+            task.wait()
+            assert(Hero.count() == 0 and math.abs(landmark.Transparency-nativeAlpha) < .001)
+            sync(0)
+            assert(Hero.count() == 1)
+            sync(2)
+            assert(Hero.count() == 0 and math.abs(landmark.Transparency-nativeAlpha) < .001)
+            Hero.sync(nil,Vector3.zero,"Low",false)
+            arena.Parent:Destroy()
+        end
+        expect(hidden).toBe(124)
+        for _,holder in pairs(holders) do holder:Destroy() end
+    end)
     it("restores five native district sidewalls immediately on revoked source or native mutation", function()
         local ReplicatedStorage=game:GetService("ReplicatedStorage")
         local previousMap=workspace:FindFirstChild("GeneratedMap")
