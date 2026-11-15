@@ -1806,7 +1806,12 @@ assert 'LocalSkySpinePylonNativePartsReplaced = family.pylon' in OWNER
 assert 'LocalOriginalSkySpinePylon3DCount = family.pylon' in OWNER
 assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
 assert 'saved[part] and not crownPylons[part]' in TRIM
-assert 'saved[part] or crownPylons[part]' in TRIM
+mask = TRIM[TRIM.index("local function setNativeMask("):
+            TRIM.index("local function refreshPylon(")]
+assert 'if saved[part] or crownPylons[part] then' in mask
+assert 'nativeBaselines[part] = part.LocalTransparencyModifier' in mask
+assert 'elseif original ~= nil then' in mask
+assert 'part.LocalTransparencyModifier = original' in mask
 assert 'PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)' in (
     CLIENT/"SkySpineCrownMeshKit.lua").read_text(encoding="utf8")
 assert 'PremiumLargeStructureMeshKit.validNativeSkyPylon(part)' in OWNER
