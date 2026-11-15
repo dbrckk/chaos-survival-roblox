@@ -56,6 +56,37 @@ local EQUIPMENT={
         size=Vector3.new(4.12,4.12,4.12),y=3.3,
     },
 }
+local FITTING_SOURCE={
+    Rail={id=138666009076890,major=8.46,minor=1.10,height=1.24,centerY=0,
+        holder="ApprovedOrbitalReactorLandmarkTemplates",
+        template="Strut",tag="OriginalOrbitalReactorLandmark3D"},
+    Beacon={id=88962643359267,major=2.7699,minor=2.34,height=2.14,centerY=0,
+        holder="ApprovedPerimeterArmorTemplates",
+        template="Cap",tag="OriginalPerimeterArmor3D"},
+    Fin={id=123049626693705,major=5.46,minor=1.76,height=15.92,centerY=0,
+        holder="ApprovedClassicBroadcastFinTemplates",
+        template="BroadcastFin",tag="OriginalClassicBroadcastFin3D"},
+}
+local VERTICAL_FITTING=CFrame.fromMatrix(Vector3.zero,Vector3.zAxis,
+    Vector3.xAxis,Vector3.yAxis)
+local ROOF_FITTINGS={
+    Towers={
+        {name="HoistRail",source="Rail",size=Vector3.new(.6,5,.6),
+            x=4.2,y=3.8,axes=VERTICAL_FITTING,vertical=true,
+            fitSize=Vector3.new(.56,.56,4.92)},
+        {name="HoistBeacon",source="Beacon",size=Vector3.new(2.2,.55,2),
+            x=0,y=4.2,axes=CFrame.Angles(0,-math.pi*.5,0),
+            fitSize=Vector3.new(1.94,.53,2.14)},
+    },
+    Orbital={
+        {name="ContainmentFin-1",source="Fin",size=Vector3.new(.9,5.5,3.2),
+            x=-4.4,y=2.8,roll=-18,wedge=true,axes=CFrame.identity,
+            fitSize=Vector3.new(.86,5.39,3.12)},
+        {name="ContainmentFin1",source="Fin",size=Vector3.new(.9,5.5,3.2),
+            x=4.4,y=2.8,roll=18,wedge=true,axes=CFrame.identity,
+            fitSize=Vector3.new(.86,5.39,3.12)},
+    },
+}
 local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true}
 local CROSSHEAD_SPAN={[2]=18.4,[4]=19.6,[7]=21.2}
 local CROSSHEAD_RISE={[2]=13.25,[4]=14.5,[7]=16.2}
@@ -70,6 +101,9 @@ local STAY_BUDGET={Medium=2,High=6}
 local EQUIPMENT_DISTANCE={Low=110,Medium=155,High=235}
 local EQUIPMENT_BUDGET={Low=1,Medium=3,High=6}
 local EQUIPMENT_TOUCH_CAP={Low=1,Medium=1,High=2}
+-- Each roof fitting slot is one complete 14-MeshPart pair near the camera.
+local FITTING_DISTANCE={Low=100,Medium=145,High=210}
+local FITTING_BUDGET={Low=1,Medium=2,High=6}
 local SIDES={-1,1}
 local STAGE={[1]="Access",[4]="Transfer",[8]="Summit"}
 -- Desktop-only extra creator-approved sculptures. The authenticated real
@@ -345,6 +379,19 @@ local function collectStayPair(arena,deck,decor,scale)
     return pair
 end
 
+local function collectRoofNative(decor,index,orientation,scale,spec)
+    local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge)
+    if not native then return nil end
+    local expected=orientation*CFrame.new(spec.x*scale,spec.y,0)
+        *CFrame.Angles(0,0,math.rad(spec.roll or 0))
+    local size=spec.size
+    if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
+        or (native.Position-expected.Position).Magnitude>.15
+        or native.CFrame.UpVector:Dot(expected.UpVector)<.999
+        or native.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+    return native
+end
+
 local function collectEquipment(arena,deck,decor,scale,equipment)
     -- Authenticate the actual crosshead and its complete, correctly
     -- streamed equipment before erecting any local art above the route.
@@ -353,14 +400,8 @@ local function collectEquipment(arena,deck,decor,scale,equipment)
     local index=deck.Name:match("^Platform(%d+)$")
     local natives={}
     for _,spec in ipairs(equipment.natives) do
-        local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge)
-        local expected=crosshead.orientation*CFrame.new(spec.x*scale,spec.y,0)
-            *CFrame.Angles(0,0,math.rad(spec.roll or 0))
-        local size=spec.size
-        if not native or (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
-            or (native.Position-expected.Position).Magnitude>.15
-            or native.CFrame.UpVector:Dot(expected.UpVector)<.999
-            or native.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+        local native=collectRoofNative(decor,index,crosshead.orientation,scale,spec)
+        if not native then return nil end
         natives[#natives+1]=native
     end
     -- The long dimension of each roof source runs along the real deck X
@@ -372,6 +413,30 @@ local function collectEquipment(arena,deck,decor,scale,equipment)
         center=natives[1].Position,orientation=crosshead.orientation
             *CFrame.new(0,equipment.y,0)*CFrame.Angles(0,-math.pi*.5,0),
         fitSize=Vector3.new(size.X*scale,size.Y,size.Z*scale),expectedParent=decor}
+end
+
+local function collectFittingPair(arena,deck,decor,scale,fittings)
+    local crosshead=collectPorticoPart(arena,deck,decor,scale)
+    if not crosshead then return nil end
+    local index=deck.Name:match("^Platform(%d+)$")
+    local pair={}
+    for slot,fitting in ipairs(fittings) do
+        local native=collectRoofNative(decor,index,crosshead.orientation,scale,fitting)
+        if not native then return nil end
+        local size=fitting.fitSize
+        local vertical=fitting.vertical
+        -- The rail's long axis becomes vertical after rotation. Shrink
+        -- changes the horizontal cross-section in the fitted source frame.
+        pair[slot]={category="fitting",name=fitting.source,spec=FITTING_SOURCE[fitting.source],
+            owner=deck,key=native,side=slot==1 and -1 or 1,arena=arena,
+            originals={native},anchor=crosshead.originals[1],
+            center=crosshead.center,orientation=native.CFrame*fitting.axes,
+            fitSize=Vector3.new(size.X*scale,vertical and size.Y*scale or size.Y,
+                vertical and size.Z or size.Z*scale),expectedParent=decor}
+    end
+    pair[1].other=pair[2].key
+    pair[2].other=pair[1].key
+    return pair
 end
 
 local function collectCasing(arena,casing,group)
@@ -446,7 +511,8 @@ local function collectHelix(arena,ramp,circuit)
 end
 
 local function isPortico(category)
-    return category=="promenade" or category=="stay" or category=="equipment"
+    return category=="promenade" or category=="stay"
+        or category=="equipment" or category=="fitting"
 end
 
 local function reveal(entry)
@@ -540,11 +606,20 @@ local function refresh(entry)
                         data=collectEquipment(entry.arena,entry.owner,decor,scale,equipment)
                     end
                 elseif entry.side then
-                    local pair=collectStayPair(entry.arena,entry.owner,decor,scale)
+                    local pair
+                    if entry.category=="stay" then
+                        pair=collectStayPair(entry.arena,entry.owner,decor,scale)
+                    else
+                        local fittings=ROOF_FITTINGS[entry.arena:GetAttribute("VariantId")]
+                        if fittings then
+                            pair=collectFittingPair(entry.arena,entry.owner,decor,scale,fittings)
+                        end
+                    end
                     data=pair and pair[entry.side<0 and 1 or 2]
                     local other=mounted[entry.other]
                     if data and (data.other~=entry.other or not other
-                        or other.other~=entry.native[1].part or not sourceIntact(other)) then
+                        or other.other~=entry.native[1].part
+                        or other.anchor~=data.anchor or not sourceIntact(other)) then
                         data=nil
                     end
                 else
@@ -794,6 +869,11 @@ local function caps(tier,touch,pressure,kind)
         if (tonumber(pressure) or 0)>=1 then return 0 end
         return (touch==true and EQUIPMENT_TOUCH_CAP or EQUIPMENT_BUDGET)[tier] or 0
     end
+    if kind=="fitting" then
+        local cap=FITTING_BUDGET[tier] or 0
+        if (tonumber(pressure) or 0)>=1 then return 0 end
+        return touch==true and math.min(cap,1) or cap
+    end
     local t=BUDGET[tier] or BUDGET.Low
     local cap=t[kind] or 0
     if touch==true then
@@ -856,8 +936,27 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     if equipment and caps(tier,touch,pressure,"equipment")>0 then
         src[equipment.name]=sourceFor(equipment.name,equipment.source)
     end
+    local fittings=ROOF_FITTINGS[variant]
+    local fittingSourcesReady=false
+    if fittings and caps(tier,touch,pressure,"fitting")>0 then
+        local first,second=fittings[1].source,fittings[2].source
+        src[first]=sourceFor(first,FITTING_SOURCE[first])
+        if second~=first then src[second]=sourceFor(second,FITTING_SOURCE[second]) end
+        fittingSourcesReady=src[first]~=nil and src[second]~=nil
+    end
     local desired={}
-    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={}}
+    local candidates={arch={},casing={},helix={},promenade={},stay={},equipment={},fitting={}}
+    local function queuePair(pair,limit,pool)
+        if not pair then return end
+        local first=pair[1]
+        local resident=mounted[first.key]~=nil and mounted[pair[2].key]~=nil
+        local priority,distance=score(first,cameraPoint,cameraLook,resident)
+        if distance<=limit+(resident and 18 or 0) then
+            first.priority=priority
+            first.pair=pair
+            pool[#pool+1]=first
+        end
+    end
     local decor=arena:FindFirstChild("Decor")
     local platforms=arena:FindFirstChild("Platforms")
     if decor and decor:IsA("Folder")
@@ -868,17 +967,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                 data=collectPorticoPart(arena,deck,decor,scale)
             end
             if src.Stay and deck:GetAttribute("PromenadeStep") then
-                local pair=collectStayPair(arena,deck,decor,scale)
-                if pair then
-                    local stay=pair[1]
-                    local resident=mounted[stay.key]~=nil and mounted[pair[2].key]~=nil
-                    local priority,distance=score(stay,cameraPoint,cameraLook,resident)
-                    if distance<=STAY_DISTANCE[tier]+(resident and 18 or 0) then
-                        stay.priority=priority
-                        stay.pair=pair
-                        candidates.stay[#candidates.stay+1]=stay
-                    end
-                end
+                queuePair(collectStayPair(arena,deck,decor,scale),
+                    STAY_DISTANCE[tier],candidates.stay)
+            end
+            if fittingSourcesReady and deck:GetAttribute("PromenadeStep") then
+                queuePair(collectFittingPair(arena,deck,decor,scale,fittings),
+                    FITTING_DISTANCE[tier],candidates.fitting)
             end
             if equipment and src[equipment.name] and deck:GetAttribute("PromenadeStep") then
                 local gear=collectEquipment(arena,deck,decor,scale,equipment)
@@ -934,7 +1028,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             end
         end
     end
-    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment"}) do
+    for _,kind in ipairs({"arch","casing","helix","promenade","stay","equipment","fitting"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name

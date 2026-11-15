@@ -289,8 +289,26 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 "OriginalOrbitalReactorLandmark3D",104654294187035,Vector3.new(4.36,4.36,4.36),
                 {"GyroCore"}},
         }
+        local fittings={
+            Towers={
+                {"ApprovedOrbitalReactorLandmarkTemplates","Strut",
+                    "OriginalOrbitalReactorLandmark3D",138666009076890,Vector3.new(8.46,1.24,1.10),
+                    "HoistRail","Rail",5},
+                {"ApprovedPerimeterArmorTemplates","Cap",
+                    "OriginalPerimeterArmor3D",88962643359267,Vector3.new(2.7699,2.14,2.34),
+                    "HoistBeacon","Beacon",.55},
+            },
+            Orbital={
+                {"ApprovedClassicBroadcastFinTemplates","BroadcastFin",
+                    "OriginalClassicBroadcastFin3D",123049626693705,Vector3.new(5.46,15.92,1.76),
+                    "ContainmentFin-1","Fin",5.5},
+                {"ApprovedClassicBroadcastFinTemplates","BroadcastFin",
+                    "OriginalClassicBroadcastFin3D",123049626693705,Vector3.new(5.46,15.92,1.76),
+                    "ContainmentFin1","Fin",5.5},
+            },
+        }
         local equipmentHolders,previousEquipment={},{}
-        for _,profile in pairs(profiles) do
+        local function provide(profile)
             local folderName,name,tag,id,size=table.unpack(profile)
             local equipmentFolder=equipmentHolders[folderName]
             if not equipmentFolder then
@@ -305,12 +323,17 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 equipmentFolder.Parent=rs
                 equipmentHolders[folderName]=equipmentFolder
             end
+            if equipmentFolder:FindFirstChild(name) then return end
             local gear=source:Clone()
             gear.Name=name
             gear:SetAttribute(tag,true)
             gear:SetAttribute("Original3DAssetId",id)
             gear:FindFirstChild("BraceMesh1").Size=size
             gear.Parent=equipmentFolder
+        end
+        for _,profile in pairs(profiles) do provide(profile) end
+        for _,pair in pairs(fittings) do
+            for _,profile in ipairs(pair) do provide(profile) end
         end
         local generated=nil
         local ok,err=pcall(function()
@@ -322,6 +345,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 local base=arena:FindFirstChild("Base")
                 local crossheads={}
                 local profile=profiles[variant]
+                local fittingPair=fittings[variant]
                 for _,deck in ipairs(platforms:GetChildren()) do
                     local index=deck.Name:match("^Platform(%d+)$")
                     local native=index and decor:FindFirstChild(
@@ -335,6 +359,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(Remaining.count("promenade")).toBe(variant=="Harbor" and 0 or 6)
                 expect(Remaining.count("stay")).toBe(variant=="Harbor" and 0 or 12)
                 expect(Remaining.count("equipment")).toBe(profile and 6 or 0)
+                expect(Remaining.count("fitting")).toBe(fittingPair and 12 or 0)
                 expect(Remaining.nativeCount("equipment")).toBe(profile and 6*#profile[6] or 0)
                 for deck,native in pairs(crossheads) do
                     expect(native.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
@@ -347,10 +372,12 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                         local primitive=decor:FindFirstChild("Promenade"..index.."_"..name)
                         expect(primitive.LocalTransparencyModifier).toBe(1)
                     end
-                    local retained=({Towers="HoistBeacon",Orbital="ContainmentFin1",
-                        Harbor="SuspendedCrate"})[variant]
-                    if retained then
-                        local detail=decor:FindFirstChild("Promenade"..index.."_"..retained)
+                    for _,fitting in ipairs(fittingPair or {}) do
+                        local detail=decor:FindFirstChild("Promenade"..index.."_"..fitting[6])
+                        expect(detail.LocalTransparencyModifier).toBe(1)
+                    end
+                    if variant=="Harbor" then
+                        local detail=decor:FindFirstChild("Promenade"..index.."_SuspendedCrate")
                         expect(detail.LocalTransparencyModifier).toBe(0)
                     end
                     for _,side in ipairs({-1,1}) do
@@ -358,6 +385,69 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                         expect(diagonal.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
                     end
                     expect(deck.CanCollide).toBe(true)
+                end
+                if fittingPair then
+                    local deck,crosshead=next(crossheads)
+                    local prefix="Promenade"..deck.Name:match("%d+").."_"
+                    local a=decor:FindFirstChild(prefix..fittingPair[1][6])
+                    local b=decor:FindFirstChild(prefix..fittingPair[2][6])
+                    local function checkPair(alpha)
+                        expect(a.LocalTransparencyModifier).toBe(alpha)
+                        expect(b.LocalTransparencyModifier).toBe(alpha)
+                    end
+                    local function syncFittings(pressure)
+                        Remaining.sync(arena,crosshead.Position,"Low",true,nil,pressure,true)
+                    end
+                    -- Drop the High residency bias before picking the nearest pair.
+                    syncFittings(1)
+                    syncFittings(0)
+                    expect(Remaining.count("fitting")).toBe(2)
+                    checkPair(1)
+                    local folder=workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
+                    local fitting=folder:FindFirstChild("ApprovedP4_"..fittingPair[1][7])
+                    local lattice=fitting:FindFirstChild("BraceMesh1")
+                    expect(fitting:GetAttribute("Original3DAssetId")).toBe(fittingPair[1][4])
+                    expect((lattice.Position-a.Position).Magnitude<.04).toBe(true)
+                    local frame=a.CFrame:ToObjectSpace(lattice.CFrame)
+                    local verticalExtent=math.abs(frame.RightVector.Y)*lattice.Size.X
+                        +math.abs(frame.UpVector.Y)*lattice.Size.Y
+                        +math.abs(frame.LookVector.Y)*lattice.Size.Z
+                    expect(math.abs(verticalExtent-fittingPair[1][8])<.12).toBe(true)
+                    expect(lattice.CanCollide or lattice.CanTouch or lattice.CanQuery).toBe(false)
+                    deck:SetAttribute("CollapsePhase","Warning")
+                    checkPair(0)
+                    deck:SetAttribute("CollapsePhase","Normal")
+                    checkPair(1)
+                    lattice:Destroy()
+                    task.wait()
+                    expect(Remaining.count("fitting")).toBe(0)
+                    checkPair(0)
+                    syncFittings(0)
+                    checkPair(1)
+                    local missingSource=equipmentHolders[fittingPair[2][1]]:FindFirstChild(fittingPair[2][2])
+                    missingSource.Parent=nil
+                    task.wait()
+                    checkPair(0)
+                    syncFittings(0)
+                    expect(Remaining.count("fitting")).toBe(0)
+                    missingSource.Parent=equipmentHolders[fittingPair[2][1]]
+                    syncFittings(0)
+                    checkPair(1)
+                    local scale=.75
+                    base.Size=Vector3.new(base.Size.X*scale,base.Size.Y,base.Size.Z*scale)
+                    checkPair(0)
+                    for _,part in ipairs({deck,crosshead,a,b}) do
+                        local frame=deck.CFrame:ToObjectSpace(part.CFrame)
+                        local offset=frame.Position
+                        part.CFrame=deck.CFrame*CFrame.new(offset.X*scale,offset.Y,offset.Z*scale)
+                            *(frame-offset)
+                        part.Size=Vector3.new(part.Size.X*scale,part.Size.Y,part.Size.Z*scale)
+                        if part~=b then checkPair(0) end
+                    end
+                    checkPair(1)
+                    syncFittings(1)
+                    expect(Remaining.count("fitting")).toBe(0)
+                    checkPair(0)
                 end
                 if variant~="Crossroads" then continue end
                 local deck,native=nil,nil

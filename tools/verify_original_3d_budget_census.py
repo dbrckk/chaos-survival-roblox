@@ -2170,8 +2170,8 @@ for name,asset_id in (
     equipment = P4_MODELS[name]
     assert equipment["asset_id"] == asset_id and equipment["moderation"] == "Approved"
     assert asset_id in P4_CLIENT
-equipment_collector = P4_CLIENT.split("local function collectEquipment", 1)[1].split(
-    "local function collectCasing", 1)[0]
+equipment_collector = P4_CLIENT.split("local function collectRoofNative", 1)[1].split(
+    "local function collectFittingPair", 1)[0]
 for clause in (
     'collectPorticoPart(arena,deck,decor,scale)',
     'promenadeNative(decor,index,"_"..spec.name,spec.wedge)',
@@ -2185,3 +2185,28 @@ assert 'or (isPortico(entry.category) and not sameOriginals(entry,data))' in P4_
 assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
 assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD
 print("PASS four approved promenade equipment sources, exact native owners and shared touch budget")
+
+# New roof pairs reuse already moderated original art with no extra import.
+for name,asset_id in (
+    ("variant_orbital_trussed_strut","138666009076890"),
+    ("perimeter_cap","88962643359267"),
+    ("variant_classic_sculpted_broadcast_fin","123049626693705"),
+):
+    fitting = P4_MODELS[name]
+    assert fitting["asset_id"] == asset_id and fitting["moderation"] == "Approved"
+    assert asset_id in P4_CLIENT
+fitting_collector = P4_CLIENT.split("local function collectFittingPair", 1)[1].split(
+    "local function collectCasing", 1)[0]
+for clause in (
+    'collectPorticoPart(arena,deck,decor,scale)',
+    'collectRoofNative(decor,index,crosshead.orientation,scale,fitting)',
+    'anchor=crosshead.originals[1]',
+    'orientation=native.CFrame*fitting.axes',
+    'pair[1].other=pair[2].key',
+    'pair[2].other=pair[1].key',
+):
+    assert clause in fitting_collector,clause
+assert 'local FITTING_BUDGET={Low=1,Medium=2,High=6}' in P4_CLIENT
+assert 'fittingSourcesReady=src[first]~=nil and src[second]~=nil' in P4_CLIENT
+assert 'LocalOriginalPromenadeRoofFittings3DCount' in SIDE_LOD
+print("PASS Towers and Orbital portico fittings use complete approved pairs within the mobile budget")

@@ -2126,6 +2126,8 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.count("equipment"),
             LocalPromenadeEquipmentNativePartsReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount("equipment"),
+            LocalOriginalPromenadeRoofFittings3DCount =
+                ApprovedRemainingStructureMeshKit.count("fitting"),
             LocalP4RemainingStructuralNativePiecesReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount(),
         }
