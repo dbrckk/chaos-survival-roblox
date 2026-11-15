@@ -2384,4 +2384,7 @@ assert 'exposed overlapping native geometry' in junction_integration
 assert 'duplicate mesh owner on lane ' in junction_integration
 assert 'missing approved mesh on lane ' in junction_integration
 assert 'approved truss is not below its deck on lane ' in junction_integration
+assert 'for lane=1,2 do' in junction_integration
+assert 'wrong mesh ownership during lane ' in junction_integration
+assert 'failed to restore lane ' in junction_integration
 print("PASS both promenade joints independently disconnect, restore and recover across five arenas")
