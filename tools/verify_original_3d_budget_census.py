@@ -1789,7 +1789,7 @@ for key in (
     'elseif kind == "ShortCradle" then',
     'function Kit.shortCradleFit(size,bounds)',
     'or (spine and shortSource',
-    'and Kit.shortCradleFit(size,shortBounds)',
+    'and Kit.shortCradleFit(fitSize,shortBounds)',
     'source,box,count=verified("ShortCradle")',
     'OriginalShortSkySpineCradle3D',
     'part:SetAttribute("OriginalLongCradle3D",true)',
@@ -1899,12 +1899,7 @@ for fragment in (
     'function Kit.hasNativeCradleFallback(decor,platform)',
     'decor:FindFirstChild("PlatformUnderFrame"..id)',
     'frame:GetAttribute("PremiumArchitecturalSurface")~=true',
-    '"SkySpine"..id.."_Undercarriage-1"',
-    '"SkySpine"..id.."_Undercarriage1"',
-    '"SkySpine"..id.."_CrossStiffener"',
     '"Promenade"..id.."_UnderdeckTruss"',
-    'marker="SkySpineDecor"',
-    'marker="PromenadeVisualOnly"',
     'native:GetAttribute("PerimeterPlatformIndex")~=id',
     'and Kit.hasNativeCradleFallback(decor,platform)',
     'if #parts ~= 7 then',
@@ -2319,7 +2314,7 @@ for clause in (
     'return tier=="High" and touch~=true and 2 or 1',
 ):
     assert clause in P4_CLIENT, clause
-assert "or crownTrim[part] or commandTrim[part] then" in mask
+assert "or crownTrim[part] or commandTrim[part] or spineClaims[part] then" in mask
 assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
 print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
 
@@ -2354,3 +2349,16 @@ assert '"ApprovedNorthSignatureFinishingLocal"' in (
 assert 'expect(total).toBe(43)' in (
     ROOT/"tests/engine/district-sidewall-rollback.spec.luau").read_text(encoding="utf8")
 print("PASS north signature refinements use six approved sources and reversible budgeted groups")
+
+
+# One owner handles the four native Sky Spine pieces and the complete
+# approved model at every shrink scale, without allocating extra MeshParts.
+assert 'function Kit.spineNativeParts(decor,deck)' in LARGE
+assert 'local fitSize,floorScale = cradleDeckSize(platform)' in LARGE
+assert 'part.Size.X*floorScale,part.Size.Y,part.Size.Z*floorScale' in LARGE
+assert 'LargeStructure.spineNativeParts(entry.decor,deck)' in TRIM
+assert 'setNativeMask(native,spineClaims,showing)' in TRIM
+assert 'PlatformNativeTrimReplacementKit.spineCradleRefitted' in OWNER
+assert 'PlatformNativeTrimReplacementKit.setSpineCradleLodVisible(native, visible)' in SIDE_LOD
+assert 'LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck' in OWNER
+print("PASS genuine Sky Spine underframes retain one complete shrink-safe LOD owner")

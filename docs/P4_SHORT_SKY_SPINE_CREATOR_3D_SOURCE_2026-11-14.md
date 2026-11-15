@@ -1,6 +1,6 @@
 # P4 — Nouveau sous-châssis 3D original pour les Sky Spine courts
 
-**État : source 3D créée, import Roblox et validation du MeshId à venir.**
+**Conception du modèle court**
 La source `tools/generate_original_short_sky_spine_cradle.py` produit un
 assemblage industriel **réellement triangulé**, ajouré, avec sept familles
 matière, longerons chanfreinés, treillis triangulés, amortisseurs,
@@ -37,3 +37,10 @@ Le workflow [43643193625](https://github.com/dbrckk/chaos-survival-roblox/action
 Le vrai `ShortCradle` peut être importé puis visible avant le dernier élément de `SkySpineN_Undercarriage±1`, `SkySpineN_CrossStiffener` ou `PlatformUnderFrameN`. Le sélecteur refuse alors à juste titre le masquage natif ; auparavant la fin de réplication des trusses ne relançait pas systématiquement la sélection. Le nouveau classificateur `PremiumLargeStructureMeshKit.cradleStreamNativeIndex(part)` identifie uniquement ces volumes autorisés et les `PromenadeN_UnderdeckTruss`. L'unique écouteur `Decor.ChildAdded/ChildRemoved` existant, la distance de caméra, la priorité Low sous pression et le regroupement à 180 ms déclenchent une reconstruction **seulement** quand le sous-châssis est complet ou quand une pièce d'un modèle réellement monté disparaît. Aucun rendu à chaque frame, nouvel écouteur ou modèle supplémentaire.
 
 Le diagnostic joueur `LocalOriginalShortSkySpineCradleCount` reflète désormais uniquement le nombre de montages **réellement réussis**, et non les candidats sélectionnés. Les tests Roblox Engine vérifient la reconnaissance des trois pièces Sky Spine, du truss Promenade, le retrait/rétablissement des pièces et le rejet de pièces de signalisation factices.
+
+
+## Sous-structures pendant le rétrécissement
+
+Les châssis courts et longs sont sélectionnés à partir de l'emprise d'origine du tablier. Ils suivent ensuite sa contraction sur X/Z jusqu'à 45 % de sa taille, en gardant la profondeur du treillis. Le client peut les monter aussi quand le tablier est déjà rétréci.
+
+Chaque tablier peut masquer quatre pièces d'origine après validation du châssis complet et de leur alignement. Le sous-cadre, les deux longerons et la traverse reviennent lorsque le maillage, sa soudure ou sa source disparaît, au changement de LOD, ou pendant un écart de réplication. Les marquages et la collision du chemin restent pilotés par le serveur. Les quotas de maillages restent ceux du profil existant. `LocalSkySpineUnderdeckNativePartsReplaced` indique le nombre réellement masqué sur l'arène active.

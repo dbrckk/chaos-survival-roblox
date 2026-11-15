@@ -10,9 +10,16 @@ local PlatformIdentityLodRules = if script and script.Parent
     then require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
     else require("../shared/PlatformIdentityLodRules")
 
+local LargeStructure = if script and script.Parent
+    and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
+    then require(script.Parent.PremiumLargeStructureMeshKit)
+    else require("./PremiumLargeStructureMeshKit")
+
 local Kit = {}
 
 local saved = {}
+local spineCradles = {}
+local spineClaims = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local routeUnderdecks = {}
@@ -41,7 +48,7 @@ local function setNativeMask(part, claims, masked)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
     if saved[part] or crownPylons[part] or routeUnderdecks[part]
-        or crownTrim[part] or commandTrim[part] then
+        or crownTrim[part] or commandTrim[part] or spineClaims[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
@@ -103,12 +110,140 @@ local function restore()
     for part in pairs(saved) do
         setNativeMask(part, saved, false)
         refreshPylon(part)
+        if not crownPylons[part] then count -= 1 end
     end
-    count = 0
     report()
 end
 
+local function refreshSpine(entry)
+    if spineCradles[entry.deck] ~= entry then return end
+    local deck,arena = entry.deck,entry.arena
+    local natives = entry.visible and entry.sourceReady and not entry.evicted
+        and arena:FindFirstChild("Decor") == entry.decor
+        and #entry.pieces == 7 and LargeStructure.spineNativeParts(entry.decor,deck)
+    if natives and (deck.Size-entry.fittedSize).Magnitude > .006 then
+        -- Roblox can replicate the collider and its native trim in
+        -- separate batches. Resume only after the 3D footprint is fitted.
+        natives = nil
+    end
+    if natives then
+        for i,native in ipairs(natives) do
+            if native ~= entry.natives[i] then natives = nil; break end
+        end
+    end
+    if natives then
+        for _,piece in ipairs(entry.pieces) do
+            local joint = entry.joints[piece]
+            if piece.Parent ~= entry.folder or joint.Parent ~= piece
+                or joint.Part0 ~= piece or joint.Part1 ~= deck or piece.Transparency >= 1
+                or piece.Anchored or piece.CanCollide or piece.CanTouch or piece.CanQuery then
+                natives = nil
+                break
+            end
+        end
+    end
+    local showing = natives ~= nil and natives ~= false
+    local changed = entry.showing ~= showing
+    entry.showing = showing
+    if not changed then return end
+    for _,native in ipairs(entry.natives) do
+        setNativeMask(native,spineClaims,showing)
+    end
+    for _,piece in ipairs(entry.pieces) do
+        piece.LocalTransparencyModifier = showing and 0 or 1
+    end
+    count += showing and #entry.natives or -#entry.natives
+    report()
+end
+
+function Kit.setSpineCradleLodVisible(deck,visible)
+    local entry = spineCradles[deck]
+    if not entry or entry.visible == visible then return end
+    entry.visible = visible
+    refreshSpine(entry)
+end
+
+function Kit.spineCradleRefitted(deck)
+    local entry = spineCradles[deck]
+    if not entry then return end
+    entry.fittedSize = deck.Size
+    refreshSpine(entry)
+end
+
+local function bindSpine(arena,deck,folder,pieces)
+    local decor = arena:FindFirstChild("Decor")
+    local natives = LargeStructure.spineNativeParts(decor,deck)
+    local source = LargeStructure.spineCradleSource(pieces[1])
+    local entry = {arena=arena,deck=deck,folder=folder,decor=decor,pieces=pieces,
+        natives=natives or {},joints={},connections={},visible=true,showing=false,
+        fittedSize=deck.Size,sourceReady=source ~= nil,evicted=not natives}
+    spineCradles[deck] = entry
+    local function refresh() refreshSpine(entry) end
+    local function evict()
+        entry.evicted = true
+        refresh()
+    end
+    local function watch(signal,callback)
+        table.insert(entry.connections,signal:Connect(callback or refresh))
+    end
+    local function properties(object,names)
+        for _,name in ipairs(names) do watch(object:GetPropertyChangedSignal(name)) end
+    end
+    local function attributes(object,names)
+        for _,name in ipairs(names) do watch(object:GetAttributeChangedSignal(name)) end
+    end
+    for _,piece in ipairs(pieces) do
+        piece.LocalTransparencyModifier = 1
+        local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+        if not joint or not joint:IsA("Weld") or piece:GetAttribute("Original3DAssetId")
+            ~= pieces[1]:GetAttribute("Original3DAssetId") then
+            entry.evicted = true
+        else
+            entry.joints[piece] = joint
+            watch(joint.AncestryChanged,evict)
+            properties(joint,{"Part0","Part1"})
+        end
+        watch(piece.AncestryChanged,evict)
+        properties(piece,{"Transparency","Anchored","CanCollide","CanQuery","CanTouch"})
+    end
+    watch(deck.AncestryChanged,evict)
+    properties(deck,{"Size","CFrame","Name","CanCollide","Transparency","Anchored"})
+    attributes(deck,{"SkySpineStep","SkySpineInterchange","ChaosPermanentRoute","RouteTier",
+        "CollapsePhase","BridgeShutterPhase"})
+    if decor then watch(decor.AncestryChanged,evict) end
+    for _,native in ipairs(natives or {}) do
+        watch(native.AncestryChanged,evict)
+        properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery",
+            "Shape","Name","Transparency"})
+        attributes(native,{"SkySpineDecor","PerimeterPlatformIndex","PremiumArchitecturalSurface"})
+    end
+    if source then
+        watch(source.AncestryChanged,evict)
+        watch(source.ChildRemoved,evict)
+        watch(source.ChildAdded,evict)
+        watch(source:GetPropertyChangedSignal("Name"),evict)
+        for _,tag in ipairs({"OwnerVerified","OriginalLargeStructure3D","CosmeticOnly","Original3DAssetId"}) do
+            watch(source:GetAttributeChangedSignal(tag),evict)
+        end
+        watch(source.Parent:GetAttributeChangedSignal("OwnerVerified"),evict)
+        for _,part in ipairs(source:GetChildren()) do
+            if part:IsA("MeshPart") then
+                for _,prop in ipairs({"CanCollide","CanTouch","CanQuery","Transparency","MeshId","Size","CFrame"}) do
+                    watch(part:GetPropertyChangedSignal(prop),evict)
+                end
+            end
+        end
+    end
+    refresh()
+end
+
 function Kit.reset()
+    for deck,entry in pairs(spineCradles) do
+        for _,connection in ipairs(entry.connections) do connection:Disconnect() end
+        entry.visible = false
+        refreshSpine(entry)
+        spineCradles[deck] = nil
+    end
     for _, connection in ipairs(watchers) do
         connection:Disconnect()
     end
@@ -442,16 +577,44 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     -- Caller-supplied source-less engine fixtures retain their old API.
     local approvedKinds = nil
     local approvedSupports = nil
+    local spinePieces = {}
     if meshFolder and meshFolder:IsA("Folder") then
         approvedKinds = table.clone(active)
         approvedSupports = table.clone(verifiedSupports)
         table.clear(active)
         table.clear(verifiedSupports)
     end
+    if approvedKinds then
+        local platforms = arena:FindFirstChild("Platforms")
+        if platforms then
+            for _,piece in ipairs(meshFolder:GetChildren()) do
+                if piece:IsA("MeshPart") and piece:GetAttribute("OriginalLongCradle3D") == true then
+                    local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+                    local deck = joint and joint:IsA("Weld") and joint.Part0 == piece and joint.Part1
+                    local id = deck and deck.Name:match("^Platform(%d+)$")
+                    if id and approvedKinds[id] == "cradle" and deck.Parent == platforms
+                        and deck:GetAttribute("SkySpineInterchange") == true then
+                        local group = spinePieces[deck] or {}
+                        table.insert(group,piece)
+                        spinePieces[deck] = group
+                    end
+                end
+            end
+            for id,kind in pairs(approvedKinds) do
+                local deck = kind == "cradle" and platforms:FindFirstChild("Platform"..id)
+                if deck and deck:GetAttribute("SkySpineInterchange") == true then
+                    approvedKinds[id] = nil
+                end
+            end
+        end
+    end
     -- Watch the REAL physical PlatformN/SkybridgeN owners before masking
     -- their native cosmetic underframes. Streaming in late also reconciles.
     attachPlatforms(arena:FindFirstChild("Platforms"))
     attachDecor(arena:FindFirstChild("Decor"))
+    for deck,pieces in pairs(spinePieces) do
+        bindSpine(arena,deck,meshFolder,pieces)
+    end
     -- A previous all-or-nothing guard restored EVERY native platform when
     -- ONE original MeshPart vanished. This emptied the premium silhouettes
     -- of four perfectly healthy route districts until an unrelated rebuild.
@@ -642,8 +805,16 @@ end
 function Kit.breakdown()
     local result = {
         bevel = 0, underframe = 0, support = 0, pylon = 0,
-        promenadePylon = 0, other = 0,
+        promenadePylon = 0, other = 0, spineUnderdeck = 0,
     }
+    for part in pairs(spineClaims) do
+        result.spineUnderdeck += 1
+        if part.Name:match("^PlatformUnderFrame%d+$") then
+            result.underframe += 1
+        else
+            result.other += 1
+        end
+    end
     for part in pairs(saved) do
         if part.Parent == activeDecor then
             local name = part.Name

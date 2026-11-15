@@ -1024,7 +1024,8 @@ local function rebuild()
                 -- Shrinking Arena contracts both axes. No ghost ledges.
                 footprintDisconnects[platform] =
                     PlatformFinishKit.bindRouteFootprint(
-                        platform, visualsByPlatform[platform]
+                        platform, visualsByPlatform[platform],
+                        PlatformNativeTrimReplacementKit.spineCradleRefitted
                     )
             end
 
@@ -1150,6 +1151,7 @@ local function rebuild()
             local attributes = {
                 LocalBevelNativePartsReplaced = family.bevel,
                 LocalUnderframeNativePartsReplaced = family.underframe,
+                LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck,
                 LocalSupportNativePartsReplaced = family.support,
                 LocalSkySpinePylonNativePartsReplaced = family.pylon,
                 LocalOriginalSkySpinePylon3DCount = family.pylon,

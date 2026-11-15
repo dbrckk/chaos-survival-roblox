@@ -16,6 +16,9 @@ local Remaining=require("../../src/client/ApprovedRemainingStructureMeshKit")
 local PrimarySkyline=require("../../src/client/ApprovedPrimarySkylineMeshKit")
 local ExteriorRetrofit=require("../../src/client/ApprovedExteriorRetrofitMeshKit")
 
+local Trim=require("../../src/client/PlatformNativeTrimReplacementKit")
+local ShrinkingArena=require("../../src/server/Disasters/ShrinkingArena")
+
 describe("P4 approved long cradle streaming fallback (engine)",function()
     it("replaces the complete exterior retrofit structures in five worlds while preserving original landmark signals",function()
         local storage = game:GetService("ReplicatedStorage")
@@ -483,6 +486,155 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if generated then generated:Destroy() end
         if oldTemplates then oldTemplates.Parent=RS end
         if previous then previous.Parent=workspace end
+        if not ok then error(err) end
+    end)
+
+    it("fits the complete Sky Spine understructure throughout the real shrink on all five arenas",function()
+        local storage = game:GetService("ReplicatedStorage")
+        local previousMap = workspace:FindFirstChild("GeneratedMap")
+        local previousSource = storage:FindFirstChild("ApprovedLargeStructureTemplates")
+        if previousMap then previousMap.Parent = nil end
+        if previousSource then previousSource.Parent = nil end
+        local templates = Instance.new("Folder")
+        templates.Name = "ApprovedLargeStructureTemplates"
+        templates:SetAttribute("OwnerVerified",true)
+        templates.Parent = storage
+        local function source(name,id,size)
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("OwnerVerified",true)
+            model:SetAttribute("OriginalLargeStructure3D",true)
+            model:SetAttribute("CosmeticOnly",true)
+            model:SetAttribute("Original3DAssetId",id)
+            for i=1,7 do
+                local part = Instance.new("MeshPart")
+                part.Name = "Mesh"..i
+                part.Size = i==1 and size or Vector3.new(.2,.2,.2)
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanTouch = false
+                part.CanQuery = false
+                part.Parent = model
+            end
+            model.Parent = templates
+            return model
+        end
+        local long = source("LongCradle",128914328933863,Vector3.new(9.8,3,22.6))
+        local short = source("ShortCradle",140716716476069,Vector3.new(16.52,2.34,10.13))
+        local models = Instance.new("Folder")
+        models.Parent = workspace
+        local disconnectFootprints = {}
+        local generated
+        local ok,err=pcall(function()
+            local verifiedDecks = 0
+            for _,variant in ipairs(ArenaVariants.Order) do
+                local arena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated = arena.Parent
+                local base,decor = arena.Base,arena.Decor
+                local steps = {}
+                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                    local step = deck:GetAttribute("SkySpineStep")
+                    if step then steps[step] = deck end
+                end
+                assert(#steps == 10)
+                local first = steps[5]
+                local firstIndex = tonumber(first.Name:match("^Platform(%d+)$"))
+                local firstNatives = assert(Kit.spineNativeParts(decor,first))
+                firstNatives[1].LocalTransparencyModifier = .18
+                local rail = decor:FindFirstChild("SkySpine"..firstIndex.."_LightedEdge1")
+                local warningAlpha=rail.LocalTransparencyModifier
+                local replacements, originals = {},{}
+                local function mount(deck)
+                    local id = tonumber(deck.Name:match("^Platform(%d+)$"))
+                    local pieces = assert(Kit.longCradle(models,deck,"High",id,true,decor),
+                        variant.." cannot fit "..deck.Name)
+                    assert(#pieces==7 and deck.CanCollide)
+                    table.insert(disconnectFootprints,Finish.bindRouteFootprint(deck,pieces,Trim.spineCradleRefitted))
+                    replacements[tostring(id)]="cradle"
+                    return pieces
+                end
+                local firstPieces = mount(first)
+                local firstMesh=firstPieces[1]
+                local originalHeight, originalWidth=firstMesh.Size.Y,firstMesh.Size.X
+                Trim.bind(arena,replacements,nil,nil,models)
+                assert(Trim.breakdown().spineUnderdeck == 4,variant.." missing initial Sky Spine mask")
+                assert(firstNatives[1].LocalTransparencyModifier == 1 and firstMesh.LocalTransparencyModifier == 0)
+                assert(rail.LocalTransparencyModifier == warningAlpha)
+                Trim.setSpineCradleLodVisible(first,false)
+                assert(math.abs(firstNatives[1].LocalTransparencyModifier-.18)<.001
+                    and firstMesh.LocalTransparencyModifier == 1 and Trim.breakdown().spineUnderdeck == 0)
+                Trim.setSpineCradleLodVisible(first,true)
+                local brace = firstNatives[4]
+                local braceFrame = brace.CFrame
+                brace.CFrame = braceFrame * CFrame.new(0,0,.8)
+                task.wait()
+                assert(Trim.breakdown().spineUnderdeck==0 and firstMesh.LocalTransparencyModifier==1)
+                brace.CFrame = braceFrame
+                task.wait()
+                assert(Trim.breakdown().spineUnderdeck==4 and firstMesh.LocalTransparencyModifier==0)
+                first:SetAttribute("CollapsePhase","Warning")
+                task.wait()
+                assert(Trim.breakdown().spineUnderdeck==0 and firstMesh.LocalTransparencyModifier==1)
+                first:SetAttribute("CollapsePhase","Normal")
+                task.wait()
+                assert(Trim.breakdown().spineUnderdeck==4 and firstMesh.LocalTransparencyModifier==0)
+
+                for i,deck in ipairs(steps) do originals[i]=deck.Size end
+                local active,cleanup = true,{}
+                ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                    Active=function() return active end,OnCleanup=cleanup})
+                local cutoff=os.clock()+1.5
+                repeat task.wait() until base.Size.X<=144.05 or os.clock()>cutoff
+                active=false
+                task.wait()
+                assert(base.Size.X<=144.05,variant.." did not reach minimum shrink")
+                assert(Trim.breakdown().spineUnderdeck==4
+                    and firstMesh.LocalTransparencyModifier==0,variant.." lost its resident cradle")
+                assert(math.abs(firstMesh.Size.Y-originalHeight)<.01
+                    and math.abs(firstMesh.Size.X-originalWidth*.45)<.02)
+
+                for i,deck in ipairs(steps) do
+                    assert(math.abs(deck.Size.X-originals[i].X*.45)<.025 and deck.CanCollide)
+                    local natives=assert(Kit.spineNativeParts(decor,deck))
+                    assert(#natives==4)
+                    verifiedDecks += 1
+                end
+                local lateDeck = steps[6]
+                local latePieces = mount(lateDeck)
+                assert(math.abs(latePieces[1].Size.Y-originalHeight)<.01
+                    and math.abs(latePieces[1].Size.X-originalWidth*.45)<.02)
+                Trim.bind(arena,replacements,nil,nil,models)
+                assert(Trim.breakdown().spineUnderdeck==8 and rail.LocalTransparencyModifier==warningAlpha)
+                local missing = firstPieces[1]
+                missing.Parent = nil
+                task.wait()
+                assert(Trim.breakdown().spineUnderdeck==4 and latePieces[1].LocalTransparencyModifier==0)
+                assert(math.abs(firstNatives[1].LocalTransparencyModifier-.18)<.001)
+                assert(firstPieces[2].LocalTransparencyModifier==1 and first.CanCollide)
+                missing:Destroy()
+                local used = latePieces[1]:GetAttribute("OriginalShortSkySpineCradle3D")==true and short or long
+                used:SetAttribute("OwnerVerified",false)
+                task.wait()
+                assert(Trim.breakdown().spineUnderdeck==0 and latePieces[1].LocalTransparencyModifier==1)
+                used:SetAttribute("OwnerVerified",true)
+                Trim.reset()
+                for _,finish in ipairs(cleanup) do finish() end
+                assert(first.Size==originals[5] and rail.LocalTransparencyModifier==warningAlpha)
+                for _,disconnect in ipairs(disconnectFootprints) do disconnect() end
+                table.clear(disconnectFootprints)
+                models:ClearAllChildren()
+                generated:Destroy()
+                generated=nil
+            end
+            expect(verifiedDecks).toBe(50)
+        end)
+        Trim.reset()
+        for _,disconnect in ipairs(disconnectFootprints) do disconnect() end
+        models:Destroy()
+        templates:Destroy()
+        if generated then generated:Destroy() end
+        if previousSource then previousSource.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
         if not ok then error(err) end
     end)
 

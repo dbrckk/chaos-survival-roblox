@@ -600,6 +600,13 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
             continue
         end
 
+        if native and native:GetAttribute("SkySpineInterchange") == true
+            and descendant:IsA("MeshPart")
+            and descendant:GetAttribute("OriginalLongCradle3D") == true then
+            PlatformNativeTrimReplacementKit.setSpineCradleLodVisible(native, visible)
+            continue
+        end
+
         local minimumTier = descendant:GetAttribute("SceneryMinimumTier")
         if minimumTier == "Medium" and profile.Name == "Low"
             or minimumTier == "High" and profile.Name ~= "High" then

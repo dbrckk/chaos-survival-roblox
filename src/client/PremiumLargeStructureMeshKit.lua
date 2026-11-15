@@ -36,7 +36,7 @@ local function verified(kind)
     local count = 0
     for _, v in ipairs(source:GetDescendants()) do
         if v:IsA("BasePart") then
-            if not v:IsA("MeshPart") or v.CanCollide
+            if not v:IsA("MeshPart") or v.Transparency >= 1 or v.CanCollide
                 or v.CanTouch or v.CanQuery then return nil end
             count += 1
         elseif v:IsA("LuaSourceContainer") then
@@ -62,6 +62,13 @@ local function verified(kind)
         and xzLong >= 1.6 and xzLong <= 2.8
         and xzShort >= 1.5 and xzShort <= 2.7) then return nil end
     return source,size,count
+end
+
+function Kit.spineCradleSource(piece)
+    local kind = piece:GetAttribute("OriginalShortSkySpineCradle3D") == true and "ShortCradle" or "LongCradle"
+    if piece:GetAttribute("Original3DAssetId") ~= IDS[kind] then return nil end
+    local source = verified(kind)
+    return source
 end
 
 local function prepare(source,scale,at,native,kind,adjustable)
@@ -258,6 +265,81 @@ function Kit.shortCradleFit(size,bounds)
     return scale
 end
 
+-- Match the authored transverse route against the current arena footprint.
+-- A late-streamed deck can already be contracted by Shrinking Arena.
+function Kit.spineFootprint(deck)
+    local step = deck:GetAttribute("SkySpineStep")
+    if deck:GetAttribute("SkySpineInterchange") ~= true
+        or deck:GetAttribute("ChaosPermanentRoute") ~= true
+        or deck:GetAttribute("RouteTier") ~= 4 or typeof(step) ~= "number"
+        or step % 1 ~= 0 or step < 1 or step > 10 then return nil end
+    local platforms = deck.Parent
+    local arena = platforms and platforms.Parent
+    local map = workspace:FindFirstChild("GeneratedMap")
+    local base = arena and arena:FindFirstChild("Base")
+    if not map or not map:IsA("Folder") or not arena or not arena:IsA("Folder")
+        or arena.Name ~= "Arena" or arena.Parent ~= map
+        or platforms ~= arena:FindFirstChild("Platforms") or not base
+        or not base:IsA("BasePart") or not base.Anchored or not base.CanCollide then
+        return nil
+    end
+    local x,z = base:GetAttribute("OriginalSizeX"),base:GetAttribute("OriginalSizeZ")
+    if typeof(x) ~= "number" or typeof(z) ~= "number"
+        or x ~= 320 or z ~= 320 then return nil end
+    local scale = base.Size.X/x
+    local size = deck.Size
+    if scale < .445 or scale > 1.005
+        or math.abs(scale-base.Size.Z/z) > .012 or math.abs(size.Y-2) > .08
+        or math.abs(size.X-12*scale) > .12
+        or size.Z/scale < 16.5 or size.Z/scale > 24 then return nil end
+    return scale
+end
+
+function Kit.spineNativeParts(decor,deck)
+    local scale = Kit.spineFootprint(deck)
+    local id=tonumber(deck.Name:match("^Platform(%d+)$"))
+    if not scale or not id or not decor or not decor:IsA("Folder")
+        or decor ~= deck.Parent.Parent:FindFirstChild("Decor")
+        or not deck.Anchored or not deck.CanCollide or deck.Transparency >= .75 then return nil end
+    local phase,shutter = deck:GetAttribute("CollapsePhase"),deck:GetAttribute("BridgeShutterPhase")
+    if (phase ~= nil and phase ~= "Normal" and phase ~= "Safe")
+        or (shutter ~= nil and shutter ~= "Idle") then return nil end
+    local sx,sy,sz = deck.Size.X,deck.Size.Y,deck.Size.Z
+    local function match(name,size,offset,checkIndex)
+        local part = decor:FindFirstChild(name)
+        if not part or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+            or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
+            or part.Transparency >= .95
+            or (part.Size-size).Magnitude > .13
+            or (part.Position-(deck.CFrame*offset).Position).Magnitude > .14
+            or part.CFrame.UpVector:Dot(deck.CFrame.UpVector) < .999
+            or part.CFrame.LookVector:Dot(deck.CFrame.LookVector) < .999 then return nil end
+        if checkIndex then
+            if part:GetAttribute("SkySpineDecor") ~= true
+                or part:GetAttribute("PerimeterPlatformIndex") ~= id then return nil end
+        elseif part:GetAttribute("PremiumArchitecturalSurface") ~= true then return nil end
+        return part
+    end
+    local top,prefix = sy*.5,"SkySpine"..id
+    local frame = match("PlatformUnderFrame"..id,Vector3.new(sx+.5*scale,.42,sz+.5*scale),
+        CFrame.new(0,-top-.18,0),false)
+    local railSize = Vector3.new(.66*scale,.6,sz-.8*scale)
+    local left = match(prefix.."_Undercarriage-1",railSize,CFrame.new(-3.9*scale,-top-.28,0),true)
+    local right = match(prefix.."_Undercarriage1",railSize,CFrame.new(3.9*scale,-top-.28,0),true)
+    local cross = match(prefix.."_CrossStiffener",Vector3.new(sx+.6*scale,.48,.64*scale),
+        CFrame.new(0,-top-.42,0),true)
+    if frame and left and right and cross then return {frame,left,right,cross} end
+    return nil
+end
+
+local function cradleDeckSize(deck)
+    if deck:GetAttribute("SkySpineStep") == nil
+        and deck:GetAttribute("SkySpineInterchange") ~= true then return deck.Size,1 end
+    local scale = Kit.spineFootprint(deck)
+    if not scale then return nil end
+    return Vector3.new(deck.Size.X/scale,deck.Size.Y,deck.Size.Z/scale),scale
+end
+
 -- Only replace the *actual streamed server-authoritative decorative
 -- understructure*. A collidable deck may replicate BEFORE its underside,
 -- Sky Spine girders or Promenade truss; reserving a seven-MeshPart cradle
@@ -271,6 +353,10 @@ function Kit.hasNativeCradleFallback(decor,platform)
         or not platform.CanCollide or platform.Transparency>=.75 then
         return false
     end
+    if platform:GetAttribute("SkySpineStep") ~= nil
+        or platform:GetAttribute("SkySpineInterchange") == true then
+        return Kit.spineNativeParts(decor,platform) ~= nil
+    end
     local id=tonumber(platform.Name:match("^Platform(%d+)$"))
     if not id then return false end
     local phase=platform:GetAttribute("CollapsePhase")
@@ -283,28 +369,13 @@ function Kit.hasNativeCradleFallback(decor,platform)
         or frame.CanCollide or frame.CanTouch or frame.CanQuery
         or frame:GetAttribute("PremiumArchitecturalSurface")~=true then
         return false end
-    local names,marker=nil,nil
-    if platform:GetAttribute("SkySpineStep")~=nil then
-        names={"SkySpine"..id.."_Undercarriage-1",
-            "SkySpine"..id.."_Undercarriage1",
-            "SkySpine"..id.."_CrossStiffener"}
-        marker="SkySpineDecor"
-    elseif platform:GetAttribute("PromenadeStep")~=nil then
-        names={"Promenade"..id.."_UnderdeckTruss"}
-        marker="PromenadeVisualOnly"
-    else
-        return false
-    end
-    for _,name in ipairs(names) do
-        local native=decor:FindFirstChild(name)
-        if not native or not native:IsA("BasePart")
-            or native.Parent~=decor or not native.Anchored
-            or native.CanCollide or native.CanTouch or native.CanQuery
-            or native:GetAttribute(marker)~=true
-            or native:GetAttribute("PerimeterPlatformIndex")~=id then
-            return false
-        end
-    end
+    if platform:GetAttribute("PromenadeStep")==nil then return false end
+    local native=decor:FindFirstChild("Promenade"..id.."_UnderdeckTruss")
+    if not native or not native:IsA("BasePart")
+        or native.Parent~=decor or not native.Anchored
+        or native.CanCollide or native.CanTouch or native.CanQuery
+        or native:GetAttribute("PromenadeVisualOnly")~=true
+        or native:GetAttribute("PerimeterPlatformIndex")~=id then return false end
     return true
 end
 
@@ -476,14 +547,16 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local spine=tonumber(platform:GetAttribute("SkySpineStep"))
             local promenade=tonumber(platform:GetAttribute("PromenadeStep"))
             if spine==5 or spine==6 then score-=14 end
+            local fitSize = cradleDeckSize(platform)
+            local hasCradle = fitSize ~= nil
+                and ((cradleSource and Kit.cradleFit(fitSize,cradleBounds))
+                    or (spine and shortSource and Kit.shortCradleFit(fitSize,shortBounds)))
+                and Kit.hasNativeCradleFallback(decor,platform)
             -- All tiers now check the same geometry as longCradle().
             -- Reject a 30+ stud native deck that the actual 22-stud
             -- original cannot cover, BEFORE spending an approved 3D slot.
             if (spine or promenade)
-                and Kit.hasNativeCradleFallback(decor,platform)
-                and ((cradleSource and Kit.cradleFit(size,cradleBounds))
-                    or (spine and shortSource
-                        and Kit.shortCradleFit(size,shortBounds)))
+                and hasCradle
                 and (tier ~= "Low"
                     or (platform.Position-cameraPoint).Magnitude<=125) then
                 cradles[#cradles+1]={platform=platform,score=score}
@@ -495,11 +568,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             -- on a different deck. Medium/High use both ranked families
             -- inside their already existing independent budgets.
             local lowHasCompleteSpineCradle=tier=="Low" and spine
-                and Kit.hasNativeCradleFallback(decor,platform)
-                and ((cradleSource
-                    and Kit.cradleFit(size,cradleBounds))
-                    or (shortSource
-                        and Kit.shortCradleFit(size,shortBounds)))
+                and hasCradle
             if supportSource and supportsAvailable[id]
                 and not lowHasCompleteSpineCradle
                 and long>=7 and long<=36 and short>=7
@@ -761,17 +830,19 @@ function Kit.longCradle(parent,platform,tier,index,selected,decor)
     if decor~=nil and not Kit.hasNativeCradleFallback(decor,platform) then
         return nil
     end
+    local fitSize,floorScale = cradleDeckSize(platform)
+    if not fitSize then return nil end
     local source,box,count=verified("LongCradle")
     local kind="LongCradle"
-    local scale=source and Kit.cradleFit(platform.Size,box) or nil
+    local scale=source and Kit.cradleFit(fitSize,box) or nil
     if not scale and platform:GetAttribute("SkySpineStep")~=nil then
         source,box,count=verified("ShortCradle")
-        scale=source and Kit.shortCradleFit(platform.Size,box) or nil
+        scale=source and Kit.shortCradleFit(fitSize,box) or nil
         kind="ShortCradle"
     end
     if not source or not scale or count~=7 then return nil end
     local sx,sy,sz=platform.Size.X,platform.Size.Y,platform.Size.Z
-    local long=math.max(sx,sz)
+    local long=math.max(fitSize.X,fitSize.Z)
     local yaw=(sz>sx)~=(box.Z>box.X) and math.pi*.5 or 0
     local stage=prepare(source,scale,function(bounds)
         if bounds.Y>5 or math.max(bounds.X,bounds.Z)>long*.97 then
@@ -781,6 +852,17 @@ function Kit.longCradle(parent,platform,tier,index,selected,decor)
             0,-sy*.5-.09-bounds.Y*.5,0)*CFrame.Angles(0,yaw,0)
     end,platform,kind,tonumber(platform:GetAttribute("RouteTier"))~=nil)
     if not stage then return nil end
+    -- Uniform X/Z contraction at mount follows the same rule as the
+    -- existing welded route footprint binder. Vertical truss depth stays.
+    if floorScale ~= 1 then
+        for _,part in ipairs(stage.parts) do
+            local weld = part:FindFirstChild("ChaosPlatformTrimWeld")
+            local p = weld.C1.Position
+            weld.C1 = CFrame.new(p.X*floorScale,p.Y,p.Z*floorScale)*weld.C1.Rotation
+            part.Size = Vector3.new(part.Size.X*floorScale,part.Size.Y,part.Size.Z*floorScale)
+            part.CFrame = platform.CFrame*weld.C1
+        end
+    end
     local parts=commit(parent,stage,kind,tostring(index))
     for _,part in ipairs(parts) do
         -- Existing renderer/native-fallback contracts remain unchanged.

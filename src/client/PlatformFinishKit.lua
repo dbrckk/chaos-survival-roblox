@@ -696,7 +696,7 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
     return changed
 end
 
-function PlatformFinishKit.bindRouteFootprint(platform, pieces)
+function PlatformFinishKit.bindRouteFootprint(platform, pieces, onRefit)
     local snapshot = PlatformFinishKit.captureRouteFootprint(platform, pieces)
     if not snapshot then return function() end end
     local connected = true
@@ -706,7 +706,10 @@ function PlatformFinishKit.bindRouteFootprint(platform, pieces)
         queued = true
         task.defer(function()
             queued = false
-            if connected then PlatformFinishKit.applyRouteFootprint(snapshot) end
+            if connected then
+                PlatformFinishKit.applyRouteFootprint(snapshot)
+                if onRefit then onRefit(platform) end
+            end
         end)
     end)
     -- A streaming player can first encounter an already-shrinking deck.
