@@ -363,6 +363,153 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if not ok then error(err) end
     end)
 
+    it("sculpts both genuine promenade pylons per portico within the existing column budget",function()
+        local rs=game:GetService("ReplicatedStorage")
+        local trim=require("../../src/client/PlatformNativeTrimReplacementKit")
+        local previous=workspace:FindFirstChild("GeneratedMap")
+        local old=rs:FindFirstChild("ApprovedLargeStructureTemplates")
+        if previous then previous.Parent=nil end
+        if old then old.Parent=nil end
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedLargeStructureTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=rs
+        local art=Instance.new("Folder")
+        art.Parent=workspace
+        local generated=nil
+        local connections={}
+        local variants={
+            Classic=91626128452597,Towers=107521411452905,
+            Crossroads=93993697329658,Orbital=119010829781313,
+            Harbor=76194593490199,
+        }
+        local ok,err=pcall(function()
+            for variant,assetId in pairs(variants) do
+                local source=Instance.new("Model")
+                source.Name=variant
+                source:SetAttribute("Original3DAssetId",assetId)
+                source:SetAttribute("OriginalLargeStructure3D",true)
+                source:SetAttribute("OwnerVerified",true)
+                source:SetAttribute("CosmeticOnly",true)
+                for i=1,7 do
+                    local piece=Instance.new("MeshPart")
+                    piece.Size=i==1 and Vector3.new(2.12,14.1,2.12)
+                        or Vector3.new(.18,.18,.18)
+                    piece.Anchored=true
+                    piece.CanCollide=false
+                    piece.CanTouch=false
+                    piece.CanQuery=false
+                    piece.Parent=source
+                end
+                source.Parent=holder
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated=arena.Parent
+                local platforms=arena:FindFirstChild("Platforms")
+                local decor=arena:FindFirstChild("Decor")
+                local base=arena:FindFirstChild("Base")
+                local genuine=0
+                local deck=nil
+                for _,owner in ipairs(platforms:GetChildren()) do
+                    local index=owner.Name:match("^Platform(%d+)$")
+                    if index then
+                        for _,side in ipairs({-1,1}) do
+                            local part=decor:FindFirstChild("Promenade"..index.."_LoadPylon"..side)
+                            if IdentityLod.matchesPromenadePylon(part,owner) then
+                                genuine+=1
+                            end
+                        end
+                    end
+                    if owner:GetAttribute("PromenadeStep")==7
+                        and owner:GetAttribute("PromenadeLane")==1 then deck=owner end
+                end
+                expect(genuine).toBe(variant=="Harbor" and 0 or 12)
+                expect(deck~=nil and deck.CanCollide).toBe(true)
+                local index=tonumber(deck.Name:match("^Platform(%d+)$"))
+                local left=decor:FindFirstChild("Promenade"..index.."_LoadPylon-1")
+                local diagonal=decor:FindFirstChild("Promenade"..index.."_DiagonalStay-1")
+                expect(IdentityLod.matchesPromenadePylon(diagonal,deck)).toBe(false)
+                if variant=="Harbor" then
+                    local harbor=Kit.supports(art,decor,deck,variant,"High",index,2,true)
+                    for _,part in ipairs(harbor and harbor.parts or {}) do
+                        expect(part:GetAttribute("OriginalPromenadePylon3D")).toBe(nil)
+                    end
+                    if harbor then
+                        for _,conn in ipairs(harbor.disconnects) do conn:Disconnect() end
+                    end
+                    art:ClearAllChildren()
+                    continue
+                end
+                local _,selected=Kit.selectNearRouteStructures(
+                    {deck},decor,variant,"Low",base,deck.Position,nil,0,false)
+                expect(selected[deck]).toBe(true)
+                local _,pressured=Kit.selectNearRouteStructures(
+                    {deck},decor,variant,"Low",base,deck.Position,nil,1,false)
+                expect(next(pressured)).toBe(nil)
+                local low=Kit.supports(art,decor,deck,variant,"Low",index,1,true)
+                expect(low.modules).toBe(1)
+                expect(low.covered[1]).toBe(left)
+                expect(#low.parts).toBe(7)
+                for _,conn in ipairs(low.disconnects) do conn:Disconnect() end
+                art:ClearAllChildren()
+                local high=Kit.supports(art,decor,deck,variant,"High",index,2,true)
+                connections=high.disconnects
+                expect(high.modules).toBe(2)
+                expect(#high.parts).toBe(14)
+                for _,part in ipairs(high.parts) do
+                    expect(part:GetAttribute("OriginalPromenadePylon3D")).toBe(true)
+                    expect(part:GetAttribute("Original3DAssetId")).toBe(assetId)
+                    expect(part.CanCollide or part.CanTouch or part.CanQuery).toBe(false)
+                end
+                left.LocalTransparencyModifier=.25
+                trim.bind(arena,{},nil,high.covered,art)
+                expect(trim.breakdown().promenadePylon).toBe(2)
+                expect(diagonal.LocalTransparencyModifier).toBe(0)
+                if variant=="Crossroads" then
+                    local mesh=high.parts[1]
+                    local anchor=IdentityLod.owner(mesh,platforms,decor)
+                    expect(anchor).toBe(left)
+                    trim.setPylonLodVisible(anchor,false)
+                    expect(left.LocalTransparencyModifier).toBe(.25)
+                    trim.setPylonLodVisible(anchor,true)
+                    expect(left.LocalTransparencyModifier).toBe(1)
+                    local initial=mesh.Size
+                    deck.Size=Vector3.new(deck.Size.X*.75,deck.Size.Y,deck.Size.Z*.75)
+                    expect(trim.breakdown().promenadePylon).toBe(0)
+                    for _,pylon in ipairs(high.covered) do
+                        local frame=deck.CFrame:ToObjectSpace(pylon.CFrame)
+                        local offset=frame.Position
+                        pylon.CFrame=deck.CFrame*CFrame.new(offset.X*.75,offset.Y,offset.Z*.75)
+                        pylon.Size=Vector3.new(pylon.Size.X*.75,pylon.Size.Y,pylon.Size.Z*.75)
+                    end
+                    expect(trim.breakdown().promenadePylon).toBe(2)
+                    expect(math.abs(mesh.Size.X-initial.X*.75)<.02).toBe(true)
+                    expect(math.abs(mesh.Size.Y-initial.Y)<.02).toBe(true)
+                    deck:SetAttribute("CollapsePhase","Warning")
+                    expect(left.LocalTransparencyModifier).toBe(.25)
+                    deck:SetAttribute("CollapsePhase","Normal")
+                    expect(left.LocalTransparencyModifier).toBe(1)
+                    mesh:Destroy()
+                    expect(left.LocalTransparencyModifier).toBe(.25)
+                    expect(trim.breakdown().promenadePylon).toBe(1)
+                    expect(high.parts[2].LocalTransparencyModifier).toBe(1)
+                end
+                trim.reset()
+                expect(left.LocalTransparencyModifier).toBe(.25)
+                for _,conn in ipairs(connections) do conn:Disconnect() end
+                table.clear(connections)
+                art:ClearAllChildren()
+            end
+        end)
+        trim.reset()
+        for _,conn in ipairs(connections) do conn:Disconnect() end
+        art:Destroy()
+        holder:Destroy()
+        if generated then generated:Destroy() end
+        if old then old.Parent=rs end
+        if previous then previous.Parent=workspace end
+        if not ok then error(err) end
+    end)
+
     it("sculpts genuine nonphysical Sky Spine pylons using old column quota",function()
         local RS=game:GetService("ReplicatedStorage")
         local Trim=require("../../src/client/PlatformNativeTrimReplacementKit")

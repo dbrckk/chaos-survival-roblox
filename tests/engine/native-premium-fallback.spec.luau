@@ -557,19 +557,19 @@ describe("Original 3D native fallback isolation (engine)", function()
                     for _,part in ipairs(decor:GetChildren()) do
                         if (part.Name:match("^PlatformSupport"..id.."_%d+$")
                             or PremiumLargeStructureMeshKit.validNativeSkyPylon(
-                                part,tonumber(id)))
+                                part,tonumber(id))
+                            or part.Name:match("^Promenade"..id.."_LoadPylon%-?1$"))
                             and part.Anchored and not part.CanCollide
                             and not part.CanTouch and not part.CanQuery then
-                            local n=PremiumLargeStructureMeshKit.supportFit(
-                                part.Size,Vector3.new(2.12,14.1,2.12))
+                            local n=part.Name:match("^Promenade") and 1
+                                or PremiumLargeStructureMeshKit.supportFit(
+                                    part.Size,Vector3.new(2.12,14.1,2.12))
                             if n then posts[#posts+1]={part.Name,n} end
                         end
                     end
                     table.sort(posts,function(a,b)
-                        local pa=a[1]:match(
-                            "^SkySpine%d+_MonumentalPylon%-?1$") and 0 or 1
-                        local pb=b[1]:match(
-                            "^SkySpine%d+_MonumentalPylon%-?1$") and 0 or 1
+                        local pa=a[1]:match("Pylon%-?1$") and 0 or 1
+                        local pb=b[1]:match("Pylon%-?1$") and 0 or 1
                         return pa==pb and a[1]<b[1] or pa<pb
                     end)
                     for j=1,math.min(#posts,maxPosts) do
@@ -592,7 +592,8 @@ describe("Original 3D native fallback isolation (engine)", function()
                 for _,post in ipairs(decor:GetChildren()) do
                     if (post.Name:match("^PlatformSupport"..id.."_%d+$")
                         or PremiumLargeStructureMeshKit.validNativeSkyPylon(
-                            post,tonumber(id)))
+                            post,tonumber(id))
+                        or post.Name:match("^Promenade"..id.."_LoadPylon%-?1$"))
                         and post:IsA("BasePart") and post.Anchored
                         and not post.CanCollide and not post.CanTouch
                         and not post.CanQuery then

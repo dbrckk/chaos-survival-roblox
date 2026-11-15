@@ -4,6 +4,11 @@
 -- The server still owns every collision route, shrinking platform,
 -- warning label, shutter and native fallback primitive.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlatformIdentityLodRules = if script and script.Parent
+    and ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("PlatformIdentityLodRules")
+    then require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
+    else require("../shared/PlatformIdentityLodRules")
 
 local Kit = {}
 local IDS = {
@@ -156,8 +161,8 @@ end
 -- ordering, so one source module cannot be reserved for an object the
 -- installer won't reach. Never changes a 7-piece budget.
 local function supportPriority(name)
-    return name:match("^SkySpine%d+_MonumentalPylon%-?1$")
-        and 0 or 1
+    return (name:match("^SkySpine%d+_MonumentalPylon%-?1$")
+        or name:match("^Promenade%d+_LoadPylon%-?1$")) and 0 or 1
 end
 
 local function sortNativeSupports(a,b)
@@ -199,6 +204,14 @@ function Kit.supportFit(nativeSize, sourceBounds)
         or width > math.max(nativeSize.X, nativeSize.Z) * 2.5
         or segmentHeight > 17.8 then return nil end
     return segments, scale
+end
+
+-- One themed module even on the 16.2-stud portal. Keep the
+-- sculpture inside the native cross-section and the original headroom.
+local function promenadePylonFit(nativeSize, sourceBounds)
+    local scale = nativeSize.Y / sourceBounds.Y
+    if scale < .85 or scale > 1.25 then return nil end
+    return 1, scale
 end
 
 -- The same genuine-model envelope must govern candidate selection and
@@ -374,18 +387,27 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     local supportsAvailable={}
     if supportSource then
         local grouped={}
+        local arena = decor.Parent
+        local platformFolder = arena and arena:FindFirstChild("Platforms")
         for _,part in ipairs(decor:GetChildren()) do
             local suffix=part.Name:match("^PlatformSupport(%d+)_%d+$")
                 or (Kit.validNativeSkyPylon(part) and
                     part.Name:match("^SkySpine(%d+)_MonumentalPylon%-?1$"))
             local id=tonumber(suffix)
+            local segments
             if id and validNativeSupport(part,id) then
-                local segments=Kit.supportFit(part.Size,supportBounds)
-                if segments and (tier~="Low" or segments==1) then
-                    local group=grouped[id]
-                    if not group then group={};grouped[id]=group end
-                    group[#group+1]={name=part.Name,modules=segments}
+                segments=Kit.supportFit(part.Size,supportBounds)
+            elseif variant~="Harbor" and platformFolder then
+                id=PlatformIdentityLodRules.promenadePylonIndex(part)
+                local owner=id and platformFolder:FindFirstChild("Platform"..id)
+                if PlatformIdentityLodRules.matchesPromenadePylon(part,owner) then
+                    segments=promenadePylonFit(part.Size,supportBounds)
                 end
+            end
+            if segments and (tier~="Low" or segments==1) then
+                local group=grouped[id]
+                if not group then group={};grouped[id]=group end
+                group[#group+1]={name=part.Name,modules=segments}
             end
         end
         -- Mounting consumes the first ONE (Medium/Low) or TWO (High)
@@ -614,10 +636,17 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
         and index % choice ~= 0) then return nil end
 
     local natives = {}
+    local promenadePylons = {}
     for _,child in ipairs(decor:GetChildren()) do
         if validNativeSupport(child,index)
             and (not Kit.validNativeSkyPylon(child,index)
                 or platform:GetAttribute("SkySpineStep")~=nil) then
+            natives[#natives+1]=child
+        elseif variant~="Harbor" and platform:GetAttribute("PromenadeLane")
+            and platform.Name == "Platform"..index
+            and PlatformIdentityLodRules.matchesPromenadePylon(child,platform)
+            and promenadePylonFit(child.Size,box) then
+            promenadePylons[child]=true
             natives[#natives+1]=child
         end
     end
@@ -627,7 +656,9 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
     local output = {parts={},covered={},disconnects={},modules=0}
     for _,support in ipairs(natives) do
         if #output.covered >= maxSupports or output.modules >= available then break end
-        local segments, scale = Kit.supportFit(support.Size, box)
+        local isPromenadePylon = promenadePylons[support] == true
+        local fit = isPromenadePylon and promenadePylonFit or Kit.supportFit
+        local segments, scale = fit(support.Size, box)
         if segments and segments <= available - output.modules then
             local height = support.Size.Y / segments
             local stages = {}
@@ -647,7 +678,9 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
                     for _,part in ipairs(commit(parent,stage,variant,
                         tostring(index).."_"..tostring(k))) do
                         part:SetAttribute("OriginalSupportColumn3D",true)
-                        if Kit.validNativeSkyPylon(support,index) then
+                        if isPromenadePylon then
+                            part:SetAttribute("OriginalPromenadePylon3D",true)
+                        elseif Kit.validNativeSkyPylon(support,index) then
                             part:SetAttribute("OriginalSkySpinePylon3D",true)
                         end
                         -- This imported source follows its actual native
@@ -663,10 +696,12 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
                     end
                 end
                 local base=support.Size
+                local sourceWidth = isPromenadePylon and box.X*scale/.98 or base.X
+                local sourceDepth = isPromenadePylon and box.Z*scale/.98 or base.Z
                 local function followSupportSize()
                     if not support.Parent then return end
-                    local rx=math.clamp(support.Size.X/base.X,.05,2)
-                    local rz=math.clamp(support.Size.Z/base.Z,.05,2)
+                    local rx=math.clamp(support.Size.X/sourceWidth,.05,2)
+                    local rz=math.clamp(support.Size.Z/sourceDepth,.05,2)
                     for _,entry in ipairs(entries) do
                         if entry.part.Parent and entry.joint
                             and entry.joint.Parent then

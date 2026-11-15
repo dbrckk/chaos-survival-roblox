@@ -588,7 +588,8 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
         end
 
         if descendant:IsA("MeshPart")
-            and descendant:GetAttribute("OriginalSkySpinePylon3D") == true then
+            and (descendant:GetAttribute("OriginalSkySpinePylon3D") == true
+                or descendant:GetAttribute("OriginalPromenadePylon3D") == true) then
             -- The trim kit reconciles the whole pylon's native fallback,
             -- crown priority and LOD together from the same decision.
             if native then

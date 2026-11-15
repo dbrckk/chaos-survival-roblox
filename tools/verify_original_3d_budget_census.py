@@ -1860,9 +1860,10 @@ assert 'supportBudget -= columns.modules' in OWNER
 assert 'if output.modules < 1 then return nil end' in LARGE
 assert 'if tier == "Low" and supportParts ~= 7 then' in LARGE
 assert 'if tier == "Low" and not cameraReady then' in LARGE
-assert 'local segments, scale = Kit.supportFit(support.Size, box)' in LARGE
+assert 'local fit = isPromenadePylon and promenadePylonFit or Kit.supportFit' in LARGE
+assert 'local segments, scale = fit(support.Size, box)' in LARGE
 assert 'if segments and segments <= available - output.modules then' in LARGE
-assert 'local segments=Kit.supportFit(part.Size,supportBounds)' in LARGE
+assert 'segments=Kit.supportFit(part.Size,supportBounds)' in LARGE
 assert 'if segments and (tier~="Low" or segments==1) then' in LARGE
 assert 'cost=supportsAvailable[id]' in LARGE
 assert 'local remaining=moduleBudget or math.huge' in LARGE
@@ -2111,3 +2112,30 @@ assert 'UnderdeckTruss' not in promenade_collector
 assert 'LoadPylon' not in promenade_collector
 assert 'Low={arch=0,casing=0,helix=0,promenade=0}' in P4_CLIENT
 print("PASS four promenade variants use the approved truss with exact native footprint and Low backoff")
+
+# The four themed columns are existing creator-approved sources. An
+# unusually tall 16.2-stud promenade pylon still costs one source module.
+for variant,asset_id in (
+    ("classic","91626128452597"), ("towers","107521411452905"),
+    ("crossroads","93993697329658"), ("orbital","119010829781313"),
+):
+    model=P4_MODELS["column_"+variant]
+    assert model["asset_id"]==asset_id and model["moderation"]=="Approved"
+    assert asset_id in LARGE
+pylon_rules=(ROOT/"src/shared/PlatformIdentityLodRules.lua").read_text(encoding="utf8")
+for clause in (
+    'local PROMENADE_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}',
+    '^Promenade(%d+)_LoadPylon(%-?1)$',
+    'native:GetAttribute("PerimeterPlatformIndex") ~= tonumber(index)',
+    'math.abs(size.X - 1.6 * scale) < .08',
+    'math.abs(size.Z - 1.8 * scale) < .08',
+    'side * 7.6 * scale',
+):
+    assert clause in pylon_rules,clause
+assert 'local function promenadePylonFit(nativeSize, sourceBounds)' in LARGE
+assert 'segments=promenadePylonFit(part.Size,supportBounds)' in LARGE
+assert 'part:SetAttribute("OriginalPromenadePylon3D",true)' in LARGE
+assert 'reconcilePylon(part)' in TRIM
+assert 'LocalOriginalPromenadePylon3DCount = family.promenadePylon' in OWNER
+assert 'descendant:GetAttribute("OriginalPromenadePylon3D") == true' in SIDE_LOD
+print("PASS 48 genuine promenade pylons eligible inside the existing column budget")

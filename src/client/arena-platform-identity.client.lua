@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
+local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
 local ApprovedPlatformRimMeshKit = require(script.Parent.ApprovedPlatformRimMeshKit)
@@ -1152,6 +1153,7 @@ local function rebuild()
                 LocalSupportNativePartsReplaced = family.support,
                 LocalSkySpinePylonNativePartsReplaced = family.pylon,
                 LocalOriginalSkySpinePylon3DCount = family.pylon,
+                LocalOriginalPromenadePylon3DCount = family.promenadePylon,
                 LocalOtherStructuralNativePartsReplaced = family.other,
             }
             for name, value in pairs(attributes) do
@@ -1343,9 +1345,10 @@ local function watchDecor(generated)
             -- rebuild for hundreds of faraway streamed posts.
             local actualSkyPylon =
                 PremiumLargeStructureMeshKit.validNativeSkyPylon(part)
+            local promenadeIndex = PlatformIdentityLodRules.promenadePylonIndex(part)
             if not part:IsA("BasePart")
                 or (not part.Name:match("^PlatformSupport%d+_%d+$")
-                    and not actualSkyPylon) then
+                    and not actualSkyPylon and not promenadeIndex) then
                 return
             end
             local templates = ReplicatedStorage:FindFirstChild(
@@ -1355,7 +1358,8 @@ local function watchDecor(generated)
             local variant = activeArena and tostring(
                 activeArena:GetAttribute("VariantId") or "Classic")
             if not templates or not variant
-                or not templates:FindFirstChild(variant) then return end
+                or not templates:FindFirstChild(variant)
+                or (promenadeIndex and variant == "Harbor") then return end
             local quality = VfxQuality.deviceTier(
                 player:GetAttribute("VfxQualityTier"),
                 UserInputService.TouchEnabled).Name
@@ -1380,6 +1384,7 @@ local function watchDecor(generated)
                     "^PlatformSupport(%d+)_%d+$")
                     or (actualSkyPylon and part.Name:match(
                         "^SkySpine(%d+)_MonumentalPylon%-?1$"))
+                    or promenadeIndex
                 local platforms = activeArena and
                     activeArena:FindFirstChild("Platforms")
                 local deck = platforms and

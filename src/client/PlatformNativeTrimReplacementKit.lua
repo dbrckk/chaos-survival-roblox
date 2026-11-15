@@ -3,6 +3,13 @@
 -- The live server continues owning its original fallback and hazard cues.
 -- Hide native structural trim ONLY while a provenance-checked genuine
 -- MeshPart carapace/girder is already in the existing platform owner.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlatformIdentityLodRules = if script and script.Parent
+    and ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("PlatformIdentityLodRules")
+    then require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
+    else require("../shared/PlatformIdentityLodRules")
+
 local Kit = {}
 
 local saved = {}
@@ -25,6 +32,7 @@ local activePlatforms = nil
 local ownerBaselines = {}
 local watchedOwners = {}
 local verifiedSupportIndices = {}
+local promenadePylonsByDeck = {}
 
 local function setNativeMask(part, claims, masked)
     claims[part] = masked and true or nil
@@ -96,6 +104,7 @@ function Kit.reset()
     table.clear(active)
     table.clear(verifiedSupports)
     table.clear(verifiedSupportIndices)
+    table.clear(promenadePylonsByDeck)
     table.clear(ownerBaselines)
     table.clear(watchedOwners)
     activePlatforms = nil
@@ -115,6 +124,7 @@ local function eligible(part)
         -- deck's support, or a Part not explicitly verified/mounted.
         return name:match("^PlatformSupport%d+_%d+$") ~= nil
             or Kit.isSkySpinePylon(part)
+            or PlatformIdentityLodRules.promenadePylonIndex(part) ~= nil
     end
     local id = name:match("^PlatformBevel(%d+)_%d+$")
     if id and (active[id] == "carapace" or active[id] == "rim") then
@@ -173,13 +183,12 @@ end
 
 -- A pure condition on REAL Roblox Parts, also checked in the
 -- important engine milestone. This does not alter collision itself.
-function Kit.authorizesMask(owner, original, platforms)
+local function ownerSafe(owner, platforms)
     if not platforms or not platforms:IsA("Folder")
         or not owner or not owner:IsA("BasePart")
         or owner.Parent ~= platforms
         or not owner.Anchored or not owner.CanCollide
-        or owner.Transparency >= 0.75
-        or typeof(original) ~= "Vector3" then
+        or owner.Transparency >= 0.75 then
         return false
     end
     local phase = owner:GetAttribute("CollapsePhase")
@@ -187,17 +196,23 @@ function Kit.authorizesMask(owner, original, platforms)
         return false
     end
     local shutter = owner:GetAttribute("BridgeShutterPhase")
-    if shutter ~= nil and shutter ~= "Idle" then
-        return false
-    end
-    -- Only mask while the source-authored imported 3D still matches
-    -- the native Part's initial physical footprint.
-    return math.abs(owner.Size.X-original.X) < 0.09
+    return shutter == nil or shutter == "Idle"
+end
+
+function Kit.authorizesMask(owner, original, platforms)
+    -- Most imports require their original footprint. Promenade pylons
+    -- are refitted to the actual resized native part as a separate case.
+    return ownerSafe(owner, platforms) and typeof(original) == "Vector3"
+        and math.abs(owner.Size.X-original.X) < 0.09
         and math.abs(owner.Size.Z-original.Z) < 0.09
 end
 
 local function physicalSafe(native)
     local owner = physicalOwner(native)
+    if PlatformIdentityLodRules.promenadePylonIndex(native) then
+        return ownerSafe(owner, activePlatforms)
+            and PlatformIdentityLodRules.matchesPromenadePylon(native, owner)
+    end
     return Kit.authorizesMask(owner, owner and ownerBaselines[owner],
         activePlatforms)
 end
@@ -211,18 +226,33 @@ local function tryMask(part)
     return true
 end
 
+local function unmask(part)
+    setNativeMask(part, saved, false)
+    refreshPylon(part)
+    if not crownPylons[part] then count -= 1 end
+end
+
+local function reconcilePylon(part)
+    if saved[part] then
+        if not eligible(part) or not physicalSafe(part) then
+            unmask(part)
+            report()
+        end
+    elseif tryMask(part) then
+        report()
+    end
+end
+
 -- The existing scenery pass reports one distance decision per real pylon.
 -- Apply it to the complete bundle and its native fallback together.
 function Kit.setPylonLodVisible(part, visible)
     if (pylonsOutsideLod[part] ~= true) == visible then return end
     pylonsOutsideLod[part] = not visible or nil
     if not visible and saved[part] then
-        setNativeMask(part, saved, false)
-        refreshPylon(part)
-        if not crownPylons[part] then count -= 1 end
+        unmask(part)
         report()
-    elseif visible and tryMask(part) then
-        report()
+    elseif visible then
+        reconcilePylon(part)
     end
 end
 
@@ -234,9 +264,7 @@ local function reconcile()
     for part in pairs(saved) do
         if part.Parent ~= activeDecor or not eligible(part)
             or not physicalSafe(part) then
-            setNativeMask(part, saved, false)
-            refreshPylon(part)
-            if not crownPylons[part] then count -= 1 end
+            unmask(part)
             changed = true
         end
     end
@@ -269,6 +297,19 @@ local function watchOwner(part)
     for _, attribute in ipairs({"CollapsePhase","BridgeShutterPhase"}) do
         watchers[#watchers+1] =
             part:GetAttributeChangedSignal(attribute):Connect(reconcile)
+    end
+    local pylons = promenadePylonsByDeck[id]
+    if pylons then
+        local function refreshPylons()
+            for _, pylon in ipairs(pylons) do reconcilePylon(pylon) end
+        end
+        watchers[#watchers+1] =
+            part:GetPropertyChangedSignal("CFrame"):Connect(refreshPylons)
+        for _, attribute in ipairs({"PromenadeLane","PromenadeStep",
+            "ChaosPermanentRoute","RouteTier"}) do
+            watchers[#watchers+1] =
+                part:GetAttributeChangedSignal(attribute):Connect(refreshPylons)
+        end
     end
 end
 
@@ -320,9 +361,7 @@ local function attachDecor(folder)
     -- immediately; never retain a phantom replacement in diagnostics.
     decorRemovedWatcher = folder.ChildRemoved:Connect(function(part)
         if not saved[part] then return end
-        setNativeMask(part, saved, false)
-        refreshPylon(part)
-        if not crownPylons[part] then count -= 1 end
+        unmask(part)
         report()
     end)
     watchers[#watchers + 1] = decorRemovedWatcher
@@ -342,18 +381,41 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         end
     end
     if type(supports) == "table" then
+        local platforms = arena:FindFirstChild("Platforms")
+        local decor = arena:FindFirstChild("Decor")
         for _, part in ipairs(supports) do
+            local pylonIndex = PlatformIdentityLodRules.promenadePylonIndex(part)
+            local isPromenadePylon = pylonIndex and platforms
+                and PlatformIdentityLodRules.matchesPromenadePylon(part,
+                    platforms:FindFirstChild("Platform"..pylonIndex))
             if part and part:IsA("BasePart")
-                and part.Parent == arena:FindFirstChild("Decor")
+                and part.Parent == decor
                 and part.Anchored and not part.CanCollide
                 and not part.CanTouch and not part.CanQuery
                 and (part.Name:match("^PlatformSupport%d+_%d+$")
-                    or Kit.isSkySpinePylon(part))
+                    or Kit.isSkySpinePylon(part)
+                    or isPromenadePylon)
                 then
                 verifiedSupports[part] = true
                 local id = part.Name:match("^PlatformSupport(%d+)_")
                     or part.Name:match("^SkySpine(%d+)_")
+                    or part.Name:match("^Promenade(%d+)_")
                 if id then verifiedSupportIndices[id] = true end
+                if isPromenadePylon then
+                    local pylons = promenadePylonsByDeck[id] or {}
+                    promenadePylonsByDeck[id] = pylons
+                    pylons[#pylons + 1] = part
+                    local function changed() reconcilePylon(part) end
+                    for _, property in ipairs({"Size","CFrame","Anchored",
+                        "CanCollide","CanTouch","CanQuery","Shape","Name"}) do
+                        watchers[#watchers + 1] =
+                            part:GetPropertyChangedSignal(property):Connect(changed)
+                    end
+                    for _, attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
+                        watchers[#watchers + 1] =
+                            part:GetAttributeChangedSignal(attribute):Connect(changed)
+                    end
+                end
             end
         end
     end
@@ -399,7 +461,9 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
                 or piece:FindFirstChild("OriginalSupportVisualWeld")
             if not joint or (not joint:IsA("Weld")
-                and not joint:IsA("WeldConstraint")) then return nil end
+                and not joint:IsA("WeldConstraint")) or joint.Part0 ~= piece then
+                return nil
+            end
             local owner = joint.Part1
             if not owner or not owner:IsA("BasePart") then return nil end
             if approvedSupports[owner] == true then
@@ -453,9 +517,11 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             local key, owner = sourceOwner(piece)
             if not key then return end
             sourceOwnerByPiece[piece] = key
-            if piece:GetAttribute("OriginalSkySpinePylon3D") == true
-                and approvedSupports[owner] == true
-                and Kit.isSkySpinePylon(owner) then
+            local skyPylon = piece:GetAttribute("OriginalSkySpinePylon3D") == true
+                and Kit.isSkySpinePylon(owner)
+            local promenadePylon = piece:GetAttribute("OriginalPromenadePylon3D") == true
+                and PlatformIdentityLodRules.promenadePylonIndex(owner) ~= nil
+            if approvedSupports[owner] == true and (skyPylon or promenadePylon) then
                 local pieces = pylonPieces[owner] or {}
                 pylonPieces[owner] = pieces
                 pieces[piece] = true
@@ -559,7 +625,7 @@ end
 function Kit.breakdown()
     local result = {
         bevel = 0, underframe = 0, support = 0, pylon = 0,
-        other = 0,
+        promenadePylon = 0, other = 0,
     }
     for part in pairs(saved) do
         if part.Parent == activeDecor then
@@ -572,6 +638,8 @@ function Kit.breakdown()
                 result.support += 1
             elseif name:match("^SkySpine%d+_MonumentalPylon%-?1$") then
                 if not crownPylons[part] then result.pylon += 1 end
+            elseif name:match("^Promenade%d+_LoadPylon%-?1$") then
+                result.promenadePylon += 1
             else
                 result.other += 1
             end
