@@ -100,7 +100,13 @@ end
 local function refreshPylon(part)
     local pieces = pylonPieces[part]
     if not pieces then return end
-    local visible = saved[part] and not crownPylons[part]
+    -- Never leave a welded sculpture visible when its authenticated
+    -- seven-piece source, streamed native owner or active arena is gone.
+    -- The original support is the safe visual fallback in every case.
+    local visible = saved[part] == true
+        and verifiedSupports[part] == true
+        and part.Parent == activeDecor
+        and not crownPylons[part]
     for piece in pairs(pieces) do
         piece.LocalTransparencyModifier = visible and 0 or 1
     end
