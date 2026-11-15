@@ -300,9 +300,8 @@ describe("Original 3D native fallback isolation (engine)", function()
                 owner=part
             end
             expect(count).toBe(2)
-            -- Real native ownership leaves six eligible High PC cradles
-            -- (eight previously reserved, two lacked complete fallback).
-            -- Unused cradle capacity stays with original column modules.
+            -- Plain promenade spans have only an authentic underframe.
+            -- The total desktop structure pool still trades column slots.
             local mobileCradles=PremiumLargeStructureMeshKit
                 .selectNearRouteStructures(ordered,decor,"Crossroads",
                     "High",base,camera,Vector3.new(0,0,1),0,false)
@@ -324,10 +323,10 @@ describe("Original 3D native fallback isolation (engine)", function()
                     decor,part)).toBe(true)
             end
             expect(mobileCount).toBe(4)
-            expect(desktopCount).toBe(6)
+            expect(desktopCount).toBe(8)
             local moved=PremiumLargeStructureMeshKit.desktopCradleTransfer(
                 "High",true,desktopCradles)
-            expect(moved).toBe(2)
+            expect(moved).toBe(4)
             expect(4+moved+16-moved).toBe(20)
             expect(PremiumLargeStructureMeshKit.desktopCradleTransfer(
                 "High",false,desktopCradles)).toBe(0)
@@ -363,8 +362,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(underframe.LocalTransparencyModifier).toBe(0)
             expect(owner.CanCollide).toBe(true)
 
-            -- Mount all six truly authenticated, real server-authored
-            -- underframes; unused original slots fund column coverage.
+            -- Mount the full set of eight eligible High desktop cradles.
             Kit.reset()
             local highParts={}
             local highReplacements={}
@@ -381,8 +379,8 @@ describe("Original 3D native fallback isolation (engine)", function()
                 if firstOwner==nil then firstOwner=deck end
                 expect(deck.CanCollide).toBe(true)
             end
-            expect(installed).toBe(6)
-            expect(#meshes:GetChildren()).toBe(42)
+            expect(installed).toBe(8)
+            expect(#meshes:GetChildren()).toBe(56)
             Kit.bind(arena,highReplacements,nil,nil,meshes)
             local masked=0
             for deck in pairs(desktopCradles) do
@@ -391,7 +389,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                 expect(native.LocalTransparencyModifier).toBe(1)
                 masked+=1
             end
-            expect(masked).toBe(6)
+            expect(masked).toBe(8)
             -- Warning on ONE real deck restores only its own fallback.
             local firstId=tonumber(firstOwner.Name:match("^Platform(%d+)$"))
             local firstFrame=decor:FindFirstChild(

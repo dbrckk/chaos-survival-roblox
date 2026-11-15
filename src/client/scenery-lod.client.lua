@@ -600,10 +600,9 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
             continue
         end
 
-        if native and native:GetAttribute("SkySpineInterchange") == true
-            and descendant:IsA("MeshPart")
+        if native and descendant:IsA("MeshPart")
             and descendant:GetAttribute("OriginalLongCradle3D") == true then
-            PlatformNativeTrimReplacementKit.setSpineCradleLodVisible(native, visible)
+            PlatformNativeTrimReplacementKit.setRouteCradleLodVisible(native, visible)
             continue
         end
 

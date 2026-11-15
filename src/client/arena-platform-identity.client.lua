@@ -105,12 +105,7 @@ local function clear()
     end
     table.clear(originalColumnDisconnects)
     table.clear(mountedSupportNatives)
-    for platform in pairs(mountedLongCradles) do
-        if platform.Parent then
-            platform:SetAttribute("LocalOriginalLongCradleMounted", nil)
-        end
-        mountedLongCradles[platform] = nil
-    end
+    table.clear(mountedLongCradles)
     -- Restore any server-authored visual fallback before destroying our
     -- verified owner-replacement meshes. Colliders are never touched.
     PlatformNativeTrimReplacementKit.reset()
@@ -831,11 +826,6 @@ local function rebuild()
                 if cradle and #cradle == 7 then
                     authenticLongCradle = true
                     replacements[tostring(visualIndex)] = "cradle"
-                    -- Shared cosmetic-only arbitration prevents the old
-                    -- 3K-triangle underdeck chassis from being mounted
-                    -- behind this newer genuine open-frame undercradle.
-                    -- Client-local attribute NEVER grants a gameplay route.
-                    platform:SetAttribute("LocalOriginalLongCradleMounted", true)
                     mountedLongCradles[platform] = true
                     longCradleBudget -= 1
                     mountedRouteCradles += 1
@@ -1025,7 +1015,7 @@ local function rebuild()
                 footprintDisconnects[platform] =
                     PlatformFinishKit.bindRouteFootprint(
                         platform, visualsByPlatform[platform],
-                        PlatformNativeTrimReplacementKit.spineCradleRefitted
+                        PlatformNativeTrimReplacementKit.routeCradleRefitted
                     )
             end
 
@@ -1152,6 +1142,7 @@ local function rebuild()
                 LocalBevelNativePartsReplaced = family.bevel,
                 LocalUnderframeNativePartsReplaced = family.underframe,
                 LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck,
+                LocalPromenadeUnderdeckNativePartsReplaced = family.promenadeUnderdeck,
                 LocalSupportNativePartsReplaced = family.support,
                 LocalSkySpinePylonNativePartsReplaced = family.pylon,
                 LocalOriginalSkySpinePylon3DCount = family.pylon,

@@ -663,3 +663,9 @@ Les deux portiques centraux de chaque arène ont leur propre signature sculptée
 Le lot couvre 22 formes natives sur les dix portiques des cinq cartes. Les six modèles créateur approuvés sont réutilisés dans le dossier déjà compté par le budget adaptatif. Une couronne visible, le vrai tablier, le bon emplacement et les sept MeshParts de chaque source sont requis. Towers monte ses deux modèles ensemble. Low, Medium et le tactile ont au plus un portique équipé par arène active. High PC peut afficher les deux. Dès la première pression graphique, la couronne commune reprend seule le rendu. Si les deux couches d'art disparaissent, le masque partagé restitue l'opacité d'origine. Aucun nouveau collider ni luminaire n'est créé.
 
 Les compteurs `LocalOriginalSkySpineCommandArtCount` et `LocalSkySpineCommandNativePartsReplaced` mesurent les modèles et les pièces masquées de la session.
+
+## Lot P4 — berceaux sculptés sur les travées simples des promenades (15 novembre)
+
+Les trois portiques de chaque promenade possèdent un sous-cadre et un treillis. Les cinq autres travées ont seulement un sous-cadre. Le modèle approuvé LongCradle de sept MeshParts peut maintenant équiper un segment simple lorsque son sous-cadre correspond à la position, aux dimensions et à l'orientation du vrai plateau. Il remplace deux pièces sur les portiques éligibles et une sur une travée simple. Les portiques cargo Harbor conservent leur rendu dédié.
+
+La promenade et la Sky Spine partagent le contrôle du montage, du niveau de détail et du rétrécissement. Les dimensions du modèle sont vérifiées à l'échelle d'origine, puis sa largeur et sa longueur suivent le sol jusqu'à 45 % de sa taille initiale. Les formes natives reviennent lorsque le modèle quitte la zone ou perd une pièce, et lorsque la plateforme passe en avertissement. Les budgets restent à un, deux ou quatre berceaux selon le profil, avec jusqu'à huit en High PC par transfert de modules depuis les colonnes.

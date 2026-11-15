@@ -1897,10 +1897,10 @@ print("PASS genuine Sky Spine monumental pylons sculpted in existing"
 # seven-MeshPart fallback covers only those declared source families.
 for fragment in (
     'function Kit.hasNativeCradleFallback(decor,platform)',
-    'decor:FindFirstChild("PlatformUnderFrame"..id)',
-    'frame:GetAttribute("PremiumArchitecturalSurface")~=true',
+    'matchingCradleNative(decor,deck,"PlatformUnderFrame"..id',
+    'CFrame.new(0,-size.Y*.5-.18,0),"PremiumArchitecturalSurface")',
     '"Promenade"..id.."_UnderdeckTruss"',
-    'native:GetAttribute("PerimeterPlatformIndex")~=id',
+    'part:GetAttribute("PerimeterPlatformIndex") ~= index',
     'and Kit.hasNativeCradleFallback(decor,platform)',
     'if #parts ~= 7 then',
     'function Kit.longCradle(parent,platform,tier,index,selected,decor)',
@@ -2325,7 +2325,7 @@ for clause in (
     'return tier=="High" and touch~=true and 2 or 1',
 ):
     assert clause in P4_CLIENT, clause
-assert "or crownTrim[part] or commandTrim[part] or spineClaims[part]" in mask
+assert "or crownTrim[part] or commandTrim[part] or cradleClaims[part]" in mask
 assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
 print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
 
@@ -2367,11 +2367,16 @@ print("PASS north signature refinements use six approved sources and reversible 
 assert 'function Kit.spineNativeParts(decor,deck)' in LARGE
 assert 'local fitSize,floorScale = cradleDeckSize(platform)' in LARGE
 assert 'part.Size.X*floorScale,part.Size.Y,part.Size.Z*floorScale' in LARGE
-assert 'LargeStructure.spineNativeParts(entry.decor,deck)' in TRIM
-assert 'setNativeMask(native,spineClaims,showing)' in TRIM
-assert 'PlatformNativeTrimReplacementKit.spineCradleRefitted' in OWNER
-assert 'PlatformNativeTrimReplacementKit.setSpineCradleLodVisible(native, visible)' in SIDE_LOD
+assert 'LargeStructure.cradleNativeParts(entry.decor,deck)' in TRIM
+assert 'setNativeMask(native,cradleClaims,showing)' in TRIM
+assert 'PlatformNativeTrimReplacementKit.routeCradleRefitted' in OWNER
+assert 'PlatformNativeTrimReplacementKit.setRouteCradleLodVisible(native, visible)' in SIDE_LOD
 assert 'LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck' in OWNER
+assert 'LocalPromenadeUnderdeckNativePartsReplaced = family.promenadeUnderdeck' in OWNER
+assert 'if not span then return {frame} end' in LARGE
+assert 'local scale = promenadeFootprint(deck)' in LARGE
+assert 'deck:SetAttribute("LocalOriginalLongCradleMounted", showing or nil)' in TRIM
+assert 'or cradleClaims[part] == true' in TRIM
 print("PASS genuine Sky Spine underframes retain one complete shrink-safe LOD owner")
 
 

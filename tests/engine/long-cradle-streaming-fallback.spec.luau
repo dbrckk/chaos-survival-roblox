@@ -343,7 +343,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     and Kit.hasNativeCradleFallback(decor,deck) then
                     if deck:GetAttribute("SkySpineStep")~=nil then
                         owners.SkySpine=deck
-                    elseif deck:GetAttribute("PromenadeStep")~=nil
+                    elseif deck:GetAttribute("PromenadeStep")==4
                         and Kit.cradleFit(deck.Size,bounds) then
                         owners.Promenade=deck
                     end
@@ -351,6 +351,63 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             end
             expect(owners.SkySpine~=nil).toBe(true)
             expect(owners.Promenade~=nil).toBe(true)
+            local plain
+            for _,deck in ipairs(platforms:GetChildren()) do
+                if deck:GetAttribute("PromenadeStep") == 3
+                    and deck:GetAttribute("PromenadeLane") == 1 then
+                    plain = deck
+                    break
+                end
+            end
+            assert(plain, "Missing plain promenade span")
+            local plainIndex = assert(tonumber(plain.Name:match("^Platform(%d+)$")))
+            local plainFrame = assert(decor:FindFirstChild("PlatformUnderFrame"..plainIndex))
+            assert(not decor:FindFirstChild("Promenade"..plainIndex.."_UnderdeckTruss"))
+            local originalFrame = plainFrame.CFrame
+            plainFrame.CFrame = originalFrame * CFrame.new(0,0,1)
+            assert(not Kit.hasNativeCradleFallback(decor,plain))
+            plainFrame.CFrame = originalFrame
+            local selectedPlain = Kit.selectNearRouteStructures(
+                {plain},decor,"Crossroads","Low",base,plain.Position,Vector3.xAxis,0)
+            assert(selectedPlain[plain] == true and #Kit.cradleNativeParts(decor,plain) == 1)
+            local plainMeshes = assert(Kit.longCradle(models,plain,"Low",plainIndex,true,decor))
+            local unsub = Finish.bindRouteFootprint(plain,plainMeshes,Trim.routeCradleRefitted)
+            local built = plainMeshes[1].Size
+            Trim.bind(arena,{[tostring(plainIndex)]="cradle"},nil,nil,models)
+            assert(Trim.breakdown().promenadeUnderdeck == 1
+                and plainFrame.LocalTransparencyModifier == 1
+                and plain:GetAttribute("LocalOriginalLongCradleMounted") == true)
+            local active, cleanup = true, {}
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return active end,OnCleanup=cleanup})
+            local cutoff = os.clock()+1.5
+            repeat task.wait() until base.Size.X<=144.05 or os.clock()>cutoff
+            active=false
+            task.wait()
+            assert(base.Size.X<=144.05 and Trim.breakdown().promenadeUnderdeck == 1)
+            assert(math.abs(plainMeshes[1].Size.X-built.X*.45)<.02
+                and math.abs(plainMeshes[1].Size.Y-built.Y)<.01)
+            Trim.setRouteCradleLodVisible(plain,false)
+            assert(plainFrame.LocalTransparencyModifier==0 and plainMeshes[1].LocalTransparencyModifier==1
+                and plain:GetAttribute("LocalOriginalLongCradleMounted")==nil)
+            Trim.setRouteCradleLodVisible(plain,true)
+            assert(plainFrame.LocalTransparencyModifier==1 and plainMeshes[1].LocalTransparencyModifier==0)
+            plain:SetAttribute("CollapsePhase","Warning")
+            task.wait()
+            assert(plainFrame.LocalTransparencyModifier==0 and plainMeshes[1].LocalTransparencyModifier==1)
+            plain:SetAttribute("CollapsePhase","Normal")
+            task.wait()
+            assert(plainFrame.LocalTransparencyModifier==1 and plainMeshes[1].LocalTransparencyModifier==0)
+            plainFrame.Parent=nil
+            task.wait()
+            assert(Trim.breakdown().promenadeUnderdeck==0 and plainMeshes[1].LocalTransparencyModifier==1)
+            plainFrame.Parent=decor
+            Trim.reset()
+            unsub()
+            for _,piece in ipairs(plainMeshes) do piece:Destroy() end
+            for _,finish in ipairs(cleanup) do finish() end
+            assert(plain.CanCollide)
+
             expect(Kit.shortCradleFit(
                 owners.SkySpine.Size,shortBounds)~=nil).toBe(true)
             expect(Kit.shortCradleFit(
@@ -483,6 +540,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(deck.CanCollide).toBe(true)
             end
         end)
+        Trim.reset()
         if models then models:Destroy() end
         if templates then templates:Destroy() end
         if generated then generated:Destroy() end
@@ -551,7 +609,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     local pieces = assert(Kit.longCradle(models,deck,"High",id,true,decor),
                         variant.." cannot fit "..deck.Name)
                     assert(#pieces==7 and deck.CanCollide)
-                    table.insert(disconnectFootprints,Finish.bindRouteFootprint(deck,pieces,Trim.spineCradleRefitted))
+                    table.insert(disconnectFootprints,Finish.bindRouteFootprint(deck,pieces,Trim.routeCradleRefitted))
                     replacements[tostring(id)]="cradle"
                     return pieces
                 end
@@ -562,10 +620,10 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 assert(Trim.breakdown().spineUnderdeck == 4,variant.." missing initial Sky Spine mask")
                 assert(firstNatives[1].LocalTransparencyModifier == 1 and firstMesh.LocalTransparencyModifier == 0)
                 assert(rail.LocalTransparencyModifier == warningAlpha)
-                Trim.setSpineCradleLodVisible(first,false)
+                Trim.setRouteCradleLodVisible(first,false)
                 assert(math.abs(firstNatives[1].LocalTransparencyModifier-.18)<.001
                     and firstMesh.LocalTransparencyModifier == 1 and Trim.breakdown().spineUnderdeck == 0)
-                Trim.setSpineCradleLodVisible(first,true)
+                Trim.setRouteCradleLodVisible(first,true)
                 local brace = firstNatives[4]
                 local braceFrame = brace.CFrame
                 brace.CFrame = braceFrame * CFrame.new(0,0,.8)

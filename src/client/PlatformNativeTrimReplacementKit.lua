@@ -18,8 +18,8 @@ local LargeStructure = if script and script.Parent
 local Kit = {}
 
 local saved = {}
-local spineCradles = {}
-local spineClaims = {}
+local routeCradles = {}
+local cradleClaims = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local routeUnderdecks = {}
@@ -49,7 +49,8 @@ local verifiedSupportIndices = {}
 local promenadePylonsByDeck = {}
 
 function Kit.hasPrimaryJunctionTruss(part)
-    return saved[part] == true or routeUnderdecks[part] == true or harborTrusses[part] == true
+    return saved[part] == true or routeUnderdecks[part] == true
+        or harborTrusses[part] == true or cradleClaims[part] == true
 end
 
 function Kit.observePrimaryJunctionTruss(part,callback)
@@ -65,7 +66,7 @@ local function setNativeMask(part, claims, masked)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
     if saved[part] or crownPylons[part] or routeUnderdecks[part]
-        or crownTrim[part] or commandTrim[part] or spineClaims[part]
+        or crownTrim[part] or commandTrim[part] or cradleClaims[part]
         or harborTrusses[part] or junctionTrusses[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
@@ -139,17 +140,18 @@ local function restore()
     report()
 end
 
-local function refreshSpine(entry)
-    if spineCradles[entry.deck] ~= entry then return end
+local function refreshCradle(entry)
+    if routeCradles[entry.deck] ~= entry then return end
     local deck,arena = entry.deck,entry.arena
     local natives = entry.visible and entry.sourceReady and not entry.evicted
         and arena:FindFirstChild("Decor") == entry.decor
-        and #entry.pieces == 7 and LargeStructure.spineNativeParts(entry.decor,deck)
+        and #entry.pieces == 7 and LargeStructure.cradleNativeParts(entry.decor,deck)
     if natives and (deck.Size-entry.fittedSize).Magnitude > .006 then
         -- Roblox can replicate the collider and its native trim in
         -- separate batches. Resume only after the 3D footprint is fitted.
         natives = nil
     end
+    if natives and #natives ~= #entry.natives then natives = nil end
     if natives then
         for i,native in ipairs(natives) do
             if native ~= entry.natives[i] then natives = nil; break end
@@ -158,7 +160,7 @@ local function refreshSpine(entry)
     if natives then
         for _,piece in ipairs(entry.pieces) do
             local joint = entry.joints[piece]
-            if piece.Parent ~= entry.folder or joint.Parent ~= piece
+            if piece.Parent ~= entry.folder or not joint or joint.Parent ~= piece
                 or joint.Part0 ~= piece or joint.Part1 ~= deck or piece.Transparency >= 1
                 or piece.Anchored or piece.CanCollide or piece.CanTouch or piece.CanQuery then
                 natives = nil
@@ -170,9 +172,12 @@ local function refreshSpine(entry)
     local changed = entry.showing ~= showing
     entry.showing = showing
     if not changed then return end
+    -- Claim the exact native pieces before the older route chassis
+    -- yields, preserving the promenade junction's takeover state.
     for _,native in ipairs(entry.natives) do
-        setNativeMask(native,spineClaims,showing)
+        setNativeMask(native,cradleClaims,showing)
     end
+    deck:SetAttribute("LocalOriginalLongCradleMounted", showing or nil)
     for _,piece in ipairs(entry.pieces) do
         piece.LocalTransparencyModifier = showing and 0 or 1
     end
@@ -180,29 +185,29 @@ local function refreshSpine(entry)
     report()
 end
 
-function Kit.setSpineCradleLodVisible(deck,visible)
-    local entry = spineCradles[deck]
+function Kit.setRouteCradleLodVisible(deck,visible)
+    local entry = routeCradles[deck]
     if not entry or entry.visible == visible then return end
     entry.visible = visible
-    refreshSpine(entry)
+    refreshCradle(entry)
 end
 
-function Kit.spineCradleRefitted(deck)
-    local entry = spineCradles[deck]
+function Kit.routeCradleRefitted(deck)
+    local entry = routeCradles[deck]
     if not entry then return end
     entry.fittedSize = deck.Size
-    refreshSpine(entry)
+    refreshCradle(entry)
 end
 
-local function bindSpine(arena,deck,folder,pieces)
+local function bindCradle(arena,deck,folder,pieces)
     local decor = arena:FindFirstChild("Decor")
-    local natives = LargeStructure.spineNativeParts(decor,deck)
-    local source = LargeStructure.spineCradleSource(pieces[1])
+    local natives = LargeStructure.cradleNativeParts(decor,deck)
+    local source = LargeStructure.cradleSource(pieces[1])
     local entry = {arena=arena,deck=deck,folder=folder,decor=decor,pieces=pieces,
         natives=natives or {},joints={},connections={},visible=true,showing=false,
         fittedSize=deck.Size,sourceReady=source ~= nil,evicted=not natives}
-    spineCradles[deck] = entry
-    local function refresh() refreshSpine(entry) end
+    routeCradles[deck] = entry
+    local function refresh() refreshCradle(entry) end
     local function evict()
         entry.evicted = true
         refresh()
@@ -232,14 +237,20 @@ local function bindSpine(arena,deck,folder,pieces)
     end
     watch(deck.AncestryChanged,evict)
     properties(deck,{"Size","CFrame","Name","CanCollide","Transparency","Anchored"})
-    attributes(deck,{"SkySpineStep","SkySpineInterchange","ChaosPermanentRoute","RouteTier",
-        "CollapsePhase","BridgeShutterPhase"})
+    attributes(deck,{"SkySpineStep","SkySpineInterchange","PromenadeStep","PromenadeLane",
+        "ChaosPermanentRoute","RouteTier","CollapsePhase","BridgeShutterPhase"})
+    local base = arena:FindFirstChild("Base")
+    if base and base:IsA("BasePart") then
+        watch(base.AncestryChanged,evict)
+        properties(base,{"Size","Anchored","CanCollide"})
+        attributes(base,{"OriginalSizeX","OriginalSizeZ"})
+    end
     if decor then watch(decor.AncestryChanged,evict) end
     for _,native in ipairs(natives or {}) do
         watch(native.AncestryChanged,evict)
         properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery",
             "Shape","Name","Transparency"})
-        attributes(native,{"SkySpineDecor","PerimeterPlatformIndex","PremiumArchitecturalSurface"})
+        attributes(native,{"SkySpineDecor","PromenadeVisualOnly","PerimeterPlatformIndex","PremiumArchitecturalSurface"})
     end
     if source then
         watch(source.AncestryChanged,evict)
@@ -262,11 +273,11 @@ local function bindSpine(arena,deck,folder,pieces)
 end
 
 function Kit.reset()
-    for deck,entry in pairs(spineCradles) do
+    for deck,entry in pairs(routeCradles) do
         for _,connection in ipairs(entry.connections) do connection:Disconnect() end
         entry.visible = false
-        refreshSpine(entry)
-        spineCradles[deck] = nil
+        refreshCradle(entry)
+        routeCradles[deck] = nil
     end
     for _, connection in ipairs(watchers) do
         connection:Disconnect()
@@ -637,7 +648,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     -- Caller-supplied source-less engine fixtures retain their old API.
     local approvedKinds = nil
     local approvedSupports = nil
-    local spinePieces = {}
+    local cradlePieces = {}
     if meshFolder and meshFolder:IsA("Folder") then
         approvedKinds = table.clone(active)
         approvedSupports = table.clone(verifiedSupports)
@@ -652,19 +663,15 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
                     local deck = joint and joint:IsA("Weld") and joint.Part0 == piece and joint.Part1
                     local id = deck and deck.Name:match("^Platform(%d+)$")
-                    if id and approvedKinds[id] == "cradle" and deck.Parent == platforms
-                        and deck:GetAttribute("SkySpineInterchange") == true then
-                        local group = spinePieces[deck] or {}
+                    if id and approvedKinds[id] == "cradle" and deck.Parent == platforms then
+                        local group = cradlePieces[deck] or {}
                         table.insert(group,piece)
-                        spinePieces[deck] = group
+                        cradlePieces[deck] = group
                     end
                 end
             end
             for id,kind in pairs(approvedKinds) do
-                local deck = kind == "cradle" and platforms:FindFirstChild("Platform"..id)
-                if deck and deck:GetAttribute("SkySpineInterchange") == true then
-                    approvedKinds[id] = nil
-                end
+                if kind == "cradle" then approvedKinds[id] = nil end
             end
         end
     end
@@ -672,8 +679,8 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     -- their native cosmetic underframes. Streaming in late also reconciles.
     attachPlatforms(arena:FindFirstChild("Platforms"))
     attachDecor(arena:FindFirstChild("Decor"))
-    for deck,pieces in pairs(spinePieces) do
-        bindSpine(arena,deck,meshFolder,pieces)
+    for deck,pieces in pairs(cradlePieces) do
+        bindCradle(arena,deck,meshFolder,pieces)
     end
     -- A previous all-or-nothing guard restored EVERY native platform when
     -- ONE original MeshPart vanished. This emptied the premium silhouettes
@@ -865,10 +872,13 @@ end
 function Kit.breakdown()
     local result = {
         bevel = 0, underframe = 0, support = 0, pylon = 0,
-        promenadePylon = 0, other = 0, spineUnderdeck = 0,
+        promenadePylon = 0, other = 0, spineUnderdeck = 0, promenadeUnderdeck = 0,
     }
-    for part in pairs(spineClaims) do
-        result.spineUnderdeck += 1
+    for part in pairs(cradleClaims) do
+        local deck = physicalOwner(part)
+        local family = deck and deck:GetAttribute("SkySpineInterchange") == true
+            and "spineUnderdeck" or "promenadeUnderdeck"
+        result[family] += 1
         if part.Name:match("^PlatformUnderFrame%d+$") then
             result.underframe += 1
         else
