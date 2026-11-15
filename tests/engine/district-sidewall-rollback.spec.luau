@@ -7,6 +7,8 @@ local ApprovedDistrictSidewallMeshKit = require(
     "../../src/client/ApprovedDistrictSidewallMeshKit")
 local PremiumDistrictFacadeMeshKit = require(
     "../../src/client/PremiumDistrictFacadeMeshKit")
+local ApprovedDistrictFoundationMeshKit = require(
+    "../../src/client/ApprovedDistrictFoundationMeshKit")
 local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local VisualTheme = require("../../src/shared/VisualTheme")
@@ -476,14 +478,16 @@ describe("Authenticated district sidewall restoration (engine)", function()
         local oldFacade=RS:FindFirstChild("ApprovedDistrictFacadeTemplates")
         local oldSidewall=RS:FindFirstChild(
             "ApprovedDistrictSidewallShellTemplates")
+        local oldCaisson=RS:FindFirstChild("ApprovedHarborDockCaissonTemplates")
         if oldMap then oldMap.Parent=nil end
         if oldFacade then oldFacade.Parent=nil end
         if oldSidewall then oldSidewall.Parent=nil end
+        if oldCaisson then oldCaisson.Parent=nil end
         PremiumDistrictFacadeMeshKit.sync(
             nil,Vector3.zero,"Low",false)
         ApprovedDistrictSidewallMeshKit.sync(
             nil,Vector3.zero,"Low",false,false,0)
-        local generated,facades,shells
+        local generated,facades,shells,caissons
         local ok,why=pcall(function()
             local arena=MapBuilder.buildArena(Config,"Classic",
                 ArenaVariants,VisualTheme)
@@ -534,6 +538,28 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 piece.Parent=shell
             end
             shell.Parent=shells
+            caissons=Instance.new("Folder")
+            caissons.Name="ApprovedHarborDockCaissonTemplates"
+            caissons:SetAttribute("OwnerVerified",true)
+            caissons.Parent=RS
+            local caisson=Instance.new("Model")
+            caisson.Name="DockCaisson"
+            caisson:SetAttribute("OwnerVerified",true)
+            caisson:SetAttribute("CosmeticOnly",true)
+            caisson:SetAttribute("OriginalHarborDockCaisson3D",true)
+            caisson:SetAttribute("Original3DAssetId",101457508594609)
+            for i=1,7 do
+                local piece=Instance.new("MeshPart")
+                piece.Size=if i==1 then Vector3.new(14.07,3.30755,14.07)
+                    else Vector3.new(.4,.4,.4)
+                piece.Anchored=true
+                piece.Massless=true
+                piece.CanCollide=false
+                piece.CanQuery=false
+                piece.CanTouch=false
+                piece.Parent=caisson
+            end
+            caisson.Parent=caissons
             local base=arena:FindFirstChild("Base")
             local district=arena:FindFirstChild("Decor")
                 :FindFirstChild("ArenaDistrictArchitecture3D")
@@ -558,6 +584,8 @@ describe("Authenticated district sidewall restoration (engine)", function()
                         then ApprovedDistrictSidewallMeshKit.lowPairingCheck() else nil)
                 ApprovedDistrictSidewallMeshKit.sync(
                     arena, pairCamera, "Low", true, true, pressure, pairLook)
+                ApprovedDistrictFoundationMeshKit.sync(
+                    arena, pairCamera, "Low", true, true, pressure, pairLook)
             end
             syncLow(0)
             expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
@@ -566,6 +594,40 @@ describe("Authenticated district sidewall restoration (engine)", function()
             expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
             expect(ApprovedDistrictSidewallMeshKit.replacedNativeCount()).toBe(5)
             expect(completeCore.Transparency).toBe(1)
+            expect(ApprovedDistrictFoundationMeshKit.replacedNativeCount()).toBe(2)
+            local foot, rim = complete.BasaltFoundation, complete.FoundationRim
+            expect(foot.Transparency).toBe(1)
+            expect(rim.Transparency).toBe(1)
+            expect(near.BasaltFoundation.Transparency).toBe(0)
+            expect(completeDoor.Transparency).toBe(0)
+            local bases = workspace:FindFirstChild("ApprovedDistrictFoundationsLocal")
+            local forged = bases:FindFirstChild("ApprovedOriginalDistrictFoundation3D")
+            local frame, bounds = forged:GetBoundingBox()
+            local floorY = base.Position.Y + base.Size.Y * .5
+            expect(#forged:GetChildren()).toBe(7)
+            assert(math.abs(frame.Position.Y - bounds.Y*.5 - floorY) < .03)
+            assert(math.abs(frame.Position.Y + bounds.Y*.5 - floorY - .88) < .03)
+            assert(math.max(bounds.X, bounds.Z) <= 15.5)
+            for _, mesh in ipairs(forged:GetChildren()) do
+                assert(mesh:IsA("MeshPart") and not mesh.CanCollide
+                    and not mesh.CanTouch and not mesh.CanQuery)
+            end
+            forged:FindFirstChildWhichIsA("MeshPart"):Destroy()
+            task.wait()
+            expect(ApprovedDistrictFoundationMeshKit.replacedNativeCount()).toBe(0)
+            expect(foot.Transparency).toBe(0)
+            syncLow(0)
+            caissons:SetAttribute("OwnerVerified", false)
+            task.wait()
+            expect(rim.Transparency).toBe(0)
+            expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
+            caissons:SetAttribute("OwnerVerified", true)
+            syncLow(0)
+            base.Size = Vector3.new(base.Size.X*.7,base.Size.Y,base.Size.Z*.7)
+            syncLow(0)
+            expect(ApprovedDistrictFoundationMeshKit.replacedNativeCount()).toBe(2)
+            base.Size = Vector3.new(base:GetAttribute("OriginalSizeX"),base.Size.Y,
+                base:GetAttribute("OriginalSizeZ"))
 
             -- A revoked shell source leaves the nearest facade eligible.
             shells:SetAttribute("OwnerVerified", false)
@@ -574,6 +636,8 @@ describe("Authenticated district sidewall restoration (engine)", function()
             expect(near:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(true)
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
             expect(completeCore.Transparency).toBe(originalAlpha)
+            expect(ApprovedDistrictFoundationMeshKit.replacedNativeCount()).toBe(0)
+            expect(rim.Transparency).toBe(0)
             shells:SetAttribute("OwnerVerified", true)
             syncLow(0)
             expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(1)
@@ -746,14 +810,17 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 arena,camera,"Medium",true,false,0,look)
             expect(ApprovedDistrictSidewallMeshKit.completeCount()).toBe(8)
         end)
+        ApprovedDistrictFoundationMeshKit.sync(nil,Vector3.zero,"Low",false,true,0)
         ApprovedDistrictSidewallMeshKit.sync(
             nil,Vector3.zero,"Low",false,false,0)
         PremiumDistrictFacadeMeshKit.sync(
             nil,Vector3.zero,"Low",false)
         if shells then shells:Destroy() end
+        if caissons then caissons:Destroy() end
         if facades then facades:Destroy() end
         if generated then generated:Destroy() end
         if oldSidewall then oldSidewall.Parent=RS end
+        if oldCaisson then oldCaisson.Parent=RS end
         if oldFacade then oldFacade.Parent=RS end
         if oldMap then oldMap.Parent=workspace end
         if not ok then error(why) end

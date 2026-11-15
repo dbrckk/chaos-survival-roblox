@@ -32,6 +32,8 @@ EXPECTED={
         "ApprovedCrossroadsEntrancePortalsLocal",
     "ApprovedCrossroadsOpenGantryMeshKit.lua":
         "ApprovedCrossroadsOpenGantryLocal",
+    "ApprovedDistrictFoundationMeshKit.lua":
+        "ApprovedDistrictFoundationsLocal",
     "ApprovedOrbitalReactorLandmarkMeshKit.lua":
         "ApprovedOrbitalReactorLandmarksLocal",
     "ApprovedPrimarySkylineMeshKit.lua":

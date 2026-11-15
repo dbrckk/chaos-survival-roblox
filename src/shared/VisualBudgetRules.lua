@@ -75,6 +75,7 @@ VisualBudgetRules.LocalFolders = {
     -- Existing Android 440/680/900 Parts ledger, Low 0, Medium touch 3,
     -- High touch 8; no independent GPU quota or hidden untracked models.
     "ApprovedDistrictSidewallsLocal",
+    "ApprovedDistrictFoundationsLocal",
     -- Five genuine creator-approved hero skyline MeshParts replace native
     -- silhouettes and must count in the existing Android Parts budget.
     "ApprovedOriginalHeroStructuresLocal",
