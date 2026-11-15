@@ -2209,4 +2209,7 @@ for clause in (
 assert 'local FITTING_BUDGET={Low=1,Medium=2,High=6}' in P4_CLIENT
 assert 'fittingSourcesReady=src[first]~=nil and src[second]~=nil' in P4_CLIENT
 assert 'LocalOriginalPromenadeRoofFittings3DCount' in SIDE_LOD
+fitting_integration = (ROOT/"tests/engine/long-cradle-streaming-fallback.spec.luau").read_text(
+    encoding="utf8")
+assert 'variant.." first fitting is missing at its native center"' in fitting_integration
 print("PASS Towers and Orbital portico fittings use complete approved pairs within the mobile budget")

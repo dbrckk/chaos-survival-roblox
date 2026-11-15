@@ -404,15 +404,25 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     expect(Remaining.count("fitting")).toBe(2)
                     checkPair(1)
                     local folder=workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
-                    local fitting=folder:FindFirstChild("ApprovedP4_"..fittingPair[1][7])
-                    local lattice=fitting:FindFirstChild("BraceMesh1")
-                    expect(fitting:GetAttribute("Original3DAssetId")).toBe(fittingPair[1][4])
-                    expect((lattice.Position-a.Position).Magnitude<.04).toBe(true)
+                    local lattice=nil
+                    for _,model in ipairs(folder:GetChildren()) do
+                        if model.Name=="ApprovedP4_"..fittingPair[1][7]
+                            and model:GetAttribute("OriginalP4OwnerPlatform")==deck.Name then
+                            local candidate=model:FindFirstChild("BraceMesh1")
+                            if (candidate.Position-a.Position).Magnitude<.04 then
+                                expect(model:GetAttribute("Original3DAssetId")).toBe(fittingPair[1][4])
+                                lattice=candidate
+                                break
+                            end
+                        end
+                    end
+                    assert(lattice,variant.." first fitting is missing at its native center")
                     local frame=a.CFrame:ToObjectSpace(lattice.CFrame)
                     local verticalExtent=math.abs(frame.RightVector.Y)*lattice.Size.X
                         +math.abs(frame.UpVector.Y)*lattice.Size.Y
                         +math.abs(frame.LookVector.Y)*lattice.Size.Z
-                    expect(math.abs(verticalExtent-fittingPair[1][8])<.12).toBe(true)
+                    assert(math.abs(verticalExtent-fittingPair[1][8])<.12,
+                        variant.." fitting vertical extent was "..verticalExtent)
                     expect(lattice.CanCollide or lattice.CanTouch or lattice.CanQuery).toBe(false)
                     deck:SetAttribute("CollapsePhase","Warning")
                     checkPair(0)
