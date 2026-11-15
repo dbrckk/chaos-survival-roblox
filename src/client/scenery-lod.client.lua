@@ -590,10 +590,9 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
         end
 
         if descendant:IsA("MeshPart")
-            and (descendant:GetAttribute("OriginalSkySpinePylon3D") == true
-                or descendant:GetAttribute("OriginalPromenadePylon3D") == true) then
-            -- The trim kit reconciles the whole pylon's native fallback,
-            -- crown priority and LOD together from the same decision.
+            and descendant:GetAttribute("OriginalSupportColumn3D") == true then
+            -- The whole welded column and its fallback share one LOD.
+            -- The crown can still take precedence on a Sky Spine pylon.
             if native then
                 PlatformNativeTrimReplacementKit.setPylonLodVisible(native, visible)
             end

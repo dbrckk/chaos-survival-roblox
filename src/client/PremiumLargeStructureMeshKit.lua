@@ -396,6 +396,47 @@ local function cradleDeckSize(deck)
     return Vector3.new(deck.Size.X/scale,deck.Size.Y,deck.Size.Z/scale),scale
 end
 
+-- Under the elevated routes MapBuilder places four square posts, with
+-- authored offsets from the deck. Normalize their footprint for the fit
+-- test so a client joining mid-round uses the same model at the same cost.
+function Kit.routeSupportScale(part, deck)
+    local id, corner = part.Name:match("^PlatformSupport(%d+)_([1-4])$")
+    if not id or not deck or deck.Name ~= "Platform"..id
+        or not validNativeSupport(part,tonumber(id)) then return nil end
+    local scale
+    if deck:GetAttribute("SkySpineInterchange") == true then
+        scale = Kit.spineFootprint(deck)
+    elseif deck:GetAttribute("PromenadeStep") ~= nil then
+        scale = promenadeFootprint(deck)
+    end
+    if not scale or part.Parent ~= deck.Parent.Parent:FindFirstChild("Decor") then return nil end
+    local sx,sz = deck.Size.X,deck.Size.Z
+    local insetX = math.max(0,sx*.5-2*scale)
+    local insetZ = math.max(0,sz*.5-2*scale)
+    local width = math.clamp(math.min(sx,sz)/scale*.10,.72,1.35)*scale
+    local height = deck.Position.Y-deck.Size.Y*.5-1.15
+    local x = (corner == "1" or corner == "3") and -insetX or insetX
+    local z = (corner == "1" or corner == "4") and -insetZ or insetZ
+    local expected = deck.CFrame*CFrame.new(x,-(deck.Size.Y+height)*.5,z)
+    if part.Transparency >= .95 or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+        or (part.Size-Vector3.new(width,height,width)).Magnitude > .10
+        or (part.Position-expected.Position).Magnitude > .15
+        or part.CFrame.UpVector:Dot(expected.UpVector) < .999
+        or part.CFrame.LookVector:Dot(expected.LookVector) < .999 then return nil end
+    return scale
+end
+
+local function supportFitSize(part, deck)
+    if part.Name:match("^PlatformSupport%d+_%d+$") and deck
+        and (deck:GetAttribute("PromenadeStep") ~= nil
+            or deck:GetAttribute("SkySpineInterchange") == true) then
+        local scale = Kit.routeSupportScale(part,deck)
+        if not scale then return nil end
+        return Vector3.new(part.Size.X/scale,part.Size.Y,part.Size.Z/scale)
+    end
+    return part.Size
+end
+
 -- Selection and mounting use the same complete authored fallback group.
 function Kit.hasNativeCradleFallback(decor,platform)
     return Kit.cradleNativeParts(decor,platform) ~= nil
@@ -489,7 +530,9 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local id=tonumber(suffix)
             local segments
             if id and validNativeSupport(part,id) then
-                segments=Kit.supportFit(part.Size,supportBounds)
+                local owner = platformFolder and platformFolder:FindFirstChild("Platform"..id)
+                local fitSize = supportFitSize(part,owner)
+                if fitSize then segments=Kit.supportFit(fitSize,supportBounds) end
             elseif variant~="Harbor" and platformFolder then
                 id=PlatformIdentityLodRules.promenadePylonIndex(part)
                 local owner=id and platformFolder:FindFirstChild("Platform"..id)
@@ -749,7 +792,9 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
         if #output.covered >= maxSupports or output.modules >= available then break end
         local isPromenadePylon = promenadePylons[support] == true
         local fit = isPromenadePylon and promenadePylonFit or Kit.supportFit
-        local segments, scale = fit(support.Size, box)
+        local fitSize = supportFitSize(support,platform)
+        local segments, scale
+        if fitSize then segments, scale = fit(fitSize, box) end
         if segments and segments <= available - output.modules then
             local height = support.Size.Y / segments
             local stages = {}
@@ -786,9 +831,8 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
                         output.parts[#output.parts+1]=part
                     end
                 end
-                local base=support.Size
-                local sourceWidth = isPromenadePylon and box.X*scale/.98 or base.X
-                local sourceDepth = isPromenadePylon and box.Z*scale/.98 or base.Z
+                local sourceWidth = isPromenadePylon and box.X*scale/.98 or fitSize.X
+                local sourceDepth = isPromenadePylon and box.Z*scale/.98 or fitSize.Z
                 local function followSupportSize()
                     if not support.Parent then return end
                     local rx=math.clamp(support.Size.X/sourceWidth,.05,2)

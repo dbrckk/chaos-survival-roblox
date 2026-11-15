@@ -404,6 +404,12 @@ local function physicalSafe(native)
         return ownerSafe(owner, activePlatforms)
             and PlatformIdentityLodRules.matchesPromenadePylon(native, owner)
     end
+    if owner and native.Name:match("^PlatformSupport%d+_%d+$")
+        and (owner:GetAttribute("PromenadeStep") ~= nil
+            or owner:GetAttribute("SkySpineInterchange") == true) then
+        return ownerSafe(owner, activePlatforms)
+            and LargeStructure.routeSupportScale(native,owner) ~= nil
+    end
     return Kit.authorizesMask(owner, owner and ownerBaselines[owner],
         activePlatforms)
 end
@@ -526,7 +532,7 @@ local function watchOwner(part)
         watchers[#watchers+1] =
             part:GetPropertyChangedSignal("CFrame"):Connect(refreshPylons)
         for _, attribute in ipairs({"PromenadeLane","PromenadeStep",
-            "ChaosPermanentRoute","RouteTier"}) do
+            "SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier"}) do
             watchers[#watchers+1] =
                 part:GetAttributeChangedSignal(attribute):Connect(refreshPylons)
         end
@@ -624,13 +630,17 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     or part.Name:match("^SkySpine(%d+)_")
                     or part.Name:match("^Promenade(%d+)_")
                 if id then verifiedSupportIndices[id] = true end
-                if isPromenadePylon then
+                local deck = id and platforms and platforms:FindFirstChild("Platform"..id)
+                local routeSupport = deck and part.Name:match("^PlatformSupport%d+_%d+$")
+                    and (deck:GetAttribute("PromenadeStep") ~= nil
+                        or deck:GetAttribute("SkySpineInterchange") == true)
+                if isPromenadePylon or routeSupport then
                     local pylons = promenadePylonsByDeck[id] or {}
                     promenadePylonsByDeck[id] = pylons
                     pylons[#pylons + 1] = part
                     local function changed() reconcilePylon(part) end
                     for _, property in ipairs({"Size","CFrame","Anchored",
-                        "CanCollide","CanTouch","CanQuery","Shape","Name"}) do
+                        "CanCollide","CanTouch","CanQuery","Shape","Name","Transparency"}) do
                         watchers[#watchers + 1] =
                             part:GetPropertyChangedSignal(property):Connect(changed)
                     end
@@ -768,7 +778,8 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                 and Kit.isSkySpinePylon(owner)
             local promenadePylon = piece:GetAttribute("OriginalPromenadePylon3D") == true
                 and PlatformIdentityLodRules.promenadePylonIndex(owner) ~= nil
-            if approvedSupports[owner] == true and (skyPylon or promenadePylon) then
+            if approvedSupports[owner] == true and (skyPylon or promenadePylon
+                or piece:GetAttribute("OriginalSupportColumn3D") == true) then
                 local pieces = pylonPieces[owner] or {}
                 pylonPieces[owner] = pieces
                 pieces[piece] = true

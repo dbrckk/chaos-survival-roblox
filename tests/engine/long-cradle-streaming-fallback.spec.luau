@@ -1443,6 +1443,67 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 for _,conn in ipairs(connections) do conn:Disconnect() end
                 table.clear(connections)
                 art:ClearAllChildren()
+                if variant=="Crossroads" then
+                    local span
+                    for _,candidate in ipairs(platforms:GetChildren()) do
+                        if candidate:GetAttribute("PromenadeStep")==3
+                            and candidate:GetAttribute("PromenadeLane")==1 then
+                            span=candidate
+                            break
+                        end
+                    end
+                    assert(span and span.CanCollide)
+                    local spanIndex = assert(tonumber(span.Name:match("^Platform(%d+)$")))
+                    local posts = assert(Kit.supports(art,decor,span,variant,"Medium",spanIndex,3,true))
+                    connections = posts.disconnects
+                    local native, mesh = posts.covered[1], posts.parts[1]
+                    native.LocalTransparencyModifier = .25
+                    local full = mesh.Size
+                    trim.bind(arena,{},nil,posts.covered,art)
+                    assert(trim.breakdown().support==1 and mesh.LocalTransparencyModifier==0)
+                    trim.setPylonLodVisible(native,false)
+                    assert(native.LocalTransparencyModifier==.25 and mesh.LocalTransparencyModifier==1)
+                    trim.setPylonLodVisible(native,true)
+                    assert(native.LocalTransparencyModifier==1 and mesh.LocalTransparencyModifier==0)
+                    local active, cleanup = true, {}
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                        Active=function() return active end,OnCleanup=cleanup})
+                    local cutoff = os.clock()+1.5
+                    repeat task.wait() until base.Size.X<=144.05 or os.clock()>cutoff
+                    active=false
+                    task.wait()
+                    assert(base.Size.X<=144.05 and trim.breakdown().support==1
+                        and math.abs(Kit.routeSupportScale(native,span)-.45)<.005)
+                    assert(math.abs(mesh.Size.X-full.X*.45)<.02
+                        and math.abs(mesh.Size.Y-full.Y)<.02)
+                    span:SetAttribute("CollapsePhase","Warning")
+                    task.wait()
+                    assert(native.LocalTransparencyModifier==.25 and mesh.LocalTransparencyModifier==1)
+                    span:SetAttribute("CollapsePhase","Normal")
+                    task.wait()
+                    assert(trim.breakdown().support==1 and mesh.LocalTransparencyModifier==0)
+                    local reduced = mesh.Size
+                    trim.reset()
+                    for _,conn in ipairs(connections) do conn:Disconnect() end
+                    table.clear(connections)
+                    art:ClearAllChildren()
+                    local late = assert(Kit.supports(art,decor,span,variant,"Medium",spanIndex,3,true))
+                    connections = late.disconnects
+                    assert(late.modules==posts.modules and late.covered[1]==native)
+                    assert((late.parts[1].Size-reduced).Magnitude < .03)
+                    local candidate, artPiece = late.covered[1], late.parts[1]
+                    trim.bind(arena,{},nil,late.covered,art)
+                    assert(candidate.LocalTransparencyModifier==1)
+                    artPiece:Destroy()
+                    task.wait()
+                    assert(candidate.LocalTransparencyModifier==.25
+                        and late.parts[2].LocalTransparencyModifier==1 and span.CanCollide)
+                    trim.reset()
+                    for _,conn in ipairs(connections) do conn:Disconnect() end
+                    table.clear(connections)
+                    art:ClearAllChildren()
+                    for _,restore in ipairs(cleanup) do restore() end
+                end
             end
         end)
         trim.reset()

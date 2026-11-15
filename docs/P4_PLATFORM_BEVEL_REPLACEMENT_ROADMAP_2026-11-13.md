@@ -669,3 +669,9 @@ Les compteurs `LocalOriginalSkySpineCommandArtCount` et `LocalSkySpineCommandNat
 Les trois portiques de chaque promenade possèdent un sous-cadre et un treillis. Les cinq autres travées ont seulement un sous-cadre. Le modèle approuvé LongCradle de sept MeshParts peut maintenant équiper un segment simple lorsque son sous-cadre correspond à la position, aux dimensions et à l'orientation du vrai plateau. Il remplace deux pièces sur les portiques éligibles et une sur une travée simple. Les portiques cargo Harbor conservent leur rendu dédié.
 
 La promenade et la Sky Spine partagent le contrôle du montage, du niveau de détail et du rétrécissement. Les dimensions du modèle sont vérifiées à l'échelle d'origine, puis sa largeur et sa longueur suivent le sol jusqu'à 45 % de sa taille initiale. Les formes natives reviennent lorsque le modèle quitte la zone ou perd une pièce, et lorsque la plateforme passe en avertissement. Les budgets restent à un, deux ou quatre berceaux selon le profil, avec jusqu'à huit en High PC par transfert de modules depuis les colonnes.
+
+## Lot P4 — poteaux sous les promenades et la Sky Spine (15 novembre)
+
+Les poteaux sous les passerelles conservent leur géométrie sculptée pendant le rétrécissement. Le client valide l'alignement des poteaux d'origine avec leur véritable plateau et calcule l'ajustement à partir de leurs dimensions initiales, y compris lors d'une arrivée en cours de manche. Le budget de modules reste celui du modèle à taille normale.
+
+Une colonne montée et son poteau de secours utilisent la même décision de visibilité. La perte d'un MeshPart, un avertissement ou la sortie de la zone de rendu ne laisse pas une colonne partielle superposée au support d'origine. La colonne reste purement décorative et les signaux de la passerelle conservent leur rôle.

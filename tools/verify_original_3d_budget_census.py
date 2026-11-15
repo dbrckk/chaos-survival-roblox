@@ -1925,9 +1925,13 @@ assert 'if output.modules < 1 then return nil end' in LARGE
 assert 'if tier == "Low" and supportParts ~= 7 then' in LARGE
 assert 'if tier == "Low" and not cameraReady then' in LARGE
 assert 'local fit = isPromenadePylon and promenadePylonFit or Kit.supportFit' in LARGE
-assert 'local segments, scale = fit(support.Size, box)' in LARGE
+assert 'if fitSize then segments, scale = fit(fitSize, box) end' in LARGE
 assert 'if segments and segments <= available - output.modules then' in LARGE
-assert 'segments=Kit.supportFit(part.Size,supportBounds)' in LARGE
+assert 'segments=Kit.supportFit(fitSize,supportBounds)' in LARGE
+assert 'function Kit.routeSupportScale(part, deck)' in LARGE
+assert 'local fitSize = supportFitSize(support,platform)' in LARGE
+assert 'and LargeStructure.routeSupportScale(native,owner) ~= nil' in TRIM
+assert 'or piece:GetAttribute("OriginalSupportColumn3D") == true' in TRIM
 assert 'if segments and (tier~="Low" or segments==1) then' in LARGE
 assert 'cost=supportsAvailable[id]' in LARGE
 assert 'local remaining=moduleBudget or math.huge' in LARGE
@@ -2212,7 +2216,7 @@ assert 'segments=promenadePylonFit(part.Size,supportBounds)' in LARGE
 assert 'part:SetAttribute("OriginalPromenadePylon3D",true)' in LARGE
 assert 'reconcilePylon(part)' in TRIM
 assert 'LocalOriginalPromenadePylon3DCount = family.promenadePylon' in OWNER
-assert 'descendant:GetAttribute("OriginalPromenadePylon3D") == true' in SIDE_LOD
+assert 'descendant:GetAttribute("OriginalSupportColumn3D") == true' in SIDE_LOD
 print("PASS 48 genuine promenade pylons eligible inside the existing column budget")
 
 
