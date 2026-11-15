@@ -34,6 +34,8 @@ EXPECTED={
         "ApprovedCrossroadsOpenGantryLocal",
     "ApprovedDistrictFoundationMeshKit.lua":
         "ApprovedDistrictFoundationsLocal",
+    "ApprovedDistrictRoofMeshKit.lua":
+        "ApprovedDistrictRoofsLocal",
     "ApprovedOrbitalReactorLandmarkMeshKit.lua":
         "ApprovedOrbitalReactorLandmarksLocal",
     "ApprovedPrimarySkylineMeshKit.lua":
@@ -142,6 +144,18 @@ SIDE_SOURCE=(ROOT/"tools/generate_original_district_sidewall_shell.py").read_tex
 SIDE_LOD=(CLIENT/"scenery-lod.client.lua").read_text(encoding="utf8")
 SIDE_INIT=(ROOT/"src/server/init.server.lua").read_text(encoding="utf8")
 SIDE_REG=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())
+ROOFS=(CLIENT/"ApprovedDistrictRoofMeshKit.lua").read_text(encoding="utf8")
+roof_ids=re.findall(r'\bid = (\d+), bounds = V\(',ROOFS)
+assert len(set(roof_ids)) == 5, roof_ids
+approved_ids={m["asset_id"] for m in SIDE_REG["models"]
+              if m["moderation"]=="Approved"}
+assert set(roof_ids) <= approved_ids, roof_ids
+assert SIDE_LOD.index("PremiumDistrictFacadeMeshKit.sync(") < SIDE_LOD.index(
+    "ApprovedDistrictRoofMeshKit.sync(")
+assert "LocalOriginalDistrictRoofEquipmentPartsReplaced" in SIDE_LOD
+for preserved in ("ServiceEntryDoor", "RecessedSignal", "DistrictWayfindingSign"):
+    assert not re.search(r'\bnatives\s*=\s*\{[^}]*"'+preserved+'"',ROOFS), preserved
+print("PASS five approved district roof sources and independent facade-linked masks")
 SIDE_ASSET=next(m for m in SIDE_REG["models"]
                 if m["name"]=="district_sidewall_shell")
 assert SIDE_ASSET["asset_id"]=="77387019170428"

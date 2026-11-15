@@ -15,6 +15,7 @@ local DistrictGatewayMeshKit = require(script.Parent.DistrictGatewayMeshKit)
 local PremiumDistrictFacadeMeshKit = require(script.Parent.PremiumDistrictFacadeMeshKit)
 local ApprovedDistrictSidewallMeshKit = require(script.Parent.ApprovedDistrictSidewallMeshKit)
 local ApprovedDistrictFoundationMeshKit = require(script.Parent.ApprovedDistrictFoundationMeshKit)
+local ApprovedDistrictRoofMeshKit = require(script.Parent.ApprovedDistrictRoofMeshKit)
 local ApprovedCornerMonumentMeshKit = require(script.Parent.ApprovedCornerMonumentMeshKit)
 local ApprovedHeroStructureMeshKit = require(script.Parent.ApprovedHeroStructureMeshKit)
 local ApprovedFoundationChassisMeshKit = require(script.Parent.ApprovedFoundationChassisMeshKit)
@@ -1973,11 +1974,19 @@ task.spawn(function()
             profile.Name, cameraReady, isTouch, districtPressure, cameraLook)
         ApprovedDistrictFoundationMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, isTouch, districtPressure, cameraLook)
+        ApprovedDistrictRoofMeshKit.sync(arena, cameraPoint,
+            profile.Name, cameraReady, isTouch, districtPressure, cameraLook)
         local foundationPartsReplaced = ApprovedDistrictFoundationMeshKit.replacedNativeCount()
         if player:GetAttribute("LocalOriginalDistrictFoundationPartsReplaced")
             ~= foundationPartsReplaced then
             player:SetAttribute("LocalOriginalDistrictFoundationPartsReplaced",
                 foundationPartsReplaced)
+        end
+        local roofPartsReplaced = ApprovedDistrictRoofMeshKit.replacedNativeCount()
+        if player:GetAttribute("LocalOriginalDistrictRoofEquipmentPartsReplaced")
+            ~= roofPartsReplaced then
+            player:SetAttribute("LocalOriginalDistrictRoofEquipmentPartsReplaced",
+                roofPartsReplaced)
         end
         lodDistrictTotalMs += (os.clock() - sidewallSyncStartedAt) * 1000
         local sidewallMeshCount = ApprovedDistrictSidewallMeshKit.count()

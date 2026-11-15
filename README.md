@@ -1,3 +1,9 @@
+## P4 — Équipements de toiture sculptés des quartiers
+
+Chaque arène possède un équipement différent sur ses 16 bâtiments de quartier. Les modèles créateur approuvés couvrent les paraboles et le mât de Classic, le portique et sa cabine à Towers, l'aiguillage de Crossroads, le réacteur à trois anneaux d'Orbital et la grue avec son conteneur à Harbor.
+
+Un modèle complet de sept MeshParts se monte sur une façade 3D chargée avant de masquer les cinq ou six éléments de toiture correspondants. Le LOD privilégie les bâtiments proches devant la caméra, avec des plafonds Low/Medium/High de 1/2/3 sur écran tactile et 1/3/6 sur PC. La première pression graphique, le streaming incomplet ou la perte d'une pièce rend le groupe d'origine visible. Les collisions et les panneaux de secteur restent disponibles.
+
 ## P4 — Socles forgés des bâtiments des quartiers
 
 Les 16 bâtiments de chaque arène peuvent afficher un socle en acier à pans biseautés avec verrous, évents et plaques de service. Le caisson original approuvé `101457508594609` remplace le disque de fondation et son anneau métallique quand la façade et les parois 3D du bâtiment sont chargées. Il s'ajuste aux 15,5 studs du socle et s'arrête à 0,88 stud au-dessus du sol. La porte, les vitrages et les panneaux de secteur restent visibles.
