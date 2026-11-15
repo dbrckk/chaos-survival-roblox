@@ -89,12 +89,15 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
         model:SetAttribute("OriginalExteriorRetrofit", true)
         model:SetAttribute("SourceIsOriginal", true)
         model:SetAttribute("CosmeticOnly", true)
-        model.Parent = fleet
 
         local inward = Vector3.new(base.Position.X - center.X, 0,
             base.Position.Z - center.Z)
         if inward.Magnitude < 1 then inward = Vector3.zAxis end
         local origin = CFrame.lookAt(center, center + inward.Unit)
+        model:SetAttribute("RetrofitIndex", i)
+        model:SetAttribute("SignatureVariant", variant)
+        model:SetAttribute("RetrofitOrigin", origin)
+        model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
         local body = theme.Structure:Lerp(theme.Detail, 0.29)
         local inset = theme.Surface:Lerp(theme.Structure, 0.32)
         local hardware = theme.Detail:Lerp(theme.Structure, 0.50)
@@ -178,6 +181,7 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
             end
         end
         pieces += #model:GetChildren()
+        model.Parent = fleet
     end
     return pieces
 end

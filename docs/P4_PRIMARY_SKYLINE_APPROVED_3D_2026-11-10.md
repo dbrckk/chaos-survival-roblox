@@ -91,3 +91,19 @@ restaure uniquement l’ensemble concerné.
 `LocalPrimarySkylinePrimitivesReplaced` compte les quatre pièces du
 corps et les deux bandes. `LocalPrimarySkylineDetailsReplaced` compte
 les socles et équipements effectivement masqués.
+
+## Coques des structures extérieures
+
+Les quatre structures `OriginalExteriorRetrofits` de chaque arène
+utilisent une coque facettée issue du modèle approuvé `137744886537150`.
+Sur Crossroads, une traverse forgée supplémentaire `90844491148907`
+suit l’axe du portique. Les maillages suivent la position
+d’origine, même pendant le rétrécissement de la base. Les signaux et
+éléments animés des structures voisines gardent leur rendu.
+
+Le remplacement couvre **276 formes natives** sur les cinq arènes. Les
+coques utilisent sept MeshParts chacune, ou quatorze avec la traverse.
+Le plafond en High est de deux structures sur écran tactile et de quatre
+sur ordinateur. Dès la première pression graphique, les formes natives
+reprennent le relais. `LocalExteriorRetrofitPrimitivesReplaced` compte
+les pièces effectivement masquées.

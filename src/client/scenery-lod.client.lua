@@ -37,6 +37,7 @@ local ApprovedCrossroadsEntrancePortalMeshKit = require(script.Parent.ApprovedCr
 local ApprovedVariantIdentitySpineMeshKit = require(script.Parent.ApprovedVariantIdentitySpineMeshKit)
 local PremiumNearfieldPbrKit = require(script.Parent.PremiumNearfieldPbrKit)
 local ApprovedPrimarySkylineMeshKit = require(script.Parent.ApprovedPrimarySkylineMeshKit)
+local ApprovedExteriorRetrofitMeshKit = require(script.Parent.ApprovedExteriorRetrofitMeshKit)
 local ApprovedOrbitalSignatureRingMeshKit = require(script.Parent.ApprovedOrbitalSignatureRingMeshKit)
 local ApprovedSouthOrbitalObservationRingMeshKit = require(script.Parent.ApprovedSouthOrbitalObservationRingMeshKit)
 local ApprovedSouthTowersSkytransferMeshKit = require(script.Parent.ApprovedSouthTowersSkytransferMeshKit)
@@ -2096,6 +2097,12 @@ task.spawn(function()
                         profile, retrofit:GetPivot().Position, cameraPoint)
                 end
             end
+        end
+        ApprovedExteriorRetrofitMeshKit.sync(arena,cameraPoint,profile.Name,cameraReady,
+            isTouch,player:GetAttribute("OptionalVfxPressure"),cameraLook)
+        local _,retrofitNatives = ApprovedExteriorRetrofitMeshKit.count()
+        if player:GetAttribute("LocalExteriorRetrofitPrimitivesReplaced") ~= retrofitNatives then
+            player:SetAttribute("LocalExteriorRetrofitPrimitivesReplaced",retrofitNatives)
         end
         local hero = SceneryLodRules.heroArchitectureOwner(workspace)
         if hero then

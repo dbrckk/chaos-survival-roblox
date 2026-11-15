@@ -164,6 +164,7 @@ VisualBudgetRules.LocalFolders = {
     "ApprovedOrbitalReactorLandmarksLocal",
     "ApprovedPrimarySkylineLocal",
     "ApprovedSkylineDepthLocal",
+    "ApprovedExteriorRetrofitsLocal",
     "ApprovedOriginalIdentitySpinesLocal",
     "ApprovedTowersMachineryLocal",
     -- One original Towers forged bridge Model (seven genuine MeshParts)

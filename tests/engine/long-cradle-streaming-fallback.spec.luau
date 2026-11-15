@@ -14,8 +14,114 @@ local Crown=require("../../src/client/SkySpineCrownMeshKit")
 local IdentityLod=require("../../src/shared/PlatformIdentityLodRules")
 local Remaining=require("../../src/client/ApprovedRemainingStructureMeshKit")
 local PrimarySkyline=require("../../src/client/ApprovedPrimarySkylineMeshKit")
+local ExteriorRetrofit=require("../../src/client/ApprovedExteriorRetrofitMeshKit")
 
 describe("P4 approved long cradle streaming fallback (engine)",function()
+    it("replaces the complete exterior retrofit structures in five worlds while preserving original landmark signals",function()
+        local storage = game:GetService("ReplicatedStorage")
+        local function model(folder,name,id,tag,size)
+            local holder = Instance.new("Folder")
+            holder.Name = folder
+            holder:SetAttribute("OwnerVerified",true)
+            holder.Parent = storage
+            local source = Instance.new("Model")
+            source.Name = name
+            source:SetAttribute("OwnerVerified",true)
+            source:SetAttribute("CosmeticOnly",true)
+            source:SetAttribute("Original3DAssetId",id)
+            source:SetAttribute(tag,true)
+            for index = 1,7 do
+                local part = Instance.new("MeshPart")
+                part.Name = "Mesh"..index
+                part.Size = index == 1 and size or Vector3.new(.12,.06,.15)
+                if index == 2 then part.Position = Vector3.new(4,0,0) end
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanTouch = false
+                part.CanQuery = false
+                part.Parent = source
+            end
+            source.Parent = holder
+            return source
+        end
+        local tower = model("ApprovedExteriorTowerTemplates","Tower21",137744886537150,
+            "OriginalExteriorTower3D",Vector3.new(9.84,22.2,11.84))
+        local gantry = model("ApprovedCrossroadsGantryTemplates","Gantry",90844491148907,
+            "OriginalCrossroadsGantry3D",Vector3.new(2.74,3.6,27.92))
+        -- The long-axis signal component remains in the genuine width.
+        gantry.Mesh2.Position = Vector3.new(0,0,4)
+        local bucket = assert(workspace:FindFirstChild("ApprovedExteriorRetrofitsLocal"))
+        local preserved = {Classic="ClassicBroadcastGlow1",Crossroads="CrossroadSignal1",
+            Towers="TowerAntenna1",Orbital="OrbitalReactorNode1"}
+        local total = 0
+        for _,variant in ipairs(ArenaVariants.Order) do
+            local arena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+            local base,decor = arena.Base,arena.Decor
+            local fleet = decor.OriginalExteriorRetrofits
+            local selected = fleet:FindFirstChild(variant.."Retrofit1")
+            local anchor = selected:GetAttribute("RetrofitOrigin")
+            local signal = preserved[variant] and decor:FindFirstChild(preserved[variant])
+            local signalAlpha = signal and signal.Transparency
+            local count = variant == "Crossroads" and 17 or 13
+            ExteriorRetrofit.sync(arena,base.Position,"High",true,false,0)
+            local models, natives = ExteriorRetrofit.count()
+            assert(models == 4 and natives == 4*count,variant.." retrofit coverage")
+            total += natives
+            for i=1,4 do
+                local structure = fleet:FindFirstChild(variant.."Retrofit"..i)
+                local sculpture = assert(bucket:FindFirstChild("Sculpted"..structure.Name))
+                assert(#sculpture:GetChildren() == (variant == "Crossroads" and 14 or 7))
+                local origin = structure:GetAttribute("RetrofitOrigin")
+                for _,piece in ipairs(sculpture:GetChildren()) do
+                    assert(piece:IsA("MeshPart") and piece.Anchored and piece.Massless
+                        and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                    if piece.Name == "Mesh1" and piece:GetAttribute("Original3DAssetId") == 90844491148907 then
+                        local axis = i <= 2 and Vector3.xAxis or Vector3.zAxis
+                        assert(math.abs(piece.CFrame.LookVector:Dot(axis)) > .999)
+                        assert(math.abs(piece.Size.Z-29.6) < .03)
+                    elseif piece.Name == "Mesh2" and piece:GetAttribute("Original3DAssetId") == 137744886537150 then
+                        assert((piece.Position-origin.Position):Dot(origin.LookVector) > 0)
+                    end
+                end
+                assert(structure.OuterFrontArmor.Transparency == 1)
+            end
+            if signal then assert(signal.Transparency == signalAlpha) end
+            local size = base.Size
+            base.Size = Vector3.new(size.X*.7,size.Y,size.Z*.7)
+            ExteriorRetrofit.sync(arena,anchor.Position,"Low",true,true,0)
+            models,natives = ExteriorRetrofit.count()
+            assert(models == 1 and natives == count and base.CanCollide)
+            local panel = selected.OuterFrontArmor
+            local replacement = assert(bucket:FindFirstChild("Sculpted"..selected.Name))
+            replacement:GetChildren()[1]:Destroy()
+            task.wait()
+            assert(math.abs(panel.Transparency-.045) < .001 and ExteriorRetrofit.count() == 0)
+            ExteriorRetrofit.sync(arena,anchor.Position,"Low",true,true,0)
+            local saved = panel.CFrame
+            panel.CFrame *= CFrame.new(.24,0,0)
+            task.wait()
+            assert(ExteriorRetrofit.count() == 0 and panel.Transparency < 1)
+            panel.CFrame = saved
+            ExteriorRetrofit.sync(arena,anchor.Position,"Low",true,true,0)
+            assert(panel.Transparency == 1)
+            local sourcePart = variant == "Crossroads" and gantry.Mesh1 or tower.Mesh1
+            local sourceSize = sourcePart.Size
+            sourcePart.Size *= 1.18
+            task.wait()
+            assert(ExteriorRetrofit.count() == 0 and panel.Transparency < 1)
+            sourcePart.Size = sourceSize
+            ExteriorRetrofit.sync(arena,anchor.Position,"Low",true,true,0)
+            assert(panel.Transparency == 1)
+            ExteriorRetrofit.sync(arena,anchor.Position,"Low",true,true,1)
+            assert(panel.Transparency < 1 and #bucket:GetChildren() == 0)
+            if signal then assert(signal.Transparency == signalAlpha) end
+            ExteriorRetrofit.sync(nil,Vector3.zero,"Low",false)
+            arena.Parent:Destroy()
+        end
+        expect(total).toBe(276)
+        tower.Parent:Destroy()
+        gantry.Parent:Destroy()
+    end)
     it("fits eighty-four primary skyline details across five real arenas and rolls them back independently",function()
         local storage = game:GetService("ReplicatedStorage")
         local holders = {}

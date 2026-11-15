@@ -494,6 +494,24 @@ assert 'syncDetail(entry,"roof",roof,bar)' in PRIMARY_SKYLINE
 assert 'LocalPrimarySkylineDetailsReplaced' in TOWERS_LOD
 print("PASS primary skyline finishes share the authentic tower and",
       "the same mobile residency limits with independent rollback")
+RETROFIT=(CLIENT/"ApprovedExteriorRetrofitMeshKit.lua").read_text(encoding="utf8")
+RETROFIT_BUILDER=(ROOT/"src/server/StructureRetrofit.lua").read_text(encoding="utf8")
+for guard in (
+    'id=137744886537150',
+    'id=90844491148907',
+    'local CAPS = {Low=1,Medium=2,High=4}',
+    'local TOUCH_CAPS = {Low=1,Medium=1,High=2}',
+    'base:GetAttribute("OriginalSizeX")',
+    'variant == "Crossroads" and 17 or 13',
+    'clone.DescendantRemoving',
+    'piece:GetPropertyChangedSignal(property)',
+):
+    assert guard in RETROFIT,guard
+assert 'model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic' in RETROFIT_BUILDER
+assert 'ApprovedExteriorRetrofitsLocal' in ledger
+assert 'LocalExteriorRetrofitPrimitivesReplaced' in TOWERS_LOD
+assert (4*4*13)+(4*17) == 276
+print("PASS all five exterior retrofit sets use approved art, shared budget and streaming rollback")
 
 # The original four giant 36-stud Harbor cranes already have two
 # creator-approved seven-material kinetic assets. Low native crane LOD is
