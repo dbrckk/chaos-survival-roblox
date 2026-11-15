@@ -778,10 +778,23 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 assert(base.Size.X<=144.05 and Remaining.nativeCount("junction")==2,variant.." failed during shrink")
                 assert(real(ends[1],promenade[1]) and real(ends[2],promenade[2]))
                 assert(lights[1].LocalTransparencyModifier==lightAlpha and promenade[1].CanCollide)
+                for lane=1,2 do
+                    assert(promenade[lane].CanCollide,
+                        variant.." promenade lane "..lane.." lost gameplay collision during shrink")
+                    assert(meshes[lane].LocalTransparencyModifier==0,
+                        variant.." promenade lane "..lane.." lost its mesh during shrink")
+                    assert(trusses[lane].LocalTransparencyModifier==1,
+                        variant.." promenade lane "..lane.." exposed its native truss during shrink")
+                end
                 source:SetAttribute("OwnerVerified",false)
                 task.wait()
-                assert(Remaining.nativeCount("junction")==0 and mesh.LocalTransparencyModifier==1)
-                assert(math.abs(trusses[1].LocalTransparencyModifier-baseline)<.001)
+                assert(Remaining.nativeCount("junction")==0,variant.." unverified source retained a mesh")
+                for lane=1,2 do
+                    assert(meshes[lane].LocalTransparencyModifier==1,
+                        variant.." unverified source remained visible on lane "..lane)
+                    assert(math.abs(trusses[lane].LocalTransparencyModifier-(lane==1 and baseline or 0))<.001,
+                        variant.." unverified source failed native rollback on lane "..lane)
+                end
                 source:SetAttribute("OwnerVerified",true)
                 sync("High",0,true)
                 assert(Remaining.nativeCount("junction")==1)
