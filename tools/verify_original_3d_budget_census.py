@@ -1862,6 +1862,16 @@ assert 'part:SetAttribute("OriginalHarborCargoTieDown3D",true)' in FINISH
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,hatchPieces,' in OWNER
 assert 'LocalOriginalHarborCargoTieDownCount' in OWNER
 print("PASS cargo tie-downs share the original service quota and preserve the real Harbor route")
+CUE_RULES=(ROOT/"src/shared/JumpRouteCueRules.lua").read_text(encoding="utf8")
+assert 'JumpRouteCueRules.takeoffChevron(' in OWNER
+assert 'piece:SetAttribute("SkipRouteFootprint",true)' in OWNER
+assert 'if valid then left,right,size = takeoffGeometry(platform,cue.target) end' in OWNER
+assert 'joint.C1 = platform.CFrame:ToObjectSpace(frame)' in OWNER
+assert 'platform:GetPropertyChangedSignal("CFrame"):Connect(queueGeometry)' in OWNER
+assert 'target:GetPropertyChangedSignal("CFrame"):Connect(queueGeometry)' in OWNER
+assert 'if routeCueStates[platform] == cue then syncRoute() end' in OWNER
+assert 'paintOffset,.12+.84*scale' in CUE_RULES
+print("PASS takeoff chevrons follow current geometry without generic trim shrink or a render loop")
 
 
 # P0 medium real support coverage: eight approved 7-piece columns are

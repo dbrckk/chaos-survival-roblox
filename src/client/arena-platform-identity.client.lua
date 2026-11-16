@@ -485,11 +485,15 @@ end
 -- Mark only geometry-verified ascending routes. The two short chevron
 -- strokes are fully inside the takeoff deck, welded to its real footprint.
 -- Existing collapse and shrink listeners own all visibility/resize work.
-local function decorateTakeoff(platform, target, index, theme, quality)
-    local frame = JumpRouteCueRules.takeoffFrame(
+local function takeoffGeometry(platform,target)
+    return JumpRouteCueRules.takeoffChevron(
         platform, target, PlatformFinishKit.surfacePaintOffset(platform, 0.05) + 0.025
     )
-    if not frame then return end
+end
+
+local function decorateTakeoff(platform, target, index, theme, quality)
+    local left,right,size = takeoffGeometry(platform,target)
+    if not left then return end
     local strokes = {}
     -- The verified safe route is restrained cool-white across all arenas;
     -- collapse/hazard warnings remain the more urgent amber/orange cue.
@@ -499,14 +503,14 @@ local function decorateTakeoff(platform, target, index, theme, quality)
     for side = -1, 1, 2 do
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
-            Vector3.new(0.15, 0.045, 1.02),
-            frame * CFrame.new(side * 0.28, 0, 0.14)
-                * CFrame.Angles(0, math.rad(side * 38), 0),
+            size,
+            side == -1 and left or right,
             color,
             Enum.Material.Neon,
             opacity,
             platform
         )
+        piece:SetAttribute("SkipRouteFootprint",true)
         strokes[#strokes + 1] = piece
     end
     routeCueStates[platform] = {target = target, strokes = strokes}
@@ -520,10 +524,20 @@ local function syncTakeoff(platform, center, variant)
     local valid = JumpRouteCueRules.cueStillSafe(
         platform, cue.target, center, variant
     )
-    for _, stroke in ipairs(cue.strokes) do
+    local left,right,size
+    if valid then left,right,size = takeoffGeometry(platform,cue.target) end
+    for index, stroke in ipairs(cue.strokes) do
         if stroke.Parent then
-            stroke.Transparency = valid
-                and stroke:GetAttribute("ChaosBaseTransparency") or 1
+            local joint = stroke:FindFirstChild("PlatformIdentityWeld")
+            local frame = index == 1 and left or right
+            if frame and joint and joint:IsA("Weld")
+                and joint.Part0 == stroke and joint.Part1 == platform then
+                stroke.Size = size
+                joint.C1 = platform.CFrame:ToObjectSpace(frame)
+                stroke.Transparency = stroke:GetAttribute("ChaosBaseTransparency")
+            else
+                stroke.Transparency = 1
+            end
         end
     end
 end
@@ -1343,16 +1357,28 @@ local function rebuild()
                     platform:GetAttributeChangedSignal("BridgeShutterPhase")
                         :Connect(syncCollapse)
             end
-            if target then
+            if routeCueStates[platform] then
                 -- Size can shrink without any CollapsePhase change.
-                -- These events only refresh the two route strokes;
-                -- the larger decorative fade remains phase-triggered.
+                -- Batch geometry changes from both decks into one update.
+                local cue = routeCueStates[platform]
+                local queued = false
+                local function queueGeometry()
+                    if queued then return end
+                    queued = true
+                    task.defer(function()
+                        queued = false
+                        if routeCueStates[platform] == cue then syncRoute() end
+                    end)
+                end
                 routeTargetConnections[platform] = {
-                    platform:GetPropertyChangedSignal("Size"):Connect(syncRoute),
+                    platform:GetPropertyChangedSignal("Size"):Connect(queueGeometry),
+                    platform:GetPropertyChangedSignal("CFrame"):Connect(queueGeometry),
                     platform:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
                     platform:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
                     target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncRoute),
-                    target:GetPropertyChangedSignal("Size"):Connect(syncRoute),
+                    target:GetPropertyChangedSignal("Size"):Connect(queueGeometry),
+                    target:GetPropertyChangedSignal("CFrame"):Connect(queueGeometry),
+                    target:GetPropertyChangedSignal("Parent"):Connect(syncRoute),
                     target:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
                     target:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
                 }
