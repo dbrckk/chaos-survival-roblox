@@ -1,3 +1,9 @@
+## P4 — Bordures sculptées des passerelles aériennes
+
+Les deux promenades et la Sky Spine de chaque arène peuvent afficher une bordure métallique à sept MeshParts sur leurs tabliers. Les modèles approuvés Rect et Long sont ajustés à la largeur du tablier, et le niveau de détail donne la priorité aux decks proches devant la caméra. Les plafonds Android restent à 1/1/2 bordures en Low/Medium/High dans les créneaux existants.
+
+La bordure masque les quatre biseaux du tablier et peut cohabiter avec le berceau ajouré déjà alloué sous le même deck. Elle suit la contraction du tablier et peut se monter en cours de manche au format rétréci. Le décor de secours revient lors d'un avertissement, d'un décalage de réplication, d'une éviction LOD ou de la perte d'une pièce ou soudure. `LocalElevatedRimBevelsReplaced` mesure les quatre biseaux effectivement remplacés par tablier.
+
 ## P4 — Équipements de toiture sculptés des quartiers
 
 Chaque arène possède un équipement différent sur ses 16 bâtiments de quartier. Les modèles créateur approuvés couvrent les paraboles et le mât de Classic, le portique et sa cabine à Towers, l'aiguillage de Crossroads, le réacteur à trois anneaux d'Orbital et la grue avec son conteneur à Harbor.

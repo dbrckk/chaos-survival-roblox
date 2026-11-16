@@ -1,7 +1,6 @@
 --!strict
 -- Genuine MapBuilder decks and native decorative truss stream ownership.
--- No asset uploads or counterfeit published MeshIds; fixtures exist only
--- inside the isolated Roblox Cloud Engine test runtime.
+-- Test meshes exist only in the Roblox Cloud Engine fixture.
 local Lest=require("@lest")
 local describe,it,expect=Lest.describe,Lest.it,Lest.expect
 local MapBuilder=require("../../src/server/MapBuilder")
@@ -9,6 +8,7 @@ local Config=require("../../src/shared/Config")
 local ArenaVariants=require("../../src/server/ArenaVariants")
 local VisualTheme=require("../../src/shared/VisualTheme")
 local Kit=require("../../src/client/PremiumLargeStructureMeshKit")
+local Rim=require("../../src/client/ApprovedPlatformRimMeshKit")
 local Finish=require("../../src/client/PlatformFinishKit")
 local Crown=require("../../src/client/SkySpineCrownMeshKit")
 local IdentityLod=require("../../src/shared/PlatformIdentityLodRules")
@@ -553,8 +553,10 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         local storage = game:GetService("ReplicatedStorage")
         local previousMap = workspace:FindFirstChild("GeneratedMap")
         local previousSource = storage:FindFirstChild("ApprovedLargeStructureTemplates")
+        local previousRims = storage:FindFirstChild("ApprovedPlatformRimTemplates")
         if previousMap then previousMap.Parent = nil end
         if previousSource then previousSource.Parent = nil end
+        if previousRims then previousRims.Parent = nil end
         local templates = Instance.new("Folder")
         templates.Name = "ApprovedLargeStructureTemplates"
         templates:SetAttribute("OwnerVerified",true)
@@ -581,12 +583,23 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         end
         local long = source("LongCradle",128914328933863,Vector3.new(9.8,3,22.6))
         local short = source("ShortCradle",140716716476069,Vector3.new(16.52,2.34,10.13))
+        local rimTemplates = Instance.new("Folder")
+        rimTemplates.Name = "ApprovedPlatformRimTemplates"
+        rimTemplates:SetAttribute("OwnerVerified",true)
+        rimTemplates.Parent = storage
+        local function rimSource(name,id,size)
+            local model = source(name,id,size)
+            model:SetAttribute("OriginalPlatformRim3D",true)
+            model.Parent = rimTemplates
+        end
+        rimSource("Rect",131482590870627,Vector3.new(16.64,2.115,9.64))
+        rimSource("Long",127617571835277,Vector3.new(7.64,2.115,25.64))
         local models = Instance.new("Folder")
         models.Parent = workspace
         local disconnectFootprints = {}
         local generated
         local ok,err=pcall(function()
-            local verifiedDecks = 0
+            local verifiedDecks, verifiedRims = 0, 0
             for _,variant in ipairs(ArenaVariants.Order) do
                 local arena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
                 generated = arena.Parent
@@ -614,12 +627,32 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     return pieces
                 end
                 local firstPieces = mount(first)
+                local function mountRim(deck)
+                    local id = tonumber(deck.Name:match("^Platform(%d+)$"))
+                    local kind = assert(Rim.selectVisibleDecks(
+                        {deck},"Low",base,deck.Position,0,true,decor)[deck])
+                    local pieces = assert(Rim.install(models,deck,id,kind,decor))
+                    assert(#pieces == 7 and pieces[1]:GetAttribute("OriginalElevatedPlatformRim") == true)
+                    table.insert(disconnectFootprints,Finish.bindRouteFootprint(deck,pieces,Trim.routeCradleRefitted))
+                    replacements[tostring(id)] = replacements[tostring(id)] or "rim"
+                    return pieces
+                end
+                local firstRim = mountRim(first)
+                local bevel = assert(Rim.routeNatives(decor,first))[1]
+                bevel.LocalTransparencyModifier = .17
+                local rimHeight = firstRim[1].Size.Y
+                local rimWidth = firstRim[1].Size.X
                 local firstMesh=firstPieces[1]
                 local originalHeight, originalWidth=firstMesh.Size.Y,firstMesh.Size.X
                 Trim.bind(arena,replacements,nil,nil,models)
                 assert(Trim.breakdown().spineUnderdeck == 4,variant.." missing initial Sky Spine mask")
                 assert(firstNatives[1].LocalTransparencyModifier == 1 and firstMesh.LocalTransparencyModifier == 0)
                 assert(rail.LocalTransparencyModifier == warningAlpha)
+                assert(Trim.breakdown().elevatedRim == 4 and bevel.LocalTransparencyModifier == 1)
+                Trim.setRouteRimLodVisible(first,false)
+                assert(Trim.breakdown().elevatedRim == 0 and firstRim[1].LocalTransparencyModifier == 1)
+                assert(math.abs(bevel.LocalTransparencyModifier-.17)<.001)
+                Trim.setRouteRimLodVisible(first,true)
                 Trim.setRouteCradleLodVisible(first,false)
                 assert(math.abs(firstNatives[1].LocalTransparencyModifier-.18)<.001
                     and firstMesh.LocalTransparencyModifier == 1 and Trim.breakdown().spineUnderdeck == 0)
@@ -635,6 +668,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 first:SetAttribute("CollapsePhase","Warning")
                 task.wait()
                 assert(Trim.breakdown().spineUnderdeck==0 and firstMesh.LocalTransparencyModifier==1)
+                assert(Trim.breakdown().elevatedRim==0 and firstRim[1].LocalTransparencyModifier==1)
                 first:SetAttribute("CollapsePhase","Normal")
                 task.wait()
                 assert(Trim.breakdown().spineUnderdeck==4 and firstMesh.LocalTransparencyModifier==0)
@@ -652,6 +686,9 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     and firstMesh.LocalTransparencyModifier==0,variant.." lost its resident cradle")
                 assert(math.abs(firstMesh.Size.Y-originalHeight)<.01
                     and math.abs(firstMesh.Size.X-originalWidth*.45)<.02)
+                assert(Trim.breakdown().elevatedRim==4 and firstRim[1].LocalTransparencyModifier==0)
+                assert(math.abs(firstRim[1].Size.Y-rimHeight)<.01
+                    and math.abs(firstRim[1].Size.X-rimWidth*.45)<.02)
 
                 for i,deck in ipairs(steps) do
                     assert(math.abs(deck.Size.X-originals[i].X*.45)<.025 and deck.CanCollide)
@@ -659,12 +696,26 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     assert(#natives==4)
                     verifiedDecks += 1
                 end
+                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                    if deck:GetAttribute("PromenadeStep") or deck:GetAttribute("SkySpineStep") then
+                        assert(#assert(Rim.routeNatives(decor,deck)) == 4)
+                        assert(Rim.selectVisibleDecks(
+                            {deck},"Low",base,deck.Position,0,true,decor)[deck])
+                        verifiedRims += 1
+                    end
+                end
                 local lateDeck = steps[6]
                 local latePieces = mount(lateDeck)
+                local lateRim = mountRim(lateDeck)
                 assert(math.abs(latePieces[1].Size.Y-originalHeight)<.01
                     and math.abs(latePieces[1].Size.X-originalWidth*.45)<.02)
                 Trim.bind(arena,replacements,nil,nil,models)
                 assert(Trim.breakdown().spineUnderdeck==8 and rail.LocalTransparencyModifier==warningAlpha)
+                assert(Trim.breakdown().elevatedRim==8 and bevel.LocalTransparencyModifier==1)
+                firstRim[1]:FindFirstChild("ChaosPlatformTrimWeld"):Destroy()
+                task.wait()
+                assert(Trim.breakdown().elevatedRim==4 and lateRim[1].LocalTransparencyModifier==0)
+                assert(math.abs(bevel.LocalTransparencyModifier-.17)<.001 and first.CanCollide)
                 local missing = firstPieces[1]
                 missing.Parent = nil
                 task.wait()
@@ -687,13 +738,16 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 generated=nil
             end
             expect(verifiedDecks).toBe(50)
+            expect(verifiedRims).toBe(130)
         end)
         Trim.reset()
         for _,disconnect in ipairs(disconnectFootprints) do disconnect() end
         models:Destroy()
         templates:Destroy()
+        rimTemplates:Destroy()
         if generated then generated:Destroy() end
         if previousSource then previousSource.Parent=storage end
+        if previousRims then previousRims.Parent=storage end
         if previousMap then previousMap.Parent=workspace end
         if not ok then error(err) end
     end)

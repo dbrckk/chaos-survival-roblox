@@ -3,6 +3,10 @@
 -- WedgePart bevels only AFTER a complete authentic model is welded.
 -- NO new colliders, new update loop, fake MeshId or primitive fallback.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LargeStructure = if script and script.Parent
+    and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
+    then require(script.Parent.PremiumLargeStructureMeshKit)
+    else require("./PremiumLargeStructureMeshKit")
 local Kit = {}
 
 local APPROVED = {
@@ -50,28 +54,72 @@ end
 
 -- The original server-backed fallback is a single coherent four-edge
 -- group. No partially streamed/unverified wedge may be hidden.
-local function completeNative(decor,deck)
+local function nativeParts(decor,deck,original,scale)
     if not decor or not decor:IsA("Folder")
-        or not deck or not deck:IsA("BasePart") then return false end
+        or not deck or not deck:IsA("BasePart") then return nil end
     local id=deck.Name:match("^Platform(%d+)$")
-    if not id then return false end
+    if not id then return nil end
     local underside=decor:FindFirstChild("PlatformUnderFrame"..id)
     if not underside or not underside:IsA("BasePart")
         or underside.Parent~=decor or not underside.Anchored
         or underside.CanCollide or underside.CanTouch or underside.CanQuery
         or underside:GetAttribute("PremiumArchitecturalSurface")~=true then
-        return false
+        return nil
     end
+    local function matches(part,size,offset)
+        local frame=deck.CFrame*offset
+        return (part.Size-size).Magnitude < .13
+            and (part.Position-frame.Position).Magnitude < .14
+            and part.CFrame.UpVector:Dot(frame.UpVector) > .999
+            and part.CFrame.LookVector:Dot(frame.LookVector) > .999
+    end
+    if original and not matches(underside,
+        Vector3.new(deck.Size.X+.5*scale,.42,deck.Size.Z+.5*scale),
+        CFrame.new(0,-deck.Size.Y*.5-.18,0)) then return nil end
+    local edges = {}
     for i=1,4 do
         local edge=decor:FindFirstChild("PlatformBevel"..id.."_"..i)
         if not edge or not edge:IsA("WedgePart")
             or edge.Parent~=decor or not edge.Anchored
             or edge.CanCollide or edge.CanTouch or edge.CanQuery
             or edge:GetAttribute("OriginalStructuralBevel")~=true then
-            return false
+            return nil
         end
+        if original then
+            local alongX = i<=2
+            local side = i%2==1 and -1 or 1
+            local depth = math.clamp(math.min(original.X,original.Z)*.075,.28,.65)*scale
+            local x = alongX and 0 or side*(deck.Size.X*.5+depth*.27)
+            local z = alongX and side*(deck.Size.Z*.5+depth*.27) or 0
+            local yaw = alongX and (i==1 and 0 or math.pi)
+                or (i==3 and math.pi*.5 or -math.pi*.5)
+            local span = (alongX and deck.Size.X or deck.Size.Z) + .12*scale
+            if not matches(edge,Vector3.new(span,.30,depth),
+                CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)) then
+                return nil
+            end
+        end
+        edges[i] = edge
     end
-    return true
+    return edges,underside
+end
+
+local function isElevatedRoute(deck)
+    return deck:GetAttribute("PromenadeStep") ~= nil
+        or deck:GetAttribute("SkySpineStep") ~= nil
+        or deck:GetAttribute("SkySpineInterchange") == true
+end
+
+function Kit.routeNatives(decor,deck)
+    if not deck or not deck:IsA("BasePart") or not isElevatedRoute(deck) then return nil end
+    local original,scale = LargeStructure.routeDeckSize(deck)
+    if not original or not decor or decor ~= deck.Parent.Parent:FindFirstChild("Decor") then return nil end
+    return nativeParts(decor,deck,original,scale)
+end
+
+local function completeNative(decor,deck)
+    if isElevatedRoute(deck) then return Kit.routeNatives(decor,deck) ~= nil end
+    return nativeParts(decor,deck) ~= nil
 end
 
 local function safeDeck(deck,platforms)
@@ -86,13 +134,9 @@ local function safeDeck(deck,platforms)
         and (shutter==nil or shutter=="Idle")
 end
 
--- Only rim shapes that convincingly COVER their matching native four
--- edges qualify. No anisotropic rescaling and no miniature 11-stud art
--- stretched to a 28-stud platform.
-function Kit.fit(deck,bounds)
-    if not deck or not bounds then return nil end
-    local long=math.max(deck.Size.X,deck.Size.Z)
-    local short=math.min(deck.Size.X,deck.Size.Z)
+local function uniformFit(size,bounds)
+    local long=math.max(size.X,size.Z)
+    local short=math.min(size.X,size.Z)
     local srcLong=math.max(bounds.X,bounds.Z)
     local srcShort=math.min(bounds.X,bounds.Z)
     local scale=math.min(1.12,long*.96/srcLong,short*.96/srcShort)
@@ -101,10 +145,31 @@ function Kit.fit(deck,bounds)
     if scale<.60 or coverLong<.90 or coverShort<.87
         or srcLong*scale>long*.97 or srcShort*scale>short*.97
         or bounds.Y*scale>3.05 then return nil end
-    local alongZ=deck.Size.Z>deck.Size.X
+    local alongZ=size.Z>size.X
     local sourceZ=bounds.Z>bounds.X
     local yaw=sourceZ==alongZ and 0 or math.pi*.5
     return scale,yaw,coverLong*coverShort
+end
+
+-- Exact-width fit for the authored Sky Spine and Promenade platforms.
+-- Normalize the route before selecting the source so a joining client
+-- sees the same fascia at 45% shrink. Vertical relief stays unchanged.
+function Kit.fit(deck,bounds)
+    if not deck or not deck:IsA("BasePart") or not bounds then return nil end
+    if not isElevatedRoute(deck) then return uniformFit(deck.Size,bounds) end
+    local original,shrink = LargeStructure.routeDeckSize(deck)
+    if not original then return nil end
+    local long,short = math.max(original.X,original.Z),math.min(original.X,original.Z)
+    local srcLong,srcShort = math.max(bounds.X,bounds.Z),math.min(bounds.X,bounds.Z)
+    local longScale,shortScale = long*.97/srcLong,short*.97/srcShort
+    if longScale < .72 or longScale > 1.50 or shortScale < .95 or shortScale > 1.62
+        or math.max(longScale/shortScale,shortScale/longScale) > 1.85 then return nil end
+    local heightScale = math.clamp(math.sqrt(longScale*shortScale),.85,1.16)
+    local sourceZ = bounds.Z>bounds.X
+    local yaw = sourceZ == (original.Z>original.X) and 0 or math.pi*.5
+    local factors = Vector3.new((sourceZ and shortScale or longScale)*shrink,
+        heightScale,(sourceZ and longScale or shortScale)*shrink)
+    return factors,yaw,1-math.abs(math.log(longScale/shortScale))
 end
 
 local function pickSource(deck,boundsByKind)
@@ -112,7 +177,7 @@ local function pickSource(deck,boundsByKind)
     for _,kind in ipairs({"Rect","Long"}) do
         local bounds=boundsByKind[kind]
         if bounds then
-            local scale,yaw,score=Kit.fit(deck,bounds)
+            local scale,_,score=Kit.fit(deck,bounds)
             if scale and score>bestScore then
                 bestKind,bestScore=kind,score
             end
@@ -125,7 +190,7 @@ end
 -- already-existing hero 3D slot; Medium/High add bounded authentic rims,
 -- never one model per platform. Android caps remain far below desktop.
 function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
-    touch,decor,reservedCarapaces,reservedHulls)
+    touch,decor,reservedCarapaces,reservedHulls,cameraLook)
     local result={}
     -- Existing seven-material rims can now finish twelve actual eligible
     -- decks on healthy desktop High (six on Medium), without creating any
@@ -164,18 +229,24 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
         if source then boundsByKind[kind]=bounds end
     end
     local candidates={}
+    local look = if typeof(cameraLook)=="Vector3"
+        then Vector3.new(cameraLook.X,0,cameraLook.Z) else Vector3.zero
+    if look.Magnitude > .2 then look = look.Unit else look = Vector3.zero end
     local platforms=base.Parent and base.Parent:FindFirstChild("Platforms")
     for _,deck in ipairs(ordered) do
         if safeDeck(deck,platforms)
             and not (reservedCarapaces and reservedCarapaces[deck])
             and not (reservedHulls and reservedHulls[deck])
             and completeNative(decor,deck) then
-            local distance=(deck.Position-cameraPoint).Magnitude
+            local delta=deck.Position-cameraPoint
+            local distance=delta.Magnitude
             if distance<=range then
                 local kind=pickSource(deck,boundsByKind)
                 if kind then
+                    local planar=Vector3.new(delta.X,0,delta.Z)
+                    local behind=planar.Magnitude>28 and planar.Unit:Dot(look)<-.20
                     candidates[#candidates+1]={
-                        deck=deck,kind=kind,score=distance,
+                        deck=deck,kind=kind,score=distance+(behind and 65 or 0),
                     }
                 end
             end
@@ -190,9 +261,8 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
     -- distribute the SAME remaining approved 3D slots across authentic
     -- platforms in other visible sectors. Previously all eight High PC
     -- rims could crowd the same walkway while distant foreground-sized
-    -- WedgePart bevels stayed primitive. No extra models, renderer passes
-    -- or unverified geometry; touch and GPU-stressed selection are exact
-    -- nearest-first as before.
+    -- WedgePart bevels stayed primitive. Touch and GPU-stressed profiles
+    -- spend their slots on the best foreground candidates.
     if touch~=true and stress==0 and tier~="Low" and count>2 then
         local foreground=math.min(count,tier=="High" and 3 or 2)
         for i=1,foreground do
@@ -247,14 +317,17 @@ function Kit.install(parent,deck,index,kind,decor)
     local scale,yaw=Kit.fit(deck,bounds)
     if not scale then return nil end
     local copy=source:Clone()
-    if not pcall(function() copy:ScaleTo(scale) end) then
+    if not copy then return nil end
+    if type(scale) == "number" and not pcall(function() copy:ScaleTo(scale) end) then
         copy:Destroy()
         return nil
     end
     local frame,size=copy:GetBoundingBox()
+    local stretch = if typeof(scale)=="Vector3" then scale else Vector3.one
+    size *= stretch
     if size.Y<=0 or size.Y>3.05
-        or math.max(size.X,size.Z)>math.max(deck.Size.X,deck.Size.Z)*.97
-        or math.min(size.X,size.Z)>math.min(deck.Size.X,deck.Size.Z)*.97 then
+        or math.max(size.X,size.Z)>math.max(deck.Size.X,deck.Size.Z)*.971
+        or math.min(size.X,size.Z)>math.min(deck.Size.X,deck.Size.Z)*.971 then
         copy:Destroy()
         return nil
     end
@@ -268,7 +341,20 @@ function Kit.install(parent,deck,index,kind,decor)
                 copy:Destroy()
                 return nil
             end
-            piece.CFrame=target*frame:ToObjectSpace(piece.CFrame)
+            local pose = frame:ToObjectSpace(piece.CFrame)
+            if typeof(scale)=="Vector3" then
+                -- The seven material meshes share the source frame.
+                -- A skewed submesh cannot be fitted by resizing its box.
+                local function axis(vector)
+                    if math.abs(vector.X)>.9999 then return stretch.X end
+                    if math.abs(vector.Y)>.9999 then return stretch.Y end
+                    if math.abs(vector.Z)>.9999 then return stretch.Z end
+                end
+                local x,y,z = axis(pose.RightVector),axis(pose.UpVector),axis(pose.LookVector)
+                if not x or not y or not z then copy:Destroy();return nil end
+                piece.Size *= Vector3.new(x,y,z)
+            end
+            piece.CFrame=target*CFrame.new(pose.Position*stretch)*pose.Rotation
             piece.Anchored=false
             piece.Massless=true
             piece.CanCollide=false
@@ -280,7 +366,9 @@ function Kit.install(parent,deck,index,kind,decor)
             piece:SetAttribute("Original3DAssetId",APPROVED[kind])
             piece:SetAttribute("ChaosBaseTransparency",piece.Transparency)
             piece:SetAttribute("ChaosPlatformTrim",true)
-            piece:SetAttribute("OriginalPlatformRimAxisSwap",yaw~=0)
+            piece:SetAttribute("OriginalPlatformRimAxisSwap",
+                math.abs(deck.CFrame:VectorToObjectSpace(piece.CFrame.RightVector).Z)>.9999)
+            piece:SetAttribute("OriginalElevatedPlatformRim",typeof(scale)=="Vector3" or nil)
             local joint=Instance.new(resizable and "Weld" or "WeldConstraint")
             joint.Name="ChaosPlatformTrimWeld"
             joint.Part0=piece
@@ -305,6 +393,14 @@ function Kit.install(parent,deck,index,kind,decor)
     end
     copy:Destroy()
     return parts
+end
+
+function Kit.sourceOf(piece)
+    local id=piece:GetAttribute("Original3DAssetId")
+    for kind,asset in pairs(APPROVED) do
+        if asset==id then return verified(kind) end
+    end
+    return nil
 end
 
 return Kit

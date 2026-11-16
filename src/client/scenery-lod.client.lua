@@ -607,6 +607,14 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
             continue
         end
 
+        if descendant:IsA("MeshPart")
+            and descendant:GetAttribute("OriginalElevatedPlatformRim") == true then
+            if native then
+                PlatformNativeTrimReplacementKit.setRouteRimLodVisible(native, visible)
+            end
+            continue
+        end
+
         if native and descendant:IsA("MeshPart")
             and (descendant:GetAttribute("NearCameraCarapace3D") == true
                 or descendant:GetAttribute("OriginalLargeDeckHull") == true

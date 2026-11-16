@@ -434,6 +434,8 @@ local function cradleDeckSize(deck)
     return Vector3.new(deck.Size.X/scale,deck.Size.Y,deck.Size.Z/scale),scale
 end
 
+Kit.routeDeckSize = cradleDeckSize
+
 -- Under the elevated routes MapBuilder places four square posts, with
 -- authored offsets from the deck. Normalize their footprint for the fit
 -- test so a client joining mid-round uses the same model at the same cost.

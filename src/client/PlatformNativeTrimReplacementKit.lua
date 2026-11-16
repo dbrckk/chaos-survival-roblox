@@ -14,12 +14,17 @@ local LargeStructure = if script and script.Parent
     and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
     then require(script.Parent.PremiumLargeStructureMeshKit)
     else require("./PremiumLargeStructureMeshKit")
+local Rim = if script and script.Parent and script.Parent:FindFirstChild("ApprovedPlatformRimMeshKit")
+    then require(script.Parent.ApprovedPlatformRimMeshKit)
+    else require("./ApprovedPlatformRimMeshKit")
 
 local Kit = {}
 
 local saved = {}
 local routeCradles = {}
+local routeRims = {}
 local cradleClaims = {}
+local rimClaims = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local routeUnderdecks = {}
@@ -68,7 +73,7 @@ local function setNativeMask(part, claims, masked)
     local original = nativeBaselines[part]
     if saved[part] or crownPylons[part] or routeUnderdecks[part]
         or crownTrim[part] or commandTrim[part] or cradleClaims[part]
-        or harborTrusses[part] or junctionTrusses[part] then
+        or harborTrusses[part] or junctionTrusses[part] or rimClaims[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
@@ -199,13 +204,6 @@ function Kit.setRouteCradleLodVisible(deck,visible)
     refreshCradle(entry)
 end
 
-function Kit.routeCradleRefitted(deck)
-    local entry = routeCradles[deck]
-    if not entry then return end
-    entry.fittedSize = deck.Size
-    refreshCradle(entry)
-end
-
 local function bindCradle(arena,deck,folder,pieces)
     local decor = arena:FindFirstChild("Decor")
     local natives = LargeStructure.cradleNativeParts(decor,deck)
@@ -279,7 +277,149 @@ local function bindCradle(arena,deck,folder,pieces)
     refresh()
 end
 
+local function refreshRim(entry)
+    local deck = entry.deck
+    local edges,frame
+    if entry.visible and not entry.evicted and entry.decor
+        and entry.decor.Parent == entry.arena
+        and deck.Parent == entry.arena:FindFirstChild("Platforms")
+        and deck.Anchored and deck.CanCollide and deck.Transparency < .75
+        and (deck.Size-entry.fittedSize).Magnitude < .006 then
+        local phase = deck:GetAttribute("CollapsePhase")
+        local shutter = deck:GetAttribute("BridgeShutterPhase")
+        if (phase == nil or phase == "Normal" or phase == "Safe")
+            and (shutter == nil or shutter == "Idle") then
+            edges,frame = Rim.routeNatives(entry.decor,deck)
+        end
+    end
+    local showing = edges ~= nil and frame == entry.frame
+    if showing then
+        for i,edge in ipairs(edges) do
+            if edge ~= entry.edges[i] then showing = false; break end
+        end
+    end
+    if showing then
+        for _,piece in ipairs(entry.pieces) do
+            local joint = entry.joints[piece]
+            if not joint or joint.Parent ~= piece or joint.Part0 ~= piece or joint.Part1 ~= deck
+                or piece.Parent ~= entry.folder or piece.Transparency >= 1 or piece.Anchored
+                or piece.CanCollide or piece.CanTouch or piece.CanQuery then
+                showing = false; break
+            end
+        end
+    end
+    if showing == entry.showing then return end
+    entry.showing = showing
+    for _,edge in ipairs(entry.edges) do setNativeMask(edge,rimClaims,showing) end
+    for _,piece in ipairs(entry.pieces) do piece.LocalTransparencyModifier = showing and 0 or 1 end
+    count += showing and #entry.edges or -#entry.edges
+    report()
+end
+
+local function bindRouteRim(arena,deck,folder,pieces)
+    local decor = arena:FindFirstChild("Decor")
+    local edges,frame = Rim.routeNatives(decor,deck)
+    local source = Rim.sourceOf(pieces[1])
+    local entry = {arena=arena,deck=deck,folder=folder,decor=decor,
+        pieces=pieces,edges=edges or {},frame=frame,joints={},connections={},
+        visible=true,showing=false,fittedSize=deck.Size,
+        evicted=not edges or not source or #pieces ~= 7}
+    routeRims[deck] = entry
+    local function refresh() refreshRim(entry) end
+    local function evict()
+        entry.evicted = true
+        refresh()
+    end
+    local function watch(signal,handler)
+        table.insert(entry.connections,signal:Connect(handler or refresh))
+    end
+    local function properties(object,names,handler)
+        for _,name in ipairs(names) do watch(object:GetPropertyChangedSignal(name),handler) end
+    end
+    for _,piece in ipairs(pieces) do
+        piece.LocalTransparencyModifier = 1
+        local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+        if joint and joint:IsA("Weld") and piece:GetAttribute("Original3DAssetId")
+            == pieces[1]:GetAttribute("Original3DAssetId") then
+            entry.joints[piece] = joint
+            watch(joint.AncestryChanged,evict)
+            properties(joint,{"Part0","Part1"})
+        else
+            entry.evicted = true
+        end
+        watch(piece.AncestryChanged,evict)
+        properties(piece,{"Anchored","CanCollide","CanTouch","CanQuery","Transparency"})
+    end
+    watch(deck.AncestryChanged,evict)
+    properties(deck,{"CFrame","Size","Anchored","CanCollide","Transparency","Name"})
+    for _,attribute in ipairs({"RouteTier","ChaosPermanentRoute","SkySpineStep",
+        "SkySpineInterchange","PromenadeStep","PromenadeLane","CollapsePhase","BridgeShutterPhase"}) do
+        watch(deck:GetAttributeChangedSignal(attribute))
+    end
+    if edges then
+        local natives = table.clone(edges)
+        table.insert(natives,frame)
+        for _,native in ipairs(natives) do
+            watch(native.AncestryChanged,evict)
+            properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery","Name"})
+            watch(native:GetAttributeChangedSignal("OriginalStructuralBevel"))
+            watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
+        end
+    end
+    local base = arena:FindFirstChild("Base")
+    if base and base:IsA("BasePart") then
+        properties(base,{"Size","Anchored","CanCollide"})
+        watch(base.AncestryChanged,evict)
+        watch(base:GetAttributeChangedSignal("OriginalSizeX"))
+        watch(base:GetAttributeChangedSignal("OriginalSizeZ"))
+    end
+    if decor then watch(decor.AncestryChanged,evict) end
+    if source then
+        watch(source.AncestryChanged,evict)
+        watch(source.DescendantRemoving,evict)
+        watch(source.DescendantAdded,evict)
+        properties(source,{"Name"},evict)
+        properties(source.Parent,{"Name"},evict)
+        watch(source.Parent:GetAttributeChangedSignal("OwnerVerified"),evict)
+        for _,attribute in ipairs({"OwnerVerified","CosmeticOnly","OriginalPlatformRim3D","Original3DAssetId"}) do
+            watch(source:GetAttributeChangedSignal(attribute),evict)
+        end
+        for _,piece in ipairs(source:GetChildren()) do
+            if piece:IsA("MeshPart") then
+                properties(piece,{"MeshId","Size","CFrame","CanCollide","CanTouch","CanQuery","Transparency"},evict)
+            end
+        end
+    end
+    refresh()
+end
+
+function Kit.setRouteRimLodVisible(deck,visible)
+    local entry = routeRims[deck]
+    if not entry or entry.visible == visible then return end
+    entry.visible = visible
+    refreshRim(entry)
+end
+
+function Kit.routeCradleRefitted(deck)
+    local cradle = routeCradles[deck]
+    if cradle then
+        cradle.fittedSize = deck.Size
+        refreshCradle(cradle)
+    end
+    local rim = routeRims[deck]
+    if rim then
+        rim.fittedSize = deck.Size
+        refreshRim(rim)
+    end
+end
+
 function Kit.reset()
+    for deck,entry in pairs(routeRims) do
+        for _,connection in ipairs(entry.connections) do connection:Disconnect() end
+        entry.visible = false
+        refreshRim(entry)
+        routeRims[deck] = nil
+    end
     for deck,entry in pairs(routeCradles) do
         for _,connection in ipairs(entry.connections) do connection:Disconnect() end
         entry.visible = false
@@ -723,6 +863,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
     local approvedKinds = nil
     local approvedSupports = nil
     local cradlePieces = {}
+    local routeRimPieces = {}
     if meshFolder and meshFolder:IsA("Folder") then
         approvedKinds = table.clone(active)
         approvedSupports = table.clone(verifiedSupports)
@@ -733,6 +874,17 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         local platforms = arena:FindFirstChild("Platforms")
         if platforms then
             for _,piece in ipairs(meshFolder:GetChildren()) do
+                if piece:IsA("MeshPart") and piece:GetAttribute("OriginalElevatedPlatformRim") == true then
+                    local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+                    local deck = joint and joint:IsA("Weld") and joint.Part0 == piece and joint.Part1
+                    local id = deck and deck.Name:match("^Platform(%d+)$")
+                    if id and deck.Parent == platforms
+                        and (approvedKinds[id] == "rim" or approvedKinds[id] == "cradle") then
+                        routeRimPieces[deck] = routeRimPieces[deck] or {}
+                        table.insert(routeRimPieces[deck],piece)
+                    end
+                    piece.LocalTransparencyModifier = 1
+                end
                 if piece:IsA("MeshPart") and piece:GetAttribute("OriginalLongCradle3D") == true then
                     local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
                     local deck = joint and joint:IsA("Weld") and joint.Part0 == piece and joint.Part1
@@ -746,6 +898,10 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
             end
             for id,kind in pairs(approvedKinds) do
                 if kind == "cradle" then approvedKinds[id] = nil end
+            end
+            for deck,pieces in pairs(routeRimPieces) do
+                approvedKinds[deck.Name:match("^Platform(%d+)$")] = nil
+                bindRouteRim(arena,deck,meshFolder,pieces)
             end
         end
     end
@@ -774,7 +930,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         -- Source identity is checked against the actual welded server
         -- owner, never the mesh name or arbitrary client-supplied count.
         local function sourceOwner(piece)
-            if not piece:IsA("MeshPart")
+            if not piece:IsA("MeshPart") or piece:GetAttribute("OriginalElevatedPlatformRim") == true
                 or not (piece:GetAttribute("Original3DStructuralSide") == true
                     or piece:GetAttribute("OriginalLargeStructure3D") == true
                     or piece:GetAttribute("OriginalLargeDeckHull") == true)
@@ -966,9 +1122,15 @@ end
 -- only on a native-mask change, not on RenderStepped or a new timer.
 function Kit.breakdown()
     local result = {
-        bevel = 0, underframe = 0, support = 0, pylon = 0,
+        bevel = 0, elevatedRim = 0, underframe = 0, support = 0, pylon = 0,
         promenadePylon = 0, other = 0, spineUnderdeck = 0, promenadeUnderdeck = 0,
     }
+    for edge in pairs(rimClaims) do
+        if edge.Parent == activeDecor then
+            result.bevel += 1
+            result.elevatedRim += 1
+        end
+    end
     for part in pairs(cradleClaims) do
         local deck = physicalOwner(part)
         local family = deck and deck:GetAttribute("SkySpineInterchange") == true

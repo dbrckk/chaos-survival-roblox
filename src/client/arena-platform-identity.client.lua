@@ -553,7 +553,7 @@ local function rebuild()
         ordered, tier.Name, base, cameraPoint,
         player:GetAttribute("OptionalVfxPressure"),
         UserInputService.TouchEnabled, decor,
-        nearCameraCarapaces, nearLargeDeckHulls)
+        nearCameraCarapaces, nearLargeDeckHulls, cameraLook)
 
     local nearCradles,nearSupports,lowBridgePier =
         PremiumLargeStructureMeshKit.selectNearRouteStructures(
@@ -818,8 +818,10 @@ local function rebuild()
             -- only after exact owner provenance and dimensions are checked.
             -- It follows RouteTier shrink via the existing welded snapshot.
             local authenticLongCradle = false
+            local elevatedRim = authenticRim
+                and rimPieces[1]:GetAttribute("OriginalElevatedPlatformRim") == true
             if longCradleBudget > 0 and not authenticCarapace
-                and not authenticRim and nearCradles[platform] == true then
+                and (not authenticRim or elevatedRim) and nearCradles[platform] == true then
                 local cradle = PremiumLargeStructureMeshKit.longCradle(
                     folder, platform, tier.Name, visualIndex, true, decor)
                 if cradle and #cradle == 7 then
@@ -865,7 +867,9 @@ local function rebuild()
             if authenticCarapace then
                 replacements[tostring(visualIndex)] = "carapace"
             elseif authenticRim then
-                replacements[tostring(visualIndex)] = "rim"
+                if not authenticLongCradle then
+                    replacements[tostring(visualIndex)] = "rim"
+                end
             elseif authenticBridge then
                 replacements[tostring(visualIndex)] = "bridge"
                 mountedBridgeGirders += 1
@@ -1139,6 +1143,7 @@ local function rebuild()
             local family = PlatformNativeTrimReplacementKit.breakdown()
             local attributes = {
                 LocalBevelNativePartsReplaced = family.bevel,
+                LocalElevatedRimBevelsReplaced = family.elevatedRim,
                 LocalUnderframeNativePartsReplaced = family.underframe,
                 LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck,
                 LocalPromenadeUnderdeckNativePartsReplaced = family.promenadeUnderdeck,

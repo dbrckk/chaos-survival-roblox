@@ -297,6 +297,12 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local count = 0
             for _ in pairs(low) do count += 1 end
             expect(count).toBe(1)
+            local behind, ahead = farDecks[3], farDecks[1]
+            local facing = Rim.selectVisibleDecks(
+                {behind, ahead}, "Medium", base, Vector3.new(-7,12,0),
+                0,true,decor,{}, {},Vector3.zAxis)
+            expect(facing[behind]).toBe(nil)
+            expect(facing[ahead]).toBe("Long")
             local stressed = Rim.selectVisibleDecks(
                 {rectangular,elongated},"Medium",base,point,
                 1,true,decor,{}, {})
