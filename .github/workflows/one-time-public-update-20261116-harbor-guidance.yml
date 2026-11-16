@@ -1,0 +1,54 @@
+name: Public Chaos Survival Update 2026-11-16
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-public-update-20261116-harbor-guidance.yml
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chaos-public-harbor-guidance-20261116
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'dbrckk/chaos-survival-roblox'
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Wait for the exact main build and Roblox engine suite
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          exact_main() {
+            test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
+          }
+          run_status() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$1/runs?branch=main&head_sha=$GITHUB_SHA&per_page=30" \
+              --jq '[.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch")] | first | if . then (.conclusion // .status) else "waiting" end'
+          }
+
+          for attempt in $(seq 1 330); do
+            exact_main || { echo "::error::Main changed; aborting this release."; exit 1; }
+            build="$(run_status ci.yml)"
+            engine="$(run_status roblox-cloud-test.yml)"
+            echo "Exact $GITHUB_SHA checks: Build Validation=$build; Roblox Open Cloud Engine Tests=$engine"
+            case "$build/$engine" in
+              success/success) break ;;
+              *failure*|*cancelled*|*timed_out*|*skipped*|*action_required*)
+                echo "::error::A required check failed. No Roblox publication."
+                exit 1
+                ;;
+            esac
+            sleep 15
+          done
+          test "$build/$engine" = 'success/success' || { echo "::error::Timed out waiting for required checks."; exit 1; }
+          exact_main || { echo "::error::Main changed before publish dispatch."; exit 1; }
+          gh workflow run publish-existing-public-playtest.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f confirm=PUBLISH_EXISTING_10771083668 -f acknowledge_untested=true

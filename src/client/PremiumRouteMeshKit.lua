@@ -15,11 +15,11 @@ local PlatformNativeTrimReplacementKit = if script and script.Parent
     else require("./PlatformNativeTrimReplacementKit")
 
 local shared = ReplicatedStorage:FindFirstChild("Shared")
-local connectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
+local connectionModule = script and shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local SkyRouteConnectionRules = if connectionModule
     then require(connectionModule) else require("../shared/SkyRouteConnectionRules")
 
-local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local lodRulesModule = script and shared and shared:FindFirstChild("PlatformIdentityLodRules")
 local PlatformIdentityLodRules = if lodRulesModule
     then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
 

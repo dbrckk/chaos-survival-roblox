@@ -13,6 +13,8 @@ on:
       - tests/engine/platform-rim-original-3d.spec.luau
       - src/shared/DistrictVisualCensusRules.lua
       - tools/verify_original_3d_budget_census.py
+      - tools/compact_cloud_luau.py
+      - .github/workflows/roblox-cloud-test.yml
   push:
     branches: [main]
     paths:
@@ -22,6 +24,8 @@ on:
       - tests/engine/platform-rim-original-3d.spec.luau
       - src/shared/DistrictVisualCensusRules.lua
       - tools/verify_original_3d_budget_census.py
+      - tools/compact_cloud_luau.py
+      - .github/workflows/roblox-cloud-test.yml
 
 concurrency:
   group: build-validation-${{ github.ref }}

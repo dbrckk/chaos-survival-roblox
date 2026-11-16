@@ -241,13 +241,17 @@ jobs:
         if: steps.config.outputs.ready == 'true'
         shell: bash
         run: |
-          python tools/prepare_cloud_batches.py --self-test
-          python tools/prepare_cloud_batches.py
           # Check generated Luau after expansion; the ordinary build
           # validates source specs but not these ephemeral bundles.
           curl --retry 4 --retry-all-errors --retry-delay 3 -fsSL -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip
           mkdir -p /tmp/luau
           unzip -q /tmp/luau.zip -d /tmp/luau
+          python tools/prepare_cloud_batches.py --self-test
+          python tools/prepare_cloud_batches.py
+          # Lest sends every transitive dependency as source in the same
+          # 1 MiB Roblox request. Compact only this disposable test checkout,
+          # after grouping so coverage and task counts stay predictable.
+          python tools/compact_cloud_luau.py /tmp/luau/luau-ast src tests/engine
           find tests/engine -maxdepth 1 -name '__ci_*.spec.luau' -print0 |
             xargs -0 -r -n1 /tmp/luau/luau-compile >/dev/null
 
