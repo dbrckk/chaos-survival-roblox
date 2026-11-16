@@ -47,7 +47,7 @@ local outpostFrameDisconnects = {}
 local outpostInstrumentDisconnects = {}
 local outpostFinishDisconnects = {}
 local cargoTieDownDisconnects = {}
-local harborRailDisconnects = {}
+local harborGirderDisconnects = {}
 local currentOutpostPosture = "normal"
 
 local function stopOutpostMotion(state)
@@ -164,8 +164,8 @@ local function clear()
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
     end
-    for _,disconnect in ipairs(harborRailDisconnects) do disconnect() end
-    table.clear(harborRailDisconnects)
+    for _,disconnect in ipairs(harborGirderDisconnects) do disconnect() end
+    table.clear(harborGirderDisconnects)
     for _, disconnect in ipairs(cargoTieDownDisconnects) do disconnect() end
     table.clear(cargoTieDownDisconnects)
     if player:GetAttribute("LocalOriginalHarborCargoTieDownCount") ~= 0 then
@@ -859,14 +859,15 @@ local function rebuild()
     player:SetAttribute("LocalOriginalHarborOutpostInstrumentCount",mountedInstruments)
 
     -- Reserve from the existing structural allocation after the outposts.
-    -- Three parts per face consume one module in Medium, two in High.
-    local railTargets,railSource = {},nil
-    local railCost = tier.Name == "High" and 2 or 1
+    -- Side rails and braces cost one module each in Medium, two in High.
+    -- Preserve rail coverage and leave room for the existing columns.
+    local railTargets,braceTargets,girderSource = {},{},nil
+    local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
-        and supportBudget >= railCost and cameraPoint
+        and supportBudget >= girderCost and cameraPoint
         and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0 then
-        railSource = PremiumPlatformSideMeshKit.harborRailSource()
-        if railSource then
+        girderSource = PremiumPlatformSideMeshKit.harborGirderSource()
+        if girderSource then
             local candidates = {}
             local range = tier.Name == "High" and 130 or 105
             for _,deck in ipairs(ordered) do
@@ -887,9 +888,16 @@ local function rebuild()
                 return a.distance < b.distance or (a.distance == b.distance and a.deck.Name < b.deck.Name)
             end)
             local limit = tier.Name == "High" and (UserInputService.TouchEnabled and 2 or 4) or 2
-            for i=1,math.min(limit,#candidates,math.floor(supportBudget/railCost)) do
+            local railCount = math.min(limit,#candidates,math.floor(supportBudget/girderCost))
+            for i=1,railCount do
                 railTargets[candidates[i].deck] = true
-                supportBudget -= railCost
+                supportBudget -= girderCost
+            end
+            local braceLimit = tier.Name == "High" and not UserInputService.TouchEnabled and 2 or 1
+            for i=1,math.min(braceLimit,railCount) do
+                if supportBudget < girderCost+1 then break end
+                braceTargets[candidates[i].deck] = true
+                supportBudget -= girderCost
             end
         end
     end
@@ -1037,15 +1045,15 @@ local function rebuild()
                 else
                     sidePieces,harborRails,railFallback = PlatformFinishKit.buildSideRails(
                         folder, platform, tier.Name, theme, variant, visualIndex,
-                        nearBridgeGirders[platform] == true, railTargets[platform] and railSource)
+                        nearBridgeGirders[platform] == true, railTargets[platform] and girderSource)
                 end
             end
             if harborRails then
                 originalLargeCount += #harborRails
-                harborRailDisconnects[#harborRailDisconnects+1] =
+                harborGirderDisconnects[#harborGirderDisconnects+1] =
                     HarborOutpostKit.bindWeldedReplacement(platform,harborRails,railFallback,scheduleRebuild)
             elseif railTargets[platform] then
-                supportBudget += railCost
+                supportBudget += girderCost
             end
             local authenticBridge = sidePieces[1] ~= nil
                 and sidePieces[1]:GetAttribute(
@@ -1071,13 +1079,23 @@ local function rebuild()
             for _, piece in ipairs(sidePieces) do
                 registerVisual(platform, piece)
             end
+            local braceMeshes
             if not authenticCarapace and not authenticBridge
                 and not authenticRim and not authenticLongCradle then
-                for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(
-                    folder, platform, variant, tier.Name, theme
-                )) do
+                local pieces,meshes,braceFallback = PlatformFinishKit.buildLoadBraces(
+                    folder, platform, variant, tier.Name, theme, braceTargets[platform] and girderSource)
+                braceMeshes = meshes
+                for _, piece in ipairs(pieces) do
                     registerVisual(platform, piece)
                 end
+                if braceMeshes then
+                    originalLargeCount += #braceMeshes
+                    harborGirderDisconnects[#harborGirderDisconnects+1] =
+                        HarborOutpostKit.bindWeldedReplacement(platform,braceMeshes,braceFallback,scheduleRebuild)
+                end
+            end
+            if braceTargets[platform] and not braceMeshes then
+                supportBudget += girderCost
             end
             -- Textured-looking three-layer native hardware on a strictly
             -- bounded subset of actual jump decks. Shares this existing
@@ -1749,6 +1767,13 @@ local function watchVerifiedTemplateReadiness(holder, connections, marker)
                 model:GetAttributeChangedSignal(attribute):Connect(function()
                     if model.Parent == holder then scheduleRebuild() end
                 end)
+        end
+        if model.Name == "Bridge" then
+            local function meshChanged(child)
+                if child:IsA("BasePart") and model.Parent == holder then scheduleRebuild() end
+            end
+            connections[#connections+1] = model.ChildAdded:Connect(meshChanged)
+            connections[#connections+1] = model.ChildRemoved:Connect(meshChanged)
         end
     end
     for _, model in ipairs(holder:GetChildren()) do attach(model) end

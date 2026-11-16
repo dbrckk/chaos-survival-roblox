@@ -1121,7 +1121,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(why) end
     end)
 
-    it("fits complete Harbor rails through real contraction and restores every native face on weld loss",function()
+    it("fits complete Harbor girders through real contraction and restores their separate native groups",function()
         local Finish=require("../../src/client/PlatformFinishKit")
         local Side=require("../../src/client/PremiumPlatformSideMeshKit")
         local Outpost=require("../../src/client/HarborOutpostKit")
@@ -1148,6 +1148,8 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         for i,size in ipairs(sizes) do
             local mesh=Instance.new("MeshPart")
             mesh.Size=size
+            if i==2 then mesh.CFrame=CFrame.new(.06,-.41,0) end
+            if i==3 then mesh.CFrame=CFrame.new(-.14,-.10,0) end
             mesh.Anchored=true
             mesh.CanCollide=false
             mesh.CanTouch=false
@@ -1158,21 +1160,29 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         source.Parent=holder
         local owner=Instance.new("Folder")
         owner.Parent=arena
-        local disconnect
+        local disconnectRails,disconnectBraces
         local running=false
         local cleanup={}
         local ok,why=pcall(function()
             local theme=VisualTheme.arena("Harbor")
             local deck=arena.Platforms.Platform96
-            local function build(tier)
-                return Finish.buildSideRails(owner,deck,tier,theme,"Harbor",96,false,Side.harborRailSource())
+            local function buildRails(tier)
+                return Finish.buildSideRails(owner,deck,tier,theme,"Harbor",96,false,Side.harborGirderSource())
             end
-            local medium,mediumMeshes=build("Medium")
+            local function buildBraces(tier)
+                return Finish.buildLoadBraces(owner,deck,"Harbor",tier,theme,Side.harborGirderSource())
+            end
+            local medium,mediumMeshes=buildRails("Medium")
             assert(#medium==8 and #mediumMeshes==6)
+            local mediumBraces,mediumOriginals=buildBraces("Medium")
+            assert(#mediumBraces==8 and #mediumOriginals==6 and #buildBraces("Low")==0)
             owner:ClearAllChildren()
-            local pieces,meshes,fallback=build("High")
+            local pieces,meshes,fallback=buildRails("High")
+            local braces,braceMeshes,braceFallback=buildBraces("High")
             assert(#pieces==16 and #meshes==12)
+            assert(#braces==16 and #braceMeshes==12)
             for native in pairs(fallback) do assert(native.Transparency==1) end
+            for native in pairs(braceFallback) do assert(native.Transparency==1) end
             for _,mesh in ipairs(meshes) do
                 assert(mesh:GetAttribute("OriginalHarborRecessedRail3D"))
                 assert(not mesh.CanCollide and not mesh.CanTouch and not mesh.CanQuery)
@@ -1180,7 +1190,13 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 assert(weld.Part0==mesh and weld.Part1==deck)
                 assert(weld.C1.Position.Y+mesh.Size.Y*.5<deck.Size.Y*.5)
             end
-            local snapshot=Finish.captureRouteFootprint(deck,pieces)
+            for _,mesh in ipairs(braceMeshes) do
+                assert(mesh:GetAttribute("OriginalHarborLoadBrace3D") and mesh:GetAttribute("ChaosLoadBrace"))
+                assert(not mesh.CanCollide and not mesh.CanTouch and not mesh.CanQuery)
+                local weld=mesh.ChaosPlatformTrimWeld
+                assert(weld.Part0==mesh and weld.Part1==deck)
+            end
+            local snapshot=Finish.captureRouteFootprint(deck,owner:GetChildren())
             running=true
             ShrinkingArena.start({Config=Config,RoundSeconds=.12,
                 Active=function() return running end,OnCleanup=cleanup})
@@ -1188,30 +1204,54 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
             running=false
             task.wait()
-            assert(arena.Base.Size.X<=144.05 and Finish.applyRouteFootprint(snapshot)==16)
+            assert(arena.Base.Size.X<=144.05 and Finish.applyRouteFootprint(snapshot)==32)
+            local topSocket=braces[1].ChaosPlatformTrimWeld.C1:PointToWorldSpace(Vector3.zAxis*braces[1].Size.Z*.5)
+            assert((topSocket-Vector3.new(-deck.Size.X*.36,-deck.Size.Y*.5-.10,-deck.Size.Z*.30)).Magnitude<.02)
             local contracted={}
-            for i,piece in ipairs(pieces) do
-                contracted[i]={piece.Size,piece.ChaosPlatformTrimWeld.C1.Position}
+            for _,piece in ipairs(owner:GetChildren()) do
+                contracted[piece.Name]={piece.Size,piece.ChaosPlatformTrimWeld.C1}
             end
             owner:ClearAllChildren()
-            pieces,meshes,fallback=build("High")
+            pieces,meshes,fallback=buildRails("High")
+            braces,braceMeshes,braceFallback=buildBraces("High")
             assert(#pieces==16 and #meshes==12)
-            for i,piece in ipairs(pieces) do
-                assert((piece.Size-contracted[i][1]).Magnitude<.03)
-                assert((piece.ChaosPlatformTrimWeld.C1.Position-contracted[i][2]).Magnitude<.03)
+            assert(#braces==16 and #braceMeshes==12)
+            for _,piece in ipairs(owner:GetChildren()) do
+                local original=contracted[piece.Name]
+                local frame=piece.ChaosPlatformTrimWeld.C1
+                assert((piece.Size-original[1]).Magnitude<.03)
+                assert((frame.Position-original[2].Position).Magnitude<.03)
+                assert(frame.LookVector:Dot(original[2].LookVector)>.999)
             end
-            disconnect=Outpost.bindWeldedReplacement(deck,meshes,fallback)
+            disconnectRails=Outpost.bindWeldedReplacement(deck,meshes,fallback)
+            disconnectBraces=Outpost.bindWeldedReplacement(deck,braceMeshes,braceFallback)
+            Finish.applyCollapseVisibility(braces,"Warning")
+            assert(braceMeshes[1].Transparency>=.8 and braces[1].Transparency==1)
+            Finish.applyCollapseVisibility(braces,"Safe")
+            assert(braceMeshes[1].Transparency<.8 and braces[1].Transparency==1)
             meshes[7].ChaosPlatformTrimWeld:Destroy()
             task.wait()
             for native,alpha in pairs(fallback) do assert(math.abs(native.Transparency-alpha)<.01) end
             for _,mesh in ipairs(meshes) do assert(mesh.Transparency==1) end
+            assert(braceMeshes[1].Transparency<1 and braces[1].Transparency==1)
+            braceMeshes[7].ChaosPlatformTrimWeld:Destroy()
+            task.wait()
+            for native,alpha in pairs(braceFallback) do assert(math.abs(native.Transparency-alpha)<.01) end
+            for _,mesh in ipairs(braceMeshes) do assert(mesh.Transparency==1) end
+            deck:SetAttribute("LocalOriginalHarborDockCaissonMounted",true)
+            local caissonNative,caissonBraces=buildBraces("High")
+            assert(#caissonNative==4 and not caissonBraces)
+            deck:SetAttribute("LocalOriginalHarborDockCaissonMounted",nil)
             sourceParts[1]:Destroy()
-            local nativeOnly,missing=build("High")
+            local nativeOnly,missing=buildRails("High")
             assert(#nativeOnly==4 and not missing and nativeOnly[1].Transparency<1)
+            local nativeBraces,missingBraces=buildBraces("High")
+            assert(#nativeBraces==4 and not missingBraces and nativeBraces[1].Transparency<1)
             assert(deck.CanCollide and arena.Decor.PlatformPanel96.Transparency<1)
         end)
         running=false
-        if disconnect then disconnect() end
+        if disconnectRails then disconnectRails() end
+        if disconnectBraces then disconnectBraces() end
         for _,stop in ipairs(cleanup) do stop() end
         arena.Parent:Destroy()
         holder:Destroy()
