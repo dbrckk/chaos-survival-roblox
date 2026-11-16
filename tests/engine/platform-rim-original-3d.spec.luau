@@ -1107,36 +1107,36 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 cleanup[#cleanup+1]=function() part:Destroy() end
                 return part
             end
-            local impactUpdates=0
-            local impactConnection=Hazards.ImpactWarningsChanged:Connect(function()
-                impactUpdates+=1
+            local warningUpdates=0
+            local warningConnection=Hazards.WarningsChanged:Connect(function()
+                warningUpdates+=1
             end)
-            cleanup[#cleanup+1]=function() impactConnection:Disconnect() end
-            local function waitForImpactUpdate(previous)
+            cleanup[#cleanup+1]=function() warningConnection:Disconnect() end
+            local function waitForWarningUpdate(previous)
                 local deadline=os.clock()+1
-                repeat task.wait() until impactUpdates>previous or os.clock()>deadline
-                assert(impactUpdates>previous,"Expected a route update for the impact warning")
+                repeat task.wait() until warningUpdates>previous or os.clock()>deadline
+                assert(warningUpdates>previous,"Expected a route update for the warning")
             end
             assert(safeJump())
             local delta=target.Position-deck.Position
             local away=Vector3.new(delta.X,0,delta.Z).Unit
             local center=target.Position+Vector3.yAxis*(target.Size.Y*.5+1.5)
             for _,name in ipairs({"MeteorWarning","BombWarning"}) do
-                local previous=impactUpdates
+                local previous=warningUpdates
                 local lateSize=name=="BombWarning"
                 local warning=hazard(name,center+(lateSize and away*8 or Vector3.zero),
                     Vector3.new(1,.1,1),workspace)
-                waitForImpactUpdate(previous)
+                waitForWarningUpdate(previous)
                 if lateSize then
                     assert(safeJump())
-                    previous=impactUpdates
+                    previous=warningUpdates
                     warning:SetAttribute("WarningEndSize",20)
-                    waitForImpactUpdate(previous)
+                    waitForWarningUpdate(previous)
                 end
                 assert(not safeJump())
-                previous=impactUpdates
+                previous=warningUpdates
                 warning:Destroy()
-                waitForImpactUpdate(previous)
+                waitForWarningUpdate(previous)
                 assert(safeJump())
             end
             local mechanics=arena:FindFirstChild("Mechanics")
@@ -1145,18 +1145,29 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 mechanics.Name="Mechanics"
                 mechanics.Parent=arena
             end
-            local sweep=Instance.new("Folder")
-            sweep.Name="HarborCargoSweep"
-            sweep.Parent=mechanics
-            local lane=hazard("HarborSweepLane1",deck.Position+Vector3.yAxis*deck.Size.Y*.5,
-                Vector3.new(5,.1,5),sweep)
-            lane:SetAttribute("HarborSweepPhase","Warning")
-            assert(not safeJump())
-            lane:SetAttribute("HarborSweepPhase","Pulse")
-            assert(not safeJump())
-            lane:SetAttribute("HarborSweepPhase","Idle")
+            local HarborCargoSweep=require("../../src/server/HarborCargoSweep")
+            local previous=warningUpdates
+            local sweep=assert(HarborCargoSweep.start({
+                EnableHarborCargoSweep=true, Active=function() return false end,
+                OnCleanup=cleanup,
+            },arena))
+            local lane=assert(sweep:FindFirstChild("HarborSweepLane1"))
+            assert(lane:HasTag("ChaosHarborSweepLane"))
+            lane.CFrame=CFrame.new(deck.Position+Vector3.yAxis*deck.Size.Y*.5)
+            lane.Size=Vector3.new(5,.1,5)
+            waitForWarningUpdate(previous)
             assert(safeJump())
+
+            for _,phase in ipairs({"Warning","Pulse","Idle","Warning"}) do
+                previous=warningUpdates
+                lane:SetAttribute("HarborSweepPhase",phase)
+                waitForWarningUpdate(previous)
+                assert(safeJump()==(phase=="Idle"))
+            end
+            previous=warningUpdates
             sweep:Destroy()
+            waitForWarningUpdate(previous)
+            assert(safeJump())
             local lava=hazard("RoundLava",target.Position+Vector3.yAxis*target.Size.Y*.5,
                 Vector3.new(1,1,1),workspace)
             assert(not safeJump())

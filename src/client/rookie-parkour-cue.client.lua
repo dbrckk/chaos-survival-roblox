@@ -103,12 +103,12 @@ local function hide()
     currentTarget = nil
 end
 
-JumpRouteHazards.ImpactWarningsChanged:Connect(function()
+JumpRouteHazards.WarningsChanged:Connect(function()
     local target = currentTarget
     local character = player.Character
     local root = target and character and character:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then return end
-    local warnings, lava = JumpRouteHazards.read()
+    local warnings, lava = JumpRouteHazards.read(mapPlatforms and mapPlatforms.Parent)
     if not safeGuidedTargetPath(root.Position, target, warnings, lava) then
         hide()
     end

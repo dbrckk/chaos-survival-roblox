@@ -172,6 +172,7 @@ local function createBand(folder, base, index)
     -- that gate the server's phase transitions. No guessed durations.
     p:SetAttribute("HarborSweepWarningSeconds", HarborCargoSweep.WarningSeconds)
     p:SetAttribute("HarborSweepPulseSeconds", HarborCargoSweep.PulseSeconds)
+    p:AddTag("ChaosHarborSweepLane")
     p.Parent = folder
 
     -- Text + colour warn together for accessibility; the caption is
