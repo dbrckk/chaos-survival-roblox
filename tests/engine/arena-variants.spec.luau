@@ -576,6 +576,16 @@ describe("Arena variants", function()
                 gate.CanCollide=false
                 expect(JumpRouteCueRules.nextPhysical(from,shortlist,Vector3.zero,id,nil,clear)).toBe(primary)
 
+                -- The air gap remains clear while a collider divides
+                -- the deck between the player's feet and its takeoff lip.
+                local feet=from.Position+Vector3.new(4,from.Size.Y*.5,0)
+                gate.Position=from.Position+Vector3.new(0,3,0)
+                gate.CanCollide=true
+                expect(clear(from,primary)).toBe(true)
+                expect(clear(from,primary,nil,feet)).toBe(false)
+                gate.CanCollide=false
+                expect(clear(from,primary,nil,feet)).toBe(true)
+
                 local base=Instance.new("Part")
                 base.Size=Vector3.new(120,2,120)
                 base.Position=Vector3.zero

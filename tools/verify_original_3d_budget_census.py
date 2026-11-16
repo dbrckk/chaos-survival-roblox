@@ -1889,8 +1889,10 @@ assert 'skyRouteDirection(from), isClear' in ROOKIE
 MASTERY=(CLIENT/"high-ground-route-cue.client.lua").read_text(encoding="utf8")
 assert 'local harborArena = variant == "Harbor" and arena or nil' in MASTERY
 assert 'JumpRouteClearance.forArena(harborArena)' in MASTERY
-assert 'canJump(base, deck, hit.Position)' in MASTERY
-assert 'nearestEntry(decks, hit.Position, 42, canApproach)' in MASTERY
+assert 'routeClearance(base, destination, hit.Position)' in MASTERY
+assert 'routeClearance(source, destination, nil, hit.Position)' in MASTERY
+assert 'nearestEntry(decks, hit.Position, 42, canJump)' in MASTERY
+assert 'arcClear(approach,start,heading.Unit,0)' in CLEARANCE
 assert 'nextPhysical(from, decks, base.Position, variant, nil, canJump)' in MASTERY
 assert 'watchHarborTarget(target, update)' in MASTERY
 assert 'target:GetAttributeChangedSignal("CollapsePhase"):Connect(onSurfaceChanged)' in MASTERY
