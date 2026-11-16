@@ -1,3 +1,7 @@
+## P4 — Guidage du défi Points hauts à Storm Harbor
+
+L'indicateur du défi vérifie le passage à pied vers le premier saut et l'espace libre entre les paliers. Il propose un autre passage praticable si l'accès est bloqué et s'efface quand aucun trajet ne convient. Le guide des urgences et du fret garde la priorité. Sur écran tactile, le défi reste affiché dans le HUD de manche.
+
 ## P4 — Premier saut guidé à Storm Harbor
 
 Le guide vérifie le passage à pied depuis les pieds du joueur jusqu'au point de départ du saut, puis l'espace nécessaire pour atteindre le premier palier. Si ce passage est obstrué, il cherche un autre accès. Une fois sur le parcours, les indications vérifient aussi les sauts entre paliers et les détours, tout en conservant l'ordre des marches et des passerelles.
