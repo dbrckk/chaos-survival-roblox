@@ -1886,6 +1886,10 @@ assert 'routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(are
 assert 'routeClearance(base, deck, hit.Position)' in ROOKIE
 assert 'routeClearance(source, destination, nil, hit.Position)' in ROOKIE
 assert 'checked[destination] = clear' in ROOKIE
+assert 'return isSafe(deck) and routeClearance(base, deck, hit.Position)' in ROOKIE
+assert 'clear = isSafe(destination)' in ROOKIE
+assert 'if destination and isSafe(destination) then' in ROOKIE
+assert 'safeTargets[destination] = safe' in ROOKIE
 assert 'crossing and isClear(from, crossing)' in ROOKIE
 assert 'flank and isClear(from, flank)' in ROOKIE
 assert 'detour and isClear(from, detour)' in ROOKIE
