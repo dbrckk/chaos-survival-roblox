@@ -466,6 +466,24 @@ describe("Arena variants", function()
                 decks[#decks + 1] = part
             end
             local checked = 0
+            local function checkChevron(from,to,expectedLength)
+                local left,right,size = JumpRouteCueRules.takeoffChevron(from,to)
+                expect(left ~= nil and right ~= nil).toBe(true)
+                expect(math.abs(size.Z-expectedLength)<.001).toBe(true)
+                local heading=to.Position-from.Position
+                local front=left.LookVector+right.LookVector
+                expect(front.Unit:Dot(Vector3.new(heading.X,0,heading.Z).Unit)>.999).toBe(true)
+                for _,stroke in ipairs({left,right}) do
+                    for _,x in ipairs({-.5,.5}) do
+                        for _,z in ipairs({-.5,.5}) do
+                            local world=stroke:PointToWorldSpace(Vector3.new(x*size.X,0,z*size.Z))
+                            local p=from.CFrame:PointToObjectSpace(world)
+                            expect(math.abs(p.X)<=from.Size.X*.5-.10).toBe(true)
+                            expect(math.abs(p.Z)<=from.Size.Z*.5-.10).toBe(true)
+                        end
+                    end
+                end
+            end
             for _, from in ipairs(decks) do
                 local to = JumpRouteCueRules.select(
                     from, decks, Vector3.zero, id
@@ -483,6 +501,19 @@ describe("Arena variants", function()
                     local localPoint = from.CFrame:PointToObjectSpace(frame.Position)
                     expect(math.abs(localPoint.X) <= from.Size.X * 0.5 - 0.7).toBe(true)
                     expect(math.abs(localPoint.Z) <= from.Size.Z * 0.5 - 0.7).toBe(true)
+                    if id == "Harbor" then
+                        local originalSize,originalTarget=from.Size,to.CFrame
+                        expect(JumpRouteCueRules.cueStillSafe(from,to,Vector3.zero,id)).toBe(true)
+                        for _,ratio in ipairs({1,.75,.45}) do
+                            from.Size=originalSize*Vector3.new(ratio,1,ratio)
+                            checkChevron(from,to,1.02)
+                        end
+                        to.CFrame=originalTarget+Vector3.new(0,0,4)
+                        checkChevron(from,to,1.02)
+                        to.CFrame=originalTarget+Vector3.new(0,0,100)
+                        expect(JumpRouteCueRules.cueStillSafe(from,to,Vector3.zero,id)).toBe(false)
+                        from.Size,to.CFrame=originalSize,originalTarget
+                    end
                 end
             end
             expect(checked >= (id == "Orbital" and 0 or 8)).toBe(true)

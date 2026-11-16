@@ -1,3 +1,7 @@
+## P4 — Chevrons de saut pendant la contraction
+
+Les deux traits du chevron suivent le bord réel du palier et se réorientent vers la cible quand l'un des paliers bouge. Ils gardent leur taille jusqu'à 45 % de la largeur des paliers de Storm Harbor et disparaissent si le saut devient hors de portée. Le calcul utilise la position courante des paliers, y compris pour les joueurs qui rejoignent la manche en cours.
+
 ## P4 — Platelage dégagé sur les itinéraires de Storm Harbor
 
 Les 58 paliers portuaires utilisent une seule bande d'arrimage de secours, placée au même endroit que l'arrimage sculpté. Le relief sélectionné remplace cette bande et reste au-dessus du bois rainuré, sous les chevrons de saut. Le jeu conserve les créneaux de détail pendant la contraction et réaffiche la bande si une soudure disparaît. Le profil Low utilise le relief sélectionné seul.

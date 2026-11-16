@@ -113,7 +113,7 @@ end
 
 -- Position the sign INSIDE the supporting collision footprint, never
 -- overhanging the edge as a ghost piece during Shrinking Arena.
-function JumpRouteCueRules.takeoffFrame(from, target, paintOffset)
+function JumpRouteCueRules.takeoffFrame(from, target, paintOffset, edgePadding)
     if not from or not target
         or not from:IsA("BasePart") or not target:IsA("BasePart") then
         return nil
@@ -128,6 +128,13 @@ function JumpRouteCueRules.takeoffFrame(from, target, paintOffset)
         (from.Size.Z * 0.5) / math.max(0.0001, math.abs(dir.Z))
     )
     local distance = math.max(0, border - 1.5)
+    if edgePadding then
+        local inside = math.min(
+            (from.Size.X*.5-edgePadding)/math.max(.0001,math.abs(dir.X)),
+            (from.Size.Z*.5-edgePadding)/math.max(.0001,math.abs(dir.Z))
+        )
+        distance = math.max(0,math.min(distance,inside))
+    end
     local face = from.CFrame * CFrame.new(
         dir.X * distance,
         tonumber(paintOffset) or (from.Size.Y * 0.5 + 0.16),
@@ -137,6 +144,20 @@ function JumpRouteCueRules.takeoffFrame(from, target, paintOffset)
         from.CFrame.UpVector)
 end
 
+function JumpRouteCueRules.takeoffChevron(from, target, paintOffset)
+    if not from or not from:IsA("BasePart") then return nil end
+    local halfWidth = math.min(from.Size.X,from.Size.Z)*.5
+    -- .84 covers the farthest corner of either rotated stroke from the
+    -- marker center (.313 center offset + .516 stroke half diagonal).
+    local scale = math.min(1,(halfWidth-.12)/.84)
+    if scale < .48 then return nil end
+    local frame = JumpRouteCueRules.takeoffFrame(from,target,paintOffset,.12+.84*scale)
+    if not frame then return nil end
+    local tilt = math.rad(38)
+    local left = frame*CFrame.new(-.28*scale,0,.14*scale)*CFrame.Angles(0,-tilt,0)
+    local right = frame*CFrame.new(.28*scale,0,.14*scale)*CFrame.Angles(0,tilt,0)
+    return left,right,Vector3.new(.15*scale,.045,1.02*scale)
+end
 
 -- First-session in-world guidance follows ONLY actual server-created,
 -- physically jumpable decks. The source is a raycast against collidable
