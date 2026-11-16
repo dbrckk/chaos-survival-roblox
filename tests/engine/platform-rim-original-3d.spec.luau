@@ -778,6 +778,81 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             assert(fallback and failed==nil and #owner:GetChildren()==5)
             assert(deck.CanCollide and deck:FindFirstChild("HarborDryDockOutpost"))
             assert(leg.Parent==nil)
+
+            local storage = game:GetService("ReplicatedStorage")
+            local instruments = {
+                {"ApprovedHarborHeroStationTemplates","SignalStation","OriginalHarborHeroStation3D",
+                    73237902371094,Vector3.new(.9,1,9),"OriginalHarborHeroMotionRole","Radar",1},
+                {"ApprovedHarborKineticGantryTemplates","CableGantry","OriginalHarborKineticGantry3D",
+                    98809955094422,Vector3.new(8.8,7.2,5.3),"OriginalHarborGantryKineticRole","Load",1},
+                {"ApprovedOrbitalReactorLandmarkTemplates","Node","OriginalOrbitalReactorLandmark3D",
+                    104654294187035,Vector3.new(4.36,4.36,4.36),nil,nil,7},
+                {"ApprovedPerimeterVariantApexTemplates","Relay","OriginalPerimeterVariantApex3D",
+                    110237986522853,Vector3.new(2.26,6.0595,1.89),nil,nil,7},
+            }
+            for route,spec in ipairs(instruments) do
+                local previous = storage:FindFirstChild(spec[1])
+                if previous then previous.Parent=nil end
+                local holder=Instance.new("Folder")
+                holder.Name=spec[1]
+                holder:SetAttribute("OwnerVerified",true)
+                cleanup[#cleanup+1]=function()
+                    holder:Destroy()
+                    if previous then previous.Parent=storage end
+                end
+                holder.Parent=storage
+                local model=Instance.new("Model")
+                model.Name=spec[2]
+                model:SetAttribute(spec[3],true)
+                model:SetAttribute("Original3DAssetId",spec[4])
+                model:SetAttribute("OwnerVerified",true)
+                model:SetAttribute("CosmeticOnly",true)
+                for i=1,7 do
+                    local mesh=Instance.new("MeshPart")
+                    mesh.Size=i==1 and spec[5] or Vector3.one*.2
+                    mesh.Position=i==1 and Vector3.zero or Vector3.new(.4,.25,0)
+                    mesh.Anchored=true
+                    mesh.CanCollide=false
+                    mesh.CanTouch=false
+                    mesh.CanQuery=false
+                    if i==1 and spec[6] then mesh:SetAttribute(spec[6],spec[7]) end
+                    mesh.Parent=model
+                end
+                model.Parent=holder
+                owner:ClearAllChildren()
+                local index=98+(route-1)*4
+                local endpoint=arena.Platforms["Platform"..index]
+                local _,pivot=Outpost.build(factory,endpoint,index,theme,"Medium")
+                assert(pivot)
+                local lost=0
+                local sculpture=assert(Outpost.mountInstrument(factory,endpoint,pivot,function()
+                    lost+=1
+                end))
+                disconnect=sculpture.disconnect
+                assert(#sculpture.parts==spec[8] and pivot.Transparency==1)
+                local joint=pivot.PlatformIdentityWeld
+                local pose=assert(Outpost.motionTarget(route,"normal"))
+                joint.C0=pose
+                Outpost.applyInstrumentPose(joint,sculpture.parts)
+                for _,part in ipairs(sculpture.parts) do
+                    local meshJoint=part.PlatformIdentityWeld
+                    local offset=joint.C1:ToObjectSpace(meshJoint.C1)
+                    local expected=joint.C1*pose:Inverse()*offset
+                    local actual=meshJoint.C1*meshJoint.C0:Inverse()
+                    assert((expected.Position-actual.Position).Magnitude<.001)
+                    assert(expected.LookVector:Dot(actual.LookVector)>.9999)
+                    assert(not part.CanCollide and part:GetAttribute("Original3DAssetId")==spec[4])
+                end
+                endpoint:SetAttribute("CollapsePhase","Warning")
+                Finish.applyCollapseVisibility(owner:GetChildren(),"Warning")
+                sculpture.parts[1].PlatformIdentityWeld:Destroy()
+                task.wait()
+                assert(lost==1 and math.abs(pivot.Transparency-.8)<.01)
+                endpoint:SetAttribute("CollapsePhase","Safe")
+                Finish.applyCollapseVisibility(owner:GetChildren(),"Safe")
+                assert(math.abs(pivot.Transparency-.1)<.01)
+                disconnect()
+            end
         end)
         running=false
         if disconnect then disconnect() end

@@ -1,3 +1,9 @@
+## P4 — Instruments animés des avant-postes de Storm Harbor
+
+Les quatre jetées ont chacune une tête mécanique distincte. Le radar reprend la barre forgée de la station portuaire, le treuil son tambour à enroulements, la balise une optique cerclée et l'antenne un relais à ailettes. Les sculptures utilisent les maillages approuvés du projet et suivent l'animation déjà pilotée par le jeu, avec réduction des mouvements et adaptation au rétrécissement des quais.
+
+Un instrument proche en Medium ou High tactile et deux en High PC peuvent utiliser la sculpture. Chaque tête occupe au plus un créneau du budget de colonnes. Le décor d'origine revient sous pression graphique ou en cas de montage incomplet. Le compteur `LocalOriginalHarborOutpostInstrumentCount` rapporte le nombre de têtes sculptées montées sur le client.
+
 ## P4 — Portiques forgés des quatre avant-postes de Storm Harbor
 
 Les quatre avant-postes réutilisent deux colonnes portuaires approuvées et une poutre en treillis. Les portiques restent au bord extérieur du palier et les instruments conservent leurs animations. La taille d'origine sert de référence pour que les joueurs qui arrivent pendant le rétrécissement retrouvent le même portique que ceux déjà présents.

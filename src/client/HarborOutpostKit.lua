@@ -2,16 +2,16 @@
 -- Owned by the EXISTING arena-platform-identity rebuild and its welded
 -- shrink/collapse lifecycle; never starts a new heartbeat or render loop.
 -- No collision, touch/query, lights or new asset imports.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HarborOutpostKit = {}
 local WIDTH = 10.5
 local FRAME_MODULES = 3
 
 -- Roblox may import the truss along either horizontal axis. The sources
 -- are two approved, seven-material packs with axis-aligned material meshes.
-local function stage(source, dimensions, target, size, truss)
-    if not source or not dimensions or not source.Archivable then return nil end
-    local frame = source:GetBoundingBox()
-    if truss and dimensions.Z > dimensions.X then
+local function stage(source, frame, dimensions, target, size, alignX, meshes, count)
+    if not source.Archivable then return nil end
+    if alignX and dimensions.Z > dimensions.X then
         frame *= CFrame.Angles(0, math.pi*.5, 0)
         dimensions = Vector3.new(dimensions.Z, dimensions.Y, dimensions.X)
     end
@@ -20,7 +20,7 @@ local function stage(source, dimensions, target, size, truss)
         return Vector3.new(math.abs(unit.X),math.abs(unit.Y),math.abs(unit.Z))
     end
     local parts = {}
-    for _,mesh in ipairs(source:GetChildren()) do
+    for _,mesh in ipairs(meshes or source:GetChildren()) do
         if not mesh:IsA("MeshPart") or not mesh.Anchored
             or mesh.CanCollide or mesh.CanTouch or mesh.CanQuery
             or mesh.Transparency >= 1 then break end
@@ -35,7 +35,7 @@ local function stage(source, dimensions, target, size, truss)
         piece.CFrame = target*CFrame.new(relative.Position*stretch)*relative.Rotation
         parts[#parts+1] = piece
     end
-    if #parts == 7 then return parts end
+    if #parts == (count or 7) then return parts end
     for _,piece in ipairs(parts) do piece:Destroy() end
     return nil
 end
@@ -43,7 +43,7 @@ end
 -- Use the ordinary collapse and LOD owners for both pictures. This
 -- switch only chooses which geometry they expose, and can be reversed
 -- even when an existing welded mesh is detached after a rebuild.
-local function bindFrame(platform, meshes, fallback, onLost)
+local function bindFrame(platform, meshes, fallback, onLost, pivot)
     local connections = {}
     local function disconnect()
         for _,connection in ipairs(connections) do connection:Disconnect() end
@@ -59,9 +59,11 @@ local function bindFrame(platform, meshes, fallback, onLost)
         end
         local phase = platform:GetAttribute("CollapsePhase")
         for part,alpha in pairs(fallback) do
-            part:SetAttribute("ChaosBaseTransparency",alpha)
-            part.Transparency = phase == "Gone" and 1
-                or (phase == "Warning" and math.max(.8,alpha) or alpha)
+            if part.Parent then
+                part:SetAttribute("ChaosBaseTransparency",alpha)
+                part.Transparency = phase == "Gone" and 1
+                    or (phase == "Warning" and math.max(.8,alpha) or alpha)
+            end
         end
         if onLost then onLost() end
     end
@@ -80,6 +82,21 @@ local function bindFrame(platform, meshes, fallback, onLost)
             end)
         end
     end
+    if pivot then
+        local pivotWeld = pivot:FindFirstChild("PlatformIdentityWeld")
+        local parent = pivot.Parent
+        connections[#connections+1] = pivot.AncestryChanged:Connect(function()
+            if pivot.Parent ~= parent then lose() end
+        end)
+        connections[#connections+1] = pivotWeld.AncestryChanged:Connect(function()
+            if pivotWeld.Parent ~= pivot then lose() end
+        end)
+        for _,property in ipairs({"Part0","Part1"}) do
+            connections[#connections+1] = pivotWeld:GetPropertyChangedSignal(property):Connect(function()
+                if pivotWeld.Part0 ~= pivot or pivotWeld.Part1 ~= platform then lose() end
+            end)
+        end
+    end
     return disconnect
 end
 
@@ -93,6 +110,115 @@ local PROFILES = {
     [4] = {name = "SignalArray", yaw = math.pi * 0.5,
         shape = Enum.PartType.Cylinder, span = 6.7, height = 5.0, legX = 2.95},
 }
+
+-- Existing creator-approved sources, with genuine separately published
+-- motion pieces for the radar bar and the spooled cable assembly.
+local INSTRUMENTS = {
+    {holder="ApprovedHarborHeroStationTemplates", name="SignalStation",
+        marker="OriginalHarborHeroStation3D", id=73237902371094,
+        roleTag="OriginalHarborHeroMotionRole", role="Radar",
+        size=Vector3.new(3.25,.55,1.10), drop=.23},
+    {holder="ApprovedHarborKineticGantryTemplates", name="CableGantry",
+        marker="OriginalHarborKineticGantry3D", id=98809955094422,
+        roleTag="OriginalHarborGantryKineticRole", role="Load",
+        size=Vector3.new(1.95,1.76,1.65), drop=.20},
+    {holder="ApprovedOrbitalReactorLandmarkTemplates", name="Node",
+        marker="OriginalOrbitalReactorLandmark3D", id=104654294187035,
+        size=Vector3.new(1.72,1.72,1.72), drop=.14},
+    {holder="ApprovedPerimeterVariantApexTemplates", name="Relay",
+        marker="OriginalPerimeterVariantApex3D", id=110237986522853,
+        size=Vector3.new(1.28,2.16,1.16), drop=.16},
+}
+
+function HarborOutpostKit.instrumentHolder(name)
+    for _,spec in ipairs(INSTRUMENTS) do
+        if spec.holder == name then return spec.name, spec.marker, spec.roleTag end
+    end
+    return nil
+end
+
+local function instrumentSource(spec)
+    local holder = ReplicatedStorage:FindFirstChild(spec.holder)
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild(spec.name)
+    if not model or not model:IsA("Model") or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true or model:GetAttribute(spec.marker) ~= true
+        or model:GetAttribute("Original3DAssetId") ~= spec.id then return nil end
+    local parts, selected = model:GetChildren(), nil
+    if #parts ~= 7 then return nil end
+    for _,part in ipairs(parts) do
+        if not part:IsA("MeshPart") or not part.Anchored
+            or part.CanCollide or part.CanTouch or part.CanQuery or part.Transparency >= 1 then return nil end
+        for _,detail in ipairs(part:GetDescendants()) do
+            if not detail:IsA("SurfaceAppearance") and not detail:IsA("Decal")
+                and not detail:IsA("Texture") then return nil end
+        end
+        if spec.role and part:GetAttribute(spec.roleTag) == spec.role then
+            if selected then return nil end
+            selected = part
+        end
+    end
+    if spec.role then
+        if not selected then return nil end
+        local b = selected.Size
+        local short, long = math.min(b.X,b.Z), math.max(b.X,b.Z)
+        if spec.role == "Radar" then
+            if b.Y > 1.4 or long < 8 or long > 10.2 or short >= 1.3 then return nil end
+        elseif b.Y < 6.6 or b.Y > 10 or long < 8.2 or long > 11.4
+            or short < 4.1 or short > 7.7 then return nil end
+        return model,selected.CFrame,b,{selected}
+    end
+    local frame, b = model:GetBoundingBox()
+    if spec.name == "Node" then
+        if (b-Vector3.new(4.36,4.36,4.36)).Magnitude > .62 then return nil end
+    elseif math.abs(math.max(b.X,b.Z)-2.26) > .30
+        or math.abs(math.min(b.X,b.Z)-1.89) > .28 or math.abs(b.Y-6.0595) > .30 then return nil end
+    return model,frame,b
+end
+
+-- One tween still drives the old instrument socket. Conjugate its C0
+-- through each part's live offset so the complete head rotates about
+-- the same pivot, including after the route footprint has been refitted.
+function HarborOutpostKit.applyInstrumentPose(pivotWeld, meshes)
+    for _,part in ipairs(meshes) do
+        if not part.Parent then continue end
+        local joint = part:FindFirstChild("PlatformIdentityWeld")
+        if joint and joint.Part1 == pivotWeld.Part1 then
+            local relative = pivotWeld.C1:ToObjectSpace(joint.C1)
+            joint.C0 = relative:Inverse()*pivotWeld.C0*relative
+        end
+    end
+end
+
+function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
+    local spec = INSTRUMENTS[platform:GetAttribute("HarborSpokeRoute")]
+    local pivotWeld = pivot and pivot:FindFirstChild("PlatformIdentityWeld")
+    if not spec or not pivotWeld or not pivotWeld:IsA("Weld")
+        or platform:GetAttribute("HarborSpokeStep") ~= 4
+        or pivotWeld.Part0 ~= pivot or pivotWeld.Part1 ~= platform then return nil end
+    local source, frame, box, selected = instrumentSource(spec)
+    if not source then return nil end
+    local scale = platform.Size.X/WIDTH
+    local target = platform.CFrame*pivotWeld.C1
+    target = CFrame.new(target.Position-Vector3.new(0,spec.drop,0))*target.Rotation
+    local size = spec.size*Vector3.new(scale,1,scale)
+    local pieces = stage(source,frame,box,target,size,spec.role ~= nil,
+        selected,selected and 1 or 7)
+    if not pieces then return nil end
+    local colors = {}
+    for index,piece in ipairs(pieces) do
+        piece:SetAttribute("OriginalHarborOutpostInstrument3D",true)
+        piece:SetAttribute("Original3DAssetId",spec.id)
+        makePart(pivot.Name.."_Sculpted"..index,
+            piece.Size,piece.CFrame,piece.Color,piece.Material,piece.Transparency,platform,piece)
+        colors[index] = piece.Color
+    end
+    local alpha = pivot:GetAttribute("ChaosBaseTransparency")
+    pivot:SetAttribute("ChaosBaseTransparency",1)
+    pivot.Transparency = 1
+    local disconnect = bindFrame(platform,pieces,{[pivot]=alpha},onLost,pivot)
+    return {parts=pieces,colors=colors,disconnect=disconnect}
+end
 
 function HarborOutpostKit.count(tier)
     if tier == "High" then return 9 end
@@ -186,9 +312,12 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
         and platform:GetAttribute("RouteTier") == 4
         and (phase == nil or phase == "Safe" or phase == "Normal") then
         local legSize = Vector3.new(.9,mastHeight,.9)*horizontal
-        staged[1] = stage(sources.column,sources.columnSize,fitFrame(legFrames[1]),legSize)
-        staged[2] = stage(sources.column,sources.columnSize,fitFrame(legFrames[2]),legSize)
-        staged[3] = stage(sources.truss,sources.trussSize,fitFrame(gantryFrame),
+        local columnFrame = sources.column:GetBoundingBox()
+        local trussFrame = sources.truss:GetBoundingBox()
+        for i,leg in ipairs(legFrames) do
+            staged[i] = stage(sources.column,columnFrame,sources.columnSize,fitFrame(leg),legSize)
+        end
+        staged[3] = stage(sources.truss,trussFrame,sources.trussSize,fitFrame(gantryFrame),
             Vector3.new(profile.span,.66,1.02)*horizontal,true)
     end
     local forged = staged[1] ~= nil and staged[2] ~= nil and staged[3] ~= nil

@@ -2010,7 +2010,7 @@ print("PASS Harbor forged piles stay inside the existing column budgets and nati
 # column allocation. A partial source must never hide any old geometry.
 outpost=(CLIENT/"HarborOutpostKit.lua").read_text(encoding="utf8")
 for fragment in (
-    "local FRAME_MODULES = 3", "if #parts == 7 then return parts end",
+    "local FRAME_MODULES = 3", "if #parts == (count or 7) then return parts end",
     "staged[1] ~= nil and staged[2] ~= nil and staged[3] ~= nil",
     "weld.Part0 ~= piece or weld.Part1 ~= platform",
     'tier == "High" and (touch and 1 or 2)',
@@ -2023,6 +2023,13 @@ assert "originalLargeCount += HarborOutpostKit.frameModules*7" in OWNER
 assert "LocalOriginalHarborOutpostFrameCount" in OWNER
 assert "RunService" not in outpost
 print("PASS all-or-nothing Harbor outposts share the existing 21-mesh column budget")
+
+for fragment in ('73237902371094', '98809955094422', '104654294187035', '110237986522853', 'selected and 1 or 7', 'relative:Inverse()*pivotWeld.C0*relative', 'bindFrame(platform,pieces,{[pivot]=alpha},onLost,pivot)'):
+    assert fragment in outpost, fragment
+assert 'supportBudget -= 1\n                mountedInstruments += 1' in OWNER
+assert 'HarborOutpostKit.applyInstrumentPose(state.joint,state.sculpture.parts)' in OWNER
+assert 'GetPropertyChangedSignal("C0")' in OWNER
+print("PASS four Harbor instruments share the existing pivot tween and column slots")
 
 
 for source,owner in EXPECTED.items():
