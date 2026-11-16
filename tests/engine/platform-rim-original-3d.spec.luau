@@ -1291,8 +1291,12 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 local original=contracted[piece.Name]
                 local joint=piece:FindFirstChild("ChaosPlatformTrimWeld") or piece.PlatformIdentityWeld
                 local frame=joint.C1
-                assert((piece.Size-original[1]).Magnitude<.03)
-                assert((frame.Position-original[2].Position).Magnitude<.03)
+                assert((piece.Size-original[1]).Magnitude<.03,
+                    ("%s rebuilt size %s, live contracted size %s")
+                        :format(piece.Name,tostring(piece.Size),tostring(original[1])))
+                assert((frame.Position-original[2].Position).Magnitude<.03,
+                    ("%s rebuilt offset %s, live contracted offset %s")
+                        :format(piece.Name,tostring(frame.Position),tostring(original[2].Position)))
                 assert(frame.LookVector:Dot(original[2].LookVector)>.999)
             end
             disconnectRails=Outpost.bindWeldedReplacement(deck,meshes,fallback)

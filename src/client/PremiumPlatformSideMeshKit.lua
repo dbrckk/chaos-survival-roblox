@@ -100,6 +100,7 @@ local function fitHarborGirder(source, platform, target, dimensions, name, kind)
         if not piece then break end
         local scale = Vector3.new(right:Dot(fit),up:Dot(fit),forward:Dot(fit))
         local size = mesh.Size*scale
+        piece:SetAttribute("HarborGirderUnclampedSize", size)
         piece.Size = Vector3.new(math.max(.05,size.X),size.Y,math.max(.05,size.Z))
         local relative = target*CFrame.new(offset.Position*fit)*offset.Rotation
         piece.CFrame = platform.CFrame*relative

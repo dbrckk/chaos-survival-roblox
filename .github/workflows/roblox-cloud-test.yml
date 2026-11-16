@@ -348,6 +348,15 @@ jobs:
 
           # Keep each suite separately named/reported for release auditing.
           # No simultaneous jobs submit execution tasks to the same owner.
+          failed=()
           for suite in gameplay_hazards gameplay_world gameplay_rounds matrix core_a core_b1 core_b2; do
-            run_suite "$suite"
+            set +e
+            (set -e; run_suite "$suite")
+            status=$?
+            set -e
+            if [ "$status" -ne 0 ]; then failed+=("$suite"); fi
           done
+          if [ "${#failed[@]}" -gt 0 ]; then
+            echo "::error::Open Cloud validation failed for: ${failed[*]}"
+            exit 1
+          fi

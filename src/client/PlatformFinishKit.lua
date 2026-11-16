@@ -395,7 +395,7 @@ function PlatformFinishKit.captureSkybridgeFootprint(platform, pieces)
         if piece and piece:IsA("BasePart") and piece.Parent then
             snapshot.entries[#snapshot.entries + 1] = {
                 part = piece,
-                size = piece.Size,
+                size = piece:GetAttribute("HarborGirderUnclampedSize") or piece.Size,
                 localCFrame = platform.CFrame:ToObjectSpace(piece.CFrame),
             }
         end
@@ -876,10 +876,12 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                 local ratio = length/data.braceLength
                 local position = offset.Position
                 localFrame = frame*CFrame.new(position.X,position.Y,position.Z*ratio)*offset.Rotation
+                local scaleX = math.abs(offset.RightVector.Z) > .999 and ratio or 1
+                local scaleZ = math.abs(offset.LookVector.Z) > .999 and ratio or 1
                 part.Size = Vector3.new(
-                    data.size.X*(math.abs(offset.RightVector.Z) > .999 and ratio or 1),
+                    math.max(.05, data.size.X*scaleX),
                     data.size.Y,
-                    data.size.Z*(math.abs(offset.LookVector.Z) > .999 and ratio or 1))
+                    math.max(.05, data.size.Z*scaleZ))
             else
                 part.Size = Vector3.new(
                     math.max(0.05, data.size.X*(rimSwapped and ratioZ or ratioX)),

@@ -1,5 +1,7 @@
 name: Public Chaos Survival Update 2026-11-16
 
+# Owner-requested retry after engine validation of district roofs and live Harbor mesh sizing.
+
 on:
   push:
     branches: [main]
