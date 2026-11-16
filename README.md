@@ -1,3 +1,7 @@
+## P4 — Palier de repli pour les chevrons de saut
+
+Le chevron conserve sa cible tant que le saut reste accessible. Si le palier passe en alerte, disparaît ou s'éloigne, le jeu cherche un autre palier compatible. Le chevron s'efface si aucun saut valide ne reste et réapparaît dès qu'un palier redevient accessible.
+
 ## P4 — Chevrons de saut pendant la contraction
 
 Les deux traits du chevron suivent le bord réel du palier et se réorientent vers la cible quand l'un des paliers bouge. Ils gardent leur taille jusqu'à 45 % de la largeur des paliers de Storm Harbor et disparaissent si le saut devient hors de portée. Le calcul utilise la position courante des paliers, y compris pour les joueurs qui rejoignent la manche en cours.

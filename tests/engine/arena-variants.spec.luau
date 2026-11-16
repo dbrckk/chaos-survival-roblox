@@ -504,6 +504,7 @@ describe("Arena variants", function()
                     if id == "Harbor" then
                         local originalSize,originalTarget=from.Size,to.CFrame
                         expect(JumpRouteCueRules.cueStillSafe(from,to,Vector3.zero,id)).toBe(true)
+                        expect(JumpRouteCueRules.retarget(from,to,decks,Vector3.zero,id)).toBe(to)
                         for _,ratio in ipairs({1,.75,.45}) do
                             from.Size=originalSize*Vector3.new(ratio,1,ratio)
                             checkChevron(from,to,1.02)
@@ -519,6 +520,30 @@ describe("Arena variants", function()
             expect(checked >= (id == "Orbital" and 0 or 8)).toBe(true)
             if id == "Orbital" then
                 expect(checked).toBe(0)
+            end
+            if id == "Harbor" then
+                local from,primary=decks[1],decks[2]
+                -- Use another authored Storm Harbor deck at a second
+                -- reachable border to exercise a split route.
+                local backup=decks[9]
+                backup.Position=from.Position+Vector3.new(0,3,14)
+                local shortlist={from,primary,backup}
+                local function retarget(current)
+                    return JumpRouteCueRules.retarget(from,current,shortlist,Vector3.zero,id)
+                end
+                primary:SetAttribute("CollapsePhase","Warning")
+                expect(retarget(primary)).toBe(backup)
+                primary:SetAttribute("CollapsePhase",nil)
+                expect(retarget(backup)).toBe(backup)
+                backup:SetAttribute("BridgeShutterPhase","Warning")
+                expect(retarget(backup)).toBe(primary)
+                primary.Parent=nil
+                expect(retarget(primary)==nil).toBe(true)
+                backup:SetAttribute("BridgeShutterPhase","Idle")
+                expect(retarget(nil)).toBe(backup)
+                primary.Parent=live
+                from:SetAttribute("CollapsePhase","Warning")
+                expect(retarget(backup)==nil).toBe(true)
             end
             live:Destroy()
         end

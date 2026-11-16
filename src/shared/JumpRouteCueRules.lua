@@ -18,6 +18,15 @@ local function deckTier(part)
     return nil
 end
 
+JumpRouteCueRules.deckTier = deckTier
+
+local function hasStableSurface(part)
+    local shutter = part:GetAttribute("BridgeShutterPhase")
+    return part.Anchored and part.CanCollide and part.Transparency < .75
+        and part:GetAttribute("CollapsePhase") == nil
+        and (shutter == nil or shutter == "Idle")
+end
+
 function JumpRouteCueRules.gap(from, target)
     if not from or not target
         or not from:IsA("BasePart") or not target:IsA("BasePart") then
@@ -37,9 +46,7 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
     end
     local tier = deckTier(from)
     if not tier or tier == 4 or type(orderedPlatforms) ~= "table"
-        or not from.Anchored or not from.CanCollide
-        or from.Transparency >= 0.75
-        or from:GetAttribute("CollapsePhase") ~= nil then
+        or not from.Parent or not hasStableSurface(from) then
         return nil
     end
 
@@ -52,9 +59,7 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
     for _, target in ipairs(orderedPlatforms) do
         local targetTier = deckTier(target)
         if target ~= from and target.Parent == from.Parent
-            and targetTier and target.Anchored and target.CanCollide
-            and target.Transparency < 0.75
-            and target:GetAttribute("CollapsePhase") == nil
+            and targetTier and hasStableSurface(target)
             and (targetTier == tier + 1 or (hub and targetTier == tier))
         then
             local rise = target.Position.Y + target.Size.Y * 0.5 - fromTop
@@ -98,17 +103,19 @@ end
 function JumpRouteCueRules.cueStillSafe(from, target, arenaCenter, variantId)
     if not from or not target
         or not from:IsA("BasePart") or not target:IsA("BasePart")
-        or not from.Parent or target.Parent ~= from.Parent
-        or not from.Anchored or not target.Anchored
-        or not from.CanCollide or not target.CanCollide
-        or from.Transparency >= 0.75 or target.Transparency >= 0.75
-        or from:GetAttribute("CollapsePhase") ~= nil
-        or target:GetAttribute("CollapsePhase") ~= nil then
+        or not from.Parent or target.Parent ~= from.Parent then
         return false
     end
     return JumpRouteCueRules.select(
         from, {from, target}, arenaCenter, variantId
     ) == target
+end
+
+function JumpRouteCueRules.retarget(from, current, orderedPlatforms, arenaCenter, variantId)
+    if JumpRouteCueRules.cueStillSafe(from,current,arenaCenter,variantId) then
+        return current
+    end
+    return JumpRouteCueRules.select(from,orderedPlatforms,arenaCenter,variantId)
 end
 
 -- Position the sign INSIDE the supporting collision footprint, never

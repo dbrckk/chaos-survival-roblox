@@ -35,8 +35,9 @@ local collapseConnections = {}
 local bridgeShutterConnections = {}
 local routeAttributeConnections = {}
 local outpostAttributeConnections = {}
-local routeTargetConnections = {}
+local routeDeckConnections = {}
 local routeCueStates = {}
+local routeGeneration = 0
 local footprintDisconnects = {}
 local originalColumnDisconnects = {}
 -- Exact server-side native Parts covered by our locally mounted Low
@@ -114,6 +115,7 @@ local function refreshOutpostMotion(platform)
 end
 
 local function clear()
+    routeGeneration += 1
     for _, connection in ipairs(originalColumnDisconnects) do
         connection:Disconnect()
     end
@@ -216,11 +218,11 @@ local function clear()
         end
         outpostAttributeConnections[platform] = nil
     end
-    for platform, connections in pairs(routeTargetConnections) do
+    for platform, connections in pairs(routeDeckConnections) do
         for _, connection in ipairs(connections) do
             connection:Disconnect()
         end
-        routeTargetConnections[platform] = nil
+        routeDeckConnections[platform] = nil
     end
     table.clear(routeCueStates)
     table.clear(visualsByPlatform)
@@ -513,23 +515,16 @@ local function decorateTakeoff(platform, target, index, theme, quality)
         piece:SetAttribute("SkipRouteFootprint",true)
         strokes[#strokes + 1] = piece
     end
-    routeCueStates[platform] = {target = target, strokes = strokes}
+    return strokes
 end
 
-local function syncTakeoff(platform, center, variant)
-    local cue = routeCueStates[platform]
-    if not cue then return end
-    -- A shrinking deck can retain collision but lose the original gap:
-    -- do not continue to advertise a now-impossible jump on Android.
-    local valid = JumpRouteCueRules.cueStillSafe(
-        platform, cue.target, center, variant
-    )
+local function refitTakeoff(platform,target,strokes)
     local left,right,size
-    if valid then left,right,size = takeoffGeometry(platform,cue.target) end
-    for index, stroke in ipairs(cue.strokes) do
+    if target then left,right,size = takeoffGeometry(platform,target) end
+    for index, stroke in ipairs(strokes) do
         if stroke.Parent then
             local joint = stroke:FindFirstChild("PlatformIdentityWeld")
-            local frame = index == 1 and left or right
+            local frame = if index == 1 then left else right
             if frame and joint and joint:IsA("Weld")
                 and joint.Part0 == stroke and joint.Part1 == platform then
                 stroke.Size = size
@@ -541,6 +536,11 @@ local function syncTakeoff(platform, center, variant)
         end
     end
 end
+
+local ROUTE_DECK_PROPERTIES = {
+    Size = true, CFrame = true, Parent = true, Anchored = true,
+    CanCollide = true, Transparency = true,
+}
 
 local scheduleRebuild
 
@@ -575,6 +575,64 @@ local function rebuild()
     local originalLargeCount = 0
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
+    -- Share deck subscriptions among every cue that uses the same target.
+    -- Revisit waiting cues once per geometry/availability change batch.
+    local targetUsers,pendingCues = {},{}
+    local waitingCues = {{},{},{},{}}
+    local dirtyTiers = {}
+    local generation = routeGeneration
+    local routeUpdateQueued = false
+    local function syncRoute(platform)
+        local cue = routeCueStates[platform]
+        if not cue then return end
+        local previous = cue.target
+        local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant)
+        if previous ~= target then
+            if previous then
+                local users = targetUsers[previous]
+                if users then
+                    users[platform] = nil
+                    if next(users) == nil then targetUsers[previous] = nil end
+                end
+            end
+            if target then
+                local users = targetUsers[target] or {}
+                users[platform] = true
+                targetUsers[target] = users
+            end
+            cue.target = target
+        end
+        waitingCues[cue.targetTier][platform] = if target then nil else true
+        -- Contraction can move a tier-one deck into the central hub radius.
+        if cue.targetTier == 2 then waitingCues[1][platform] = waitingCues[2][platform] end
+        if cue.strokes then
+            refitTakeoff(platform,target,cue.strokes)
+        elseif target then
+            cue.strokes = decorateTakeoff(platform,target,cue.index,theme,tier)
+        end
+    end
+    local function queueRouteUpdate(deck,deckTier)
+        if generation ~= routeGeneration then return end
+        if routeCueStates[deck] then pendingCues[deck] = true end
+        local users = targetUsers[deck]
+        if users then
+            for source in pairs(users) do pendingCues[source] = true end
+        end
+        if next(waitingCues[deckTier]) then dirtyTiers[deckTier] = true end
+        if next(pendingCues) == nil and next(dirtyTiers) == nil then return end
+        if routeUpdateQueued then return end
+        routeUpdateQueued = true
+        task.defer(function()
+            if generation ~= routeGeneration then return end
+            routeUpdateQueued = false
+            for deckTier in pairs(dirtyTiers) do
+                for source in pairs(waitingCues[deckTier]) do pendingCues[source] = true end
+            end
+            table.clear(dirtyTiers)
+            for source in pairs(pendingCues) do syncRoute(source) end
+            table.clear(pendingCues)
+        end)
+    end
     local camera = workspace.CurrentCamera
     local cameraPoint = camera and camera.CFrame.Position or nil
     local cameraLook = camera and camera.CFrame.LookVector or nil
@@ -1290,11 +1348,20 @@ local function rebuild()
 
             -- Orbital uses continuous physical Helix ramps instead of
             -- jumping between these deck tiers; no false route arrows.
-            local target = JumpRouteCueRules.select(
-                platform, ordered, base.Position, variant
-            )
-            if target then
-                decorateTakeoff(platform, target, visualIndex, theme, tier)
+            local routeTier = variant ~= "Orbital" and JumpRouteCueRules.deckTier(platform)
+            if routeTier then
+                if routeTier < 4 then
+                    routeCueStates[platform] = {index=visualIndex,targetTier=routeTier+1}
+                end
+                routeDeckConnections[platform] = {
+                    platform.Changed:Connect(function(property)
+                        if ROUTE_DECK_PROPERTIES[property] then queueRouteUpdate(platform,routeTier) end
+                    end),
+                    platform:GetAttributeChangedSignal("RouteTier"):Connect(function()
+                        queueRouteUpdate(platform,routeTier)
+                        scheduleRebuild()
+                    end),
+                }
             end
 
             -- Permanent Tower skybridges shorten during Shrinking Arena.
@@ -1323,10 +1390,7 @@ local function rebuild()
 
             -- A platform can enter while already Gone (streaming/late
             -- replication) or switch phase after the visuals are built.
-            local function syncRoute()
-                syncTakeoff(platform, base.Position, variant)
-            end
-            local function syncCollapse()
+            local function syncCollapse(initial)
                 local pieces=visualsByPlatform[platform]
                 PlatformFinishKit.applyCollapseVisibility(
                     pieces, platform:GetAttribute("CollapsePhase")
@@ -1347,43 +1411,18 @@ local function rebuild()
                         end
                     end
                 end
-                syncRoute()
+                if routeTier and not initial then queueRouteUpdate(platform,routeTier) end
                 refreshOutpostMotion(platform)
             end
             collapseConnections[platform] =
                 platform:GetAttributeChangedSignal("CollapsePhase"):Connect(syncCollapse)
-            if platform:GetAttribute("ChaosSkybridge")==true then
+            if routeTier or platform:GetAttribute("ChaosSkybridge")==true then
                 bridgeShutterConnections[platform] =
                     platform:GetAttributeChangedSignal("BridgeShutterPhase")
                         :Connect(syncCollapse)
             end
-            if routeCueStates[platform] then
-                -- Size can shrink without any CollapsePhase change.
-                -- Batch geometry changes from both decks into one update.
-                local cue = routeCueStates[platform]
-                local queued = false
-                local function queueGeometry()
-                    if queued then return end
-                    queued = true
-                    task.defer(function()
-                        queued = false
-                        if routeCueStates[platform] == cue then syncRoute() end
-                    end)
-                end
-                routeTargetConnections[platform] = {
-                    platform:GetPropertyChangedSignal("Size"):Connect(queueGeometry),
-                    platform:GetPropertyChangedSignal("CFrame"):Connect(queueGeometry),
-                    platform:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
-                    platform:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
-                    target:GetAttributeChangedSignal("CollapsePhase"):Connect(syncRoute),
-                    target:GetPropertyChangedSignal("Size"):Connect(queueGeometry),
-                    target:GetPropertyChangedSignal("CFrame"):Connect(queueGeometry),
-                    target:GetPropertyChangedSignal("Parent"):Connect(syncRoute),
-                    target:GetPropertyChangedSignal("CanCollide"):Connect(syncRoute),
-                    target:GetPropertyChangedSignal("Transparency"):Connect(syncRoute),
-                }
-            end
-            syncCollapse()
+            syncCollapse(true)
+            syncRoute(platform)
         end
     end
     -- Once genuine owner-approved MeshParts are fully built, mask ONLY
