@@ -13,8 +13,9 @@ requires=re.findall(
     r'^\s*local (Premium\w+Assets) = require\(script\.\1\)$',
     scoped,re.M)
 deferred=re.findall(r'task\.defer\((Premium\w+Assets)\.start\)',scoped)
-assert len(requires)==47,(len(requires),requires)
-assert len(set(requires))==47
+expected_owners = 48
+assert len(requires) == expected_owners, (len(requires), requires)
+assert len(set(requires)) == expected_owners
 assert requires==deferred,(requires,deferred)
 for module in requires:
     assert (ROOT/"src/server"/(module+".lua")).is_file(),module
@@ -47,6 +48,6 @@ for arena,name,hint in entries:
     assert len(name)>=4
     assert 24<=len(hint)<=96,(arena,len(hint),hint)
 assert "two blue squall pads in 14s" in dict((x[0],x[2]) for x in entries)["Harbor"]
-print("PASS 47 real premium art requires scoped away from main round loop")
+print(f"PASS {expected_owners} real premium art requires scoped away from main round loop")
 print("PASS optional art is deferred without changing per-owner start order")
 print("PASS all five arena mechanic hints obey real in-engine HUD limits")
