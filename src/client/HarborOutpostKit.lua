@@ -130,21 +130,27 @@ local INSTRUMENTS = {
         size=Vector3.new(1.28,2.16,1.16), drop=.16},
 }
 
-function HarborOutpostKit.instrumentHolder(name)
+local WING = {
+    holder="ApprovedPerimeterArmorTemplates", name="Wing",
+    marker="OriginalPerimeterArmor3D", id=138096293972093,
+}
+
+function HarborOutpostKit.templateForHolder(name)
     for _,spec in ipairs(INSTRUMENTS) do
         if spec.holder == name then return spec.name, spec.marker, spec.roleTag end
     end
+    if name == WING.holder then return WING.name,WING.marker end
     return nil
 end
 
-local function instrumentSource(spec)
+local function approvedModel(spec)
     local holder = ReplicatedStorage:FindFirstChild(spec.holder)
     if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then return nil end
     local model = holder:FindFirstChild(spec.name)
     if not model or not model:IsA("Model") or model:GetAttribute("OwnerVerified") ~= true
         or model:GetAttribute("CosmeticOnly") ~= true or model:GetAttribute(spec.marker) ~= true
         or model:GetAttribute("Original3DAssetId") ~= spec.id then return nil end
-    local parts, selected = model:GetChildren(), nil
+    local parts = model:GetChildren()
     if #parts ~= 7 then return nil end
     for _,part in ipairs(parts) do
         if not part:IsA("MeshPart") or not part.Anchored
@@ -153,6 +159,15 @@ local function instrumentSource(spec)
             if not detail:IsA("SurfaceAppearance") and not detail:IsA("Decal")
                 and not detail:IsA("Texture") then return nil end
         end
+    end
+    return model,parts
+end
+
+local function instrumentSource(spec)
+    local model,parts = approvedModel(spec)
+    if not model then return nil end
+    local selected
+    for _,part in ipairs(parts) do
         if spec.role and part:GetAttribute(spec.roleTag) == spec.role then
             if selected then return nil end
             selected = part
@@ -218,6 +233,78 @@ function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
     pivot.Transparency = 1
     local disconnect = bindFrame(platform,pieces,{[pivot]=alpha},onLost,pivot)
     return {parts=pieces,colors=colors,disconnect=disconnect}
+end
+
+function HarborOutpostKit.wingSource()
+    local model = approvedModel(WING)
+    if not model then return nil end
+    local _,box = model:GetBoundingBox()
+    if math.abs(box.Y-1.64) > .32
+        or math.abs(math.min(box.X,box.Z)-3.277) > .30
+        or math.abs(math.max(box.X,box.Z)-5.62) > .32 then return nil end
+    return model,box
+end
+
+-- Each assembly uses its own fallback. A broken wing restores both original
+-- wings, while the under-deck tie and the animated instrument keep ownership.
+function HarborOutpostKit.mountFinishing(makePart, platform, natives, kind, source, bounds, onLost)
+    local profile = PROFILES[platform:GetAttribute("HarborSpokeRoute")]
+    local expectedNatives = kind == "Keel" and 1 or (kind == "Wing" and 2)
+    local phase = platform:GetAttribute("CollapsePhase")
+    if not profile or not expectedNatives or not natives or #natives ~= expectedNatives
+        or not source or not bounds or platform:GetAttribute("HarborSpokeStep") ~= 4
+        or platform:GetAttribute("RouteTier") ~= 4 or not platform.Anchored
+        or not platform.CanCollide or platform.Transparency >= .75
+        or (phase and phase ~= "Safe" and phase ~= "Normal") then return nil end
+    for _,native in ipairs(natives) do
+        local weld = native:FindFirstChild("PlatformIdentityWeld")
+        if not native.Parent or not weld or not weld:IsA("Weld")
+            or weld.Part0 ~= native or weld.Part1 ~= platform
+            or type(native:GetAttribute("ChaosBaseTransparency")) ~= "number" then return nil end
+    end
+    local frame = platform.CFrame*CFrame.Angles(0,profile.yaw,0)
+    local horizontal = Vector3.new(platform.Size.X/WIDTH,1,platform.Size.Z/WIDTH)
+    local top, rear = platform.Size.Y*.5, -WIDTH*.34
+    local function fit(position, size, yaw)
+        return frame*CFrame.new(position*horizontal)*CFrame.Angles(0,yaw,0),
+            size*horizontal
+    end
+    local sourceFrame = source:GetBoundingBox()
+    local staged, fallback = {}, {}
+    for i,native in ipairs(natives) do
+        local target,size
+        if kind == "Keel" then
+            -- The deepest approved caisson can end at deck top -3.69.
+            -- Keep an exposed lower chord beneath it, with the upper
+            -- chord meeting the original deck underside when it is absent.
+            target,size = fit(Vector3.new(0,-top-1.05,rear),
+                Vector3.new(profile.span+.35,2.08,1.18),0)
+        else
+            local side = i == 1 and -1 or 1
+            target,size = fit(Vector3.new(side*(profile.legX-.22),
+                top+profile.height+.52,rear),Vector3.new(1.44,.43,1.05),
+                math.pi*.5+side*math.rad(13))
+        end
+        local pieces = stage(source,sourceFrame,bounds,target,size,true)
+        if not pieces then
+            for _,previous in ipairs(staged) do previous:Destroy() end
+            return nil
+        end
+        fallback[native] = native:GetAttribute("ChaosBaseTransparency")
+        for _,part in ipairs(pieces) do staged[#staged+1] = part end
+    end
+    if #staged == 0 then return nil end
+    for i,piece in ipairs(staged) do
+        piece:SetAttribute("OriginalHarborOutpostFinishing3D",kind)
+        piece:SetAttribute("Original3DAssetId",source:GetAttribute("Original3DAssetId"))
+        makePart(natives[1].Name.."_Sculpted"..i,
+            piece.Size,piece.CFrame,piece.Color,piece.Material,piece.Transparency,platform,piece)
+    end
+    for native in pairs(fallback) do
+        native:SetAttribute("ChaosBaseTransparency",1)
+        native.Transparency = 1
+    end
+    return bindFrame(platform,staged,fallback,onLost),#staged
 end
 
 function HarborOutpostKit.count(tier)
@@ -350,7 +437,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
     end
 
     -- Medium: exactly five pieces per outpost; 20 across Harbor.
-    add("Keel", Vector3.new(profile.span + 0.35, 0.44, 1.05),
+    local keel = add("Keel", Vector3.new(profile.span + 0.35, 0.44, 1.05),
         CFrame.new(0, -top - 0.38, rear),
         muted, Enum.Material.CorrodedMetal, 0.08)
     for i, leg in ipairs(legFrames) do
@@ -372,6 +459,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
             or Enum.Material.CorrodedMetal,
         0.10, profile.shape)
 
+    local wingNatives = {}
     if tier == "High" then
         -- Add only four machined details per endpoint (36 total in High).
         -- These are close-range accents, not lights, beams or warning glyphs.
@@ -383,7 +471,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
                 muted, Enum.Material.Metal, 0.12, nil, true)
         end
         for _, side in ipairs({-1, 1}) do
-            add(side < 0 and "PortVane" or "StarboardVane",
+            wingNatives[#wingNatives+1] = add(side < 0 and "PortVane" or "StarboardVane",
                 Vector3.new(1.05, 0.30, 1.4),
                 CFrame.new(side * (spread * 0.5), top + mastHeight + 0.55, rear - 0.45)
                     * CFrame.Angles(0, side * math.rad(16), 0),
@@ -391,8 +479,8 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
                 Enum.Material.CorrodedMetal, 0.16)
         end
     end
-    if forged then return made, instrument, bindFrame(platform, meshes, fallback, onLost) end
-    return made, instrument
+    local disconnect = forged and bindFrame(platform,meshes,fallback,onLost) or nil
+    return made,instrument,disconnect,{Keel={keel},Wing=wingNatives}
 end
 
 -- A server-authored round contains at most two disaster IDs. Reduce the

@@ -1,3 +1,9 @@
+## P4 — Quilles et ailettes sculptées des avant-postes de Storm Harbor
+
+Les quatre avant-postes peuvent recevoir une traverse ajourée sous le caisson et une paire d'ailettes en métal sculpté au-dessus des jambes. Les pièces restent soudées au palier et suivent sa largeur pendant la contraction. Les ailettes laissent le centre libre pour les instruments animés.
+
+En Medium, un avant-poste proche peut recevoir la traverse. En High, les deux finitions peuvent s'afficher sur un avant-poste tactile ou jusqu'à deux sur PC selon les créneaux disponibles dans le budget existant des colonnes. Les quilles sont servies avant les ailettes. La disparition d'une soudure restaure seulement la quille ou la paire d'ailettes concernée. `LocalOriginalHarborOutpostFinishCount` compte les groupes montés.
+
 ## P4 — Instruments animés des avant-postes de Storm Harbor
 
 Les quatre jetées ont chacune une tête mécanique distincte. Le radar reprend la barre forgée de la station portuaire, le treuil son tambour à enroulements, la balise une optique cerclée et l'antenne un relais à ailettes. Les sculptures utilisent les maillages approuvés du projet et suivent l'animation déjà pilotée par le jeu, avec réduction des mouvements et adaptation au rétrécissement des quais.
