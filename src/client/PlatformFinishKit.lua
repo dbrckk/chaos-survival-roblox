@@ -8,6 +8,11 @@ local PlatformFinishKit = {}
 local PremiumPlatformSideMeshKit = script and script.Parent
     and require(script.Parent.PremiumPlatformSideMeshKit) or nil
 
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule
+    then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
+
 local NAMES = {
     Classic = {"ClassicCalibrationPlate", "ClassicDatumTick", "ClassicArmoredLip"},
     Towers = {"TowerHoistMount", "TowerGuideBracket", "TowerMaintenanceMark"},
@@ -415,6 +420,16 @@ local function serviceHatchSource(variant)
     return source, dimensions, assetId, count
 end
 
+local function harborLashingWidth(platform, variant)
+    if variant ~= "Harbor" or not PlatformIdentityLodRules.isHarborLanding(platform)
+        or tonumber(platform:GetAttribute("RouteTier")) == nil then return nil end
+    local width = PlatformIdentityLodRules.harborLandingWidth(platform)
+    local size = platform.Size
+    if not width or size.X/width < .445 or size.X/width > 1.005
+        or math.abs(size.X-size.Z) > .08 or math.abs(size.Y-2) > .08 then return nil end
+    return width
+end
+
 -- The ORIGINAL 1-in-9 High / 1-in-18 Medium authentic mesh budget is
 -- counted from currently safe legacy-eligible decks. Move those same slots
 -- onto the in-view platforms that ALREADY owned native 3-piece hatches,
@@ -461,12 +476,13 @@ function PlatformFinishKit.selectOriginalServiceHatches(
             local phase = platform:GetAttribute("CollapsePhase")
             local shutter = platform:GetAttribute("BridgeShutterPhase")
             local sx, sz = platform.Size.X, platform.Size.Z
-            if id % 3 == 1 and math.min(sx, sz) >= 8
-                and math.max(sx, sz) <= 36
+            local legacy = id % 3 == 1 and math.min(sx,sz) >= 8 and math.max(sx,sz) <= 36
+            local lashing = sourceParts == 7 and harborLashingWidth(platform,variant)
+            if (legacy or lashing)
                 and (phase == nil or phase == "Normal" or phase == "Safe")
                 and (shutter == nil or shutter == "Idle") then
-                local width = math.min(sx * .55, 6.2)
-                local depth = math.min(sz * .42, 4.2)
+                local width = math.min((lashing or sx) * .55, 6.2)
+                local depth = lashing and 1.88 or math.min(sz * .42, 4.2)
                 local scale = math.min(1,
                     width * .96 / sourceLong,
                     depth * .90 / sourceShort)
@@ -478,14 +494,14 @@ function PlatformFinishKit.selectOriginalServiceHatches(
                         -- shares the existing Low near-route shell budget.
                         -- No native 3-Part Low hatch existed to replace.
                         quota = 1
-                    elseif id % legacyStep == 1 then
+                    elseif legacy and id % legacyStep == 1 then
                         -- Preserve the exact High/Medium quota as before.
                         quota += 1
                     end
                     local delta = platform.Position - focus
                     local distance = Vector3.new(
                         delta.X, delta.Y * .6, delta.Z).Magnitude
-                    local score = distance
+                    local score = distance - (lashing and 14 or 0)
                     local flat = Vector3.new(delta.X, 0, delta.Z)
                     if hasCamera and flat.Magnitude > 30
                         and look.Magnitude > .2 then
@@ -510,7 +526,7 @@ function PlatformFinishKit.selectOriginalServiceHatches(
 end
 
 local function originalServiceHatch(parent, platform, variant, tier,
-        width, depth, upper, index, selected)
+        width, depth, upper, index, selected, lashingWidth)
     -- FALSE: this owner already allocated its finite mesh slots.
     -- NIL: preserve legacy use in independent engine helper callers.
     local step = tier == "High" and 9 or 18
@@ -521,10 +537,12 @@ local function originalServiceHatch(parent, platform, variant, tier,
     end
     local source, original, assetId, expectedPieces =
         serviceHatchSource(variant)
-    if not source or (tier == "Low" and expectedPieces ~= 7) then
+    if not source or (tier == "Low" and expectedPieces ~= 7)
+        or (lashingWidth and expectedPieces ~= 7) then
         return nil
     end
     local copy = source:Clone()
+    if not copy then return nil end
     local long = math.max(original.X, original.Z)
     local short = math.min(original.X, original.Z)
     -- Preserve the entire original relief, no non-uniform mesh distortion.
@@ -538,10 +556,29 @@ local function originalServiceHatch(parent, platform, variant, tier,
     local target = platform.CFrame
         * CFrame.new(0, upper + .05, -platform.Size.Z * .19)
         * CFrame.Angles(0, yaw, 0)
+    local shrink = lashingWidth and platform.Size.X/lashingWidth
+    if shrink then
+        -- Fit the stamped relief in the old offset cargo strip. The top
+        -- stays between the panel's +.105 face and the takeoff cue.
+        local offset = platform.Size.Z * .29
+        if platform:GetAttribute("HarborSkywayLane") == 1
+            or platform:GetAttribute("HarborSpokeRoute") == 1 then offset = -offset end
+        target = platform.CFrame
+            * CFrame.new(0, platform.Size.Y*.5+.140-bounds.Y*.5,offset)
+            * CFrame.Angles(0,yaw,0)
+    end
     local made = {}
     for _, part in ipairs(copy:GetDescendants()) do
         if part:IsA("MeshPart") then
-            part.CFrame = target * sourceFrame:ToObjectSpace(part.CFrame)
+            local relative = sourceFrame:ToObjectSpace(part.CFrame)
+            if shrink then
+                if math.abs(relative.UpVector.Y) < .999 then copy:Destroy(); return nil end
+                local horizontal = Vector3.new(shrink,1,shrink)
+                part.Size *= horizontal
+                relative = CFrame.new(relative.Position*horizontal)*relative.Rotation
+                part:SetAttribute("OriginalHarborCargoTieDown3D",true)
+            end
+            part.CFrame = target * relative
             part.Anchored = false
             part.Massless = true
             part.CanCollide = false
@@ -580,11 +617,16 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     if not parent or not platform or not platform:IsA("BasePart")
         or (tier == "Low" and selected ~= true)
         or not NAMES[variant] or not theme
-        or (math.floor(tonumber(index) or 0) % 3 ~= 1)
         or platform:GetAttribute("ChaosSkybridge") == true
     then return {} end
-    local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
-    if math.min(sx, sz) < 8 or math.max(sx, sz) > 36 then return {} end
+    local phase = platform:GetAttribute("CollapsePhase")
+    local lashing = selected == true and platform.Anchored and platform.CanCollide
+        and platform.Transparency < .75 and (phase == nil or phase == "Safe" or phase == "Normal")
+        and harborLashingWidth(platform,variant)
+    local sx, sz = platform.Size.X, platform.Size.Z
+    local legacy = math.floor(tonumber(index) or 0) % 3 == 1
+        and math.min(sx,sz) >= 8 and math.max(sx,sz) <= 36
+    if not legacy and not lashing then return {} end
     local upper = PlatformFinishKit.surfacePaintOffset(platform, 0.065)
     local hatchWidth = math.min(sx * 0.55, 6.2)
     local hatchDepth = math.min(sz * 0.42, 4.2)
