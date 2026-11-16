@@ -1084,6 +1084,61 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             assert(timber.Material==Enum.Material.WoodPlanks and not timber.CanCollide)
             assert(timber.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
             assert(math.abs(timber.Size.X-(deck.Size.X-.8)*.987)<.02)
+
+            -- The timber is cosmetic. The jump marking must follow the
+            -- same live danger geometry as the personal route guide.
+            local Hazards=require("../../src/shared/JumpRouteHazards")
+            local target=arena.Platforms.Platform99
+            local function safeJump()
+                local warnings,lava=Hazards.read(arena)
+                return Hazards.deckPathIsSafe(deck,target,warnings,lava)
+            end
+            local function hazard(name,position,size,parent)
+                local part=Instance.new("Part")
+                part.Name=name
+                part.Position=position
+                part.Size=size
+                part.Anchored=true
+                part.CanCollide=false
+                part.Parent=parent
+                cleanup[#cleanup+1]=function() part:Destroy() end
+                return part
+            end
+            assert(safeJump())
+            for _,name in ipairs({"MeteorWarning","BombWarning"}) do
+                local warning=hazard(name,target.Position+Vector3.yAxis*(target.Size.Y*.5+1.5),
+                    Vector3.new(1,.1,1),workspace)
+                task.wait()
+                assert(not safeJump())
+                warning:Destroy()
+                task.wait()
+                assert(safeJump())
+            end
+            local mechanics=arena:FindFirstChild("Mechanics")
+            if not mechanics then
+                mechanics=Instance.new("Folder")
+                mechanics.Name="Mechanics"
+                mechanics.Parent=arena
+            end
+            local sweep=Instance.new("Folder")
+            sweep.Name="HarborCargoSweep"
+            sweep.Parent=mechanics
+            local lane=hazard("HarborSweepLane1",deck.Position+Vector3.yAxis*deck.Size.Y*.5,
+                Vector3.new(5,.1,5),sweep)
+            lane:SetAttribute("HarborSweepPhase","Warning")
+            assert(not safeJump())
+            lane:SetAttribute("HarborSweepPhase","Pulse")
+            assert(not safeJump())
+            lane:SetAttribute("HarborSweepPhase","Idle")
+            assert(safeJump())
+            sweep:Destroy()
+            local lava=hazard("RoundLava",target.Position+Vector3.yAxis*target.Size.Y*.5,
+                Vector3.new(1,1,1),workspace)
+            assert(not safeJump())
+            lava:Destroy()
+            assert(safeJump())
+            assert(deck.CanCollide and timber.LocalTransparencyModifier==0)
+
             deck:SetAttribute("CollapsePhase","Warning")
             task.wait()
             assert(timber.LocalTransparencyModifier==1 and math.abs(panel.LocalTransparencyModifier-.18)<.01)

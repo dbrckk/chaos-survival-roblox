@@ -8,6 +8,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local JumpRouteClearance = require(ReplicatedStorage.Shared.JumpRouteClearance)
+local JumpRouteHazards = require(ReplicatedStorage.Shared.JumpRouteHazards)
 local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
@@ -579,6 +580,8 @@ local function rebuild()
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
     local isClear = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
+    local warnings, lava
+    if isClear then warnings, lava = JumpRouteHazards.read(arena) end
     -- Share deck subscriptions among every cue that uses the same target.
     -- Revisit waiting cues once per geometry/availability change batch.
     local targetUsers,pendingCues = {},{}
@@ -586,6 +589,19 @@ local function rebuild()
     local dirtyTiers = {}
     local generation = routeGeneration
     local routeUpdateQueued = false
+    local function updateTakeoff(platform, cue, refit)
+        local target = cue.target
+        local blocked = warnings ~= nil and target ~= nil
+            and not JumpRouteHazards.deckPathIsSafe(platform, target, warnings, lava)
+        if not refit and cue.hazardBlocked == blocked then return end
+        cue.hazardBlocked = blocked
+        if blocked then target = nil end
+        if cue.strokes then
+            refitTakeoff(platform, target, cue.strokes)
+        elseif target then
+            cue.strokes = decorateTakeoff(platform, target, cue.index, theme, tier)
+        end
+    end
     local function syncRoute(platform)
         local cue = routeCueStates[platform]
         if not cue then return end
@@ -609,11 +625,7 @@ local function rebuild()
         waitingCues[cue.targetTier][platform] = if target then nil else true
         -- Contraction can move a tier-one deck into the central hub radius.
         if cue.targetTier == 2 then waitingCues[1][platform] = waitingCues[2][platform] end
-        if cue.strokes then
-            refitTakeoff(platform,target,cue.strokes)
-        elseif target then
-            cue.strokes = decorateTakeoff(platform,target,cue.index,theme,tier)
-        end
+        updateTakeoff(platform, cue, true)
     end
     local function queueRouteUpdate(deck,deckTier)
         if generation ~= routeGeneration then return end
@@ -643,6 +655,19 @@ local function rebuild()
             local camera = workspace.CurrentCamera
             if not camera then return end
             local point = camera.CFrame.Position
+            local wasHazardActive = lava ~= nil or #warnings > 0
+            warnings, lava = JumpRouteHazards.read(arena)
+            local hazardActive = lava ~= nil or #warnings > 0
+            if wasHazardActive or hazardActive then
+                -- Recheck visual eligibility without raycasts. Keep the
+                -- existing eight-deck budget below for physical clearance.
+                for deck, cue in pairs(routeCueStates) do
+                    if cue.target and (cue.hazardBlocked
+                        or (hazardActive and (deck.Position - point).Magnitude <= 100)) then
+                        updateTakeoff(deck, cue, false)
+                    end
+                end
+            end
             local checked = 0
             -- Rotate through the nearby cues so the closest ones cannot
             -- starve another route in the same sector.
