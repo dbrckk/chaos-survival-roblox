@@ -201,13 +201,43 @@ end
 local function publishHarborGirders(parent,built,meshes,fallback)
     for _,piece in ipairs(meshes) do
         piece.Parent = parent
-        built[#built+1] = piece
+        if built then built[#built+1] = piece end
     end
     for native in pairs(fallback) do
         native:SetAttribute("ChaosBaseTransparency",1)
         native.Transparency = 1
     end
-    return built,meshes,fallback
+end
+
+function PlatformFinishKit.mountHarborLandingKeel(parent, platform, keel, mount, source)
+    if not source or not keel or keel.Parent ~= parent or keel.Name ~= "HarborUndersideKeel"
+        or not platform.Anchored or not platform.CanCollide or platform.Transparency >= .75
+        or not PlatformIdentityLodRules.harborLandingWidth(platform)
+        or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted") then return nil end
+    local phase = platform:GetAttribute("CollapsePhase")
+    if phase and phase ~= "Safe" and phase ~= "Normal" then return nil end
+    local joint = keel:FindFirstChild("ChaosPlatformTrimWeld")
+    if not joint or not joint:IsA("Weld") or joint.Part0 ~= keel or joint.Part1 ~= platform then return nil end
+    local fallback = {[keel]=keel.Transparency}
+    if mount then
+        local supportWeld = mount:FindFirstChild("PlatformIdentityWeld")
+        if mount.Parent ~= parent or not mount.Name:match("^HarborKeelMount%d+$")
+            or not supportWeld or not supportWeld:IsA("Weld")
+            or supportWeld.Part0 ~= mount or supportWeld.Part1 ~= platform then return nil end
+        fallback[mount] = mount.Transparency
+    end
+    local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
+    local meshes = sideKit.harborLandingKeel(source,platform,joint.C1,keel.Size)
+    if not meshes then return nil end
+    publishHarborGirders(parent,nil,meshes,fallback)
+    return meshes,fallback
+end
+
+function PlatformFinishKit.harborKeelMountSize(platform)
+    local size = platform.Size
+    local nominal = PlatformIdentityLodRules.harborLandingWidth(platform)
+    local scale = nominal and size.X/nominal or 1
+    return Vector3.new(math.min(size.X*.58,7*scale),.27,math.min(size.Z*.22,1.8*scale))
 end
 
 function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge, harborSource)
@@ -285,7 +315,8 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
         for _,piece in ipairs(rail) do meshes[#meshes+1] = piece end
         fallback[native] = native.Transparency
     end
-    return publishHarborGirders(parent,built,meshes,fallback)
+    publishHarborGirders(parent,built,meshes,fallback)
+    return built,meshes,fallback
 end
 
 -- A Tower skybridge is a solid permanent route. Shrinking Arena contracts
@@ -899,7 +930,8 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
         end
         fallback[native] = native.Transparency
     end
-    return publishHarborGirders(parent,built,meshes,fallback)
+    publishHarborGirders(parent,built,meshes,fallback)
+    return built,meshes,fallback
 end
 
 -- Authored native 3D carapaces turn rectangular jump blocks into engineered

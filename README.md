@@ -1,3 +1,9 @@
+## P4 — Quilles centrales des paliers de Storm Harbor
+
+Sous un palier proche en High, trois maillages du treillis approuvé `122766792774607` remplacent les deux blocs centraux superposés. La quille garde sa hauteur et suit la largeur du palier pendant la contraction. Le caisson et les dessous complets restent prioritaires.
+
+Jusqu'à deux paliers sur PC et un sur mobile utilisent ensemble un des créneaux de colonnes existants. Les blocs d'origine reprennent le relais si un maillage ou sa soudure disparaît, ou si la pression graphique augmente.
+
 ## P4 — Renforts diagonaux des paliers de Storm Harbor
 
 Les barres sous les paliers proches peuvent recevoir trois maillages du treillis approuvé `122766792774607` par diagonale. Les renforts suivent leurs deux points d'appui pendant la contraction, y compris lorsqu'un joueur rejoint une manche en cours. Les panneaux d'alerte et les collisions du palier conservent leur fonctionnement.

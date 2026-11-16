@@ -1769,6 +1769,13 @@ assert 'loadBraceFrame(deck.Size,data.braceCorner,true)' in FINISH
 assert 'or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in FINISH
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,braceMeshes,braceFallback,scheduleRebuild)' in OWNER
 print("PASS Harbor diagonals refit the anchor geometry and share the column budget and caisson priority")
+assert 'local keelLimit = UserInputService.TouchEnabled and 1 or 2' in OWNER
+assert 'if tier.Name == "High" and supportBudget >= 2 and railCount > 0 then' in OWNER
+assert 'if platformKeel and not authenticRim and not authenticUnderdeck then' in OWNER
+assert 'HarborOutpostKit.bindWeldedReplacement(platform,keelMeshes,keelFallback,scheduleRebuild)' in OWNER
+assert 'fallback[mount] = mount.Transparency' in FINISH
+assert 'descendant:GetAttribute("OriginalHarborLandingKeel3D") == true' in SIDE_LOD
+print("PASS one approved central Harbor keel replaces both local blocks with caisson priority")
 assert 'if genuineUnderdeck == true and (variant == "Towers"' in FINISH
 assert 'or (i == 3 and (variant == "Classic"' in FINISH
 assert 'or variant == "Harbor"))) then' in FINISH
