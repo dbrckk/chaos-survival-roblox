@@ -1,3 +1,9 @@
+## P4 — Caissons forgés des quais de Storm Harbor
+
+Les 28 marches portuaires, les 16 paliers des jetées et les 14 paliers des traversées de fret acceptent le caisson approuvé `101457508594609`. Ses sept maillages remplacent les quatre biseaux et le sous-cadre de chaque palier sélectionné. Le niveau de détail écarte aussi les finitions locales qui recouvrent le caisson, en gardant les bandes de surface et les repères de saut.
+
+Le caisson garde son relief à 45 % de la largeur normale. Son sommet reste sous la surface de saut et ses coins dans le dégagement des biseaux d'origine. Les cinq pièces reprennent leur transparence de secours à l'alerte, au déchargement ou à la perte d'un maillage ou d'une soudure. Les plafonds restent à 1/5/12 caissons selon la qualité graphique, avant réduction sous pression. `LocalHarborDockNativePartsReplaced` compte les pièces réellement masquées.
+
 ## P4 — Bordures forgées sur les voies d'ascension
 
 Les 32 marches de périmètre, 16 paliers de branche et 4 traverses de secours par arène acceptent une bordure à sept MeshParts. Le modèle Rect approuvé s'ajuste à ces plateformes carrées. Sa lèvre métallique passe juste à l'extérieur du montant, sous la surface de saut et dans l'enveloppe des anciens biseaux. Le modèle suit le rétrécissement et le décor natif revient pendant une alerte ou si le montage est incomplet.
