@@ -1,3 +1,9 @@
+## P4 — Platelages rainurés de Storm Harbor
+
+Les 58 paliers portuaires peuvent recevoir le panneau rainuré issu du modèle de saut approuvé `98478693994864`. Seul le maillage du panneau est repris, avec une finition bois grisée pour les passages hauts et plus chaude pour les jetées. Le panneau d'origine reste sous les rainures et les chevrons et arrimages restent au-dessus.
+
+Le panneau suit la largeur du palier et utilise un créneau du niveau de détail des itinéraires. Il se retire pendant une alerte, en cas de perte du panneau natif ou de sa propre soudure. `LocalOriginalHarborTimberDeckCount` compte les panneaux rainurés visibles côté client.
+
 ## P4 — Arrimages moulés sur les itinéraires de Storm Harbor
 
 Les 58 paliers des marches de fret, des jetées cardinales et des traversées hautes peuvent recevoir le relief portuaire approuvé à sept maillages. Les taquets, les rivets et le rouleau d'arrimage remplacent la bande rectangulaire sur les paliers sélectionnés. Ils restent au bord de la surface en bois, sous la hauteur des chevrons de saut.

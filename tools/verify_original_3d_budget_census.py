@@ -776,7 +776,19 @@ for px,pz,sx,sz in ((12,12,24,10),(22,12,32,10),(22,8,24,10)):
     valid=20<=sourceLong<=26 and 8<=sourceShort<=13 and (
         length>=17 and width>=9.5)
     assert not valid,(px,pz,sx,sz)
-assert 'desired.bridge, desired.underdeck)' in ROUTE
+assert 'desired.bridge, desired.underdeck, desired.timber)' in ROUTE
+for fragment in (
+    'math.abs(size.Y-.106) <= .022',
+    'piece.Material = Enum.Material.WoodPlanks',
+    'local inset = (nominal-.8)*.987*entry.initialFloorScale',
+    'panelCovered = fit and fit.panelCovered or false',
+    'entry.panel ~= nil and entry.ownsPanel(entry.panel)',
+    'and entry.panel.Material == Enum.Material.WoodPlanks',
+    'if entry.timber or model == entry.underdeckModel then',
+):
+    assert fragment in ROUTE, ("Harbor original timber deck",fragment)
+print("PASS Harbor grooved timber uses a single approved mesh in the old route slots")
+
 # A requested source is NOT the same as a successful import. If a
 # clone fails, do not claim a 3D undercarriage and do not tear down valid
 # top-cover meshes repeatedly on each 0.65-second LOD sample.
