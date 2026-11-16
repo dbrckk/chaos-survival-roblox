@@ -781,7 +781,7 @@ for fragment in (
     'math.abs(size.Y-.106) <= .022',
     'piece.Material = Enum.Material.WoodPlanks',
     'local inset = (nominal-.8)*.987*entry.initialFloorScale',
-    'panelCovered = fit and fit.panelCovered or false',
+    'panelCovered = timber ~= nil or (fit and fit.panelCovered or false)',
     'entry.panel ~= nil and entry.ownsPanel(entry.panel)',
     'and entry.panel.Material == Enum.Material.WoodPlanks',
     'if entry.timber or model == entry.underdeckModel then',

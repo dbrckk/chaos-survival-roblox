@@ -1031,7 +1031,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(why) end
     end)
 
-    it("keeps grooved Harbor timber on the real panel through shrink and restores warnings",function()
+    it("replaces the Harbor panel with grooved timber and restores the exact fallback",function()
         local Route=require("../../src/client/PremiumRouteMeshKit")
         local storage=game:GetService("ReplicatedStorage")
         local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
@@ -1079,20 +1079,21 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 return assert(find())
             end
             local timber=mount()
+            assert(Route.coveredPanelCount()>=1)
             assert(Route.timberCount()>=1 and Route.timberCount()<=2)
             assert(timber.Material==Enum.Material.WoodPlanks and not timber.CanCollide)
-            assert(timber.LocalTransparencyModifier==0 and math.abs(panel.LocalTransparencyModifier-.18)<.01)
+            assert(timber.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
             assert(math.abs(timber.Size.X-(deck.Size.X-.8)*.987)<.02)
             deck:SetAttribute("CollapsePhase","Warning")
             task.wait()
-            assert(timber.LocalTransparencyModifier==1 and panel.LocalTransparencyModifier<.20)
+            assert(timber.LocalTransparencyModifier==1 and math.abs(panel.LocalTransparencyModifier-.18)<.01)
             deck:SetAttribute("CollapsePhase","Safe")
             panel.Parent=nil
             task.wait()
-            assert(timber.LocalTransparencyModifier==1)
+            assert(timber.LocalTransparencyModifier==1 and math.abs(panel.LocalTransparencyModifier-.18)<.01)
             panel.Parent=arena.Decor
             task.wait()
-            assert(timber.LocalTransparencyModifier==0)
+            assert(timber.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
             local oldSize=timber.Size
             running=true
             ShrinkingArena.start({Config=Config,RoundSeconds=.12,
@@ -1105,11 +1106,13 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             assert(math.abs(timber.Size.X-oldSize.X*.45)<.02 and timber.Size.Y==oldSize.Y)
             local contracted=timber.Size
             Route.sync(nil,Vector3.zero,"Low",false)
+            assert(math.abs(panel.LocalTransparencyModifier-.18)<.01)
             local late=mount()
-            assert((late.Size-contracted).Magnitude<.03 and panel.LocalTransparencyModifier<.20)
+            assert((late.Size-contracted).Magnitude<.03 and panel.LocalTransparencyModifier==1)
             late.OriginalRouteMeshCosmeticWeld:Destroy()
             task.wait()
             assert(late.LocalTransparencyModifier==1 and deck.CanCollide)
+            assert(math.abs(panel.LocalTransparencyModifier-.18)<.01)
         end)
         running=false
         Route.sync(nil,Vector3.zero,"Low",false)
