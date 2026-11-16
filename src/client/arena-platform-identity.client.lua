@@ -47,6 +47,7 @@ local outpostFrameDisconnects = {}
 local outpostInstrumentDisconnects = {}
 local outpostFinishDisconnects = {}
 local cargoTieDownDisconnects = {}
+local harborRailDisconnects = {}
 local currentOutpostPosture = "normal"
 
 local function stopOutpostMotion(state)
@@ -163,6 +164,8 @@ local function clear()
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
     end
+    for _,disconnect in ipairs(harborRailDisconnects) do disconnect() end
+    table.clear(harborRailDisconnects)
     for _, disconnect in ipairs(cargoTieDownDisconnects) do disconnect() end
     table.clear(cargoTieDownDisconnects)
     if player:GetAttribute("LocalOriginalHarborCargoTieDownCount") ~= 0 then
@@ -855,6 +858,42 @@ local function rebuild()
     player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
     player:SetAttribute("LocalOriginalHarborOutpostInstrumentCount",mountedInstruments)
 
+    -- Reserve from the existing structural allocation after the outposts.
+    -- Three parts per face consume one module in Medium, two in High.
+    local railTargets,railSource = {},nil
+    local railCost = tier.Name == "High" and 2 or 1
+    if variant == "Harbor" and tier.Name ~= "Low"
+        and supportBudget >= railCost and cameraPoint
+        and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0 then
+        railSource = PremiumPlatformSideMeshKit.harborRailSource()
+        if railSource then
+            local candidates = {}
+            local range = tier.Name == "High" and 130 or 105
+            for _,deck in ipairs(ordered) do
+                local phase = deck:GetAttribute("CollapsePhase")
+                if deck:IsA("BasePart") and deck.CanCollide and deck.Anchored
+                    and deck.Transparency < .75 and (not phase or phase == "Safe" or phase == "Normal")
+                    and PlatformIdentityLodRules.harborLandingWidth(deck)
+                    and not deck:GetAttribute("LocalOriginalHarborDockCaissonMounted")
+                    and not nearRims[deck] and not nearCameraCarapaces[deck]
+                    and not nearLargeDeckHulls[deck] then
+                    local distance = (deck.Position-cameraPoint).Magnitude
+                    if distance <= range then
+                        candidates[#candidates+1] = {deck=deck,distance=distance}
+                    end
+                end
+            end
+            table.sort(candidates,function(a,b)
+                return a.distance < b.distance or (a.distance == b.distance and a.deck.Name < b.deck.Name)
+            end)
+            local limit = tier.Name == "High" and (UserInputService.TouchEnabled and 2 or 4) or 2
+            for i=1,math.min(limit,#candidates,math.floor(supportBudget/railCost)) do
+                railTargets[candidates[i].deck] = true
+                supportBudget -= railCost
+            end
+        end
+    end
+
     for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
             index += 1
@@ -991,12 +1030,22 @@ local function rebuild()
                     registerVisual(platform, piece)
                 end
             end
-            local sidePieces = {}
+            local sidePieces,harborRails,railFallback = {},nil,nil
             if not authenticCarapace and not authenticRim then
-                sidePieces = (staged and staged.kind == "bridge"
-                    and staged.parts) or PlatformFinishKit.buildSideRails(
-                    folder, platform, tier.Name, theme, variant, visualIndex,
-                    nearBridgeGirders[platform] == true)
+                if staged and staged.kind == "bridge" then
+                    sidePieces = staged.parts
+                else
+                    sidePieces,harborRails,railFallback = PlatformFinishKit.buildSideRails(
+                        folder, platform, tier.Name, theme, variant, visualIndex,
+                        nearBridgeGirders[platform] == true, railTargets[platform] and railSource)
+                end
+            end
+            if harborRails then
+                originalLargeCount += #harborRails
+                harborRailDisconnects[#harborRailDisconnects+1] =
+                    HarborOutpostKit.bindWeldedReplacement(platform,harborRails,railFallback,scheduleRebuild)
+            elseif railTargets[platform] then
+                supportBudget += railCost
             end
             local authenticBridge = sidePieces[1] ~= nil
                 and sidePieces[1]:GetAttribute(

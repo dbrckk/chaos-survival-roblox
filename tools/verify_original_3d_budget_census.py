@@ -1688,7 +1688,7 @@ assert OWNER.index('registerVisual(platform, piece)',gate_end) > gate_end
 # Native paint now follows the actual approved-mesh mounting decision.
 # It still obeys exactly the former even-index Low paint gate.
 authentic_mount=OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil')
-before_side=OWNER.index('local sidePieces = {}',authentic_mount)
+before_side=OWNER.index('local sidePieces,harborRails,railFallback = {},nil,nil',authentic_mount)
 assert 'if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then' in (
     OWNER[authentic_mount:before_side])
 assert OWNER.index('for _, piece in ipairs(PlatformFinishKit.build(') > (
@@ -1723,6 +1723,14 @@ assert '.RenderStepped:Connect(' not in OWNER
 print("PASS Low even-index original undercradle/support adoption, native",
       "half-density retained, late-near support streaming bounded/rebuilt")
 
+
+assert 'local railCost = tier.Name == "High" and 2 or 1' in OWNER
+assert 'math.floor(supportBudget/railCost)' in OWNER
+assert 'supportBudget -= railCost' in OWNER
+assert 'and not deck:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in OWNER
+assert 'HarborOutpostKit.bindWeldedReplacement(platform,harborRails,railFallback,scheduleRebuild)' in OWNER
+assert 'OriginalHarborRecessedRail3D' in SIDE_LOD
+print("PASS Harbor recessed rails trade existing support slots and yield to mounted caissons")
 
 # P4 visible-result regression: never stack client-created native
 # underside blocks over a fully mounted original seven-material shell.

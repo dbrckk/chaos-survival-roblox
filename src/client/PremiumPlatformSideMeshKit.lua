@@ -51,6 +51,84 @@ function Kit.bridgeTrussSource()
     return verified("Bridge")
 end
 
+-- The three structural groups in the approved girder are identifiable
+-- by their source bounds. Leave the other four behind for this shallow
+-- application, which needs no lighting, gauges or false walkway paint.
+local HARBOR_RAIL_GROUPS = {
+    Vector3.new(9.62,.39,.55),
+    Vector3.new(9.18,.42,.34),
+    Vector3.new(7.8371,.9701,.1465),
+}
+
+function Kit.harborRailSource()
+    local source,bounds = verified("Bridge")
+    if not source then return nil end
+    local parts = {}
+    for _,part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") or not part.Anchored or part.Transparency >= 1
+            or part.CanCollide or part.CanTouch or part.CanQuery then return nil end
+        local size = part.Size
+        local normalized = Vector3.new(math.max(size.X,size.Z),size.Y,math.min(size.X,size.Z))
+        for i,expected in ipairs(HARBOR_RAIL_GROUPS) do
+            if (normalized-expected).Magnitude <= .09 then
+                if parts[i] or not part.Archivable then return nil end
+                parts[i] = part
+            end
+        end
+    end
+    for i=1,#HARBOR_RAIL_GROUPS do if not parts[i] then return nil end end
+    local frame = source:GetBoundingBox()
+    if bounds.Z > bounds.X then
+        frame *= CFrame.Angles(0,math.pi*.5,0)
+        bounds = Vector3.new(bounds.Z,bounds.Y,bounds.X)
+    end
+    return {frame=frame,bounds=bounds,parts=parts}
+end
+
+function Kit.harborRail(source, platform, native, index, shrink)
+    local nativeWeld = native:FindFirstChild("ChaosPlatformTrimWeld")
+    if not nativeWeld or not nativeWeld:IsA("Weld") or nativeWeld.Part1 ~= platform then return nil end
+    local alongZ = native.Size.Z > native.Size.X
+    local target = nativeWeld.C1 * CFrame.Angles(0,alongZ and math.pi*.5 or 0,0)
+    local fit = Vector3.new(math.max(native.Size.X,native.Size.Z),.42,.22*shrink)/source.bounds
+    local parts = {}
+    local function absolute(v)
+        return Vector3.new(math.abs(v.X),math.abs(v.Y),math.abs(v.Z))
+    end
+    for i,mesh in ipairs(source.parts) do
+        local offset = source.frame:ToObjectSpace(mesh.CFrame)
+        local right,up,forward = absolute(offset.RightVector),
+            absolute(offset.UpVector),absolute(offset.LookVector)
+        if up.Y < .999 or math.max(right.X,right.Z) < .999 then break end
+        local piece = mesh:Clone()
+        if not piece then break end
+        local scale = Vector3.new(right:Dot(fit),up:Dot(fit),forward:Dot(fit))
+        local size = mesh.Size*scale
+        piece.Size = Vector3.new(math.max(.05,size.X),size.Y,math.max(.05,size.Z))
+        local relative = target*CFrame.new(offset.Position*fit)*offset.Rotation
+        piece.CFrame = platform.CFrame*relative
+        piece.Name = "OriginalHarborRecessedRail_"..index.."_"..i
+        piece.Anchored = false
+        piece.Massless = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece:SetAttribute("ChaosBaseTransparency",piece.Transparency)
+        piece:SetAttribute("Original3DAssetId",IDS.Bridge)
+        piece:SetAttribute("OriginalHarborRecessedRail3D",true)
+        local weld = Instance.new("Weld")
+        weld.Name = "ChaosPlatformTrimWeld"
+        weld.Part0,weld.Part1 = piece,platform
+        weld.C1 = relative
+        weld.Parent = piece
+        parts[#parts+1] = piece
+    end
+    if #parts == #HARBOR_RAIL_GROUPS then return parts end
+    for _,piece in ipairs(parts) do piece:Destroy() end
+    return nil
+end
+
 local function preparedParts(copy, sourceFrame, target, platform, name)
     local list = {}
     local adjustable = platform:GetAttribute("ChaosSkybridge") == true
