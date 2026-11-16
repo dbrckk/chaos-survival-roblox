@@ -58,7 +58,7 @@ Le niveau Medium utilise six maillages par palier sélectionné et le niveau Hig
 
 Les 58 paliers portuaires peuvent recevoir le panneau rainuré issu du modèle de saut approuvé `98478693994864`. Seul le maillage du panneau est repris, avec une finition bois grisée pour les passages hauts et plus chaude pour les jetées. Le platelage sculpté remplace le panneau plat sur les paliers sélectionnés. Les chevrons et les arrimages restent visibles.
 
-Le panneau suit la largeur du palier et utilise un créneau du niveau de détail des itinéraires. Le panneau natif réapparaît pendant une alerte, lorsque le maillage sort du niveau de détail ou si sa soudure disparaît. `LocalOriginalHarborTimberDeckCount` compte les panneaux rainurés visibles côté client.
+Le panneau suit la largeur du palier et utilise un créneau du niveau de détail des itinéraires. Le panneau natif réapparaît pendant une alerte, lorsque le maillage sort du niveau de détail ou si sa soudure disparaît. Si le dossier de décor est remplacé, le jeu masque le maillage jusqu'à l'arrivée du panneau correspondant. `LocalOriginalHarborTimberDeckCount` compte les panneaux rainurés visibles côté client.
 
 ## P4 — Arrimages moulés sur les itinéraires de Storm Harbor
 

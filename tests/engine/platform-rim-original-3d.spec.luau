@@ -1094,6 +1094,25 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             panel.Parent=arena.Decor
             task.wait()
             assert(timber.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
+
+            -- A replacement Decor may replicate before its matching panel.
+            local decor=arena.Decor
+            decor.Name="PreviousDecor"
+            local replacement=Instance.new("Folder")
+            replacement.Name="Decor"
+            replacement.Parent=arena
+            task.wait()
+            assert(timber.LocalTransparencyModifier==1 and deck.CanCollide)
+            assert(math.abs(panel.LocalTransparencyModifier-.18)<.01)
+            panel.Parent=replacement
+            task.wait()
+            assert(timber.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
+            decor.Name="Decor"
+            panel.Parent=decor
+            replacement:Destroy()
+            task.wait()
+            assert(timber.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
+
             local oldSize=timber.Size
             running=true
             ShrinkingArena.start({Config=Config,RoundSeconds=.12,
