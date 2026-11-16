@@ -360,7 +360,7 @@ local function update()
     )
     -- Rookie guidance stays focused on survival. Experienced players
     -- see a cargo cue only while an actual timed Harbor objective exists.
-    local rookie = FirstTimeExperience.isRookie(games)
+    local rookie = FirstTimeExperience.isGuidedPhase(games, currentPhase)
     -- Rising lava is lethal to beginners AND veteran avatars alike.
     -- Reuse this ONE existing depth-tested marker to direct a genuine
     -- ascent instead of creating a competing Android objective card.

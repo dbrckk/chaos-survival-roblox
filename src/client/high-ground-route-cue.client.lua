@@ -252,7 +252,7 @@ local function update()
         player:GetAttribute("Games"),
         player:GetAttribute("SessionRoundsPlayed")
     )
-    if FirstTimeExperience.isRookie(games) then
+    if FirstTimeExperience.isGuidedPhase(games, state.phase) then
         hide()
         return
     end

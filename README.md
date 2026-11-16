@@ -1,3 +1,7 @@
+## P4 — Guidage pendant les trois premières manches
+
+Le guide de saut accompagne les nouveaux joueurs pendant les trois premières manches. Sur mobile, le compte à rebours privilégie le repère de saut et retire l'indication du pad de boost. Le HUD indique comment monter sur un palier, y compris quand aucun repère de saut n'est visible. Il actualise la consigne des spectateurs dès que leur participation est connue.
+
 ## P4 — Guidage du défi Points hauts à Storm Harbor
 
 L'indicateur du défi vérifie le passage à pied depuis la position du joueur jusqu'au bord de départ, au sol comme sur un palier. Il vérifie ensuite l'espace libre pour le saut. Il propose un autre passage praticable si l'accès est bloqué et s'efface quand aucun trajet ne convient. Une alerte d'effondrement, une fermeture de passerelle ou le déchargement du palier affiché déclenche la recherche d'un autre passage sans attendre le prochain message de manche. Le guide des urgences et du fret garde la priorité. Sur écran tactile, le défi reste affiché dans le HUD de manche.
