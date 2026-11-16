@@ -623,6 +623,7 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
                 or descendant:GetAttribute("NearCameraCarapace3D") == true
                 or descendant:GetAttribute("ChaosLoadBrace") == true
                 or name == "HarborUndersideKeel" or name:match("^HarborKeelMount%d+$")
+                or descendant:GetAttribute("OriginalHarborLandingKeel3D") == true
                 or name:match("^PlatformRecessedSideRail%d+$")
                 or descendant:GetAttribute("OriginalHarborRecessedRail3D") == true then
                 visible = false

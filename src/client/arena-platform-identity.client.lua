@@ -446,7 +446,8 @@ end
 local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, tieDown)
     if tier.Name == "Low" then return end
     local width = math.min(platform.Size.X, platform.Size.Z)
-    if width < 4.5 then return end
+    local nominal = PlatformIdentityLodRules.harborLandingWidth(platform)
+    if width < 4.5 and (not nominal or width < nominal*.445) then return end
     local top = PlatformFinishKit.surfacePaintOffset(platform, 0.045)
     local hardware = theme.Structure:Lerp(
         Color3.fromRGB(114, 101, 89), 0.38
@@ -466,14 +467,11 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, ti
     )
     -- The approved seven-MeshPart underside replaces this flat native
     -- keel block, but NOT Harbor's useful top-surface cargo lashing.
+    local keelMount
     if tier.Name == "High" and not genuineUnderdeck then
-        makePart(
+        keelMount = makePart(
             "HarborKeelMount" .. index,
-            Vector3.new(
-                math.min(platform.Size.X * 0.58, 7.0),
-                0.27,
-                math.min(platform.Size.Z * 0.22, 1.8)
-            ),
+            PlatformFinishKit.harborKeelMountSize(platform),
             platform.CFrame * CFrame.new(
                 0, -platform.Size.Y * 0.5 - 0.23, 0
             ),
@@ -483,7 +481,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, ti
             platform
         )
     end
-    return lashing
+    return lashing,keelMount
 end
 
 -- Mark only geometry-verified ascending routes. The two short chevron
@@ -861,7 +859,7 @@ local function rebuild()
     -- Reserve from the existing structural allocation after the outposts.
     -- Side rails and braces cost one module each in Medium, two in High.
     -- Preserve rail coverage and leave room for the existing columns.
-    local railTargets,braceTargets,girderSource = {},{},nil
+    local railTargets,braceTargets,keelTargets,girderSource = {},{},{},nil
     local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
         and supportBudget >= girderCost and cameraPoint
@@ -898,6 +896,15 @@ local function rebuild()
                 if supportBudget < girderCost+1 then break end
                 braceTargets[candidates[i].deck] = true
                 supportBudget -= girderCost
+            end
+            -- Two central keels fit in one existing seven-mesh module.
+            -- Keep one module available for columns after the allocation.
+            if tier.Name == "High" and supportBudget >= 2 and railCount > 0 then
+                local keelLimit = UserInputService.TouchEnabled and 1 or 2
+                for i=1,math.min(keelLimit,railCount) do
+                    keelTargets[candidates[i].deck] = true
+                end
+                supportBudget -= 1
             end
         end
     end
@@ -1030,12 +1037,16 @@ local function rebuild()
             -- Never fabricate a fallback-looking keel beneath complete
             -- creator-approved metal. Surface wayfinding remains intact.
             -- Even-index Low keeps its original half-density paint rule.
+            local platformKeel
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme,
                     authenticUnderdeck
                 )) do
                     registerVisual(platform, piece)
+                    if keelTargets[platform] and piece.Name == "HarborUndersideKeel" then
+                        platformKeel = piece
+                    end
                 end
             end
             local sidePieces,harborRails,railFallback = {},nil,nil
@@ -1163,8 +1174,18 @@ local function rebuild()
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Harbor" then
                 local tieDown = hatchPieces[1] and hatchPieces[1]:GetAttribute("OriginalHarborCargoTieDown3D") == true
-                local lashing = decorateHarbor(platform, visualIndex, theme, tier,
+                local lashing,keelMount = decorateHarbor(platform, visualIndex, theme, tier,
                     authenticUnderdeck, tieDown)
+                if platformKeel and not authenticRim and not authenticUnderdeck then
+                    local keelMeshes,keelFallback = PlatformFinishKit.mountHarborLandingKeel(
+                        folder,platform,platformKeel,keelMount,girderSource)
+                    if keelMeshes then
+                        for _,piece in ipairs(keelMeshes) do registerVisual(platform,piece) end
+                        originalLargeCount += #keelMeshes
+                        harborGirderDisconnects[#harborGirderDisconnects+1] =
+                            HarborOutpostKit.bindWeldedReplacement(platform,keelMeshes,keelFallback,scheduleRebuild)
+                    end
+                end
                 if tieDown then
                     local fallback = lashing and {[lashing]=.26} or {}
                     for _,piece in ipairs(visualsByPlatform[platform]) do

@@ -142,6 +142,11 @@ function Kit.harborLoadBrace(source, platform, frame, length, index)
         "OriginalHarborLoadBrace_"..index,"OriginalHarborLoadBrace3D")
 end
 
+function Kit.harborLandingKeel(source, platform, frame, footprint)
+    return fitHarborGirder(source,platform,frame,Vector3.new(footprint.X,.46,footprint.Z),
+        "OriginalHarborLandingKeel","OriginalHarborLandingKeel3D")
+end
+
 local function preparedParts(copy, sourceFrame, target, platform, name)
     local list = {}
     local adjustable = platform:GetAttribute("ChaosSkybridge") == true
