@@ -1614,7 +1614,7 @@ assert '<= 100' in FINISH
 assert 'quota = 1' in FINISH
 assert 'or (tier == "Low" and expectedPieces ~= 7)' in FINISH
 assert 'or (tier == "Low" and selected ~= true)' in FINISH
-assert 'if tier == "Low" then return {} end' in FINISH
+assert 'if tier == "Low" or landing then return {} end' in FINISH
 assert 'part.CanCollide = false' in FINISH
 assert 'part.CanTouch = false' in FINISH
 assert 'part.CanQuery = false' in FINISH
@@ -1741,7 +1741,7 @@ print("PASS Harbor recessed rails trade existing support slots and yield to moun
 for marker in (
     'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)',
     'if genuineUnderdeck then return end',
-    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, tieDown)',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
@@ -1852,9 +1852,12 @@ assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
 assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
 print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero native hatch fallback")
-assert 'local lashing = sourceParts == 7 and harborLashingWidth(platform,variant)' in FINISH
+assert 'local lashing = sourceParts == 7 and nominal' in FINISH
 assert 'elseif legacy and id % legacyStep == 1 then' in FINISH
-assert 'platform.Size.Y*.5+.140-bounds.Y*.5' in FINISH
+assert 'platform.Size.Y*.5+.174-height*.5' in FINISH
+assert 'selected, lashing)' in FINISH
+assert 'if tier == "Low" or landing then return {} end' in FINISH
+assert 'fallback[cargoBand] = cargoBand:GetAttribute("ChaosBaseTransparency")' in OWNER
 assert 'part:SetAttribute("OriginalHarborCargoTieDown3D",true)' in FINISH
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,hatchPieces,' in OWNER
 assert 'LocalOriginalHarborCargoTieDownCount' in OWNER

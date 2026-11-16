@@ -1407,7 +1407,11 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                         assert(math.abs(p.X)+math.max(part.Size.X,part.Size.Z)*.5 < deck.Size.X*.5)
                         assert(math.abs(p.Z)+math.min(part.Size.X,part.Size.Z)*.5 < deck.Size.Z*.5)
                     end
-                    assert(math.abs(highest-(deck.Size.Y*.5+.140))<.01)
+                    assert(math.abs(highest-(deck.Size.Y*.5+.174))<.01)
+                    local band=Finish.build(owner,deck,"Harbor","Medium",theme)[2]
+                    local bandOffset=band.ChaosPlatformTrimWeld.C1.Position.Z
+                    local bakedOffset=pieces[1].ChaosPlatformTrimWeld.C1.Position.Z
+                    assert(math.abs(bandOffset-bakedOffset)<.01)
                     count+=1
                     owner:ClearAllChildren()
                 end
@@ -1420,6 +1424,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             assert(selected[deck] and #build(deck,"Low")==7)
             assert(next(Finish.selectOriginalServiceHatches(decks,"Harbor","Low",
                 arena.Base,deck.Position,nil,1))==nil)
+            assert(#Finish.buildServiceHatch(owner,deck,"Harbor","High",theme,1,false)==0)
             local original=owner:GetChildren()
             local function largest(pieces)
                 local result=pieces[1]
@@ -1444,14 +1449,20 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local finalSize=shape.Size
             owner:ClearAllChildren()
             local late=build(deck,"Medium")
-            assert(#late==7 and (largest(late).Size-finalSize).Magnitude<.03)
-            local fallback=Instance.new("Part")
+            assert(#late==7 and late[1]:GetAttribute("OriginalHarborCargoTieDown3D"))
+            assert((largest(late).Size-finalSize).Magnitude<.03)
+            assert(next(Finish.selectOriginalServiceHatches(decks,"Harbor","Medium",
+                arena.Base,deck.Position,nil,0))~=nil)
+            local fallback=Finish.build(owner,deck,"Harbor","Medium",theme)[2]
+            local alpha=fallback.Transparency
             fallback.Transparency=1
-            fallback.Parent=owner
-            disconnect=Outpost.bindWeldedReplacement(deck,late,{[fallback]=.26})
+            fallback:SetAttribute("ChaosBaseTransparency",1)
+            disconnect=Outpost.bindWeldedReplacement(deck,late,{[fallback]=alpha})
             late[1].ChaosPlatformTrimWeld:Destroy()
             task.wait()
-            assert(math.abs(fallback.Transparency-.26)<.01 and late[2].Transparency==1)
+            assert(math.abs(fallback.Transparency-alpha)<.01 and late[2].Transparency==1)
+            source:GetChildren()[1]:Destroy()
+            assert(#build(deck,"Medium")==0 and fallback.Transparency<1)
             assert(deck.CanCollide and arena.Decor.PlatformPanel96.Transparency<1)
         end)
         running=false

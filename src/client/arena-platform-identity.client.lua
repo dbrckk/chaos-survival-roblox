@@ -444,28 +444,25 @@ end
 -- pieces, takeoff chevrons and physical panels still display normally.
 -- All pieces are inside the real deck, linked to its shrink footprint
 -- and inherit collapse visibility from the existing single owner.
-local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, tieDown)
+local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
     if tier.Name == "Low" then return end
     local width = math.min(platform.Size.X, platform.Size.Z)
     local nominal = PlatformIdentityLodRules.harborLandingWidth(platform)
     if width < 4.5 and (not nominal or width < nominal*.445) then return end
-    local top = PlatformFinishKit.surfacePaintOffset(platform, 0.045)
     local hardware = theme.Structure:Lerp(
         Color3.fromRGB(114, 101, 89), 0.38
     )
     -- Short offset cargo lashing stripe is an intentionally incomplete
     -- crossbar, NOT a fake bridge or hazard arrow.
-    local lashing = makePart(
-        "HarborCargoLashing" .. index,
-        Vector3.new(math.min(platform.Size.X * 0.55, 6.8), 0.045, 0.24),
-        platform.CFrame * CFrame.new(
-            0, top, platform.Size.Z * 0.26
-        ),
-        hardware,
-        Enum.Material.CorrodedMetal,
-        tieDown and 1 or 0.26,
-        platform
-    )
+    if not nominal then
+        local top = PlatformFinishKit.surfacePaintOffset(platform, 0.045)
+        makePart(
+            "HarborCargoLashing" .. index,
+            Vector3.new(math.min(platform.Size.X * 0.55, 6.8), 0.045, 0.24),
+            platform.CFrame * CFrame.new(0, top, platform.Size.Z * 0.26),
+            hardware, Enum.Material.CorrodedMetal, 0.26, platform
+        )
+    end
     -- The approved seven-MeshPart underside replaces this flat native
     -- keel block, but NOT Harbor's useful top-surface cargo lashing.
     local keelMount
@@ -482,7 +479,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, ti
             platform
         )
     end
-    return lashing,keelMount
+    return keelMount
 end
 
 -- Mark only geometry-verified ascending routes. The two short chevron
@@ -1047,7 +1044,7 @@ local function rebuild()
             -- Never fabricate a fallback-looking keel beneath complete
             -- creator-approved metal. Surface wayfinding remains intact.
             -- Even-index Low keeps its original half-density paint rule.
-            local platformKeel
+            local platformKeel,cargoBand
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme,
@@ -1056,6 +1053,8 @@ local function rebuild()
                     registerVisual(platform, piece)
                     if keelTargets[platform] and piece.Name == "HarborUndersideKeel" then
                         platformKeel = piece
+                    elseif piece.Name == "HarborCargoSteelBand" then
+                        cargoBand = piece
                     end
                 end
             end
@@ -1200,8 +1199,8 @@ local function rebuild()
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Harbor" then
                 local tieDown = hatchPieces[1] and hatchPieces[1]:GetAttribute("OriginalHarborCargoTieDown3D") == true
-                local lashing,keelMount = decorateHarbor(platform, visualIndex, theme, tier,
-                    authenticUnderdeck, tieDown)
+                local keelMount = decorateHarbor(platform, visualIndex, theme, tier,
+                    authenticUnderdeck)
                 if platformKeel and not authenticRim and not authenticUnderdeck then
                     local keelMeshes,keelFallback = PlatformFinishKit.mountHarborLandingKeel(
                         folder,platform,platformKeel,keelMount,girderSource)
@@ -1213,13 +1212,11 @@ local function rebuild()
                     end
                 end
                 if tieDown then
-                    local fallback = lashing and {[lashing]=.26} or {}
-                    for _,piece in ipairs(visualsByPlatform[platform]) do
-                        if piece.Name == "HarborCargoSteelBand" then
-                            fallback[piece] = piece:GetAttribute("ChaosBaseTransparency")
-                            piece:SetAttribute("ChaosBaseTransparency",1)
-                            piece.Transparency = 1
-                        end
+                    local fallback = {}
+                    if cargoBand then
+                        fallback[cargoBand] = cargoBand:GetAttribute("ChaosBaseTransparency")
+                        cargoBand:SetAttribute("ChaosBaseTransparency",1)
+                        cargoBand.Transparency = 1
                     end
                     mountedCargoTieDowns += 1
                     cargoTieDownDisconnects[#cargoTieDownDisconnects+1] =

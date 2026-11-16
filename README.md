@@ -1,3 +1,7 @@
+## P4 — Platelage dégagé sur les itinéraires de Storm Harbor
+
+Les 58 paliers portuaires utilisent une seule bande d'arrimage de secours, placée au même endroit que l'arrimage sculpté. Le relief sélectionné remplace cette bande et reste au-dessus du bois rainuré, sous les chevrons de saut. Le jeu conserve les créneaux de détail pendant la contraction et réaffiche la bande si une soudure disparaît. Le profil Low utilise le relief sélectionné seul.
+
 ## P4 — Ferrures d'angle des paliers de Storm Harbor
 
 Les plaques d'angle d'un palier proche équipé de lisses ajourées peuvent céder la place à des ferrures basses. Chaque coin réutilise trois maillages du modèle approuvé `102215174919938`, avec ses rails et ses fixations visibles au-dessus du platelage. Les ferrures suivent la contraction du palier et le caisson reste prioritaire.
@@ -32,7 +36,7 @@ Le panneau suit la largeur du palier et utilise un créneau du niveau de détail
 
 Les 58 paliers des marches de fret, des jetées cardinales et des traversées hautes peuvent recevoir le relief portuaire approuvé à sept maillages. Les taquets, les rivets et le rouleau d'arrimage remplacent la bande rectangulaire sur les paliers sélectionnés. Ils restent au bord de la surface en bois, sous la hauteur des chevrons de saut.
 
-Les arrimages partagent les créneaux des trappes de service, dont le seul créneau Low pour ce type de finition. Le montage retrouve la même largeur après un rétrécissement ou une arrivée en cours de manche. En cas de perte d'une fixation, les bandes d'origine réapparaissent sur les profils qui les affichent. `LocalOriginalHarborCargoTieDownCount` compte les assemblages montés.
+Les arrimages partagent les créneaux des trappes de service, dont le seul créneau Low pour ce type de finition. Le montage retrouve la même largeur après un rétrécissement ou une arrivée en cours de manche. En cas de perte d'une fixation, la bande de secours réapparaît sur les profils qui l'affichent. `LocalOriginalHarborCargoTieDownCount` compte les assemblages montés.
 
 ## P4 — Quilles et ailettes sculptées des avant-postes de Storm Harbor
 
