@@ -1972,7 +1972,7 @@ assert 'if output.modules < 1 then return nil end' in LARGE
 assert 'if tier == "Low" and supportParts ~= 7 then' in LARGE
 assert 'if tier == "Low" and not cameraReady then' in LARGE
 assert 'local fit = isPromenadePylon and promenadePylonFit or Kit.supportFit' in LARGE
-assert 'if fitSize then segments, scale = fit(fitSize, box) end' in LARGE
+assert 'segments, scale = fit(fitSize, box)' in LARGE
 assert 'if segments and segments <= available - output.modules then' in LARGE
 assert 'segments=Kit.supportFit(fitSize,supportBounds)' in LARGE
 assert 'function Kit.routeSupportScale(part, deck)' in LARGE
@@ -1988,6 +1988,23 @@ assert 'if count ~= 7 then return nil end' in LARGE
 assert 'Kit.bind(' not in LARGE
 print("PASS medium 8 real supported platform owners / 8 original modules,"
       " High 8x2=16, Low one, native ownership and collapse fallback")
+
+# Harbor's shorter and taller port supports share the same slots and the
+# same reconciler as generic columns. Only the fit and live footprint differ.
+for fragment in (
+    "local function harborPileFit(nativeSize, sourceBounds)",
+    "return 1, scale, width/(math.max(sourceBounds.X,sourceBounds.Z)*scale)",
+    "local allowHarborPiles = (tonumber(pressure) or 0) == 0",
+    "local visiblePosts = posts or harborPiles[id]",
+    "and (visiblePosts or (long>=7 and long<=36 and short>=7))",
+    "segments, scale, horizontalFit = harborPileFit(fitSize, box)",
+    "entry.size.Y",
+):
+    assert fragment in LARGE, ("Harbor forged pile fit/budget", fragment)
+assert "or PlatformIdentityLodRules.isHarborLanding(owner)" in TRIM
+assert "or PlatformIdentityLodRules.isHarborLanding(deck)" in TRIM
+assert "LocalHarborPierPilesReplaced = family.harborPile" in OWNER
+print("PASS Harbor forged piles stay inside the existing column budgets and native mask lifecycle")
 
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")

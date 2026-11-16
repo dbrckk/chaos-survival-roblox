@@ -6,6 +6,35 @@ local Rules = {}
 local PROMENADE_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}
 local PROMENADE_VARIANTS = {Classic = true, Towers = true, Crossroads = true, Orbital = true}
 
+local SWITCHBACK_WIDTHS = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6}
+local function routeIndex(value, maximum)
+    return type(value) == "number" and value % 1 == 0
+        and value >= 1 and value <= maximum
+end
+
+function Rules.isHarborLanding(deck)
+    return deck:GetAttribute("HarborRoute") ~= nil
+        or deck:GetAttribute("HarborSpokeRoute") ~= nil
+        or deck:GetAttribute("HarborSkywayLane") ~= nil
+end
+
+function Rules.harborLandingWidth(deck)
+    if routeIndex(deck:GetAttribute("HarborSkywayLane"), 2)
+        and routeIndex(deck:GetAttribute("HarborSkywayStep"), 7) then
+        local step = deck:GetAttribute("HarborSkywayStep")
+        return (step == 1 or step == 7) and 10.5 or 9.8
+    end
+    local harbor = deck:GetAttribute("HarborRoute")
+    local harborStep = deck:GetAttribute("HarborStep")
+    if routeIndex(harbor, 4) and routeIndex(harborStep, 7) then
+        return SWITCHBACK_WIDTHS[harborStep]
+    end
+    local spoke = deck:GetAttribute("HarborSpokeRoute")
+    local spokeStep = deck:GetAttribute("HarborSpokeStep")
+    if routeIndex(spoke, 4) and routeIndex(spokeStep, 4) then return 12-(spokeStep-1)*.5 end
+    return nil
+end
+
 function Rules.promenadePylonIndex(native)
     if typeof(native) ~= "Instance" or native:GetAttribute("PromenadeVisualOnly") ~= true then
         return nil

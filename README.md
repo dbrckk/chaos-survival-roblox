@@ -1,3 +1,9 @@
+## P4 — Pieux forgés des jetées de Storm Harbor
+
+Le modèle portuaire approuvé `76194593490199` couvre les 140 poteaux sous les marches de fret, les jetées cardinales et les traversées hautes. Un seul fût à sept maillages s'adapte à chaque poteau, avec des brides soudées, des chaînes et des bandes de bois. Le modèle suit le poteau pendant le rétrécissement et conserve toute sa hauteur. Le système de détail privilégie les poteaux proches et réutilise les créneaux existants de colonnes.
+
+Le décor de secours réapparaît pendant une alerte, sous pression graphique, hors distance d'affichage ou si le poteau, un maillage ou sa soudure se décharge. Le compteur `LocalHarborPierPilesReplaced` indique combien de poteaux sont effectivement masqués sur le client.
+
 ## P4 — Caissons forgés des quais de Storm Harbor
 
 Les 28 marches portuaires, les 16 paliers des jetées et les 14 paliers des traversées de fret acceptent le caisson approuvé `101457508594609`. Ses sept maillages remplacent les quatre biseaux et le sous-cadre de chaque palier sélectionné. Le niveau de détail écarte aussi les finitions locales qui recouvrent le caisson, en gardant les bandes de surface et les repères de saut.
