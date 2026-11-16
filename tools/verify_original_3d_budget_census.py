@@ -1883,7 +1883,12 @@ assert 'cast.RespectCanCollide = true' in CLEARANCE
 assert 'workspace:Blockcast(frame,BODY,point-previous,cast)' in CLEARANCE
 ROOKIE=(CLIENT/"rookie-parkour-cue.client.lua").read_text(encoding="utf8")
 assert 'routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in ROOKIE
-assert 'canApproach = function(deck) return isClear(base,deck,hit.Position) end' in ROOKIE
+assert 'routeClearance(base, deck, hit.Position)' in ROOKIE
+assert 'routeClearance(source, destination, nil, hit.Position)' in ROOKIE
+assert 'checked[destination] = clear' in ROOKIE
+assert 'crossing and isClear(from, crossing)' in ROOKIE
+assert 'flank and isClear(from, flank)' in ROOKIE
+assert 'detour and isClear(from, detour)' in ROOKIE
 assert 'pieces, hit.Position, 42, canApproach' in ROOKIE
 assert 'skyRouteDirection(from), isClear' in ROOKIE
 MASTERY=(CLIENT/"high-ground-route-cue.client.lua").read_text(encoding="utf8")

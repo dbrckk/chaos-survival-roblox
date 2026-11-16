@@ -516,10 +516,25 @@ local function update()
     end
 
     local pieces = platforms:GetChildren()
-    local isClear = routeClearance
-    local canApproach
-    if isClear and from == base then
-        canApproach = function(deck) return isClear(base,deck,hit.Position) end
+    local isClear, canApproach
+    if routeClearance then
+        if from == base then
+            canApproach = function(deck)
+                return routeClearance(base, deck, hit.Position)
+            end
+        elseif from.Parent == platforms then
+            -- Selection, junction labels and detours can all inspect the
+            -- same deck in one update. Only cast once per destination.
+            local checked = {}
+            isClear = function(source, destination)
+                local clear = checked[destination]
+                if clear == nil then
+                    clear = routeClearance(source, destination, nil, hit.Position)
+                    checked[destination] = clear
+                end
+                return clear
+            end
+        end
     end
     if skywayArrival == from then
         -- This is a completed, genuine harbor-to-harbor crossing. The
@@ -630,6 +645,10 @@ local function update()
             if isJunction then
                 local forward, crossing = JumpRouteCueRules.skyNetworkOptions(
                     from, pieces, skyRouteDirection(from))
+                if isClear then
+                    forward = forward and isClear(from, forward) and forward or nil
+                    crossing = crossing and isClear(from, crossing) and crossing or nil
+                end
                 if forward and crossing then
                     hint = french and "2 CHEMINS EN HAUTEUR"
                         or "2 SKY ROUTES"
@@ -646,6 +665,10 @@ local function update()
             local forward, flank = JumpRouteCueRules.forkOptions(
                 from, pieces
             )
+            if isClear then
+                forward = forward and isClear(from, forward) and forward or nil
+                flank = flank and isClear(from, flank) and flank or nil
+            end
             if forward and flank then
                 -- A genuine, server-authored choice. The physical fork
                 -- arrows show the side direction; keep only ONE nearby
@@ -661,6 +684,10 @@ local function update()
             local forward, detour = JumpRouteCueRules.crosslinkOptions(
                 from, pieces
             )
+            if isClear then
+                forward = forward and isClear(from, forward) and forward or nil
+                detour = detour and isClear(from, detour) and detour or nil
+            end
             if forward and detour then
                 hint = french and "2 ROUTES  •  CHOISIS"
                     or "2 PATHS  •  CHOOSE"
@@ -709,7 +736,7 @@ local function update()
             end
         end
         if alternative and safeGuidedTargetPath(root.Position,alternative,dangerWarnings)
-            and (not isClear or from == base or isClear(from,alternative)) then
+            and (not isClear or isClear(from,alternative)) then
             target = alternative
             hint = french and "DÉTOUR SÛR  ↑" or "SAFE DETOUR  ↑"
         else
