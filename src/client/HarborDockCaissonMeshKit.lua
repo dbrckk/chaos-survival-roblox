@@ -11,9 +11,14 @@ local Trim = if script and script.Parent and script.Parent:FindFirstChild("Platf
     then require(script.Parent.PlatformNativeTrimReplacementKit)
     else require("./PlatformNativeTrimReplacementKit")
 
+local PlatformIdentityLodRules = if script and script.Parent
+    and ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("PlatformIdentityLodRules")
+    then require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
+    else require("../shared/PlatformIdentityLodRules")
+
 local Kit = {}
 local ASSET_ID = 101457508594609
-local SWITCHBACK_WIDTHS = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6}
 local BUDGET = {
     -- One original below-deck armored caisson directly under the camera.
     -- Never add a false walkable surface or an extra collision platform.
@@ -65,26 +70,6 @@ local function original()
     return source, count
 end
 
-local function route(deck)
-    local function index(value, maximum)
-        return type(value) == "number" and value % 1 == 0 and value >= 1 and value <= maximum
-    end
-    if index(deck:GetAttribute("HarborSkywayLane"), 2)
-        and index(deck:GetAttribute("HarborSkywayStep"), 7) then
-        local step = deck:GetAttribute("HarborSkywayStep")
-        return (step == 1 or step == 7) and 10.5 or 9.8
-    end
-    local harbor = deck:GetAttribute("HarborRoute")
-    local harborStep = deck:GetAttribute("HarborStep")
-    if index(harbor, 4) and index(harborStep, 7) then
-        return SWITCHBACK_WIDTHS[harborStep]
-    end
-    local spoke = deck:GetAttribute("HarborSpokeRoute")
-    local spokeStep = deck:GetAttribute("HarborSpokeStep")
-    if index(spoke, 4) and index(spokeStep, 4) then return 12-(spokeStep-1)*.5 end
-    return nil
-end
-
 -- ShrinkingArena scales and MOVES genuine Harbor RouteTier decks every
 -- round tick. Require the server-authored ORIGINAL floor footprint and
 -- compare deck width against the actual floor shrink fraction, instead of
@@ -126,7 +111,7 @@ local function genuineLanding(deck, arena, base)
     end
     local shutter = deck:GetAttribute("BridgeShutterPhase")
     if shutter ~= nil and shutter ~= "Idle" then return false end
-    local width = route(deck)
+    local width = PlatformIdentityLodRules.harborLandingWidth(deck)
     if not width or math.abs(deck.Size.X-width*floorScale) > .08
         or math.abs(deck.Size.Z-width*floorScale) > .08 then return false end
     return width, floorScale

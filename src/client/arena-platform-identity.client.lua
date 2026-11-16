@@ -118,6 +118,9 @@ local function clear()
     if player:GetAttribute("LocalOriginalShortSkySpineCradleCount") ~= 0 then
         player:SetAttribute("LocalOriginalShortSkySpineCradleCount", 0)
     end
+    if player:GetAttribute("LocalHarborPierPilesReplaced") ~= 0 then
+        player:SetAttribute("LocalHarborPierPilesReplaced", 0)
+    end
     if player:GetAttribute("LocalOriginalNearSupportColumnCount") ~= 0 then
         player:SetAttribute("LocalOriginalNearSupportColumnCount", 0)
     end
@@ -1151,6 +1154,7 @@ local function rebuild()
                 LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck,
                 LocalPromenadeUnderdeckNativePartsReplaced = family.promenadeUnderdeck,
                 LocalSupportNativePartsReplaced = family.support,
+                LocalHarborPierPilesReplaced = family.harborPile,
                 LocalSkySpinePylonNativePartsReplaced = family.pylon,
                 LocalOriginalSkySpinePylon3DCount = family.pylon,
                 LocalOriginalPromenadePylon3DCount = family.promenadePylon,

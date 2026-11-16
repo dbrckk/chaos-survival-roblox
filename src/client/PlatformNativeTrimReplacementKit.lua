@@ -597,7 +597,8 @@ local function physicalSafe(native)
     end
     if owner and native.Name:match("^PlatformSupport%d+_%d+$")
         and (owner:GetAttribute("PromenadeStep") ~= nil
-            or owner:GetAttribute("SkySpineInterchange") == true) then
+            or owner:GetAttribute("SkySpineInterchange") == true
+            or PlatformIdentityLodRules.isHarborLanding(owner)) then
         return ownerSafe(owner, activePlatforms)
             and LargeStructure.routeSupportScale(native,owner) ~= nil
     end
@@ -723,7 +724,7 @@ local function watchOwner(part)
         for _, pylon in ipairs(pylons) do reconcilePylon(pylon) end
     end
     local function refresh()
-        if bridgeId and active[id] ~= "bridge" and pylons then
+        if pylons and active[id] == nil then
             refreshPylons()
         else
             reconcile()
@@ -745,7 +746,9 @@ local function watchOwner(part)
         watchers[#watchers+1] =
             part:GetPropertyChangedSignal("CFrame"):Connect(refreshPylons)
         for _, attribute in ipairs({"PromenadeLane","PromenadeStep",
-            "SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier"}) do
+            "SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier",
+            "HarborRoute","HarborStep","HarborSpokeRoute","HarborSpokeStep",
+            "HarborSkywayLane","HarborSkywayStep"}) do
             watchers[#watchers+1] =
                 part:GetAttributeChangedSignal(attribute):Connect(refreshPylons)
         end
@@ -846,7 +849,8 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     and platforms:FindFirstChild("Skybridge"..id)
                 local routeSupport = deck and part.Name:match("^PlatformSupport%d+_%d+$")
                     and (deck:GetAttribute("PromenadeStep") ~= nil
-                        or deck:GetAttribute("SkySpineInterchange") == true)
+                        or deck:GetAttribute("SkySpineInterchange") == true
+                        or PlatformIdentityLodRules.isHarborLanding(deck))
                 if isPromenadePylon or routeSupport
                     or (bridge and LargeStructure.matchesSkybridgeSupport(part,bridge)) then
                     local pylons = promenadePylonsByDeck[id] or {}
@@ -1134,6 +1138,7 @@ function Kit.breakdown()
     local result = {
         bevel = 0, elevatedRim = 0, ascensionRim = 0, underframe = 0, support = 0, pylon = 0,
         promenadePylon = 0, other = 0, spineUnderdeck = 0, promenadeUnderdeck = 0,
+        harborPile = 0,
     }
     for edge in pairs(rimClaims) do
         if edge.Parent == activeDecor then
@@ -1167,6 +1172,10 @@ function Kit.breakdown()
                 result.underframe += 1
             elseif name:match("^PlatformSupport%d+_%d+$") then
                 result.support += 1
+                local owner = physicalOwner(part)
+                if owner and PlatformIdentityLodRules.isHarborLanding(owner) then
+                    result.harborPile += 1
+                end
             elseif name:match("^SkySpine%d+_MonumentalPylon%-?1$") then
                 if not crownPylons[part] then result.pylon += 1 end
             elseif name:match("^Promenade%d+_LoadPylon%-?1$") then

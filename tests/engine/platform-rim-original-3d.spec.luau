@@ -658,6 +658,132 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(reason) end
     end)
 
+    it("fits the forged Harbor pile to short piers and tall crossings through shrink", function()
+        local Large=require("../../src/client/PremiumLargeStructureMeshKit")
+        local Rules=require("../../src/shared/PlatformIdentityLodRules")
+        local storage=game:GetService("ReplicatedStorage")
+        local priorTemplates=storage:FindFirstChild("ApprovedLargeStructureTemplates")
+        local priorMap=workspace:FindFirstChild("GeneratedMap")
+        if priorTemplates then priorTemplates.Parent=nil end
+        if priorMap then priorMap.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local visuals=Instance.new("Folder")
+        visuals.Parent=arena.Parent
+        local templates=Instance.new("Folder")
+        templates.Name="ApprovedLargeStructureTemplates"
+        templates:SetAttribute("OwnerVerified",true)
+        templates.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="Harbor"
+        source:SetAttribute("Original3DAssetId",76194593490199)
+        source:SetAttribute("OriginalLargeStructure3D",true)
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        for i=1,7 do
+            local mesh=Instance.new("MeshPart")
+            mesh.Size=i==1 and Vector3.new(2,14,1.8) or Vector3.one*.2
+            mesh.Anchored=true
+            mesh.CanCollide=false
+            mesh.CanTouch=false
+            mesh.CanQuery=false
+            mesh.Parent=source
+        end
+        source.Parent=templates
+        local running=false
+        local cleanup,connections={},{}
+        local ok,why=pcall(function()
+            local base,decor,platforms=arena.Base,arena.Decor,arena.Platforms
+            local count=0
+            for _,part in ipairs(decor:GetChildren()) do
+                local id=part.Name:match("^PlatformSupport(%d+)_%d+$")
+                local deck=id and platforms:FindFirstChild("Platform"..id)
+                if deck and Rules.isHarborLanding(deck) then
+                    local scale=Large.routeSupportScale(part,deck)
+                    assert(scale and math.abs(scale-1)<.002,part.Name)
+                    count+=1
+                end
+            end
+            expect(count).toBe(140)
+            local short=platforms.Platform96
+            assert(short:GetAttribute("HarborSpokeStep")==2)
+            local tall=platforms.Platform84
+            assert(tall:GetAttribute("HarborSkywayStep")~=nil)
+            local shortPile,tallPile=decor.PlatformSupport96_1,decor.PlatformSupport84_2
+            local function install(deck,pile)
+                local index=tonumber(deck.Name:match("%d+"))
+                local _,chosen=Large.selectNearRouteStructures(
+                    {deck},decor,"Harbor","Low",base,pile.Position,nil,0,false)
+                expect(chosen[deck]).toBe(true)
+                local result=assert(Large.supports(
+                    visuals,decor,deck,"Harbor","Low",index,1,true,pile.Position))
+                for _,connection in ipairs(result.disconnects) do
+                    connections[#connections+1]=connection
+                end
+                assert(result.modules==1 and #result.parts==7 and result.covered[1]==pile)
+                return result.parts
+            end
+            local shortPieces=install(short,shortPile)
+            local tallPieces=install(tall,tallPile)
+            local function largest(pieces)
+                local piece=pieces[1]
+                for _,candidate in ipairs(pieces) do
+                    if candidate.Size.Y>piece.Size.Y then piece=candidate end
+                end
+                return piece
+            end
+            local shaft=largest(tallPieces)
+            local shortShaft=largest(shortPieces)
+            assert(math.abs(shaft.Size.Y-tallPile.Size.Y)<.02)
+            assert(math.abs(shortShaft.Size.Y-shortPile.Size.Y)<.02)
+            local initial=shaft.Size
+            Kit.bind(arena,{},nil,{shortPile,tallPile},visuals)
+            expect(Kit.breakdown().harborPile).toBe(2)
+            short:SetAttribute("CollapsePhase","Warning")
+            task.wait()
+            expect(shortPile.LocalTransparencyModifier).toBe(0)
+            expect(shortShaft.LocalTransparencyModifier).toBe(1)
+            expect(tallPile.LocalTransparencyModifier).toBe(1)
+            local _,pressured=Large.selectNearRouteStructures(
+                {short,tall},decor,"Harbor","Medium",base,tallPile.Position,nil,1,false)
+            expect(next(pressured)).toBe(nil)
+
+            running=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return running end,OnCleanup=cleanup})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until base.Size.X<=144.05 or os.clock()>deadline
+            running=false
+            task.wait()
+            assert(base.Size.X<=144.05 and tall.CanCollide)
+            assert(math.abs(Large.routeSupportScale(tallPile,tall)-.45)<.002)
+            assert(tallPile.LocalTransparencyModifier==1)
+            assert(math.abs(shaft.Size.X-initial.X*.45)<.02 and shaft.Size.Y==initial.Y)
+            local final=shaft.Size
+            Kit.reset()
+            visuals:ClearAllChildren()
+            local late=install(tall,tallPile)
+            assert((largest(late).Size-final).Magnitude<.03)
+            Kit.bind(arena,{},nil,{tallPile},visuals)
+            expect(Kit.breakdown().harborPile).toBe(1)
+            Kit.setPylonLodVisible(tallPile,false)
+            expect(tallPile.LocalTransparencyModifier).toBe(0)
+            Kit.setPylonLodVisible(tallPile,true)
+            late[1]:FindFirstChild("ChaosPlatformTrimWeld"):Destroy()
+            task.wait()
+            expect(tallPile.LocalTransparencyModifier).toBe(0)
+            expect(late[2].LocalTransparencyModifier).toBe(1)
+        end)
+        running=false
+        Kit.reset()
+        for _,stop in ipairs(cleanup) do stop() end
+        for _,connection in ipairs(connections) do connection:Disconnect() end
+        arena.Parent:Destroy()
+        templates:Destroy()
+        if priorTemplates then priorTemplates.Parent=storage end
+        if priorMap then priorMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
     it("replaces the five native pieces under a real Storm Harbor freight landing",function()
         local Dock=require("../../src/client/HarborDockCaissonMeshKit")
         local storage=game:GetService("ReplicatedStorage")

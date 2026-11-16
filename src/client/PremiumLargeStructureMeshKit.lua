@@ -452,6 +452,23 @@ function Kit.routeSupportScale(part, deck)
         scale = Kit.spineFootprint(deck)
     elseif deck:GetAttribute("PromenadeStep") ~= nil then
         scale = promenadeFootprint(deck)
+    elseif PlatformIdentityLodRules.isHarborLanding(deck) then
+        local platforms = deck.Parent
+        local arena = platforms and platforms.Parent
+        local map = workspace:FindFirstChild("GeneratedMap")
+        local width = PlatformIdentityLodRules.harborLandingWidth(deck)
+        local sx,sz = deck.Size.X,deck.Size.Z
+        if not map or not map:IsA("Folder") or not arena
+            or not arena:IsA("Folder") or arena.Parent ~= map or arena.Name ~= "Arena"
+            or arena:FindFirstChild("Platforms") ~= platforms
+            or arena:GetAttribute("VariantId") ~= "Harbor"
+            or not width or tonumber(deck:GetAttribute("RouteTier")) == nil
+            or math.abs(deck.Size.Y-2) > .08 or math.abs(sx-sz) > .08
+            or (tonumber(corner) > 2 and width < 11) then return nil end
+        -- The native socket and deck may stream after the floor has shrunk.
+        -- Fit against their authored footprint and shared local geometry.
+        scale = sx/width
+        if scale < .445 or scale > 1.005 then return nil end
     end
     if not scale or part.Parent ~= deck.Parent.Parent:FindFirstChild("Decor") then return nil end
     local sx,sz = deck.Size.X,deck.Size.Z
@@ -473,12 +490,24 @@ end
 local function supportFitSize(part, deck)
     if part.Name:match("^PlatformSupport%d+_%d+$") and deck
         and (deck:GetAttribute("PromenadeStep") ~= nil
-            or deck:GetAttribute("SkySpineInterchange") == true) then
+            or deck:GetAttribute("SkySpineInterchange") == true
+            or PlatformIdentityLodRules.isHarborLanding(deck)) then
         local scale = Kit.routeSupportScale(part,deck)
         if not scale then return nil end
         return Vector3.new(part.Size.X/scale,part.Size.Y,part.Size.Z/scale)
     end
     return part.Size
+end
+
+-- A dock pile is one continuous forged shaft, including the tall freight
+-- crossings. Fit height independently from width so low piles keep their
+-- collars and high piles do not need two stacked seven-part modules.
+local function harborPileFit(nativeSize, sourceBounds)
+    if not nativeSize or nativeSize.Y < 4.75 or nativeSize.Y > 20
+        or nativeSize.X < .94 or nativeSize.X > 1.22 then return nil end
+    local scale = nativeSize.Y/sourceBounds.Y
+    local width = nativeSize.X*1.30
+    return 1, scale, width/(math.max(sourceBounds.X,sourceBounds.Z)*scale)
 end
 
 -- Selection and mounting use the same complete authored fallback group.
@@ -564,6 +593,8 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
     -- or absent support must never consume an authentic mesh slot.
     local supportsAvailable={}
     local bridgeSupports={}
+    local harborPiles={}
+    local allowHarborPiles = (tonumber(pressure) or 0) == 0
     if supportSource then
         local grouped={}
         local arena = decor.Parent
@@ -578,7 +609,14 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                 local owner = platformFolder and platformFolder:FindFirstChild("Platform"..id)
                 if owner then
                     local fitSize = supportFitSize(part,owner)
-                    if fitSize then segments=Kit.supportFit(fitSize,supportBounds) end
+                    if variant == "Harbor" and PlatformIdentityLodRules.isHarborLanding(owner) then
+                        if allowHarborPiles then segments=harborPileFit(fitSize,supportBounds) end
+                        if segments then
+                            local posts = harborPiles[id] or {}
+                            posts[#posts+1] = part
+                            harborPiles[id] = posts
+                        end
+                    elseif fitSize then segments=Kit.supportFit(fitSize,supportBounds) end
                 elseif variant == "Towers" and platformFolder and (tonumber(pressure) or 0)==0 then
                     local bridge = platformFolder:FindFirstChild("Skybridge"..id)
                     if Kit.matchesSkybridgeSupport(part,bridge) then
@@ -695,9 +733,10 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
             local supportDistance=delta.Magnitude
             local supportScore=score
             local nearPier=false
-            if posts then
+            local visiblePosts = posts or harborPiles[id]
+            if visiblePosts then
                 supportScore,supportDistance=math.huge,math.huge
-                for _,post in ipairs(posts) do
+                for _,post in ipairs(visiblePosts) do
                     local offset=post.Position-focus
                     supportDistance=math.min(supportDistance,offset.Magnitude)
                     supportScore=math.min(supportScore,
@@ -705,13 +744,15 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                             +cameraFacingBias(offset))
                 end
                 -- A shrinking bridge must still retain a midspan zone.
-                local localFocus=platform.CFrame:PointToObjectSpace(focus)
-                local longitudinal=size.X>size.Z and localFocus.X or localFocus.Z
-                nearPier=supportDistance<=18 and math.abs(longitudinal)>=long*.23
+                if posts then
+                    local localFocus=platform.CFrame:PointToObjectSpace(focus)
+                    local longitudinal=size.X>size.Z and localFocus.X or localFocus.Z
+                    nearPier=supportDistance<=18 and math.abs(longitudinal)>=long*.23
+                end
             end
             if supportSource and supportsAvailable[id]
                 and not lowHasCompleteSpineCradle
-                and (posts or (long>=7 and long<=36 and short>=7))
+                and (visiblePosts or (long>=7 and long<=36 and short>=7))
                 and (tier ~= "Low" or supportDistance <= 125) then
                 supports[#supports+1]={platform=platform,score=supportScore,
                     cost=supportsAvailable[id],nearPier=nearPier}
@@ -873,7 +914,8 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             natives[#natives+1]=child
         end
     end
-    if bridge and typeof(cameraPoint) == "Vector3" then
+    local harborPile = variant == "Harbor" and PlatformIdentityLodRules.isHarborLanding(platform)
+    if (bridge or harborPile) and typeof(cameraPoint) == "Vector3" then
         table.sort(natives,function(a,b)
             local da,db=(a.Position-cameraPoint).Magnitude,(b.Position-cameraPoint).Magnitude
             return da<db or (da==db and a.Name<b.Name)
@@ -889,8 +931,12 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
         local isPromenadePylon = promenadePylons[support] == true
         local fit = isPromenadePylon and promenadePylonFit or Kit.supportFit
         local fitSize = supportFitSize(support,platform)
-        local segments, scale
-        if fitSize then segments, scale = fit(fitSize, box) end
+        local segments, scale, horizontalFit
+        if harborPile then
+            segments, scale, horizontalFit = harborPileFit(fitSize, box)
+        elseif fitSize then
+            segments, scale = fit(fitSize, box)
+        end
         if segments and segments <= available - output.modules then
             local height = support.Size.Y / segments
             local stages = {}
@@ -898,7 +944,7 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             for k=1,segments do
                 local delta=(k-(segments+1)*.5)*height
                 local stage=prepare(source,scale,function(scaled)
-                    if scaled.Y <= 0 or scaled.Y>17.8 then return nil end
+                    if scaled.Y <= 0 or scaled.Y > (harborPile and 20 or 17.8) then return nil end
                     return support.CFrame*CFrame.new(0,delta,0)
                 end,support,variant,true)
                 if not stage then ok=false; break end
@@ -931,8 +977,8 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
                 local sourceDepth = isPromenadePylon and box.Z*scale/.98 or fitSize.Z
                 local function followSupportSize()
                     if not support.Parent then return end
-                    local rx=math.clamp(support.Size.X/sourceWidth,.05,2)
-                    local rz=math.clamp(support.Size.Z/sourceDepth,.05,2)
+                    local rx=math.clamp(support.Size.X/sourceWidth,.05,2)*(horizontalFit or 1)
+                    local rz=math.clamp(support.Size.Z/sourceDepth,.05,2)*(horizontalFit or 1)
                     for _,entry in ipairs(entries) do
                         if entry.part.Parent and entry.joint
                             and entry.joint.Parent then
