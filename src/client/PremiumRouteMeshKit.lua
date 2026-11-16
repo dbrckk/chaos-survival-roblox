@@ -88,7 +88,7 @@ local function restore(entry)
         model:Destroy()
     end
     local panel = entry.panel
-    if not entry.timber and panel and panel.Parent then
+    if panel then
         panel.LocalTransparencyModifier = entry.originalPanelAlpha
     end
 end
@@ -363,6 +363,7 @@ local function addTimberModel(entry, platform, template, source, nominal)
     piece:SetAttribute("PreserveNativeMaterial",true)
     piece.Size = Vector3.new(inset,.031,inset)
     piece.Transparency = 0
+    piece.LocalTransparencyModifier = 1
     piece.Anchored = false
     piece.Massless = true
     piece.CanCollide = false
@@ -749,7 +750,7 @@ local function syncVisibility(entry, platform)
             end
         end
     end
-    if not entry.timber and entry.panel and entry.panel.Parent then
+    if entry.panel then
         local desired = (safe and entry.panelCovered)
             and 1 or entry.originalPanelAlpha
         if entry.panel.LocalTransparencyModifier ~= desired then
@@ -805,9 +806,8 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         underdeck = false,
         underdeckMasked = {},
         replacesNativeUnderdeck = underdeckTemplate ~= nil and usesNativeUnderdeck(platform),
-        -- The native landing paint is masked ONLY when the owner-approved
-        -- model's actual bounding box covers both walkable axes.
-        panelCovered = fit and fit.panelCovered or false,
+        -- Timber also covers both axes of its matching native inset.
+        panelCovered = timber ~= nil or (fit and fit.panelCovered or false),
     }
 
     if timber then
@@ -908,7 +908,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     local function releaseNativePanel()
         for _, connection in ipairs(entry.panelConnections) do connection:Disconnect() end
         table.clear(entry.panelConnections)
-        if not entry.timber and entry.panel and entry.panel.Parent then
+        if entry.panel then
             entry.panel.LocalTransparencyModifier = entry.originalPanelAlpha
         end
         entry.panel = nil
@@ -1582,6 +1582,7 @@ function PremiumRouteMeshKit.coveredPanelCount()
     for platform, entry in pairs(mounted) do
         if entry.panel and entry.panel.Parent
             and entry.panelCovered
+            and (not entry.timber or entry.timberVisible)
             and authenticDeck(entry,platform)
             and entry.panel.LocalTransparencyModifier == 1 then
             count += 1
