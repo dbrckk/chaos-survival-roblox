@@ -2206,7 +2206,7 @@ player:GetAttributeChangedSignal("LocalPremiumNearFieldEpoch")
 player:GetAttributeChangedSignal("LocalHarborRouteClearanceEpoch"):Connect(function()
     if refreshRouteClearance then refreshRouteClearance() end
 end)
-JumpRouteHazards.ImpactWarningsChanged:Connect(function()
+JumpRouteHazards.WarningsChanged:Connect(function()
     local camera = workspace.CurrentCamera
     if refreshRouteHazards and camera then
         refreshRouteHazards(camera.CFrame.Position)

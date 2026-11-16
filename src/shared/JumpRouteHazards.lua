@@ -1,20 +1,21 @@
 -- Share replicated warnings between the personal guide, mastery hints and deck markings.
+local CollectionService = game:GetService("CollectionService")
 local JumpRouteCueRules = if script then require(script.Parent.JumpRouteCueRules)
     else require("./JumpRouteCueRules")
 
-local impactWarningsChanged = Instance.new("BindableEvent")
+local warningsChanged = Instance.new("BindableEvent")
 local JumpRouteHazards = {
-    ImpactWarningsChanged = impactWarningsChanged.Event,
+    WarningsChanged = warningsChanged.Event,
 }
 
 local liveWarnings = {}
-local impactUpdateQueued = false
-local function queueImpactUpdate()
-    if impactUpdateQueued then return end
-    impactUpdateQueued = true
+local warningUpdateQueued = false
+local function queueWarningUpdate()
+    if warningUpdateQueued then return end
+    warningUpdateQueued = true
     task.defer(function()
-        impactUpdateQueued = false
-        impactWarningsChanged:Fire()
+        warningUpdateQueued = false
+        warningsChanged:Fire()
     end)
 end
 
@@ -24,8 +25,8 @@ local function trackWarning(child)
         return
     end
     -- Streaming can deliver the final hazard size after the Part itself.
-    liveWarnings[child] = child:GetAttributeChangedSignal("WarningEndSize"):Connect(queueImpactUpdate)
-    queueImpactUpdate()
+    liveWarnings[child] = child:GetAttributeChangedSignal("WarningEndSize"):Connect(queueWarningUpdate)
+    queueWarningUpdate()
 end
 workspace.ChildAdded:Connect(trackWarning)
 workspace.ChildRemoved:Connect(function(child)
@@ -33,12 +34,34 @@ workspace.ChildRemoved:Connect(function(child)
     if not connection then return end
     connection:Disconnect()
     liveWarnings[child] = nil
-    queueImpactUpdate()
+    queueWarningUpdate()
     -- The remove notification may run after the same part streams back in.
     trackWarning(child)
 end)
 for _, child in ipairs(workspace:GetChildren()) do
     trackWarning(child)
+end
+
+local SWEEP_TAG = "ChaosHarborSweepLane"
+local sweepConnections = {}
+local function trackSweep(lane)
+    if sweepConnections[lane] or not lane:IsA("BasePart")
+        or not lane:IsDescendantOf(game) or not lane:HasTag(SWEEP_TAG) then return end
+    sweepConnections[lane] = lane:GetAttributeChangedSignal("HarborSweepPhase"):Connect(queueWarningUpdate)
+    queueWarningUpdate()
+end
+
+CollectionService:GetInstanceAddedSignal(SWEEP_TAG):Connect(trackSweep)
+CollectionService:GetInstanceRemovedSignal(SWEEP_TAG):Connect(function(lane)
+    local connection = sweepConnections[lane]
+    if not connection then return end
+    connection:Disconnect()
+    sweepConnections[lane] = nil
+    queueWarningUpdate()
+    trackSweep(lane)
+end)
+for _, lane in ipairs(CollectionService:GetTagged(SWEEP_TAG)) do
+    trackSweep(lane)
 end
 
 function JumpRouteHazards.read(arena)
