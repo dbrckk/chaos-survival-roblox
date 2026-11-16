@@ -546,6 +546,12 @@ local function harborLashingWidth(platform, variant)
     return width
 end
 
+local function harborLashingOffset(platform)
+    local direction = (platform:GetAttribute("HarborSkywayLane") == 1
+        or platform:GetAttribute("HarborSpokeRoute") == 1) and -1 or 1
+    return platform.Size.Z*.29*direction
+end
+
 -- The ORIGINAL 1-in-9 High / 1-in-18 Medium authentic mesh budget is
 -- counted from currently safe legacy-eligible decks. Move those same slots
 -- onto the in-view platforms that ALREADY owned native 3-piece hatches,
@@ -592,9 +598,11 @@ function PlatformFinishKit.selectOriginalServiceHatches(
             local phase = platform:GetAttribute("CollapsePhase")
             local shutter = platform:GetAttribute("BridgeShutterPhase")
             local sx, sz = platform.Size.X, platform.Size.Z
-            local legacy = id % 3 == 1 and math.min(sx,sz) >= 8 and math.max(sx,sz) <= 36
-            local lashing = sourceParts == 7 and harborLashingWidth(platform,variant)
-            if (legacy or lashing)
+            local nominal = harborLashingWidth(platform,variant)
+            local legacy = id % 3 == 1 and (nominal or math.min(sx,sz)) >= 8
+                and (nominal or math.max(sx,sz)) <= 36
+            local lashing = sourceParts == 7 and nominal
+            if (lashing or (legacy and not nominal))
                 and (phase == nil or phase == "Normal" or phase == "Safe")
                 and (shutter == nil or shutter == "Idle") then
                 local width = math.min((lashing or sx) * .55, 6.2)
@@ -673,14 +681,14 @@ local function originalServiceHatch(parent, platform, variant, tier,
         * CFrame.new(0, upper + .05, -platform.Size.Z * .19)
         * CFrame.Angles(0, yaw, 0)
     local shrink = lashingWidth and platform.Size.X/lashingWidth
+    local stretch
     if shrink then
-        -- Fit the stamped relief in the old offset cargo strip. The top
-        -- stays between the panel's +.105 face and the takeoff cue.
-        local offset = platform.Size.Z * .29
-        if platform:GetAttribute("HarborSkywayLane") == 1
-            or platform:GetAttribute("HarborSpokeRoute") == 1 then offset = -offset end
+        -- Expose the shallow relief above the grooved wood (+.137)
+        -- while leaving its top below the chevron's luminous face (+.1895).
+        local height = .045
+        stretch = Vector3.new(shrink,height/bounds.Y,shrink)
         target = platform.CFrame
-            * CFrame.new(0, platform.Size.Y*.5+.140-bounds.Y*.5,offset)
+            * CFrame.new(0, platform.Size.Y*.5+.174-height*.5,harborLashingOffset(platform))
             * CFrame.Angles(0,yaw,0)
     end
     local made = {}
@@ -689,9 +697,8 @@ local function originalServiceHatch(parent, platform, variant, tier,
             local relative = sourceFrame:ToObjectSpace(part.CFrame)
             if shrink then
                 if math.abs(relative.UpVector.Y) < .999 then copy:Destroy(); return nil end
-                local horizontal = Vector3.new(shrink,1,shrink)
-                part.Size *= horizontal
-                relative = CFrame.new(relative.Position*horizontal)*relative.Rotation
+                part.Size *= stretch
+                relative = CFrame.new(relative.Position*stretch)*relative.Rotation
                 part:SetAttribute("OriginalHarborCargoTieDown3D",true)
             end
             part.CFrame = target * relative
@@ -736,23 +743,28 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
         or platform:GetAttribute("ChaosSkybridge") == true
     then return {} end
     local phase = platform:GetAttribute("CollapsePhase")
-    local lashing = selected == true and platform.Anchored and platform.CanCollide
+    local landing = harborLashingWidth(platform,variant)
+    local shutter = platform:GetAttribute("BridgeShutterPhase")
+    local lashing = landing and selected == true and platform.Anchored and platform.CanCollide
         and platform.Transparency < .75 and (phase == nil or phase == "Safe" or phase == "Normal")
-        and harborLashingWidth(platform,variant)
+        and (shutter == nil or shutter == "Idle") and landing
+    -- Harbor landings already have a dedicated cargo strip below. They
+    -- should never stack a generic service hatch on it or its replacement.
+    if landing and not lashing then return {} end
     local sx, sz = platform.Size.X, platform.Size.Z
     local legacy = math.floor(tonumber(index) or 0) % 3 == 1
         and math.min(sx,sz) >= 8 and math.max(sx,sz) <= 36
     if not legacy and not lashing then return {} end
     local upper = PlatformFinishKit.surfacePaintOffset(platform, 0.065)
-    local hatchWidth = math.min(sx * 0.55, 6.2)
-    local hatchDepth = math.min(sz * 0.42, 4.2)
+    local hatchWidth = math.min((lashing or sx) * 0.55, 6.2)
+    local hatchDepth = lashing and 1.88 or math.min(sz * 0.42, 4.2)
     local original = originalServiceHatch(
         parent, platform, variant, tier, hatchWidth, hatchDepth, upper, index,
-        selected)
+        selected, lashing)
     if original then return original end
     -- The old Low route had NO hatch. Never add three primitive Parts if
     -- the approved source is unavailable, rejected or fails mid-mount.
-    if tier == "Low" then return {} end
+    if tier == "Low" or landing then return {} end
     local materials = {
         Classic = Enum.Material.DiamondPlate,
         Towers = Enum.Material.CorrodedMetal,
@@ -1213,9 +1225,17 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
         piece(1, CFrame.new(-sx * 0.16, top, -sz * 0.18),
             Vector3.new(math.max(2.2, sx * 0.52), 0.028, 0.34),
             timber, Enum.Material.WoodPlanks, 0.16)
-        piece(2, CFrame.new(sx * 0.14, top + 0.009, sz * 0.28),
-            Vector3.new(math.max(2.0, sx * 0.56), 0.038, 0.23),
-            hardware, Enum.Material.CorrodedMetal, 0.18)
+        local nominal = harborLashingWidth(platform,variant)
+        if nominal then
+            local scale = sx/nominal
+            piece(2, CFrame.new(0, top, harborLashingOffset(platform)),
+                Vector3.new(math.min(nominal*.55,6.2)*scale,.028,.24*scale),
+                hardware, Enum.Material.CorrodedMetal, 0.18)
+        else
+            piece(2, CFrame.new(sx * 0.14, top + 0.009, sz * 0.28),
+                Vector3.new(math.max(2.0, sx * 0.56), 0.038, 0.23),
+                hardware, Enum.Material.CorrodedMetal, 0.18)
+        end
         piece(3, CFrame.new(0, -sy * 0.5 - 0.20, 0),
             Vector3.new(math.max(2.4, sx * 0.64), 0.26,
                 math.max(0.7, sz * 0.20)),

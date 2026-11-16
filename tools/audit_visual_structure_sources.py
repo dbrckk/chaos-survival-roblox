@@ -415,7 +415,7 @@ identity=(ROOT/"src/client/arena-platform-identity.client.lua").read_text(
 for clause in (
     "local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)",
     "if genuineUnderdeck then return end",
-    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, tieDown)',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
