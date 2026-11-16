@@ -568,6 +568,32 @@ describe("Arena variants", function()
                 expect(JumpRouteCueRules.retarget(from,backup,shortlist,Vector3.zero,id,clear)).toBe(backup)
                 gate.Position=from.Position+Vector3.new(-4.8,3,0)
                 expect(clear(from,primary)).toBe(false)
+                from:SetAttribute("HarborRoute",1)
+                from:SetAttribute("HarborStep",1)
+                primary:SetAttribute("HarborRoute",1)
+                primary:SetAttribute("HarborStep",2)
+                expect(JumpRouteCueRules.nextPhysical(from,shortlist,Vector3.zero,id,nil,clear)==nil).toBe(true)
+                gate.CanCollide=false
+                expect(JumpRouteCueRules.nextPhysical(from,shortlist,Vector3.zero,id,nil,clear)).toBe(primary)
+
+                local base=Instance.new("Part")
+                base.Size=Vector3.new(120,2,120)
+                base.Position=Vector3.zero
+                base.Anchored=true
+                base.Parent=corridor
+                local secondEntry=decks[8]
+                secondEntry.Position=from.Position+Vector3.new(-3,0,18)
+                secondEntry.Parent=corridor
+                local floorPoint=Vector3.new(from.Position.X-21,1,from.Position.Z)
+                local function canApproach(deck) return clear(base,deck,floorPoint) end
+                local entries={from,secondEntry}
+                expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)).toBe(from)
+                gate.Position=floorPoint+Vector3.new(8,3,0)
+                gate.CanCollide=true
+                expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)).toBe(secondEntry)
+                gate.Position+=Vector3.new(0,20,0)
+                expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)).toBe(from)
+                expect(clear(base,from,Vector3.new(from.Position.X,1,from.Position.Z-1))).toBe(false)
                 gate:Destroy()
                 corridor:Destroy()
             end

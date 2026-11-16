@@ -1,3 +1,7 @@
+## P4 — Premier saut guidé à Storm Harbor
+
+Le guide vérifie le passage à pied depuis les pieds du joueur jusqu'au point de départ du saut, puis l'espace nécessaire pour atteindre le premier palier. Si ce passage est obstrué, il cherche un autre accès. Une fois sur le parcours, les indications vérifient aussi les sauts entre paliers et les détours, tout en conservant l'ordre des marches et des passerelles.
+
 ## P4 — Vérification des obstacles sur les sauts de Storm Harbor
 
 Le chevron vérifie le volume traversé par l'avatar entre les deux paliers. Une passerelle ou un obstacle solide dans ce volume bloque la suggestion. Le décor traversable laisse le saut disponible. Près de la caméra, le contrôle périodique du décor détecte aussi les obstacles qui se déplacent pendant la manche.
