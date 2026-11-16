@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local JumpRouteClearance = require(ReplicatedStorage.Shared.JumpRouteClearance)
+local JumpRouteHazards = require(ReplicatedStorage.Shared.JumpRouteHazards)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 
 local player = Players.LocalPlayer
@@ -287,6 +288,10 @@ local function update()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local variant = arena and arena:GetAttribute("VariantId")
+    if type(variant) ~= "string" or (state.arenaId and state.arenaId ~= variant) then
+        hide()
+        return
+    end
     local harborArena = variant == "Harbor" and arena or nil
     if harborArena ~= clearanceArena then
         disconnectTarget()
@@ -324,14 +329,19 @@ local function update()
         local decks = platforms:GetChildren()
         local canJump
         if routeClearance then
+            local warnings, lava = JumpRouteHazards.read(arena)
+            local function safeLanding(destination)
+                return eligibleTarget(destination, root.Position, required)
+                    and JumpRouteHazards.landingPathIsSafe(root.Position, destination, warnings, lava)
+            end
             if from == base then
                 canJump = function(destination)
-                    return eligibleTarget(destination, root.Position, required)
+                    return safeLanding(destination)
                         and routeClearance(base, destination, hit.Position)
                 end
             else
                 canJump = function(source, destination)
-                    return eligibleTarget(destination, root.Position, required)
+                    return safeLanding(destination)
                         and routeClearance(source, destination, nil, hit.Position)
                 end
             end
@@ -359,4 +369,7 @@ states.OnClientEvent:Connect(function(state)
 end)
 
 player:GetAttributeChangedSignal("RoundPeakTier"):Connect(update)
+for _, attribute in ipairs({"RoundParticipant", "RoundEliminated"}) do
+    player:GetAttributeChangedSignal(attribute):Connect(update)
+end
 player.CharacterRemoving:Connect(hide)

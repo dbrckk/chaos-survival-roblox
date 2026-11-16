@@ -1091,7 +1091,10 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local target=arena.Platforms.Platform99
             local function safeJump()
                 local warnings,lava=Hazards.read(arena)
-                return Hazards.deckPathIsSafe(deck,target,warnings,lava)
+                local playerRoot=deck.Position+Vector3.yAxis*(deck.Size.Y*.5+2.5)
+                local markingsSafe=Hazards.deckPathIsSafe(deck,target,warnings,lava)
+                assert(Hazards.landingPathIsSafe(playerRoot,target,warnings,lava)==markingsSafe)
+                return markingsSafe
             end
             local function hazard(name,position,size,parent)
                 local part=Instance.new("Part")
@@ -1135,6 +1138,11 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local lava=hazard("RoundLava",target.Position+Vector3.yAxis*target.Size.Y*.5,
                 Vector3.new(1,1,1),workspace)
             assert(not safeJump())
+            lava.Position=deck.Position+Vector3.yAxis*deck.Size.Y*.5
+            local warnings,liveLava=Hazards.read(arena)
+            local playerRoot=deck.Position+Vector3.yAxis*(deck.Size.Y*.5+2.5)
+            assert(not Hazards.deckPathIsSafe(deck,target,warnings,liveLava))
+            assert(Hazards.landingPathIsSafe(playerRoot,target,warnings,liveLava))
             lava:Destroy()
             assert(safeJump())
             assert(deck.CanCollide and timber.LocalTransparencyModifier==0)

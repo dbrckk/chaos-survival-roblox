@@ -8,7 +8,7 @@ Le guide de saut accompagne les nouveaux joueurs pendant les trois premières ma
 
 ## P4 — Guidage du défi Points hauts à Storm Harbor
 
-L'indicateur du défi vérifie le passage à pied depuis la position du joueur jusqu'au bord de départ, au sol comme sur un palier. Il vérifie ensuite l'espace libre pour le saut. Il propose un autre passage praticable si l'accès est bloqué et s'efface quand aucun trajet ne convient. Une alerte d'effondrement, une fermeture de passerelle ou le déchargement du palier affiché déclenche la recherche d'un autre passage sans attendre le prochain message de manche. Le guide des urgences et du fret garde la priorité. Sur écran tactile, le défi reste affiché dans le HUD de manche.
+L'indicateur du défi vérifie le passage à pied depuis la position du joueur jusqu'au bord de départ, au sol comme sur un palier. Il vérifie ensuite l'espace libre pour le saut. Il propose un autre passage praticable si l'accès est bloqué et s'efface quand aucun trajet ne convient. Une alerte d'effondrement, une fermeture de passerelle ou le déchargement du palier affiché déclenche la recherche d'un autre passage sans attendre le prochain message de manche. Sur PC, le repère du défi écarte aussi les sauts exposés aux météores, aux bombes, aux balayages ou à la lave et disparaît si le joueur sort de la manche. Le guide des urgences et du fret garde la priorité. Sur écran tactile, le défi reste affiché dans le HUD de manche.
 
 ## P4 — Guide des sauts à Storm Harbor
 
