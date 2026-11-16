@@ -3267,6 +3267,58 @@ local function localizedStateCopy(state)
     return displayTitle, displayHint
 end
 
+local function refreshRookieCoach()
+    local phase = currentHudPhase
+    local games = FirstTimeExperience.effectiveGames(
+        player:GetAttribute("Games"),
+        player:GetAttribute("SessionRoundsPlayed")
+    )
+    local votingOpen = phase == "intermission"
+        and FirstTimeExperience.validVoteOptions(currentHudVoteOptions)
+    -- The touch HUD already presents voting and the live hazard guidance.
+    if not FirstTimeExperience.isGuidedPhase(games, phase)
+        or (touchDevice and (votingOpen or phase == "round")) then
+        rookieCoach.Visible = false
+        return
+    end
+
+    local coachKey
+    if phase == "ready" or phase == "round" then
+        if player:GetAttribute("RoundEliminated") == true then
+            coachKey = "FIRST_OUT"
+        elseif player:GetAttribute("RoundParticipant") ~= true then
+            coachKey = "FIRST_WATCH"
+        elseif phase == "round" then
+            coachKey = "FIRST_ROUND"
+        elseif touchDevice then
+            coachKey = "FIRST_READY"
+        else
+            coachKey = UserInputService.GamepadEnabled
+                and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS"
+        end
+    elseif votingOpen then
+        coachKey = "FIRST_VOTE"
+    elseif phase == "waiting" or phase == "intermission" then
+        coachKey = touchDevice and "FIRST_WAIT_TOUCH"
+            or (UserInputService.GamepadEnabled and "FIRST_WAIT_GAMEPAD"
+                or "FIRST_WAIT_KEYBOARD")
+    elseif phase == "result" then
+        coachKey = "FIRST_RESULT"
+    end
+
+    rookieCoach.Visible = coachKey ~= nil
+    if coachKey then
+        rookieCoach.Text = CoreLocalization.text(localeId, coachKey)
+    end
+end
+
+-- RoundState and player attributes can reach the client in either order.
+for _, attribute in ipairs({
+    "Games", "SessionRoundsPlayed", "RoundParticipant", "RoundEliminated",
+}) do
+    player:GetAttributeChangedSignal(attribute):Connect(refreshRookieCoach)
+end
+
 stateEvent.OnClientEvent:Connect(function(state)
     -- A malformed RoundState must not crash or replace a valid HUD.
     if type(state) ~= "table" then return end
@@ -3413,54 +3465,7 @@ stateEvent.OnClientEvent:Connect(function(state)
         aliveCounter.Visible = false
     end
 
-    -- First real-player feedback: people could not tell what to do.
-    -- Previously touch devices suppressed this cue DURING voting and
-    -- survival, precisely when a newcomer needed it most. Show one simple
-    -- phase instruction at a time for the first three rounds.
-    local coachKey = nil
-    if FirstTimeExperience.isGuidedPhase(gamesPlayed, currentHudPhase) then
-        if currentHudPhase == "intermission" and votingOpen then
-            coachKey = "FIRST_VOTE"
-        elseif currentHudPhase == "waiting" or currentHudPhase == "intermission" then
-            coachKey = "FIRST_WAIT"
-        elseif currentHudPhase == "ready" then
-            coachKey = "FIRST_READY"
-        elseif currentHudPhase == "round" then
-            if player:GetAttribute("RoundEliminated") == true then
-                coachKey = "FIRST_OUT"
-            elseif player:GetAttribute("RoundParticipant") == false then
-                coachKey = "FIRST_WATCH"
-            else
-                coachKey = "FIRST_ROUND"
-            end
-        elseif currentHudPhase == "result" then
-            coachKey = "FIRST_RESULT"
-        end
-    end
-
-    -- Touch players already have a large actionable vote panel, plus the
-    -- disaster title and bottom objective during active rounds. A second
-    -- big beginner banner in those lanes obscured the playfield.
-    -- Keep guidance in quiet lobby/ready phases; never stack it on votes
-    -- or in front of the avatar during hazard movement.
-    rookieCoach.Visible = coachKey ~= nil
-        and (not touchDevice or (not votingOpen and currentHudPhase ~= "round"))
-    if coachKey then
-        if coachKey == "FIRST_WAIT" then
-            -- Show a physical first action without creating another modal
-            -- or obscuring the live hazard, vote or avatar.
-            local controlsKey = touchDevice and "FIRST_WAIT_TOUCH"
-                or (UserInputService.GamepadEnabled and "FIRST_WAIT_GAMEPAD"
-                    or "FIRST_WAIT_KEYBOARD")
-            rookieCoach.Text = CoreLocalization.text(localeId, controlsKey)
-        elseif coachKey == "FIRST_READY" and not touchDevice then
-            local controlsKey = UserInputService.GamepadEnabled
-                and "GAMEPAD_CONTROLS" or "KEYBOARD_CONTROLS"
-            rookieCoach.Text = CoreLocalization.text(localeId, controlsKey)
-        else
-            rookieCoach.Text = CoreLocalization.text(localeId, coachKey)
-        end
-    end
+    refreshRookieCoach()
 
     if state.phase == "ready" then
         setTimerPalette(UITheme.Colors.Blue, UITheme.Colors.Cyan)

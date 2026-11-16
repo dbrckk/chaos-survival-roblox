@@ -448,10 +448,17 @@ local function refresh()
     end
 
     if currentState.phase == "ready" then
+        -- Touch uses the jump cue during READY. A second world marker
+        -- for an optional boost can point in a different direction.
+        if UserInputService.TouchEnabled
+            or player:GetAttribute("RoundParticipant") ~= true
+            or player:GetAttribute("RoundEliminated") == true then
+            clearMarker()
+            return
+        end
         -- Only advertise an actually replicated, touch-enabled pad whose
         -- straight approach is supported by real collidable arena floor.
         -- If there is no verified route, prefer no marker to a fake one.
-        -- Touch uses a world highlight, never a blocking billboard.
         mark(
             nearestReachablePad(arenaPads()),
             CoreLocalization.text(localeId, "ESCAPE_PAD"),
@@ -569,6 +576,7 @@ player:GetAttributeChangedSignal("Games"):Connect(refresh)
 player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refresh)
 player:GetAttributeChangedSignal("LobbyPracticeUses"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     clearMarker()
     refresh()
