@@ -916,7 +916,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     end
 
     local function attachNativePanel(panel)
-        if not ownedPanel(panel) or entry.panel == panel then return end
+        if not ownedPanel(panel) or entry.panel == panel then return false end
         releaseNativePanel()
         entry.panel = panel
         entry.originalPanelAlpha = panel.LocalTransparencyModifier
@@ -929,6 +929,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             end
         end
         syncVisibility(entry, platform)
+        return true
     end
 
     local underdeckWatchers = {}
@@ -987,9 +988,13 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         end
         if entry.replacesNativeUnderdeck then
             for name in pairs(nativeNames) do watchUnderdeckNative(decor:FindFirstChild(name)) end
+        end
+        -- A replacement Decor can arrive before its matching panel streams in.
+        -- Release the timber immediately and keep the physical deck visible.
+        if not attachNativePanel(decor:FindFirstChild(panelName))
+            and (entry.timber or entry.replacesNativeUnderdeck) then
             syncVisibility(entry, platform)
         end
-        attachNativePanel(decor:FindFirstChild(panelName))
         entry.decorConnections[#entry.decorConnections + 1] =
             decor.ChildAdded:Connect(function(child)
                 if child.Name == panelName then
@@ -1034,12 +1039,12 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         entry.connections[#entry.connections + 1] =
             arena.ChildAdded:Connect(function(child)
                 if child.Name == "Decor" and child:IsA("Folder") then
-                    bindDecor(child)
+                    bindDecor(arena:FindFirstChild("Decor"))
                 end
             end)
         entry.connections[#entry.connections + 1] =
             arena.ChildRemoved:Connect(function(child)
-                if child == decor then bindDecor(nil) end
+                if child == decor then bindDecor(arena:FindFirstChild("Decor")) end
             end)
     end
     local function refresh()
