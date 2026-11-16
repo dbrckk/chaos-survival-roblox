@@ -31,8 +31,8 @@ function PlatformFinishKit.count(tier)
     return 2
 end
 
-local function add(parent, platform, name, localFrame, size, color, material, alpha, shape)
-    local part = Instance.new(shape == "WedgePart" and "WedgePart" or "Part")
+local function add(parent, platform, name, localFrame, size, color, material, alpha, shape, mesh)
+    local part = mesh or Instance.new(shape == "WedgePart" and "WedgePart" or "Part")
     part.Name = name
     part.Size = size
     part.CFrame = platform.CFrame * localFrame
@@ -157,7 +157,10 @@ function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
         return {}
     end
 
-    local armorSize = math.clamp(math.min(sx, sz) * 0.13, 0.75, 1.50)
+    local width = math.min(sx,sz)
+    local nominal = variant == "Harbor" and PlatformIdentityLodRules.harborLandingWidth(platform)
+    local armorSize = math.clamp((nominal or width)*.13,.75,1.50)
+    if nominal then armorSize *= width/nominal end
     local color = theme.Structure:Lerp(theme.Detail, 0.34)
     local corners = {
         {-1, -1, 0},
@@ -198,7 +201,7 @@ function PlatformFinishKit.sideRailCount(tier)
     return 0
 end
 
-local function publishHarborGirders(parent,built,meshes,fallback)
+local function publishHarborTrim(parent,built,meshes,fallback)
     for _,piece in ipairs(meshes) do
         piece.Parent = parent
         if built then built[#built+1] = piece end
@@ -207,6 +210,57 @@ local function publishHarborGirders(parent,built,meshes,fallback)
         native:SetAttribute("ChaosBaseTransparency",1)
         native.Transparency = 1
     end
+end
+
+function PlatformFinishKit.mountHarborCornerArmor(parent, platform, natives, source)
+    if not source or not PlatformIdentityLodRules.harborLandingWidth(platform)
+        or not platform.Anchored or not platform.CanCollide or platform.Transparency >= .75
+        or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted")
+        or (#natives ~= 2 and #natives ~= 4) then return nil end
+    local phase = platform:GetAttribute("CollapsePhase")
+    if phase and phase ~= "Safe" and phase ~= "Normal" then return nil end
+    local fallback = {}
+    for _,native in ipairs(natives) do
+        local joint = native:FindFirstChild("ChaosPlatformTrimWeld")
+        local corner = native:GetAttribute("ChaosArmorCorner")
+        if native.Parent ~= parent or not native:IsA("WedgePart") or not corner
+            or native.Name ~= "HarborCornerArmor"..corner or not joint or not joint:IsA("Weld")
+            or joint.Part0 ~= native or joint.Part1 ~= platform then return nil end
+        fallback[native] = native.Transparency
+    end
+    local offsets = {}
+    for index,part in ipairs(source.parts) do
+        local offset = source.frame:ToObjectSpace(part.CFrame)
+        -- The sanitized source has upright, axis-aligned material meshes.
+        if math.abs(offset.UpVector.Y) < .999
+            or math.max(math.abs(offset.RightVector.X),math.abs(offset.RightVector.Z)) < .999 then
+            return nil
+        end
+        offsets[index] = offset
+    end
+    local meshes = {}
+    for _,native in ipairs(natives) do
+        local corner = native:GetAttribute("ChaosArmorCorner")
+        local center = native.ChaosPlatformTrimWeld.C1*CFrame.new(0,.13,0)
+        local fit = Vector3.new(native.Size.X*.98,.15,native.Size.Z*.98)/source.bounds
+        for index,part in ipairs(source.parts) do
+            local piece = part:Clone()
+            if not piece then
+                for _,mesh in ipairs(meshes) do mesh:Destroy() end
+                return nil
+            end
+            local offset = offsets[index]
+            local horizontalSwap = math.abs(offset.RightVector.Z) > .999
+            local scale = horizontalSwap and Vector3.new(fit.Z,fit.Y,fit.X) or fit
+            local frame = center*CFrame.new(offset.Position*fit)*offset.Rotation
+            piece:SetAttribute("OriginalHarborCornerArmor3D",true)
+            piece:SetAttribute("Original3DAssetId",102215174919938)
+            meshes[#meshes+1] = add(nil,platform,"OriginalHarborCornerArmor_"..corner.."_"..index,
+                frame,part.Size*scale,piece.Color,piece.Material,piece.Transparency,nil,piece)
+        end
+    end
+    publishHarborTrim(parent,nil,meshes,fallback)
+    return meshes,fallback
 end
 
 function PlatformFinishKit.mountHarborLandingKeel(parent, platform, keel, mount, source)
@@ -229,7 +283,7 @@ function PlatformFinishKit.mountHarborLandingKeel(parent, platform, keel, mount,
     local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
     local meshes = sideKit.harborLandingKeel(source,platform,joint.C1,keel.Size)
     if not meshes then return nil end
-    publishHarborGirders(parent,nil,meshes,fallback)
+    publishHarborTrim(parent,nil,meshes,fallback)
     return meshes,fallback
 end
 
@@ -315,7 +369,7 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
         for _,piece in ipairs(rail) do meshes[#meshes+1] = piece end
         fallback[native] = native.Transparency
     end
-    publishHarborGirders(parent,built,meshes,fallback)
+    publishHarborTrim(parent,built,meshes,fallback)
     return built,meshes,fallback
 end
 
@@ -930,7 +984,7 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
         end
         fallback[native] = native.Transparency
     end
-    publishHarborGirders(parent,built,meshes,fallback)
+    publishHarborTrim(parent,built,meshes,fallback)
     return built,meshes,fallback
 end
 

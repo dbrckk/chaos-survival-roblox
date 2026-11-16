@@ -17,6 +17,7 @@ local PremiumLargeStructureMeshKit = require(
     script.Parent.PremiumLargeStructureMeshKit)
 local PremiumPlatformSideMeshKit = require(
     script.Parent.PremiumPlatformSideMeshKit)
+local PremiumFloorHardwareMeshKit = require(script.Parent.PremiumFloorHardwareMeshKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
 
 local player = Players.LocalPlayer
@@ -859,7 +860,8 @@ local function rebuild()
     -- Reserve from the existing structural allocation after the outposts.
     -- Side rails and braces cost one module each in Medium, two in High.
     -- Preserve rail coverage and leave room for the existing columns.
-    local railTargets,braceTargets,keelTargets,girderSource = {},{},{},nil
+    local railTargets,braceTargets,keelTargets,cornerTargets = {},{},{},{}
+    local girderSource,cornerSource
     local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
         and supportBudget >= girderCost and cameraPoint
@@ -905,6 +907,14 @@ local function rebuild()
                     keelTargets[candidates[i].deck] = true
                 end
                 supportBudget -= 1
+            end
+            -- At most one corner set, funded after rails, braces and keels.
+            if railCount > 0 and supportBudget >= girderCost+1 then
+                cornerSource = PremiumFloorHardwareMeshKit.harborCornerSource()
+                if cornerSource then
+                    cornerTargets[candidates[1].deck] = true
+                    supportBudget -= girderCost
+                end
             end
         end
     end
@@ -1079,13 +1089,29 @@ local function rebuild()
                 replacements[tostring(visualIndex)] = "bridge"
                 mountedBridgeGirders += 1
             end
+            local cornerMeshes
             if not authenticCarapace and not authenticBridge
                 and not authenticRim then
-                for _, piece in ipairs(PlatformFinishKit.buildArmor(
+                local armor = PlatformFinishKit.buildArmor(
                     folder, platform, variant, tier.Name, theme
-                )) do
+                )
+                for _,piece in ipairs(armor) do
                     registerVisual(platform, piece)
                 end
+                if cornerTargets[platform] and harborRails and not authenticLongCradle then
+                    local fallback
+                    cornerMeshes,fallback = PlatformFinishKit.mountHarborCornerArmor(
+                        folder,platform,armor,cornerSource)
+                    if cornerMeshes then
+                        for _,piece in ipairs(cornerMeshes) do registerVisual(platform,piece) end
+                        originalLargeCount += #cornerMeshes
+                        harborGirderDisconnects[#harborGirderDisconnects+1] =
+                            HarborOutpostKit.bindWeldedReplacement(platform,cornerMeshes,fallback,scheduleRebuild)
+                    end
+                end
+            end
+            if cornerTargets[platform] and not cornerMeshes then
+                supportBudget += girderCost
             end
             for _, piece in ipairs(sidePieces) do
                 registerVisual(platform, piece)
@@ -1770,7 +1796,7 @@ local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
     LongCradle = true, ShortCradle = true, LargeDeckHull = true,
-    Rect = true, Long = true,
+    Rect = true, Long = true, CornerGuard = true,
 }
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
     if not holder or not holder:IsA("Folder") then return end
@@ -1789,7 +1815,7 @@ local function watchVerifiedTemplateReadiness(holder, connections, marker)
                     if model.Parent == holder then scheduleRebuild() end
                 end)
         end
-        if model.Name == "Bridge" then
+        if model.Name == "Bridge" or model.Name == "CornerGuard" then
             local function meshChanged(child)
                 if child:IsA("BasePart") and model.Parent == holder then scheduleRebuild() end
             end
@@ -1823,7 +1849,9 @@ local function watchPlatformReliefTemplates(holder)
             local arena = generated and generated:FindFirstChild("Arena")
             local variant = arena and tostring(
                 arena:GetAttribute("VariantId") or "Classic")
-            if variant == child.Name then scheduleRebuild() end
+            if variant == child.Name or (variant == "Harbor" and child.Name == "CornerGuard") then
+                scheduleRebuild()
+            end
         end
         platformReliefTemplateConnections[#platformReliefTemplateConnections + 1] =
             holder.ChildAdded:Connect(changed)

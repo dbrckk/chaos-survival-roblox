@@ -1,3 +1,9 @@
+## P4 — Ferrures d'angle des paliers de Storm Harbor
+
+Les plaques d'angle d'un palier proche équipé de lisses ajourées peuvent céder la place à des ferrures basses. Chaque coin réutilise trois maillages du modèle approuvé `102215174919938`, avec ses rails et ses fixations visibles au-dessus du platelage. Les ferrures suivent la contraction du palier et le caisson reste prioritaire.
+
+Les deux coins en Medium et les quatre en High partagent le budget des colonnes. La perte d'une soudure restaure le jeu complet de plaques du palier.
+
 ## P4 — Quilles centrales des paliers de Storm Harbor
 
 Sous un palier proche en High, trois maillages du treillis approuvé `122766792774607` remplacent les deux blocs centraux superposés. La quille garde sa hauteur et suit la largeur du palier pendant la contraction. Le caisson et les dessous complets restent prioritaires.
