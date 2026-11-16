@@ -1031,6 +1031,96 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(why) end
     end)
 
+    it("keeps grooved Harbor timber on the real panel through shrink and restores warnings",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local holder=Instance.new("Folder")
+        holder.Name="PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="PremiumJumpDeck"
+        source:SetAttribute("Original3DAssetId",98478693994864)
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("PremiumRoute3D",true)
+        for i=1,7 do
+            local mesh=Instance.new("MeshPart")
+            mesh.Size=i==1 and Vector3.new(11.1,.106,11.1)
+                or Vector3.new(11.94,1.6,11.94)
+            mesh.Anchored=true
+            mesh.CanCollide=false
+            mesh.CanTouch=false
+            mesh.CanQuery=false
+            mesh.Parent=source
+        end
+        source.Parent=holder
+        local running=false
+        local cleanup={}
+        local ok,why=pcall(function()
+            local deck=arena.Platforms.Platform98
+            local panel=arena.Decor.PlatformPanel98
+            panel.LocalTransparencyModifier=.18
+            local function find()
+                for _,model in ipairs(workspace.PremiumRouteMeshLocal:GetChildren()) do
+                    if model:GetAttribute("OriginalHarborTimberDeck3D") then
+                        local part=model:FindFirstChildWhichIsA("MeshPart")
+                        if part.OriginalRouteMeshCosmeticWeld.Part0==deck then return part end
+                    end
+                end
+            end
+            local function mount()
+                Route.sync(arena,deck.Position,"Low",true,nil,0,true)
+                return assert(find())
+            end
+            local timber=mount()
+            assert(Route.timberCount()>=1 and Route.timberCount()<=2)
+            assert(timber.Material==Enum.Material.WoodPlanks and not timber.CanCollide)
+            assert(timber.LocalTransparencyModifier==0 and math.abs(panel.LocalTransparencyModifier-.18)<.01)
+            assert(math.abs(timber.Size.X-(deck.Size.X-.8)*.987)<.02)
+            deck:SetAttribute("CollapsePhase","Warning")
+            task.wait()
+            assert(timber.LocalTransparencyModifier==1 and panel.LocalTransparencyModifier<.20)
+            deck:SetAttribute("CollapsePhase","Safe")
+            panel.Parent=nil
+            task.wait()
+            assert(timber.LocalTransparencyModifier==1)
+            panel.Parent=arena.Decor
+            task.wait()
+            assert(timber.LocalTransparencyModifier==0)
+            local oldSize=timber.Size
+            running=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return running end,OnCleanup=cleanup})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            running=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05 and timber.LocalTransparencyModifier==0)
+            assert(math.abs(timber.Size.X-oldSize.X*.45)<.02 and timber.Size.Y==oldSize.Y)
+            local contracted=timber.Size
+            Route.sync(nil,Vector3.zero,"Low",false)
+            local late=mount()
+            assert((late.Size-contracted).Magnitude<.03 and panel.LocalTransparencyModifier<.20)
+            late.OriginalRouteMeshCosmeticWeld:Destroy()
+            task.wait()
+            assert(late.LocalTransparencyModifier==1 and deck.CanCollide)
+        end)
+        running=false
+        Route.sync(nil,Vector3.zero,"Low",false)
+        for _,stop in ipairs(cleanup) do stop() end
+        arena.Parent:Destroy()
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
     it("fits the approved cargo tie-down to the 58 real Harbor landings",function()
         local Finish=require("../../src/client/PlatformFinishKit")
         local Outpost=require("../../src/client/HarborOutpostKit")

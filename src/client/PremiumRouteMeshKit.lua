@@ -19,6 +19,10 @@ local connectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRul
 local SkyRouteConnectionRules = if connectionModule
     then require(connectionModule) else require("../shared/SkyRouteConnectionRules")
 
+local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule
+    then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
+
 local PremiumRouteMeshKit = {}
 local PROMENADE_TRUSS_SPAN = {[2] = 11, [4] = 13, [7] = 15}
 
@@ -77,11 +81,14 @@ local function restore(entry)
     for _, connection in ipairs(entry.decorConnections or {}) do
         connection:Disconnect()
     end
+    for _, connection in ipairs(entry.panelConnections or {}) do
+        connection:Disconnect()
+    end
     for _, model in ipairs(entry.models) do
         model:Destroy()
     end
     local panel = entry.panel
-    if panel and panel.Parent then
+    if not entry.timber and panel and panel.Parent then
         panel.LocalTransparencyModifier = entry.originalPanelAlpha
     end
 end
@@ -149,9 +156,9 @@ local function modelsIntact(entry)
         for _, piece in ipairs(parts) do
             if not piece:IsA("MeshPart")
                 or not piece:IsDescendantOf(model) then return false end
-            if model == entry.underdeckModel then
+            if entry.timber or model == entry.underdeckModel then
                 local weld = entry.joints[piece]
-                if weld.Parent ~= piece or weld.Part0 ~= entry.platform
+                if not weld or weld.Parent ~= piece or weld.Part0 ~= entry.platform
                     or weld.Part1 ~= piece then return false end
             end
         end
@@ -314,6 +321,77 @@ local function chooseBridgeSegments(platform, bounds, maxSegments)
         end
     end
     return bestCount
+end
+
+-- The jump deck OBJ has a separate shallow GRIP layer: one continuous
+-- inset with six raised ribs. The other six materials include machinery
+-- and route paint, so never substitute the full assembly for Harbor wood.
+local function timberInset(template)
+    if not template or template:GetAttribute("PremiumRoute3D") ~= true then return nil end
+    local children = template:GetChildren()
+    if #children ~= 7 then return nil end
+    local candidate
+    for _,piece in ipairs(children) do
+        if not piece:IsA("MeshPart") or not piece.Anchored
+            or piece.CanCollide or piece.CanTouch or piece.CanQuery
+            or piece.Transparency >= 1 then return nil end
+        local size = piece.Size
+        if math.abs(size.X-11.1) <= .19 and math.abs(size.Z-11.1) <= .19
+            and math.abs(size.Y-.106) <= .022 then
+            if candidate then return nil end
+            candidate = piece
+        end
+    end
+    return candidate
+end
+
+local function addTimberModel(entry, platform, template, source, nominal)
+    local size = platform.Size
+    local inset = (nominal-.8)*.987*entry.initialFloorScale
+    local piece = source:Clone()
+    if not piece then return false end
+    for _,detail in ipairs(piece:GetChildren()) do detail:Destroy() end
+    piece.Name = "StormHarborGroovedTimber"
+    piece.TextureID = ""
+    piece.Material = Enum.Material.WoodPlanks
+    piece.MaterialVariant = ""
+    -- Slate-grey weathered wood with subtle treatment by route family.
+    local tone = platform:GetAttribute("HarborSkywayLane") and Color3.fromRGB(118,107,96)
+        or (platform:GetAttribute("HarborSpokeRoute") and Color3.fromRGB(142,118,91)
+            or Color3.fromRGB(128,109,91))
+    piece.Color = tone
+    piece:SetAttribute("PreserveNativeMaterial",true)
+    piece.Size = Vector3.new(inset,.031,inset)
+    piece.Transparency = 0
+    piece.Anchored = false
+    piece.Massless = true
+    piece.CanCollide = false
+    piece.CanTouch = false
+    piece.CanQuery = false
+    piece.CastShadow = false
+
+    local spoke = platform:GetAttribute("HarborSpokeRoute")
+    local turned = platform:GetAttribute("HarborSkywayLane") ~= nil
+        or (typeof(spoke) == "number" and spoke%2 == 0)
+    local localFrame = CFrame.new(0,size.Y*.5+.137-.031*.5,0)
+        * CFrame.Angles(0,turned and math.pi*.5 or 0,0)
+    piece.CFrame = platform.CFrame*localFrame
+    local weld = Instance.new("Weld")
+    weld.Name = "OriginalRouteMeshCosmeticWeld"
+    weld.Part0 = platform
+    weld.Part1 = piece
+    weld.C0 = localFrame
+    weld.Parent = piece
+    local clone = Instance.new("Model")
+    clone.Name = "OriginalPremiumRouteMesh"
+    clone:SetAttribute("CosmeticOnly",true)
+    clone:SetAttribute("OriginalHarborTimberDeck3D",true)
+    clone:SetAttribute("OriginalPremiumRouteAssetId",template:GetAttribute("Original3DAssetId"))
+    piece.Parent = clone
+    clone.Parent = folder
+    entry.joints[piece],entry.frames[piece],entry.sizes[piece] = weld,localFrame,piece.Size
+    entry.models[#entry.models+1] = clone
+    return true
 end
 
 local function addModel(entry, platform, template, offset, scale, yaw)
@@ -646,6 +724,12 @@ end
 
 local function syncVisibility(entry, platform)
     local safe = refit(entry,platform)
+    if entry.timber then
+        safe = safe and entry.panel ~= nil and entry.ownsPanel(entry.panel)
+            and entry.panel.Material == Enum.Material.WoodPlanks
+            and entry.panel.Transparency < .75
+        entry.timberVisible = safe
+    end
     local showUnderdeck = reconcileUnderdeck(entry, platform, safe)
     entry.underdeckVisible = safe and showUnderdeck
     -- An active collapse/shutter must release optional GPU-heavy 2K
@@ -665,7 +749,7 @@ local function syncVisibility(entry, platform)
             end
         end
     end
-    if entry.panel and entry.panel.Parent then
+    if not entry.timber and entry.panel and entry.panel.Parent then
         local desired = (safe and entry.panelCovered)
             and 1 or entry.originalPanelAlpha
         if entry.panel.LocalTransparencyModifier ~= desired then
@@ -674,7 +758,7 @@ local function syncVisibility(entry, platform)
     end
 end
 
-local function mount(platform, template, count, bridgeCandidate, underdeckTemplate)
+local function mount(platform, template, count, bridgeCandidate, underdeckTemplate, timber)
     local arena=platform.Parent and platform.Parent.Parent
     local base=arena and arena:FindFirstChild("Base")
     local initialFloorScale=realFloorScale(base,arena)
@@ -687,18 +771,24 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     local length = math.max(platform.Size.X, platform.Size.Z)
     local countToMount = isBridge and count or 1
     local segment = length / countToMount
-    local fit = fitSourceToDeck(platform, bounds, countToMount, isBridge)
-    if not fit then return nil end
-    local scale = fit.scale
+    local nominal = timber and PlatformIdentityLodRules.harborLandingWidth(platform)
+    local fit = not timber and fitSourceToDeck(platform, bounds, countToMount, isBridge)
+    if timber then
+        if not nominal or math.abs(platform.Size.Y-2) > .08
+            or math.abs(platform.Size.X-nominal*initialFloorScale) > .09
+            or math.abs(platform.Size.Z-nominal*initialFloorScale) > .09 then return nil end
+    elseif not fit then return nil end
     local entry = {
         models = {},
         connections = {},
         decorConnections = {},
+        panelConnections = {},
         initialSize = platform.Size,
         initialFloorScale = initialFloorScale,
         arena = arena,
         base = base,
         platform = platform,
+        timber = timber,
         resizeKind = tonumber(platform:GetAttribute("RouteTier"))~=nil
             and "compact" or (platform:GetAttribute("ChaosSkybridge")==true
             and "skybridge" or "static"),
@@ -717,24 +807,27 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         replacesNativeUnderdeck = underdeckTemplate ~= nil and usesNativeUnderdeck(platform),
         -- The native landing paint is masked ONLY when the owner-approved
         -- model's actual bounding box covers both walkable axes.
-        panelCovered = fit.panelCovered,
+        panelCovered = fit and fit.panelCovered or false,
     }
-    local yaw = fit.yaw
 
-    for i = 1, countToMount do
-        local offset = isBridge
-            and ((i - 0.5) * segment - length * 0.5)
-            or 0
-        -- The imported module's X axis is rotated into the actual long
-        -- bridge axis; the tile translation follows that SAME axis.
-        -- No fake physical Part is introduced for the orientation change.
-        local modelOffset = isBridge and platform.Size.Z > platform.Size.X
-            and Vector3.new(0, 0, offset) or offset
-        local before = #entry.models
-        if not addModel(entry, platform, template, modelOffset, scale, yaw)
-            or #entry.models == before then
-            for _, model in ipairs(entry.models) do model:Destroy() end
-            return nil
+    if timber then
+        if not addTimberModel(entry,platform,template,timber,nominal) then return nil end
+    else
+        for i = 1, countToMount do
+            local offset = isBridge
+                and ((i - 0.5) * segment - length * 0.5)
+                or 0
+            -- The imported module's X axis is rotated into the actual long
+            -- bridge axis; the tile translation follows that SAME axis.
+            -- No fake physical Part is introduced for the orientation change.
+            local modelOffset = isBridge and platform.Size.Z > platform.Size.X
+                and Vector3.new(0, 0, offset) or offset
+            local before = #entry.models
+            if not addModel(entry, platform, template, modelOffset, fit.scale, fit.yaw)
+                or #entry.models == before then
+                for _, model in ipairs(entry.models) do model:Destroy() end
+                return nil
+            end
         end
     end
 
@@ -794,13 +887,28 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         end
         local intended = platform.Position
             + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)
+        if entry.timber then
+            local scale = realFloorScale(entry.base,entry.arena)
+            local nominal = PlatformIdentityLodRules.harborLandingWidth(platform)
+            if not scale or not nominal then return false end
+            local width = (nominal-.8)*scale
+            return panel:IsA("Part") and panel.Shape == Enum.PartType.Block
+                and panel.Anchored and (panel.Position-intended).Magnitude < .10
+                and (panel.Size-Vector3.new(width,.10,width)).Magnitude < .10
+                and panel.CFrame.UpVector:Dot(platform.CFrame.UpVector) > .999
+                and panel.CFrame.LookVector:Dot(platform.CFrame.LookVector) > .999
+        end
         return (panel.Position - intended).Magnitude <= 0.75
             and math.abs(panel.Size.X - (platform.Size.X - 0.8)) < 1.25
             and math.abs(panel.Size.Z - (platform.Size.Z - 0.8)) < 1.25
     end
 
+    entry.ownsPanel = ownedPanel
+
     local function releaseNativePanel()
-        if entry.panel and entry.panel.Parent then
+        for _, connection in ipairs(entry.panelConnections) do connection:Disconnect() end
+        table.clear(entry.panelConnections)
+        if not entry.timber and entry.panel and entry.panel.Parent then
             entry.panel.LocalTransparencyModifier = entry.originalPanelAlpha
         end
         entry.panel = nil
@@ -812,6 +920,14 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         releaseNativePanel()
         entry.panel = panel
         entry.originalPanelAlpha = panel.LocalTransparencyModifier
+        if entry.timber then
+            for _,property in ipairs({"Material","Transparency","Size","CFrame"}) do
+                entry.panelConnections[#entry.panelConnections+1] =
+                    panel:GetPropertyChangedSignal(property):Connect(function()
+                        syncVisibility(entry,platform)
+                    end)
+            end
+        end
         syncVisibility(entry, platform)
     end
 
@@ -886,6 +1002,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             decor.ChildRemoved:Connect(function(child)
                 if child == entry.panel then
                     releaseNativePanel()
+                    if entry.timber then syncVisibility(entry,platform) end
                 elseif underdeckWatchers[child] then
                     unwatchUnderdeckNative(child)
                     syncVisibility(entry, platform)
@@ -938,6 +1055,13 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         "SkySpineStep", "PromenadeLane", "PromenadeStep"}) do
         entry.connections[#entry.connections + 1] =
             platform:GetAttributeChangedSignal(attribute):Connect(refresh)
+    end
+    if entry.timber then
+        local _,weld = next(entry.joints)
+        entry.connections[#entry.connections+1] = weld.AncestryChanged:Connect(refresh)
+        for _,property in ipairs({"Part0","Part1"}) do
+            entry.connections[#entry.connections+1] = weld:GetPropertyChangedSignal(property):Connect(refresh)
+        end
     end
     if entry.underdeck then
         for _, piece in ipairs(entry.modelParts[entry.underdeckModel]) do
@@ -1198,14 +1322,18 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         -- new assets, rendering loop or physical platform changes.
         local _, deckBounds = deckTemplate:GetBoundingBox()
         local fittedDecks = {}
+        local harbor = arena:GetAttribute("VariantId") == "Harbor"
+        local timber = harbor and timberInset(deckTemplate) or nil
         for _, item in ipairs(decks) do
-            local fit = fitSourceToDeck(item.platform, deckBounds, 1, false)
-            if fit then
+            local terminal = harbor and PlatformIdentityLodRules.isHarborLanding(item.platform)
+            local fit = not terminal and fitSourceToDeck(item.platform, deckBounds, 1, false)
+            if fit or (terminal and timber and PlatformIdentityLodRules.harborLandingWidth(item.platform)) then
                 fittedDecks[#fittedDecks + 1] = {
                     item = item,
                     -- Local 3D shells with incomplete two-axis coverage
                     -- remain eligible only AFTER comparably near full fits.
-                    score = item.priority + (fit.panelCovered and 0 or 48),
+                    score = item.priority + ((terminal or fit.panelCovered) and 0 or 48),
+                    timber = terminal and timber or nil,
                 }
             end
         end
@@ -1219,7 +1347,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         for i = 1, math.min(#fittedDecks, deckCap) do
             local platform = fittedDecks[i].item.platform
             wanted[platform] = {template = deckTemplate, count = 1,
-                bridge = false}
+                bridge = false, timber = fittedDecks[i].timber}
         end
     end
     if bridgeTemplate then
@@ -1329,7 +1457,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
 
     for platform, entry in pairs(mounted) do
         local desired = wanted[platform]
-        if not desired or desired.count ~= entry.count
+        if not desired or desired.count ~= entry.count or desired.timber ~= entry.timber
             or (desired.underdeck ~= nil) ~= entry.underdeckRequested
             or (entry.underdeck and desired.underdeck ~= entry.underdeckSource)
             or not modelsIntact(entry) then
@@ -1340,14 +1468,14 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     for platform, desired in pairs(wanted) do
         if not mounted[platform] then
             mounted[platform] = mount(platform, desired.template, desired.count,
-                desired.bridge, desired.underdeck)
+                desired.bridge, desired.underdeck, desired.timber)
         end
     end
     -- Late-streamed panel/geometry alignment is reconciled by this SAME
     -- 0.65/0.90-second camera owner; no extra heartbeat or per-Part polling.
     for platform, entry in pairs(mounted) do
         if entry.refreshNativePanel then entry.refreshNativePanel() end
-        if entry.underdeck then syncVisibility(entry, platform) end
+        if entry.underdeck or entry.timber then syncVisibility(entry, platform) end
     end
     -- Give the nearest REAL contiguous bridge one coherent 2K PBR finish,
     -- not just its first segment. Healthy desktop can keep two; Android
@@ -1387,6 +1515,14 @@ end
 -- Number of REAL physical adjacent route pairs where BOTH approved
 -- 3D skins actually exist and the authoritative collision remains safe.
 -- This measures visual continuity, not guaranteed crossing or jump AI.
+function PremiumRouteMeshKit.timberCount()
+    local count = 0
+    for _,entry in pairs(mounted) do
+        if entry.timberVisible then count += 1 end
+    end
+    return count
+end
+
 function PremiumRouteMeshKit.connectedPairsCount()
     local platforms = {}
     for platform, entry in pairs(mounted) do
