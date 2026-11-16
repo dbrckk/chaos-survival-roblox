@@ -15,6 +15,7 @@ on:
       - tools/verify_original_3d_budget_census.py
       - tools/compact_cloud_luau.py
       - .github/workflows/roblox-cloud-test.yml
+      - .github/workflows/one-time-public-update-20261116-harbor-guidance.yml
   push:
     branches: [main]
     paths:
@@ -26,6 +27,7 @@ on:
       - tools/verify_original_3d_budget_census.py
       - tools/compact_cloud_luau.py
       - .github/workflows/roblox-cloud-test.yml
+      - .github/workflows/one-time-public-update-20261116-harbor-guidance.yml
 
 concurrency:
   group: build-validation-${{ github.ref }}
