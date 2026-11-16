@@ -1892,7 +1892,12 @@ assert 'JumpRouteClearance.forArena(harborArena)' in MASTERY
 assert 'canJump(base, deck, hit.Position)' in MASTERY
 assert 'nearestEntry(decks, hit.Position, 42, canApproach)' in MASTERY
 assert 'nextPhysical(from, decks, base.Position, variant, nil, canJump)' in MASTERY
-print("PASS Storm Harbor high-ground challenge checks clearance on approach and onward jumps")
+assert 'watchHarborTarget(target, update)' in MASTERY
+assert 'target:GetAttributeChangedSignal("CollapsePhase"):Connect(onSurfaceChanged)' in MASTERY
+assert 'target:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(onSurfaceChanged)' in MASTERY
+assert 'target.AncestryChanged:Connect(onAncestryChanged)' in MASTERY
+assert 'local function hide()\n    disconnectTarget()' in MASTERY
+print("PASS Storm Harbor high-ground challenge checks clearance and refreshes its active landing")
 assert 'arcClear(approach,start,direction,0)' in CLEARANCE
 assert 'and (not canApproach or canApproach(part)) then' in CUE_RULES
 assert 'paintOffset,.12+.84*scale' in CUE_RULES
