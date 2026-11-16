@@ -1,3 +1,7 @@
+## P4 — Vérification des obstacles sur les sauts de Storm Harbor
+
+Le chevron vérifie le volume traversé par l'avatar entre les deux paliers. Une passerelle ou un obstacle solide dans ce volume bloque la suggestion. Le décor traversable laisse le saut disponible. Près de la caméra, le contrôle périodique du décor détecte aussi les obstacles qui se déplacent pendant la manche.
+
 ## P4 — Palier de repli pour les chevrons de saut
 
 Le chevron conserve sa cible tant que le saut reste accessible. Si le palier passe en alerte, disparaît ou s'éloigne, le jeu cherche un autre palier compatible. Le chevron s'efface si aucun saut valide ne reste et réapparaît dès qu'un palier redevient accessible.

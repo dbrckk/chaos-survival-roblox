@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
+local JumpRouteClearance = require(ReplicatedStorage.Shared.JumpRouteClearance)
 local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdentityLodRules)
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
@@ -38,6 +39,7 @@ local outpostAttributeConnections = {}
 local routeDeckConnections = {}
 local routeCueStates = {}
 local routeGeneration = 0
+local refreshRouteClearance
 local footprintDisconnects = {}
 local originalColumnDisconnects = {}
 -- Exact server-side native Parts covered by our locally mounted Low
@@ -116,6 +118,7 @@ end
 
 local function clear()
     routeGeneration += 1
+    refreshRouteClearance = nil
     for _, connection in ipairs(originalColumnDisconnects) do
         connection:Disconnect()
     end
@@ -575,6 +578,7 @@ local function rebuild()
     local originalLargeCount = 0
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
+    local isClear = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
     -- Share deck subscriptions among every cue that uses the same target.
     -- Revisit waiting cues once per geometry/availability change batch.
     local targetUsers,pendingCues = {},{}
@@ -586,7 +590,7 @@ local function rebuild()
         local cue = routeCueStates[platform]
         if not cue then return end
         local previous = cue.target
-        local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant)
+        local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant,isClear)
         if previous ~= target then
             if previous then
                 local users = targetUsers[previous]
@@ -632,6 +636,26 @@ local function rebuild()
             for source in pairs(pendingCues) do syncRoute(source) end
             table.clear(pendingCues)
         end)
+    end
+    if isClear then
+        local routeCursor = 1
+        refreshRouteClearance = function()
+            local camera = workspace.CurrentCamera
+            if not camera then return end
+            local point = camera.CFrame.Position
+            local checked = 0
+            -- Rotate through the nearby cues so the closest ones cannot
+            -- starve another route in the same sector.
+            for _ = 1,#ordered do
+                local deck = ordered[routeCursor]
+                routeCursor = routeCursor%#ordered+1
+                if routeCueStates[deck] and (deck.Position-point).Magnitude <= 100 then
+                    syncRoute(deck)
+                    checked += 1
+                    if checked == 8 then break end
+                end
+            end
+        end
     end
     local camera = workspace.CurrentCamera
     local cameraPoint = camera and camera.CFrame.Position or nil
@@ -2151,6 +2175,9 @@ player:GetAttributeChangedSignal("OptionalVfxPressure")
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("LocalPremiumNearFieldEpoch")
     :Connect(scheduleRebuild)
+player:GetAttributeChangedSignal("LocalHarborRouteClearanceEpoch"):Connect(function()
+    if refreshRouteClearance then refreshRouteClearance() end
+end)
 -- Accessibility changes affect at most four existing instrument tweens;
 -- never rebuild the whole arena just to freeze/restart the moving heads.
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()

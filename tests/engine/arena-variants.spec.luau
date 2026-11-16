@@ -9,6 +9,7 @@ local PremiumRouteMeshAssets = require("../../src/server/PremiumRouteMeshAssets"
 local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
+local JumpRouteClearance = require("../../src/shared/JumpRouteClearance")
 
 describe("Arena variants", function()
     it("exposes only the three approved original route and ground MeshPart packages", function()
@@ -544,6 +545,31 @@ describe("Arena variants", function()
                 primary.Parent=live
                 from:SetAttribute("CollapsePhase","Warning")
                 expect(retarget(backup)==nil).toBe(true)
+                from:SetAttribute("CollapsePhase",nil)
+
+                local corridor=Instance.new("Folder")
+                corridor.Name="HarborJumpClearance"
+                from.Parent,primary.Parent,backup.Parent=corridor,corridor,corridor
+                corridor.Parent=workspace
+                local clear=JumpRouteClearance.forArena(corridor)
+                local gate=Instance.new("Part")
+                gate.Size=Vector3.new(.35,12,3)
+                gate.Position=from.Position:Lerp(primary.Position,.5)+Vector3.new(0,4,0)
+                gate.Anchored=true
+                gate.CanCollide=false
+                gate.CanQuery=true
+                gate.Parent=corridor
+                expect(clear(from,primary)).toBe(true)
+                gate.CanCollide=true
+                expect(clear(from,primary)).toBe(false)
+                expect(JumpRouteCueRules.retarget(from,primary,shortlist,Vector3.zero,id,clear)).toBe(backup)
+                gate.Position+=Vector3.new(0,20,0)
+                expect(clear(from,primary)).toBe(true)
+                expect(JumpRouteCueRules.retarget(from,backup,shortlist,Vector3.zero,id,clear)).toBe(backup)
+                gate.Position=from.Position+Vector3.new(-4.8,3,0)
+                expect(clear(from,primary)).toBe(false)
+                gate:Destroy()
+                corridor:Destroy()
             end
             live:Destroy()
         end

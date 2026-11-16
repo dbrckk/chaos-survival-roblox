@@ -1868,10 +1868,19 @@ assert 'piece:SetAttribute("SkipRouteFootprint",true)' in OWNER
 assert 'if target then left,right,size = takeoffGeometry(platform,target) end' in OWNER
 assert 'joint.C1 = platform.CFrame:ToObjectSpace(frame)' in OWNER
 assert 'Size = true, CFrame = true, Parent = true, Anchored = true' in OWNER
-assert 'local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant)' in OWNER
+assert 'local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant,isClear)' in OWNER
 assert 'if generation ~= routeGeneration then return end' in OWNER
 assert 'if next(waitingCues[deckTier]) then dirtyTiers[deckTier] = true end' in OWNER
-assert 'if JumpRouteCueRules.cueStillSafe(from,current,arenaCenter,variantId) then' in CUE_RULES
+assert 'if JumpRouteCueRules.cueStillSafe(from,current,arenaCenter,variantId)' in CUE_RULES
+assert 'and (not isClear or isClear(from,current)) then' in CUE_RULES
+assert 'and (not isClear or isClear(from,target)) then' in CUE_RULES
+assert 'variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in OWNER
+assert 'if checked == 8 then break end' in OWNER
+assert 'LocalHarborRouteClearanceEpoch' in SIDE_LOD
+CLEARANCE=(ROOT/"src/shared/JumpRouteClearance.lua").read_text(encoding="utf8")
+assert 'cast.IncludeInstances = {arena}' in CLEARANCE
+assert 'cast.RespectCanCollide = true' in CLEARANCE
+assert 'workspace:Blockcast(frame,BODY,point-previous,cast)' in CLEARANCE
 assert 'paintOffset,.12+.84*scale' in CUE_RULES
 print("PASS takeoff chevrons follow current geometry without generic trim shrink or a render loop")
 
