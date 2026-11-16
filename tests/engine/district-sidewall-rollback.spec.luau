@@ -636,7 +636,8 @@ describe("Authenticated district sidewall restoration (engine)", function()
             shells:SetAttribute("OwnerVerified", false)
             syncLow(0)
             expect(PremiumDistrictFacadeMeshKit.count()).toBe(1)
-            expect(near:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(true)
+            assert(near:GetAttribute("LocalApprovedDistrictFacadeMounted") == true,
+                "nearest facade did not load after shell source revocation")
             expect(ApprovedDistrictSidewallMeshKit.count()).toBe(0)
             expect(completeCore.Transparency).toBe(originalAlpha)
             expect(ApprovedDistrictFoundationMeshKit.replacedNativeCount()).toBe(0)
@@ -688,8 +689,8 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 if building:GetAttribute(
                     "LocalApprovedDistrictFacadeMounted")==true then
                     full+=1
-                    expect(building:GetAttribute(
-                        "LocalApprovedDistrictSidewallMounted")).toBe(true)
+                    assert(building:GetAttribute("LocalApprovedDistrictSidewallMounted") == true,
+                        "desktop Medium facade missing sidewall on " .. building.Name)
                     sides[building:GetAttribute("DistrictSide")]=true
                 end
             end
@@ -866,17 +867,21 @@ describe("Authenticated district sidewall restoration (engine)", function()
                 local door = building.ServiceEntryDoor
                 local native = building:FindFirstChild(profile[6])
                 local nativeAlpha = native.Transparency
-                local eye = door.Position + door.CFrame.LookVector * 14 + Vector3.new(0, 17, 0)
+                -- Stay close to this door when selecting the single Low
+                -- facade slot; look from the roof toward the same building.
+                local eye = door.Position + door.CFrame.LookVector * 5 + Vector3.new(0, 12, 0)
                 local function update(pressure)
                     ApprovedDistrictRoofMeshKit.sync(world, eye, "Low", true, true, pressure,
                         -door.CFrame.LookVector)
                 end
                 PremiumDistrictFacadeMeshKit.sync(world, eye, "Low", true,
                     -door.CFrame.LookVector, true, 0)
-                expect(building:GetAttribute("LocalApprovedDistrictFacadeMounted")).toBe(true)
+                assert(building:GetAttribute("LocalApprovedDistrictFacadeMounted") == true,
+                    variant .. " roof fixture did not mount the facade on " .. building.Name)
                 update(0)
-                expect(ApprovedDistrictRoofMeshKit.replacedNativeCount()).toBe(profile[7])
-                expect(native.Transparency).toBe(1)
+                assert(ApprovedDistrictRoofMeshKit.replacedNativeCount() == profile[7],
+                    variant .. " verified roof did not mount all native replacements")
+                assert(native.Transparency == 1, variant .. " roof left its native visible")
                 assert(math.abs(building.RecessedSignal.Transparency - .32) < .001)
                 local model = roofBucket:FindFirstChild("ApprovedOriginalDistrictRoof3D")
                 local pose, bounds = model:GetBoundingBox()
