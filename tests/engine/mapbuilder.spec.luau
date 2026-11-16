@@ -1588,6 +1588,17 @@ describe("Chaos Survival engine", function()
                 from, pieces, Config.ArenaCenter, variantId
             )).toBe(to)
 
+            to:SetAttribute("BridgeShutterPhase", "Warning")
+            expect(JumpRouteCueRules.safeLandingTarget(to)).toBe(false)
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(nil)
+            to:SetAttribute("BridgeShutterPhase", "Idle")
+            expect(JumpRouteCueRules.nextPhysical(
+                from, pieces, Config.ArenaCenter, variantId
+            )).toBe(to)
+            to:SetAttribute("BridgeShutterPhase", nil)
+
             -- Escaping FROM a yellow deck must remain possible. Only
             -- its use as the landing destination is suppressed.
             from:SetAttribute("CollapsePhase", "Warning")

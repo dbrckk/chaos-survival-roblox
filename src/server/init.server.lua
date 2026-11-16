@@ -2097,6 +2097,8 @@ local function runDisasterSet(selected, contestants, roundSettings)
         )
         broadcast({
             phase = "round",
+            roundNumber = roundNumber,
+            arenaId = currentArenaVariant,
             impactWaveMode = (impactWaveMode ~= ImpactWaveDirector.SCATTER)
                 and impactWaveMode or nil,
             -- Only announce the second-collapse danger after real, spaced

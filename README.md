@@ -1,3 +1,7 @@
+## P4 — Repères de saut pendant les changements de manche et de terrain
+
+Le guide retire le repère dès que le palier indiqué passe en alerte d’effondrement, qu’une barrière se ferme, que la collision disparaît ou que le palier se décharge. Au prochain contrôle, il propose un autre accès s’il en existe un. Il attend que l’arène reçue par le client corresponde à celle de la manche et retire aussi le repère lors d’une élimination.
+
 ## P4 — Guidage pendant les trois premières manches
 
 Le guide de saut accompagne les nouveaux joueurs pendant les trois premières manches. Sur mobile, le compte à rebours privilégie le repère de saut et retire l'indication du pad de boost. Le HUD indique comment monter sur un palier, y compris quand aucun repère de saut n'est visible. Il actualise la consigne des spectateurs dès que leur participation est connue.
