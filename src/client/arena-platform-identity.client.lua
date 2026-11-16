@@ -44,6 +44,7 @@ local mountedSupportNatives = {}
 local mountedLongCradles = {}
 local outpostMotions = {}
 local outpostFrameDisconnects = {}
+local outpostInstrumentDisconnects = {}
 local currentOutpostPosture = "normal"
 
 local function stopOutpostMotion(state)
@@ -70,6 +71,14 @@ local function refreshOutpostMotion(platform)
             state.instrument.Color = HarborOutpostKit.instrumentColor(
                 state.baseColor, currentOutpostPosture
             )
+        end
+        if state.sculpture then
+            for index,part in ipairs(state.sculpture.parts) do
+                if part.Parent then
+                    part.Color = HarborOutpostKit.instrumentColor(
+                        state.sculpture.colors[index],currentOutpostPosture)
+                end
+            end
         end
     end
     local phase = platform:GetAttribute("CollapsePhase")
@@ -151,6 +160,11 @@ local function clear()
     end
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
+    end
+    for _, disconnect in ipairs(outpostInstrumentDisconnects) do disconnect() end
+    table.clear(outpostInstrumentDisconnects)
+    if player:GetAttribute("LocalOriginalHarborOutpostInstrumentCount") ~= 0 then
+        player:SetAttribute("LocalOriginalHarborOutpostInstrumentCount",0)
     end
     for _, disconnect in ipairs(outpostFrameDisconnects) do disconnect() end
     table.clear(outpostFrameDisconnects)
@@ -728,7 +742,9 @@ local function rebuild()
     local mountedRouteCradles = 0
     local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
-    local forgedOutpostInstruments = {}
+    local outpostInstruments = {}
+    local outpostSculptures = {}
+    local mountedInstruments = 0
     local forgedOutposts = 0
     if variant == "Harbor" and supportBudget >= HarborOutpostKit.frameModules then
         local candidates, limit = HarborOutpostKit.candidates(ordered,tier.Name,cameraPoint,
@@ -748,7 +764,7 @@ local function rebuild()
                             player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
                             scheduleRebuild()
                         end)
-                    forgedOutpostInstruments[platform] = instrument
+                    outpostInstruments[platform] = instrument
                     if disconnect then
                         supportBudget -= HarborOutpostKit.frameModules
                         originalLargeCount += HarborOutpostKit.frameModules*7
@@ -758,8 +774,32 @@ local function rebuild()
                 end
             end
         end
+        for _,candidate in ipairs(candidates) do
+            if mountedInstruments >= limit or supportBudget == 0 then break end
+            local platform = candidate.deck
+            local pivot = outpostInstruments[platform]
+            if not pivot then
+                local _, fallback = HarborOutpostKit.build(
+                    makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name)
+                pivot = fallback
+                outpostInstruments[platform] = pivot
+            end
+            local sculpture = HarborOutpostKit.mountInstrument(makePart,platform,pivot,function()
+                mountedInstruments -= 1
+                player:SetAttribute("LocalOriginalHarborOutpostInstrumentCount",mountedInstruments)
+                scheduleRebuild()
+            end)
+            if sculpture then
+                supportBudget -= 1
+                mountedInstruments += 1
+                originalLargeCount += #sculpture.parts
+                outpostSculptures[platform] = sculpture
+                outpostInstrumentDisconnects[#outpostInstrumentDisconnects+1] = sculpture.disconnect
+            end
+        end
     end
     player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
+    player:SetAttribute("LocalOriginalHarborOutpostInstrumentCount",mountedInstruments)
 
     for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
@@ -1007,7 +1047,7 @@ local function rebuild()
                 -- 3D port infrastructure. The existing visual registrar,
                 -- shrink-weld, collapse owner and tier rebuild own it.
                 -- No new scene loop, world physics or touch occlusion.
-                local instrument = forgedOutpostInstruments[platform]
+                local instrument = outpostInstruments[platform]
                 if not instrument then
                     local _, fallback = HarborOutpostKit.build(
                         makePart, platform, visualIndex, theme, tier.Name
@@ -1024,6 +1064,7 @@ local function rebuild()
                             instrument = instrument,
                             baseColor = instrument.Color,
                             route = platform:GetAttribute("HarborSpokeRoute"),
+                            sculpture = outpostSculptures[platform],
                             connections = {
                                 platform:GetPropertyChangedSignal("CanCollide")
                                     :Connect(function()
@@ -1035,6 +1076,13 @@ local function rebuild()
                                     end),
                             },
                         }
+                        local sculpture = outpostSculptures[platform]
+                        if sculpture then
+                            local connections = outpostMotions[platform].connections
+                            connections[#connections+1] = joint:GetPropertyChangedSignal("C0"):Connect(function()
+                                HarborOutpostKit.applyInstrumentPose(joint,sculpture.parts)
+                            end)
+                        end
                     end
                 end
             elseif variant == "Classic" then
@@ -1065,7 +1113,13 @@ local function rebuild()
                 footprintDisconnects[platform] =
                     PlatformFinishKit.bindRouteFootprint(
                         platform, visualsByPlatform[platform],
-                        PlatformNativeTrimReplacementKit.routeCradleRefitted
+                        outpostSculptures[platform] and function(deck)
+                            PlatformNativeTrimReplacementKit.routeCradleRefitted(deck)
+                            local state = outpostMotions[deck]
+                            if state and state.sculpture then
+                                HarborOutpostKit.applyInstrumentPose(state.joint,state.sculpture.parts)
+                            end
+                        end or PlatformNativeTrimReplacementKit.routeCradleRefitted
                     )
             end
 
@@ -1722,6 +1776,67 @@ local function watchLargeStructureTemplates(holder)
         scheduleRebuild()
     end
 end
+
+-- Instruments share the existing loaders. Only changes to the four
+-- approved templates can wake the already debounced Harbor rebuild.
+local instrumentTemplateConnections = {}
+local function instrumentTemplatesChanged()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRebuild() end
+end
+
+local function watchInstrumentTemplates(holder)
+    local name, marker, role = HarborOutpostKit.instrumentHolder(holder.Name)
+    if not name or not holder:IsA("Folder") or instrumentTemplateConnections[holder] then return end
+    local connections, modelConnections = {}, {}
+    instrumentTemplateConnections[holder] = connections
+    local function disconnectModel()
+        for _,connection in ipairs(modelConnections) do connection:Disconnect() end
+        table.clear(modelConnections)
+    end
+    local function attach()
+        disconnectModel()
+        local model = holder:FindFirstChild(name)
+        if model and model:IsA("Model") then
+            for _,attribute in ipairs({"OwnerVerified","CosmeticOnly","Original3DAssetId",marker}) do
+                modelConnections[#modelConnections+1] = model:GetAttributeChangedSignal(attribute)
+                    :Connect(instrumentTemplatesChanged)
+            end
+            local function attachMesh(part)
+                if role and part:IsA("MeshPart") then
+                    modelConnections[#modelConnections+1] =
+                        part:GetAttributeChangedSignal(role):Connect(instrumentTemplatesChanged)
+                end
+            end
+            for _,part in ipairs(model:GetChildren()) do attachMesh(part) end
+            modelConnections[#modelConnections+1] = model.ChildAdded:Connect(function(part)
+                attachMesh(part)
+                instrumentTemplatesChanged()
+            end)
+            modelConnections[#modelConnections+1] = model.ChildRemoved:Connect(instrumentTemplatesChanged)
+        end
+        instrumentTemplatesChanged()
+    end
+    local function childChanged(child)
+        if child.Name == name then attach() end
+    end
+    connections[#connections+1] = holder:GetAttributeChangedSignal("OwnerVerified")
+        :Connect(instrumentTemplatesChanged)
+    connections[#connections+1] = holder.ChildAdded:Connect(childChanged)
+    connections[#connections+1] = holder.ChildRemoved:Connect(childChanged)
+    connections[#connections+1] = holder.AncestryChanged:Connect(function()
+        if holder.Parent == ReplicatedStorage then return end
+        disconnectModel()
+        for _,connection in ipairs(connections) do connection:Disconnect() end
+        instrumentTemplateConnections[holder] = nil
+        instrumentTemplatesChanged()
+    end)
+    attach()
+end
+
+for _,holder in ipairs(ReplicatedStorage:GetChildren()) do watchInstrumentTemplates(holder) end
+ReplicatedStorage.ChildAdded:Connect(watchInstrumentTemplates)
 
 ReplicatedStorage.ChildAdded:Connect(function(child)
     if child.Name == "ApprovedFloorReliefTemplates" then
