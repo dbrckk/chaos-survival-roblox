@@ -773,6 +773,47 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             end
             disconnect()
             owner:ClearAllChildren()
+            -- Already contracted real platform. Finish pieces share the
+            -- late-join dimensions but keep independent welded ownership.
+            local _, pivot, _, nativeFinish=Outpost.build(factory,deck,98,theme,"High")
+            local keel, wings=nativeFinish.Keel[1],nativeFinish.Wing
+            local wing=truss:Clone()
+            wing:SetAttribute("Original3DAssetId",138096293972093)
+            cleanup[#cleanup+1]=function() wing:Destroy() end
+            local lostFinish=0
+            local function lostGroup() lostFinish+=1 end
+            local keelStop,keelCount=Outpost.mountFinishing(
+                factory,deck,nativeFinish.Keel,"Keel",truss,trussSize,lostGroup)
+            local wingStop,wingCount=Outpost.mountFinishing(
+                factory,deck,wings,"Wing",wing,trussSize,lostGroup)
+            assert(keelStop and keelCount==7 and wingStop and wingCount==14)
+            assert(pivot.Transparency<1 and deck.CanCollide)
+            assert(keel.Transparency==1 and wings[1].Transparency==1 and wings[2].Transparency==1)
+            local bottom = math.huge
+            local wingSculpt
+            for _,part in ipairs(owner:GetChildren()) do
+                local kind = part:GetAttribute("OriginalHarborOutpostFinishing3D")
+                if kind == "Keel" then
+                    local y = part.PlatformIdentityWeld.C1.Position.Y
+                    assert(y+part.Size.Y*.5 <= -deck.Size.Y*.5)
+                    bottom = math.min(bottom,y-part.Size.Y*.5)
+                elseif kind == "Wing" then
+                    assert(part.PlatformIdentityWeld.C1.Position.Y > 5.5)
+                    wingSculpt = part
+                end
+            end
+            assert(bottom < -2.69 and wingSculpt)
+            wingSculpt.PlatformIdentityWeld:Destroy()
+            task.wait()
+            assert(lostFinish==1 and keel.Transparency==1)
+            assert(math.abs(wings[1].Transparency-.16)<.01 and math.abs(wings[2].Transparency-.16)<.01)
+            wing:FindFirstChildWhichIsA("MeshPart"):Destroy()
+            assert(Outpost.mountFinishing(
+                factory,deck,wings,"Wing",wing,trussSize,lostGroup)==nil)
+            assert(math.abs(wings[1].Transparency-.16)<.01)
+            keelStop()
+            wingStop()
+            owner:ClearAllChildren()
             truss:FindFirstChildWhichIsA("MeshPart"):Destroy()
             local _,fallback,failed=Outpost.build(factory,deck,98,theme,"Medium",sources)
             assert(fallback and failed==nil and #owner:GetChildren()==5)

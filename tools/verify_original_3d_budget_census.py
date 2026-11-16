@@ -2031,6 +2031,20 @@ assert 'HarborOutpostKit.applyInstrumentPose(state.joint,state.sculpture.parts)'
 assert 'GetPropertyChangedSignal("C0")' in OWNER
 print("PASS four Harbor instruments share the existing pivot tween and column slots")
 
+for fragment in (
+    'id=138096293972093',
+    'local expectedNatives = kind == "Keel" and 1 or (kind == "Wing" and 2)',
+    'Vector3.new(profile.span+.35,2.08,1.18)',
+    'bindFrame(platform,staged,fallback,onLost)',
+):
+    assert fragment in outpost, fragment
+assert 'supportBudget -= modules' in OWNER
+assert 'mountFinish(platform,natives.Keel,"Keel",truss,trussSize,1)' in OWNER
+assert 'mountFinish(platform,natives.Wing,"Wing",wing,wingSize,2)' in OWNER
+assert 'LocalOriginalHarborOutpostFinishCount' in OWNER
+print("PASS Harbor finish uses independent complete keel and paired wing replacements in column slots")
+
+
 
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
