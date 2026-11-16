@@ -3,7 +3,8 @@
 -- the server determines progress, standing time and Coins/XP.
 --
 -- No task loop, RenderStepped listener, custom Parts or new Remotes:
--- reuse the existing authoritative RoundState heartbeat (~1Hz).
+-- reuse the existing authoritative RoundState heartbeat (~1Hz) and
+-- react to changes on the displayed Harbor landing.
 -- Also respects rookie tutoring, live collapse warnings, streaming,
 -- mobile graphic tiers and the optional Storm Harbor cargo objective.
 local Players = game:GetService("Players")
@@ -21,13 +22,22 @@ local marker, caption
 local latestState = nil
 local currentTarget = nil
 local clearanceArena, routeClearance
+local targetConnections = {}
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
 rayParams.RespectCanCollide = true
 
+local function disconnectTarget()
+    for _, connection in ipairs(targetConnections) do
+        connection:Disconnect()
+    end
+    table.clear(targetConnections)
+end
+
 local function hide()
+    disconnectTarget()
     if marker then
         marker.Enabled = false
         marker.Adornee = nil
@@ -128,6 +138,27 @@ local function orbitalNext(arena, from, root)
     return nil
 end
 
+local function watchHarborTarget(target, refresh)
+    local function onAncestryChanged()
+        if currentTarget == target then refresh() end
+    end
+    local function onSurfaceChanged()
+        if currentTarget ~= target then return end
+        local shutter = target:GetAttribute("BridgeShutterPhase")
+        if not liveSurface(target) or (shutter and shutter ~= "Idle") then
+            refresh()
+        end
+    end
+    targetConnections = {
+        target:GetAttributeChangedSignal("CollapsePhase"):Connect(onSurfaceChanged),
+        target:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(onSurfaceChanged),
+        target:GetPropertyChangedSignal("CanCollide"):Connect(onSurfaceChanged),
+        target:GetPropertyChangedSignal("Anchored"):Connect(onSurfaceChanged),
+        target:GetPropertyChangedSignal("Transparency"):Connect(onSurfaceChanged),
+        target.AncestryChanged:Connect(onAncestryChanged),
+    }
+end
+
 local function show(target, isRamp, achieved, required, returnToRamp)
     if not marker then
         marker = Instance.new("BillboardGui")
@@ -178,6 +209,7 @@ local function show(target, isRamp, achieved, required, returnToRamp)
     local tier = player:GetAttribute("VfxQualityTier")
     marker.MaxDistance = tier == "Low" and 36 or (tier == "Medium" and 44 or 48)
     if currentTarget ~= target then
+        disconnectTarget()
         currentTarget = target
         marker.Adornee = target
         local rampStart = isRamp and target:GetAttribute("HelixStart") or nil
@@ -257,6 +289,7 @@ local function update()
     local variant = arena and arena:GetAttribute("VariantId")
     local harborArena = variant == "Harbor" and arena or nil
     if harborArena ~= clearanceArena then
+        disconnectTarget()
         clearanceArena = harborArena
         routeClearance = harborArena and JumpRouteClearance.forArena(harborArena) or nil
     end
@@ -312,6 +345,9 @@ local function update()
         return
     end
     show(target, isRamp, achieved, required, returnToRamp)
+    if harborArena and #targetConnections == 0 then
+        watchHarborTarget(target, update)
+    end
 end
 
 states.OnClientEvent:Connect(function(state)
