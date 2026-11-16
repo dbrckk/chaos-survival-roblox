@@ -2,19 +2,40 @@
 local JumpRouteCueRules = if script then require(script.Parent.JumpRouteCueRules)
     else require("./JumpRouteCueRules")
 
-local JumpRouteHazards = {}
+local impactWarningsChanged = Instance.new("BindableEvent")
+local JumpRouteHazards = {
+    ImpactWarningsChanged = impactWarningsChanged.Event,
+}
 
 local liveWarnings = {}
+local impactUpdateQueued = false
+local function queueImpactUpdate()
+    if impactUpdateQueued then return end
+    impactUpdateQueued = true
+    task.defer(function()
+        impactUpdateQueued = false
+        impactWarningsChanged:Fire()
+    end)
+end
+
 local function trackWarning(child)
-    if child:IsA("BasePart")
-        and (child.Name == "MeteorWarning" or child.Name == "BombWarning")
-    then
-        liveWarnings[child] = true
+    if child.Parent ~= workspace or liveWarnings[child] or not child:IsA("BasePart")
+        or (child.Name ~= "MeteorWarning" and child.Name ~= "BombWarning") then
+        return
     end
+    -- Streaming can deliver the final hazard size after the Part itself.
+    liveWarnings[child] = child:GetAttributeChangedSignal("WarningEndSize"):Connect(queueImpactUpdate)
+    queueImpactUpdate()
 end
 workspace.ChildAdded:Connect(trackWarning)
 workspace.ChildRemoved:Connect(function(child)
+    local connection = liveWarnings[child]
+    if not connection then return end
+    connection:Disconnect()
     liveWarnings[child] = nil
+    queueImpactUpdate()
+    -- The remove notification may run after the same part streams back in.
+    trackWarning(child)
 end)
 for _, child in ipairs(workspace:GetChildren()) do
     trackWarning(child)
@@ -25,8 +46,6 @@ function JumpRouteHazards.read(arena)
     for part in pairs(liveWarnings) do
         if part.Parent == workspace then
             result[#result + 1] = part
-        else
-            liveWarnings[part] = nil
         end
     end
 

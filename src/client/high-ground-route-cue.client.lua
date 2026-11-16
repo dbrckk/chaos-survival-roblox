@@ -368,6 +368,17 @@ states.OnClientEvent:Connect(function(state)
     update()
 end)
 
+JumpRouteHazards.ImpactWarningsChanged:Connect(function()
+    local target = clearanceArena and currentTarget
+    local character = player.Character
+    local root = target and character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not root:IsA("BasePart") then return end
+    local warnings, lava = JumpRouteHazards.read()
+    if not JumpRouteHazards.landingPathIsSafe(root.Position, target, warnings, lava) then
+        hide()
+    end
+end)
+
 player:GetAttributeChangedSignal("RoundPeakTier"):Connect(update)
 for _, attribute in ipairs({"RoundParticipant", "RoundEliminated"}) do
     player:GetAttributeChangedSignal(attribute):Connect(update)
