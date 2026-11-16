@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 local JumpRouteClearance = require(ReplicatedStorage.Shared.JumpRouteClearance)
+local JumpRouteHazards = require(ReplicatedStorage.Shared.JumpRouteHazards)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 local HAZARD_OWNER = "imminent-hazard"
 
@@ -53,59 +54,6 @@ local function resetRecovery()
     recoveryDeck, recoveryAnchor, recoverySince = nil, nil, 0
 end
 
--- Reuse the existing low-frequency coach polling. Cache ONLY the actual
--- server warning Parts; never scan every descendant on each Android tick.
-local liveWarnings = {}
-local function trackWarning(child)
-    if child:IsA("BasePart")
-        and (child.Name == "MeteorWarning" or child.Name == "BombWarning")
-    then
-        liveWarnings[child] = true
-    end
-end
-workspace.ChildAdded:Connect(trackWarning)
-workspace.ChildRemoved:Connect(function(child)
-    liveWarnings[child] = nil
-end)
-for _, child in ipairs(workspace:GetChildren()) do
-    trackWarning(child)
-end
-
-local function warningsNow()
-    local result = {}
-    for part in pairs(liveWarnings) do
-        if part.Parent == workspace then
-            result[#result + 1] = part
-        else
-            liveWarnings[part] = nil
-        end
-    end
-
-    -- Unlike meteor warning Parts, these permanent lanes live under the
-    -- CURRENT arena mechanics and transition between Idle/Warning/Pulse.
-    -- Four inexpensive direct children per map at existing 0.4/0.85 s
-    -- guide cadence, no per-frame descendants scan or stale-map watcher.
-    local generated = workspace:FindFirstChild("GeneratedMap")
-    local arena = generated and generated:FindFirstChild("Arena")
-    local mechanics = arena and arena:FindFirstChild("Mechanics")
-    if mechanics then
-        for _, folderName in ipairs({"GridSweep", "HarborCargoSweep"}) do
-            local folder = mechanics:FindFirstChild(folderName)
-            if folder then
-                for _, band in ipairs(folder:GetChildren()) do
-                    if band:IsA("BasePart")
-                        and (band:GetAttribute("GridSweepPhase") == "Warning"
-                            or band:GetAttribute("GridSweepPhase") == "Pulse"
-                            or band:GetAttribute("HarborSweepPhase") == "Warning"
-                            or band:GetAttribute("HarborSweepPhase") == "Pulse") then
-                        result[#result + 1] = band
-                    end
-                end
-            end
-        end
-    end
-    return result
-end
 -- This optional sign must not recommend a deck already submerged by
 -- the live server-owned lava. Use the same hazard geometry for every
 -- candidate checked during this update.
@@ -571,8 +519,7 @@ local function update()
         return true
     end
     local pieces = platforms:GetChildren()
-    local dangerWarnings = warningsNow()
-    local lava = workspace:FindFirstChild("RoundLava")
+    local dangerWarnings, lava = JumpRouteHazards.read(arena)
     local safeTargets = {}
     local function isSafe(destination)
         local safe = safeTargets[destination]
