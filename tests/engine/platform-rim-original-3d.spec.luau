@@ -1031,6 +1031,118 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(why) end
     end)
 
+    it("fits the approved cargo tie-down to the 58 real Harbor landings",function()
+        local Finish=require("../../src/client/PlatformFinishKit")
+        local Outpost=require("../../src/client/HarborOutpostKit")
+        local Rules=require("../../src/shared/PlatformIdentityLodRules")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("ApprovedFloorReliefTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedFloorReliefTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="Harbor"
+        source:SetAttribute("Original3DAssetId",94830155055482)
+        source:SetAttribute("OriginalFloorRelief3D",true)
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        for i=1,7 do
+            local mesh=Instance.new("MeshPart")
+            mesh.Size=i==1 and Vector3.new(2.74,.32,7.55) or Vector3.one*.2
+            mesh.Anchored=true
+            mesh.CanCollide=false
+            mesh.CanTouch=false
+            mesh.CanQuery=false
+            mesh.Parent=source
+        end
+        source.Parent=holder
+        local owner=Instance.new("Folder")
+        owner.Parent=arena
+        local disconnect
+        local running=false
+        local cleanup={}
+        local ok,why=pcall(function()
+            local theme=VisualTheme.arena("Harbor")
+            local decks=arena.Platforms:GetChildren()
+            local function build(deck,tier)
+                return Finish.buildServiceHatch(owner,deck,"Harbor",tier,theme,
+                    tonumber(deck.Name:match("%d+")),true)
+            end
+            local count=0
+            for _,deck in ipairs(decks) do
+                if deck:IsA("BasePart") and Rules.isHarborLanding(deck) then
+                    local pieces=build(deck,"Low")
+                    assert(#pieces==7 and pieces[1]:GetAttribute("OriginalHarborCargoTieDown3D")==true)
+                    local highest=-math.huge
+                    for _,part in ipairs(pieces) do
+                        local p=part.ChaosPlatformTrimWeld.C1.Position
+                        highest=math.max(highest,p.Y+part.Size.Y*.5)
+                        assert(not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                        assert(math.abs(p.X)+math.max(part.Size.X,part.Size.Z)*.5 < deck.Size.X*.5)
+                        assert(math.abs(p.Z)+math.min(part.Size.X,part.Size.Z)*.5 < deck.Size.Z*.5)
+                    end
+                    assert(math.abs(highest-(deck.Size.Y*.5+.140))<.01)
+                    count+=1
+                    owner:ClearAllChildren()
+                end
+            end
+            expect(count).toBe(58)
+            local deck=arena.Platforms.Platform96
+            assert(deck:GetAttribute("HarborSpokeStep")==2)
+            local selected=Finish.selectOriginalServiceHatches(decks,"Harbor","Low",
+                arena.Base,deck.Position,nil,0)
+            assert(selected[deck] and #build(deck,"Low")==7)
+            assert(next(Finish.selectOriginalServiceHatches(decks,"Harbor","Low",
+                arena.Base,deck.Position,nil,1))==nil)
+            local original=owner:GetChildren()
+            local function largest(pieces)
+                local result=pieces[1]
+                for _,part in ipairs(pieces) do
+                    if part.Size.Magnitude>result.Size.Magnitude then result=part end
+                end
+                return result
+            end
+            local shape=largest(original)
+            local snapshot=Finish.captureRouteFootprint(deck,original)
+            local originalSize=shape.Size
+            running=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return running end,OnCleanup=cleanup})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            running=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05)
+            Finish.applyRouteFootprint(snapshot)
+            assert(math.abs(shape.Size.X-originalSize.X*.45)<.02 and shape.Size.Y==originalSize.Y)
+            local finalSize=shape.Size
+            owner:ClearAllChildren()
+            local late=build(deck,"Medium")
+            assert(#late==7 and (largest(late).Size-finalSize).Magnitude<.03)
+            local fallback=Instance.new("Part")
+            fallback.Transparency=1
+            fallback.Parent=owner
+            disconnect=Outpost.bindWeldedReplacement(deck,late,{[fallback]=.26})
+            late[1].ChaosPlatformTrimWeld:Destroy()
+            task.wait()
+            assert(math.abs(fallback.Transparency-.26)<.01 and late[2].Transparency==1)
+            assert(deck.CanCollide and arena.Decor.PlatformPanel96.Transparency<1)
+        end)
+        running=false
+        if disconnect then disconnect() end
+        for _,stop in ipairs(cleanup) do stop() end
+        arena.Parent:Destroy()
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
     it("replaces the five native pieces under a real Storm Harbor freight landing",function()
         local Dock=require("../../src/client/HarborDockCaissonMeshKit")
         local storage=game:GetService("ReplicatedStorage")

@@ -46,6 +46,7 @@ local outpostMotions = {}
 local outpostFrameDisconnects = {}
 local outpostInstrumentDisconnects = {}
 local outpostFinishDisconnects = {}
+local cargoTieDownDisconnects = {}
 local currentOutpostPosture = "normal"
 
 local function stopOutpostMotion(state)
@@ -161,6 +162,11 @@ local function clear()
     end
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
+    end
+    for _, disconnect in ipairs(cargoTieDownDisconnects) do disconnect() end
+    table.clear(cargoTieDownDisconnects)
+    if player:GetAttribute("LocalOriginalHarborCargoTieDownCount") ~= 0 then
+        player:SetAttribute("LocalOriginalHarborCargoTieDownCount",0)
     end
     for _, disconnect in ipairs(outpostFinishDisconnects) do disconnect() end
     table.clear(outpostFinishDisconnects)
@@ -434,7 +440,7 @@ end
 -- pieces, takeoff chevrons and physical panels still display normally.
 -- All pieces are inside the real deck, linked to its shrink footprint
 -- and inherit collapse visibility from the existing single owner.
-local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
+local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, tieDown)
     if tier.Name == "Low" then return end
     local width = math.min(platform.Size.X, platform.Size.Z)
     if width < 4.5 then return end
@@ -444,7 +450,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
     )
     -- Short offset cargo lashing stripe is an intentionally incomplete
     -- crossbar, NOT a fake bridge or hazard arrow.
-    makePart(
+    local lashing = makePart(
         "HarborCargoLashing" .. index,
         Vector3.new(math.min(platform.Size.X * 0.55, 6.8), 0.045, 0.24),
         platform.CFrame * CFrame.new(
@@ -452,7 +458,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
         ),
         hardware,
         Enum.Material.CorrodedMetal,
-        0.26,
+        tieDown and 1 or 0.26,
         platform
     )
     -- The approved seven-MeshPart underside replaces this flat native
@@ -474,6 +480,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
             platform
         )
     end
+    return lashing
 end
 
 -- Mark only geometry-verified ascending routes. The two short chevron
@@ -727,6 +734,7 @@ local function rebuild()
     local mountedLargeDeckHulls = 0
     local mountedRimDecks = 0
     local mountedServiceHatches3D = 0
+    local mountedCargoTieDowns = 0
     -- On HIGH DESKTOP only, exchange up to four seven-piece approved
     -- COLUMN source slots for the same number of seven-piece, broad
     -- open-lattice underframes. The aggregate structural module ceiling
@@ -1087,8 +1095,27 @@ local function rebuild()
             elseif variant == "Orbital" then
                 decorateOrbital(platform, visualIndex, theme, tier, base.Position)
             elseif variant == "Harbor" then
-                decorateHarbor(platform, visualIndex, theme, tier,
-                    authenticUnderdeck)
+                local tieDown = hatchPieces[1] and hatchPieces[1]:GetAttribute("OriginalHarborCargoTieDown3D") == true
+                local lashing = decorateHarbor(platform, visualIndex, theme, tier,
+                    authenticUnderdeck, tieDown)
+                if tieDown then
+                    local fallback = lashing and {[lashing]=.26} or {}
+                    for _,piece in ipairs(visualsByPlatform[platform]) do
+                        if piece.Name == "HarborCargoSteelBand" then
+                            fallback[piece] = piece:GetAttribute("ChaosBaseTransparency")
+                            piece:SetAttribute("ChaosBaseTransparency",1)
+                            piece.Transparency = 1
+                        end
+                    end
+                    mountedCargoTieDowns += 1
+                    cargoTieDownDisconnects[#cargoTieDownDisconnects+1] =
+                        HarborOutpostKit.bindWeldedReplacement(platform,hatchPieces,
+                            fallback,function()
+                                mountedCargoTieDowns -= 1
+                                player:SetAttribute("LocalOriginalHarborCargoTieDownCount",mountedCargoTieDowns)
+                                scheduleRebuild()
+                            end)
+                end
                 -- Only the four real cardinal terminal decks get authored
                 -- 3D port infrastructure. The existing visual registrar,
                 -- shrink-weld, collapse owner and tier rebuild own it.
@@ -1272,6 +1299,9 @@ local function rebuild()
         ~= mountedBridgeGirders then
         player:SetAttribute("LocalOriginalNearBridgeGirderCount",
             mountedBridgeGirders)
+    end
+    if player:GetAttribute("LocalOriginalHarborCargoTieDownCount") ~= mountedCargoTieDowns then
+        player:SetAttribute("LocalOriginalHarborCargoTieDownCount",mountedCargoTieDowns)
     end
     if player:GetAttribute("LocalOriginalServiceHatch3DCount")
         ~= mountedServiceHatches3D then

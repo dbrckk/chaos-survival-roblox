@@ -1,3 +1,9 @@
+## P4 — Arrimages moulés sur les itinéraires de Storm Harbor
+
+Les 58 paliers des marches de fret, des jetées cardinales et des traversées hautes peuvent recevoir le relief portuaire approuvé à sept maillages. Les taquets, les rivets et le rouleau d'arrimage remplacent la bande rectangulaire sur les paliers sélectionnés. Ils restent au bord de la surface en bois, sous la hauteur des chevrons de saut.
+
+Les arrimages partagent les créneaux des trappes de service, dont le seul créneau Low pour ce type de finition. Le montage retrouve la même largeur après un rétrécissement ou une arrivée en cours de manche. En cas de perte d'une fixation, les bandes d'origine réapparaissent sur les profils qui les affichent. `LocalOriginalHarborCargoTieDownCount` compte les assemblages montés.
+
 ## P4 — Quilles et ailettes sculptées des avant-postes de Storm Harbor
 
 Les quatre avant-postes peuvent recevoir une traverse ajourée sous le caisson et une paire d'ailettes en métal sculpté au-dessus des jambes. Les pièces restent soudées au palier et suivent sa largeur pendant la contraction. Les ailettes laissent le centre libre pour les instruments animés.

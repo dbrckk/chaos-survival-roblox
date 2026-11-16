@@ -43,7 +43,7 @@ end
 -- Use the ordinary collapse and LOD owners for both pictures. This
 -- switch only chooses which geometry they expose, and can be reversed
 -- even when an existing welded mesh is detached after a rebuild.
-local function bindFrame(platform, meshes, fallback, onLost, pivot)
+function HarborOutpostKit.bindWeldedReplacement(platform, meshes, fallback, onLost, pivot)
     local connections = {}
     local function disconnect()
         for _,connection in ipairs(connections) do connection:Disconnect() end
@@ -69,6 +69,7 @@ local function bindFrame(platform, meshes, fallback, onLost, pivot)
     end
     for _,piece in ipairs(meshes) do
         local weld = piece:FindFirstChild("PlatformIdentityWeld")
+            or piece:FindFirstChild("ChaosPlatformTrimWeld")
         local owner = piece.Parent
         connections[#connections+1] = piece.AncestryChanged:Connect(function()
             if piece.Parent ~= owner then lose() end
@@ -231,7 +232,7 @@ function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
     local alpha = pivot:GetAttribute("ChaosBaseTransparency")
     pivot:SetAttribute("ChaosBaseTransparency",1)
     pivot.Transparency = 1
-    local disconnect = bindFrame(platform,pieces,{[pivot]=alpha},onLost,pivot)
+    local disconnect = HarborOutpostKit.bindWeldedReplacement(platform,pieces,{[pivot]=alpha},onLost,pivot)
     return {parts=pieces,colors=colors,disconnect=disconnect}
 end
 
@@ -304,7 +305,7 @@ function HarborOutpostKit.mountFinishing(makePart, platform, natives, kind, sour
         native:SetAttribute("ChaosBaseTransparency",1)
         native.Transparency = 1
     end
-    return bindFrame(platform,staged,fallback,onLost),#staged
+    return HarborOutpostKit.bindWeldedReplacement(platform,staged,fallback,onLost),#staged
 end
 
 function HarborOutpostKit.count(tier)
@@ -479,7 +480,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
                 Enum.Material.CorrodedMetal, 0.16)
         end
     end
-    local disconnect = forged and bindFrame(platform,meshes,fallback,onLost) or nil
+    local disconnect = forged and HarborOutpostKit.bindWeldedReplacement(platform,meshes,fallback,onLost) or nil
     return made,instrument,disconnect,{Keel={keel},Wing=wingNatives}
 end
 

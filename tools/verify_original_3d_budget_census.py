@@ -1720,7 +1720,7 @@ print("PASS Low even-index original undercradle/support adoption, native",
 for marker in (
     'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)',
     'if genuineUnderdeck then return end',
-    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, tieDown)',
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
@@ -1808,6 +1808,14 @@ assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
 assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
 print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero native hatch fallback")
+assert 'local lashing = sourceParts == 7 and harborLashingWidth(platform,variant)' in FINISH
+assert 'elseif legacy and id % legacyStep == 1 then' in FINISH
+assert 'platform.Size.Y*.5+.140-bounds.Y*.5' in FINISH
+assert 'part:SetAttribute("OriginalHarborCargoTieDown3D",true)' in FINISH
+assert 'HarborOutpostKit.bindWeldedReplacement(platform,hatchPieces,' in OWNER
+assert 'LocalOriginalHarborCargoTieDownCount' in OWNER
+print("PASS cargo tie-downs share the original service quota and preserve the real Harbor route")
+
 
 # P0 medium real support coverage: eight approved 7-piece columns are
 # already permitted by the existing client budget. Never select only four
@@ -2024,7 +2032,7 @@ assert "LocalOriginalHarborOutpostFrameCount" in OWNER
 assert "RunService" not in outpost
 print("PASS all-or-nothing Harbor outposts share the existing 21-mesh column budget")
 
-for fragment in ('73237902371094', '98809955094422', '104654294187035', '110237986522853', 'selected and 1 or 7', 'relative:Inverse()*pivotWeld.C0*relative', 'bindFrame(platform,pieces,{[pivot]=alpha},onLost,pivot)'):
+for fragment in ('73237902371094', '98809955094422', '104654294187035', '110237986522853', 'selected and 1 or 7', 'relative:Inverse()*pivotWeld.C0*relative', 'HarborOutpostKit.bindWeldedReplacement(platform,pieces,{[pivot]=alpha},onLost,pivot)'):
     assert fragment in outpost, fragment
 assert 'supportBudget -= 1\n                mountedInstruments += 1' in OWNER
 assert 'HarborOutpostKit.applyInstrumentPose(state.joint,state.sculpture.parts)' in OWNER
@@ -2035,7 +2043,7 @@ for fragment in (
     'id=138096293972093',
     'local expectedNatives = kind == "Keel" and 1 or (kind == "Wing" and 2)',
     'Vector3.new(profile.span+.35,2.08,1.18)',
-    'bindFrame(platform,staged,fallback,onLost)',
+    'HarborOutpostKit.bindWeldedReplacement(platform,staged,fallback,onLost)',
 ):
     assert fragment in outpost, fragment
 assert 'supportBudget -= modules' in OWNER
