@@ -1121,6 +1121,105 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(why) end
     end)
 
+    it("fits complete Harbor rails through real contraction and restores every native face on weld loss",function()
+        local Finish=require("../../src/client/PlatformFinishKit")
+        local Side=require("../../src/client/PremiumPlatformSideMeshKit")
+        local Outpost=require("../../src/client/HarborOutpostKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("ApprovedPlatformSideTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedPlatformSideTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="Bridge"
+        source:SetAttribute("Original3DAssetId",122766792774607)
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("OriginalStructuralSide3D",true)
+        local sizes={Vector3.new(9.62,.39,.55),Vector3.new(9.18,.42,.34),
+            Vector3.new(7.8371,.9701,.1465),Vector3.new(9,1.505,.45),
+            Vector3.new(9.48,.56,.49),Vector3.new(8.82,.22,.34),Vector3.one*.2}
+        local sourceParts={}
+        for i,size in ipairs(sizes) do
+            local mesh=Instance.new("MeshPart")
+            mesh.Size=size
+            mesh.Anchored=true
+            mesh.CanCollide=false
+            mesh.CanTouch=false
+            mesh.CanQuery=false
+            mesh.Parent=source
+            sourceParts[i]=mesh
+        end
+        source.Parent=holder
+        local owner=Instance.new("Folder")
+        owner.Parent=arena
+        local disconnect
+        local running=false
+        local cleanup={}
+        local ok,why=pcall(function()
+            local theme=VisualTheme.arena("Harbor")
+            local deck=arena.Platforms.Platform96
+            local function build(tier)
+                return Finish.buildSideRails(owner,deck,tier,theme,"Harbor",96,false,Side.harborRailSource())
+            end
+            local medium,mediumMeshes=build("Medium")
+            assert(#medium==8 and #mediumMeshes==6)
+            owner:ClearAllChildren()
+            local pieces,meshes,fallback=build("High")
+            assert(#pieces==16 and #meshes==12)
+            for native in pairs(fallback) do assert(native.Transparency==1) end
+            for _,mesh in ipairs(meshes) do
+                assert(mesh:GetAttribute("OriginalHarborRecessedRail3D"))
+                assert(not mesh.CanCollide and not mesh.CanTouch and not mesh.CanQuery)
+                local weld=mesh.ChaosPlatformTrimWeld
+                assert(weld.Part0==mesh and weld.Part1==deck)
+                assert(weld.C1.Position.Y+mesh.Size.Y*.5<deck.Size.Y*.5)
+            end
+            local snapshot=Finish.captureRouteFootprint(deck,pieces)
+            running=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return running end,OnCleanup=cleanup})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            running=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05 and Finish.applyRouteFootprint(snapshot)==16)
+            local contracted={}
+            for i,piece in ipairs(pieces) do
+                contracted[i]={piece.Size,piece.ChaosPlatformTrimWeld.C1.Position}
+            end
+            owner:ClearAllChildren()
+            pieces,meshes,fallback=build("High")
+            assert(#pieces==16 and #meshes==12)
+            for i,piece in ipairs(pieces) do
+                assert((piece.Size-contracted[i][1]).Magnitude<.03)
+                assert((piece.ChaosPlatformTrimWeld.C1.Position-contracted[i][2]).Magnitude<.03)
+            end
+            disconnect=Outpost.bindWeldedReplacement(deck,meshes,fallback)
+            meshes[7].ChaosPlatformTrimWeld:Destroy()
+            task.wait()
+            for native,alpha in pairs(fallback) do assert(math.abs(native.Transparency-alpha)<.01) end
+            for _,mesh in ipairs(meshes) do assert(mesh.Transparency==1) end
+            sourceParts[1]:Destroy()
+            local nativeOnly,missing=build("High")
+            assert(#nativeOnly==4 and not missing and nativeOnly[1].Transparency<1)
+            assert(deck.CanCollide and arena.Decor.PlatformPanel96.Transparency<1)
+        end)
+        running=false
+        if disconnect then disconnect() end
+        for _,stop in ipairs(cleanup) do stop() end
+        arena.Parent:Destroy()
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
     it("fits the approved cargo tie-down to the 58 real Harbor landings",function()
         local Finish=require("../../src/client/PlatformFinishKit")
         local Outpost=require("../../src/client/HarborOutpostKit")

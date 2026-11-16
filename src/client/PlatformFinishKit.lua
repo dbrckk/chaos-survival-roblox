@@ -198,7 +198,7 @@ function PlatformFinishKit.sideRailCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge)
+function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge, harborSource)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not NAMES[variant] then
         return {}
@@ -221,7 +221,10 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
     -- Expose the narrow vertical side face just outside the deck footprint,
     -- below the top so it cannot be mistaken for a walkable ledge.
     local y = -sy * 0.5 + railHeight * 0.5
-    local outside = 0.055
+    local harborWidth = variant == "Harbor" and PlatformIdentityLodRules.harborLandingWidth(platform)
+    local harborScale = harborWidth and sx/harborWidth
+    local outside = 0.055*(harborScale or 1)
+    local thickness = .13*(harborScale or 1)
     -- Structural side faces express each arena's actual material
     -- language without any extra Parts, emissive light, fake top
     -- ledge or change to the physical deck. Make the nearby platform
@@ -240,21 +243,45 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
             and theme.Structure:Lerp(theme.Surface, 0.48)
             or theme.Detail:Lerp(theme.Structure, 0.38))
     local segments = {
-        {Vector3.new(0, y, -sz * 0.5 - outside), Vector3.new(sx * 0.72, railHeight, 0.13)},
-        {Vector3.new(0, y, sz * 0.5 + outside), Vector3.new(sx * 0.72, railHeight, 0.13)},
-        {Vector3.new(-sx * 0.5 - outside, y, 0), Vector3.new(0.13, railHeight, sz * 0.72)},
-        {Vector3.new(sx * 0.5 + outside, y, 0), Vector3.new(0.13, railHeight, sz * 0.72)},
+        {Vector3.new(0, y, -sz * 0.5 - outside), Vector3.new(sx * 0.72, railHeight, thickness)},
+        {Vector3.new(0, y, sz * 0.5 + outside), Vector3.new(sx * 0.72, railHeight, thickness)},
+        {Vector3.new(-sx * 0.5 - outside, y, 0), Vector3.new(thickness, railHeight, sz * 0.72)},
+        {Vector3.new(sx * 0.5 + outside, y, 0), Vector3.new(thickness, railHeight, sz * 0.72)},
     }
     local built = {}
-    for index, segment in ipairs(segments) do
-        if count == 4 or index <= 2 then
-            local piece = add(parent, platform, "PlatformRecessedSideRail" .. index,
+    for railIndex, segment in ipairs(segments) do
+        if count == 4 or railIndex <= 2 then
+            local piece = add(parent, platform, "PlatformRecessedSideRail" .. railIndex,
                 CFrame.new(segment[1]), segment[2], color,
                 material, 0.08)
             table.insert(built, piece)
         end
     end
-    return built
+    local phase = platform:GetAttribute("CollapsePhase")
+    if not harborSource or not harborScale or harborScale < .445 or harborScale > 1.005
+        or math.abs(sx-sz) > .08 or not platform.Anchored or not platform.CanCollide
+        or platform.Transparency >= .75 or platform:GetAttribute("RouteTier") == nil
+        or (phase and phase ~= "Safe" and phase ~= "Normal") then return built end
+    local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
+    local meshes, fallback = {}, {}
+    for railIndex,native in ipairs(built) do
+        local rail = sideKit.harborRail(harborSource,platform,native,railIndex,harborScale)
+        if not rail then
+            for _,piece in ipairs(meshes) do piece:Destroy() end
+            return built
+        end
+        for _,piece in ipairs(rail) do meshes[#meshes+1] = piece end
+        fallback[native] = native.Transparency
+    end
+    for _,piece in ipairs(meshes) do
+        piece.Parent = parent
+        built[#built+1] = piece
+    end
+    for native in pairs(fallback) do
+        native:SetAttribute("ChaosBaseTransparency",1)
+        native.Transparency = 1
+    end
+    return built,meshes,fallback
 end
 
 -- A Tower skybridge is a solid permanent route. Shrinking Arena contracts

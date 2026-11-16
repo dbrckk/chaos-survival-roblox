@@ -1,3 +1,9 @@
+## P4 — Lisses latérales ajourées de Storm Harbor
+
+Les lisses des 58 paliers portuaires peuvent recevoir trois maillages du treillis approuvé `122766792774607` par face. Les pièces restent en retrait sous le bord de la plateforme et suivent sa largeur. Un caisson prioritaire masque les lisses du même palier, sans masquer les chevrons ou les arrimages.
+
+Le niveau Medium utilise six maillages par palier sélectionné et le niveau High douze. Le montage puise dans le budget existant des colonnes, avec au plus deux paliers proches sur mobile et quatre sur PC en High. Une soudure manquante restaure les lisses d'origine. Sous pression graphique, le client conserve les pièces de secours.
+
 ## P4 — Platelages rainurés de Storm Harbor
 
 Les 58 paliers portuaires peuvent recevoir le panneau rainuré issu du modèle de saut approuvé `98478693994864`. Seul le maillage du panneau est repris, avec une finition bois grisée pour les passages hauts et plus chaude pour les jetées. Le panneau d'origine reste sous les rainures et les chevrons et arrimages restent au-dessus.
