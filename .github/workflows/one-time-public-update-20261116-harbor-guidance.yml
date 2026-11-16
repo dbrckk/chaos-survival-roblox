@@ -1,7 +1,7 @@
 name: Public Chaos Survival Update 2026-11-16
 
-# Owner-requested public playtest update after validating the three-round guide and live landing invalidation.
-run-name: Public Chaos Survival guidance update for ${{ github.sha }}
+# Owner-requested public playtest update for the approved Storm Harbor grooved deck finish.
+run-name: Public Storm Harbor timber update for ${{ github.sha }}
 
 on:
   push:
