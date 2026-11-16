@@ -13,6 +13,7 @@ local MapBuilder = require("../../src/server/MapBuilder")
 local ArenaVariants = require("../../src/server/ArenaVariants")
 local Config = require("../../src/shared/Config")
 local VisualTheme = require("../../src/shared/VisualTheme")
+local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
 
 describe("Approved perimeter rim fallback and physics (engine)", function()
     it("moves the single Low carapace between real Crossroads decks and restores their trim", function()
@@ -180,7 +181,9 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         local Rim = require("../../src/client/ApprovedPlatformRimMeshKit")
         local RS = game:GetService("ReplicatedStorage")
         local previous = RS:FindFirstChild("ApprovedPlatformRimTemplates")
+        local previousMap = workspace:FindFirstChild("GeneratedMap")
         if previous then previous.Parent = nil end
+        if previousMap then previousMap.Parent = nil end
         Kit.reset()
         local templates = Instance.new("Folder")
         templates.Name = "ApprovedPlatformRimTemplates"
@@ -284,6 +287,10 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         local meshes = Instance.new("Folder")
         meshes.Name = "TestVerifiedRimMeshes"
         meshes.Parent = arena
+        local generated
+        local cleanup = {}
+        local active = false
+        local footprint
         local ok,why=pcall(function()
             local point = Vector3.new(5,19,3)
             local selected = Rim.selectVisibleDecks(
@@ -415,8 +422,87 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             end
             expect(longFrame.LocalTransparencyModifier).toBe(0)
             expect(elongated.CanCollide).toBe(true)
+
+            local Finish = require("../../src/client/PlatformFinishKit")
+            local total = 0
+            for _, variant in ipairs(ArenaVariants.Order) do
+                local live = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated = live.Parent
+                local deck, mark
+                for _, landing in ipairs(live.Platforms:GetChildren()) do
+                    if landing:GetAttribute("PerimeterStep")
+                        or landing:GetAttribute("BranchStep")
+                        or landing:GetAttribute("CrosslinkRoute") then
+                        local picks = Rim.selectVisibleDecks({landing},"Low",live.Base,
+                            landing.Position,0,true,live.Decor,{[landing]=true})
+                        assert(picks[landing]=="Rect",variant.." "..landing.Name)
+                        total += 1
+                        if landing:GetAttribute("BranchStep")==2 then
+                            deck = landing
+                            local route = landing:GetAttribute("BranchRoute")
+                            mark = live.Decor:FindFirstChild("BranchStepArrow"..route.."_2_1")
+                        end
+                    end
+                end
+                local owner = assert(deck)
+                local arrow = assert(mark)
+                local markerAlpha = arrow.LocalTransparencyModifier
+                local id = assert(owner.Name:match("^Platform(%d+)$"))
+                local edges = assert(Rim.routeNatives(live.Decor,owner))
+                edges[1].LocalTransparencyModifier = .16
+                local pieces = assert(Rim.install(meshes,owner,id,"Rect",live.Decor))
+                local fascia = pieces[1]
+                local width,height = fascia.Size.X,fascia.Size.Y
+                local original = owner.Size
+                assert(fascia:GetAttribute("OriginalAscensionPlatformRim"))
+                assert(width > original.X and width < original.X+.96)
+                assert(math.abs((owner.CFrame:PointToObjectSpace(fascia.Position).Y
+                    + height*.5) - (original.Y*.5-.09)) < .03)
+                footprint=Finish.bindRouteFootprint(owner,pieces,Kit.routeCradleRefitted)
+                Kit.bind(live,{[id]="rim"},nil,nil,meshes)
+                expect(Kit.breakdown().ascensionRim).toBe(4)
+                expect(Kit.breakdown().elevatedRim).toBe(0)
+                owner:SetAttribute("CollapsePhase","Warning")
+                task.wait()
+                expect(Kit.breakdown().ascensionRim).toBe(0)
+                assert(math.abs(edges[1].LocalTransparencyModifier-.16)<.001)
+                owner:SetAttribute("CollapsePhase","Safe")
+                task.wait()
+                active=true
+                ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                    Active=function() return active end,OnCleanup=cleanup})
+                local deadline=os.clock()+1.5
+                repeat task.wait() until live.Base.Size.X<=144.05 or os.clock()>deadline
+                active=false
+                task.wait()
+                assert(live.Base.Size.X<=144.05 and owner.CanCollide)
+                expect(Kit.breakdown().ascensionRim).toBe(4)
+                assert(math.abs(fascia.Size.X-width*.45)<.02 and math.abs(fascia.Size.Y-height)<.02)
+                local late = assert(Rim.install(meshes,owner,id,"Rect",live.Decor))
+                assert(math.abs(late[1].Size.X-fascia.Size.X)<.02)
+                for _, piece in ipairs(late) do piece:Destroy() end
+                fascia:FindFirstChild("ChaosPlatformTrimWeld"):Destroy()
+                task.wait()
+                expect(Kit.breakdown().ascensionRim).toBe(0)
+                assert(math.abs(edges[1].LocalTransparencyModifier-.16)<.001)
+                assert(arrow.LocalTransparencyModifier==markerAlpha and owner.CanCollide)
+                Kit.reset()
+                footprint()
+                footprint=nil
+                for _, stop in ipairs(cleanup) do stop() end
+                table.clear(cleanup)
+                meshes:ClearAllChildren()
+                generated:Destroy()
+                generated=nil
+            end
+            expect(total).toBe(260)
         end)
         Kit.reset()
+        active=false
+        if footprint then footprint() end
+        for _, stop in ipairs(cleanup) do stop() end
+        if generated then generated:Destroy() end
+        if previousMap then previousMap.Parent=workspace end
         arena:Destroy()
         templates:Destroy()
         if previous then previous.Parent = RS end

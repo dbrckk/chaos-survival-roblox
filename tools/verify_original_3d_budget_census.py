@@ -1790,6 +1790,13 @@ assert 'LocalElevatedRimBevelsReplaced = family.elevatedRim' in OWNER
 assert 'PlatformNativeTrimReplacementKit.setRouteRimLodVisible(native, visible)' in SIDE_LOD
 print("PASS elevated four-edge rims use authenticated shrinking footprints"
       " and share existing residency with an independent underdeck")
+assert 'LargeStructure.liveRouteFloorScale(deck)' in RIM
+assert 'local width = (original.X + .94)*shrink' in RIM
+assert 'local longLimit,shortLimit = long*.971,short*.971' in RIM
+assert 'longLimit,shortLimit = long+.96*shrink,short+.96*shrink' in RIM
+assert 'rim and rim == carapace and rimDistance <= hatchScore + 8' in OWNER
+assert 'LocalAscensionRimBevelsReplaced = family.ascensionRim' in OWNER
+print("PASS ascension fascia covers the original four-edge envelope in the existing rim slots")
 
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger

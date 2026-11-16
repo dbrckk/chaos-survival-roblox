@@ -1,3 +1,9 @@
+## P4 — Bordures forgées sur les voies d'ascension
+
+Les 32 marches de périmètre, 16 paliers de branche et 4 traverses de secours par arène acceptent une bordure à sept MeshParts. Le modèle Rect approuvé s'ajuste à ces plateformes carrées. Sa lèvre métallique passe juste à l'extérieur du montant, sous la surface de saut et dans l'enveloppe des anciens biseaux. Le modèle suit le rétrécissement et le décor natif revient pendant une alerte ou si le montage est incomplet.
+
+Le remplacement rend 1 040 biseaux éligibles sur les cinq arènes. Les bordures d'ascension partagent les créneaux existants avec les passerelles aériennes et utilisent `LocalAscensionRimBevelsReplaced` pour compter les biseaux effectivement masqués.
+
 ## P4 — Bordures sculptées des passerelles aériennes
 
 Les deux promenades et la Sky Spine de chaque arène peuvent afficher une bordure métallique à sept MeshParts sur leurs tabliers. Les modèles approuvés Rect et Long sont ajustés à la largeur du tablier, et le niveau de détail donne la priorité aux decks proches devant la caméra. Les plafonds Android restent à 1/1/2 bordures en Low/Medium/High dans les créneaux existants.

@@ -353,7 +353,9 @@ local function bindRouteRim(arena,deck,folder,pieces)
     watch(deck.AncestryChanged,evict)
     properties(deck,{"CFrame","Size","Anchored","CanCollide","Transparency","Name"})
     for _,attribute in ipairs({"RouteTier","ChaosPermanentRoute","SkySpineStep",
-        "SkySpineInterchange","PromenadeStep","PromenadeLane","CollapsePhase","BridgeShutterPhase"}) do
+        "SkySpineInterchange","PromenadeStep","PromenadeLane","CollapsePhase","BridgeShutterPhase",
+        "PerimeterRoute","PerimeterStep","BranchRoute","BranchStep","BranchParentStep",
+        "CrosslinkRoute","CrosslinkFromPerimeterStep","CrosslinkToBranchStep"}) do
         watch(deck:GetAttributeChangedSignal(attribute))
     end
     if edges then
@@ -874,7 +876,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         local platforms = arena:FindFirstChild("Platforms")
         if platforms then
             for _,piece in ipairs(meshFolder:GetChildren()) do
-                if piece:IsA("MeshPart") and piece:GetAttribute("OriginalElevatedPlatformRim") == true then
+                if piece:IsA("MeshPart") and Rim.isRouteRim(piece) then
                     local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
                     local deck = joint and joint:IsA("Weld") and joint.Part0 == piece and joint.Part1
                     local id = deck and deck.Name:match("^Platform(%d+)$")
@@ -930,7 +932,7 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
         -- Source identity is checked against the actual welded server
         -- owner, never the mesh name or arbitrary client-supplied count.
         local function sourceOwner(piece)
-            if not piece:IsA("MeshPart") or piece:GetAttribute("OriginalElevatedPlatformRim") == true
+            if not piece:IsA("MeshPart") or Rim.isRouteRim(piece)
                 or not (piece:GetAttribute("Original3DStructuralSide") == true
                     or piece:GetAttribute("OriginalLargeStructure3D") == true
                     or piece:GetAttribute("OriginalLargeDeckHull") == true)
@@ -1122,13 +1124,19 @@ end
 -- only on a native-mask change, not on RenderStepped or a new timer.
 function Kit.breakdown()
     local result = {
-        bevel = 0, elevatedRim = 0, underframe = 0, support = 0, pylon = 0,
+        bevel = 0, elevatedRim = 0, ascensionRim = 0, underframe = 0, support = 0, pylon = 0,
         promenadePylon = 0, other = 0, spineUnderdeck = 0, promenadeUnderdeck = 0,
     }
     for edge in pairs(rimClaims) do
         if edge.Parent == activeDecor then
             result.bevel += 1
-            result.elevatedRim += 1
+            local deck = physicalOwner(edge)
+            local entry = deck and routeRims[deck]
+            if entry and entry.pieces[1]:GetAttribute("OriginalAscensionPlatformRim") == true then
+                result.ascensionRim += 1
+            else
+                result.elevatedRim += 1
+            end
         end
     end
     for part in pairs(cradleClaims) do
