@@ -324,17 +324,20 @@ local function update()
         local decks = platforms:GetChildren()
         local canJump
         if routeClearance then
-            canJump = function(source, destination, floorPoint)
-                return eligibleTarget(destination, root.Position, required)
-                    and routeClearance(source, destination, floorPoint)
+            if from == base then
+                canJump = function(destination)
+                    return eligibleTarget(destination, root.Position, required)
+                        and routeClearance(base, destination, hit.Position)
+                end
+            else
+                canJump = function(source, destination)
+                    return eligibleTarget(destination, root.Position, required)
+                        and routeClearance(source, destination, nil, hit.Position)
+                end
             end
         end
         if from == base then
-            local canApproach
-            if canJump then
-                canApproach = function(deck) return canJump(base, deck, hit.Position) end
-            end
-            target = JumpRouteCueRules.nearestEntry(decks, hit.Position, 42, canApproach)
+            target = JumpRouteCueRules.nearestEntry(decks, hit.Position, 42, canJump)
         else
             target = JumpRouteCueRules.nextPhysical(from, decks, base.Position, variant, nil, canJump)
         end

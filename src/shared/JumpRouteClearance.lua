@@ -49,7 +49,9 @@ function Clearance.forArena(arena)
         return #workspace:GetPartBoundsInBox(CFrame.new(finish)*facing,BODY,overlap) == 0
     end
 
-    return function(from,target,floorPoint)
+    -- floorPoint checks the approach from the arena floor. deckPoint checks
+    -- the approach across a raised source deck to its usual takeoff edge.
+    return function(from,target,floorPoint,deckPoint)
         local shutter = target:GetAttribute("BridgeShutterPhase")
         if shutter and shutter ~= "Idle" then return false end
         local delta = target.Position-(floorPoint or from.Position)
@@ -79,6 +81,16 @@ function Clearance.forArena(arena)
             end
         else
             start = edge(from,direction,EDGE_INSET)
+            if deckPoint then
+                local approach = deckPoint+Vector3.yAxis*(BODY_BOTTOM+BODY.Y*.5)
+                local approachDelta = start-approach
+                local heading = Vector3.new(approachDelta.X,0,approachDelta.Z)
+                if heading.Magnitude > .05 then
+                    cast.ExcludeInstances = {from}
+                    overlap.ExcludeInstances = {from}
+                    if not arcClear(approach,start,heading.Unit,0) then return false end
+                end
+            end
         end
         cast.ExcludeInstances = exclusions
         overlap.ExcludeInstances = exclusions
