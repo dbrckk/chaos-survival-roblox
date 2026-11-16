@@ -1755,7 +1755,7 @@ braces=OWNER.index('for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(',s
 assert start < cradle < finish < braces
 assert 'local authenticLongCradle = false' in OWNER[start:finish]
 assert 'if cradle and #cradle == 7 then' in OWNER[start:finish]
-assert 'and not authenticRim and nearCradles[platform] == true' in OWNER[start:finish]
+assert 'and (not authenticRim or elevatedRim) and nearCradles[platform] == true' in OWNER[start:finish]
 assert 'authenticLongCradle = true' in OWNER[start:finish]
 assert 'local authenticUnderdeck = authenticCarapace' in OWNER[start:finish]
 assert 'and not authenticRim and not authenticLongCradle then' in OWNER
@@ -1782,6 +1782,14 @@ for clause in (
     assert clause in RIM,("verified desktop rim coverage/mobile fallback",clause)
 print("PASS 6/12 genuine desktop rim slots, touch 1/2 and pressure-safe"
       " 2/4 desktop fallback, seven-piece verified source/owner")
+assert 'LargeStructure.routeDeckSize(deck)' in RIM
+assert 'local longScale,shortScale = long*.97/srcLong,short*.97/srcShort' in RIM
+assert 'OriginalElevatedPlatformRim' in RIM
+assert 'local function bindRouteRim(' in (CLIENT/"PlatformNativeTrimReplacementKit.lua").read_text()
+assert 'LocalElevatedRimBevelsReplaced = family.elevatedRim' in OWNER
+assert 'PlatformNativeTrimReplacementKit.setRouteRimLodVisible(native, visible)' in SIDE_LOD
+print("PASS elevated four-edge rims use authenticated shrinking footprints"
+      " and share existing residency with an independent underdeck")
 
 assert 'LocalOriginalServiceHatch3DCount' in OWNER
 assert '"ArenaPlatformIdentityLocal"' in ledger
