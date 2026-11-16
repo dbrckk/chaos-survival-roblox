@@ -9,7 +9,7 @@ local PremiumPlatformSideMeshKit = script and script.Parent
     and require(script.Parent.PremiumPlatformSideMeshKit) or nil
 
 local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
-local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local lodRulesModule = script and shared and shared:FindFirstChild("PlatformIdentityLodRules")
 local PlatformIdentityLodRules = if lodRulesModule
     then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
 
