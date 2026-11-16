@@ -1881,6 +1881,13 @@ CLEARANCE=(ROOT/"src/shared/JumpRouteClearance.lua").read_text(encoding="utf8")
 assert 'cast.IncludeInstances = {arena}' in CLEARANCE
 assert 'cast.RespectCanCollide = true' in CLEARANCE
 assert 'workspace:Blockcast(frame,BODY,point-previous,cast)' in CLEARANCE
+ROOKIE=(CLIENT/"rookie-parkour-cue.client.lua").read_text(encoding="utf8")
+assert 'routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in ROOKIE
+assert 'canApproach = function(deck) return isClear(base,deck,hit.Position) end' in ROOKIE
+assert 'pieces, hit.Position, 42, canApproach' in ROOKIE
+assert 'skyRouteDirection(from), isClear' in ROOKIE
+assert 'arcClear(approach,start,direction,0)' in CLEARANCE
+assert 'and (not canApproach or canApproach(part)) then' in CUE_RULES
 assert 'paintOffset,.12+.84*scale' in CUE_RULES
 print("PASS takeoff chevrons follow current geometry without generic trim shrink or a render loop")
 

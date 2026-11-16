@@ -205,7 +205,7 @@ end
 -- takeoff deck. Only first-tier original/perimeter entries are eligible;
 -- never point toward a floating roof, a side-branch shortcut or a hidden
 -- platform. Position is the actual floor raycast hit, not the camera.
-function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
+function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange, canApproach)
     if type(orderedPlatforms) ~= "table"
         or typeof(floorPoint) ~= "Vector3" then
         return nil
@@ -223,7 +223,8 @@ function JumpRouteCueRules.nearestEntry(orderedPlatforms, floorPoint, maxRange)
             local delta = part.Position - floorPoint
             local distance = Vector3.new(delta.X, 0, delta.Z).Magnitude
             if rise >= 1.5 and rise <= 5.2
-                and distance <= range and distance < bestDistance then
+                and distance <= range and distance < bestDistance
+                and (not canApproach or canApproach(part)) then
                 closest, bestDistance = part, distance
             end
         end
@@ -237,7 +238,7 @@ end
 -- "CLIMB" banner. Extend the range ONLY for this verified emergency.
 -- An entry already under water or collapsing is never a refuge.
 function JumpRouteCueRules.nearestLavaClimbEntry(
-    orderedPlatforms, floorPoint, lava, maxRange
+    orderedPlatforms, floorPoint, lava, maxRange, canApproach
 )
     if type(orderedPlatforms) ~= "table"
         or typeof(floorPoint) ~= "Vector3" then return nil end
@@ -260,7 +261,8 @@ function JumpRouteCueRules.nearestLavaClimbEntry(
             -- The nearest floor-to-route step is still a native jump,
             -- not a teleport to an arbitrary high deck.
             if rise >= 1.5 and rise <= 5.2
-                and distance <= range and distance < closest then
+                and distance <= range and distance < closest
+                and (not canApproach or canApproach(part)) then
                 selected, closest = part, distance
             end
         end
@@ -529,7 +531,7 @@ end
 -- The same physical skyway is traversable in either direction. The
 -- optional travelDirection is the rookie coach's last REAL landed step,
 -- never client authority over platforms or jumps.
-function JumpRouteCueRules.nextSkyway(from, orderedPlatforms, travelDirection)
+function JumpRouteCueRules.nextSkyway(from, orderedPlatforms, travelDirection, isClear)
     if not walkable(from) or type(orderedPlatforms) ~= "table" then
         return nil
     end
@@ -574,7 +576,8 @@ function JumpRouteCueRules.nextSkyway(from, orderedPlatforms, travelDirection)
                     and candidate:GetAttribute("HarborSkywayLane")
                         == targetLane
                     and candidate:GetAttribute("HarborSkywayStep") == nextStep)
-            and JumpRouteCueRules.skywayLeap(from, candidate) then
+            and JumpRouteCueRules.skywayLeap(from, candidate)
+            and (not isClear or isClear(from,candidate)) then
             return candidate
         end
     end
@@ -700,14 +703,14 @@ end
 -- and side-lookout steps have explicit server-authored route/step IDs;
 -- using those IDs avoids directing a novice across unrelated adjacent
 -- towers. The last step is a genuine end point, never a phantom jump.
-function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId, skywayDirection)
+function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId, skywayDirection, isClear)
     if not walkable(from) or type(orderedPlatforms) ~= "table" then
         return nil
     end
 
     if from:GetAttribute("HarborSkywayLane") ~= nil then
         return JumpRouteCueRules.nextSkyway(
-            from, orderedPlatforms, skywayDirection
+            from, orderedPlatforms, skywayDirection, isClear
         )
     end
 
@@ -720,7 +723,8 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
             and from:GetAttribute("BranchStep") == 4) then
         local forward, junction = JumpRouteCueRules.skyNetworkOptions(
             from, orderedPlatforms, skywayDirection)
-        return forward or junction
+        if forward and (not isClear or isClear(from,forward)) then return forward end
+        return junction and (not isClear or isClear(from,junction)) and junction or nil
     end
 
     -- Storm Harbor's newer cardinal dry-dock routes are also authored
@@ -741,7 +745,8 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
             if destination ~= from and destination:IsA("BasePart")
                 and destination:GetAttribute("HarborSpokeRoute") == spokeRoute
                 and destination:GetAttribute("HarborSpokeStep") == spokeStep + 1
-                and JumpRouteCueRules.jumpable(from, destination) then
+                and JumpRouteCueRules.jumpable(from, destination)
+                and (not isClear or isClear(from,destination)) then
                 return destination
             end
         end
@@ -761,13 +766,14 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
             return nil
         end
         if harborStep == 7 then
-            return JumpRouteCueRules.nextSkyway(from, orderedPlatforms)
+            return JumpRouteCueRules.nextSkyway(from, orderedPlatforms,nil,isClear)
         end
         for _, destination in ipairs(orderedPlatforms) do
             if destination ~= from and destination:IsA("BasePart")
                 and destination:GetAttribute("HarborRoute") == harborRoute
                 and destination:GetAttribute("HarborStep") == harborStep + 1
-                and JumpRouteCueRules.jumpable(from, destination) then
+                and JumpRouteCueRules.jumpable(from, destination)
+                and (not isClear or isClear(from,destination)) then
                 return destination
             end
         end
@@ -790,7 +796,8 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
             if target ~= from and target:IsA("BasePart")
                 and target:GetAttribute("BranchRoute") == crossing
                 and target:GetAttribute("BranchStep") == 2
-                and JumpRouteCueRules.jumpable(from, target) then
+                and JumpRouteCueRules.jumpable(from, target)
+                and (not isClear or isClear(from,target)) then
                 return target
             end
         end
@@ -805,13 +812,15 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
             local forward, flank = JumpRouteCueRules.forkOptions(
                 from, orderedPlatforms
             )
-            return forward or flank
+            if forward and (not isClear or isClear(from,forward)) then return forward end
+            return flank and (not isClear or isClear(from,flank)) and flank or nil
         end
         if route ~= nil and step == 6 then
             local forward, detour = JumpRouteCueRules.crosslinkOptions(
                 from, orderedPlatforms
             )
-            return forward or detour
+            if forward and (not isClear or isClear(from,forward)) then return forward end
+            return detour and (not isClear or isClear(from,detour)) and detour or nil
         end
         local routeId = route or branch
         local index = route ~= nil and step or branchStep
@@ -831,7 +840,8 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
                 and candidate:GetAttribute(
                     route ~= nil and "PerimeterStep" or "BranchStep"
                 ) == index + 1
-                and JumpRouteCueRules.jumpable(from, candidate) then
+                and JumpRouteCueRules.jumpable(from, candidate)
+                and (not isClear or isClear(from,candidate)) then
                 return candidate
             end
         end
@@ -839,7 +849,7 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
     end
 
     local target = JumpRouteCueRules.select(
-        from, orderedPlatforms, arenaCenter, variantId
+        from, orderedPlatforms, arenaCenter, variantId,isClear
     )
     if target and JumpRouteCueRules.jumpable(from, target) then
         return target

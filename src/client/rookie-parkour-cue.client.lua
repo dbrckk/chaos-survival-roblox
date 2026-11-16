@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
+local JumpRouteClearance = require(ReplicatedStorage.Shared.JumpRouteClearance)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 local HAZARD_OWNER = "imminent-hazard"
 
@@ -139,10 +140,12 @@ local caption
 local currentTarget
 local currentMap
 local mapPlatforms
+local routeClearance
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
+rayParams.RespectCanCollide = true
 
 local function hide()
     if marker then marker.Enabled = false end
@@ -217,7 +220,7 @@ end
 -- when a genuine two-coin Harbor cargo cache is active. Resolve route
 -- and step only from server-owned deck/shard attributes; do not invent
 -- waypoints, scan for off-route roofs, or obscure disaster warnings.
-local function cargoWaypoint(from, pieces, base, root, arena, french)
+local function cargoWaypoint(from, pieces, base, root, arena, french, isClear, canApproach)
     if arena:GetAttribute("VariantId") ~= "Harbor" then
         return nil, nil
     end
@@ -241,7 +244,8 @@ local function cargoWaypoint(from, pieces, base, root, arena, french)
                             and deck:GetAttribute("HarborStep") == 1
                             and JumpRouteCueRules.safeLandingTarget(deck)
                             and deck.Position.Y + deck.Size.Y * 0.5
-                                - (base.Position.Y + base.Size.Y * 0.5) <= 5.2 then
+                                - (base.Position.Y + base.Size.Y * 0.5) <= 5.2
+                            and (not canApproach or canApproach(deck)) then
                             destination = deck
                             break
                         end
@@ -258,7 +262,7 @@ local function cargoWaypoint(from, pieces, base, root, arena, french)
                             atCache = true
                         else
                             local nextDeck = JumpRouteCueRules.nextPhysical(
-                                from, pieces, base.Position, "Harbor")
+                                from, pieces, base.Position, "Harbor", nil, isClear)
                             if nextDeck
                                 and nextDeck:GetAttribute("HarborRoute") == route
                                 and nextDeck:GetAttribute("HarborStep") == step + 1 then
@@ -404,8 +408,10 @@ local function update()
 
     -- The old platform folder can be destroyed when the map changes.
     -- Do not keep a stale target, array or listener from a previous round.
+    local variant = arena:GetAttribute("VariantId")
     if generated ~= currentMap or platforms ~= mapPlatforms then
         currentMap, mapPlatforms = generated, platforms
+        routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
         hide()
         resetRecovery()
         resetSkyway()
@@ -510,6 +516,11 @@ local function update()
     end
 
     local pieces = platforms:GetChildren()
+    local isClear = routeClearance
+    local canApproach
+    if isClear and from == base then
+        canApproach = function(deck) return isClear(base,deck,hit.Position) end
+    end
     if skywayArrival == from then
         -- This is a completed, genuine harbor-to-harbor crossing. The
         -- destination's own cargo route has no forced continuation and
@@ -528,8 +539,7 @@ local function update()
         -- over mastery, cargo and ordinary climb advice for EVERY player.
         -- If no physical exit exists, do not invent a safe arrow.
         target = JumpRouteCueRules.nextPhysical(
-            from, pieces, base.Position, arena:GetAttribute("VariantId"),
-            skyRouteDirection(from)
+            from, pieces, base.Position, variant, skyRouteDirection(from), isClear
         )
         if target then
             hint = french and "QUITTE LA PLATEFORME  ↑"
@@ -539,7 +549,6 @@ local function update()
         -- Never point to a painted floor arrow or a distant invented
         -- refuge. The target is one actual live server PlatformN or
         -- a genuine Orbital helix ramp with its physical entry.
-        local variant = arena:GetAttribute("VariantId")
         if variant == "Orbital" then
             target = orbitalRampNext(arena, from, root, base, platforms, true)
             if not target and from.Parent == platforms then
@@ -550,11 +559,11 @@ local function update()
         elseif from == base then
             target = JumpRouteCueRules.nearestLavaClimbEntry(
                 pieces, hit.Position, workspace:FindFirstChild("RoundLava"),
-                106)
+                106,canApproach)
         elseif from.Parent == platforms then
             target = JumpRouteCueRules.nextPhysical(
                 from, pieces, base.Position, variant,
-                skyRouteDirection(from))
+                skyRouteDirection(from),isClear)
         end
         if target then
             if from == base then
@@ -578,7 +587,7 @@ local function update()
         -- Mastery already owns its own physical objective marker. An
         -- optional hint only assists a genuinely stalled platform runner.
         target, hint = cargoWaypoint(
-            from, pieces, base, root, arena, french)
+            from, pieces, base, root, arena, french, isClear, canApproach)
         if not target and currentChallenge ~= "highGround"
             and not finalRush and from.Parent == platforms
             and JumpRouteCueRules.recoveryHintReady(
@@ -587,15 +596,14 @@ local function update()
                 true
             ) then
             target = JumpRouteCueRules.nextPhysical(
-                from, pieces, base.Position, arena:GetAttribute("VariantId"),
-                skyRouteDirection(from)
+                from, pieces, base.Position, variant, skyRouteDirection(from), isClear
             )
             if target then
                 hint = french and "REPRENDS LE PARCOURS  ↑"
                     or "RESUME THE ROUTE  ↑"
             end
         end
-    elseif arena:GetAttribute("VariantId") == "Orbital" then
+    elseif variant == "Orbital" then
         -- This world uses physical ramps instead of tiered jump gaps.
         -- Preserve the SAME one-sign Android guide, not a second HUD.
         target = orbitalRampNext(arena, from, root, base, platforms)
@@ -606,12 +614,11 @@ local function update()
         -- The largest missing first-session cue was *before* the first
         -- jump. Guide from the actual floor to a short, grounded entry.
         target = JumpRouteCueRules.nearestEntry(
-            pieces, hit.Position, 42
+            pieces, hit.Position, 42, canApproach
         )
     elseif from.Parent == platforms then
         target = JumpRouteCueRules.nextPhysical(
-            from, pieces, base.Position, arena:GetAttribute("VariantId"),
-            skyRouteDirection(from)
+            from, pieces, base.Position, variant, skyRouteDirection(from), isClear
         )
         if from:GetAttribute("PromenadeLane") ~= nil
             or from:GetAttribute("SkySpineStep") ~= nil
@@ -670,28 +677,22 @@ local function update()
     -- If a genuine timed hazard overlaps the proposed jump, never put
     -- an optional route sign on top of the game's primary escape cue.
     -- At authored perimeter forks prefer a real alternate path instead.
-    if target and not safeGuidedTargetPath(
-        root.Position, target, dangerWarnings
-    ) then
+    if target and not safeGuidedTargetPath(root.Position,target,dangerWarnings) then
         local alternative = nil
         if (rookie or lavaClimbActive) and from == base then
             -- Don't simply hide the very first actionable cue when a
             -- meteor covers the nearest entry; look for another REAL
             -- first-tier takeoff in range, only during a live warning.
-            local remaining = {}
-            for _, deck in ipairs(pieces) do
-                if deck:IsA("BasePart") and safeGuidedTargetPath(
-                    root.Position, deck, dangerWarnings
-                ) then
-                    remaining[#remaining + 1] = deck
-                end
+            local function safeEntry(deck)
+                return safeGuidedTargetPath(root.Position,deck,dangerWarnings)
+                    and (not canApproach or canApproach(deck))
             end
-            alternative = lavaClimbActive
-                and JumpRouteCueRules.nearestLavaClimbEntry(
-                    remaining, hit.Position,
-                    workspace:FindFirstChild("RoundLava"), 106)
-                or JumpRouteCueRules.nearestEntry(
-                    remaining, hit.Position, 42)
+            if lavaClimbActive then
+                alternative = JumpRouteCueRules.nearestLavaClimbEntry(
+                    pieces,hit.Position,workspace:FindFirstChild("RoundLava"),106,safeEntry)
+            else
+                alternative = JumpRouteCueRules.nearestEntry(pieces,hit.Position,42,safeEntry)
+            end
         elseif from.Parent == platforms then
             if from:GetAttribute("PerimeterStep") == 5 then
                 local forward, flank = JumpRouteCueRules.forkOptions(from, pieces)
@@ -707,9 +708,8 @@ local function update()
                 alternative = target == forward and crossing or forward
             end
         end
-        if alternative and safeGuidedTargetPath(
-            root.Position, alternative, dangerWarnings
-        ) then
+        if alternative and safeGuidedTargetPath(root.Position,alternative,dangerWarnings)
+            and (not isClear or from == base or isClear(from,alternative)) then
             target = alternative
             hint = french and "DÉTOUR SÛR  ↑" or "SAFE DETOUR  ↑"
         else
