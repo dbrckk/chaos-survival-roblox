@@ -1,4 +1,4 @@
--- Share the replicated warning list between the personal guide and deck markings.
+-- Share replicated warnings between the personal guide, mastery hints and deck markings.
 local JumpRouteCueRules = if script then require(script.Parent.JumpRouteCueRules)
     else require("./JumpRouteCueRules")
 
@@ -50,13 +50,21 @@ function JumpRouteHazards.read(arena)
     return result, workspace:FindFirstChild("RoundLava")
 end
 
+local function standingRoot(deck)
+    return deck.Position + Vector3.yAxis * (deck.Size.Y * 0.5 + 2.5)
+end
+
+function JumpRouteHazards.landingPathIsSafe(fromPosition, target, warnings, lava)
+    local targetRoot = standingRoot(target)
+    return not JumpRouteCueRules.lavaAtRoot(targetRoot, lava)
+        and JumpRouteCueRules.safeGuidedPath(fromPosition, targetRoot, warnings)
+end
+
 function JumpRouteHazards.deckPathIsSafe(from, target, warnings, lava)
     if not lava and #warnings == 0 then return true end
-    local fromRoot = from.Position + Vector3.new(0, from.Size.Y * .5 + 2.5, 0)
-    local targetRoot = target.Position + Vector3.new(0, target.Size.Y * .5 + 2.5, 0)
+    local fromRoot = standingRoot(from)
     return not JumpRouteCueRules.lavaAtRoot(fromRoot, lava)
-        and not JumpRouteCueRules.lavaAtRoot(targetRoot, lava)
-        and JumpRouteCueRules.safeGuidedPath(fromRoot, targetRoot, warnings)
+        and JumpRouteHazards.landingPathIsSafe(fromRoot, target, warnings, lava)
 end
 
 return JumpRouteHazards

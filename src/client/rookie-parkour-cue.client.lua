@@ -59,19 +59,14 @@ end
 -- candidate checked during this update.
 local function safeGuidedTargetPath(fromPosition, target, warnings, lava)
     if not target or not target:IsA("BasePart") then return false end
-    -- Compare the same HumanoidRootPart clearance used by the authoritative
-    -- disaster and the airborne landing preview. Using the deck's CENTER
-    -- instead of the player's standing height incorrectly hides safe upper
-    -- exits while a bomb detonates well below them.
-    -- Cargo pickups are not standable platforms; keep their actual goal
-    -- position for the route test rather than inventing a floor under them.
+    if target.Parent and target.Parent.Name == "Platforms" then
+        return JumpRouteHazards.landingPathIsSafe(fromPosition, target, warnings, lava)
+    end
+    -- Cargo still uses the real pickup position. A helix ramp uses its entry.
     local rampStart = target.Parent and target.Parent.Name == "HelixCircuit"
         and target:GetAttribute("HelixStart") or nil
     local toPosition = typeof(rampStart) == "Vector3"
         and rampStart + Vector3.new(0, 2.5, 0) or target.Position
-    if target.Parent and target.Parent.Name == "Platforms" then
-        toPosition += Vector3.new(0, target.Size.Y * 0.5 + 2.5, 0)
-    end
     if not JumpRouteCueRules.safeGuidedPath(
         fromPosition, toPosition, warnings
     ) then
