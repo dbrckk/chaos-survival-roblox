@@ -395,7 +395,7 @@ function PlatformFinishKit.captureSkybridgeFootprint(platform, pieces)
         if piece and piece:IsA("BasePart") and piece.Parent then
             snapshot.entries[#snapshot.entries + 1] = {
                 part = piece,
-                size = piece:GetAttribute("HarborGirderUnclampedSize") or piece.Size,
+                size = piece.Size,
                 localCFrame = platform.CFrame:ToObjectSpace(piece.CFrame),
             }
         end
@@ -824,20 +824,23 @@ function PlatformFinishKit.captureRouteFootprint(platform, pieces)
             -- PlatformSupport, whose server CFrame and Size already follow
             -- the arena shrink. A second deck-relative shrink would apply
             -- contraction twice and could leave a floating fake pillar.
+            local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+                or piece:FindFirstChild("PlatformIdentityWeld")
+            local welded = joint and joint:IsA("Weld") and joint.Part1 == platform
+            local girderSize = piece:GetAttribute("HarborGirderUnclampedSize")
             local entry = {
                 part = piece,
-                size = piece.Size,
-                localCFrame = platform.CFrame:ToObjectSpace(piece.CFrame),
+                size = girderSize or piece.Size,
+                minimum = girderSize and .05 or .001,
+                localCFrame = if welded then joint.C1
+                    else platform.CFrame:ToObjectSpace(piece.CFrame),
             }
             local corner = piece:GetAttribute("HarborLoadBraceCorner")
-            if BRACE_CORNERS[corner] then
+            if BRACE_CORNERS[corner] and welded then
                 local frame,length = loadBraceFrame(snapshot.originalSize,corner,true)
-                local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
-                if joint and joint:IsA("Weld") then
-                    entry.braceCorner = corner
-                    entry.braceLength = length
-                    entry.braceOffset = frame:ToObjectSpace(joint.C1)
-                end
+                entry.braceCorner = corner
+                entry.braceLength = length
+                entry.braceOffset = frame:ToObjectSpace(joint.C1)
             end
             snapshot.entries[#snapshot.entries + 1] = entry
         end
@@ -884,9 +887,9 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                     math.max(.05, data.size.Z*scaleZ))
             else
                 part.Size = Vector3.new(
-                    math.max(0.05, data.size.X*(rimSwapped and ratioZ or ratioX)),
+                    math.max(data.minimum, data.size.X*(rimSwapped and ratioZ or ratioX)),
                     data.size.Y,
-                    math.max(0.05, data.size.Z*(rimSwapped and ratioX or ratioZ)))
+                    math.max(data.minimum, data.size.Z*(rimSwapped and ratioX or ratioZ)))
             end
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
                 or part:FindFirstChild("PlatformIdentityWeld")
@@ -1224,12 +1227,12 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
         -- Android client sees one cheap inset on alternate platforms only.
         local timber = theme.Surface:Lerp(Color3.fromRGB(113, 91, 73), 0.28)
         local hardware = theme.Structure:Lerp(theme.Detail, 0.34)
-        piece(1, CFrame.new(-sx * 0.16, top, -sz * 0.18),
-            Vector3.new(math.max(2.2, sx * 0.52), 0.028, 0.34),
-            timber, Enum.Material.WoodPlanks, 0.16)
         local nominal = harborLashingWidth(platform,variant)
+        local scale = nominal and sx/nominal or 1
+        piece(1, CFrame.new(-sx * 0.16, top, -sz * 0.18),
+            Vector3.new(math.max(2.2, (nominal or sx) * 0.52) * scale, 0.028, 0.34 * scale),
+            timber, Enum.Material.WoodPlanks, 0.16)
         if nominal then
-            local scale = sx/nominal
             piece(2, CFrame.new(0, top, harborLashingOffset(platform)),
                 Vector3.new(math.min(nominal*.55,6.2)*scale,.028,.24*scale),
                 hardware, Enum.Material.CorrodedMetal, 0.18)

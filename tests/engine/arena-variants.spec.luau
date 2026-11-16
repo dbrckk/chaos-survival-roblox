@@ -586,6 +586,9 @@ describe("Arena variants", function()
                 gate.CanCollide=false
                 expect(clear(from,primary,nil,feet)).toBe(true)
 
+                -- Isolate the floor approach fixture from the upper
+                -- decks whose overhangs legitimately block that entry.
+                primary.Parent,backup.Parent=live,live
                 local base=Instance.new("Part")
                 base.Size=Vector3.new(120,2,120)
                 base.Position=Vector3.zero
@@ -597,7 +600,8 @@ describe("Arena variants", function()
                 local floorPoint=Vector3.new(from.Position.X-21,1,from.Position.Z)
                 local function canApproach(deck) return clear(base,deck,floorPoint) end
                 local entries={from,secondEntry}
-                expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)).toBe(from)
+                assert(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)==from,
+                    "clear floor route must choose the closer entry")
                 gate.Position=floorPoint+Vector3.new(8,3,0)
                 gate.CanCollide=true
                 expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)).toBe(secondEntry)
@@ -605,7 +609,8 @@ describe("Arena variants", function()
                 expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)==nil).toBe(true)
                 secondEntry:SetAttribute("CollapsePhase",nil)
                 gate.Position+=Vector3.new(0,20,0)
-                expect(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)).toBe(from)
+                assert(JumpRouteCueRules.nearestEntry(entries,floorPoint,42,canApproach)==from,
+                    "moving the collider away must restore the closer entry")
                 expect(clear(base,from,Vector3.new(from.Position.X,1,from.Position.Z-1))).toBe(false)
                 gate:Destroy()
                 corridor:Destroy()
