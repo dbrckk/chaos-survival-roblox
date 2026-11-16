@@ -1727,7 +1727,7 @@ print("PASS Low even-index original undercradle/support adoption, native",
 assert 'local girderCost = tier.Name == "High" and 2 or 1' in OWNER
 assert 'math.floor(supportBudget/girderCost)' in OWNER
 assert 'if supportBudget < girderCost+1 then break end' in OWNER
-assert OWNER.count('supportBudget -= girderCost') == 2
+assert OWNER.count('supportBudget -= girderCost') == 3
 assert 'and not deck:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in OWNER
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,harborRails,railFallback,scheduleRebuild)' in OWNER
 assert 'OriginalHarborRecessedRail3D' in SIDE_LOD
@@ -1776,6 +1776,15 @@ assert 'HarborOutpostKit.bindWeldedReplacement(platform,keelMeshes,keelFallback,
 assert 'fallback[mount] = mount.Transparency' in FINISH
 assert 'descendant:GetAttribute("OriginalHarborLandingKeel3D") == true' in SIDE_LOD
 print("PASS one approved central Harbor keel replaces both local blocks with caisson priority")
+FLOOR_HARDWARE=(CLIENT/"PremiumFloorHardwareMeshKit.lua").read_text(encoding="utf8")
+assert 'local source = genuineTemplate("CornerGuard")' in FLOOR_HARDWARE
+assert 'if #children ~= 7 then return nil end' in FLOOR_HARDWARE
+assert 'if cornerTargets[platform] and harborRails and not authenticLongCradle then' in OWNER
+assert 'HarborOutpostKit.bindWeldedReplacement(platform,cornerMeshes,fallback,scheduleRebuild)' in OWNER
+assert 'descendant:GetAttribute("OriginalHarborCornerArmor3D") == true' in SIDE_LOD
+assert 'or name:match("^HarborCornerArmor%d+$")' in SIDE_LOD
+assert 'publishHarborTrim(parent,nil,meshes,fallback)' in FINISH
+print("PASS Harbor corner armor uses three approved meshes per plate and yields to the caisson")
 assert 'if genuineUnderdeck == true and (variant == "Towers"' in FINISH
 assert 'or (i == 3 and (variant == "Classic"' in FINISH
 assert 'or variant == "Harbor"))) then' in FINISH

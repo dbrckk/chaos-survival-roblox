@@ -77,6 +77,35 @@ local function genuineTemplate(kind)
     return source
 end
 
+local CORNER_GROUPS = {
+    Vector2.new(5.08,5.08), -- cast wedge
+    Vector2.new(4.12,3.904), -- seals and captive anchors
+    Vector2.new(3.884,3.76), -- bearing rails
+}
+
+function Kit.harborCornerSource()
+    local source = genuineTemplate("CornerGuard")
+    if not source then return nil end
+    local children = source:GetChildren()
+    if #children ~= 7 then return nil end
+    local parts = {}
+    for _,part in ipairs(children) do
+        if not part:IsA("MeshPart") or not part.Anchored or part.CanCollide
+            or part.CanTouch or part.CanQuery or part.Transparency >= 1 then return nil end
+        local size = part.Size
+        local footprint = Vector2.new(math.max(size.X,size.Z),math.min(size.X,size.Z))
+        for index,expected in ipairs(CORNER_GROUPS) do
+            if (footprint-expected).Magnitude < .10 then
+                if parts[index] or not part.Archivable then return nil end
+                parts[index] = part
+            end
+        end
+    end
+    if not parts[1] or not parts[2] or not parts[3] then return nil end
+    local frame,bounds = source:GetBoundingBox()
+    return {frame=frame,bounds=bounds,parts=parts}
+end
+
 local function nativePart(folder, name)
     local part = folder:FindFirstChild(name)
     if part and part.Parent == folder and part:IsA("BasePart")
