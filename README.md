@@ -2,9 +2,9 @@
 
 L'indicateur du défi vérifie le passage à pied depuis la position du joueur jusqu'au bord de départ, au sol comme sur un palier. Il vérifie ensuite l'espace libre pour le saut. Il propose un autre passage praticable si l'accès est bloqué et s'efface quand aucun trajet ne convient. Une alerte d'effondrement, une fermeture de passerelle ou le déchargement du palier affiché déclenche la recherche d'un autre passage sans attendre le prochain message de manche. Le guide des urgences et du fret garde la priorité. Sur écran tactile, le défi reste affiché dans le HUD de manche.
 
-## P4 — Premier saut guidé à Storm Harbor
+## P4 — Guide des sauts à Storm Harbor
 
-Le guide vérifie le passage à pied depuis les pieds du joueur jusqu'au point de départ du saut, puis l'espace nécessaire pour atteindre le premier palier. Si ce passage est obstrué, il cherche un autre accès. Une fois sur le parcours, les indications vérifient aussi les sauts entre paliers et les détours, tout en conservant l'ordre des marches et des passerelles.
+Le guide vérifie le passage à pied depuis les pieds du joueur jusqu'au point de départ du saut, puis l'espace nécessaire pour atteindre le premier palier. Si ce passage est obstrué, il cherche un autre accès. Une fois sur un palier, le guide vérifie aussi l'accès au bord depuis la position du joueur. Les indications pour le fret, les détours et les sorties d'urgence utilisent le même contrôle. Aux embranchements, le guide annonce deux routes quand les deux accès sont dégagés.
 
 ## P4 — Vérification des obstacles sur les sauts de Storm Harbor
 
