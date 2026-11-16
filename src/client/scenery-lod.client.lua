@@ -616,6 +616,18 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
             continue
         end
 
+        if native and descendant:IsA("BasePart")
+            and native:GetAttribute("LocalOriginalHarborDockCaissonMounted") == true then
+            local name = descendant.Name
+            if descendant:GetAttribute("OriginalDeckCarapace") == true
+                or descendant:GetAttribute("NearCameraCarapace3D") == true
+                or descendant:GetAttribute("ChaosLoadBrace") == true
+                or name == "HarborUndersideKeel" or name:match("^HarborKeelMount%d+$")
+                or name:match("^PlatformRecessedSideRail%d+$") then
+                visible = false
+            end
+        end
+
         if native and descendant:IsA("MeshPart")
             and (descendant:GetAttribute("NearCameraCarapace3D") == true
                 or descendant:GetAttribute("OriginalLargeDeckHull") == true
@@ -797,10 +809,6 @@ task.spawn(function()
         -- and their trim; preserve the original quality cutoffs and all
         -- server disaster/collision authority. One existing LOD tick.
         local identity = workspace:FindFirstChild("ArenaPlatformIdentityLocal")
-        if identity and identity:IsA("Folder") then
-            applyPlatformIdentityNearPlayer(
-                identity, profile, arenaOrigin, cameraPoint)
-        end
 
         -- Each playable-sector original 3D monument is its own client
         -- Model at a different location. Keep the exact old Low/Medium
@@ -999,7 +1007,13 @@ task.spawn(function()
         HarborDockCaissonMeshKit.sync(arena,cameraPoint,profile.Name,
             cameraReady,cameraLook,
             player:GetAttribute("OptionalVfxPressure"))
-        local dockModels, dockPieces = HarborDockCaissonMeshKit.count()
+        if identity and identity:IsA("Folder") then
+            applyPlatformIdentityNearPlayer(identity, profile, arenaOrigin, cameraPoint)
+        end
+        local dockModels, dockPieces, dockNatives = HarborDockCaissonMeshKit.count()
+        if player:GetAttribute("LocalHarborDockNativePartsReplaced") ~= dockNatives then
+            player:SetAttribute("LocalHarborDockNativePartsReplaced", dockNatives)
+        end
         if player:GetAttribute("LocalOriginalHarborDockCaissonCount")
             ~= dockModels then
             player:SetAttribute("LocalOriginalHarborDockCaissonCount",

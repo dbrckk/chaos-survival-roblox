@@ -1,12 +1,19 @@
 -- Real seven-material creator-approved cargo caisson skins for the
 -- EXISTING Harbor switchbacks and cardinal dock spurs. Only their 3D
--- sidewalls and undersides are enriched. The native platform's TOP,
+-- sidewalls and undersides are replaced. The native platform's TOP,
 -- full authoritative collision, and danger overlays are NEVER hidden.
 -- Reuse scenery-lod's one existing camera/quality tick, not new polling.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Rim = if script and script.Parent and script.Parent:FindFirstChild("ApprovedPlatformRimMeshKit")
+    then require(script.Parent.ApprovedPlatformRimMeshKit)
+    else require("./ApprovedPlatformRimMeshKit")
+local Trim = if script and script.Parent and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
+    then require(script.Parent.PlatformNativeTrimReplacementKit)
+    else require("./PlatformNativeTrimReplacementKit")
 
 local Kit = {}
 local ASSET_ID = 101457508594609
+local SWITCHBACK_WIDTHS = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6}
 local BUDGET = {
     -- One original below-deck armored caisson directly under the camera.
     -- Never add a false walkable surface or an extra collision platform.
@@ -43,6 +50,8 @@ local function original()
     for _, item in ipairs(source:GetDescendants()) do
         if item:IsA("BasePart") then
             if not item:IsA("MeshPart") then return nil end
+            if item.CanCollide or item.CanTouch or item.CanQuery
+                or item.Transparency >= 1 then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then
             return nil
@@ -57,20 +66,23 @@ local function original()
 end
 
 local function route(deck)
+    local function index(value, maximum)
+        return type(value) == "number" and value % 1 == 0 and value >= 1 and value <= maximum
+    end
+    if index(deck:GetAttribute("HarborSkywayLane"), 2)
+        and index(deck:GetAttribute("HarborSkywayStep"), 7) then
+        local step = deck:GetAttribute("HarborSkywayStep")
+        return (step == 1 or step == 7) and 10.5 or 9.8
+    end
     local harbor = deck:GetAttribute("HarborRoute")
     local harborStep = deck:GetAttribute("HarborStep")
-    if type(harbor) == "number" and harbor >= 1 and harbor <= 4
-        and harbor % 1 == 0
-        and type(harborStep) == "number" and harborStep >= 1
-        and harborStep <= 7 and harborStep % 1 == 0 then
-        return true
+    if index(harbor, 4) and index(harborStep, 7) then
+        return SWITCHBACK_WIDTHS[harborStep]
     end
     local spoke = deck:GetAttribute("HarborSpokeRoute")
     local spokeStep = deck:GetAttribute("HarborSpokeStep")
-    return type(spoke) == "number" and spoke >= 1 and spoke <= 4
-        and spoke % 1 == 0
-        and type(spokeStep) == "number" and spokeStep >= 1
-        and spokeStep <= 4 and spokeStep % 1 == 0
+    if index(spoke, 4) and index(spokeStep, 4) then return 12-(spokeStep-1)*.5 end
+    return nil
 end
 
 -- ShrinkingArena scales and MOVES genuine Harbor RouteTier decks every
@@ -105,15 +117,6 @@ local function genuineLanding(deck, arena, base)
         or deck.Transparency >= .75
         or deck:GetAttribute("ChaosSkybridge") == true
         or type(deck:GetAttribute("RouteTier")) ~= "number"
-        or not route(deck)
-        -- The server's genuine Harbor switchback/spoke footprint starts
-        -- between 9.5 and 12.2 studs and scales uniformly with the floor.
-        -- An unrelated/lagging deck never qualifies as a forged landing.
-        or deck.Size.X / floorScale < 9.35
-        or deck.Size.X / floorScale > 12.35
-        or deck.Size.Z / floorScale < 9.35
-        or deck.Size.Z / floorScale > 12.35
-        or math.abs(deck.Size.X - deck.Size.Z) > .18
         or math.abs(deck.Size.Y - 2) > .10 then
         return false
     end
@@ -123,7 +126,20 @@ local function genuineLanding(deck, arena, base)
     end
     local shutter = deck:GetAttribute("BridgeShutterPhase")
     if shutter ~= nil and shutter ~= "Idle" then return false end
-    return true
+    local width = route(deck)
+    if not width or math.abs(deck.Size.X-width*floorScale) > .08
+        or math.abs(deck.Size.Z-width*floorScale) > .08 then return false end
+    return width, floorScale
+end
+
+local function nativeParts(deck, arena, base)
+    local width, scale = genuineLanding(deck, arena, base)
+    if not width then return nil end
+    local edges, frame = Rim.nativeParts(arena:FindFirstChild("Decor"), deck,
+        Vector3.new(width, deck.Size.Y, width), scale)
+    if not edges then return nil end
+    table.insert(edges, frame)
+    return edges
 end
 
 local function valid(entry)
@@ -138,7 +154,7 @@ local function valid(entry)
         -- cosmetic is not an authentic underdeck shell. Hide it rather
         -- than claiming that the caisson has survived the shrink event.
         if not part:IsA("MeshPart") or part.Parent ~= entry.model
-            or part.Anchored or not part.Massless
+            or part.Anchored or not part.Massless or part.Transparency >= 1
             or part.CanCollide or part.CanTouch or part.CanQuery then
             return false
         end
@@ -160,7 +176,7 @@ local function refit(entry)
     if not valid(entry) then return false end
     local width = math.min(entry.deck.Size.X, entry.deck.Size.Z)
     local factor = width / entry.initialWidth
-    if factor < .44 or factor > 1.03 then return false end
+    if factor < .44 or factor > 2.24 then return false end
     for _, piece in ipairs(entry.pieces) do
         local weld, frame, size =
             entry.joints[piece], entry.localFrames[piece], entry.sizes[piece]
@@ -173,20 +189,26 @@ local function refit(entry)
         return true
     end
     local shift = CFrame.new(0,
-        entry.deck.Size.Y * .5 - .14 - entry.boxHeight * factor * .5, 0)
+        entry.deck.Size.Y * .5 - .14 - entry.boxHeight * .5, 0)
+    local horizontal = Vector3.new(factor, 1, factor)
     for _, piece in ipairs(entry.pieces) do
         local frame = entry.localFrames[piece]
-        piece.Size = entry.sizes[piece] * factor
+        piece.Size = entry.sizes[piece] * horizontal
         entry.joints[piece].C0 = shift *
-            CFrame.new(frame.Position * factor) *
+            CFrame.new(frame.Position * horizontal) *
             (frame - frame.Position)
     end
     entry.lastWidth = width
     return true
 end
 
-local function visibility(entry)
-    local show = refit(entry)
+local function setVisible(entry, show)
+    if entry.showing == show then return end
+    for _, native in ipairs(entry.natives) do
+        Trim.setHarborDockMask(native, show)
+    end
+    entry.showing = show
+    entry.deck:SetAttribute("LocalOriginalHarborDockCaissonMounted", show or nil)
     for _, part in ipairs(entry.pieces) do
         if part.Parent then
             part.LocalTransparencyModifier = show and 0 or 1
@@ -194,18 +216,27 @@ local function visibility(entry)
     end
 end
 
+local function visibility(entry)
+    local natives = not entry.evicted and nativeParts(entry.deck, entry.arena, entry.base)
+    if natives then
+        for i,part in ipairs(natives) do
+            if part ~= entry.natives[i] then natives = nil; break end
+        end
+    end
+    setVisible(entry, natives ~= nil and natives ~= false and refit(entry))
+end
+
 local function dispose(entry)
     if entry.disposing then return end
     entry.disposing = true
+    setVisible(entry, false)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
     entry.model:Destroy()
 end
 
--- No native art is hidden by this kit, but an externally removed model
--- must release its per-deck listeners immediately: do not retain ghost
--- residents or stale references until the next camera LOD sample.
+-- An externally removed model releases its masks and listeners together.
 folder.ChildRemoved:Connect(function(child)
     if not child:IsA("Model") then return end
     for deck, entry in pairs(mounted) do
@@ -233,13 +264,15 @@ local function clear()
 end
 
 local function mount(deck, arena, base, source, expected)
+    local natives = nativeParts(deck, arena, base)
+    if not natives then return nil end
     local clone = source:Clone()
+    if not clone then return nil end
+    local nominal, shrink = genuineLanding(deck, arena, base)
+    if not nominal then clone:Destroy(); return nil end
     local width = math.min(deck.Size.X, deck.Size.Z)
-    -- Every approved original MODEL is a 12-stud base profile. Scale all
-    -- three axes together: this preserves bevel tangents, UVs and truss
-    -- proportions, while the actual walkable top remains authoritative.
-    local scale = width / 12.0
-    if scale < .34 or scale > 1.02 then
+    local scale = nominal / 12
+    if scale < .79 or scale > 1.02 then
         clone:Destroy()
         return nil
     end
@@ -248,8 +281,7 @@ local function mount(deck, arena, base, source, expected)
         return nil
     end
     local origin, box = clone:GetBoundingBox()
-    if box.X < width * 1.08 or box.Z < width * 1.08
-        or box.Y < 2.2 or box.Y > 3.60 then
+    if box.Y < 2.2 or box.Y > 3.60 then
         clone:Destroy()
         return nil
     end
@@ -258,6 +290,10 @@ local function mount(deck, arena, base, source, expected)
     -- or block a real R15 jump, even if the Roblox importer changes pivot.
     local target = deck.CFrame * CFrame.new(
         0, deck.Size.Y * .5 - .14 - box.Y * .5, 0)
+    -- Fit the 3D corners inside the old bevel clearance. Preserve the
+    -- original vertical relief so a late join matches a resident caisson.
+    local lip = (nominal + .94)*shrink
+    local stretch = Vector3.new(lip/box.X, 1, lip/box.Z)
     local pieces = {}
     for _, part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -265,7 +301,13 @@ local function mount(deck, arena, base, source, expected)
                 clone:Destroy()
                 return nil
             end
-            part.CFrame = target * origin:ToObjectSpace(part.CFrame)
+            local pose = origin:ToObjectSpace(part.CFrame)
+            if math.abs(pose.RightVector.X) < .9999 or math.abs(pose.UpVector.Y) < .9999 then
+                clone:Destroy(); return nil
+            end
+            part.Size *= stretch
+            part.CFrame = target * CFrame.new(pose.Position*stretch) * pose.Rotation
+            part.LocalTransparencyModifier = 1
             part.Anchored = false
             part.Massless = true
             part.CanCollide = false
@@ -281,9 +323,9 @@ local function mount(deck, arena, base, source, expected)
     local entry = {
         model = clone, source = source, arena = arena, base = base,
         deck = deck, initialWidth = width, boxHeight = box.Y,
-        pieces = pieces, expected = expected, connections = {},
+        pieces = pieces, expected = expected, connections = {}, natives = natives,
         localFrames = {}, sizes = {}, joints = {}, lastWidth = nil,
-        disposing = false,
+        disposing = false, showing = false,
     }
     clone.Name = "ApprovedOriginalHarborDockCaisson3D"
     clone:SetAttribute("CosmeticOnly", true)
@@ -311,7 +353,14 @@ local function mount(deck, arena, base, source, expected)
         -- the original 12-stud shell survives until the next LOD tick.
         visibility(entry)
     end
-    for _, property in ipairs({"Size", "CanCollide", "Transparency",
+    local function evict()
+        entry.evicted = true
+        setVisible(entry, false)
+    end
+    local function watch(signal, handler)
+        table.insert(entry.connections, signal:Connect(handler or changed))
+    end
+    for _, property in ipairs({"Size", "CFrame", "CanCollide", "Transparency",
         "Anchored"}) do
         entry.connections[#entry.connections + 1] =
             deck:GetPropertyChangedSignal(property):Connect(changed)
@@ -319,18 +368,48 @@ local function mount(deck, arena, base, source, expected)
     for _, attr in ipairs({
         "CollapsePhase", "BridgeShutterPhase", "HarborRoute",
         "HarborStep", "HarborSpokeRoute", "HarborSpokeStep", "RouteTier",
+        "HarborSkywayLane", "HarborSkywayStep",
     }) do
         entry.connections[#entry.connections + 1] =
             deck:GetAttributeChangedSignal(attr):Connect(changed)
     end
     entry.connections[#entry.connections + 1] =
         deck.AncestryChanged:Connect(changed)
-    entry.connections[#entry.connections + 1] =
-        clone.DescendantRemoving:Connect(function(part)
-            if not entry.disposing and part:IsA("MeshPart") then
-                task.defer(visibility, entry)
+    watch(clone.DescendantRemoving, function(part)
+        if part:IsA("MeshPart") or part:IsA("Weld") then evict() end
+    end)
+    for _, native in ipairs(natives) do
+        watch(native.AncestryChanged, evict)
+        for _, property in ipairs({"Size","CFrame","Name","Anchored","CanCollide","CanTouch","CanQuery"}) do
+            watch(native:GetPropertyChangedSignal(property))
+        end
+        watch(native:GetAttributeChangedSignal("OriginalStructuralBevel"))
+        watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
+    end
+    for _,piece in ipairs(pieces) do
+        local joint = entry.joints[piece]
+        watch(joint:GetPropertyChangedSignal("Part0"))
+        watch(joint:GetPropertyChangedSignal("Part1"))
+        for _,property in ipairs({"Anchored","Massless","CanCollide","CanTouch","CanQuery","Transparency"}) do
+            watch(piece:GetPropertyChangedSignal(property))
+        end
+    end
+    watch(source.AncestryChanged,evict)
+    watch(source:GetPropertyChangedSignal("Name"),evict)
+    watch(source.Parent:GetPropertyChangedSignal("Name"),evict)
+    watch(source.DescendantRemoving,evict)
+    watch(source.DescendantAdded,evict)
+    for _,attr in ipairs({"OwnerVerified","CosmeticOnly","OriginalHarborDockCaisson3D","Original3DAssetId"}) do
+        watch(source:GetAttributeChangedSignal(attr),evict)
+    end
+    watch(source.Parent:GetAttributeChangedSignal("OwnerVerified"),evict)
+    for _,part in ipairs(source:GetDescendants()) do
+        if part:IsA("MeshPart") then
+            for _,name in ipairs({"MeshId","Size","CFrame","Transparency","CanCollide","CanTouch","CanQuery"}) do
+                watch(part:GetPropertyChangedSignal(name),evict)
             end
-        end)
+        end
+    end
     -- The attached deck may already have shrunk before this LOD sample.
     visibility(entry)
     return entry
@@ -386,16 +465,14 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
         end)
     end
     local source, expected = original()
-    -- The approved source has seven material families. Low only accepts
-    -- exactly seven real MeshParts, never a larger importer split or
-    -- a cheap generic Part pretending to be the forged sidewall.
-    if not source or (quality == "Low" and expected ~= 7) then
+    -- Mask the fallback only for a complete seven-material import.
+    if not source or expected ~= 7 then
         clearModels()
         return
     end
     local nearby = {}
     for _, deck in ipairs(platforms:GetChildren()) do
-        if genuineLanding(deck, arena, base) then
+        if nativeParts(deck, arena, base) then
             local dist = (cameraPoint - deck.Position).Magnitude
             local resident = mounted[deck] ~= nil
             if dist <= budget.distance +
@@ -423,7 +500,7 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
         wanted[nearby[i].deck] = true
     end
     for deck, entry in pairs(mounted) do
-        if not wanted[deck] or not valid(entry)
+        if not wanted[deck] or entry.evicted or not valid(entry)
             or entry.source ~= source then
             dispose(entry)
             mounted[deck] = nil
@@ -439,14 +516,15 @@ function Kit.sync(arena, cameraPoint, quality, cameraReady, cameraLook, pressure
 end
 
 function Kit.count()
-    local models, parts = 0, 0
+    local models, parts, native = 0, 0, 0
     for _, entry in pairs(mounted) do
-        if valid(entry) then
+        if entry.showing then
             models += 1
             parts += entry.expected
+            native += #entry.natives
         end
     end
-    return models, parts
+    return models, parts, native
 end
 
 return Kit

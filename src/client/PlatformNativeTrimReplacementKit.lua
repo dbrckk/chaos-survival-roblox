@@ -25,6 +25,7 @@ local routeCradles = {}
 local routeRims = {}
 local cradleClaims = {}
 local rimClaims = {}
+local harborDockClaims = {}
 local nativeBaselines = {}
 local crownPylons = {}
 local routeUnderdecks = {}
@@ -73,7 +74,8 @@ local function setNativeMask(part, claims, masked)
     local original = nativeBaselines[part]
     if saved[part] or crownPylons[part] or routeUnderdecks[part]
         or crownTrim[part] or commandTrim[part] or cradleClaims[part]
-        or harborTrusses[part] or junctionTrusses[part] or rimClaims[part] then
+        or harborTrusses[part] or junctionTrusses[part] or rimClaims[part]
+        or harborDockClaims[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
         end
@@ -83,6 +85,12 @@ local function setNativeMask(part, claims, masked)
         nativeBaselines[part] = nil
     end
     if observer and Kit.hasPrimaryJunctionTruss(part) ~= wasPrimary then observer() end
+end
+
+function Kit.setHarborDockMask(part, masked)
+    if (harborDockClaims[part] == true) ~= masked then
+        setNativeMask(part, harborDockClaims, masked)
+    end
 end
 
 function Kit.setRouteUnderdeckMask(part, masked)

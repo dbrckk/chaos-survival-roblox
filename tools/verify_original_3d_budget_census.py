@@ -1100,7 +1100,7 @@ assert 'Medium = {models = 5, distance = 150, retention = 24}' in DOCK
 assert 'High = {models = 12, distance = 215, retention = 34}' in DOCK
 assert 'elseif quality == "Low" and stress > 0 then' in DOCK
 assert 'maximum = 0' in DOCK
-assert '(quality == "Low" and expected ~= 7)' in DOCK
+assert 'if not source or expected ~= 7 then' in DOCK
 assert 'if not item:IsA("MeshPart") then return nil end' in DOCK
 assert 'item:IsA("LuaSourceContainer")' in DOCK
 assert 'holder:GetAttribute("OwnerVerified") ~= true' in DOCK
@@ -1112,11 +1112,11 @@ assert 'deck.Name:match("^Platform%d+$")' in DOCK
 assert 'or not deck.Anchored or not deck.CanCollide' in DOCK
 assert 'or deck.Transparency >= .75' in DOCK
 assert 'local function realFloorScale(base, arena)' in DOCK
-assert 'deck.Size.X / floorScale' in DOCK
-assert 'deck.Size.Z / floorScale' in DOCK
+assert 'math.abs(deck.Size.X-width*floorScale) > .08' in DOCK
+assert 'math.abs(deck.Size.Z-width*floorScale) > .08' in DOCK
 assert 'type(deck:GetAttribute("RouteTier")) ~= "number"' in DOCK
 assert 'local function refit(entry)' in DOCK
-assert 'piece.Size = entry.sizes[piece] * factor' in DOCK
+assert 'piece.Size = entry.sizes[piece] * horizontal' in DOCK
 assert 'entry.joints[piece].C0 = shift' in DOCK
 assert 'local joint = Instance.new("Weld")' in DOCK
 assert 'realFloorScale(base, arena)' in DOCK
@@ -1132,7 +1132,7 @@ assert 'joint.Part0 = deck' in DOCK and 'joint.Part1 = piece' in DOCK
 assert 'if #pieces ~= expected then clone:Destroy(); return nil end' in DOCK
 assert 'part.LocalTransparencyModifier = show and 0 or 1' in DOCK
 assert 'deck:GetAttributeChangedSignal(attr):Connect(changed)' in DOCK
-assert 'clone.DescendantRemoving:Connect' in DOCK
+assert 'watch(clone.DescendantRemoving' in DOCK
 assert 'HarborDockCaissonMeshKit.sync(arena,cameraPoint,profile.Name,' in (CLIENT/"scenery-lod.client.lua").read_text()
 assert '"OriginalHarborDockCaissonsLocal"' in ledger
 assert 'folder.Name = "OriginalHarborDockCaissonsLocal"' in DOCK
@@ -1141,6 +1141,10 @@ assert 'under_top_limit' in DOCK_SOURCE
 assert 'if pieces < 1 or pieces > 12 then return false end' in DOCK_SERVER
 assert 'RenderStepped' not in DOCK and 'Heartbeat' not in DOCK
 assert 'AssetService' not in DOCK
+assert 'Trim.setHarborDockMask(native, show)' in DOCK
+assert 'local lip = (nominal + .94)*shrink' in DOCK
+assert 'HarborSkywayStep' in DOCK
+assert 'LocalHarborDockNativePartsReplaced' in (CLIENT/"scenery-lod.client.lua").read_text()
 print("PASS one authentic seven-MeshPart Harbor dock underside on healthy Low,",
       "108-stud camera range, safe original collision and GPU rollback")
 

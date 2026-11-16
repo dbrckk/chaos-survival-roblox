@@ -104,6 +104,8 @@ local function nativeParts(decor,deck,original,scale)
     return edges,underside
 end
 
+Kit.nativeParts = nativeParts
+
 local function isElevatedRoute(deck)
     return deck:GetAttribute("PromenadeStep") ~= nil
         or deck:GetAttribute("SkySpineStep") ~= nil
