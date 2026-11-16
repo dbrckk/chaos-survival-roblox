@@ -110,15 +110,50 @@ local function isElevatedRoute(deck)
         or deck:GetAttribute("SkySpineInterchange") == true
 end
 
+local function routeIndex(value,maximum)
+    return typeof(value) == "number" and value % 1 == 0 and value >= 1 and value <= maximum
+end
+
+local function isAscensionRoute(deck)
+    return deck:GetAttribute("PerimeterStep") ~= nil
+        or deck:GetAttribute("BranchStep") ~= nil or deck:GetAttribute("CrosslinkRoute") ~= nil
+end
+
+local function ascensionDeckSize(deck)
+    local perimeter = deck:GetAttribute("PerimeterStep")
+    local branch = deck:GetAttribute("BranchStep")
+    local link = deck:GetAttribute("CrosslinkRoute")
+    local valid = (routeIndex(perimeter,8) and routeIndex(deck:GetAttribute("PerimeterRoute"),4))
+        or (routeIndex(branch,4) and routeIndex(deck:GetAttribute("BranchRoute"),4)
+            and deck:GetAttribute("BranchParentStep") == 5)
+        or (routeIndex(link,4) and deck:GetAttribute("CrosslinkFromPerimeterStep") == 6
+            and deck:GetAttribute("CrosslinkToBranchStep") == 2)
+    if not valid or not routeIndex(deck:GetAttribute("RouteTier"),4) then return nil end
+    local scale = LargeStructure.liveRouteFloorScale(deck)
+    if not scale then return nil end
+    local size = deck.Size
+    local width = size.X/scale
+    if math.abs(size.X-size.Z) > .05 or width < 9.88 or width > 12.12
+        or size.Y < 2.92 or size.Y > 37 then return nil end
+    return Vector3.new(width,size.Y,width),scale
+end
+
 function Kit.routeNatives(decor,deck)
-    if not deck or not deck:IsA("BasePart") or not isElevatedRoute(deck) then return nil end
-    local original,scale = LargeStructure.routeDeckSize(deck)
+    if not deck or not deck:IsA("BasePart") then return nil end
+    local original,scale
+    if isElevatedRoute(deck) then
+        original,scale = LargeStructure.routeDeckSize(deck)
+    elseif isAscensionRoute(deck) then
+        original,scale = ascensionDeckSize(deck)
+    end
     if not original or not decor or decor ~= deck.Parent.Parent:FindFirstChild("Decor") then return nil end
     return nativeParts(decor,deck,original,scale)
 end
 
 local function completeNative(decor,deck)
-    if isElevatedRoute(deck) then return Kit.routeNatives(decor,deck) ~= nil end
+    if isElevatedRoute(deck) or isAscensionRoute(deck) then
+        return Kit.routeNatives(decor,deck) ~= nil
+    end
     return nativeParts(decor,deck) ~= nil
 end
 
@@ -156,6 +191,14 @@ end
 -- sees the same fascia at 45% shrink. Vertical relief stays unchanged.
 function Kit.fit(deck,bounds)
     if not deck or not deck:IsA("BasePart") or not bounds then return nil end
+    if isAscensionRoute(deck) then
+        local original,shrink = ascensionDeckSize(deck)
+        if not original or math.max(bounds.X,bounds.Z) > 17.4 then return nil end
+        -- Keep the lip outside the solid riser, inside the original bevel's
+        -- clearance. A shallow fascia stays below the real landing top.
+        local width = (original.X + .94)*shrink
+        return Vector3.new(width/bounds.X,.82/bounds.Y,width/bounds.Z),0,1
+    end
     if not isElevatedRoute(deck) then return uniformFit(deck.Size,bounds) end
     local original,shrink = LargeStructure.routeDeckSize(deck)
     if not original then return nil end
@@ -235,7 +278,8 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
     local platforms=base.Parent and base.Parent:FindFirstChild("Platforms")
     for _,deck in ipairs(ordered) do
         if safeDeck(deck,platforms)
-            and not (reservedCarapaces and reservedCarapaces[deck])
+            and ((tier=="Low" and isAscensionRoute(deck))
+                or not (reservedCarapaces and reservedCarapaces[deck]))
             and not (reservedHulls and reservedHulls[deck])
             and completeNative(decor,deck) then
             local delta=deck.Position-cameraPoint
@@ -325,14 +369,22 @@ function Kit.install(parent,deck,index,kind,decor)
     local frame,size=copy:GetBoundingBox()
     local stretch = if typeof(scale)=="Vector3" then scale else Vector3.one
     size *= stretch
+    local ascension = isAscensionRoute(deck)
+    local long,short = math.max(deck.Size.X,deck.Size.Z),math.min(deck.Size.X,deck.Size.Z)
+    local longLimit,shortLimit = long*.971,short*.971
+    if ascension then
+        local _,shrink = ascensionDeckSize(deck)
+        if not shrink then copy:Destroy();return nil end
+        longLimit,shortLimit = long+.96*shrink,short+.96*shrink
+    end
     if size.Y<=0 or size.Y>3.05
-        or math.max(size.X,size.Z)>math.max(deck.Size.X,deck.Size.Z)*.971
-        or math.min(size.X,size.Z)>math.min(deck.Size.X,deck.Size.Z)*.971 then
+        or math.max(size.X,size.Z)>longLimit
+        or math.min(size.X,size.Z)>shortLimit then
         copy:Destroy()
         return nil
     end
     local target=deck.CFrame*CFrame.new(0,
-        deck.Size.Y*.5-.17-size.Y*.5,0)*CFrame.Angles(0,yaw,0)
+        deck.Size.Y*.5-(ascension and .09 or .17)-size.Y*.5,0)*CFrame.Angles(0,yaw,0)
     local parts={}
     local resizable=tonumber(deck:GetAttribute("RouteTier"))~=nil
     for _,piece in ipairs(copy:GetDescendants()) do
@@ -368,7 +420,8 @@ function Kit.install(parent,deck,index,kind,decor)
             piece:SetAttribute("ChaosPlatformTrim",true)
             piece:SetAttribute("OriginalPlatformRimAxisSwap",
                 math.abs(deck.CFrame:VectorToObjectSpace(piece.CFrame.RightVector).Z)>.9999)
-            piece:SetAttribute("OriginalElevatedPlatformRim",typeof(scale)=="Vector3" or nil)
+            piece:SetAttribute("OriginalElevatedPlatformRim",isElevatedRoute(deck) or nil)
+            piece:SetAttribute("OriginalAscensionPlatformRim",ascension or nil)
             local joint=Instance.new(resizable and "Weld" or "WeldConstraint")
             joint.Name="ChaosPlatformTrimWeld"
             joint.Part0=piece
@@ -393,6 +446,11 @@ function Kit.install(parent,deck,index,kind,decor)
     end
     copy:Destroy()
     return parts
+end
+
+function Kit.isRouteRim(piece)
+    return piece:GetAttribute("OriginalElevatedPlatformRim") == true
+        or piece:GetAttribute("OriginalAscensionPlatformRim") == true
 end
 
 function Kit.sourceOf(piece)

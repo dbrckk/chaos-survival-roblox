@@ -608,7 +608,8 @@ local function applyPlatformIdentityNearPlayer(folder, profile,
         end
 
         if descendant:IsA("MeshPart")
-            and descendant:GetAttribute("OriginalElevatedPlatformRim") == true then
+            and (descendant:GetAttribute("OriginalElevatedPlatformRim") == true
+                or descendant:GetAttribute("OriginalAscensionPlatformRim") == true) then
             if native then
                 PlatformNativeTrimReplacementKit.setRouteRimLodVisible(native, visible)
             end

@@ -307,7 +307,7 @@ end
 -- A late-streamed deck can already be contracted by Shrinking Arena.
 local PROMENADE_TRUSS_SPAN = {[2] = 11, [4] = 13, [7] = 15}
 
-local function routeFloorScale(deck)
+function Kit.liveRouteFloorScale(deck)
     local platforms = deck.Parent
     local arena = platforms and platforms.Parent
     local map = workspace:FindFirstChild("GeneratedMap")
@@ -315,16 +315,20 @@ local function routeFloorScale(deck)
     if not map or not map:IsA("Folder") or not arena or not arena:IsA("Folder")
         or arena.Name ~= "Arena" or arena.Parent ~= map
         or platforms ~= arena:FindFirstChild("Platforms") or not base
-        or not base:IsA("BasePart") or not base.Anchored or not base.CanCollide
-        or deck:GetAttribute("ChaosPermanentRoute") ~= true
-        or deck:GetAttribute("RouteTier") ~= 4 then return nil end
+        or not base:IsA("BasePart") or not base.Anchored or not base.CanCollide then return nil end
     local x,z = base:GetAttribute("OriginalSizeX"),base:GetAttribute("OriginalSizeZ")
     if x ~= 320 or z ~= 320 then return nil end
     local scale = base.Size.X/x
     if scale < .445 or scale > 1.005
-        or math.abs(scale-base.Size.Z/z) > .012
-        or math.abs(deck.Size.Y-2) > .08 then return nil end
+        or math.abs(scale-base.Size.Z/z) > .012 then return nil end
     return scale
+end
+
+local function routeFloorScale(deck)
+    if deck:GetAttribute("ChaosPermanentRoute") ~= true
+        or deck:GetAttribute("RouteTier") ~= 4
+        or math.abs(deck.Size.Y-2) > .08 then return nil end
+    return Kit.liveRouteFloorScale(deck)
 end
 
 function Kit.spineFootprint(deck)

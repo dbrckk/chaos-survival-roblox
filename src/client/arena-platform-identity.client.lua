@@ -618,6 +618,8 @@ local function rebuild()
                 if lowHubDeck and hullDistance <= math.min(
                     carapaceDistance + 12, hatchScore + 12) then
                     choice, target = "hull", lowHubDeck
+                elseif rim and rim == carapace and rimDistance <= hatchScore + 8 then
+                    choice, target = "rim", rim
                 elseif carapace and carapaceDistance <= hatchScore + 8
                     and carapaceDistance <= rimDistance + 8 then
                     choice, target = "carapace", carapace
@@ -1144,6 +1146,7 @@ local function rebuild()
             local attributes = {
                 LocalBevelNativePartsReplaced = family.bevel,
                 LocalElevatedRimBevelsReplaced = family.elevatedRim,
+                LocalAscensionRimBevelsReplaced = family.ascensionRim,
                 LocalUnderframeNativePartsReplaced = family.underframe,
                 LocalSkySpineUnderdeckNativePartsReplaced = family.spineUnderdeck,
                 LocalPromenadeUnderdeckNativePartsReplaced = family.promenadeUnderdeck,
