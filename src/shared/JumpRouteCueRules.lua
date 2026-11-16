@@ -39,7 +39,7 @@ function JumpRouteCueRules.gap(from, target)
     return math.sqrt(dx * dx + dz * dz)
 end
 
-function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId)
+function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId, isClear, rejected)
     -- Orbital's upper ascent uses real helical ramps, not an airborne jump.
     if variantId == "Orbital" or typeof(arenaCenter) ~= "Vector3" then
         return nil
@@ -58,7 +58,7 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
 
     for _, target in ipairs(orderedPlatforms) do
         local targetTier = deckTier(target)
-        if target ~= from and target.Parent == from.Parent
+        if target ~= from and target ~= rejected and target.Parent == from.Parent
             and targetTier and hasStableSurface(target)
             and (targetTier == tier + 1 or (hub and targetTier == tier))
         then
@@ -84,7 +84,7 @@ function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId
             then
                 local score = gap + horizontalDistance * 0.08
                     + math.max(0, rise) * 0.18
-                if score < bestScore then
+                if score < bestScore and (not isClear or isClear(from,target)) then
                     best = target
                     bestScore = score
                 end
@@ -111,11 +111,12 @@ function JumpRouteCueRules.cueStillSafe(from, target, arenaCenter, variantId)
     ) == target
 end
 
-function JumpRouteCueRules.retarget(from, current, orderedPlatforms, arenaCenter, variantId)
-    if JumpRouteCueRules.cueStillSafe(from,current,arenaCenter,variantId) then
+function JumpRouteCueRules.retarget(from, current, orderedPlatforms, arenaCenter, variantId, isClear)
+    if JumpRouteCueRules.cueStillSafe(from,current,arenaCenter,variantId)
+        and (not isClear or isClear(from,current)) then
         return current
     end
-    return JumpRouteCueRules.select(from,orderedPlatforms,arenaCenter,variantId)
+    return JumpRouteCueRules.select(from,orderedPlatforms,arenaCenter,variantId,isClear,current)
 end
 
 -- Position the sign INSIDE the supporting collision footprint, never
