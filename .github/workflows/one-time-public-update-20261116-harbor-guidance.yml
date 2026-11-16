@@ -1,6 +1,7 @@
 name: Public Chaos Survival Update 2026-11-16
 
-# Owner-requested retry after engine validation of district roofs, live Harbor mesh sizing and isolated floor approach.
+# Owner-requested public playtest update after validating the three-round guide and live landing invalidation.
+run-name: Public Chaos Survival guidance update for ${{ github.sha }}
 
 on:
   push:
