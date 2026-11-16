@@ -40,7 +40,7 @@ local outpostAttributeConnections = {}
 local routeDeckConnections = {}
 local routeCueStates = {}
 local routeGeneration = 0
-local refreshRouteClearance
+local refreshRouteClearance, refreshRouteHazards
 local footprintDisconnects = {}
 local originalColumnDisconnects = {}
 -- Exact server-side native Parts covered by our locally mounted Low
@@ -119,7 +119,7 @@ end
 
 local function clear()
     routeGeneration += 1
-    refreshRouteClearance = nil
+    refreshRouteClearance, refreshRouteHazards = nil, nil
     for _, connection in ipairs(originalColumnDisconnects) do
         connection:Disconnect()
     end
@@ -651,10 +651,7 @@ local function rebuild()
     end
     if isClear then
         local routeCursor = 1
-        refreshRouteClearance = function()
-            local camera = workspace.CurrentCamera
-            if not camera then return end
-            local point = camera.CFrame.Position
+        refreshRouteHazards = function(point)
             local wasHazardActive = lava ~= nil or #warnings > 0
             warnings, lava = JumpRouteHazards.read(arena)
             local hazardActive = lava ~= nil or #warnings > 0
@@ -668,6 +665,12 @@ local function rebuild()
                     end
                 end
             end
+        end
+        refreshRouteClearance = function()
+            local camera = workspace.CurrentCamera
+            if not camera then return end
+            local point = camera.CFrame.Position
+            refreshRouteHazards(point)
             local checked = 0
             -- Rotate through the nearby cues so the closest ones cannot
             -- starve another route in the same sector.
@@ -2202,6 +2205,12 @@ player:GetAttributeChangedSignal("LocalPremiumNearFieldEpoch")
     :Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("LocalHarborRouteClearanceEpoch"):Connect(function()
     if refreshRouteClearance then refreshRouteClearance() end
+end)
+JumpRouteHazards.ImpactWarningsChanged:Connect(function()
+    local camera = workspace.CurrentCamera
+    if refreshRouteHazards and camera then
+        refreshRouteHazards(camera.CFrame.Position)
+    end
 end)
 -- Accessibility changes affect at most four existing instrument tweens;
 -- never rebuild the whole arena just to freeze/restart the moving heads.

@@ -1107,14 +1107,36 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 cleanup[#cleanup+1]=function() part:Destroy() end
                 return part
             end
+            local impactUpdates=0
+            local impactConnection=Hazards.ImpactWarningsChanged:Connect(function()
+                impactUpdates+=1
+            end)
+            cleanup[#cleanup+1]=function() impactConnection:Disconnect() end
+            local function waitForImpactUpdate(previous)
+                local deadline=os.clock()+1
+                repeat task.wait() until impactUpdates>previous or os.clock()>deadline
+                assert(impactUpdates>previous,"Expected a route update for the impact warning")
+            end
             assert(safeJump())
+            local delta=target.Position-deck.Position
+            local away=Vector3.new(delta.X,0,delta.Z).Unit
+            local center=target.Position+Vector3.yAxis*(target.Size.Y*.5+1.5)
             for _,name in ipairs({"MeteorWarning","BombWarning"}) do
-                local warning=hazard(name,target.Position+Vector3.yAxis*(target.Size.Y*.5+1.5),
+                local previous=impactUpdates
+                local lateSize=name=="BombWarning"
+                local warning=hazard(name,center+(lateSize and away*8 or Vector3.zero),
                     Vector3.new(1,.1,1),workspace)
-                task.wait()
+                waitForImpactUpdate(previous)
+                if lateSize then
+                    assert(safeJump())
+                    previous=impactUpdates
+                    warning:SetAttribute("WarningEndSize",20)
+                    waitForImpactUpdate(previous)
+                end
                 assert(not safeJump())
+                previous=impactUpdates
                 warning:Destroy()
-                task.wait()
+                waitForImpactUpdate(previous)
                 assert(safeJump())
             end
             local mechanics=arena:FindFirstChild("Mechanics")
