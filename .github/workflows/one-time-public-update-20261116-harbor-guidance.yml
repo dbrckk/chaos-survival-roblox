@@ -31,6 +31,7 @@ jobs:
           exact_main() {
             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
           }
+          echo "Waiting for checked release candidate $GITHUB_SHA"
           run_status() {
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$1/runs?branch=main&head_sha=$GITHUB_SHA&per_page=30" \
               --jq '[.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch")] | first | if . then (.conclusion // .status) else "waiting" end'
