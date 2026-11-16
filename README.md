@@ -1,3 +1,9 @@
+## P4 — Renforts diagonaux des paliers de Storm Harbor
+
+Les barres sous les paliers proches peuvent recevoir trois maillages du treillis approuvé `122766792774607` par diagonale. Les renforts suivent leurs deux points d'appui pendant la contraction, y compris lorsqu'un joueur rejoint une manche en cours. Les panneaux d'alerte et les collisions du palier conservent leur fonctionnement.
+
+Les renforts et les lisses partagent les créneaux de colonnes déjà disponibles. Les caissons et les dessous sculptés restent prioritaires. Les renforts peuvent équiper un palier en Medium ou sur mobile en High et deux paliers sur PC en High. Un renfort manquant restaure l'ensemble des barres du palier et la pression graphique réactive le décor de secours.
+
 ## P4 — Lisses latérales ajourées de Storm Harbor
 
 Les lisses des 58 paliers portuaires peuvent recevoir trois maillages du treillis approuvé `122766792774607` par face. Les pièces restent en retrait sous le bord de la plateforme et suivent sa largeur. Un caisson prioritaire masque les lisses du même palier, sans masquer les chevrons ou les arrimages.

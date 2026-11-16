@@ -60,7 +60,7 @@ local HARBOR_RAIL_GROUPS = {
     Vector3.new(7.8371,.9701,.1465),
 }
 
-function Kit.harborRailSource()
+function Kit.harborGirderSource()
     local source,bounds = verified("Bridge")
     if not source then return nil end
     local parts = {}
@@ -85,12 +85,8 @@ function Kit.harborRailSource()
     return {frame=frame,bounds=bounds,parts=parts}
 end
 
-function Kit.harborRail(source, platform, native, index, shrink)
-    local nativeWeld = native:FindFirstChild("ChaosPlatformTrimWeld")
-    if not nativeWeld or not nativeWeld:IsA("Weld") or nativeWeld.Part1 ~= platform then return nil end
-    local alongZ = native.Size.Z > native.Size.X
-    local target = nativeWeld.C1 * CFrame.Angles(0,alongZ and math.pi*.5 or 0,0)
-    local fit = Vector3.new(math.max(native.Size.X,native.Size.Z),.42,.22*shrink)/source.bounds
+local function fitHarborGirder(source, platform, target, dimensions, name, kind)
+    local fit = dimensions/source.bounds
     local parts = {}
     local function absolute(v)
         return Vector3.new(math.abs(v.X),math.abs(v.Y),math.abs(v.Z))
@@ -107,7 +103,7 @@ function Kit.harborRail(source, platform, native, index, shrink)
         piece.Size = Vector3.new(math.max(.05,size.X),size.Y,math.max(.05,size.Z))
         local relative = target*CFrame.new(offset.Position*fit)*offset.Rotation
         piece.CFrame = platform.CFrame*relative
-        piece.Name = "OriginalHarborRecessedRail_"..index.."_"..i
+        piece.Name = name.."_"..i
         piece.Anchored = false
         piece.Massless = true
         piece.CanCollide = false
@@ -116,7 +112,8 @@ function Kit.harborRail(source, platform, native, index, shrink)
         piece.CastShadow = false
         piece:SetAttribute("ChaosBaseTransparency",piece.Transparency)
         piece:SetAttribute("Original3DAssetId",IDS.Bridge)
-        piece:SetAttribute("OriginalHarborRecessedRail3D",true)
+        piece:SetAttribute(kind,true)
+        if kind == "OriginalHarborLoadBrace3D" then piece:SetAttribute("ChaosLoadBrace",true) end
         local weld = Instance.new("Weld")
         weld.Name = "ChaosPlatformTrimWeld"
         weld.Part0,weld.Part1 = piece,platform
@@ -127,6 +124,22 @@ function Kit.harborRail(source, platform, native, index, shrink)
     if #parts == #HARBOR_RAIL_GROUPS then return parts end
     for _,piece in ipairs(parts) do piece:Destroy() end
     return nil
+end
+
+function Kit.harborRail(source, platform, native, index, shrink)
+    local nativeWeld = native:FindFirstChild("ChaosPlatformTrimWeld")
+    if not nativeWeld or not nativeWeld:IsA("Weld") or nativeWeld.Part1 ~= platform then return nil end
+    local alongZ = native.Size.Z > native.Size.X
+    local target = nativeWeld.C1 * CFrame.Angles(0,alongZ and math.pi*.5 or 0,0)
+    local dimensions = Vector3.new(math.max(native.Size.X,native.Size.Z),.42,.22*shrink)
+    return fitHarborGirder(source,platform,target,dimensions,
+        "OriginalHarborRecessedRail_"..index,"OriginalHarborRecessedRail3D")
+end
+
+function Kit.harborLoadBrace(source, platform, frame, length, index)
+    local target = frame * CFrame.Angles(0,math.pi*.5,0)
+    return fitHarborGirder(source,platform,target,Vector3.new(length,.54,.66),
+        "OriginalHarborLoadBrace_"..index,"OriginalHarborLoadBrace3D")
 end
 
 local function preparedParts(copy, sourceFrame, target, platform, name)

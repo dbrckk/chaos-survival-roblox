@@ -1724,9 +1724,10 @@ print("PASS Low even-index original undercradle/support adoption, native",
       "half-density retained, late-near support streaming bounded/rebuilt")
 
 
-assert 'local railCost = tier.Name == "High" and 2 or 1' in OWNER
-assert 'math.floor(supportBudget/railCost)' in OWNER
-assert 'supportBudget -= railCost' in OWNER
+assert 'local girderCost = tier.Name == "High" and 2 or 1' in OWNER
+assert 'math.floor(supportBudget/girderCost)' in OWNER
+assert 'if supportBudget < girderCost+1 then break end' in OWNER
+assert OWNER.count('supportBudget -= girderCost') == 2
 assert 'and not deck:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in OWNER
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,harborRails,railFallback,scheduleRebuild)' in OWNER
 assert 'OriginalHarborRecessedRail3D' in SIDE_LOD
@@ -1761,6 +1762,13 @@ FINISH=(CLIENT/"PlatformFinishKit.lua").read_text(encoding="utf8")
 assert 'if pieces ~= 7 then return nil end' in PLATFORM_SIDE
 assert 'if pieces < 1 or pieces > 12 then return nil end' not in PLATFORM_SIDE
 assert 'function PlatformFinishKit.build(parent, platform, variant, tier, theme,' in FINISH
+assert '"OriginalHarborLoadBrace3D"' in PLATFORM_SIDE
+assert 'piece:SetAttribute("ChaosLoadBrace",true)' in PLATFORM_SIDE
+assert 'descendant:GetAttribute("ChaosLoadBrace") == true' in SIDE_LOD
+assert 'loadBraceFrame(deck.Size,data.braceCorner,true)' in FINISH
+assert 'or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in FINISH
+assert 'HarborOutpostKit.bindWeldedReplacement(platform,braceMeshes,braceFallback,scheduleRebuild)' in OWNER
+print("PASS Harbor diagonals refit the anchor geometry and share the column budget and caisson priority")
 assert 'if genuineUnderdeck == true and (variant == "Towers"' in FINISH
 assert 'or (i == 3 and (variant == "Classic"' in FINISH
 assert 'or variant == "Harbor"))) then' in FINISH
@@ -1775,7 +1783,7 @@ print("PASS source-verified platform hull eliminates duplicate local underdeck"
 start=OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil')
 cradle=OWNER.index('PremiumLargeStructureMeshKit.longCradle(',start)
 finish=OWNER.index('for _, piece in ipairs(PlatformFinishKit.build(',start)
-braces=OWNER.index('for _, piece in ipairs(PlatformFinishKit.buildLoadBraces(',start)
+braces=OWNER.index('local pieces,meshes,braceFallback = PlatformFinishKit.buildLoadBraces(',start)
 assert start < cradle < finish < braces
 assert 'local authenticLongCradle = false' in OWNER[start:finish]
 assert 'if cradle and #cradle == 7 then' in OWNER[start:finish]

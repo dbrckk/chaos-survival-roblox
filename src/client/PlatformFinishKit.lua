@@ -198,6 +198,18 @@ function PlatformFinishKit.sideRailCount(tier)
     return 0
 end
 
+local function publishHarborGirders(parent,built,meshes,fallback)
+    for _,piece in ipairs(meshes) do
+        piece.Parent = parent
+        built[#built+1] = piece
+    end
+    for native in pairs(fallback) do
+        native:SetAttribute("ChaosBaseTransparency",1)
+        native.Transparency = 1
+    end
+    return built,meshes,fallback
+end
+
 function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge, harborSource)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not NAMES[variant] then
@@ -273,15 +285,7 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
         for _,piece in ipairs(rail) do meshes[#meshes+1] = piece end
         fallback[native] = native.Transparency
     end
-    for _,piece in ipairs(meshes) do
-        piece.Parent = parent
-        built[#built+1] = piece
-    end
-    for native in pairs(fallback) do
-        native:SetAttribute("ChaosBaseTransparency",1)
-        native.Transparency = 1
-    end
-    return built,meshes,fallback
+    return publishHarborGirders(parent,built,meshes,fallback)
 end
 
 -- A Tower skybridge is a solid permanent route. Shrinking Arena contracts
@@ -692,6 +696,17 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     return {hatch, collar, handle}
 end
 
+local BRACE_CORNERS = {{-1,-1},{1,1},{-1,1},{1,-1}}
+
+local function loadBraceFrame(size, corner, harbor)
+    local dir = BRACE_CORNERS[corner]
+    local bottom = -size.Y*.5
+    local start = Vector3.new(dir[1]*size.X*.36,bottom-(harbor and .10 or .22),dir[2]*size.Z*.30)
+    local drop = math.clamp(math.min(size.X,size.Z)*.24,1.5,3)
+    local finish = Vector3.new(dir[1]*size.X*.11,bottom-drop,dir[2]*size.Z*.08)
+    return CFrame.lookAt((start+finish)*.5,finish),(finish-start).Magnitude
+end
+
 -- Classic's authored zigzag decks shrink along BOTH horizontal axes.
 -- Keep every welded client-only stripe, armor/brace and axis cue strictly
 -- inside its real collision deck instead of showing a phantom 10-stud top.
@@ -712,11 +727,22 @@ function PlatformFinishKit.captureRouteFootprint(platform, pieces)
             -- PlatformSupport, whose server CFrame and Size already follow
             -- the arena shrink. A second deck-relative shrink would apply
             -- contraction twice and could leave a floating fake pillar.
-            snapshot.entries[#snapshot.entries + 1] = {
+            local entry = {
                 part = piece,
                 size = piece.Size,
                 localCFrame = platform.CFrame:ToObjectSpace(piece.CFrame),
             }
+            local corner = piece:GetAttribute("HarborLoadBraceCorner")
+            if BRACE_CORNERS[corner] then
+                local frame,length = loadBraceFrame(snapshot.originalSize,corner,true)
+                local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
+                if joint and joint:IsA("Weld") then
+                    entry.braceCorner = corner
+                    entry.braceLength = length
+                    entry.braceOffset = frame:ToObjectSpace(joint.C1)
+                end
+            end
+            snapshot.entries[#snapshot.entries + 1] = entry
         end
     end
     return snapshot
@@ -745,13 +771,24 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
             -- contracting bridge while the other collapses incorrectly.
             local rimSwapped = part:GetAttribute(
                 "OriginalPlatformRimAxisSwap") == true
-            part.Size = Vector3.new(
-                math.max(0.05, data.size.X
-                    * (rimSwapped and ratioZ or ratioX)),
-                data.size.Y,
-                math.max(0.05, data.size.Z
-                    * (rimSwapped and ratioX or ratioZ))
-            )
+            if data.braceCorner then
+                -- Keep the socket at the deck edge and refit the diagonal
+                -- to the new lower anchor instead of squashing its width.
+                local frame,length = loadBraceFrame(deck.Size,data.braceCorner,true)
+                local offset = data.braceOffset
+                local ratio = length/data.braceLength
+                local position = offset.Position
+                localFrame = frame*CFrame.new(position.X,position.Y,position.Z*ratio)*offset.Rotation
+                part.Size = Vector3.new(
+                    data.size.X*(math.abs(offset.RightVector.Z) > .999 and ratio or 1),
+                    data.size.Y,
+                    data.size.Z*(math.abs(offset.LookVector.Z) > .999 and ratio or 1))
+            else
+                part.Size = Vector3.new(
+                    math.max(0.05, data.size.X*(rimSwapped and ratioZ or ratioX)),
+                    data.size.Y,
+                    math.max(0.05, data.size.Z*(rimSwapped and ratioX or ratioZ)))
+            end
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
                 or part:FindFirstChild("PlatformIdentityWeld")
             if joint and joint:IsA("Weld") then
@@ -799,7 +836,7 @@ function PlatformFinishKit.braceCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme)
+function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme, harborSource)
     if not parent or not platform or not platform:IsA("BasePart")
         or not NAMES[variant] or not theme
         or platform:GetAttribute("ChaosSkybridge") == true then
@@ -807,10 +844,13 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     end
 
     local count = PlatformFinishKit.braceCount(tier)
-    local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
-    if count == 0 or math.min(sx, sz) < 9 then return {} end
+    local size = platform.Size
+    local harborWidth = variant == "Harbor" and PlatformIdentityLodRules.harborLandingWidth(platform)
+    local harbor = harborWidth and tonumber(platform:GetAttribute("RouteTier")) ~= nil
+        and math.abs(size.X-size.Z) <= .08 and size.X >= harborWidth*.445
+        and size.X <= harborWidth*1.005
+    if count == 0 or (not harbor and math.min(size.X,size.Z) < 9) then return {} end
 
-    local drop = math.clamp(math.min(sx, sz) * 0.24, 1.5, 3.0)
     -- Each real close-up jump deck has its own load-bearing language.
     -- Reuse the same 0/2/4 brace budget, welds and shrink/collapse owner:
     -- no new physics, decorative parts, loops or fake reachable ledges.
@@ -828,33 +868,38 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     }
     local profile = profiles[variant]
     local color = profile.tone
-    local corners = {
-        {-1, -1},
-        {1, 1},
-        {-1, 1},
-        {1, -1},
-    }
     local built = {}
     for i = 1, count do
-        local dir = corners[i]
-        local start = Vector3.new(
-            dir[1] * sx * 0.36, -sy * 0.5 - 0.22, dir[2] * sz * 0.30
-        )
-        local finish = Vector3.new(
-            dir[1] * sx * 0.11, -sy * 0.5 - drop, dir[2] * sz * 0.08
-        )
-        local midpoint = (start + finish) * 0.5
-        local length = (finish - start).Magnitude
+        local frame,length = loadBraceFrame(size,i,harbor)
         local brace = add(
-            parent, platform, variant .. "LoadBrace" .. i,
-            CFrame.lookAt(midpoint, finish),
+            parent, platform, variant .. "LoadBrace" .. i, frame,
             Vector3.new(profile.width, profile.depth, length),
             color, profile.material, tier == "High" and 0.08 or 0.14
         )
         brace:SetAttribute("ChaosLoadBrace", true)
+        if harbor then brace:SetAttribute("HarborLoadBraceCorner",i) end
         built[#built + 1] = brace
     end
-    return built
+    local phase = platform:GetAttribute("CollapsePhase")
+    if not harborSource or not harbor or not platform.Anchored or not platform.CanCollide
+        or platform.Transparency >= .75 or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted")
+        or (phase and phase ~= "Safe" and phase ~= "Normal") then return built end
+    local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
+    local meshes,fallback = {},{}
+    for i,native in ipairs(built) do
+        local pieces = sideKit.harborLoadBrace(harborSource,platform,
+            native.ChaosPlatformTrimWeld.C1,native.Size.Z,i)
+        if not pieces then
+            for _,piece in ipairs(meshes) do piece:Destroy() end
+            return built
+        end
+        for _,piece in ipairs(pieces) do
+            piece:SetAttribute("HarborLoadBraceCorner",i)
+            meshes[#meshes+1] = piece
+        end
+        fallback[native] = native.Transparency
+    end
+    return publishHarborGirders(parent,built,meshes,fallback)
 end
 
 -- Authored native 3D carapaces turn rectangular jump blocks into engineered
