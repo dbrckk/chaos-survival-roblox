@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
+local JumpRouteClearance = require(ReplicatedStorage.Shared.JumpRouteClearance)
 local JumpRouteCueRules = require(ReplicatedStorage.Shared.JumpRouteCueRules)
 
 local player = Players.LocalPlayer
@@ -19,6 +20,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local marker, caption
 local latestState = nil
 local currentTarget = nil
+local clearanceArena, routeClearance
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -39,6 +41,14 @@ local function liveSurface(part)
         or part.Transparency >= 0.75 then return false end
     local phase = part:GetAttribute("CollapsePhase")
     return phase ~= "Warning" and phase ~= "Gone"
+end
+
+local function eligibleTarget(part, rootPosition, required)
+    if not liveSurface(part) or (rootPosition - part.Position).Magnitude > 48 then
+        return false
+    end
+    local tier = tonumber(part:GetAttribute("RouteTier"))
+    return tier == nil or tier <= required
 end
 
 local function findRealChild(folder, name)
@@ -244,6 +254,13 @@ local function update()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
+    local variant = arena and arena:GetAttribute("VariantId")
+    local harborArena = variant == "Harbor" and arena or nil
+    if harborArena ~= clearanceArena then
+        clearanceArena = harborArena
+        routeClearance = harborArena and JumpRouteClearance.forArena(harborArena) or nil
+    end
+
     local platforms = arena and arena:FindFirstChild("Platforms")
     local base = arena and arena:FindFirstChild("Base")
     if not arena or not platforms or not liveSurface(base) then
@@ -261,7 +278,6 @@ local function update()
         return
     end
 
-    local variant = arena:GetAttribute("VariantId")
     local target
     local isRamp = false
     local returnToRamp = false
@@ -271,23 +287,27 @@ local function update()
         isRamp = circuit ~= nil and target ~= nil
             and target.Parent == circuit
         returnToRamp = from.Parent == platforms and from.Name == "Platform17"
-    elseif from == base then
-        target = JumpRouteCueRules.nearestEntry(
-            platforms:GetChildren(), hit.Position, 42
-        )
-    elseif from.Parent == platforms then
-        target = JumpRouteCueRules.nextPhysical(
-            from, platforms:GetChildren(), base.Position, variant
-        )
+    elseif from == base or from.Parent == platforms then
+        local decks = platforms:GetChildren()
+        local canJump
+        if routeClearance then
+            canJump = function(source, destination, floorPoint)
+                return eligibleTarget(destination, root.Position, required)
+                    and routeClearance(source, destination, floorPoint)
+            end
+        end
+        if from == base then
+            local canApproach
+            if canJump then
+                canApproach = function(deck) return canJump(base, deck, hit.Position) end
+            end
+            target = JumpRouteCueRules.nearestEntry(decks, hit.Position, 42, canApproach)
+        else
+            target = JumpRouteCueRules.nextPhysical(from, decks, base.Position, variant, nil, canJump)
+        end
     end
 
-    if not liveSurface(target)
-        or (root.Position - target.Position).Magnitude > 48 then
-        hide()
-        return
-    end
-    local nextTier = tonumber(target:GetAttribute("RouteTier"))
-    if nextTier and nextTier > required then
+    if not eligibleTarget(target, root.Position, required) then
         hide()
         return
     end

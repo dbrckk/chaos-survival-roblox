@@ -1886,6 +1886,13 @@ assert 'routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(are
 assert 'canApproach = function(deck) return isClear(base,deck,hit.Position) end' in ROOKIE
 assert 'pieces, hit.Position, 42, canApproach' in ROOKIE
 assert 'skyRouteDirection(from), isClear' in ROOKIE
+MASTERY=(CLIENT/"high-ground-route-cue.client.lua").read_text(encoding="utf8")
+assert 'local harborArena = variant == "Harbor" and arena or nil' in MASTERY
+assert 'JumpRouteClearance.forArena(harborArena)' in MASTERY
+assert 'canJump(base, deck, hit.Position)' in MASTERY
+assert 'nearestEntry(decks, hit.Position, 42, canApproach)' in MASTERY
+assert 'nextPhysical(from, decks, base.Position, variant, nil, canJump)' in MASTERY
+print("PASS Storm Harbor high-ground challenge checks clearance on approach and onward jumps")
 assert 'arcClear(approach,start,direction,0)' in CLEARANCE
 assert 'and (not canApproach or canApproach(part)) then' in CUE_RULES
 assert 'paintOffset,.12+.84*scale' in CUE_RULES
