@@ -1,3 +1,9 @@
+## P4 — Portiques forgés des quatre avant-postes de Storm Harbor
+
+Les quatre avant-postes réutilisent deux colonnes portuaires approuvées et une poutre en treillis. Les portiques restent au bord extérieur du palier et les instruments conservent leurs animations. La taille d'origine sert de référence pour que les joueurs qui arrivent pendant le rétrécissement retrouvent le même portique que ceux déjà présents.
+
+Chaque portique prend trois créneaux de sept maillages dans le budget des colonnes existant. Medium et High tactile peuvent équiper un avant-poste proche. High PC peut en équiper deux. À la première pression graphique ou si le montage perd un maillage ou sa soudure, les pièces de secours reprennent la main. Low conserve le palier et son panneau.
+
 ## P4 — Pieux forgés des jetées de Storm Harbor
 
 Le modèle portuaire approuvé `76194593490199` couvre les 140 poteaux sous les marches de fret, les jetées cardinales et les traversées hautes. Un seul fût à sept maillages s'adapte à chaque poteau, avec des brides soudées, des chaînes et des bandes de bois. Le modèle suit le poteau pendant le rétrécissement et conserve toute sa hauteur. Le système de détail privilégie les poteaux proches et réutilise les créneaux existants de colonnes.

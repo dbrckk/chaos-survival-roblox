@@ -43,6 +43,7 @@ local originalColumnDisconnects = {}
 local mountedSupportNatives = {}
 local mountedLongCradles = {}
 local outpostMotions = {}
+local outpostFrameDisconnects = {}
 local currentOutpostPosture = "normal"
 
 local function stopOutpostMotion(state)
@@ -151,6 +152,11 @@ local function clear()
     if player:GetAttribute("LocalOriginalLargeStructure3DCount") ~= 0 then
         player:SetAttribute("LocalOriginalLargeStructure3DCount", 0)
     end
+    for _, disconnect in ipairs(outpostFrameDisconnects) do disconnect() end
+    table.clear(outpostFrameDisconnects)
+    if player:GetAttribute("LocalOriginalHarborOutpostFrameCount") ~= 0 then
+        player:SetAttribute("LocalOriginalHarborOutpostFrameCount",0)
+    end
     for platform, state in pairs(outpostMotions) do
         stopOutpostMotion(state)
         for _, connection in ipairs(state.connections or {}) do
@@ -203,8 +209,8 @@ local function registerVisual(platform, visual)
     table.insert(visuals, visual)
 end
 
-local function makePart(name, size, cframe, color, material, transparency, anchorPart)
-    local part = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, anchorPart, mesh)
+    local part = mesh or Instance.new("Part")
     part.Name = name
     part.Size = size
     part.CFrame = cframe
@@ -722,6 +728,38 @@ local function rebuild()
     local mountedRouteCradles = 0
     local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
+    local forgedOutpostInstruments = {}
+    local forgedOutposts = 0
+    if variant == "Harbor" and supportBudget >= HarborOutpostKit.frameModules then
+        local candidates, limit = HarborOutpostKit.candidates(ordered,tier.Name,cameraPoint,
+            player:GetAttribute("OptionalVfxPressure"),UserInputService.TouchEnabled)
+        if #candidates > 0 then
+            local column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
+            local truss, trussSize = PremiumPlatformSideMeshKit.bridgeTrussSource()
+            if column and truss then
+                local sources = {column=column,columnSize=columnSize,truss=truss,trussSize=trussSize}
+                for _,candidate in ipairs(candidates) do
+                    if forgedOutposts >= limit or supportBudget < HarborOutpostKit.frameModules then break end
+                    local platform = candidate.deck
+                    local _, instrument, disconnect = HarborOutpostKit.build(
+                        makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name,sources,
+                        function()
+                            forgedOutposts -= 1
+                            player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
+                            scheduleRebuild()
+                        end)
+                    forgedOutpostInstruments[platform] = instrument
+                    if disconnect then
+                        supportBudget -= HarborOutpostKit.frameModules
+                        originalLargeCount += HarborOutpostKit.frameModules*7
+                        forgedOutposts += 1
+                        outpostFrameDisconnects[#outpostFrameDisconnects+1] = disconnect
+                    end
+                end
+            end
+        end
+    end
+    player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
 
     for _, platform in ipairs(ordered) do
         if platform:IsA("BasePart") then
@@ -969,9 +1007,13 @@ local function rebuild()
                 -- 3D port infrastructure. The existing visual registrar,
                 -- shrink-weld, collapse owner and tier rebuild own it.
                 -- No new scene loop, world physics or touch occlusion.
-                local _, instrument = HarborOutpostKit.build(
-                    makePart, platform, visualIndex, theme, tier.Name
-                )
+                local instrument = forgedOutpostInstruments[platform]
+                if not instrument then
+                    local _, fallback = HarborOutpostKit.build(
+                        makePart, platform, visualIndex, theme, tier.Name
+                    )
+                    instrument = fallback
+                end
                 if instrument then
                     local joint = instrument:FindFirstChild(
                         "PlatformIdentityWeld"

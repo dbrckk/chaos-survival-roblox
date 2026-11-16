@@ -658,6 +658,137 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(reason) end
     end)
 
+    it("mounts complete forged Harbor frames on real animated jetty endpoints",function()
+        local Outpost=require("../../src/client/HarborOutpostKit")
+        local Finish=require("../../src/client/PlatformFinishKit")
+        local prior=workspace:FindFirstChild("GeneratedMap")
+        if prior then prior.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local owner=Instance.new("Folder")
+        owner.Parent=arena.Parent
+        local column,truss=Instance.new("Model"),Instance.new("Model")
+        column:SetAttribute("Original3DAssetId",76194593490199)
+        truss:SetAttribute("Original3DAssetId",122766792774607)
+        local columnSize,trussSize=Vector3.new(1.92,13.91,1.93),Vector3.new(1,2,10)
+        for model,size in pairs({[column]=columnSize,[truss]=trussSize}) do
+            for i=1,7 do
+                local mesh=Instance.new("MeshPart")
+                mesh.Size=i==1 and size or Vector3.one*.2
+                mesh.Anchored=true
+                mesh.CanCollide=false
+                mesh.CanTouch=false
+                mesh.CanQuery=false
+                mesh.Parent=model
+            end
+        end
+        local sources={column=column,columnSize=columnSize,truss=truss,trussSize=trussSize}
+        local function factory(name,size,cf,color,material,alpha,anchor,mesh)
+            local part=mesh or Instance.new("Part")
+            part.Name=name
+            part.Size=size
+            part.CFrame=cf
+            part.Color=color
+            part.Material=material
+            part.Transparency=alpha
+            part:SetAttribute("ChaosBaseTransparency",alpha)
+            part.Anchored=false
+            part.CanCollide=false
+            part.CanTouch=false
+            part.CanQuery=false
+            part.Massless=true
+            local weld=Instance.new("Weld")
+            weld.Name="PlatformIdentityWeld"
+            weld.Part0=part
+            weld.Part1=anchor
+            weld.C1=anchor.CFrame:ToObjectSpace(cf)
+            weld.Parent=part
+            part.Parent=owner
+            return part
+        end
+        local disconnect
+        local running=false
+        local cleanup={}
+        local ok,why=pcall(function()
+            local decks=arena.Platforms:GetChildren()
+            local deck=arena.Platforms.Platform98
+            assert(deck:GetAttribute("HarborSpokeStep")==4)
+            local found,limit=Outpost.candidates(decks,"High",deck.Position,0,true)
+            assert(found[1].deck==deck and limit==1)
+            local _,desktopLimit=Outpost.candidates(decks,"High",deck.Position,0,false)
+            assert(desktopLimit==2)
+            assert(#(Outpost.candidates(decks,"Medium",deck.Position,1,false))==0)
+            local theme=VisualTheme.arena("Harbor")
+            local function install()
+                local lost=0
+                local count,instrument,stop=Outpost.build(factory,deck,98,theme,"High",sources,
+                    function() lost+=1 end)
+                disconnect=stop
+                assert(count==9 and instrument and stop)
+                assert(instrument.Name=="HarborStormRadarInstrument98")
+                assert(Outpost.motionTarget(1,"normal")~=nil)
+                local meshes=0
+                local beam
+                for _,part in ipairs(owner:GetChildren()) do
+                    if part:IsA("MeshPart") then
+                        meshes+=1
+                        assert(part:GetAttribute("OriginalHarborOutpostFrame3D"))
+                        assert(not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                        if part:GetAttribute("Original3DAssetId")==122766792774607
+                            and math.max(part.Size.X,part.Size.Z)>2 then beam=part end
+                    end
+                end
+                assert(meshes==21 and beam)
+                local leg=owner.HarborStormRadarPortLeg98
+                expect(leg.Transparency).toBe(1)
+                return beam,leg,function() return lost end
+            end
+            local beam,leg=install()
+            local snapshot=Finish.captureRouteFootprint(deck,owner:GetChildren())
+            local original=beam.Size
+            running=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return running end,OnCleanup=cleanup})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            running=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05)
+            Finish.applyRouteFootprint(snapshot)
+            assert(math.abs(math.max(beam.Size.X,beam.Size.Z)
+                -math.max(original.X,original.Z)*.45)<.03)
+            local finalSize=beam.Size
+            local finalWeld=beam.PlatformIdentityWeld.C1.Position
+            disconnect()
+            owner:ClearAllChildren()
+            local late,lateLeg,lost=install()
+            assert((late.Size-finalSize).Magnitude<.04)
+            assert((late.PlatformIdentityWeld.C1.Position-finalWeld).Magnitude<.04)
+            late.PlatformIdentityWeld:Destroy()
+            task.wait()
+            assert(lost()==1 and math.abs(lateLeg.Transparency-.06)<.01)
+            Finish.applyCollapseVisibility(owner:GetChildren(),"Gone")
+            expect(lateLeg.Transparency).toBe(1)
+            for _,part in ipairs(owner:GetChildren()) do
+                if part:IsA("MeshPart") then expect(part.Transparency).toBe(1) end
+            end
+            disconnect()
+            owner:ClearAllChildren()
+            truss:FindFirstChildWhichIsA("MeshPart"):Destroy()
+            local _,fallback,failed=Outpost.build(factory,deck,98,theme,"Medium",sources)
+            assert(fallback and failed==nil and #owner:GetChildren()==5)
+            assert(deck.CanCollide and deck:FindFirstChild("HarborDryDockOutpost"))
+            assert(leg.Parent==nil)
+        end)
+        running=false
+        if disconnect then disconnect() end
+        for _,stop in ipairs(cleanup) do stop() end
+        arena.Parent:Destroy()
+        column:Destroy()
+        truss:Destroy()
+        if prior then prior.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
     it("fits the forged Harbor pile to short piers and tall crossings through shrink", function()
         local Large=require("../../src/client/PremiumLargeStructureMeshKit")
         local Rules=require("../../src/shared/PlatformIdentityLodRules")

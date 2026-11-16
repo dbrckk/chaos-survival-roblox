@@ -64,6 +64,10 @@ local function verified(kind)
     return source,size,count
 end
 
+function Kit.harborColumnSource()
+    return verified("Harbor")
+end
+
 function Kit.cradleSource(piece)
     local kind = piece:GetAttribute("OriginalShortSkySpineCradle3D") == true and "ShortCradle" or "LongCradle"
     if piece:GetAttribute("Original3DAssetId") ~= IDS[kind] then return nil end

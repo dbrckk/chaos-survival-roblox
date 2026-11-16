@@ -47,6 +47,10 @@ local function verified(name)
     return model, size, pieces
 end
 
+function Kit.bridgeTrussSource()
+    return verified("Bridge")
+end
+
 local function preparedParts(copy, sourceFrame, target, platform, name)
     local list = {}
     local adjustable = platform:GetAttribute("ChaosSkybridge") == true

@@ -2006,6 +2006,25 @@ assert "or PlatformIdentityLodRules.isHarborLanding(deck)" in TRIM
 assert "LocalHarborPierPilesReplaced = family.harborPile" in OWNER
 print("PASS Harbor forged piles stay inside the existing column budgets and native mask lifecycle")
 
+# Each complete port frame uses three modules subtracted from the existing
+# column allocation. A partial source must never hide any old geometry.
+outpost=(CLIENT/"HarborOutpostKit.lua").read_text(encoding="utf8")
+for fragment in (
+    "local FRAME_MODULES = 3", "if #parts == 7 then return parts end",
+    "staged[1] ~= nil and staged[2] ~= nil and staged[3] ~= nil",
+    "weld.Part0 ~= piece or weld.Part1 ~= platform",
+    'tier == "High" and (touch and 1 or 2)',
+    "local scale = platform.Size.X/WIDTH",
+    'piece:SetAttribute("ChaosBaseTransparency",1)',
+):
+    assert fragment in outpost, fragment
+assert "supportBudget -= HarborOutpostKit.frameModules" in OWNER
+assert "originalLargeCount += HarborOutpostKit.frameModules*7" in OWNER
+assert "LocalOriginalHarborOutpostFrameCount" in OWNER
+assert "RunService" not in outpost
+print("PASS all-or-nothing Harbor outposts share the existing 21-mesh column budget")
+
+
 for source,owner in EXPECTED.items():
     code=(CLIENT/source).read_text(encoding="utf8")
     assert owner in observed,(source,owner,
