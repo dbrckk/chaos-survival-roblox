@@ -106,9 +106,9 @@ local function warningsNow()
     return result
 end
 -- This optional sign must not recommend a deck already submerged by
--- the live server-owned lava. Keep the existing meteor/bomb/sweep route
--- classifier and add only one cheap workspace-root lookup per target.
-local function safeGuidedTargetPath(fromPosition, target, warnings)
+-- the live server-owned lava. Use the same hazard geometry for every
+-- candidate checked during this update.
+local function safeGuidedTargetPath(fromPosition, target, warnings, lava)
     if not target or not target:IsA("BasePart") then return false end
     -- Compare the same HumanoidRootPart clearance used by the authoritative
     -- disaster and the airborne landing preview. Using the deck's CENTER
@@ -128,7 +128,6 @@ local function safeGuidedTargetPath(fromPosition, target, warnings)
     ) then
         return false
     end
-    local lava = workspace:FindFirstChild("RoundLava")
     if typeof(rampStart) == "Vector3" then
         return not JumpRouteCueRules.lavaAtRoot(toPosition, lava)
     end
@@ -220,7 +219,7 @@ end
 -- when a genuine two-coin Harbor cargo cache is active. Resolve route
 -- and step only from server-owned deck/shard attributes; do not invent
 -- waypoints, scan for off-route roofs, or obscure disaster warnings.
-local function cargoWaypoint(from, pieces, base, root, arena, french, isClear, canApproach)
+local function cargoWaypoint(from, pieces, base, root, arena, french, isClear, canApproach, isSafe)
     if arena:GetAttribute("VariantId") ~= "Harbor" then
         return nil, nil
     end
@@ -272,7 +271,7 @@ local function cargoWaypoint(from, pieces, base, root, arena, french, isClear, c
                     end
                 end
 
-                if destination then
+                if destination and isSafe(destination) then
                     local distance = (root.Position - destination.Position).Magnitude
                     if distance <= 46 and distance < bestDistance then
                         bestDistance = distance
@@ -515,33 +514,45 @@ local function update()
         recoverySince = now
     end
 
-    local pieces = platforms:GetChildren()
-    local isClear, canApproach
-    if routeClearance then
-        if from == base then
-            canApproach = function(deck)
-                return routeClearance(base, deck, hit.Position)
-            end
-        elseif from.Parent == platforms then
-            -- Selection, junction labels and detours can all inspect the
-            -- same deck in one update. Only cast once per destination.
-            local checked = {}
-            isClear = function(source, destination)
-                local clear = checked[destination]
-                if clear == nil then
-                    clear = routeClearance(source, destination, nil, hit.Position)
-                    checked[destination] = clear
-                end
-                return clear
-            end
-        end
-    end
     if skywayArrival == from then
         -- This is a completed, genuine harbor-to-harbor crossing. The
         -- destination's own cargo route has no forced continuation and
         -- should not immediately nag a newcomer to reverse direction.
         hide()
         return true
+    end
+    local pieces = platforms:GetChildren()
+    local dangerWarnings = warningsNow()
+    local lava = workspace:FindFirstChild("RoundLava")
+    local safeTargets = {}
+    local function isSafe(destination)
+        local safe = safeTargets[destination]
+        if safe == nil then
+            safe = safeGuidedTargetPath(root.Position, destination, dangerWarnings, lava)
+            safeTargets[destination] = safe
+        end
+        return safe
+    end
+
+    local isClear, canApproach
+    if routeClearance then
+        if from == base then
+            canApproach = function(deck)
+                return isSafe(deck) and routeClearance(base, deck, hit.Position)
+            end
+        elseif from.Parent == platforms then
+            -- Selection and junction labels may inspect the same deck.
+            local checked = {}
+            isClear = function(source, destination)
+                local clear = checked[destination]
+                if clear == nil then
+                    clear = isSafe(destination)
+                        and routeClearance(source, destination, nil, hit.Position)
+                    checked[destination] = clear
+                end
+                return clear
+            end
+        end
     end
     local target = nil
     local french = player.LocaleId:sub(1, 2) == "fr"
@@ -573,8 +584,7 @@ local function update()
             end
         elseif from == base then
             target = JumpRouteCueRules.nearestLavaClimbEntry(
-                pieces, hit.Position, workspace:FindFirstChild("RoundLava"),
-                106,canApproach)
+                pieces, hit.Position, lava, 106, canApproach)
         elseif from.Parent == platforms then
             target = JumpRouteCueRules.nextPhysical(
                 from, pieces, base.Position, variant,
@@ -602,7 +612,7 @@ local function update()
         -- Mastery already owns its own physical objective marker. An
         -- optional hint only assists a genuinely stalled platform runner.
         target, hint = cargoWaypoint(
-            from, pieces, base, root, arena, french, isClear, canApproach)
+            from, pieces, base, root, arena, french, isClear, canApproach, isSafe)
         if not target and currentChallenge ~= "highGround"
             and not finalRush and from.Parent == platforms
             and JumpRouteCueRules.recoveryHintReady(
@@ -700,25 +710,19 @@ local function update()
                 or "TO LOOKOUT  ↑"
         end
     end
-    local dangerWarnings = warningsNow()
-    -- If a genuine timed hazard overlaps the proposed jump, never put
-    -- an optional route sign on top of the game's primary escape cue.
-    -- At authored perimeter forks prefer a real alternate path instead.
-    if target and not safeGuidedTargetPath(root.Position,target,dangerWarnings) then
+    -- Harbor has already excluded hazards before choosing a target.
+    -- Other arenas keep their existing post-selection detour rules.
+    if not routeClearance and target and not isSafe(target) then
         local alternative = nil
         if (rookie or lavaClimbActive) and from == base then
             -- Don't simply hide the very first actionable cue when a
             -- meteor covers the nearest entry; look for another REAL
             -- first-tier takeoff in range, only during a live warning.
-            local function safeEntry(deck)
-                return safeGuidedTargetPath(root.Position,deck,dangerWarnings)
-                    and (not canApproach or canApproach(deck))
-            end
             if lavaClimbActive then
                 alternative = JumpRouteCueRules.nearestLavaClimbEntry(
-                    pieces,hit.Position,workspace:FindFirstChild("RoundLava"),106,safeEntry)
+                    pieces, hit.Position, lava, 106, isSafe)
             else
-                alternative = JumpRouteCueRules.nearestEntry(pieces,hit.Position,42,safeEntry)
+                alternative = JumpRouteCueRules.nearestEntry(pieces,hit.Position,42,isSafe)
             end
         elseif from.Parent == platforms then
             if from:GetAttribute("PerimeterStep") == 5 then
@@ -735,8 +739,7 @@ local function update()
                 alternative = target == forward and crossing or forward
             end
         end
-        if alternative and safeGuidedTargetPath(root.Position,alternative,dangerWarnings)
-            and (not isClear or isClear(from,alternative)) then
+        if alternative and isSafe(alternative) then
             target = alternative
             hint = french and "DÉTOUR SÛR  ↑" or "SAFE DETOUR  ↑"
         else

@@ -4,7 +4,7 @@ L'indicateur du défi vérifie le passage à pied depuis la position du joueur j
 
 ## P4 — Guide des sauts à Storm Harbor
 
-Le guide vérifie le passage à pied depuis les pieds du joueur jusqu'au point de départ du saut, puis l'espace nécessaire pour atteindre le premier palier. Si ce passage est obstrué, il cherche un autre accès. Une fois sur un palier, le guide vérifie aussi l'accès au bord depuis la position du joueur. Les indications pour le fret, les détours et les sorties d'urgence utilisent le même contrôle. Aux embranchements, le guide annonce deux routes quand les deux accès sont dégagés.
+Le guide vérifie le passage à pied depuis les pieds du joueur jusqu'au point de départ du saut, puis l'espace nécessaire pour atteindre le premier palier. Si ce passage est obstrué, il cherche un autre accès. Une fois sur un palier, le guide vérifie aussi l'accès au bord depuis la position du joueur. Les indications pour le fret, les détours et les sorties d'urgence utilisent le même contrôle. Le guide écarte les trajectoires exposées aux météores, aux bombes, aux balayages ou à la lave avant de choisir un palier. Il propose un détour praticable quand il en existe un et annonce deux routes uniquement quand les deux sont disponibles.
 
 ## P4 — Vérification des obstacles sur les sauts de Storm Harbor
 
