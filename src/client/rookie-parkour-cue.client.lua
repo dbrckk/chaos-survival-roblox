@@ -16,6 +16,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local currentPhase = "waiting"
+local roundNumber, roundArenaId
 local currentChallenge = nil
 local currentDisasters = {}
 local finalRush = false
@@ -137,6 +138,7 @@ end
 local marker
 local caption
 local currentTarget
+local targetConnections = {}
 local currentMap
 local mapPlatforms
 local routeClearance
@@ -147,9 +149,58 @@ rayParams.IgnoreWater = true
 rayParams.RespectCanCollide = true
 
 local function hide()
-    if marker then marker.Enabled = false end
+    for _, connection in ipairs(targetConnections) do
+        connection:Disconnect()
+    end
+    table.clear(targetConnections)
+    if marker then
+        marker.Enabled = false
+        marker.Adornee = nil
+    end
     currentTarget = nil
 end
+
+local function watchTarget(target, isLanding)
+    local parent = target.Parent
+    targetConnections[1] = target.AncestryChanged:Connect(function()
+        if currentTarget == target and (target.Parent ~= parent
+            or not target:IsDescendantOf(workspace)) then
+            hide()
+        end
+    end)
+    if not isLanding then return end
+
+    local function onSurfaceChanged()
+        if currentTarget == target and not JumpRouteCueRules.safeLandingSurface(target) then
+            hide()
+        end
+    end
+    for _, attribute in ipairs({"CollapsePhase", "BridgeShutterPhase"}) do
+        table.insert(targetConnections,
+            target:GetAttributeChangedSignal(attribute):Connect(onSurfaceChanged))
+    end
+    for _, property in ipairs({"CanCollide", "Anchored", "Transparency"}) do
+        table.insert(targetConnections,
+            target:GetPropertyChangedSignal(property):Connect(onSurfaceChanged))
+    end
+end
+
+local function clearPlayerCue()
+    hide()
+    resetRecovery()
+    resetSkyway()
+end
+
+local function onParticipationChanged()
+    if player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true then
+        clearPlayerCue()
+    end
+end
+
+player:GetAttributeChangedSignal("RoundParticipant"):Connect(onParticipationChanged)
+player:GetAttributeChangedSignal("RoundEliminated"):Connect(onParticipationChanged)
+player.CharacterRemoving:Connect(clearPlayerCue)
 
 -- The real danger event can arrive between two 0.4-second guidance polls.
 -- Hide the existing world sign in that SAME frame, without another loop.
@@ -162,19 +213,19 @@ end)
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
-    local previous = currentPhase
+    local previousPhase = currentPhase
     currentPhase = tostring(state.phase or "waiting")
+    local roundChanged = roundNumber ~= state.roundNumber or roundArenaId ~= state.arenaId
+    roundNumber, roundArenaId = state.roundNumber, state.arenaId
     currentChallenge = state.challengeMetric
     currentDisasters = type(state.disasterIds) == "table"
         and state.disasterIds or {}
     finalRush = state.finalRush == true
-    if currentPhase ~= previous then
+    if roundChanged or (currentPhase ~= "ready" and currentPhase ~= "round") then
+        clearPlayerCue()
+    elseif currentPhase ~= previousPhase then
         resetRecovery()
         resetSkyway()
-    end
-    if currentPhase ~= "ready" and currentPhase ~= "round" then
-        hide()
-        resetRecovery()
     end
 end)
 
@@ -303,13 +354,7 @@ local function orbitalRampNext(arena, from, root, base, platforms,
     if not circuit then return nil end
     local function real(folder, name)
         local part = folder and folder:FindFirstChild(name)
-        if not part or not part:IsA("BasePart") or not part.Anchored
-            or not part.CanCollide or part.Transparency >= 0.75
-            or part:GetAttribute("CollapsePhase") == "Warning"
-            or part:GetAttribute("CollapsePhase") == "Gone" then
-            return nil
-        end
-        return part
+        return JumpRouteCueRules.safeLandingSurface(part) and part or nil
     end
     local function nearestEntry(maxDistance)
         local closest, distance = nil, maxDistance
@@ -408,6 +453,10 @@ local function update()
     -- The old platform folder can be destroyed when the map changes.
     -- Do not keep a stale target, array or listener from a previous round.
     local variant = arena:GetAttribute("VariantId")
+    if type(variant) ~= "string" or (roundArenaId and variant ~= roundArenaId) then
+        clearPlayerCue()
+        return true
+    end
     if generated ~= currentMap or platforms ~= mapPlatforms then
         currentMap, mapPlatforms = generated, platforms
         routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
@@ -800,11 +849,15 @@ local function update()
     end
     if caption.Text ~= hint then caption.Text = hint end
     if currentTarget ~= target then
+        hide()
         currentTarget = target
         sign.Adornee = target
         sign.StudsOffsetWorldSpace = typeof(rampStart) == "Vector3"
             and (rampStart + Vector3.new(0, 3.1, 0) - target.Position)
             or Vector3.new(0, target.Size.Y * 0.5 + 3.1, 0)
+        local targetParent = target.Parent
+        watchTarget(target, targetParent == platforms
+            or (targetParent ~= nil and targetParent == arena:FindFirstChild("HelixCircuit")))
     end
     sign.Enabled = true
     return true, collapseEscape

@@ -182,10 +182,20 @@ end
 -- its server-owned CanCollide is still true. Do not direct newcomers to
 -- the doomed target; a player standing on a warning deck may still be
 -- guided OUT to a safe successor.
-function JumpRouteCueRules.safeLandingTarget(part)
-    if not walkable(part) then return false end
+function JumpRouteCueRules.safeLandingSurface(part)
+    if not part or not part:IsA("BasePart") or not part.Parent
+        or not part.Anchored or not part.CanCollide or part.Transparency >= 0.75 then
+        return false
+    end
     local phase = part:GetAttribute("CollapsePhase")
+    local shutter = part:GetAttribute("BridgeShutterPhase")
     return phase ~= "Warning" and phase ~= "Gone"
+        and (shutter == nil or shutter == "Idle")
+end
+
+function JumpRouteCueRules.safeLandingTarget(part)
+    return JumpRouteCueRules.safeLandingSurface(part)
+        and part.Name:match("^Platform%d+$") ~= nil
 end
 
 function JumpRouteCueRules.jumpable(from, target)
