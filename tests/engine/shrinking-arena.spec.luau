@@ -943,8 +943,9 @@ describe("Shrinking Arena mobility integration", function()
         end
         for index=1,7 do
             local piece=Instance.new("MeshPart")
-            piece.Name="Region"..index
-            piece.Size=Vector3.new(5.17,.5065,12.8)
+            piece.Name=index==7 and "UnderdeckSignal" or "Region"..index
+            piece.Size=index==7 and Vector3.new(1.09,.05,12.15)
+                or Vector3.new(5.17,.5065,12.8)
             piece.Anchored=true
             piece.Massless=true
             piece.CanCollide=false
@@ -954,6 +955,24 @@ describe("Shrinking Arena mobility integration", function()
         end
         source.Parent=holder
         return holder
+    end
+
+    local function checkUnderdeckSignal(arena,deck)
+        local index=assert(deck.Name:match("^Platform(%d+)$"))
+        local glow=arena.Decor:FindFirstChild("PlatformCoreGlow"..index)
+        assert(glow and glow:IsA("MeshPart") and glow.Material==Enum.Material.Neon)
+        assert(glow.Anchored and not glow.CanCollide and not glow.CanTouch and not glow.CanQuery)
+        assert(#glow:GetChildren()==0 and glow.Transparency<1)
+        local offset=deck.CFrame:ToObjectSpace(glow.CFrame)
+        local acrossX=math.abs(offset.LookVector.X)>.99
+        local extentX=acrossX and glow.Size.Z or glow.Size.X
+        local extentZ=acrossX and glow.Size.X or glow.Size.Z
+        local alongX=deck.Size.X>deck.Size.Z
+        assert(math.abs(extentX-deck.Size.X*(alongX and .62 or .22))<.025)
+        assert(math.abs(extentZ-deck.Size.Z*(alongX and .22 or .62))<.025)
+        assert(math.abs(offset.Y+deck.Size.Y*.5+.52)<.015)
+        assert(math.abs(glow.Size.Y-.30)<.01)
+        return glow
     end
 
     it("fits the short approved chassis beneath every Promenade deck",function()
@@ -999,6 +1018,7 @@ describe("Shrinking Arena mobility integration", function()
                         assert(Remaining.count("junction",name)==1)
                         assert(Remaining.nativeCount("junction")==(truss and 2 or 1))
                         assert(frame.LocalTransparencyModifier==1 and deck.CanCollide)
+                        checkUnderdeckSignal(arena,deck)
                         for _,piece in ipairs(model:GetChildren()) do
                             local center=deck.CFrame:PointToObjectSpace(piece.Position)
                             local bounds=deck.CFrame:ToObjectSpace(piece.CFrame)
@@ -1043,6 +1063,8 @@ describe("Shrinking Arena mobility integration", function()
                     local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_JunctionUnderframe
                     local mesh=art:FindFirstChildWhichIsA("MeshPart")
                     local width=mesh.Size.X
+                    local glow=checkUnderdeckSignal(arena,finalDeck)
+                    local originalGlowSize=glow.Size
                     NativeTrim.setPromenadeStructureMask(finalTruss,true,true)
                     assert(mesh.LocalTransparencyModifier==1 and finalTruss.LocalTransparencyModifier==1)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1056,11 +1078,13 @@ describe("Shrinking Arena mobility integration", function()
                     active=false
                     task.wait()
                     assert(arena.Base.Size.X<=144.05 and math.abs(mesh.Size.X-width*.45)<.025)
+                    assert(checkUnderdeckSignal(arena,finalDeck)==glow)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
                     assert(math.abs(finalTruss.LocalTransparencyModifier-.22)<.01)
                     cleanup(callbacks,{})
+                    assert((glow.Size-originalGlowSize).Magnitude<.01)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
@@ -1117,6 +1141,7 @@ describe("Shrinking Arena mobility integration", function()
                         end
                         local id=deck.Name:match("^Platform(%d+)$")
                         assert(arena.Decor["SkySpine"..id.."_LightedEdge1"].LocalTransparencyModifier==0)
+                        checkUnderdeckSignal(arena,deck)
                         count+=1
                         owner=deck
                     end
@@ -1164,6 +1189,7 @@ describe("Shrinking Arena mobility integration", function()
                     task.wait()
                     assert(arena.Base.Size.X<=144.05 and mesh.LocalTransparencyModifier==0)
                     assert(math.abs(mesh.Size.X-size.X*.45)<.03 and math.abs(mesh.Size.Z-size.Z*.45)<.03)
+                    checkUnderdeckSignal(arena,owner)
                     Remaining.sync(arena,owner.Position,"Low",true,nil,1,true)
                     for _,part in ipairs(native) do
                         assert(math.abs(part.LocalTransparencyModifier-.21)<.01)

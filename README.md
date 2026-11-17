@@ -1,3 +1,7 @@
+## P4 — Éclairage biseauté sous les tabliers aériens
+
+Les 80 tabliers des Promenades et les 50 tabliers de l’Épine céleste peuvent recevoir deux inserts lumineux biseautés à la place de leur plaque rectangulaire. La paire forme un seul maillage issu du châssis approuvé d’Orbital. Elle reprend la teinte de l’arène, suit la contraction du tablier et utilise les règles de visibilité existantes. Les plaques d’origine prennent le relais si la source 3D est indisponible lors de la construction de l’arène.
+
 ## P4 — Bordures sculptées sous le balisage des tabliers aériens
 
 Les bordures 3D des 130 tabliers des Promenades et de l’Épine céleste dépassent désormais du bord du tablier, dans l’enveloppe des biseaux d’origine. Leur lèvre reste sous la surface d’appui. Les bandes lumineuses et les chevrons restent visibles. La saillie suit la contraction et les bordures conservent les créneaux de rendu existants.

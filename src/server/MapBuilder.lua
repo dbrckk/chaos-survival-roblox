@@ -1645,7 +1645,20 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
     end
 end
 
-local function addPlatformFinish(decor, platform, index, theme)
+local function underdeckSignalSource()
+    local templates = ReplicatedStorage:FindFirstChild("ApprovedRemainingStructureTemplates")
+    if not templates or templates:GetAttribute("OwnerVerified") ~= true then return nil end
+    local chassis = templates:FindFirstChild("AccessChassis")
+    if not chassis or not chassis:IsA("Model")
+        or chassis:GetAttribute("OwnerVerified") ~= true
+        or chassis:GetAttribute("CosmeticOnly") ~= true
+        or chassis:GetAttribute("P4OriginalRemainingStructure3D") ~= true
+        or chassis:GetAttribute("Original3DAssetId") ~= 106401955318567 then return nil end
+    local signal = chassis:FindFirstChild("UnderdeckSignal")
+    return signal and signal:IsA("MeshPart") and signal.Archivable and signal or nil
+end
+
+local function addPlatformFinish(decor, platform, index, theme, underdeckSignal)
     local topPanel = decorPart(
         decor,
         "PlatformPanel" .. index,
@@ -1770,20 +1783,46 @@ local function addPlatformFinish(decor, platform, index, theme)
     underFrame.Transparency = 0.04
     underFrame:SetAttribute("PremiumArchitecturalSurface", true)
 
-    local core = decorPart(
-        decor,
-        "PlatformCoreGlow" .. index,
-        Vector3.new(
-            math.max(0.8, platform.Size.X * 0.32),
-            0.12,
-            math.max(0.8, platform.Size.Z * 0.32)
-        ),
-        platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.42, 0),
-        (index % 2 == 0) and theme.Secondary or theme.Accent,
-        VisualTheme.Materials.Glow
-    )
-    core.Transparency = routeTier and
-        (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
+    local coreName = "PlatformCoreGlow" .. index
+    local coreColor = (index % 2 == 0) and theme.Secondary or theme.Accent
+    local coreAlpha = routeTier and (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
+    if underdeckSignal and (promenadeLane or skySpineStep) then
+        -- Keep the same decor name/owner so the existing disaster rules
+        -- resize and hide both emitters as a single cosmetic piece.
+        local lens = underdeckSignal:Clone()
+        lens:ClearAllChildren()
+        lens.TextureID = ""
+        lens.Name = coreName
+        lens.Color = coreColor
+        lens.Material = VisualTheme.Materials.Glow
+        lens.MaterialVariant = ""
+        lens.Transparency = coreAlpha
+        local deckAlongX = platform.Size.X > platform.Size.Z
+        local lensAlongX = lens.Size.X > lens.Size.Z
+        local length = math.max(platform.Size.X, platform.Size.Z) * 0.62
+        local width = math.min(platform.Size.X, platform.Size.Z) * 0.22
+        lens.Size = lensAlongX and Vector3.new(length, 0.30, width)
+            or Vector3.new(width, 0.30, length)
+        -- The top overlaps the native frame by .02 studs. The luminous
+        -- faces sit below both the native frame and the shallow chassis.
+        lens.CFrame = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.52, 0)
+            * CFrame.Angles(0, deckAlongX ~= lensAlongX and math.pi * 0.5 or 0, 0)
+        lens.Parent = decor
+    else
+        local core = decorPart(
+            decor,
+            coreName,
+            Vector3.new(
+                math.max(0.8, platform.Size.X * 0.32),
+                0.12,
+                math.max(0.8, platform.Size.Z * 0.32)
+            ),
+            platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.42, 0),
+            coreColor,
+            VisualTheme.Materials.Glow
+        )
+        core.Transparency = coreAlpha
+    end
 
     local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
     local deckTop = 1.15
@@ -2670,6 +2709,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Keeping the combined parts under Platforms lets all server-owned
     -- disaster and AI systems treat outer routes as real gameplay geometry.
     local platformDefinitions = table.clone(variant.Platforms)
+    local underdeckSignal = underdeckSignalSource()
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -2968,7 +3008,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         else
             trim.Transparency = 0.64
         end
-        addPlatformFinish(decor, platform, i, theme)
+        addPlatformFinish(decor, platform, i, theme, underdeckSignal)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
