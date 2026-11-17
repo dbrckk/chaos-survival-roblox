@@ -2299,6 +2299,13 @@ for name,asset_id in P4_IDS.items():
     assert str(asset_id) in P4_IMPORT
     assert str(asset_id) in P4_CLIENT
     assert name in P4_SOURCE
+access_chassis=P4_MODELS["orbital_access_chassis"]
+assert access_chassis["asset_id"]=="106401955318567"
+assert access_chassis["moderation"]=="Approved" and access_chassis["cosmetic_only"]
+assert access_chassis["workflow_run_id"]==44064536419
+assert access_chassis["triangles"]==2352 and len(access_chassis["source_sha256"])==64
+assert access_chassis["asset_id"] in P4_IMPORT and access_chassis["asset_id"] in P4_CLIENT
+assert "orbital_access_chassis" in P4_SOURCE
 assert 'require(script.PremiumRemainingStructureAssets).start()' in P4_START
 assert 'require("./PremiumApprovedAssetImportGate")' in P4_IMPORT
 for contract in (
@@ -2348,6 +2355,7 @@ assert 'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,' in SIDE_LOD
 for name in ("LocalOriginalAscensionArch3DCount",
              "LocalOriginalColumnCasing3DCount",
              "LocalOriginalOrbitalHelixUnderframe3DCount",
+             "LocalOriginalOrbitalAccessChassis3DCount",
              "LocalOriginalPromenadeCrosshead3DCount",
              "LocalP4RemainingStructuralNativePiecesReplaced"):
     assert name in SIDE_LOD,name
@@ -2489,7 +2497,7 @@ for clause in (
     assert clause in equipment_collector,clause
 assert 'local EQUIPMENT_TOUCH_CAP={Low=1,Medium=1,High=2}' in P4_CLIENT
 assert 'if data.anchor then watchPorticoNative(data.anchor) end' in P4_CLIENT
-assert 'or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing")' in P4_CLIENT
+assert 'or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"' in P4_CLIENT
 assert 'and not sameOriginals(entry,data))' in P4_CLIENT
 assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
 assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD
