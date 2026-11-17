@@ -408,16 +408,21 @@ function Kit.spineNativeParts(decor,deck)
     return nil
 end
 
+function Kit.promenadeNativeFrame(decor,deck)
+    if not deck or not deck:IsA("BasePart") then return nil end
+    local scale = promenadeFootprint(deck)
+    local id = cradleNativeOwner(decor,deck,scale)
+    if not id then return nil end
+    return cradleNativeFrame(decor,deck,id,scale),id,scale
+end
+
 function Kit.cradleNativeParts(decor,deck)
     if not deck or not deck:IsA("BasePart") then return nil end
     if deck:GetAttribute("SkySpineStep") ~= nil
         or deck:GetAttribute("SkySpineInterchange") == true then
         return Kit.spineNativeParts(decor,deck)
     end
-    local scale = promenadeFootprint(deck)
-    local id = cradleNativeOwner(decor,deck,scale)
-    if not id then return nil end
-    local frame = cradleNativeFrame(decor,deck,id,scale)
+    local frame,id,scale = Kit.promenadeNativeFrame(decor,deck)
     if not frame then return nil end
     local span = PROMENADE_TRUSS_SPAN[deck:GetAttribute("PromenadeStep")]
     if not span then return {frame} end

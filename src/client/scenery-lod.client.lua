@@ -2242,6 +2242,9 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.count("junction", "JunctionTruss"),
             LocalOriginalPromenadeTrussesReplaced =
                 ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss"),
+            LocalOriginalPromenadeFramesReplaced =
+                ApprovedRemainingStructureMeshKit.count("junction", "PromenadeUnderframe")
+                + ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss"),
             LocalOriginalSkySpineUnderframesReplaced =
                 ApprovedRemainingStructureMeshKit.count("junction", "SpineUnderframe"),
             LocalOriginalPromenadeDiagonalStay3DCount =

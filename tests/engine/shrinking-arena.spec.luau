@@ -956,7 +956,7 @@ describe("Shrinking Arena mobility integration", function()
         return holder
     end
 
-    it("fits the short approved chassis beneath all outer Promenade porticos",function()
+    it("fits the short approved chassis beneath the Promenade decks outside the central junctions",function()
         local storage=game:GetService("ReplicatedStorage")
         local oldMap=workspace:FindFirstChild("GeneratedMap")
         local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
@@ -971,42 +971,61 @@ describe("Shrinking Arena mobility integration", function()
             for _,variant in ipairs(ArenaVariants.Order) do
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
-                local count=0
-                local finalDeck,finalNative
+                local count,porticos=0,0
+                local finalDeck,finalFrame,finalTruss
                 for _,deck in ipairs(arena.Platforms:GetChildren()) do
                     local step=deck:GetAttribute("PromenadeStep")
-                    if step==2 or step==7 then
+                    if step and step~=4 then
                         context=variant.." "..deck.Name
                         local index=deck.Name:match("^Platform(%d+)$")
-                        local native=arena.Decor["Promenade"..index.."_UnderdeckTruss"]
-                        native.LocalTransparencyModifier=.19
+                        local frame=arena.Decor["PlatformUnderFrame"..index]
+                        local truss=(step==2 or step==7)
+                            and arena.Decor["Promenade"..index.."_UnderdeckTruss"]
+                        local name=truss and "PromenadeTruss" or "PromenadeUnderframe"
+                        frame.LocalTransparencyModifier=.19
+                        if truss then truss.LocalTransparencyModifier=.22 end
                         Remaining.sync(nil,Vector3.zero,"Low",false)
                         Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
                         local bucket=workspace.ApprovedRemainingStructureMeshesLocal
-                        local model=bucket:FindFirstChild("ApprovedP4_PromenadeTruss")
+                        local model=bucket:FindFirstChild("ApprovedP4_"..name)
                         assert(model and model:GetAttribute("OriginalP4OwnerPlatform")==deck.Name)
-                        assert(Remaining.count("junction","PromenadeTruss")==1)
-                        assert(native.LocalTransparencyModifier==1 and deck.CanCollide)
+                        assert(Remaining.count("junction",name)==1)
+                        assert(Remaining.nativeCount("junction")==(truss and 2 or 1))
+                        assert(frame.LocalTransparencyModifier==1 and deck.CanCollide)
                         for _,piece in ipairs(model:GetChildren()) do
                             local center=deck.CFrame:PointToObjectSpace(piece.Position)
+                            local bounds=deck.CFrame:ToObjectSpace(piece.CFrame)
+                            local halfX=(math.abs(bounds.RightVector.X)*piece.Size.X
+                                +math.abs(bounds.LookVector.X)*piece.Size.Z)*.5
+                            local halfZ=(math.abs(bounds.RightVector.Z)*piece.Size.X
+                                +math.abs(bounds.LookVector.Z)*piece.Size.Z)*.5
                             assert(center.Y+piece.Size.Y*.5 < -deck.Size.Y*.5)
+                            assert(math.abs(center.X)+halfX < deck.Size.X*.5
+                                and math.abs(center.Z)+halfZ < deck.Size.Z*.5)
                             assert(not piece.CanCollide and not piece.CanQuery)
                         end
+                        if truss then
+                            assert(truss.LocalTransparencyModifier==1)
+                            porticos+=1
+                            finalDeck,finalFrame,finalTruss=deck,frame,truss
+                        end
                         count+=1
-                        finalDeck,finalNative=deck,native
                     end
                 end
-                assert(count==4,variant)
+                assert(count==14 and porticos==4,variant)
                 total+=count
-                if variant=="Harbor" and finalDeck and finalNative then
+                if variant=="Harbor" then
                     context="Harbor truss ownership and shrink"
+                    Remaining.sync(nil,Vector3.zero,"Low",false)
+                    Remaining.sync(arena,finalDeck.Position,"Low",true,nil,0,true)
                     local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_PromenadeTruss
                     local mesh=art:FindFirstChildWhichIsA("MeshPart")
                     local width=mesh.Size.X
-                    NativeTrim.setJunctionTrussMask(finalNative,true,true)
-                    assert(mesh.LocalTransparencyModifier==1 and finalNative.LocalTransparencyModifier==1)
-                    NativeTrim.setJunctionTrussMask(finalNative,true,false)
-                    assert(mesh.LocalTransparencyModifier==0)
+                    NativeTrim.setJunctionTrussMask(finalTruss,true,true)
+                    assert(mesh.LocalTransparencyModifier==1 and finalTruss.LocalTransparencyModifier==1)
+                    assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
+                    NativeTrim.setJunctionTrussMask(finalTruss,true,false)
+                    assert(mesh.LocalTransparencyModifier==0 and finalFrame.LocalTransparencyModifier==1)
                     active=true
                     ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,
                         Active=function() return active end})
@@ -1015,9 +1034,10 @@ describe("Shrinking Arena mobility integration", function()
                     active=false
                     task.wait()
                     assert(arena.Base.Size.X<=144.05 and math.abs(mesh.Size.X-width*.45)<.025)
-                    assert(finalNative.LocalTransparencyModifier==1)
+                    assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
-                    assert(math.abs(finalNative.LocalTransparencyModifier-.19)<.01)
+                    assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
+                    assert(math.abs(finalTruss.LocalTransparencyModifier-.22)<.01)
                     cleanup(callbacks,{})
                     table.clear(callbacks)
                 end
@@ -1025,7 +1045,7 @@ describe("Shrinking Arena mobility integration", function()
                 generated:Destroy()
                 generated=nil
             end
-            expect(total).toBe(20)
+            expect(total).toBe(70)
         end)
         active=false
         Remaining.sync(nil,Vector3.zero,"Low",false)

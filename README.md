@@ -2,9 +2,9 @@
 
 Chacun des dix tabliers de l’Épine céleste peut recevoir un seul châssis ajouré à la place de son socle plat, de ses deux longerons et de sa traverse. Le châssis court approuvé d’Orbital s’ajuste à l’empreinte du tablier et rend 200 pièces éligibles sur les cinq arènes. Il suit la contraction et partage le quota des treillis de jonction. Les quatre pièces réapparaissent ensemble si le châssis se décharge. Un berceau complet a la priorité dès son arrivée.
 
-## P4 — Châssis sculptés sous les portiques des Promenades
+## P4 — Châssis sculptés sous les tabliers des Promenades
 
-Les deux portiques extérieurs de chaque Promenade peuvent recevoir le châssis court approuvé d’Orbital sous leur tablier. Cela rend 20 blocs éligibles au remplacement sur les cinq arènes. Les châssis se redimensionnent avec le tablier et partagent le quota des treillis de jonction. Lorsqu’un berceau complet ou une grue couvre déjà le dessous, cet habillage prend la priorité.
+Sur les cinq arènes, 70 socles plats peuvent recevoir le châssis ajouré approuvé d’Orbital. Aux 20 portiques extérieurs, le même châssis remplace le socle et son treillis. Chaque châssis suit la contraction du tablier et occupe un créneau du quota des treillis de jonction. Si un berceau complet ou l’habillage portuaire prend la priorité, le châssis lui cède la place.
 
 ## P4 — Platelage nervuré des grandes traversées aériennes
 

@@ -2418,13 +2418,14 @@ print("PASS P4 five original moderated structures, genuine source masks,"
 
 
 promenade_collector = P4_CLIENT.split("local function porticoStep", 1)[1].split(
-    "local function collectCasing", 1)[0]
+    "local function promenadeUnderdeck", 1)[0]
 brace = P4_MODELS["perimeter_crossbrace"]
 assert brace["asset_id"]=="108452611210970" and brace["moderation"]=="Approved"
 assert brace["workflow_run_id"]==42696898936
 assert 'holder="ApprovedPerimeterStructuresTemplates"' in P4_CLIENT
 for contract in (
-    'PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]',
+    'local variant=arena:GetAttribute("VariantId")',
+    'if not PROMENADE_VARIANTS[variant]',
     '"_MonumentalCrosshead"',
     'native:GetAttribute("PromenadeVisualOnly")~=true',
     'native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index)',
@@ -2433,8 +2434,7 @@ for contract in (
     'originals={native}',
 ):
     assert contract in promenade_collector,contract
-crosshead_collector=promenade_collector.split("local function collectJunctionTruss",1)[0]
-assert 'UnderdeckTruss' not in crosshead_collector
+assert 'UnderdeckTruss' not in promenade_collector
 assert 'LoadPylon' not in promenade_collector
 assert 'Low={arch=0,casing=0,helix=0,promenade=0}' in P4_CLIENT
 print("PASS four promenade variants use the approved truss with exact native footprint and Low backoff")
@@ -2645,7 +2645,11 @@ assert 'marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "S
 assert 'count("junction", "SpineUnderframe")' in SIDE_LOD
 assert 'LocalSkySpineJunctionTrussesReplaced' in SIDE_LOD
 assert 'LocalOriginalPromenadeTrussesReplaced' in SIDE_LOD
-assert 'step~=2 and step~=7' in P4_CLIENT
+assert 'LocalOriginalPromenadeFramesReplaced' in SIDE_LOD
+assert 'step==2 or step==7' in P4_CLIENT
+assert 'LargeStructure.promenadeNativeFrame(decor,deck)' in P4_CLIENT
+assert 'key=frame,owner=deck,arena=arena,originals=originals' in P4_CLIENT
+assert 'count("junction", "PromenadeUnderframe")' in SIDE_LOD
 assert 'spec=SOURCE.AccessChassis' in P4_CLIENT
 assert 'local routeUnderframes=trussCap>0' in P4_CLIENT
 assert 'count("junction", "PromenadeTruss")' in SIDE_LOD
