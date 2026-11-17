@@ -231,6 +231,9 @@ def orbital_access_chassis(art: Sculpture) -> None:
 
     block("OctagonalServiceHousing", "CARBON", 0, -.014, 0, 2.72, .334, 2.50, .46)
     block("RecessedServiceCover", "BRUSHED", 0, -.194, 0, 1.79, .122, 1.64, .39)
+    for side in (-1, 1):
+        for end in (-1, 1):
+            span(f"CassetteMount{side}_{end}", side*2.15, end*1.34, side*1.09, end*.76)
     for z in (-1.06, 1.06):
         for i in range(5):
             block(f"CassetteVent{z}_{i}", "GRIP", (i-2)*.26, -.212, z,
