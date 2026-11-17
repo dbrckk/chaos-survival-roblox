@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from generate_original_skyfleet_carrier import MATERIALS, Sculpture
@@ -24,6 +25,7 @@ PROFILES = (
     *ASCENSION,
     "architectural_column_casing",
     "orbital_helix_underframe",
+    "orbital_access_chassis",
 )
 
 
@@ -178,6 +180,77 @@ def orbital_helix_underframe(art: Sculpture) -> None:
                       0,-1.67,0,.26,.055,8.5,.025)
 
 
+def orbital_access_chassis(art: Sculpture) -> None:
+    """Low-profile Orbital structure after the approved brief and reference sheet."""
+    block = art.beveled_block
+
+    def span(name, x1, z1, x2, z2):
+        """Closed, chamfered diagonal with rectangular load-bearing section."""
+        dx, dz = x2 - x1, z2 - z1
+        length = math.hypot(dx, dz)
+        ux, uz = dx / length, dz / length
+        wx, wz = uz, -ux
+        mx, mz = (x1 + x2) / 2, (z1 + z2) / 2
+        section = [(-.13, -.10), (.13, -.10), (.20, -.055), (.20, .06),
+                   (.135, .115), (-.135, .115), (-.20, .06), (-.20, -.055)]
+        verts = [(mx + wx * x + ux * end, y - .018, mz + wz * x + uz * end)
+                 for end in (-length / 2, length / 2) for x, y in section]
+        faces = [(0, i+1, i) for i in range(1, 7)]
+        faces += [(8, 8+i, 9+i) for i in range(1, 7)]
+        for i in range(8):
+            j = (i + 1) % 8
+            faces.extend(((i, j, i+8), (j, j+8, i+8)))
+        art.add(name, "ALLOY", verts, faces)
+
+    for side in (-1, 1):
+        x = side * 2.22
+        # Three bevel profiles give the spars raised splice points and
+        # recessed service bays without blocking the open truss windows.
+        block(f"CentralSpar{side}", "ARMOR", x, 0, 0, .49, .30, 5.08, .13)
+        for end in (-1, 1):
+            block(f"OuterSpar{side}_{end}", "ARMOR", x, -.012, end * 4.03,
+                  .59, .37, 3.4, .25)
+            block(f"MachinedSparSplice{side}_{end}", "BRUSHED", x, -.052,
+                  end * 2.52, .66, .40, .32, .09)
+            block(f"VentWell{side}_{end}", "CARBON", side * 2.512, -.015,
+                  end * 4.51, .031, .18, .99, .009)
+            for fin in range(4):
+                block(f"VentRib{side}_{end}_{fin}", "GRIP", side * 2.533, -.015,
+                      end * 4.51 + (fin-1.5)*.205, .026, .153, .055, .008)
+            for screw in (-1, 1):
+                block(f"SpliceFastener{side}_{end}_{screw}", "CERAMIC",
+                      x + screw*.20, -.263, end * 2.52, .13, .065, .13, .054)
+
+    for bay, (near, far) in enumerate(((-5.62, -3.48), (-3.48, -1.27),
+                                        (1.27, 3.48), (3.48, 5.62))):
+        center = (near + far) / 2
+        for side in (-1, 1):
+            span(f"ForgedDiagonal{bay}_{side}_A", side*2.08, near, 0, center)
+            span(f"ForgedDiagonal{bay}_{side}_B", side*2.08, far, 0, center)
+        block(f"GussetHub{bay}", "BRUSHED", 0, -.085, center, .69, .24, .64, .20)
+
+    block("OctagonalServiceHousing", "CARBON", 0, -.014, 0, 2.72, .334, 2.50, .46)
+    block("RecessedServiceCover", "BRUSHED", 0, -.194, 0, 1.79, .122, 1.64, .39)
+    for side in (-1, 1):
+        for end in (-1, 1):
+            span(f"CassetteMount{side}_{end}", side*2.15, end*1.34, side*1.09, end*.76)
+    for z in (-1.06, 1.06):
+        for i in range(5):
+            block(f"CassetteVent{z}_{i}", "GRIP", (i-2)*.26, -.212, z,
+                  .14, .085, .23, .040)
+    for x in (-.63, .63):
+        for z in (-.57, .57):
+            block(f"CassetteRivet{x}_{z}", "CERAMIC", x, -.263, z,
+                  .119, .055, .119, .046)
+    for end in (-1, 1):
+        block(f"TaperedTitaniumSaddle{end}", "BRUSHED", 0, -.015, end*5.96,
+              5.17, .45, .88, .38)
+        block(f"BrassInsetSeat{end}", "CARBON", 0, -.225, end*5.96,
+              1.28, .09, .32, .099)
+        block(f"BrassIdentificationInsert{end}", "SIGNAL", 0, -.279, end*5.96,
+              1.09, .035, .23, .079)
+
+
 def generate(model: str, output: Path) -> dict:
     if model not in PROFILES:
         raise ValueError("Unknown original Chaos 3D structure")
@@ -190,6 +263,9 @@ def generate(model: str, output: Path) -> dict:
         architectural_casing(art)
     elif model=="orbital_helix_underframe":
         orbital_helix_underframe(art)
+    elif model=="orbital_access_chassis":
+        art.lines[1] = "mtllib chaos_orbital_access_chassis.mtl"
+        orbital_access_chassis(art)
     if set(art.materials)!=set(MATERIALS):
         raise ValueError("All seven approved materials must be present")
     if not (500<=art.triangles<=5900 and 25<=art.groups<=190):
@@ -203,6 +279,10 @@ def generate(model: str, output: Path) -> dict:
         if not (8<=dims[0]<=10 and 9.8<=dims[1]<=11.8
                 and 5.0<=dims[2]<=9.0):
             raise ValueError("Unexpected architectural casing dimensions "+str(dims))
+    elif model=="orbital_access_chassis":
+        if not (5.1 <= dims[0] <= 5.3 and .45 <= dims[1] <= .55
+                and 12.7 <= dims[2] <= 12.9 and art.triangles <= 2400):
+            raise ValueError("Unsafe Orbital access chassis geometry " + str(dims))
     else:
         if not (4.5<=dims[0]<=5.7 and 1.0<=dims[1]<=2.3
                 and 23.0<=dims[2]<=25.0):

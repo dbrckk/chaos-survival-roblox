@@ -1,0 +1,22 @@
+# Original Orbital under-ramp palette, sampled visually from the concept sheet.
+newmtl ARMOR
+Kd .12 .205 .315
+Ke 0 0 0
+newmtl BRUSHED
+Kd .51 .55 .595
+Ke 0 0 0
+newmtl CARBON
+Kd .050 .068 .093
+Ke 0 0 0
+newmtl GRIP
+Kd .19 .225 .266
+Ke 0 0 0
+newmtl ALLOY
+Kd .355 .394 .464
+Ke 0 0 0
+newmtl CERAMIC
+Kd .65 .653 .667
+Ke 0 0 0
+newmtl SIGNAL
+Kd .53 .385 .177
+Ke 0 0 0
