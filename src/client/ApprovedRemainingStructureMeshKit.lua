@@ -716,65 +716,78 @@ local function collectCasing(arena,casing,group)
         expectedParent=casing}
 end
 
+local function availableOrbitalRamp(arena,ramp,circuit)
+    if arena:GetAttribute("VariantId")~="Orbital" or not ramp:IsA("BasePart")
+        or ramp.Parent~=circuit or not ramp.Anchored or not ramp.CanCollide
+        or ramp.Transparency>=.75 then return false end
+    local phase=ramp:GetAttribute("CollapsePhase")
+    local shutter=ramp:GetAttribute("BridgeShutterPhase")
+    return typeof(ramp:GetAttribute("HelixStart"))=="Vector3"
+        and typeof(ramp:GetAttribute("HelixFinish"))=="Vector3"
+        and phase~="Warning" and phase~="Gone" and (not shutter or shutter=="Idle")
+end
+
 local function collectHelix(arena,ramp,circuit)
-    if arena:GetAttribute("VariantId")~="Orbital"
-        or not ramp:IsA("BasePart") or ramp.Parent~=circuit
-        or ramp:GetAttribute("OrbitalHelixRamp")~=true
-        or not ramp.Name:match("^HelixRamp%d+$")
-        or not ramp.Anchored or not ramp.CanCollide
-        or ramp.Transparency>=.75 then return nil end
+    if not availableOrbitalRamp(arena,ramp,circuit) then return nil end
     local index=ramp:GetAttribute("HelixLane")
     if type(index)~="number" or index%1~=0
-        or index<1 or index>8
-        or ramp.Name~="HelixRamp"..index
-        or ramp:GetAttribute("OrbitRouteGroup")~="Helix"..index
-        or ramp.Size.X<4.9 or ramp.Size.X>5.9
-        or ramp.Size.Z<6.5 or ramp.Size.Z>65
-        or ramp.Size.Y<.8 or ramp.Size.Y>1.1 then return nil end
-    local names={
-        "HelixUnderframe"..index.."_-1",
-        "HelixUnderframe"..index.."_1",
-        "HelixSpineBrace"..index.."_-1",
-        "HelixSpineBrace"..index.."_1",
-    }
+        or index<1 or index>9 or ramp.Name~="HelixRamp"..index then return nil end
+    local core=index==9
+    local group=core and "Core2" or "Helix"..index
+    local tag=core and "OrbitalCoreRamp" or "OrbitalHelixRamp"
+    local fullWidth=core and 4.6 or 5.4
+    local size=ramp.Size
+    if ramp:GetAttribute(tag)~=true or ramp:GetAttribute("OrbitRouteGroup")~=group
+        or size.X<(core and 2.38 or 5.37) or size.X>fullWidth+.03
+        or size.Z<6.5 or size.Z>57.6 or math.abs(size.Y-.92)>.04 then return nil end
+
     local originals={}
-    for _,name in ipairs(names) do
+    local lateralScale=size.X/fullWidth
+    local function take(name,specSize,position)
         local part=circuit:FindFirstChild(name)
-        if not visualNative(part,circuit)
-            or part:GetAttribute("HelixLane")~=index
-            or part:GetAttribute("OrbitRouteGroup")~="Helix"..index then
-            return nil
-        end
+        if not visualNative(part,circuit) or not part:IsA("Part")
+            or part.Shape~=Enum.PartType.Block or part:GetAttribute("HelixLane")~=index
+            or part:GetAttribute("OrbitRouteGroup")~=group then return false end
+        local relative=ramp.CFrame:ToObjectSpace(part.CFrame)
+        if (part.Size-specSize).Magnitude>.09 or (relative.Position-position).Magnitude>.09
+            or relative.LookVector:Dot(-Vector3.zAxis)<.998
+            or relative.UpVector:Dot(Vector3.yAxis)<.998 then return false end
         originals[#originals+1]=part
+        return true
     end
-    -- Native linear underframes are length-tracked by OrbitalHelix.scale.
-    -- Refuse a partial replication tick before masking either underframe.
-    for j=1,2 do
-        if math.abs(originals[j].Size.Z-(ramp.Size.Z-.7))>.40 then
-            return nil
-        end
+    for side=-1,1,2 do
+        if not take("HelixUnderframe"..index.."_"..side,
+            Vector3.new(.34,.26,size.Z-.7),
+            Vector3.new(side*(fullWidth*.5-.45)*lateralScale,-.65,0))
+            or not take("HelixSpineBrace"..index.."_"..side,
+            Vector3.new((fullWidth+.25)*lateralScale,.23,.45),
+            Vector3.new(0,-.62,side*size.Z*.28)) then return nil end
     end
-    return {category="helix",name="Helix",owner=ramp,arena=arena,
-        originals=originals,center=ramp.Position,
-        orientation=ramp.CFrame,
-        scaleX=ramp.Size.X/5.4,scaleZ=ramp.Size.Z/24.0,
-        expectedParent=circuit,index=index}
+
+    local data={category="helix",name="Helix",owner=ramp,arena=arena,
+        originals=originals,center=ramp.Position,orientation=ramp.CFrame,
+        scaleX=size.X/5.4,scaleZ=size.Z/24,expectedParent=circuit}
+    if core then
+        if not take("HelixSpineBrace"..index.."_0",
+            Vector3.new((fullWidth+.25)*lateralScale,.23,.45),
+            Vector3.new(0,-.62,0)) then return nil end
+        -- This short reactor crossing has another playable route underneath.
+        -- Fit within the native underframe's depth instead of hanging a keel below it.
+        local depth=.30
+        local centerY=-size.Y*.5-.012-depth*.5
+        data.orientation=ramp.CFrame*CFrame.new(0,centerY-SOURCE.Helix.centerY,0)
+        data.fitSize=Vector3.new(size.X*.965,depth,size.Z-.7)
+    end
+    return data
 end
 
 local function collectAccessChassis(arena,ramp,circuit)
-    if arena:GetAttribute("VariantId")~="Orbital" or not ramp:IsA("BasePart")
-        or ramp.Parent~=circuit or not ramp.Anchored or not ramp.CanCollide
-        or ramp.Transparency>=.75 then return nil end
+    if not availableOrbitalRamp(arena,ramp,circuit) then return nil end
     local kind,number=ramp.Name:match("^(%a+)Ramp([1-8])$")
     if kind~="Entry" and (kind~="Core" or number=="2") then return nil end
     local attribute=kind=="Entry" and "OrbitalAccessRamp" or "OrbitalCoreRamp"
     local group=kind..number
-    local phase=ramp:GetAttribute("CollapsePhase")
-    local shutter=ramp:GetAttribute("BridgeShutterPhase")
-    if ramp:GetAttribute(attribute)~=true or ramp:GetAttribute("OrbitRouteGroup")~=group
-        or typeof(ramp:GetAttribute("HelixStart"))~="Vector3"
-        or typeof(ramp:GetAttribute("HelixFinish"))~="Vector3"
-        or phase=="Warning" or phase=="Gone" or (shutter and shutter~="Idle") then
+    if ramp:GetAttribute(attribute)~=true or ramp:GetAttribute("OrbitRouteGroup")~=group then
         return nil
     end
     local size=ramp.Size
@@ -815,7 +828,7 @@ local function reveal(entry)
             Trim.setJunctionTrussMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
             or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
-                or entry.name=="AccessChassis")
+                or entry.category=="helix")
                 and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
@@ -1125,7 +1138,7 @@ local function mount(data,source)
             data.owner.AncestryChanged:Connect(changed)
     end
     if data.category=="arch" or data.category=="archBase" or isPortico(data.category)
-        or data.name=="AccessChassis" then
+        or data.category=="helix" then
         -- A collapsing/shutter warning takes precedence over decorative
         -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
         entry.connections[#entry.connections+1]=
@@ -1182,11 +1195,12 @@ local function mount(data,source)
                     entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
                 end
             end
-        elseif data.name=="AccessChassis" then
+        elseif data.category=="helix" then
             watch(native,{"CFrame","Size","Transparency","Anchored","CanCollide",
                 "CanTouch","CanQuery","Name","Shape"})
-            entry.connections[#entry.connections+1]=
-                native:GetAttributeChangedSignal("OrbitRouteGroup"):Connect(changed)
+            for _,tag in ipairs({"OrbitRouteGroup","HelixLane"}) do
+                entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
+            end
         elseif isPortico(data.category) then
             watchPorticoNative(native)
         else
@@ -1194,8 +1208,9 @@ local function mount(data,source)
         end
     end
     if data.anchor then watchPorticoNative(data.anchor) end
-    if data.name=="AccessChassis" then
-        for _,tag in ipairs({"OrbitalAccessRamp","OrbitalCoreRamp","OrbitRouteGroup","HelixStart","HelixFinish"}) do
+    if data.category=="helix" then
+        local routeTag=data.name=="AccessChassis" and "OrbitalAccessRamp" or "OrbitalHelixRamp"
+        for _,tag in ipairs({routeTag,"OrbitalCoreRamp","OrbitRouteGroup","HelixLane","HelixStart","HelixFinish"}) do
             entry.connections[#entry.connections+1]=data.owner:GetAttributeChangedSignal(tag):Connect(changed)
         end
         entry.connections[#entry.connections+1]=data.owner:GetPropertyChangedSignal("Name"):Connect(changed)
@@ -1208,7 +1223,7 @@ local function mount(data,source)
             entry.connections[#entry.connections+1]=data.owner:GetAttributeChangedSignal(tag):Connect(changed)
         end
     end
-    if data.category=="archBase" or data.category=="casing" or data.name=="AccessChassis" then
+    if data.category=="archBase" or data.category=="casing" or data.category=="helix" then
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
             entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
@@ -1472,14 +1487,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     end
     local circuit=arena:FindFirstChild("HelixCircuit")
     local helixCap=caps(tier,touch,pressure,"helix")
-    -- A close access stair can borrow the one existing Low casing slot.
-    -- Standard Helix and access chassis share the same higher-tier pool.
+    -- The nearest complete Orbital underframe can borrow the existing Low
+    -- casing slot. Both models continue to share one pool on higher tiers.
     local borrowCasing=tier=="Low" and caps(tier,touch,pressure,"casing")>0
-    if circuit and circuit:IsA("Folder") and ((src.Helix and helixCap>0)
-        or (src.AccessChassis and (helixCap>0 or borrowCasing))) then
+    if circuit and circuit:IsA("Folder") and (src.Helix or src.AccessChassis)
+        and (helixCap>0 or borrowCasing) then
         for _,ramp in ipairs(circuit:GetChildren()) do
             local data=src.AccessChassis and collectAccessChassis(arena,ramp,circuit)
-            if not data and src.Helix and helixCap>0 then
+            if not data and src.Helix then
                 data=collectHelix(arena,ramp,circuit)
             end
             if data then
@@ -1602,7 +1617,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             or data.otherDeck~=entry.otherDeck
             or src[entry.name]~=entry.source
             or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
-                or entry.name=="AccessChassis")
+                or entry.category=="helix")
                 and not sameOriginals(entry,data))
             or not sourceIntact(entry) then
             -- A streamed/lost local MeshPart is not a valid seven-piece

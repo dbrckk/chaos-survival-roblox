@@ -1367,7 +1367,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                     local underframe=circuit:FindFirstChild("HelixUnderframe1_-1")
                     expect(underframe~=nil).toBe(true)
                     expect(underframe.LocalTransparencyModifier).toBe(1)
-                    RemainingStructureKit.sync(arena,base.Position,"Low",true,
+                    RemainingStructureKit.sync(arena,base.Position+Vector3.new(0,200,0),"Low",true,
                         Vector3.new(0,0,-1),0,true)
                     expect(RemainingStructureKit.count("helix")).toBe(0)
                     expect(underframe.LocalTransparencyModifier).toBe(0)

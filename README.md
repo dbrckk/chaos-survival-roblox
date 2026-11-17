@@ -1,3 +1,9 @@
+## P4 — Dessous de rampes sculptés sur Orbital
+
+Les 24 rampes d’Orbital peuvent recevoir un dessous sculpté. Les huit grandes rampes peuvent désormais afficher leur treillis approuvé en qualité basse. La passerelle centrale vers le réacteur reçoit une version aplatie du même treillis, dans la hauteur du décor d’origine, et remplace cinq pièces rectangulaires. Le montage suit la contraction de l’arène et revient au décor d’origine si une pièce se décharge ou si une alerte se déclenche.
+
+En qualité basse, le dessous éligible le plus proche peut occuper le créneau de décor déjà disponible. Les deux modèles partagent le budget des rampes dans les profils supérieurs.
+
 ## P4 — Alerte de danger et guidage dans les cinq arènes
 
 Dans Classic Grid, Towers, Crossroads et Storm Harbor, les chevrons de saut proches se masquent si le trajet est menacé. Les balayages de Classic Grid et de Storm Harbor déclenchent ce contrôle à chaque changement de phase. Sur PC, le défi Points hauts filtre les paliers dangereux dans toutes les arènes et vérifie l’entrée réelle des rampes d’Orbital. Sur écran tactile, le défi garde son affichage dans le HUD.
