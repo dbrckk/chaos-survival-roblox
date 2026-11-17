@@ -1,6 +1,6 @@
 ## P4 — Châssis ajourés sous l’Épine céleste
 
-Chacun des dix tabliers de l’Épine céleste peut recevoir le châssis court approuvé d’Orbital à la place de ses deux longerons et de sa traverse rectangulaire. Le montage rend 150 pièces éligibles sur les cinq arènes. Il suit la contraction et partage le quota des treillis de jonction. Les trois pièces réapparaissent ensemble si le châssis se décharge. Un berceau complet a la priorité dès son arrivée.
+Chacun des dix tabliers de l’Épine céleste peut recevoir un seul châssis ajouré à la place de son socle plat, de ses deux longerons et de sa traverse. Le châssis court approuvé d’Orbital s’ajuste à l’empreinte du tablier et rend 200 pièces éligibles sur les cinq arènes. Il suit la contraction et partage le quota des treillis de jonction. Les quatre pièces réapparaissent ensemble si le châssis se décharge. Un berceau complet a la priorité dès son arrivée.
 
 ## P4 — Châssis sculptés sous les portiques des Promenades
 

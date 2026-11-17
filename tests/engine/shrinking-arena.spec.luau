@@ -1057,20 +1057,20 @@ describe("Shrinking Arena mobility integration", function()
                     if deck:GetAttribute("SkySpineStep") then
                         context=variant.." "..deck.Name
                         local native=assert(LargeStructure.spineNativeParts(arena.Decor,deck))
-                        for index=2,4 do native[index].LocalTransparencyModifier=.21 end
+                        for _,part in ipairs(native) do part.LocalTransparencyModifier=.21 end
                         Remaining.sync(nil,Vector3.zero,"Low",false)
                         Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
                         local art=workspace.ApprovedRemainingStructureMeshesLocal
                             :FindFirstChild("ApprovedP4_SpineUnderframe")
                         assert(art and art:GetAttribute("OriginalP4OwnerPlatform")==deck.Name)
                         assert(Remaining.count("junction","SpineUnderframe")==1)
-                        assert(Remaining.nativeCount("junction")==3)
-                        assert(native[1].LocalTransparencyModifier==0 and deck.CanCollide)
-                        for index=2,4 do assert(native[index].LocalTransparencyModifier==1) end
+                        assert(Remaining.nativeCount("junction")==4 and deck.CanCollide)
+                        for _,part in ipairs(native) do assert(part.LocalTransparencyModifier==1) end
                         for _,mesh in ipairs(art:GetChildren()) do
                             local p=deck.CFrame:PointToObjectSpace(mesh.Position)
                             assert(p.Y+mesh.Size.Y*.5< -deck.Size.Y*.5)
                             assert(math.abs(p.X)+mesh.Size.X*.5<=deck.Size.X*.5)
+                            assert(math.abs(p.Z)+mesh.Size.Z*.5<=deck.Size.Z*.5)
                             assert(not mesh.CanCollide and not mesh.CanQuery)
                         end
                         local id=deck.Name:match("^Platform(%d+)$")
@@ -1093,12 +1093,22 @@ describe("Shrinking Arena mobility integration", function()
                         NativeTrim.setRouteUnderdeckMask(native[index],false)
                         assert(mesh.LocalTransparencyModifier==0)
                     end
+                    local frame=native[1]
+                    frame:SetAttribute("PremiumArchitecturalSurface",false)
+                    task.wait()
+                    assert(mesh.LocalTransparencyModifier==1)
+                    for _,part in ipairs(native) do
+                        assert(math.abs(part.LocalTransparencyModifier-.21)<.01)
+                    end
+                    frame:SetAttribute("PremiumArchitecturalSurface",true)
+                    task.wait()
+                    assert(mesh.LocalTransparencyModifier==0)
                     local cross=native[4]
                     cross.Parent=nil
                     task.wait()
                     assert(mesh.LocalTransparencyModifier==1)
-                    for index=2,4 do
-                        assert(math.abs(native[index].LocalTransparencyModifier-.21)<.01)
+                    for _,part in ipairs(native) do
+                        assert(math.abs(part.LocalTransparencyModifier-.21)<.01)
                     end
                     cross.Parent=arena.Decor
                     task.wait()
@@ -1113,8 +1123,8 @@ describe("Shrinking Arena mobility integration", function()
                     assert(arena.Base.Size.X<=144.05 and mesh.LocalTransparencyModifier==0)
                     assert(math.abs(mesh.Size.X-size.X*.45)<.03 and math.abs(mesh.Size.Z-size.Z*.45)<.03)
                     Remaining.sync(arena,owner.Position,"Low",true,nil,1,true)
-                    for index=2,4 do
-                        assert(math.abs(native[index].LocalTransparencyModifier-.21)<.01)
+                    for _,part in ipairs(native) do
+                        assert(math.abs(part.LocalTransparencyModifier-.21)<.01)
                     end
                     cleanup(callbacks,{})
                     table.clear(callbacks)

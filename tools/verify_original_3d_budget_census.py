@@ -2639,9 +2639,9 @@ assert 'SkyRouteConnectionRules.spineJunction(first,second)' in ROUTE
 assert 'not Connection.spineJunction(spine,deck)' in P4_CLIENT
 assert 'Trim.hasPrimaryJunctionTruss(native)' in P4_CLIENT
 assert 'Trim.observePrimaryJunctionTruss(part,changed)' in P4_CLIENT
-assert 'Trim.observePrimaryJunctionTruss(data.anchor,changed)' in P4_CLIENT
 assert 'local native=LargeStructure.spineNativeParts(decor,deck)' in P4_CLIENT
-assert 'anchor=frame,originals={left,right,cross}' in P4_CLIENT
+assert 'key=native[1],owner=deck,arena=arena,originals=native' in P4_CLIENT
+assert 'marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "SkySpineDecor"' in P4_CLIENT
 assert 'count("junction", "SpineUnderframe")' in SIDE_LOD
 assert 'LocalSkySpineJunctionTrussesReplaced' in SIDE_LOD
 assert 'LocalOriginalPromenadeTrussesReplaced' in SIDE_LOD

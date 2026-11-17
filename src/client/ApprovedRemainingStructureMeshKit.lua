@@ -535,14 +535,15 @@ local function collectSpineUnderframe(arena,deck,decor)
     for _,part in ipairs(native) do
         if Trim.hasPrimaryJunctionTruss(part) then return nil end
     end
-    local frame,left,right,cross=table.unpack(native)
     local size=deck.Size
-    local depth=.42
-    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.44,0)
+    local depth=.60
+    -- Fit the whole underside within the solid deck's perimeter. Keep
+    -- just below the collision face and above the original cross brace bottom.
+    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.04-depth*.5,0)
     return {category="junction",name="SpineUnderframe",spec=SOURCE.AccessChassis,
-        key=cross,owner=deck,arena=arena,anchor=frame,originals={left,right,cross},
+        key=native[1],owner=deck,arena=arena,originals=native,
         center=deck.Position,orientation=orientation,
-        fitSize=Vector3.new(size.X*.96,depth,left.Size.Z*.985),expectedParent=decor}
+        fitSize=Vector3.new(size.X*.985,depth,size.Z*.985),expectedParent=decor}
 end
 
 -- Two real central trusses already exist in the five maps. Cover each
@@ -1216,9 +1217,6 @@ local function mount(data,source)
         for _,part in ipairs(data.originals) do
             disconnects[#disconnects+1]=Trim.observePrimaryJunctionTruss(part,changed)
         end
-        if data.anchor then
-            disconnects[#disconnects+1]=Trim.observePrimaryJunctionTruss(data.anchor,changed)
-        end
         entry.disconnectTruss=function()
             for _,disconnect in ipairs(disconnects) do disconnect() end
         end
@@ -1238,7 +1236,7 @@ local function mount(data,source)
         end
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
         if data.name=="SpineUnderframe" then
-            marker=native==data.anchor and "PremiumArchitecturalSurface" or "SkySpineDecor"
+            marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "SkySpineDecor"
         end
         for _,attribute in ipairs({marker,"PerimeterPlatformIndex"}) do
             entry.connections[#entry.connections+1]=
