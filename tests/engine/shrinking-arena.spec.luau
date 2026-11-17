@@ -930,12 +930,7 @@ describe("Shrinking Arena mobility integration", function()
         root:Destroy()
     end)
 
-    it("fits the short approved chassis beneath all outer Promenade porticos",function()
-        local storage=game:GetService("ReplicatedStorage")
-        local oldMap=workspace:FindFirstChild("GeneratedMap")
-        local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
-        if oldMap then oldMap.Parent=nil end
-        if oldSource then oldSource.Parent=nil end
+    local function shortChassisFixture(storage)
         local holder=Instance.new("Folder")
         holder.Name="ApprovedRemainingStructureTemplates"
         holder:SetAttribute("OwnerVerified",true)
@@ -958,6 +953,16 @@ describe("Shrinking Arena mobility integration", function()
             piece.Parent=source
         end
         source.Parent=holder
+        return holder
+    end
+
+    it("fits the short approved chassis beneath all outer Promenade porticos",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if oldMap then oldMap.Parent=nil end
+        if oldSource then oldSource.Parent=nil end
+        local holder=shortChassisFixture(storage)
 
         local generated,context
         local active,callbacks=false,{}
@@ -1021,6 +1026,104 @@ describe("Shrinking Arena mobility integration", function()
                 generated=nil
             end
             expect(total).toBe(20)
+        end)
+        active=false
+        Remaining.sync(nil,Vector3.zero,"Low",false)
+        cleanup(callbacks,{})
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if oldSource then oldSource.Parent=storage end
+        if oldMap then oldMap.Parent=workspace end
+        if not okay then error(tostring(context)..": "..tostring(why)) end
+    end)
+
+
+    it("fits one approved chassis over each complete Sky Spine set and yields to the full cradle",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if oldMap then oldMap.Parent=nil end
+        if oldSource then oldSource.Parent=nil end
+        local holder=shortChassisFixture(storage)
+        local generated,context
+        local active,callbacks=false,{}
+        local okay,why=pcall(function()
+            local total=0
+            for _,variant in ipairs(ArenaVariants.Order) do
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
+                generated=arena.Parent
+                local count,owner=0,nil
+                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                    if deck:GetAttribute("SkySpineStep") then
+                        context=variant.." "..deck.Name
+                        local native=assert(LargeStructure.spineNativeParts(arena.Decor,deck))
+                        for index=2,4 do native[index].LocalTransparencyModifier=.21 end
+                        Remaining.sync(nil,Vector3.zero,"Low",false)
+                        Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                        local art=workspace.ApprovedRemainingStructureMeshesLocal
+                            :FindFirstChild("ApprovedP4_SpineUnderframe")
+                        assert(art and art:GetAttribute("OriginalP4OwnerPlatform")==deck.Name)
+                        assert(Remaining.count("junction","SpineUnderframe")==1)
+                        assert(Remaining.nativeCount("junction")==3)
+                        assert(native[1].LocalTransparencyModifier==0 and deck.CanCollide)
+                        for index=2,4 do assert(native[index].LocalTransparencyModifier==1) end
+                        for _,mesh in ipairs(art:GetChildren()) do
+                            local p=deck.CFrame:PointToObjectSpace(mesh.Position)
+                            assert(p.Y+mesh.Size.Y*.5< -deck.Size.Y*.5)
+                            assert(math.abs(p.X)+mesh.Size.X*.5<=deck.Size.X*.5)
+                            assert(not mesh.CanCollide and not mesh.CanQuery)
+                        end
+                        local id=deck.Name:match("^Platform(%d+)$")
+                        assert(arena.Decor["SkySpine"..id.."_LightedEdge1"].LocalTransparencyModifier==0)
+                        count+=1
+                        owner=deck
+                    end
+                end
+                assert(count==10,variant)
+                total+=count
+                if variant=="Harbor" and owner then
+                    context="Sky Spine streaming, shared claims and contraction"
+                    local native=assert(LargeStructure.spineNativeParts(arena.Decor,owner))
+                    local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_SpineUnderframe
+                    local mesh=art:FindFirstChildWhichIsA("MeshPart")
+                    local size=mesh.Size
+                    for _,index in ipairs({1,3}) do
+                        NativeTrim.setRouteUnderdeckMask(native[index],true)
+                        assert(mesh.LocalTransparencyModifier==1 and native[index].LocalTransparencyModifier==1)
+                        NativeTrim.setRouteUnderdeckMask(native[index],false)
+                        assert(mesh.LocalTransparencyModifier==0)
+                    end
+                    local cross=native[4]
+                    cross.Parent=nil
+                    task.wait()
+                    assert(mesh.LocalTransparencyModifier==1)
+                    for index=2,4 do
+                        assert(math.abs(native[index].LocalTransparencyModifier-.21)<.01)
+                    end
+                    cross.Parent=arena.Decor
+                    task.wait()
+                    assert(mesh.LocalTransparencyModifier==0)
+                    active=true
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,
+                        Active=function() return active end})
+                    local deadline=os.clock()+1.5
+                    repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+                    active=false
+                    task.wait()
+                    assert(arena.Base.Size.X<=144.05 and mesh.LocalTransparencyModifier==0)
+                    assert(math.abs(mesh.Size.X-size.X*.45)<.03 and math.abs(mesh.Size.Z-size.Z*.45)<.03)
+                    Remaining.sync(arena,owner.Position,"Low",true,nil,1,true)
+                    for index=2,4 do
+                        assert(math.abs(native[index].LocalTransparencyModifier-.21)<.01)
+                    end
+                    cleanup(callbacks,{})
+                    table.clear(callbacks)
+                end
+                Remaining.sync(nil,Vector3.zero,"Low",false)
+                generated:Destroy()
+                generated=nil
+            end
+            expect(total).toBe(50)
         end)
         active=false
         Remaining.sync(nil,Vector3.zero,"Low",false)

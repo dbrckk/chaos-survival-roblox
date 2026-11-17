@@ -8,6 +8,9 @@ local Trim=if script and script.Parent
     and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
     then require(script.Parent.PlatformNativeTrimReplacementKit)
     else require("./PlatformNativeTrimReplacementKit")
+local LargeStructure=if script and script.Parent and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
+    then require(script.Parent.PremiumLargeStructureMeshKit)
+    else require("./PremiumLargeStructureMeshKit")
 local Crown=if script and script.Parent and script.Parent:FindFirstChild("SkySpineCrownMeshKit")
     then require(script.Parent.SkySpineCrownMeshKit)
     else require("./SkySpineCrownMeshKit")
@@ -525,6 +528,23 @@ local function collectPromenadeTruss(arena,deck,decor,scale)
         fitSize=Vector3.new(native.Size.X*.965,depth,native.Size.Z*.985),expectedParent=decor}
 end
 
+local function collectSpineUnderframe(arena,deck,decor)
+    if not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms") then return nil end
+    local native=LargeStructure.spineNativeParts(decor,deck)
+    if not native then return nil end
+    for _,part in ipairs(native) do
+        if Trim.hasPrimaryJunctionTruss(part) then return nil end
+    end
+    local frame,left,right,cross=table.unpack(native)
+    local size=deck.Size
+    local depth=.42
+    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.44,0)
+    return {category="junction",name="SpineUnderframe",spec=SOURCE.AccessChassis,
+        key=cross,owner=deck,arena=arena,anchor=frame,originals={left,right,cross},
+        center=deck.Position,orientation=orientation,
+        fitSize=Vector3.new(size.X*.96,depth,left.Size.Z*.985),expectedParent=decor}
+end
+
 -- Two real central trusses already exist in the five maps. Cover each
 -- with a forged coupler only while its own Sky Spine endpoint overlaps.
 -- The full promenade cradle/Harbor gantry has priority over this inset.
@@ -949,6 +969,8 @@ local function refresh(entry)
                 elseif entry.category=="junction" then
                     if entry.name=="PromenadeTruss" then
                         data=collectPromenadeTruss(entry.arena,entry.owner,decor,scale)
+                    elseif entry.name=="SpineUnderframe" then
+                        data=collectSpineUnderframe(entry.arena,entry.owner,decor)
                     else
                         data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale)
                     end
@@ -1173,7 +1195,7 @@ local function mount(data,source)
             data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
     end
     if isPortico(data.category) then
-        local routeAttributes=data.category=="command"
+        local routeAttributes=(data.category=="command" or data.name=="SpineUnderframe")
             and {"SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier","LocalSkySpineCrownVisible"}
             or {"PromenadeLane","PromenadeStep","ChaosPermanentRoute","RouteTier"}
         for _,attribute in ipairs(routeAttributes) do
@@ -1190,7 +1212,16 @@ local function mount(data,source)
         end
     end
     if data.category=="junction" then
-        entry.disconnectTruss=Trim.observePrimaryJunctionTruss(data.originals[1],changed)
+        local disconnects={}
+        for _,part in ipairs(data.originals) do
+            disconnects[#disconnects+1]=Trim.observePrimaryJunctionTruss(part,changed)
+        end
+        if data.anchor then
+            disconnects[#disconnects+1]=Trim.observePrimaryJunctionTruss(data.anchor,changed)
+        end
+        entry.disconnectTruss=function()
+            for _,disconnect in ipairs(disconnects) do disconnect() end
+        end
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
             entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
@@ -1206,6 +1237,9 @@ local function mount(data,source)
                 native:GetPropertyChangedSignal("Shape"):Connect(changed)
         end
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
+        if data.name=="SpineUnderframe" then
+            marker=native==data.anchor and "PremiumArchitecturalSurface" or "SkySpineDecor"
+        end
         for _,attribute in ipairs({marker,"PerimeterPlatformIndex"}) do
             entry.connections[#entry.connections+1]=
                 native:GetAttributeChangedSignal(attribute):Connect(changed)
@@ -1394,11 +1428,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if name=="ArchAbutment" or name=="ArchGirder" then
             if archBaseCap>0 then src[name]=sourceFor(name) end
         elseif name=="AccessChassis" then
-            local promenadeTruss=trussCap>0 and (promenadeVariant or variant=="Harbor")
-            if variant=="Orbital" or promenadeTruss then
+            local routeUnderframes=trussCap>0 and (promenadeVariant or variant=="Harbor")
+            if variant=="Orbital" or routeUnderframes then
                 local source=sourceFor(name)
                 if variant=="Orbital" then src[name]=source end
-                if promenadeTruss then src.PromenadeTruss=source end
+                if routeUnderframes then
+                    src.PromenadeTruss=source
+                    src.SpineUnderframe=source
+                end
             end
         elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
@@ -1467,6 +1504,11 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                     truss=collectPromenadeTruss(arena,deck,decor,scale)
                 end
                 queuePair(truss and {truss},(DISTANCE[tier] or DISTANCE.Low).promenade,candidates.junction)
+            end
+            if src.SpineUnderframe and deck:GetAttribute("SkySpineStep") then
+                local underframe=collectSpineUnderframe(arena,deck,decor)
+                queuePair(underframe and {underframe},(DISTANCE[tier] or DISTANCE.Low).promenade,
+                    candidates.junction)
             end
             local data=collectArch(arena,deck,decor,scale)
             if src.ArchAbutment and src.ArchGirder and deck:GetAttribute("PerimeterStep") then
