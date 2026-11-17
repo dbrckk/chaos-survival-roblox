@@ -1,3 +1,7 @@
+## P4 — Renforts ajourés des Promenades de Storm Harbor
+
+Les 12 diagonales des six portiques peuvent recevoir le treillis approuvé des passerelles. Les deux côtés d’un portique s’affichent ensemble dans les créneaux de renforts Medium et High. Le portique de fret complet prend la priorité. Les diagonales d’origine reprennent le relais si une pièce se décharge, si la pression graphique augmente ou si l’arène se contracte au-delà du dégagement disponible.
+
 ## P4 — Colonnes sculptées sur les Promenades
 
 Les 12 montants des Promenades de Storm Harbor peuvent désormais recevoir la colonne portuaire approuvée, dans les créneaux de colonnes existants. Le portique complet prend la priorité dès qu’il s’affiche, et la colonne individuelle prend le relais si elle est déjà montée. Quand un seul montant est sélectionné, le modèle se place du côté le plus proche de la caméra. Les cinq arènes totalisent ainsi 60 montants éligibles à un remplacement individuel.

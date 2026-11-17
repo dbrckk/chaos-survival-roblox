@@ -865,7 +865,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 for lane=1,2 do
                     for _,useHarbor in ipairs({false,true}) do
                         local truss=trusses[lane]
-                        if useHarbor then Trim.setJunctionTrussMask(truss,true,true)
+                        if useHarbor then Trim.setPromenadeStructureMask(truss,true,true)
                         else Trim.setRouteUnderdeckMask(truss,true) end
                         assert(Remaining.nativeCount("junction")==1,
                             variant.." duplicate reinforcement on lane "..lane)
@@ -874,7 +874,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                             variant.." wrong mesh ownership during lane "..lane.." takeover")
                         assert(truss.LocalTransparencyModifier==1,
                             variant.." native overlap during lane "..lane.." takeover")
-                        if useHarbor then Trim.setJunctionTrussMask(truss,true,false)
+                        if useHarbor then Trim.setPromenadeStructureMask(truss,true,false)
                         else Trim.setRouteUnderdeckMask(truss,false) end
                         assert(Remaining.nativeCount("junction")==2
                             and meshes[lane].LocalTransparencyModifier==0,
@@ -1129,7 +1129,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 expect(total).toBe(6)
                 Remaining.sync(arena,base.Position,"High",true,nil,0,false)
                 expect(Remaining.count("promenade")).toBe(variant=="Harbor" and 0 or 6)
-                expect(Remaining.count("stay")).toBe(variant=="Harbor" and 0 or 12)
+                expect(Remaining.count("stay")).toBe(12)
                 expect(Remaining.count("equipment")).toBe(profile and 6 or 0)
                 expect(Remaining.count("fitting")).toBe(fittingPair and 12 or 0)
                 expect(Remaining.nativeCount("equipment")).toBe(profile and 6*#profile[6] or 0)
@@ -1152,10 +1152,23 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     if variant=="Harbor" then
                         local detail=decor:FindFirstChild("Promenade"..index.."_SuspendedCrate")
                         expect(detail.LocalTransparencyModifier).toBe(0)
+                        local left=assert(decor:FindFirstChild("Promenade"..index.."_DiagonalStay-1"))
+                        local right=assert(decor:FindFirstChild("Promenade"..index.."_DiagonalStay1"))
+                        Trim.setPromenadeStructureMask(left,true,true)
+                        expect(Remaining.count("stay")).toBe(10)
+                        expect(left.LocalTransparencyModifier).toBe(1)
+                        expect(right.LocalTransparencyModifier).toBe(0)
+                        Trim.setPromenadeStructureMask(right,true,true)
+                        Trim.setPromenadeStructureMask(left,true,false)
+                        expect(Remaining.count("stay")).toBe(10)
+                        expect(left.LocalTransparencyModifier).toBe(0)
+                        expect(right.LocalTransparencyModifier).toBe(1)
+                        Trim.setPromenadeStructureMask(right,true,false)
+                        expect(Remaining.count("stay")).toBe(12)
                     end
                     for _,side in ipairs({-1,1}) do
                         local diagonal=decor:FindFirstChild("Promenade"..index.."_DiagonalStay"..side)
-                        expect(diagonal.LocalTransparencyModifier).toBe(variant=="Harbor" and 0 or 1)
+                        expect(diagonal.LocalTransparencyModifier).toBe(1)
                     end
                     expect(deck.CanCollide).toBe(true)
                 end

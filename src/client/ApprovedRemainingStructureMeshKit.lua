@@ -421,10 +421,10 @@ local function collectArchBase(arena,deck,decor,scale)
     return pieces
 end
 
-local function porticoStep(arena,deck,scale)
+local function porticoStep(arena,deck,scale,allowHarbor)
     local variant=arena:GetAttribute("VariantId")
-    if not PROMENADE_VARIANTS[variant]
-        or not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
+    if not PROMENADE_VARIANTS[variant] and not (allowHarbor and variant=="Harbor") then return nil end
+    if not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("ChaosPermanentRoute")~=true
         or deck:GetAttribute("RouteTier")~=4
         or not deck.Anchored or not deck.CanCollide or deck.Transparency>=.75
@@ -461,7 +461,7 @@ local function promenadeNative(decor,index,suffix,wedge)
 end
 
 local function collectPorticoPart(arena,deck,decor,scale,side)
-    local step=porticoStep(arena,deck,scale)
+    local step=porticoStep(arena,deck,scale,side~=nil)
     if not step then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local suffix=side and "_DiagonalStay"..side or "_MonumentalCrosshead"
@@ -471,6 +471,7 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
     local rise=CROSSHEAD_RISE[step]
     local span=CROSSHEAD_SPAN[step]
     if side then
+        if Trim.hasPrimaryStructure(native) then return nil end
         local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise*.66,
             side*8.3*scale)*CFrame.Angles(side*STAY_ANGLE,0,0)
         if math.abs(size.X-.65*scale)>.045 or math.abs(size.Y-rise*.55)>.06
@@ -504,7 +505,7 @@ end
 local function promenadeUnderdeck(deck,decor,scale,span)
     local index=deck.Name:match("^Platform(%d+)$")
     local native=promenadeNative(decor,index,"_UnderdeckTruss")
-    if not native or Trim.hasPrimaryJunctionTruss(native) then return nil end
+    if not native or Trim.hasPrimaryStructure(native) then return nil end
     local expected=deck.CFrame*CFrame.new(0,-.3,0)
     if (native.Position-expected.Position).Magnitude>.14
         or (native.Size-Vector3.new(5.6*scale,1.7,span*scale)).Magnitude>.13
@@ -530,7 +531,7 @@ local function collectPromenadeUnderframe(arena,deck,decor)
     -- Step four uses the dedicated two-deck junction fit.
     if step==4 then return nil end
     local frame,_,scale=LargeStructure.promenadeNativeFrame(decor,deck)
-    if not frame or Trim.hasPrimaryJunctionTruss(frame) then return nil end
+    if not frame or Trim.hasPrimaryStructure(frame) then return nil end
 
     if step==2 or step==7 then
         local truss=promenadeUnderdeck(deck,decor,scale,step==2 and 11 or 15)
@@ -545,7 +546,7 @@ local function collectSpineUnderframe(arena,deck,decor)
     local native=LargeStructure.spineNativeParts(decor,deck)
     if not native then return nil end
     for _,part in ipairs(native) do
-        if Trim.hasPrimaryJunctionTruss(part) then return nil end
+        if Trim.hasPrimaryStructure(part) then return nil end
     end
     local size=deck.Size
     local depth=.60
@@ -571,7 +572,7 @@ local function collectJunctionTruss(arena,deck,spine,decor,scale,useChassis)
     if not native then return nil end
     if useChassis then
         local frame=LargeStructure.promenadeNativeFrame(decor,deck)
-        if not frame or Trim.hasPrimaryJunctionTruss(frame) then return nil end
+        if not frame or Trim.hasPrimaryStructure(frame) then return nil end
         return promenadeChassis(arena,deck,decor,frame,native,"JunctionUnderframe",spine)
     end
     -- The shoulder remains underneath the real two-stud collision deck,
@@ -882,8 +883,8 @@ local function reveal(entry)
     for _,n in ipairs(entry.native) do
         if entry.category=="command" then
             Trim.setSkySpineRoofMask(n.part,true,false)
-        elseif entry.category=="junction" then
-            Trim.setJunctionTrussMask(n.part,false,false)
+        elseif entry.category=="junction" or entry.category=="stay" then
+            Trim.setPromenadeStructureMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
             or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
                 or entry.category=="helix")
@@ -1081,8 +1082,8 @@ local function refresh(entry)
         if n.part.Parent==entry.expectedParent then
             if entry.category=="command" then
                 Trim.setSkySpineRoofMask(n.part,true,true)
-            elseif entry.category=="junction" then
-                Trim.setJunctionTrussMask(n.part,false,true)
+            elseif entry.category=="junction" or entry.category=="stay" then
+                Trim.setPromenadeStructureMask(n.part,false,true)
             else
                 n.part.LocalTransparencyModifier=1
             end
@@ -1095,7 +1096,7 @@ end
 local function dispose(entry)
     if entry.disposing then return end
     entry.disposing=true
-    if entry.disconnectTruss then entry.disconnectTruss() end
+    if entry.disconnectStructureObserver then entry.disconnectStructureObserver() end
     reveal(entry)
     for _,c in ipairs(entry.connections) do c:Disconnect() end
     if entry.model then entry.model:Destroy() end
@@ -1228,12 +1229,12 @@ local function mount(data,source)
                 data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
         end
     end
-    if data.category=="junction" then
+    if data.category=="junction" or data.category=="stay" then
         local disconnects={}
         for _,part in ipairs(data.originals) do
-            disconnects[#disconnects+1]=Trim.observePrimaryJunctionTruss(part,changed)
+            disconnects[#disconnects+1]=Trim.observePrimaryStructure(part,changed)
         end
-        entry.disconnectTruss=function()
+        entry.disconnectStructureObserver=function()
             for _,disconnect in ipairs(disconnects) do disconnect() end
         end
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
@@ -1455,7 +1456,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                     src.SpineUnderframe=source
                 end
             end
-        elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
+        elseif not kind or ((promenadeVariant or kind=="junction"
+            or (kind=="stay" and variant=="Harbor")) and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
     end

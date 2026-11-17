@@ -1043,10 +1043,10 @@ describe("Shrinking Arena mobility integration", function()
                     local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_JunctionUnderframe
                     local mesh=art:FindFirstChildWhichIsA("MeshPart")
                     local width=mesh.Size.X
-                    NativeTrim.setJunctionTrussMask(finalTruss,true,true)
+                    NativeTrim.setPromenadeStructureMask(finalTruss,true,true)
                     assert(mesh.LocalTransparencyModifier==1 and finalTruss.LocalTransparencyModifier==1)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
-                    NativeTrim.setJunctionTrussMask(finalTruss,true,false)
+                    NativeTrim.setPromenadeStructureMask(finalTruss,true,false)
                     assert(mesh.LocalTransparencyModifier==0 and finalFrame.LocalTransparencyModifier==1)
                     active=true
                     ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,

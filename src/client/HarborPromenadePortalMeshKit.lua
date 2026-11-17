@@ -189,8 +189,8 @@ local function refit(entry)
 end
 
 local function setNativeMask(part, native, visible)
-    if native.truss then
-        Trim.setJunctionTrussMask(part,true,visible)
+    if native.structure then
+        Trim.setPromenadeStructureMask(part,true,visible)
     elseif native.pylon then
         Trim.setPrimaryPylonMask(part,visible)
     else
@@ -307,7 +307,8 @@ local function mount(arena,base,decor,deck,template,expected)
         if entry.native[part] or not isNative(part,deck,decor) then return end
         entry.native[part]={
             original=part.LocalTransparencyModifier,
-            truss=part.Name:match("_UnderdeckTruss$") ~= nil,
+            structure=part.Name:match("_UnderdeckTruss$") ~= nil
+                or part.Name:match("_DiagonalStay%-?1$") ~= nil,
             pylon=part.Name:match("_LoadPylon%-?1$") ~= nil,
         }
         if entry.model.Parent == folder and isAlive(entry) then refresh(entry) end

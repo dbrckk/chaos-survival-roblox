@@ -2488,7 +2488,10 @@ for clause in (
 ):
     assert clause in P4_CLIENT,clause
 assert 'LocalOriginalPromenadeDiagonalStay3DCount' in SIDE_LOD
-print("PASS 48 native diagonal stays use fitted girder pairs with zero Low or GPU-pressure residency")
+assert 'kind=="stay" and variant=="Harbor"' in P4_CLIENT
+assert 'part.Name:match("_DiagonalStay%-?1$") ~= nil' in HARBOR
+assert 'Trim.setPromenadeStructureMask(part,true,visible)' in HARBOR
+print("PASS 60 native diagonal stays use fitted girder pairs with gantry precedence and GPU backoff")
 
 # Mount roof equipment only on a fully streamed, authenticated portico.
 for name,asset_id in (
@@ -2643,8 +2646,8 @@ assert '(step == 1 and lane == 1) or (step == 10 and lane == 2)' in connections
 assert 'half-math.abs(delta:Dot(axis)) < .20' in connections
 assert 'SkyRouteConnectionRules.spineJunction(first,second)' in ROUTE
 assert 'not Connection.spineJunction(spine,deck)' in P4_CLIENT
-assert 'Trim.hasPrimaryJunctionTruss(native)' in P4_CLIENT
-assert 'Trim.observePrimaryJunctionTruss(part,changed)' in P4_CLIENT
+assert 'Trim.hasPrimaryStructure(native)' in P4_CLIENT
+assert 'Trim.observePrimaryStructure(part,changed)' in P4_CLIENT
 assert 'local native=LargeStructure.spineNativeParts(decor,deck)' in P4_CLIENT
 assert 'key=native[1],owner=deck,arena=arena,originals=native' in P4_CLIENT
 assert 'marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "SkySpineDecor"' in P4_CLIENT
