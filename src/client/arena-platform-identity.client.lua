@@ -581,7 +581,7 @@ local function rebuild()
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
     local isClear = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
     local warnings, lava
-    if isClear then warnings, lava = JumpRouteHazards.read(arena) end
+    if variant ~= "Orbital" then warnings, lava = JumpRouteHazards.read(arena) end
     -- Share deck subscriptions among every cue that uses the same target.
     -- Revisit waiting cues once per geometry/availability change batch.
     local targetUsers,pendingCues = {},{}
@@ -649,8 +649,7 @@ local function rebuild()
             table.clear(pendingCues)
         end)
     end
-    if isClear then
-        local routeCursor = 1
+    if warnings then
         refreshRouteHazards = function(point)
             local wasHazardActive = lava ~= nil or #warnings > 0
             warnings, lava = JumpRouteHazards.read(arena)
@@ -666,11 +665,10 @@ local function rebuild()
                 end
             end
         end
-        refreshRouteClearance = function()
-            local camera = workspace.CurrentCamera
-            if not camera then return end
-            local point = camera.CFrame.Position
-            refreshRouteHazards(point)
+    end
+    if isClear then
+        local routeCursor = 1
+        refreshRouteClearance = function(point)
             local checked = 0
             -- Rotate through the nearby cues so the closest ones cannot
             -- starve another route in the same sector.
@@ -2203,15 +2201,20 @@ player:GetAttributeChangedSignal("OptionalVfxPressure")
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("LocalPremiumNearFieldEpoch")
     :Connect(scheduleRebuild)
-player:GetAttributeChangedSignal("LocalHarborRouteClearanceEpoch"):Connect(function()
-    if refreshRouteClearance then refreshRouteClearance() end
-end)
-JumpRouteHazards.WarningsChanged:Connect(function()
+local function updateRouteHazards()
     local camera = workspace.CurrentCamera
-    if refreshRouteHazards and camera then
-        refreshRouteHazards(camera.CFrame.Position)
+    if not camera then return nil end
+    local point = camera.CFrame.Position
+    if refreshRouteHazards then refreshRouteHazards(point) end
+    return point
+end
+player:GetAttributeChangedSignal("LocalJumpRouteEpoch"):Connect(function()
+    local point = updateRouteHazards()
+    if refreshRouteClearance and point then
+        refreshRouteClearance(point)
     end
 end)
+JumpRouteHazards.WarningsChanged:Connect(updateRouteHazards)
 -- Accessibility changes affect at most four existing instrument tweens;
 -- never rebuild the whole arena just to freeze/restart the moving heads.
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()

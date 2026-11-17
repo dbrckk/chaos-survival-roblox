@@ -119,6 +119,7 @@ local function makeBand(folder, base, index)
     band.Color = Color3.fromRGB(75, 151, 190)
     band.Transparency = 0.92
     band:SetAttribute("GridSweepIndex", index)
+    band:AddTag("ChaosClassicSweepBand")
     band.Parent = folder
     return band
 end
