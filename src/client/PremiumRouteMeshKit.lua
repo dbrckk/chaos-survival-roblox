@@ -29,6 +29,8 @@ local VisualTheme = if themeModule
 
 local PremiumRouteMeshKit = {}
 local PROMENADE_TRUSS_SPAN = {[2] = 11, [4] = 13, [7] = 15}
+local TOWER_BRIDGE_SPAN = 49
+local TOWER_BRIDGE_WIDTH = 4.5
 
 
 local ASSETS = {
@@ -327,10 +329,9 @@ local function chooseBridgeSegments(platform, bounds, maxSegments)
     return bestCount
 end
 
--- The jump deck OBJ has a separate shallow GRIP layer: one continuous
--- inset with six raised ribs. The other six materials include machinery
--- and route paint; use just the GRIP geometry for a fitted landing finish.
-local function routeInset(template)
+-- Only the continuous GRIP surface is used. The other regions of the
+-- approved assemblies include supports, fixtures and navigation markings.
+local function routeInset(template, bridge)
     if not template or template:GetAttribute("PremiumRoute3D") ~= true then return nil end
     local children = template:GetChildren()
     if #children ~= 7 then return nil end
@@ -340,8 +341,15 @@ local function routeInset(template)
             or piece.CanCollide or piece.CanTouch or piece.CanQuery
             or piece.Transparency >= 1 then return nil end
         local size = piece.Size
-        if math.abs(size.X-11.1) <= .19 and math.abs(size.Z-11.1) <= .19
-            and math.abs(size.Y-.106) <= .022 then
+        local matching = bridge
+            and math.abs(math.max(size.X,size.Z)-9.46) <= .15
+            and math.abs(math.min(size.X,size.Z)-4.64) <= .15
+            and math.abs(size.Y-.081) <= .022
+        if not bridge then
+            matching = math.abs(size.X-11.1) <= .19 and math.abs(size.Z-11.1) <= .19
+                and math.abs(size.Y-.106) <= .022
+        end
+        if matching then
             if candidate then return nil end
             candidate = piece
         end
@@ -349,61 +357,104 @@ local function routeInset(template)
     return candidate
 end
 
-local function addInsetModel(entry, platform, template, source)
+local function isTowerBridge(platform, scale)
+    local index = tonumber(platform.Name:match("^Skybridge(1[89])$")
+        or platform.Name:match("^Skybridge(2[01])$"))
+    if not index or platform:GetAttribute("ChaosSkybridge") ~= true then return false end
     local size = platform.Size
-    local margin = .8*entry.initialFloorScale
-    local width = (size.X-margin)*.987
-    local length = (size.Z-margin)*.987
-    local piece = source:Clone()
-    if not piece then return false end
-    for _,detail in ipairs(piece:GetChildren()) do detail:Destroy() end
-    piece.Name = entry.timber and "StormHarborGroovedTimber" or "OriginalLandingTread"
-    piece.TextureID = ""
-    piece.Material = entry.insetMaterial
-    piece.MaterialVariant = ""
-    if entry.timber then
-        -- Slate-grey weathered wood with subtle treatment by route family.
-        piece.Color = platform:GetAttribute("HarborSkywayLane") and Color3.fromRGB(118,107,96)
-            or (platform:GetAttribute("HarborSpokeRoute") and Color3.fromRGB(142,118,91)
-                or Color3.fromRGB(128,109,91))
-    else
-        piece.Color = platform.Color
-    end
-    piece:SetAttribute("PreserveNativeMaterial",true)
-    local thickness = entry.timber and .031 or .075
-    piece.Size = Vector3.new(width,thickness,length)
-    piece.Transparency = 0
-    piece.LocalTransparencyModifier = 1
-    piece.Anchored = false
-    piece.Massless = true
-    piece.CanCollide = false
-    piece.CanTouch = false
-    piece.CanQuery = false
-    piece.CastShadow = false
+    local alongX = index < 20
+    local span = alongX and size.X or size.Z
+    local width = alongX and size.Z or size.X
+    local expectedSpan = math.max(4,(TOWER_BRIDGE_SPAN+7)*scale-7)
+    return math.abs(size.Y-1) <= .06 and math.abs(width-TOWER_BRIDGE_WIDTH) <= .07
+        and math.abs(span-expectedSpan) <= .13
+end
 
+local function insetPanelSize(platform, scale, bridge)
+    local size = platform.Size
+    if bridge then
+        -- ShrinkingArena scales the original panel in the long axis only,
+        -- using the deck's current span as a ratio of its original span.
+        local alongX = size.X > size.Z
+        local span = (alongX and size.X or size.Z)*(1-.8/TOWER_BRIDGE_SPAN)
+        local width = TOWER_BRIDGE_WIDTH-.8
+        return alongX and Vector3.new(span,.10,width) or Vector3.new(width,.10,span)
+    end
+    local margin = .8*scale
+    return Vector3.new(size.X-margin,.10,size.Z-margin)
+end
+
+local function addInsetModel(entry, platform, template, source)
+    local bridge = entry.bridge
+    local panel = insetPanelSize(platform,entry.initialFloorScale,bridge)
+    local count = entry.count
+    local alongX = entry.longAlongX
+    local span = (alongX and panel.X or panel.Z)*.987/count
+    local width = (alongX and span or panel.X*.987)
+    local length = (alongX and panel.Z*.987 or span)
     local spoke = platform:GetAttribute("HarborSpokeRoute")
     local turned = entry.timber and (platform:GetAttribute("HarborSkywayLane") ~= nil
         or (typeof(spoke) == "number" and spoke%2 == 0))
+    if bridge then
+        turned = alongX ~= (source.Size.X > source.Size.Z)
+        entry.insetTurned = turned
+        if turned then width,length = length,width end
+    end
+
+    local color = platform.Color
+    if entry.timber then
+        -- Slate-grey weathered wood with subtle treatment by route family.
+        color = platform:GetAttribute("HarborSkywayLane") and Color3.fromRGB(118,107,96)
+            or (platform:GetAttribute("HarborSpokeRoute") and Color3.fromRGB(142,118,91)
+                or Color3.fromRGB(128,109,91))
+    end
+    local name = bridge and "OriginalSkybridgeTread"
+        or (entry.timber and "StormHarborGroovedTimber" or "OriginalLandingTread")
+    local attribute = entry.timber and "OriginalHarborTimberDeck3D" or name.."3D"
+    local thickness = entry.timber and .031 or .075
     local surface = entry.timber and .137 or .105
-    local localFrame = CFrame.new(0,size.Y*.5+surface-thickness*.5,0)
-        * CFrame.Angles(0,turned and math.pi*.5 or 0,0)
-    piece.CFrame = platform.CFrame*localFrame
-    local weld = Instance.new("Weld")
-    weld.Name = "OriginalRouteMeshCosmeticWeld"
-    weld.Part0 = platform
-    weld.Part1 = piece
-    weld.C0 = localFrame
-    weld.Parent = piece
+    local height = platform.Size.Y*.5+surface-thickness*.5
+    local rotation = CFrame.Angles(0,turned and math.pi*.5 or 0,0)
     local clone = Instance.new("Model")
     clone.Name = "OriginalPremiumRouteMesh"
     clone:SetAttribute("CosmeticOnly",true)
-    clone:SetAttribute(entry.timber and "OriginalHarborTimberDeck3D"
-        or "OriginalLandingTread3D",true)
-    entry.insetPiece = piece
+    clone:SetAttribute(attribute,true)
     clone:SetAttribute("OriginalPremiumRouteAssetId",template:GetAttribute("Original3DAssetId"))
-    piece.Parent = clone
+    entry.insetPieces = {}
+    for index=1,count do
+        local piece = source:Clone()
+        if not piece then clone:Destroy(); return false end
+        for _,detail in ipairs(piece:GetChildren()) do detail:Destroy() end
+        piece.Name = name
+        piece.TextureID = ""
+        piece.Material = entry.insetMaterial
+        piece.MaterialVariant = ""
+        piece.Color = color
+        piece:SetAttribute("PreserveNativeMaterial",true)
+        piece.Size = Vector3.new(width,thickness,length)
+        piece.Transparency = 0
+        piece.LocalTransparencyModifier = 1
+        piece.Anchored = false
+        piece.Massless = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+
+        local offset = (index-(count+1)*.5)*span
+        local frame = CFrame.new(alongX and offset or 0,height,alongX and 0 or offset)*rotation
+        piece.CFrame = platform.CFrame*frame
+        local weld = Instance.new("Weld")
+        weld.Name = "OriginalRouteMeshCosmeticWeld"
+        weld.Part0 = platform
+        weld.Part1 = piece
+        weld.C0 = frame
+        weld.Parent = piece
+        piece.Parent = clone
+        entry.joints[piece],entry.frames[piece],entry.sizes[piece] = weld,frame,piece.Size
+        entry.insetPieces[index] = piece
+    end
     clone.Parent = folder
-    entry.joints[piece],entry.frames[piece],entry.sizes[piece] = weld,localFrame,piece.Size
     entry.models[#entry.models+1] = clone
     return true
 end
@@ -615,8 +666,9 @@ local function refit(entry,platform)
         for _,piece in ipairs(entry.modelParts[model]) do
             local frame=entry.frames[piece]
             local original=entry.sizes[piece]
-            piece.Size=Vector3.new(original.X*fx,original.Y,
-                original.Z*fz)
+            local turned = entry.insetTurned and model == entry.models[1]
+            piece.Size=Vector3.new(original.X*(turned and fz or fx),original.Y,
+                original.Z*(turned and fx or fz))
             entry.joints[piece].C0=CFrame.new(
                 frame.Position.X*fx,frame.Position.Y,
                 frame.Position.Z*fz)*(frame-frame.Position)
@@ -739,14 +791,17 @@ end
 local function syncVisibility(entry, platform)
     local safe = refit(entry,platform)
     if entry.inset then
+        local insetTemplateName = entry.bridge and "PremiumSkybridgeModule" or "PremiumJumpDeck"
         safe = safe and entry.panel ~= nil and entry.ownsPanel(entry.panel)
             and entry.panel.Material == entry.insetMaterial
             and entry.panel.Transparency < .75
             and entry.inset.Parent ~= nil
-            and entry.inset.Parent == getTemplate("PremiumJumpDeck")
+            and entry.inset.Parent == getTemplate(insetTemplateName)
         entry.insetVisible = safe
         if safe and not entry.timber then
-            entry.insetPiece.Color = entry.panel.Color
+            for _,piece in ipairs(entry.insetPieces) do
+                piece.Color = entry.panel.Color
+            end
         end
     end
     local showUnderdeck = reconcileUnderdeck(entry, platform, safe)
@@ -798,6 +853,8 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         if not nominal or math.abs(platform.Size.Y-2) > .08
             or math.abs(platform.Size.X-nominal*initialFloorScale) > .09
             or math.abs(platform.Size.Z-nominal*initialFloorScale) > .09 then return nil end
+    elseif inset and isBridge then
+        if variant ~= "Towers" or not isTowerBridge(platform,initialFloorScale) then return nil end
     elseif not inset and not fit then return nil end
     local entry = {
         models = {},
@@ -912,12 +969,11 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         if entry.inset then
             local scale = realFloorScale(entry.base,entry.arena)
             if not scale then return false end
-            local size = platform.Size
-            local margin = .8*scale
+            local expected = insetPanelSize(platform,scale,entry.bridge)
             return panel:IsA("Part") and panel.Shape == Enum.PartType.Block
                 and panel.Anchored and (panel.Position-intended).Magnitude < .10
                 and (entry.timber or panel:GetAttribute("PremiumArchitecturalSurface") == true)
-                and (panel.Size-Vector3.new(size.X-margin,.10,size.Z-margin)).Magnitude < .10
+                and (panel.Size-expected).Magnitude < .10
                 and panel.CFrame.UpVector:Dot(platform.CFrame.UpVector) > .999
                 and panel.CFrame.LookVector:Dot(platform.CFrame.LookVector) > .999
         end
@@ -1090,11 +1146,13 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             platform:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
     if entry.inset then
-        local weld = entry.joints[entry.insetPiece]
         entry.connections[#entry.connections+1] = entry.inset.AncestryChanged:Connect(refresh)
-        entry.connections[#entry.connections+1] = weld.AncestryChanged:Connect(refresh)
-        for _,property in ipairs({"Part0","Part1"}) do
-            entry.connections[#entry.connections+1] = weld:GetPropertyChangedSignal(property):Connect(refresh)
+        for _,piece in ipairs(entry.insetPieces) do
+            local weld = entry.joints[piece]
+            entry.connections[#entry.connections+1] = weld.AncestryChanged:Connect(refresh)
+            for _,property in ipairs({"Part0","Part1"}) do
+                entry.connections[#entry.connections+1] = weld:GetPropertyChangedSignal(property):Connect(refresh)
+            end
         end
     end
     if entry.underdeck then
@@ -1404,17 +1462,20 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     end
     if bridgeTemplate then
         local _, sourceBox = bridgeTemplate:GetBoundingBox()
+        local towerInset = arena:GetAttribute("VariantId") == "Towers"
+            and routeInset(bridgeTemplate,true)
         local qualified = {}
         for _, item in ipairs(bridges) do
-            local count = chooseBridgeSegments(
-                item.platform, sourceBox, budget.segments)
-            local fit = count and fitSourceToDeck(
-                item.platform, sourceBox, count, true)
-            -- A tiny fragment on a narrow Towers gate never becomes a
-            -- bogus 3D bridge, even if it is near the camera.
-            if fit and fit.longCoverage >= 0.68
-                and fit.widthCoverage >= 0.65 then
-                qualified[#qualified + 1] = {item = item, count = count}
+            if towerInset and isTowerBridge(item.platform,floorScale) then
+                qualified[#qualified + 1] = {
+                    item = item, count = math.min(3,budget.segments), inset = towerInset,
+                }
+            else
+                local count = chooseBridgeSegments(item.platform,sourceBox,budget.segments)
+                local fit = count and fitSourceToDeck(item.platform,sourceBox,count,true)
+                if fit and fit.longCoverage >= 0.68 and fit.widthCoverage >= 0.65 then
+                    qualified[#qualified + 1] = {item = item, count = count}
+                end
             end
         end
         local selected = {}
@@ -1449,6 +1510,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
                 template = bridgeTemplate,
                 count = best.count,
                 bridge = true,
+                inset = best.inset,
             }
         end
     end
@@ -1539,7 +1601,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     for _, item in ipairs(bridges) do
         if pbrSlots <= 0 then break end
         local entry = mounted[item.platform]
-        if entry and entry.panelCovered
+        if entry and entry.panelCovered and not entry.inset
             and wanted[item.platform]
             and wanted[item.platform].template == bridgeTemplate then
             pbrSelected[item.platform] = true
@@ -1578,7 +1640,7 @@ end
 function PremiumRouteMeshKit.landingTreadCount()
     local count = 0
     for _,entry in pairs(mounted) do
-        if entry.inset and not entry.timber and entry.insetVisible then count += 1 end
+        if entry.inset and not entry.bridge and not entry.timber and entry.insetVisible then count += 1 end
     end
     return count
 end

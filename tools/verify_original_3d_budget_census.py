@@ -785,7 +785,10 @@ for fragment in (
     'entry.panel ~= nil and entry.ownsPanel(entry.panel)',
     'and entry.panel.Material == entry.insetMaterial',
     'if entry.inset or model == entry.underdeckModel then',
-    'entry.insetPiece.Color = entry.panel.Color',
+    'piece.Color = entry.panel.Color',
+    'local towerInset = arena:GetAttribute("VariantId") == "Towers"',
+    'item = item, count = math.min(3,budget.segments), inset = towerInset,',
+    'and entry.inset.Parent == getTemplate(insetTemplateName)',
     'or not originalFit or not originalFit.panelCovered',
 ):
     assert fragment in ROUTE, ("Fitted approved route inset",fragment)

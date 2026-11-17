@@ -1,3 +1,7 @@
+## P4 — Platelage nervuré des passerelles de Tower Run
+
+Les quatre passerelles à volets peuvent recevoir le relief antidérapant du modèle approuvé de passerelle. Deux sections en qualité basse et trois dans les profils supérieurs couvrent le panneau existant, dans les créneaux de détail des passerelles. Les sections suivent le raccourcissement du tablier et reprennent sa finition métallique. Dès le début d’une alerte ou en cas de perte d’une fixation, le jeu réaffiche le panneau d’origine.
+
 ## P4 — Relief antidérapant sur les paliers hors gabarit
 
 Les paliers compacts de Classic Grid, Tower Run, Crossroads et Orbital peuvent recevoir un relief antidérapant en 3D lorsque le modèle complet du palier couvre mal leur surface. La finition reprend une seule pièce du modèle approuvé du jeu, s’ajuste aux dimensions du panneau d’origine et reprend sa teinte et son matériau. Les grands paliers centraux et les réceptions rectangulaires de Crossroads sont concernés.
