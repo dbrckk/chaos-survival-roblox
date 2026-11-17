@@ -452,13 +452,13 @@ jobs:
               "variant_classic_sculpted_broadcast_fin", "variant_orbital_sculpted_node", "variant_orbital_trussed_strut",
               "variant_crossroads_sculpted_entrance_portal", "variant_classic_grid_marker_sculpt", "variant_towers_spine_sculpt",
               "skyline_depth_sculpt",
-              # Five genuine original, Roblox-moderated P0 structure sculptures.
+              # Original Roblox-moderated P4 structure sculptures.
               "ascension_access_arch", "ascension_transfer_arch",
               "ascension_summit_arch", "architectural_column_casing",
-              "orbital_helix_underframe",
+              "orbital_helix_underframe", "orbital_access_chassis",
           }
-          assert len(premium_extension_names) == 45
-          assert len(models) == 111
+          assert len(premium_extension_names) == 46
+          assert len(models) == 112
           rim_ids = {"platform_rim_rect": "131482590870627",
                      "platform_rim_long": "127617571835277"}
           assert {m["name"]: m["asset_id"] for m in models
@@ -466,6 +466,9 @@ jobs:
           assert all(m["moderation"] == "Approved" and
                      m.get("workflow_run_id") == 43499366621
                      for m in models if m["name"] in rim_ids)
+          chassis = next(m for m in models if m["name"] == "orbital_access_chassis")
+          assert chassis["asset_id"] == "106401955318567"
+          assert chassis["workflow_run_id"] == 44064536419
           assert {m["name"] for m in models} == (
               scenery_names | route_names | district_names
               | skyfleet_names | underdeck_names | lobby_gate_names
@@ -725,9 +728,8 @@ jobs:
           assert sky_triangles == 1696 and len(sky_parts) == 7
           assert {m["name"] for m in sky_doc["materials"]} == {
               "ARMOR", "BRUSHED", "CARBON", "GRIP", "ALLOY", "CERAMIC", "SIGNAL"}
-          # 110 Roblox-moderated, creator-owned Models: the previous 108
-          # plus the two new approved rectangular/long platform rims.
-          assert len(models) == 111
+          # Creator-owned Models include the approved rims and Orbital chassis.
+          assert len(models) == 112
           large_server = Path("src/server/PremiumLargeDeckHullAssets.lua").read_text()
           large_client = Path("src/client/PremiumLargeDeckHullMeshKit.lua").read_text()
           large_script = Path("src/client/arena-platform-identity.client.lua").read_text()
