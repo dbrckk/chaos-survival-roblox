@@ -680,6 +680,44 @@ local function collectFittingPair(arena,deck,decor,scale,fittings)
     return pair
 end
 
+local function skySpineRoofPart(decor,index,top,scale,spec)
+    local native=decor:FindFirstChild("SkySpine"..index.."_"..spec.name)
+    if not visualNative(native,decor) or native:GetAttribute("SkySpineDecor")~=true
+        or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
+    if spec.wedge then
+        if not native:IsA("WedgePart") then return nil end
+    elseif not native:IsA("Part") or native.Shape~=(spec.shape or Enum.PartType.Block) then
+        return nil
+    end
+    local size=spec.size
+    local aim=top*CFrame.new((spec.x or 0)*scale,spec.y,(spec.z or 0)*scale)
+        *CFrame.Angles(0,0,math.rad(spec.roll or 0))
+    if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.11
+        or (native.Position-aim.Position).Magnitude>.15
+        or native.CFrame.UpVector:Dot(aim.UpVector)<.999
+        or native.CFrame.LookVector:Dot(aim.LookVector)<.999 then return nil end
+    return native
+end
+
+local SPINE_CROWN={name="InterchangeCrown",size=Vector3.new(17.2,1.4,2.5),y=13}
+
+local function collectSpineSignalBeam(arena,deck,decor,scale)
+    if not Crown.isGatewayDeck(arena,deck) or deck:GetAttribute("RouteTier")~=4
+        or deck:GetAttribute("LocalSkySpineCrownVisible")==true then return nil end
+    local index=deck.Name:match("^Platform(%d+)$")
+    local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
+    local beam=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN)
+    if not beam then return nil end
+    local size=beam.Size
+    -- Set the trellis behind the native OverheadPulse strip. The bottom
+    -- chord meets the pylons without hiding the light on the front face.
+    local frame=beam.CFrame*CFrame.new(0,-.11,size.Z*.224)*CFrame.Angles(0,math.pi*.5,0)
+    return {category="command",name="SpineSignalBeam",spec=SOURCE.Crosshead,
+        owner=deck,key=beam,arena=arena,originals={beam},center=beam.Position,
+        orientation=frame,fitSize=Vector3.new(size.Z*.54,size.Y*.985,size.X*.98),
+        expectedParent=decor}
+end
+
 local function collectCommandArt(arena,deck,decor,scale,profiles)
     local index=deck.Name:match("^Platform(%d+)$")
     local step=deck:GetAttribute("SkySpineStep")
@@ -696,32 +734,13 @@ local function collectCommandArt(arena,deck,decor,scale,profiles)
         or (shutter and shutter~="Idle") then return nil end
 
     local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
-    local prefix="SkySpine"..index.."_"
-    local function nativePart(spec)
-        local native=decor:FindFirstChild(prefix..spec.name)
-        if not visualNative(native,decor) or native:GetAttribute("SkySpineDecor")~=true
-            or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
-        if spec.wedge then
-            if not native:IsA("WedgePart") then return nil end
-        elseif not native:IsA("Part") or native.Shape~=(spec.shape or Enum.PartType.Block) then
-            return nil
-        end
-        local size=spec.size
-        local aim=top*CFrame.new((spec.x or 0)*scale,spec.y,(spec.z or 0)*scale)
-            *CFrame.Angles(0,0,math.rad(spec.roll or 0))
-        if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.11
-            or (native.Position-aim.Position).Magnitude>.15
-            or native.CFrame.UpVector:Dot(aim.UpVector)<.999
-            or native.CFrame.LookVector:Dot(aim.LookVector)<.999 then return nil end
-        return native
-    end
-    local crown=nativePart({name="InterchangeCrown",size=Vector3.new(17.2,1.4,2.5),y=13})
+    local crown=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN)
     if not crown then return nil end
     local group={}
     for i,profile in ipairs(profiles) do
         local natives={}
         for _,spec in ipairs(profile.natives) do
-            local native=nativePart(spec)
+            local native=skySpineRoofPart(decor,index,top,scale,spec)
             if not native then return nil end
             natives[#natives+1]=native
         end
@@ -1033,6 +1052,8 @@ local function refresh(entry)
                     if equipment then
                         data=collectEquipment(entry.arena,entry.owner,decor,scale,equipment)
                     end
+                elseif entry.name=="SpineSignalBeam" then
+                    data=collectSpineSignalBeam(entry.arena,entry.owner,decor,scale)
                 elseif entry.category=="command" or entry.side then
                     local pair
                     if entry.category=="command" then
@@ -1287,6 +1308,8 @@ local function mount(data,source)
         entry.disconnectStructureObserver=function()
             for _,disconnect in ipairs(disconnects) do disconnect() end
         end
+    end
+    if usesStructureMask(data) or data.name=="SpineSignalBeam" then
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
             entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
@@ -1538,8 +1561,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if second~=first then src[second]=sourceFor(second,FITTING_SOURCE[second]) end
         fittingSourcesReady=src[first]~=nil and src[second]~=nil
     end
+    local commandCap=caps(tier,touch,pressure,"command")
+    if commandCap>0 then
+        src.SpineSignalBeam=src.Crosshead or sourceFor("Crosshead")
+    end
     local commandProfiles=COMMAND_ART[variant]
-    local commandReady=commandProfiles~=nil and caps(tier,touch,pressure,"command")>0
+    local commandReady=commandProfiles~=nil and commandCap>0
     if commandReady then
         for _,profile in ipairs(commandProfiles) do
             src[profile.name]=sourceFor(profile.name,profile.source)
@@ -1608,9 +1635,16 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
                 data=collectPorticoPart(arena,deck,decor,scale)
             end
-            if commandReady and deck:GetAttribute("SkySpineStep") then
-                queuePair(collectCommandArt(arena,deck,decor,scale,commandProfiles),
-                    COMMAND_DISTANCE[tier] or COMMAND_DISTANCE.Low,candidates.command)
+            if deck:GetAttribute("SkySpineStep") then
+                local range=COMMAND_DISTANCE[tier] or COMMAND_DISTANCE.Low
+                if commandReady then
+                    queuePair(collectCommandArt(arena,deck,decor,scale,commandProfiles),
+                        range,candidates.command)
+                end
+                if src.SpineSignalBeam then
+                    local beam=collectSpineSignalBeam(arena,deck,decor,scale)
+                    queuePair(beam and {beam},range,candidates.command)
+                end
             end
             if src.Stay and deck:GetAttribute("PromenadeStep") then
                 queuePair(collectStayPair(arena,deck,decor,scale),
@@ -1685,6 +1719,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     borrowCasing=borrowCasing and #candidates.helix>0
     for _,kind in ipairs({"arch","archBase","casing","helix","promenade","stay","equipment","fitting","command","junction"}) do
         table.sort(candidates[kind],function(a,b)
+            if kind=="command" then
+                local beamA,beamB=a.name=="SpineSignalBeam",b.name=="SpineSignalBeam"
+                if beamA~=beamB then return beamB end
+            end
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
         end)

@@ -2598,7 +2598,10 @@ for clause in (
     assert clause in P4_CLIENT, clause
 assert "or crownTrim[part] or commandTrim[part] or cradleClaims[part]" in mask
 assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
-print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
+assert 'category="command",name="SpineSignalBeam",spec=SOURCE.Crosshead' in P4_CLIENT
+assert 'Crown.isGatewayDeck(arena,deck)' in P4_CLIENT
+assert 'LocalOriginalSkySpineSignalBeam3DCount' in SIDE_LOD
+print("PASS Sky Spine command silhouettes and 20 signal beams share the existing budget and native rollback")
 
 # The complete north signature uses approved structural/fitting sources,
 # independently of the six existing landmark sculptures. Preserve its

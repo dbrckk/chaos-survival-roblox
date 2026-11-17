@@ -1,3 +1,7 @@
+## P4 — Traverses sculptées pour les balises de l’Épine céleste
+
+Les quatre portiques de l’Épine céleste dans chaque arène peuvent afficher le treillis approuvé des Promenades. Il se place derrière la bande lumineuse et s’appuie sur les pylônes. La couronne complète garde la priorité. La traverse de détail réutilise les créneaux libres du décor de commandement et suit le rétrécissement de l’arène.
+
 ## P4 — Ensembles de levage des Promenades de Storm Harbor
 
 Les six portiques peuvent afficher un bras ajouré, un chariot, deux câbles et une caisse nervurée. Six maillages issus de deux modèles approuvés remplacent ensemble les trois pièces de secours de chaque portique sélectionné. Les câbles relient le chariot à la caisse au fur et à mesure que l’arène rétrécit. Le portique de fret complet reste prioritaire et les pièces d’origine reviennent si l’ensemble est incomplet ou sous pression graphique.

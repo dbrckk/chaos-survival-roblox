@@ -618,6 +618,10 @@ function Kit.pbrCount()
     return models, appearances
 end
 
+function Kit.isGatewayDeck(arena,deck)
+    return authentic(deck,arena,arena:FindFirstChild("Base"))
+end
+
 function Kit.supportsCommandArt(deck)
     local entry=mounted[deck]
     return entry~=nil and safeAfterMount(entry)

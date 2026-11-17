@@ -2225,6 +2225,7 @@ task.spawn(function()
         ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,cameraLook,
             player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local spineSignalBeams=ApprovedRemainingStructureMeshKit.count("command","SpineSignalBeam")
         local p4Counts = {
             LocalOriginalAscensionArch3DCount =
                 ApprovedRemainingStructureMeshKit.count("arch"),
@@ -2257,10 +2258,11 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.nativeCount("equipment"),
             LocalOriginalPromenadeRoofFittings3DCount =
                 ApprovedRemainingStructureMeshKit.count("fitting"),
+            LocalOriginalSkySpineSignalBeam3DCount = spineSignalBeams,
             LocalOriginalSkySpineCommandArtCount =
-                ApprovedRemainingStructureMeshKit.count("command"),
+                ApprovedRemainingStructureMeshKit.count("command") - spineSignalBeams,
             LocalSkySpineCommandNativePartsReplaced =
-                ApprovedRemainingStructureMeshKit.nativeCount("command"),
+                ApprovedRemainingStructureMeshKit.nativeCount("command") - spineSignalBeams,
             LocalP4RemainingStructuralNativePiecesReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount(),
         }
