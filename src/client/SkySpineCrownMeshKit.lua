@@ -282,7 +282,7 @@ end
 
 local function setNativeVisibility(saved, visible)
     if saved.pylon then
-        PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)
+        PlatformNativeTrimReplacementKit.setPrimaryPylonMask(saved.part, visible)
     else
         PlatformNativeTrimReplacementKit.setSkySpineRoofMask(saved.part, false, visible)
     end

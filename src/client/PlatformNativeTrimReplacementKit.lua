@@ -27,7 +27,7 @@ local cradleClaims = {}
 local rimClaims = {}
 local harborDockClaims = {}
 local nativeBaselines = {}
-local crownPylons = {}
+local primaryPylons = {}
 local routeUnderdecks = {}
 local harborTrusses = {}
 local junctionTrusses = {}
@@ -72,7 +72,7 @@ local function setNativeMask(part, claims, masked)
     local wasPrimary = observer and Kit.hasPrimaryJunctionTruss(part)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
-    if saved[part] or crownPylons[part] or routeUnderdecks[part]
+    if saved[part] or primaryPylons[part] or routeUnderdecks[part]
         or crownTrim[part] or commandTrim[part] or cradleClaims[part]
         or harborTrusses[part] or junctionTrusses[part] or rimClaims[part]
         or harborDockClaims[part] then
@@ -120,7 +120,7 @@ local function refreshPylon(part)
     local visible = saved[part] == true
         and verifiedSupports[part] == true
         and part.Parent == activeDecor
-        and not crownPylons[part]
+        and not primaryPylons[part]
     for piece in pairs(pieces) do
         piece.LocalTransparencyModifier = visible and 0 or 1
     end
@@ -139,11 +139,11 @@ local function report()
     if notify then notify(count) end
 end
 
--- Both approved models claim the same native pylon. The crown has visual
--- priority; the column stays ready to take over if the crown disappears.
-function Kit.setCrownPylonMask(part, masked)
-    if (crownPylons[part] == true) == masked then return end
-    setNativeMask(part, crownPylons, masked)
+-- The crown and the Harbor gantry take priority over individual
+-- columns. Keep the native baseline until the last claim is released.
+function Kit.setPrimaryPylonMask(part, masked)
+    if (primaryPylons[part] == true) == masked then return end
+    setNativeMask(part, primaryPylons, masked)
     refreshPylon(part)
     if saved[part] then
         count += masked and -1 or 1
@@ -155,7 +155,7 @@ local function restore()
     for part in pairs(saved) do
         setNativeMask(part, saved, false)
         refreshPylon(part)
-        if not crownPylons[part] then count -= 1 end
+        if not primaryPylons[part] then count -= 1 end
     end
     report()
 end
@@ -611,14 +611,14 @@ local function tryMask(part)
         or saved[part] ~= nil or not physicalSafe(part) then return end
     setNativeMask(part, saved, true)
     refreshPylon(part)
-    if not crownPylons[part] then count += 1 end
+    if not primaryPylons[part] then count += 1 end
     return true
 end
 
 local function unmask(part)
     setNativeMask(part, saved, false)
     refreshPylon(part)
-    if not crownPylons[part] then count -= 1 end
+    if not primaryPylons[part] then count -= 1 end
 end
 
 local function reconcilePylon(part)
@@ -1177,9 +1177,9 @@ function Kit.breakdown()
                     result.harborPile += 1
                 end
             elseif name:match("^SkySpine%d+_MonumentalPylon%-?1$") then
-                if not crownPylons[part] then result.pylon += 1 end
+                if not primaryPylons[part] then result.pylon += 1 end
             elseif name:match("^Promenade%d+_LoadPylon%-?1$") then
-                result.promenadePylon += 1
+                if not primaryPylons[part] then result.promenadePylon += 1 end
             else
                 result.other += 1
             end

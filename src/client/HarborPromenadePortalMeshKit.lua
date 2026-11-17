@@ -188,6 +188,16 @@ local function refit(entry)
     return true
 end
 
+local function setNativeMask(part, native, visible)
+    if native.truss then
+        Trim.setJunctionTrussMask(part,true,visible)
+    elseif native.pylon then
+        Trim.setPrimaryPylonMask(part,visible)
+    else
+        part.LocalTransparencyModifier = visible and 1 or native.original
+    end
+end
+
 local function refresh(entry)
     local visible = refit(entry)
     -- Server hazard/shrink priority: restore original UV and safety cues
@@ -198,13 +208,8 @@ local function refresh(entry)
             part.LocalTransparencyModifier = visible and 0 or 1
         end
     end
-    for _, native in ipairs(entry.native) do
-        if native.truss then
-            Trim.setJunctionTrussMask(native.part,true,visible and native.part.Parent ~= nil)
-        elseif native.part.Parent then
-            native.part.LocalTransparencyModifier =
-                visible and 1 or native.original
-        end
+    for part, native in pairs(entry.native) do
+        setNativeMask(part,native,visible and part.Parent ~= nil)
     end
 end
 
@@ -215,12 +220,8 @@ local function dismantle(entry)
     for _, connection in ipairs(entry.connections) do
         connection:Disconnect()
     end
-    for _, saved in ipairs(entry.native) do
-        if saved.truss then
-            Trim.setJunctionTrussMask(saved.part,true,false)
-        elseif saved.part.Parent then
-            saved.part.LocalTransparencyModifier = saved.original
-        end
+    for part, native in pairs(entry.native) do
+        setNativeMask(part,native,false)
     end
     suppressOwnRemoval = true
     entry.model:Destroy()
@@ -300,15 +301,14 @@ local function mount(arena,base,decor,deck,template,expected)
         native={}, joints={}, frames={}, sizes={}, lastScale=nil,
         disposing=false,
     }
-    local seen = {}
     local function watchNative(part)
         -- A late StreamingEnabled packet must not draw a generic native
         -- Part through the already-approved sculptural cargo gantry.
-        if seen[part] or not isNative(part,deck,decor) then return end
-        seen[part]=true
-        entry.native[#entry.native+1]={
-            part=part, original=part.LocalTransparencyModifier,
+        if entry.native[part] or not isNative(part,deck,decor) then return end
+        entry.native[part]={
+            original=part.LocalTransparencyModifier,
             truss=part.Name:match("_UnderdeckTruss$") ~= nil,
+            pylon=part.Name:match("_LoadPylon%-?1$") ~= nil,
         }
         if entry.model.Parent == folder and isAlive(entry) then refresh(entry) end
     end
@@ -350,6 +350,14 @@ local function mount(arena,base,decor,deck,template,expected)
         deck.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections+1] =
         decor.ChildAdded:Connect(watchNative)
+    entry.connections[#entry.connections+1] =
+        decor.ChildRemoved:Connect(function(part)
+            local native=entry.native[part]
+            if native then
+                entry.native[part]=nil
+                setNativeMask(part,native,false)
+            end
+        end)
     entry.connections[#entry.connections+1] =
         copy.DescendantRemoving:Connect(function(child)
             if not entry.disposing and child:IsA("MeshPart") then

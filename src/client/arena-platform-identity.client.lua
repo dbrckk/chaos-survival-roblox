@@ -1756,8 +1756,7 @@ local function watchDecor(generated)
             local variant = activeArena and tostring(
                 activeArena:GetAttribute("VariantId") or "Classic")
             if not templates or not variant
-                or not templates:FindFirstChild(variant)
-                or (promenadeIndex and variant == "Harbor") then return end
+                or not templates:FindFirstChild(variant) then return end
             local quality = VfxQuality.deviceTier(
                 player:GetAttribute("VfxQualityTier"),
                 UserInputService.TouchEnabled).Name

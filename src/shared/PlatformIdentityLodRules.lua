@@ -4,7 +4,7 @@
 -- obtained from the existing renderer's exact source-authored weld.
 local Rules = {}
 local PROMENADE_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}
-local PROMENADE_VARIANTS = {Classic = true, Towers = true, Crossroads = true, Orbital = true}
+local PROMENADE_VARIANTS = {Classic = true, Towers = true, Crossroads = true, Orbital = true, Harbor = true}
 
 local SWITCHBACK_WIDTHS = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6}
 local function routeIndex(value, maximum)

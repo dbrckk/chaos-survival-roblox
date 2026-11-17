@@ -1440,6 +1440,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
     it("sculpts both genuine promenade pylons per portico within the existing column budget",function()
         local rs=game:GetService("ReplicatedStorage")
         local trim=require("../../src/client/PlatformNativeTrimReplacementKit")
+        local gantry=require("../../src/client/HarborPromenadePortalMeshKit")
         local previous=workspace:FindFirstChild("GeneratedMap")
         local old=rs:FindFirstChild("ApprovedLargeStructureTemplates")
         if previous then previous.Parent=nil end
@@ -1448,6 +1449,24 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         holder.Name="ApprovedLargeStructureTemplates"
         holder:SetAttribute("OwnerVerified",true)
         holder.Parent=rs
+        local oldGantry=rs:FindFirstChild("ApprovedHarborPromenadePortalTemplates")
+        if oldGantry then oldGantry.Parent=nil end
+        local gantryHolder=Instance.new("Folder")
+        gantryHolder.Name="ApprovedHarborPromenadePortalTemplates"
+        gantryHolder:SetAttribute("OwnerVerified",true)
+        gantryHolder.Parent=rs
+        local gantrySource=Instance.new("Model")
+        gantrySource.Name="CargoGantry"
+        gantrySource:SetAttribute("Original3DAssetId",134157110756659)
+        gantrySource:SetAttribute("OriginalHarborPromenadePortal3D",true)
+        gantrySource:SetAttribute("OwnerVerified",true)
+        gantrySource:SetAttribute("CosmeticOnly",true)
+        for i=1,7 do
+            local piece=Instance.new("MeshPart")
+            piece.Size=i==1 and Vector3.new(12.6,20.1,19.4) or Vector3.one*.2
+            piece.Parent=gantrySource
+        end
+        gantrySource.Parent=gantryHolder
         local art=Instance.new("Folder")
         art.Parent=workspace
         local generated=nil
@@ -1496,32 +1515,22 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     if owner:GetAttribute("PromenadeStep")==7
                         and owner:GetAttribute("PromenadeLane")==1 then deck=owner end
                 end
-                expect(genuine).toBe(variant=="Harbor" and 0 or 12)
+                expect(genuine).toBe(12)
                 expect(deck~=nil and deck.CanCollide).toBe(true)
                 local index=tonumber(deck.Name:match("^Platform(%d+)$"))
                 local left=decor:FindFirstChild("Promenade"..index.."_LoadPylon-1")
+                local right=decor:FindFirstChild("Promenade"..index.."_LoadPylon1")
                 local diagonal=decor:FindFirstChild("Promenade"..index.."_DiagonalStay-1")
                 expect(IdentityLod.matchesPromenadePylon(diagonal,deck)).toBe(false)
-                if variant=="Harbor" then
-                    local harbor=Kit.supports(art,decor,deck,variant,"High",index,2,true)
-                    for _,part in ipairs(harbor and harbor.parts or {}) do
-                        expect(part:GetAttribute("OriginalPromenadePylon3D")).toBe(nil)
-                    end
-                    if harbor then
-                        for _,conn in ipairs(harbor.disconnects) do conn:Disconnect() end
-                    end
-                    art:ClearAllChildren()
-                    continue
-                end
                 local _,selected=Kit.selectNearRouteStructures(
                     {deck},decor,variant,"Low",base,deck.Position,nil,0,false)
                 expect(selected[deck]).toBe(true)
                 local _,pressured=Kit.selectNearRouteStructures(
                     {deck},decor,variant,"Low",base,deck.Position,nil,1,false)
                 expect(next(pressured)).toBe(nil)
-                local low=Kit.supports(art,decor,deck,variant,"Low",index,1,true)
+                local low=Kit.supports(art,decor,deck,variant,"Low",index,1,true,right.Position)
                 expect(low.modules).toBe(1)
-                expect(low.covered[1]).toBe(left)
+                expect(low.covered[1]).toBe(right)
                 expect(#low.parts).toBe(7)
                 for _,conn in ipairs(low.disconnects) do conn:Disconnect() end
                 art:ClearAllChildren()
@@ -1538,6 +1547,21 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 trim.bind(arena,{},nil,high.covered,art)
                 expect(trim.breakdown().promenadePylon).toBe(2)
                 expect(diagonal.LocalTransparencyModifier).toBe(0)
+                if variant=="Harbor" then
+                    local mesh=high.parts[1]
+                    assert(IdentityLod.owner(mesh,platforms,decor)==left)
+                    gantry.sync(arena,deck.Position,"Low",true,nil,0,true,false)
+                    expect(gantry.count()).toBe(1)
+                    expect(trim.breakdown().promenadePylon).toBe(0)
+                    expect(left.LocalTransparencyModifier).toBe(1)
+                    expect(mesh.LocalTransparencyModifier).toBe(1)
+                    gantry.sync(arena,deck.Position,"Low",true,nil,1,true,false)
+                    expect(gantry.count()).toBe(0)
+                    expect(trim.breakdown().promenadePylon).toBe(2)
+                    expect(left.LocalTransparencyModifier).toBe(1)
+                    expect(mesh.LocalTransparencyModifier).toBe(0)
+                    expect(diagonal.LocalTransparencyModifier).toBe(0)
+                end
                 if variant=="Crossroads" then
                     local mesh=high.parts[1]
                     local anchor=IdentityLod.owner(mesh,platforms,decor)
@@ -1635,10 +1659,13 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 end
             end
         end)
+        gantry.sync(nil,Vector3.zero,"Low",false)
         trim.reset()
         for _,conn in ipairs(connections) do conn:Disconnect() end
         art:Destroy()
         holder:Destroy()
+        gantryHolder:Destroy()
+        if oldGantry then oldGantry.Parent=rs end
         if generated then generated:Destroy() end
         if old then old.Parent=rs end
         if previous then previous.Parent=workspace end

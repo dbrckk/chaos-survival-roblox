@@ -637,7 +637,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                         end
                     end
                 end
-            elseif variant~="Harbor" and platformFolder then
+            elseif platformFolder then
                 id=PlatformIdentityLodRules.promenadePylonIndex(part)
                 local owner=id and platformFolder:FindFirstChild("Platform"..id)
                 if PlatformIdentityLodRules.matchesPromenadePylon(part,owner) then
@@ -915,7 +915,7 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             and (not Kit.validNativeSkyPylon(child,index)
                 or platform:GetAttribute("SkySpineStep")~=nil) then
             natives[#natives+1]=child
-        elseif variant~="Harbor" and platform:GetAttribute("PromenadeLane")
+        elseif platform:GetAttribute("PromenadeLane")
             and platform.Name == "Platform"..index
             and PlatformIdentityLodRules.matchesPromenadePylon(child,platform)
             and promenadePylonFit(child.Size,box) then
@@ -928,6 +928,14 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
         table.sort(natives,function(a,b)
             local da,db=(a.Position-cameraPoint).Magnitude,(b.Position-cameraPoint).Magnitude
             return da<db or (da==db and a.Name<b.Name)
+        end)
+    elseif next(promenadePylons) and typeof(cameraPoint) == "Vector3" then
+        table.sort(natives,function(a,b)
+            if promenadePylons[a] and promenadePylons[b] then
+                local da,db=(a.Position-cameraPoint).Magnitude,(b.Position-cameraPoint).Magnitude
+                if da~=db then return da<db end
+            end
+            return sortNativeSupports(a,b)
         end)
     else
         table.sort(natives,sortNativeSupports)

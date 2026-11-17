@@ -1196,7 +1196,9 @@ for name in ('LoadPylon-1','LoadPylon1','DiagonalStay-1','DiagonalStay1',
     'MonumentalCrosshead','UnderdeckTruss','FreightHoistArm',
     'SuspendedCrate','CargoChain'):
     assert name in HARBOR,name
-assert 'native.part.LocalTransparencyModifier =' in HARBOR
+assert 'part.LocalTransparencyModifier = visible and 1 or native.original' in HARBOR
+assert 'Trim.setPrimaryPylonMask(part,visible)' in HARBOR
+assert 'decor.ChildRemoved:Connect(function(part)' in HARBOR
 assert 'visible and 1 or native.original' in HARBOR
 assert 'decor.ChildAdded:Connect(watchNative)' in HARBOR
 assert 'PremiumRoutePbrKit.entryBudget(' in HARBOR
@@ -2023,25 +2025,25 @@ assert 'result.pylon += 1' in TRIM
 assert 'verifiedSupports[part] = true' in TRIM
 assert 'LocalSkySpinePylonNativePartsReplaced = family.pylon' in OWNER
 assert 'LocalOriginalSkySpinePylon3DCount = family.pylon' in OWNER
-assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
+assert 'function Kit.setPrimaryPylonMask(part, masked)' in TRIM
 support_visibility = TRIM[TRIM.index("local function refreshPylon("):
                           TRIM.index("function Kit.isSkySpinePylon(")]
 for guard in (
     'saved[part] == true',
     'verifiedSupports[part] == true',
     'part.Parent == activeDecor',
-    'not crownPylons[part]',
+    'not primaryPylons[part]',
 ):
     assert guard in support_visibility, guard
 mask = TRIM[TRIM.index("local function setNativeMask("):
             TRIM.index("local function refreshPylon(")]
-assert 'if saved[part] or crownPylons[part] or routeUnderdecks[part]' in mask
+assert 'if saved[part] or primaryPylons[part] or routeUnderdecks[part]' in mask
 assert 'nativeBaselines[part] = part.LocalTransparencyModifier' in mask
 assert 'function Kit.setPylonLodVisible(part, visible)' in TRIM
 assert 'PlatformNativeTrimReplacementKit.setPylonLodVisible(native, visible)' in SIDE_LOD
 assert 'elseif original ~= nil then' in mask
 assert 'part.LocalTransparencyModifier = original' in mask
-assert 'PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)' in (
+assert 'PlatformNativeTrimReplacementKit.setPrimaryPylonMask(saved.part, visible)' in (
     CLIENT/"SkySpineCrownMeshKit.lua").read_text(encoding="utf8")
 assert 'PremiumLargeStructureMeshKit.validNativeSkyPylon(part)' in OWNER
 assert 'local supportBudget = tier.Name == "High" and 16' in OWNER
@@ -2444,6 +2446,7 @@ print("PASS four promenade variants use the approved truss with exact native foo
 for variant,asset_id in (
     ("classic","91626128452597"), ("towers","107521411452905"),
     ("crossroads","93993697329658"), ("orbital","119010829781313"),
+    ("harbor","76194593490199"),
 ):
     model=P4_MODELS["column_"+variant]
     assert model["asset_id"]==asset_id and model["moderation"]=="Approved"
@@ -2464,7 +2467,10 @@ assert 'part:SetAttribute("OriginalPromenadePylon3D",true)' in LARGE
 assert 'reconcilePylon(part)' in TRIM
 assert 'LocalOriginalPromenadePylon3DCount = family.promenadePylon' in OWNER
 assert 'descendant:GetAttribute("OriginalSupportColumn3D") == true' in SIDE_LOD
-print("PASS 48 genuine promenade pylons eligible inside the existing column budget")
+assert 'Orbital = true, Harbor = true' in pylon_rules
+assert 'variant~="Harbor" and platform' not in LARGE
+assert 'if not primaryPylons[part] then result.promenadePylon += 1 end' in TRIM
+print("PASS 60 genuine promenade pylons eligible inside the existing column budget")
 
 
 girder=P4_MODELS["bridge_side_girder"]

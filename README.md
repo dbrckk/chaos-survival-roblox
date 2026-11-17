@@ -1,3 +1,7 @@
+## P4 — Colonnes sculptées sur les Promenades
+
+Les 12 montants des Promenades de Storm Harbor peuvent désormais recevoir la colonne portuaire approuvée, dans les créneaux de colonnes existants. Le portique complet prend la priorité dès qu’il s’affiche, et la colonne individuelle prend le relais si elle est déjà montée. Quand un seul montant est sélectionné, le modèle se place du côté le plus proche de la caméra. Les cinq arènes totalisent ainsi 60 montants éligibles à un remplacement individuel.
+
 ## P4 — Châssis ajourés sous l’Épine céleste
 
 Chacun des dix tabliers de l’Épine céleste peut recevoir un seul châssis ajouré à la place de son socle plat, de ses deux longerons et de sa traverse. Le châssis court approuvé d’Orbital s’ajuste à l’empreinte du tablier et rend 200 pièces éligibles sur les cinq arènes. Il suit la contraction et partage le quota des treillis de jonction. Les quatre pièces réapparaissent ensemble si le châssis se décharge. Un berceau complet a la priorité dès son arrivée.
