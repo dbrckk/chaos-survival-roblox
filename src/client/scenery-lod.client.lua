@@ -914,6 +914,10 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalHarborTimberDeckCount") ~= timberDecks then
             player:SetAttribute("LocalOriginalHarborTimberDeckCount",timberDecks)
         end
+        local landingTreads = PremiumRouteMeshKit.landingTreadCount()
+        if player:GetAttribute("LocalOriginalLandingTreadCount") ~= landingTreads then
+            player:SetAttribute("LocalOriginalLandingTreadCount",landingTreads)
+        end
         local routePbrModels, routePbrAppearances =
             PremiumRouteMeshKit.pbrCount()
         if player:GetAttribute("LocalOriginalRoutePbr2KModelCount")
