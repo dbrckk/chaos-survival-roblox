@@ -627,12 +627,32 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     return pieces
                 end
                 local firstPieces = mount(first)
+                local function checkRimEnvelope(deck,pieces)
+                    local maxX,maxY,maxZ = 0,-math.huge,0
+                    for _,piece in ipairs(pieces) do
+                        local pose=piece.ChaosPlatformTrimWeld.C1
+                        local size=piece.Size
+                        local function extent(axis)
+                            return .5*(math.abs(pose.RightVector:Dot(axis))*size.X
+                                +math.abs(pose.UpVector:Dot(axis))*size.Y
+                                +math.abs(pose.LookVector:Dot(axis))*size.Z)
+                        end
+                        maxX=math.max(maxX,math.abs(pose.Position.X)+extent(Vector3.xAxis))
+                        maxY=math.max(maxY,pose.Position.Y+extent(Vector3.yAxis))
+                        maxZ=math.max(maxZ,math.abs(pose.Position.Z)+extent(Vector3.zAxis))
+                    end
+                    local expected=.47*(base.Size.X/320)
+                    assert(math.abs(maxX-deck.Size.X*.5-expected)<.012)
+                    assert(math.abs(maxZ-deck.Size.Z*.5-expected)<.012)
+                    assert(maxY<deck.Size.Y*.5-.08)
+                end
                 local function mountRim(deck)
                     local id = tonumber(deck.Name:match("^Platform(%d+)$"))
                     local kind = assert(Rim.selectVisibleDecks(
                         {deck},"Low",base,deck.Position,0,true,decor)[deck])
                     local pieces = assert(Rim.install(models,deck,id,kind,decor))
                     assert(#pieces == 7 and pieces[1]:GetAttribute("OriginalElevatedPlatformRim") == true)
+                    checkRimEnvelope(deck,pieces)
                     table.insert(disconnectFootprints,Finish.bindRouteFootprint(deck,pieces,Trim.routeCradleRefitted))
                     replacements[tostring(id)] = replacements[tostring(id)] or "rim"
                     return pieces
@@ -689,6 +709,8 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                 assert(Trim.breakdown().elevatedRim==4 and firstRim[1].LocalTransparencyModifier==0)
                 assert(math.abs(firstRim[1].Size.Y-rimHeight)<.01
                     and math.abs(firstRim[1].Size.X-rimWidth*.45)<.02)
+                checkRimEnvelope(first,firstRim)
+                assert(rail.LocalTransparencyModifier==warningAlpha)
 
                 for i,deck in ipairs(steps) do
                     assert(math.abs(deck.Size.X-originals[i].X*.45)<.025 and deck.CanCollide)

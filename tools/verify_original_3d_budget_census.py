@@ -1842,6 +1842,10 @@ print("PASS 6/12 genuine desktop rim slots, touch 1/2 and pressure-safe"
       " 2/4 desktop fallback, seven-piece verified source/owner")
 assert 'LargeStructure.routeDeckSize(deck)' in RIM
 assert 'local longScale,shortScale = long*.97/srcLong,short*.97/srcShort' in RIM
+assert 'local ELEVATED_RIM_OVERHANG = .94' in RIM
+assert 'local outerLong = (long+ELEVATED_RIM_OVERHANG)*shrink/srcLong' in RIM
+assert 'local outerShort = (short+ELEVATED_RIM_OVERHANG)*shrink/srcShort' in RIM
+assert 'deck.Size.Y*.5-((ascension or elevated) and .09 or .17)' in RIM
 assert 'OriginalElevatedPlatformRim' in RIM
 assert 'local function bindRouteRim(' in (CLIENT/"PlatformNativeTrimReplacementKit.lua").read_text()
 assert 'LocalElevatedRimBevelsReplaced = family.elevatedRim' in OWNER

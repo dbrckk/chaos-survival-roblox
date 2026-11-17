@@ -1,3 +1,7 @@
+## P4 — Bordures sculptées sous le balisage des tabliers aériens
+
+Les bordures 3D des 130 tabliers des Promenades et de l’Épine céleste dépassent désormais du bord du tablier, dans l’enveloppe des biseaux d’origine. Leur lèvre reste sous la surface d’appui. Les bandes lumineuses et les chevrons restent visibles. La saillie suit la contraction et les bordures conservent les créneaux de rendu existants.
+
 ## P4 — Traverses sculptées pour les balises de l’Épine céleste
 
 Les quatre portiques de l’Épine céleste dans chaque arène peuvent afficher le treillis approuvé des Promenades. Il se place derrière la bande lumineuse et s’appuie sur les pylônes. La couronne complète garde la priorité. La traverse de détail réutilise les créneaux libres du décor de commandement et suit le rétrécissement de l’arène.

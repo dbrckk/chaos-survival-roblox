@@ -13,6 +13,9 @@ local APPROVED = {
     Rect = 131482590870627,
     Long = 127617571835277,
 }
+-- Total horizontal allowance. The real wedges extend up to .50 studs
+-- per side at the authored size of these decks.
+local ELEVATED_RIM_OVERHANG = .94
 local DIMENSIONS = {
     Rect = {longMin=15.9,longMax=17.4,shortMin=9,shortMax=10.5},
     Long = {longMin=25,longMax=26.4,shortMin=7,shortMax=8.6},
@@ -212,8 +215,12 @@ function Kit.fit(deck,bounds)
     local heightScale = math.clamp(math.sqrt(longScale*shortScale),.85,1.16)
     local sourceZ = bounds.Z>bounds.X
     local yaw = sourceZ == (original.Z>original.X) and 0 or math.pi*.5
-    local factors = Vector3.new((sourceZ and shortScale or longScale)*shrink,
-        heightScale,(sourceZ and longScale or shortScale)*shrink)
+    -- Size the visible outer face to the original bevel envelope. Use
+    -- the original proportions above to select the source and its relief.
+    local outerLong = (long+ELEVATED_RIM_OVERHANG)*shrink/srcLong
+    local outerShort = (short+ELEVATED_RIM_OVERHANG)*shrink/srcShort
+    local factors = Vector3.new(sourceZ and outerShort or outerLong,
+        heightScale,sourceZ and outerLong or outerShort)
     return factors,yaw,1-math.abs(math.log(longScale/shortScale))
 end
 
@@ -372,12 +379,18 @@ function Kit.install(parent,deck,index,kind,decor)
     local stretch = if typeof(scale)=="Vector3" then scale else Vector3.one
     size *= stretch
     local ascension = isAscensionRoute(deck)
+    local elevated = isElevatedRoute(deck)
     local long,short = math.max(deck.Size.X,deck.Size.Z),math.min(deck.Size.X,deck.Size.Z)
     local longLimit,shortLimit = long*.971,short*.971
     if ascension then
         local _,shrink = ascensionDeckSize(deck)
         if not shrink then copy:Destroy();return nil end
         longLimit,shortLimit = long+.96*shrink,short+.96*shrink
+    elseif elevated then
+        local _,shrink = LargeStructure.routeDeckSize(deck)
+        if not shrink then copy:Destroy();return nil end
+        local allowance = (ELEVATED_RIM_OVERHANG+.02)*shrink
+        longLimit,shortLimit = long+allowance,short+allowance
     end
     if size.Y<=0 or size.Y>3.05
         or math.max(size.X,size.Z)>longLimit
@@ -386,7 +399,7 @@ function Kit.install(parent,deck,index,kind,decor)
         return nil
     end
     local target=deck.CFrame*CFrame.new(0,
-        deck.Size.Y*.5-(ascension and .09 or .17)-size.Y*.5,0)*CFrame.Angles(0,yaw,0)
+        deck.Size.Y*.5-((ascension or elevated) and .09 or .17)-size.Y*.5,0)*CFrame.Angles(0,yaw,0)
     local parts={}
     local resizable=tonumber(deck:GetAttribute("RouteTier"))~=nil
     for _,piece in ipairs(copy:GetDescendants()) do
@@ -422,7 +435,7 @@ function Kit.install(parent,deck,index,kind,decor)
             piece:SetAttribute("ChaosPlatformTrim",true)
             piece:SetAttribute("OriginalPlatformRimAxisSwap",
                 math.abs(deck.CFrame:VectorToObjectSpace(piece.CFrame.RightVector).Z)>.9999)
-            piece:SetAttribute("OriginalElevatedPlatformRim",isElevatedRoute(deck) or nil)
+            piece:SetAttribute("OriginalElevatedPlatformRim",elevated or nil)
             piece:SetAttribute("OriginalAscensionPlatformRim",ascension or nil)
             local joint=Instance.new(resizable and "Weld" or "WeldConstraint")
             joint.Name="ChaosPlatformTrimWeld"
