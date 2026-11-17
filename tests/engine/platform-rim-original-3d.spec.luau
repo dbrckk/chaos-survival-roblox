@@ -1031,14 +1031,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(why) end
     end)
 
-    it("replaces the Harbor panel with grooved timber and restores the exact fallback",function()
-        local Route=require("../../src/client/PremiumRouteMeshKit")
-        local storage=game:GetService("ReplicatedStorage")
-        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
-        local previousMap=workspace:FindFirstChild("GeneratedMap")
-        if previous then previous.Parent=nil end
-        if previousMap then previousMap.Parent=nil end
-        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+    local function approvedJumpDeckFixture(storage)
         local holder=Instance.new("Folder")
         holder.Name="PremiumRouteMeshTemplates"
         holder:SetAttribute("OwnerVerified",true)
@@ -1052,7 +1045,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         for i=1,7 do
             local mesh=Instance.new("MeshPart")
             mesh.Size=i==1 and Vector3.new(11.1,.106,11.1)
-                or Vector3.new(11.94,1.6,11.94)
+                or Vector3.new(11.94,1.67,11.94)
             mesh.Anchored=true
             mesh.CanCollide=false
             mesh.CanTouch=false
@@ -1060,6 +1053,18 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             mesh.Parent=source
         end
         source.Parent=holder
+        return holder,source
+    end
+
+    it("replaces the Harbor panel with grooved timber and restores the exact fallback",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local holder=approvedJumpDeckFixture(storage)
         local running=false
         local cleanup={}
         local ok,why=pcall(function()
@@ -1238,6 +1243,124 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if previous then previous.Parent=storage end
         if previousMap then previousMap.Parent=workspace end
         if not ok then error(why) end
+    end)
+
+    it("fits approved landing treads onto authored wide and rectangular decks",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local holder,source=approvedJumpDeckFixture(storage)
+        local running,cleanup=false,{}
+        local generated,context
+        local ok,why=pcall(function()
+            local function findTread(deck)
+                for _,model in ipairs(workspace.PremiumRouteMeshLocal:GetChildren()) do
+                    if model:GetAttribute("OriginalLandingTread3D") then
+                        local mesh=model:FindFirstChildWhichIsA("MeshPart")
+                        local weld=mesh and mesh:FindFirstChild("OriginalRouteMeshCosmeticWeld")
+                        if weld and weld.Part0==deck then return mesh end
+                    end
+                end
+            end
+            local function mount(arena,deck,pressure)
+                Route.sync(arena,deck.Position,"Low",true,nil,pressure or 0,true)
+                return assert(findTread(deck),"missing fitted tread for "..deck.Name)
+            end
+            local function near(value,expected)
+                return math.abs(value-expected)<.025
+            end
+            for _,spec in ipairs({
+                {"Towers",{13}}, {"Orbital",{17}}, {"Crossroads",{1,2,4,6,8}},
+            }) do
+                local variant,indices=spec[1],spec[2]
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated=arena.Parent
+                for _,index in ipairs(indices) do
+                    context=variant.." Platform"..index
+                    local deck=arena.Platforms["Platform"..index]
+                    local panel=arena.Decor["PlatformPanel"..index]
+                    panel.LocalTransparencyModifier=.23
+                    local tread=mount(arena,deck)
+                    assert(tread.Material==panel.Material and tread.Color==panel.Color)
+                    assert(deck.CanCollide and not tread.CanCollide and not tread.CanQuery)
+                    assert(near(tread.Size.X,panel.Size.X*.987)
+                        and near(tread.Size.Z,panel.Size.Z*.987))
+                    local frame=tread.OriginalRouteMeshCosmeticWeld.C0
+                    assert(near(frame.Position.Y+tread.Size.Y*.5,deck.Size.Y*.5+.105))
+                    assert(panel.LocalTransparencyModifier==1 and tread.LocalTransparencyModifier==0)
+                    assert(Route.landingTreadCount()>=1 and Route.landingTreadCount()<=2)
+                    assert(Route.timberCount()==0)
+                    Route.sync(nil,Vector3.zero,"Low",false)
+                    assert(near(panel.LocalTransparencyModifier,.23))
+                end
+                if variant~="Crossroads" then
+                    generated:Destroy()
+                    generated=nil
+                    continue
+                end
+
+                context="rectangular shrink, hazard, source and native owner"
+                local deck=arena.Platforms.Platform2
+                local panel=arena.Decor.PlatformPanel2
+                local tread=mount(arena,deck,2)
+                assert(Route.landingTreadCount()==1)
+                panel.Color=Color3.fromRGB(71,86,93)
+                task.wait()
+                assert(tread.Color==panel.Color)
+                deck:SetAttribute("CollapsePhase","Warning")
+                task.wait()
+                assert(tread.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+                deck:SetAttribute("CollapsePhase","Safe")
+                panel:SetAttribute("PremiumArchitecturalSurface",false)
+                task.wait()
+                assert(tread.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+                panel:SetAttribute("PremiumArchitecturalSurface",true)
+                task.wait()
+                assert(tread.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
+                panel.Parent=nil
+                task.wait()
+                assert(tread.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+                panel.Parent=arena.Decor
+                task.wait()
+                assert(tread.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
+
+                local before=tread.Size
+                running=true
+                ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                    Active=function() return running end,OnCleanup=cleanup})
+                local deadline=os.clock()+1.5
+                repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+                running=false
+                task.wait()
+                assert(arena.Base.Size.X<=144.05 and tread.LocalTransparencyModifier==0)
+                assert(near(tread.Size.X,before.X*.45) and near(tread.Size.Z,before.Z*.45))
+                local contracted=tread.Size
+                assert(mount(arena,deck,2)==tread)
+                Route.sync(nil,Vector3.zero,"Low",false)
+                local late=mount(arena,deck,2)
+                assert((late.Size-contracted).Magnitude<.03 and panel.LocalTransparencyModifier==1)
+                source.Parent=nil
+                task.wait()
+                assert(late.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+                source.Parent=holder
+                task.wait()
+                assert(late.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
+                late.OriginalRouteMeshCosmeticWeld:Destroy()
+                task.wait()
+                assert(late.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+            end
+        end)
+        running=false
+        Route.sync(nil,Vector3.zero,"Low",false)
+        for _,stop in ipairs(cleanup) do stop() end
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(tostring(context)..": "..tostring(why)) end
     end)
 
     it("fits complete Harbor girders through real contraction and restores their separate native groups",function()

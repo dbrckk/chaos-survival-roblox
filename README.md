@@ -1,3 +1,9 @@
+## P4 — Relief antidérapant sur les paliers hors gabarit
+
+Les paliers compacts de Classic Grid, Tower Run, Crossroads et Orbital peuvent recevoir un relief antidérapant en 3D lorsque le modèle complet du palier couvre mal leur surface. La finition reprend une seule pièce du modèle approuvé du jeu, s’ajuste aux dimensions du panneau d’origine et reprend sa teinte et son matériau. Les grands paliers centraux et les réceptions rectangulaires de Crossroads sont concernés.
+
+Le relief suit le rétrécissement et utilise les créneaux déjà attribués aux modèles de paliers. Une alerte, le déchargement du panneau ou la perte d’une soudure rétablit le panneau original. Le compteur client relève uniquement les reliefs effectivement affichés.
+
 ## P4 — Dessous de rampes sculptés sur Orbital
 
 Les 24 rampes d’Orbital peuvent recevoir un dessous sculpté. Les huit grandes rampes peuvent désormais afficher leur treillis approuvé en qualité basse. La passerelle centrale vers le réacteur reçoit une version aplatie du même treillis, dans la hauteur du décor d’origine, et remplace cinq pièces rectangulaires. Le montage suit la contraction de l’arène et revient au décor d’origine si une pièce se décharge ou si une alerte se déclenche.
