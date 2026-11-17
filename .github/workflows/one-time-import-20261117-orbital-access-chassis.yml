@@ -1,0 +1,26 @@
+name: Import Original Orbital Access Chassis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-import-20261117-orbital-access-chassis.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: import-original-orbital-access-chassis-20261117
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: github.repository == 'dbrckk/chaos-survival-roblox' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    uses: ./.github/workflows/upload-original-3d-models.yml
+    with:
+      model: orbital_access_chassis
+      creator_kind: user
+      creator_id: '9774173158'
+      dry_run: false
+      confirmation: UPLOAD_CHAOS_ORIGINAL_3D
+    secrets:
+      ROBLOX_ASSET_API_KEY: ${{ secrets.ROBLOX_ASSET_API_KEY }}
