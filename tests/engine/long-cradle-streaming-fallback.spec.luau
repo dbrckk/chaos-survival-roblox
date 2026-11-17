@@ -758,6 +758,8 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         local previousSource=storage:FindFirstChild("ApprovedPerimeterStructuresTemplates")
         if previousMap then previousMap.Parent=nil end
         if previousSource then previousSource.Parent=nil end
+        local previousChassis=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if previousChassis then previousChassis.Parent=nil end
         local holder=Instance.new("Folder")
         holder.Name="ApprovedPerimeterStructuresTemplates"
         holder:SetAttribute("OwnerVerified",true)
@@ -922,6 +924,7 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         if generated then generated:Destroy() end
         holder:Destroy()
         if previousSource then previousSource.Parent=storage end
+        if previousChassis then previousChassis.Parent=storage end
         if previousMap then previousMap.Parent=workspace end
         if not okay then error(why) end
     end)

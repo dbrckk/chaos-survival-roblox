@@ -956,7 +956,7 @@ describe("Shrinking Arena mobility integration", function()
         return holder
     end
 
-    it("fits the short approved chassis beneath the Promenade decks outside the central junctions",function()
+    it("fits the short approved chassis beneath every Promenade deck",function()
         local storage=game:GetService("ReplicatedStorage")
         local oldMap=workspace:FindFirstChild("GeneratedMap")
         local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
@@ -971,17 +971,24 @@ describe("Shrinking Arena mobility integration", function()
             for _,variant in ipairs(ArenaVariants.Order) do
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
-                local count,porticos=0,0
+                local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
-                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                local endpoints={}
+                local decks=arena.Platforms:GetChildren()
+                for _,deck in ipairs(decks) do
+                    local step=deck:GetAttribute("SkySpineStep")
+                    if step==1 or step==10 then endpoints[step==1 and 1 or 2]=deck end
+                end
+                for _,deck in ipairs(decks) do
                     local step=deck:GetAttribute("PromenadeStep")
-                    if step and step~=4 then
+                    if step then
                         context=variant.." "..deck.Name
                         local index=deck.Name:match("^Platform(%d+)$")
                         local frame=arena.Decor["PlatformUnderFrame"..index]
-                        local truss=(step==2 or step==7)
+                        local truss=(step==2 or step==4 or step==7)
                             and arena.Decor["Promenade"..index.."_UnderdeckTruss"]
-                        local name=truss and "PromenadeTruss" or "PromenadeUnderframe"
+                        local name=step==4 and "JunctionUnderframe"
+                            or (truss and "PromenadeTruss" or "PromenadeUnderframe")
                         frame.LocalTransparencyModifier=.19
                         if truss then truss.LocalTransparencyModifier=.22 end
                         Remaining.sync(nil,Vector3.zero,"Low",false)
@@ -1006,19 +1013,34 @@ describe("Shrinking Arena mobility integration", function()
                         end
                         if truss then
                             assert(truss.LocalTransparencyModifier==1)
-                            porticos+=1
-                            finalDeck,finalFrame,finalTruss=deck,frame,truss
+                            if step==4 then
+                                local endpoint=endpoints[deck:GetAttribute("PromenadeLane")]
+                                local joined=endpoint.CFrame
+                                endpoint.CFrame=joined*CFrame.new(50,0,0)
+                                task.wait()
+                                assert(Remaining.count("junction",name)==0)
+                                assert(math.abs(frame.LocalTransparencyModifier-.19)<.01
+                                    and math.abs(truss.LocalTransparencyModifier-.22)<.01)
+                                endpoint.CFrame=joined
+                                task.wait()
+                                assert(Remaining.count("junction",name)==1)
+                                assert(frame.LocalTransparencyModifier==1 and truss.LocalTransparencyModifier==1)
+                                junctions+=1
+                                finalDeck,finalFrame,finalTruss=deck,frame,truss
+                            else
+                                porticos+=1
+                            end
                         end
                         count+=1
                     end
                 end
-                assert(count==14 and porticos==4,variant)
+                assert(count==16 and porticos==4 and junctions==2,variant)
                 total+=count
                 if variant=="Harbor" then
                     context="Harbor truss ownership and shrink"
                     Remaining.sync(nil,Vector3.zero,"Low",false)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,0,true)
-                    local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_PromenadeTruss
+                    local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_JunctionUnderframe
                     local mesh=art:FindFirstChildWhichIsA("MeshPart")
                     local width=mesh.Size.X
                     NativeTrim.setJunctionTrussMask(finalTruss,true,true)
@@ -1045,7 +1067,7 @@ describe("Shrinking Arena mobility integration", function()
                 generated:Destroy()
                 generated=nil
             end
-            expect(total).toBe(70)
+            expect(total).toBe(80)
         end)
         active=false
         Remaining.sync(nil,Vector3.zero,"Low",false)

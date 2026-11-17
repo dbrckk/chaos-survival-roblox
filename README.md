@@ -4,7 +4,7 @@ Chacun des dix tabliers de l’Épine céleste peut recevoir un seul châssis aj
 
 ## P4 — Châssis sculptés sous les tabliers des Promenades
 
-Sur les cinq arènes, 70 socles plats peuvent recevoir le châssis ajouré approuvé d’Orbital. Aux 20 portiques extérieurs, le même châssis remplace le socle et son treillis. Chaque châssis suit la contraction du tablier et occupe un créneau du quota des treillis de jonction. Si un berceau complet ou l’habillage portuaire prend la priorité, le châssis lui cède la place.
+Sur les cinq arènes, 80 socles plats peuvent recevoir le châssis ajouré approuvé d’Orbital. Aux 20 portiques extérieurs et aux 10 jonctions centrales, le même châssis remplace le socle et son treillis. Chaque montage suit la contraction et occupe un créneau du quota des treillis. Aux jonctions centrales, il dépend du raccord physique à l’Épine céleste. Le treillis forgé approuvé sert de repli si le châssis ou le socle d’origine se décharge. Les berceaux complets et l’habillage portuaire ont la priorité.
 
 ## P4 — Platelage nervuré des grandes traversées aériennes
 

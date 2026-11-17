@@ -513,6 +513,17 @@ local function promenadeUnderdeck(deck,decor,scale,span)
     return native
 end
 
+local function promenadeChassis(arena,deck,decor,frame,truss,name,spine)
+    local size=deck.Size
+    local depth=.56
+    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.04-depth*.5,0)
+        *CFrame.Angles(0,math.pi*.5,0)
+    return {category="junction",name=name,spec=SOURCE.AccessChassis,
+        key=frame,owner=deck,arena=arena,originals=truss and {frame,truss} or {frame},
+        otherDeck=spine,center=deck.Position,orientation=orientation,
+        fitSize=Vector3.new(size.Z*.985,depth,size.X*.985),expectedParent=decor}
+end
+
 local function collectPromenadeUnderframe(arena,deck,decor)
     if deck.Parent~=arena:FindFirstChild("Platforms") then return nil end
     local step=deck:GetAttribute("PromenadeStep")
@@ -521,23 +532,12 @@ local function collectPromenadeUnderframe(arena,deck,decor)
     local frame,_,scale=LargeStructure.promenadeNativeFrame(decor,deck)
     if not frame or Trim.hasPrimaryJunctionTruss(frame) then return nil end
 
-    local originals={frame}
-    local name="PromenadeUnderframe"
     if step==2 or step==7 then
         local truss=promenadeUnderdeck(deck,decor,scale,step==2 and 11 or 15)
         if not truss then return nil end
-        originals[2]=truss
-        name="PromenadeTruss"
+        return promenadeChassis(arena,deck,decor,frame,truss,"PromenadeTruss")
     end
-
-    local size=deck.Size
-    local depth=.56
-    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.04-depth*.5,0)
-        *CFrame.Angles(0,math.pi*.5,0)
-    return {category="junction",name=name,spec=SOURCE.AccessChassis,
-        key=frame,owner=deck,arena=arena,originals=originals,
-        center=deck.Position,orientation=orientation,
-        fitSize=Vector3.new(size.Z*.985,depth,size.X*.985),expectedParent=decor}
+    return promenadeChassis(arena,deck,decor,frame,nil,"PromenadeUnderframe")
 end
 
 local function collectSpineUnderframe(arena,deck,decor)
@@ -558,10 +558,8 @@ local function collectSpineUnderframe(arena,deck,decor)
         fitSize=Vector3.new(size.X*.985,depth,size.Z*.985),expectedParent=decor}
 end
 
--- Two real central trusses already exist in the five maps. Cover each
--- with a forged coupler only while its own Sky Spine endpoint overlaps.
--- The full promenade cradle/Harbor gantry has priority over this inset.
-local function collectJunctionTruss(arena,deck,spine,decor,scale)
+-- The central fittings depend on their own traversable Sky Spine endpoint.
+local function collectJunctionTruss(arena,deck,spine,decor,scale,useChassis)
     if not spine or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("PromenadeStep")~=4
         or deck:GetAttribute("RouteTier")~=4 or spine:GetAttribute("RouteTier")~=4
@@ -571,6 +569,11 @@ local function collectJunctionTruss(arena,deck,spine,decor,scale)
         or not Connection.spineJunction(spine,deck) then return nil end
     local native=promenadeUnderdeck(deck,decor,scale,13)
     if not native then return nil end
+    if useChassis then
+        local frame=LargeStructure.promenadeNativeFrame(decor,deck)
+        if not frame or Trim.hasPrimaryJunctionTruss(frame) then return nil end
+        return promenadeChassis(arena,deck,decor,frame,native,"JunctionUnderframe",spine)
+    end
     -- The shoulder remains underneath the real two-stud collision deck,
     -- with a flange at its underside and visible structural depth below.
     return {category="junction",name="JunctionTruss",key=native,owner=deck,
@@ -985,7 +988,8 @@ local function refresh(entry)
                     elseif entry.name=="SpineUnderframe" then
                         data=collectSpineUnderframe(entry.arena,entry.owner,decor)
                     else
-                        data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale)
+                        data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale,
+                            entry.name=="JunctionUnderframe")
                     end
                 elseif entry.category=="equipment" then
                     local equipment=EQUIPMENT[entry.arena:GetAttribute("VariantId")]
@@ -1249,8 +1253,7 @@ local function mount(data,source)
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
         if data.name=="SpineUnderframe" then
             marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "SkySpineDecor"
-        elseif (data.name=="PromenadeTruss" or data.name=="PromenadeUnderframe")
-            and native==data.originals[1] then
+        elseif data.category=="junction" and native.Name:match("^PlatformUnderFrame%d+$") then
             marker="PremiumArchitecturalSurface"
         end
         for _,attribute in ipairs({marker,"PerimeterPlatformIndex"}) do
@@ -1446,6 +1449,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                 local source=sourceFor(name)
                 if variant=="Orbital" then src[name]=source end
                 if routeUnderframes then
+                    src.JunctionUnderframe=source
                     src.PromenadeUnderframe=source
                     src.PromenadeTruss=source
                     src.SpineUnderframe=source
@@ -1497,7 +1501,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         and platforms and platforms:IsA("Folder") then
         local decks=platforms:GetChildren()
         local spineEnds={}
-        if src.JunctionTruss then
+        if src.JunctionTruss or src.JunctionUnderframe then
             for _,deck in ipairs(decks) do
                 local step=deck:GetAttribute("SkySpineStep")
                 if step==1 or step==10 then
@@ -1511,8 +1515,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             if lane and (src.JunctionTruss or src.PromenadeUnderframe) then
                 local underframe
                 if deck:GetAttribute("PromenadeStep")==4 then
-                    if src.JunctionTruss then
-                        underframe=collectJunctionTruss(arena,deck,spineEnds[lane],decor,scale)
+                    local spine=spineEnds[lane]
+                    if src.JunctionUnderframe then
+                        underframe=collectJunctionTruss(arena,deck,spine,decor,scale,true)
+                    end
+                    if not underframe and src.JunctionTruss then
+                        underframe=collectJunctionTruss(arena,deck,spine,decor,scale,false)
                     end
                 elseif src.PromenadeUnderframe then
                     underframe=collectPromenadeUnderframe(arena,deck,decor)

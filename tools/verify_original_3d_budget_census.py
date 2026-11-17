@@ -2648,7 +2648,9 @@ assert 'LocalOriginalPromenadeTrussesReplaced' in SIDE_LOD
 assert 'LocalOriginalPromenadeFramesReplaced' in SIDE_LOD
 assert 'step==2 or step==7' in P4_CLIENT
 assert 'LargeStructure.promenadeNativeFrame(decor,deck)' in P4_CLIENT
-assert 'key=frame,owner=deck,arena=arena,originals=originals' in P4_CLIENT
+assert 'key=frame,owner=deck,arena=arena,originals=truss and {frame,truss} or {frame}' in P4_CLIENT
+assert 'return promenadeChassis(arena,deck,decor,frame,native,"JunctionUnderframe",spine)' in P4_CLIENT
+assert 'count("junction", "JunctionUnderframe")' in SIDE_LOD
 assert 'count("junction", "PromenadeUnderframe")' in SIDE_LOD
 assert 'spec=SOURCE.AccessChassis' in P4_CLIENT
 assert 'local routeUnderframes=trussCap>0' in P4_CLIENT

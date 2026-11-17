@@ -2239,12 +2239,14 @@ task.spawn(function()
             LocalOriginalPromenadeCrosshead3DCount =
                 ApprovedRemainingStructureMeshKit.count("promenade"),
             LocalSkySpineJunctionTrussesReplaced =
-                ApprovedRemainingStructureMeshKit.count("junction", "JunctionTruss"),
+                ApprovedRemainingStructureMeshKit.count("junction", "JunctionTruss")
+                + ApprovedRemainingStructureMeshKit.count("junction", "JunctionUnderframe"),
             LocalOriginalPromenadeTrussesReplaced =
                 ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss"),
             LocalOriginalPromenadeFramesReplaced =
                 ApprovedRemainingStructureMeshKit.count("junction", "PromenadeUnderframe")
-                + ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss"),
+                + ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss")
+                + ApprovedRemainingStructureMeshKit.count("junction", "JunctionUnderframe"),
             LocalOriginalSkySpineUnderframesReplaced =
                 ApprovedRemainingStructureMeshKit.count("junction", "SpineUnderframe"),
             LocalOriginalPromenadeDiagonalStay3DCount =
