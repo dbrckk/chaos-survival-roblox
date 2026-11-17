@@ -786,8 +786,9 @@ for fragment in (
     'and entry.panel.Material == entry.insetMaterial',
     'if entry.inset or model == entry.underdeckModel then',
     'piece.Color = entry.panel.Color',
-    'local towerInset = arena:GetAttribute("VariantId") == "Towers"',
-    'item = item, count = math.min(3,budget.segments), inset = towerInset,',
+    'local bridgeInset = VisualTheme.Arenas[variant] and routeInset(bridgeTemplate,true)',
+    'count = tower and math.min(3,budget.segments) or 2, inset = bridgeInset',
+    'item.connector and isAirborneConnector(platform,floorScale)',
     'and entry.inset.Parent == getTemplate(insetTemplateName)',
     'or not originalFit or not originalFit.panelCovered',
 ):

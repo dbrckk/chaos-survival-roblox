@@ -1,3 +1,7 @@
+## P4 — Platelage nervuré des grandes traversées aériennes
+
+Les 16 tabliers des deux Promenades et les 10 tabliers de l’Épine céleste sont éligibles dans chaque arène. Quand la coque intégrale ne couvre pas la surface, deux sections du relief approuvé de passerelle épousent le panneau d’origine. Elles reprennent sa finition, suivent le rétrécissement et occupent un créneau existant de passerelle. Elles s’arrêtent à l’intérieur du tablier et se retirent ensemble si le panneau se décharge, si une fixation disparaît ou si une alerte se déclenche.
+
 ## P4 — Platelage nervuré des passerelles de Tower Run
 
 Les quatre passerelles à volets peuvent recevoir le relief antidérapant du modèle approuvé de passerelle. Deux sections en qualité basse et trois dans les profils supérieurs couvrent le panneau existant, dans les créneaux de détail des passerelles. Les sections suivent le raccourcissement du tablier et reprennent sa finition métallique. Dès le début d’une alerte ou en cas de perte d’une fixation, le jeu réaffiche le panneau d’origine.

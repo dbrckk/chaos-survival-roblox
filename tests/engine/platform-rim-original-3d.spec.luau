@@ -1363,13 +1363,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if not ok then error(tostring(context)..": "..tostring(why)) end
     end)
 
-    it("tiles approved treads across both axes of the four gated Tower Run bridges",function()
-        local Route=require("../../src/client/PremiumRouteMeshKit")
-        local storage=game:GetService("ReplicatedStorage")
-        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
-        local previousMap=workspace:FindFirstChild("GeneratedMap")
-        if previous then previous.Parent=nil end
-        if previousMap then previousMap.Parent=nil end
+    local function approvedSkybridgeFixture(storage)
         local holder=Instance.new("Folder")
         holder.Name="PremiumRouteMeshTemplates"
         holder:SetAttribute("OwnerVerified",true)
@@ -1390,6 +1384,17 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             part.Parent=source
         end
         source.Parent=holder
+        return holder
+    end
+
+    it("tiles approved treads across both axes of the four gated Tower Run bridges",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local holder=approvedSkybridgeFixture(storage)
 
         local generated
         local running=false
@@ -1467,6 +1472,94 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if previous then previous.Parent=storage end
         if previousMap then previousMap.Parent=workspace end
         if not ok then error(why) end
+    end)
+
+    it("fits every Promenade and Sky Spine tread inside its original walkable deck",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local holder=approvedSkybridgeFixture(storage)
+        local generated,context
+        local running,cleanup=false,{}
+        local function mount(arena,deck)
+            Route.sync(arena,deck.Position,"Low",true,nil,0,true)
+            for _,model in ipairs(workspace.PremiumRouteMeshLocal:GetChildren()) do
+                if model:GetAttribute("OriginalSkybridgeTread3D") then
+                    local mesh=model:FindFirstChildWhichIsA("MeshPart")
+                    local weld=mesh and mesh:FindFirstChild("OriginalRouteMeshCosmeticWeld")
+                    if weld and weld.Part0==deck then return model end
+                end
+            end
+            error("missing connector tread")
+        end
+        local ok,why=pcall(function()
+            for _,variant in ipairs(ArenaVariants.Order) do
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated=arena.Parent
+                local count,spine=0,nil
+                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                    if deck:GetAttribute("PromenadeStep") or deck:GetAttribute("SkySpineStep") then
+                        context=variant.." "..deck.Name
+                        local isSpine=deck:GetAttribute("SkySpineInterchange")==true
+                        local panel=arena.Decor["PlatformPanel"..deck.Name:match("%d+$")]
+                        local model=mount(arena,deck)
+                        local parts=model:GetChildren()
+                        assert(#parts==2 and panel.LocalTransparencyModifier==1 and deck.CanCollide)
+                        local span=isSpine and panel.Size.Z or panel.Size.X
+                        local width=isSpine and panel.Size.X or panel.Size.Z
+                        for _,piece in ipairs(parts) do
+                            local weld=piece.OriginalRouteMeshCosmeticWeld
+                            local p=weld.C0.Position
+                            local offset=math.abs(isSpine and p.Z or p.X)
+                            assert(piece.Material==panel.Material and piece.Color==panel.Color)
+                            assert(not piece.CanCollide and not piece.CanQuery)
+                            assert(math.abs(2*piece.Size.X-span*.987)<.05)
+                            assert(math.abs(piece.Size.Z-width*.987)<.03)
+                            assert(offset+piece.Size.X*.5<span*.5)
+                        end
+                        count+=1
+                        if isSpine then spine=deck end
+                        Route.sync(nil,Vector3.zero,"Low",false)
+                    end
+                end
+                assert(count==26,variant)
+                if variant=="Orbital" and spine then
+                    context="contracted Orbital Sky Spine"
+                    local panel=arena.Decor["PlatformPanel"..spine.Name:match("%d+$")]
+                    local model=mount(arena,spine)
+                    running=true
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                        Active=function() return running end,OnCleanup=cleanup})
+                    local deadline=os.clock()+1.5
+                    repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+                    running=false
+                    task.wait()
+                    assert(arena.Base.Size.X<=144.05 and mount(arena,spine)==model)
+                    local pieces=model:GetChildren()
+                    assert(math.abs(pieces[1].Size.X*2-panel.Size.Z*.987)<.05)
+                    assert(math.abs(pieces[1].Size.Z-panel.Size.X*.987)<.03)
+                    pieces[1].OriginalRouteMeshCosmeticWeld:Destroy()
+                    task.wait()
+                    assert(panel.LocalTransparencyModifier==0 and pieces[2].LocalTransparencyModifier==1)
+                    for _,stop in ipairs(cleanup) do stop() end
+                    table.clear(cleanup)
+                end
+                Route.sync(nil,Vector3.zero,"Low",false)
+                generated:Destroy()
+                generated=nil
+            end
+        end)
+        running=false
+        Route.sync(nil,Vector3.zero,"Low",false)
+        for _,stop in ipairs(cleanup) do stop() end
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(tostring(context)..": "..tostring(why)) end
     end)
 
     it("fits complete Harbor girders through real contraction and restores their separate native groups",function()

@@ -310,12 +310,12 @@ end
 -- Select the MINIMUM genuine module count that can cover an authentic
 -- long 3D corridor instead of blindly subdividing by 9.5 studs. The
 -- fallback chooses the best real source coverage within Android quota.
-local function chooseBridgeSegments(platform, bounds, maxSegments)
+local function chooseBridgeSegments(platform, bounds, maxSegments, authoredSize)
     local limit = math.max(1, math.floor(maxSegments or 1))
     local bestCount = nil
     local bestScore = -math.huge
     for n = 1, limit do
-        local fit = fitSourceToDeck(platform, bounds, n, true)
+        local fit = fitSourceToDeck(platform, bounds, n, true, authoredSize)
         if fit then
             if fit.panelCovered then return n end
             local score = math.min(1, fit.longCoverage) * 0.8
@@ -370,9 +370,9 @@ local function isTowerBridge(platform, scale)
         and math.abs(span-expectedSpan) <= .13
 end
 
-local function insetPanelSize(platform, scale, bridge)
+local function insetPanelSize(platform, scale, gatedBridge)
     local size = platform.Size
-    if bridge then
+    if gatedBridge then
         -- ShrinkingArena scales the original panel in the long axis only,
         -- using the deck's current span as a ratio of its original span.
         local alongX = size.X > size.Z
@@ -386,7 +386,7 @@ end
 
 local function addInsetModel(entry, platform, template, source)
     local bridge = entry.bridge
-    local panel = insetPanelSize(platform,entry.initialFloorScale,bridge)
+    local panel = insetPanelSize(platform,entry.initialFloorScale,entry.resizeKind == "skybridge")
     local count = entry.count
     local alongX = entry.longAlongX
     local span = (alongX and panel.X or panel.Z)*.987/count
@@ -704,6 +704,18 @@ local function isPermanentConnector(platform)
         and spine % 1 == 0 and spine >= 1 and spine <= 10
 end
 
+local function isAirborneConnector(platform, scale)
+    if not isPermanentConnector(platform) or platform:GetAttribute("RouteTier") ~= 4 then
+        return false
+    end
+    local size = platform.Size
+    local spine = platform:GetAttribute("SkySpineInterchange") == true
+    local span = (spine and size.Z or size.X)/scale
+    local width = (spine and size.X or size.Z)/scale
+    return math.abs(size.Y-2) <= .08 and math.abs(width-12) <= .20
+        and span > 14.55 and span < 29.65
+end
+
 local function usesNativeUnderdeck(platform)
     return platform:GetAttribute("RouteTier") == 4 and isPermanentConnector(platform)
 end
@@ -846,7 +858,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     local countToMount = isBridge and count or 1
     local segment = length / countToMount
     local variant = arena:GetAttribute("VariantId")
-    local timber = inset ~= nil and variant == "Harbor"
+    local timber = inset ~= nil and not isBridge and variant == "Harbor"
     local nominal = timber and PlatformIdentityLodRules.harborLandingWidth(platform)
     local fit = not inset and fitSourceToDeck(platform, bounds, countToMount, isBridge)
     if timber then
@@ -854,7 +866,10 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
             or math.abs(platform.Size.X-nominal*initialFloorScale) > .09
             or math.abs(platform.Size.Z-nominal*initialFloorScale) > .09 then return nil end
     elseif inset and isBridge then
-        if variant ~= "Towers" or not isTowerBridge(platform,initialFloorScale) then return nil end
+        if not (variant == "Towers" and isTowerBridge(platform,initialFloorScale))
+            and not (VisualTheme.Arenas[variant] and isAirborneConnector(platform,initialFloorScale)) then
+            return nil
+        end
     elseif not inset and not fit then return nil end
     local entry = {
         models = {},
@@ -969,7 +984,13 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         if entry.inset then
             local scale = realFloorScale(entry.base,entry.arena)
             if not scale then return false end
-            local expected = insetPanelSize(platform,scale,entry.bridge)
+            local gatedBridge = entry.resizeKind == "skybridge"
+            if entry.bridge then
+                local valid = gatedBridge and variant == "Towers" and isTowerBridge(platform,scale)
+                    or not gatedBridge and isAirborneConnector(platform,scale)
+                if not valid then return false end
+            end
+            local expected = insetPanelSize(platform,scale,gatedBridge)
             return panel:IsA("Part") and panel.Shape == Enum.PartType.Block
                 and panel.Anchored and (panel.Position-intended).Magnitude < .10
                 and (entry.timber or panel:GetAttribute("PremiumArchitecturalSurface") == true)
@@ -1462,20 +1483,33 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
     end
     if bridgeTemplate then
         local _, sourceBox = bridgeTemplate:GetBoundingBox()
-        local towerInset = arena:GetAttribute("VariantId") == "Towers"
-            and routeInset(bridgeTemplate,true)
+        local variant = arena:GetAttribute("VariantId")
+        local bridgeInset = VisualTheme.Arenas[variant] and routeInset(bridgeTemplate,true)
         local qualified = {}
         for _, item in ipairs(bridges) do
-            if towerInset and isTowerBridge(item.platform,floorScale) then
+            local platform = item.platform
+            local count = chooseBridgeSegments(platform,sourceBox,budget.segments)
+            local fit = count and fitSourceToDeck(platform,sourceBox,count,true)
+            local tower = bridgeInset and variant == "Towers" and isTowerBridge(platform,floorScale)
+            local connector = bridgeInset and item.connector and isAirborneConnector(platform,floorScale)
+            local useInset = tower
+            if connector then
+                -- Keep the fitted surface through contraction when the
+                -- full-size connector cannot use a complete approved shell.
+                local size = platform.Size
+                local authored = Vector3.new(size.X/floorScale,size.Y,size.Z/floorScale)
+                local originalCount = chooseBridgeSegments(platform,sourceBox,budget.segments,authored)
+                local originalFit = originalCount
+                    and fitSourceToDeck(platform,sourceBox,originalCount,true,authored)
+                useInset = not originalFit or not originalFit.panelCovered
+                    or not fit or not fit.panelCovered
+            end
+            if useInset then
                 qualified[#qualified + 1] = {
-                    item = item, count = math.min(3,budget.segments), inset = towerInset,
+                    item = item, count = tower and math.min(3,budget.segments) or 2, inset = bridgeInset,
                 }
-            else
-                local count = chooseBridgeSegments(item.platform,sourceBox,budget.segments)
-                local fit = count and fitSourceToDeck(item.platform,sourceBox,count,true)
-                if fit and fit.longCoverage >= 0.68 and fit.widthCoverage >= 0.65 then
-                    qualified[#qualified + 1] = {item = item, count = count}
-                end
+            elseif fit and fit.longCoverage >= 0.68 and fit.widthCoverage >= 0.65 then
+                qualified[#qualified + 1] = {item = item, count = count}
             end
         end
         local selected = {}
