@@ -2640,6 +2640,11 @@ assert 'not Connection.spineJunction(spine,deck)' in P4_CLIENT
 assert 'Trim.hasPrimaryJunctionTruss(native)' in P4_CLIENT
 assert 'observePrimaryJunctionTruss(data.originals[1],changed)' in P4_CLIENT
 assert 'LocalSkySpineJunctionTrussesReplaced' in SIDE_LOD
+assert 'LocalOriginalPromenadeTrussesReplaced' in SIDE_LOD
+assert 'step~=2 and step~=7' in P4_CLIENT
+assert 'spec=SOURCE.AccessChassis' in P4_CLIENT
+assert 'local promenadeTruss=trussCap>0' in P4_CLIENT
+assert 'count("junction", "PromenadeTruss")' in SIDE_LOD
 print("PASS ten authored junction trusses use one approved source, proved deck overlap and shared rollback")
 junction_integration=(ROOT/"tests/engine/long-cradle-streaming-fallback.spec.luau").read_text(encoding="utf8")
 assert 'expect(count).toBe(10)' in junction_integration

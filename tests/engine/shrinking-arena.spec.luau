@@ -929,6 +929,109 @@ describe("Shrinking Arena mobility integration", function()
         end
         root:Destroy()
     end)
+
+    it("fits the short approved chassis beneath all outer Promenade porticos",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if oldMap then oldMap.Parent=nil end
+        if oldSource then oldSource.Parent=nil end
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedRemainingStructureTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="AccessChassis"
+        source:SetAttribute("Original3DAssetId",106401955318567)
+        for _,attribute in ipairs({"OwnerVerified","CosmeticOnly","P4OriginalRemainingStructure3D"}) do
+            source:SetAttribute(attribute,true)
+        end
+        for index=1,7 do
+            local piece=Instance.new("MeshPart")
+            piece.Name="Region"..index
+            piece.Size=Vector3.new(5.17,.5065,12.8)
+            piece.Anchored=true
+            piece.Massless=true
+            piece.CanCollide=false
+            piece.CanTouch=false
+            piece.CanQuery=false
+            piece.Parent=source
+        end
+        source.Parent=holder
+
+        local generated,context
+        local active,callbacks=false,{}
+        local okay,why=pcall(function()
+            local total=0
+            for _,variant in ipairs(ArenaVariants.Order) do
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
+                generated=arena.Parent
+                local count=0
+                local finalDeck,finalNative
+                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                    local step=deck:GetAttribute("PromenadeStep")
+                    if step==2 or step==7 then
+                        context=variant.." "..deck.Name
+                        local index=deck.Name:match("^Platform(%d+)$")
+                        local native=arena.Decor["Promenade"..index.."_UnderdeckTruss"]
+                        native.LocalTransparencyModifier=.19
+                        Remaining.sync(nil,Vector3.zero,"Low",false)
+                        Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                        local bucket=workspace.ApprovedRemainingStructureMeshesLocal
+                        local model=bucket:FindFirstChild("ApprovedP4_PromenadeTruss")
+                        assert(model and model:GetAttribute("OriginalP4OwnerPlatform")==deck.Name)
+                        assert(Remaining.count("junction","PromenadeTruss")==1)
+                        assert(native.LocalTransparencyModifier==1 and deck.CanCollide)
+                        for _,piece in ipairs(model:GetChildren()) do
+                            local center=deck.CFrame:PointToObjectSpace(piece.Position)
+                            assert(center.Y+piece.Size.Y*.5 < -deck.Size.Y*.5)
+                            assert(not piece.CanCollide and not piece.CanQuery)
+                        end
+                        count+=1
+                        finalDeck,finalNative=deck,native
+                    end
+                end
+                assert(count==4,variant)
+                total+=count
+                if variant=="Harbor" and finalDeck and finalNative then
+                    context="Harbor truss ownership and shrink"
+                    local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_PromenadeTruss
+                    local mesh=art:FindFirstChildWhichIsA("MeshPart")
+                    local width=mesh.Size.X
+                    NativeTrim.setJunctionTrussMask(finalNative,true,true)
+                    assert(mesh.LocalTransparencyModifier==1 and finalNative.LocalTransparencyModifier==1)
+                    NativeTrim.setJunctionTrussMask(finalNative,true,false)
+                    assert(mesh.LocalTransparencyModifier==0)
+                    active=true
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,
+                        Active=function() return active end})
+                    local deadline=os.clock()+1.5
+                    repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+                    active=false
+                    task.wait()
+                    assert(arena.Base.Size.X<=144.05 and math.abs(mesh.Size.X-width*.45)<.025)
+                    assert(finalNative.LocalTransparencyModifier==1)
+                    Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
+                    assert(math.abs(finalNative.LocalTransparencyModifier-.19)<.01)
+                    cleanup(callbacks,{})
+                    table.clear(callbacks)
+                end
+                Remaining.sync(nil,Vector3.zero,"Low",false)
+                generated:Destroy()
+                generated=nil
+            end
+            expect(total).toBe(20)
+        end)
+        active=false
+        Remaining.sync(nil,Vector3.zero,"Low",false)
+        cleanup(callbacks,{})
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if oldSource then oldSource.Parent=storage end
+        if oldMap then oldMap.Parent=workspace end
+        if not okay then error(tostring(context)..": "..tostring(why)) end
+    end)
+
 end)
 
 return nil

@@ -418,8 +418,9 @@ local function collectArchBase(arena,deck,decor,scale)
     return pieces
 end
 
-local function porticoStep(arena,deck,scale)
-    if not PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
+local function porticoStep(arena,deck,scale,includeHarbor)
+    local variant=arena:GetAttribute("VariantId")
+    if not (PROMENADE_VARIANTS[variant] or (includeHarbor and variant=="Harbor"))
         or not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("ChaosPermanentRoute")~=true
         or deck:GetAttribute("RouteTier")~=4
@@ -497,6 +498,33 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
         fitSize=Vector3.new(size.X*.85,size.Y*.975,size.Z*.98),expectedParent=decor}
 end
 
+local function promenadeUnderdeck(deck,decor,scale,span)
+    local index=deck.Name:match("^Platform(%d+)$")
+    local native=promenadeNative(decor,index,"_UnderdeckTruss")
+    if not native or Trim.hasPrimaryJunctionTruss(native) then return nil end
+    local expected=deck.CFrame*CFrame.new(0,-.3,0)
+    if (native.Position-expected.Position).Magnitude>.14
+        or (native.Size-Vector3.new(5.6*scale,1.7,span*scale)).Magnitude>.13
+        or expected.UpVector:Dot(native.CFrame.UpVector)<.999
+        or expected.LookVector:Dot(native.CFrame.LookVector)<.999 then return nil end
+    return native
+end
+
+local function collectPromenadeTruss(arena,deck,decor,scale)
+    local step=porticoStep(arena,deck,scale,true)
+    -- The fourth span belongs to the physical two-deck junction and
+    -- must still prove its overlap with the Sky Spine endpoint.
+    if step~=2 and step~=7 then return nil end
+    local native=promenadeUnderdeck(deck,decor,scale,step==2 and 11 or 15)
+    if not native then return nil end
+    local depth=.56
+    local orientation=deck.CFrame*CFrame.new(0,-deck.Size.Y*.5-.04-depth*.5,0)
+    return {category="junction",name="PromenadeTruss",spec=SOURCE.AccessChassis,
+        key=native,owner=deck,arena=arena,originals={native},
+        center=deck.Position,orientation=orientation,
+        fitSize=Vector3.new(native.Size.X*.965,depth,native.Size.Z*.985),expectedParent=decor}
+end
+
 -- Two real central trusses already exist in the five maps. Cover each
 -- with a forged coupler only while its own Sky Spine endpoint overlaps.
 -- The full promenade cradle/Harbor gantry has priority over this inset.
@@ -508,14 +536,8 @@ local function collectJunctionTruss(arena,deck,spine,decor,scale)
         or math.abs(spine.Size.X-12*scale)>.12
         or math.abs(deck.Size.Y-2)>.08 or math.abs(spine.Size.Y-2)>.08
         or not Connection.spineJunction(spine,deck) then return nil end
-    local index=deck.Name:match("^Platform(%d+)$")
-    local native=promenadeNative(decor,index,"_UnderdeckTruss")
-    if not native or Trim.hasPrimaryJunctionTruss(native) then return nil end
-    local expected=deck.CFrame*CFrame.new(0,-.3,0)
-    if (native.Position-expected.Position).Magnitude>.14
-        or (native.Size-Vector3.new(5.6*scale,1.7,13*scale)).Magnitude>.13
-        or expected.UpVector:Dot(native.CFrame.UpVector)<.999
-        or expected.LookVector:Dot(native.CFrame.LookVector)<.999 then return nil end
+    local native=promenadeUnderdeck(deck,decor,scale,13)
+    if not native then return nil end
     -- The shoulder remains underneath the real two-stud collision deck,
     -- with a flange at its underside and visible structural depth below.
     return {category="junction",name="JunctionTruss",key=native,owner=deck,
@@ -925,7 +947,11 @@ local function refresh(entry)
                 if entry.category=="arch" then
                     data=collectArch(entry.arena,entry.owner,decor,scale)
                 elseif entry.category=="junction" then
-                    data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale)
+                    if entry.name=="PromenadeTruss" then
+                        data=collectPromenadeTruss(entry.arena,entry.owner,decor,scale)
+                    else
+                        data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale)
+                    end
                 elseif entry.category=="equipment" then
                     local equipment=EQUIPMENT[entry.arena:GetAttribute("VariantId")]
                     if equipment then
@@ -1162,6 +1188,8 @@ local function mount(data,source)
             entry.connections[#entry.connections+1]=
                 data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
         end
+    end
+    if data.category=="junction" then
         entry.disconnectTruss=Trim.observePrimaryJunctionTruss(data.originals[1],changed)
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
             entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
@@ -1359,13 +1387,19 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     local variant=arena:GetAttribute("VariantId")
     local promenadeVariant=PROMENADE_VARIANTS[variant]
     local archBaseCap=caps(tier,touch,pressure,"archBase")
+    local trussCap=caps(tier,touch,pressure,"junction")
     for name in pairs(SOURCE) do
         local kind=name=="Crosshead" and "promenade" or (name=="Stay" and "stay")
             or (name=="JunctionTruss" and "junction")
         if name=="ArchAbutment" or name=="ArchGirder" then
             if archBaseCap>0 then src[name]=sourceFor(name) end
         elseif name=="AccessChassis" then
-            if variant=="Orbital" then src[name]=sourceFor(name) end
+            local promenadeTruss=trussCap>0 and (promenadeVariant or variant=="Harbor")
+            if variant=="Orbital" or promenadeTruss then
+                local source=sourceFor(name)
+                if variant=="Orbital" then src[name]=source end
+                if promenadeTruss then src.PromenadeTruss=source end
+            end
         elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
@@ -1423,8 +1457,15 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
         for _,deck in ipairs(decks) do
             local lane=deck:GetAttribute("PromenadeLane")
-            if src.JunctionTruss and lane then
-                local truss=collectJunctionTruss(arena,deck,spineEnds[lane],decor,scale)
+            if lane and (src.JunctionTruss or src.PromenadeTruss) then
+                local truss
+                if deck:GetAttribute("PromenadeStep")==4 then
+                    if src.JunctionTruss then
+                        truss=collectJunctionTruss(arena,deck,spineEnds[lane],decor,scale)
+                    end
+                elseif src.PromenadeTruss then
+                    truss=collectPromenadeTruss(arena,deck,decor,scale)
+                end
                 queuePair(truss and {truss},(DISTANCE[tier] or DISTANCE.Low).promenade,candidates.junction)
             end
             local data=collectArch(arena,deck,decor,scale)

@@ -1,3 +1,7 @@
+## P4 — Châssis sculptés sous les portiques des Promenades
+
+Les deux portiques extérieurs de chaque Promenade peuvent recevoir le châssis court approuvé d’Orbital sous leur tablier. Cela rend 20 blocs éligibles au remplacement sur les cinq arènes. Les châssis se redimensionnent avec le tablier et partagent le quota des treillis de jonction. Lorsqu’un berceau complet ou une grue couvre déjà le dessous, cet habillage prend la priorité.
+
 ## P4 — Platelage nervuré des grandes traversées aériennes
 
 Les 16 tabliers des deux Promenades et les 10 tabliers de l’Épine céleste sont éligibles dans chaque arène. Quand la coque intégrale ne couvre pas la surface, deux sections du relief approuvé de passerelle épousent le panneau d’origine. Elles reprennent sa finition, suivent le rétrécissement et occupent un créneau existant de passerelle. Elles s’arrêtent à l’intérieur du tablier et se retirent ensemble si le panneau se décharge, si une fixation disparaît ou si une alerte se déclenche.
