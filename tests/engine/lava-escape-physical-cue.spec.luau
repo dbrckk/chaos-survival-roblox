@@ -68,6 +68,25 @@ describe("Lava escape: find a genuine dry entry for new and veteran players", fu
                     {}, floor, nil, 106)).toBe(nil)
                 expect(JumpRouteCueRules.nearestLavaClimbEntry(
                     decks, nil, nil, 106)).toBe(nil)
+
+                if id == "Orbital" then
+                    local hazards = require("../../src/shared/JumpRouteHazards")
+                    local ramp = arena.HelixCircuit.EntryRamp1
+                    local rampEntry = ramp:GetAttribute("HelixStart")
+                    assert(typeof(rampEntry) == "Vector3")
+                    local entryLava = Instance.new("Part")
+                    entryLava.Name = "RoundLava"
+                    entryLava.Size = Vector3.one
+                    entryLava.Position = rampEntry
+                    entryLava.Anchored = true
+                    entryLava.CanCollide = false
+                    entryLava.Parent = workspace
+                    local playerRoot = rampEntry + Vector3.new(0, 2.5, 4)
+                    expect(hazards.landingPathIsSafe(playerRoot, ramp, {}, entryLava)).toBe(true)
+                    expect(hazards.landingPathIsSafe(playerRoot, ramp, {}, entryLava, rampEntry)).toBe(false)
+                    entryLava:Destroy()
+                    expect(hazards.landingPathIsSafe(playerRoot, ramp, {}, entryLava, rampEntry)).toBe(true)
+                end
                 root:Destroy()
             end)
     end

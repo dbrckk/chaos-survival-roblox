@@ -42,26 +42,35 @@ for _, child in ipairs(workspace:GetChildren()) do
     trackWarning(child)
 end
 
-local SWEEP_TAG = "ChaosHarborSweepLane"
-local sweepConnections = {}
-local function trackSweep(lane)
-    if sweepConnections[lane] or not lane:IsA("BasePart")
-        or not lane:IsDescendantOf(game) or not lane:HasTag(SWEEP_TAG) then return end
-    sweepConnections[lane] = lane:GetAttributeChangedSignal("HarborSweepPhase"):Connect(queueWarningUpdate)
-    queueWarningUpdate()
+local sweeps = {
+    {folder = "GridSweep", phase = "GridSweepPhase", tag = "ChaosClassicSweepBand"},
+    {folder = "HarborCargoSweep", phase = "HarborSweepPhase", tag = "ChaosHarborSweepLane"},
+}
+
+local function watchSweep(sweep)
+    local connections = {}
+    local function track(lane)
+        if connections[lane] or not lane:IsA("BasePart")
+            or not lane:IsDescendantOf(game) or not lane:HasTag(sweep.tag) then return end
+        connections[lane] = lane:GetAttributeChangedSignal(sweep.phase):Connect(queueWarningUpdate)
+        queueWarningUpdate()
+    end
+    CollectionService:GetInstanceAddedSignal(sweep.tag):Connect(track)
+    CollectionService:GetInstanceRemovedSignal(sweep.tag):Connect(function(lane)
+        local connection = connections[lane]
+        if not connection then return end
+        connection:Disconnect()
+        connections[lane] = nil
+        queueWarningUpdate()
+        track(lane)
+    end)
+    for _, lane in ipairs(CollectionService:GetTagged(sweep.tag)) do
+        track(lane)
+    end
 end
 
-CollectionService:GetInstanceAddedSignal(SWEEP_TAG):Connect(trackSweep)
-CollectionService:GetInstanceRemovedSignal(SWEEP_TAG):Connect(function(lane)
-    local connection = sweepConnections[lane]
-    if not connection then return end
-    connection:Disconnect()
-    sweepConnections[lane] = nil
-    queueWarningUpdate()
-    trackSweep(lane)
-end)
-for _, lane in ipairs(CollectionService:GetTagged(SWEEP_TAG)) do
-    trackSweep(lane)
+for _, sweep in ipairs(sweeps) do
+    watchSweep(sweep)
 end
 
 function JumpRouteHazards.read(arena)
@@ -74,15 +83,12 @@ function JumpRouteHazards.read(arena)
 
     local mechanics = arena and arena:FindFirstChild("Mechanics")
     if mechanics then
-        for _, folderName in ipairs({"GridSweep", "HarborCargoSweep"}) do
-            local folder = mechanics:FindFirstChild(folderName)
+        for _, sweep in ipairs(sweeps) do
+            local folder = mechanics:FindFirstChild(sweep.folder)
             if folder then
                 for _, band in ipairs(folder:GetChildren()) do
-                    if band:IsA("BasePart")
-                        and (band:GetAttribute("GridSweepPhase") == "Warning"
-                            or band:GetAttribute("GridSweepPhase") == "Pulse"
-                            or band:GetAttribute("HarborSweepPhase") == "Warning"
-                            or band:GetAttribute("HarborSweepPhase") == "Pulse") then
+                    local phase = band:GetAttribute(sweep.phase)
+                    if band:IsA("BasePart") and (phase == "Warning" or phase == "Pulse") then
                         result[#result + 1] = band
                     end
                 end
@@ -96,8 +102,8 @@ local function standingRoot(deck)
     return deck.Position + Vector3.yAxis * (deck.Size.Y * 0.5 + 2.5)
 end
 
-function JumpRouteHazards.landingPathIsSafe(fromPosition, target, warnings, lava)
-    local targetRoot = standingRoot(target)
+function JumpRouteHazards.landingPathIsSafe(fromPosition, target, warnings, lava, rampEntry)
+    local targetRoot = if rampEntry then rampEntry + Vector3.yAxis * 2.5 else standingRoot(target)
     return not JumpRouteCueRules.lavaAtRoot(targetRoot, lava)
         and JumpRouteCueRules.safeGuidedPath(fromPosition, targetRoot, warnings)
 end

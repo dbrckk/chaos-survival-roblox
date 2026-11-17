@@ -4,7 +4,7 @@
 --
 -- No task loop, RenderStepped listener, custom Parts or new Remotes:
 -- reuse the existing authoritative RoundState heartbeat (~1Hz) and
--- react to changes on the displayed Harbor landing.
+-- react to changes on the displayed landing.
 -- Also respects rookie tutoring, live collapse warnings, streaming,
 -- mobile graphic tiers and the optional Storm Harbor cargo objective.
 local Players = game:GetService("Players")
@@ -22,7 +22,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local marker, caption
 local latestState = nil
 local currentTarget = nil
-local clearanceArena, routeClearance
+local currentArena, routeClearance
 local targetConnections = {}
 
 local rayParams = RaycastParams.new()
@@ -54,8 +54,16 @@ local function liveSurface(part)
     return phase ~= "Warning" and phase ~= "Gone"
 end
 
-local function eligibleTarget(part, rootPosition, required)
-    if not liveSurface(part) or (rootPosition - part.Position).Magnitude > 48 then
+local function rampEntry(part)
+    local parent = part.Parent
+    local entry = parent and parent.Name == "HelixCircuit"
+        and part:GetAttribute("HelixStart")
+    return if typeof(entry) == "Vector3" then entry else nil
+end
+
+local function eligibleTarget(part, rootPosition, required, entry)
+    if not JumpRouteCueRules.safeLandingSurface(part)
+        or (rootPosition - (entry or part.Position)).Magnitude > 48 then
         return false
     end
     local tier = tonumber(part:GetAttribute("RouteTier"))
@@ -68,7 +76,7 @@ local function findRealChild(folder, name)
     return nil
 end
 
-local function nearestOrbitalEntry(circuit, root, maxStartDistance)
+local function nearestOrbitalEntry(circuit, root, maxStartDistance, isSafe)
     local best, bestDistance = nil, maxStartDistance
     for i = 1, 8 do
         local ramp = findRealChild(circuit, "EntryRamp" .. i)
@@ -79,7 +87,7 @@ local function nearestOrbitalEntry(circuit, root, maxStartDistance)
                     start.X - root.Position.X, 0,
                     start.Z - root.Position.Z
                 ).Magnitude
-                if flat < bestDistance then
+                if flat < bestDistance and isSafe(ramp) then
                     best, bestDistance = ramp, flat
                 end
             end
@@ -88,7 +96,7 @@ local function nearestOrbitalEntry(circuit, root, maxStartDistance)
     return best
 end
 
-local function orbitalNext(arena, from, root)
+local function orbitalNext(arena, from, root, isSafe)
     -- Orbital's eight authored stair-free paths are physical inclined
     -- ramps, NOT jump-sized gaps. Always guide to a real server-owned
     -- collidable EntryRamp / HelixRamp / CoreRamp or its actual deck.
@@ -98,7 +106,7 @@ local function orbitalNext(arena, from, root)
     if not circuit or not platforms or not base then return nil end
 
     if from == base then
-        return nearestOrbitalEntry(circuit, root, 44)
+        return nearestOrbitalEntry(circuit, root, 44, isSafe)
     end
 
     if from.Parent == platforms then
@@ -109,7 +117,7 @@ local function orbitalNext(arena, from, root)
             -- climbable core. Players must descend safely to the floor
             -- and take a real outer entry ramp. Without this route,
             -- the mastery sign vanishes at the most confusing fork.
-            return nearestOrbitalEntry(circuit, root, 56)
+            return nearestOrbitalEntry(circuit, root, 56, isSafe)
         end
         if id >= 1 and id <= 8 then
             return findRealChild(circuit, "HelixRamp" .. id)
@@ -139,14 +147,13 @@ local function orbitalNext(arena, from, root)
     return nil
 end
 
-local function watchHarborTarget(target, refresh)
+local function watchTarget(target, refresh)
     local function onAncestryChanged()
         if currentTarget == target then refresh() end
     end
     local function onSurfaceChanged()
         if currentTarget ~= target then return end
-        local shutter = target:GetAttribute("BridgeShutterPhase")
-        if not liveSurface(target) or (shutter and shutter ~= "Idle") then
+        if not JumpRouteCueRules.safeLandingSurface(target) then
             refresh()
         end
     end
@@ -292,11 +299,10 @@ local function update()
         hide()
         return
     end
-    local harborArena = variant == "Harbor" and arena or nil
-    if harborArena ~= clearanceArena then
-        disconnectTarget()
-        clearanceArena = harborArena
-        routeClearance = harborArena and JumpRouteClearance.forArena(harborArena) or nil
+    if arena ~= currentArena then
+        hide()
+        currentArena = arena
+        routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
     end
 
     local platforms = arena and arena:FindFirstChild("Platforms")
@@ -316,50 +322,46 @@ local function update()
         return
     end
 
+    local warnings, lava = JumpRouteHazards.read(arena)
+    local function safeLanding(target)
+        if not target then return false end
+        local entry = rampEntry(target)
+        return eligibleTarget(target, root.Position, required, entry)
+            and JumpRouteHazards.landingPathIsSafe(root.Position, target, warnings, lava, entry)
+    end
+
     local target
     local isRamp = false
     local returnToRamp = false
     if variant == "Orbital" then
-        target = orbitalNext(arena, from, root)
+        target = orbitalNext(arena, from, root, safeLanding)
         local circuit = arena:FindFirstChild("HelixCircuit")
         isRamp = circuit ~= nil and target ~= nil
             and target.Parent == circuit
         returnToRamp = from.Parent == platforms and from.Name == "Platform17"
     elseif from == base or from.Parent == platforms then
         local decks = platforms:GetChildren()
-        local canJump
-        if routeClearance then
-            local warnings, lava = JumpRouteHazards.read(arena)
-            local function safeLanding(destination)
-                return eligibleTarget(destination, root.Position, required)
-                    and JumpRouteHazards.landingPathIsSafe(root.Position, destination, warnings, lava)
-            end
-            if from == base then
-                canJump = function(destination)
-                    return safeLanding(destination)
-                        and routeClearance(base, destination, hit.Position)
-                end
-            else
-                canJump = function(source, destination)
-                    return safeLanding(destination)
-                        and routeClearance(source, destination, nil, hit.Position)
-                end
-            end
-        end
         if from == base then
-            target = JumpRouteCueRules.nearestEntry(decks, hit.Position, 42, canJump)
+            target = JumpRouteCueRules.nearestEntry(decks, hit.Position, 42, function(destination)
+                return safeLanding(destination)
+                    and (not routeClearance or routeClearance(base, destination, hit.Position))
+            end)
         else
-            target = JumpRouteCueRules.nextPhysical(from, decks, base.Position, variant, nil, canJump)
+            target = JumpRouteCueRules.nextPhysical(from, decks, base.Position, variant, nil,
+                function(source, destination)
+                    return safeLanding(destination)
+                        and (not routeClearance or routeClearance(source, destination, nil, hit.Position))
+                end)
         end
     end
 
-    if not eligibleTarget(target, root.Position, required) then
+    if not safeLanding(target) then
         hide()
         return
     end
     show(target, isRamp, achieved, required, returnToRamp)
-    if harborArena and #targetConnections == 0 then
-        watchHarborTarget(target, update)
+    if #targetConnections == 0 then
+        watchTarget(target, update)
     end
 end
 
@@ -369,12 +371,12 @@ states.OnClientEvent:Connect(function(state)
 end)
 
 JumpRouteHazards.WarningsChanged:Connect(function()
-    local target = clearanceArena and currentTarget
+    local target = currentTarget
     local character = player.Character
     local root = target and character and character:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then return end
-    local warnings, lava = JumpRouteHazards.read(clearanceArena)
-    if not JumpRouteHazards.landingPathIsSafe(root.Position, target, warnings, lava) then
+    local warnings, lava = JumpRouteHazards.read(currentArena)
+    if not JumpRouteHazards.landingPathIsSafe(root.Position, target, warnings, lava, rampEntry(target)) then
         hide()
     end
 end)

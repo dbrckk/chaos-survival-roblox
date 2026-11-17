@@ -1163,6 +1163,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 lane:SetAttribute("HarborSweepPhase",phase)
                 waitForWarningUpdate(previous)
                 assert(safeJump()==(phase=="Idle"))
+                assert(not table.find(Hazards.read(arena.Parent),lane))
             end
             previous=warningUpdates
             sweep:Destroy()

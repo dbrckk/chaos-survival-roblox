@@ -1,3 +1,7 @@
+## P4 — Alerte de danger et guidage dans les cinq arènes
+
+Dans Classic Grid, Towers, Crossroads et Storm Harbor, les chevrons de saut proches se masquent si le trajet est menacé. Les balayages de Classic Grid et de Storm Harbor déclenchent ce contrôle à chaque changement de phase. Sur PC, le défi Points hauts filtre les paliers dangereux dans toutes les arènes et vérifie l’entrée réelle des rampes d’Orbital. Sur écran tactile, le défi garde son affichage dans le HUD.
+
 ## P4 — Repères de saut pendant les changements de manche et de terrain
 
 Le guide retire le repère dès que le palier indiqué passe en alerte d’effondrement, qu’une barrière se ferme, que la collision disparaît ou que le palier se décharge. Au prochain contrôle, il propose un autre accès s’il en existe un. Il attend que l’arène reçue par le client corresponde à celle de la manche et retire aussi le repère lors d’une élimination.

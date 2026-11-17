@@ -1876,7 +1876,8 @@ assert 'and (not isClear or isClear(from,current)) then' in CUE_RULES
 assert 'and (not isClear or isClear(from,target)) then' in CUE_RULES
 assert 'variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in OWNER
 assert 'if checked == 8 then break end' in OWNER
-assert 'LocalHarborRouteClearanceEpoch' in SIDE_LOD
+assert 'LocalJumpRouteEpoch' in SIDE_LOD and 'LocalJumpRouteEpoch' in OWNER
+assert 'variant ~= "Orbital" then warnings, lava = JumpRouteHazards.read(arena) end' in OWNER
 CLEARANCE=(ROOT/"src/shared/JumpRouteClearance.lua").read_text(encoding="utf8")
 assert 'cast.IncludeInstances = {arena}' in CLEARANCE
 assert 'cast.RespectCanCollide = true' in CLEARANCE
@@ -1896,19 +1897,19 @@ assert 'detour and isClear(from, detour)' in ROOKIE
 assert 'pieces, hit.Position, 42, canApproach' in ROOKIE
 assert 'skyRouteDirection(from), isClear' in ROOKIE
 MASTERY=(CLIENT/"high-ground-route-cue.client.lua").read_text(encoding="utf8")
-assert 'local harborArena = variant == "Harbor" and arena or nil' in MASTERY
-assert 'JumpRouteClearance.forArena(harborArena)' in MASTERY
+assert 'routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in MASTERY
 assert 'routeClearance(base, destination, hit.Position)' in MASTERY
 assert 'routeClearance(source, destination, nil, hit.Position)' in MASTERY
-assert 'nearestEntry(decks, hit.Position, 42, canJump)' in MASTERY
+assert 'nearestEntry(decks, hit.Position, 42, function(destination)' in MASTERY
 assert 'arcClear(approach,start,heading.Unit,0)' in CLEARANCE
-assert 'nextPhysical(from, decks, base.Position, variant, nil, canJump)' in MASTERY
-assert 'watchHarborTarget(target, update)' in MASTERY
+assert 'nextPhysical(from, decks, base.Position, variant, nil,' in MASTERY
+assert 'JumpRouteHazards.landingPathIsSafe(root.Position, target, warnings, lava, entry)' in MASTERY
+assert 'watchTarget(target, update)' in MASTERY
 assert 'target:GetAttributeChangedSignal("CollapsePhase"):Connect(onSurfaceChanged)' in MASTERY
 assert 'target:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(onSurfaceChanged)' in MASTERY
 assert 'target.AncestryChanged:Connect(onAncestryChanged)' in MASTERY
 assert 'local function hide()\n    disconnectTarget()' in MASTERY
-print("PASS Storm Harbor high-ground challenge checks clearance and refreshes its active landing")
+print("PASS high-ground guidance filters live danger and retains physical clearance checks in Harbor")
 assert 'arcClear(approach,start,direction,0)' in CLEARANCE
 assert 'and (not canApproach or canApproach(part)) then' in CUE_RULES
 assert 'paintOffset,.12+.84*scale' in CUE_RULES

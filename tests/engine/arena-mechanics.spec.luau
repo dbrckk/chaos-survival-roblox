@@ -241,6 +241,26 @@ describe("Arena mechanics", function()
         expect(sweep.velocity(Vector3.zero, positiveX).X < 0).toBe(true)
         expect(sweep.velocity(Vector3.zero, negativeZ).Z > 0).toBe(true)
 
+        local hazards = require("../../src/shared/JumpRouteHazards")
+        local notifications = 0
+        local connection = hazards.WarningsChanged:Connect(function()
+            notifications += 1
+        end)
+        expect(negativeX:HasTag("ChaosClassicSweepBand")).toBe(true)
+        local function phaseReachesGuide(phase)
+            local previous = notifications
+            sweep.setPhase(negativeX, phase, workspace:GetServerTimeNow())
+            local expires = os.clock() + 1
+            repeat task.wait() until notifications > previous or os.clock() > expires
+            expect(notifications > previous).toBe(true)
+            local warnings = hazards.read(arena)
+            expect(table.find(warnings, negativeX) ~= nil).toBe(phase ~= nil)
+        end
+        phaseReachesGuide("Warning")
+        phaseReachesGuide("Pulse")
+        phaseReachesGuide(nil)
+        connection:Disconnect()
+
         local bot = Instance.new("Model")
         bot.Name = "ClassicSweepRegressionBot"
         bot:SetAttribute("AISurvivor", true)

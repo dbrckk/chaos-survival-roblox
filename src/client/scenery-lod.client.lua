@@ -1017,9 +1017,9 @@ task.spawn(function()
             player:GetAttribute("OptionalVfxPressure"))
         if identity and identity:IsA("Folder") then
             applyPlatformIdentityNearPlayer(identity, profile, arenaOrigin, cameraPoint)
-            if cameraReady and arena and arena:GetAttribute("VariantId") == "Harbor" then
-                player:SetAttribute("LocalHarborRouteClearanceEpoch",
-                    (player:GetAttribute("LocalHarborRouteClearanceEpoch") or 0)+1)
+            if cameraReady and arena and arena:GetAttribute("VariantId") ~= "Orbital" then
+                player:SetAttribute("LocalJumpRouteEpoch",
+                    (player:GetAttribute("LocalJumpRouteEpoch") or 0)+1)
             end
         end
         local dockModels, dockPieces, dockNatives = HarborDockCaissonMeshKit.count()
