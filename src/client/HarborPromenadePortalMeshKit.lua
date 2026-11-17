@@ -308,7 +308,8 @@ local function mount(arena,base,decor,deck,template,expected)
         entry.native[part]={
             original=part.LocalTransparencyModifier,
             structure=part.Name:match("_UnderdeckTruss$") ~= nil
-                or part.Name:match("_DiagonalStay%-?1$") ~= nil,
+                or part.Name:match("_DiagonalStay%-?1$") ~= nil
+                or part.Name:match("_MonumentalCrosshead$") ~= nil,
             pylon=part.Name:match("_LoadPylon%-?1$") ~= nil,
         }
         if entry.model.Parent == folder and isAlive(entry) then refresh(entry) end

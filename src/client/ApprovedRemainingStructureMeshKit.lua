@@ -159,7 +159,7 @@ local COMMAND_ART={
         }}},
 }
 local COMMAND_DISTANCE={Low=112,Medium=165,High=240}
-local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true}
+local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true,Harbor=true}
 local CROSSHEAD_SPAN={[2]=18.4,[4]=19.6,[7]=21.2}
 local CROSSHEAD_RISE={[2]=13.25,[4]=14.5,[7]=16.2}
 -- Source Z becomes the height along the tilted native stay. The open
@@ -421,9 +421,9 @@ local function collectArchBase(arena,deck,decor,scale)
     return pieces
 end
 
-local function porticoStep(arena,deck,scale,allowHarbor)
+local function porticoStep(arena,deck,scale)
     local variant=arena:GetAttribute("VariantId")
-    if not PROMENADE_VARIANTS[variant] and not (allowHarbor and variant=="Harbor") then return nil end
+    if not PROMENADE_VARIANTS[variant] then return nil end
     if not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("ChaosPermanentRoute")~=true
         or deck:GetAttribute("RouteTier")~=4
@@ -461,17 +461,16 @@ local function promenadeNative(decor,index,suffix,wedge)
 end
 
 local function collectPorticoPart(arena,deck,decor,scale,side)
-    local step=porticoStep(arena,deck,scale,side~=nil)
+    local step=porticoStep(arena,deck,scale)
     if not step then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local suffix=side and "_DiagonalStay"..side or "_MonumentalCrosshead"
     local native=promenadeNative(decor,index,suffix)
-    if not native then return nil end
+    if not native or Trim.hasPrimaryStructure(native) then return nil end
     local size=native.Size
     local rise=CROSSHEAD_RISE[step]
     local span=CROSSHEAD_SPAN[step]
     if side then
-        if Trim.hasPrimaryStructure(native) then return nil end
         local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise*.66,
             side*8.3*scale)*CFrame.Angles(side*STAY_ANGLE,0,0)
         if math.abs(size.X-.65*scale)>.045 or math.abs(size.Y-rise*.55)>.06
@@ -879,11 +878,15 @@ local function isPortico(category)
         or category=="junction"
 end
 
+local function usesStructureMask(category)
+    return category=="junction" or category=="stay" or category=="promenade"
+end
+
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
         if entry.category=="command" then
             Trim.setSkySpineRoofMask(n.part,true,false)
-        elseif entry.category=="junction" or entry.category=="stay" then
+        elseif usesStructureMask(entry.category) then
             Trim.setPromenadeStructureMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
             or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
@@ -1082,7 +1085,7 @@ local function refresh(entry)
         if n.part.Parent==entry.expectedParent then
             if entry.category=="command" then
                 Trim.setSkySpineRoofMask(n.part,true,true)
-            elseif entry.category=="junction" or entry.category=="stay" then
+            elseif usesStructureMask(entry.category) then
                 Trim.setPromenadeStructureMask(n.part,false,true)
             else
                 n.part.LocalTransparencyModifier=1
@@ -1229,7 +1232,7 @@ local function mount(data,source)
                 data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
         end
     end
-    if data.category=="junction" or data.category=="stay" then
+    if usesStructureMask(data.category) then
         local disconnects={}
         for _,part in ipairs(data.originals) do
             disconnects[#disconnects+1]=Trim.observePrimaryStructure(part,changed)
@@ -1445,7 +1448,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if name=="ArchAbutment" or name=="ArchGirder" then
             if archBaseCap>0 then src[name]=sourceFor(name) end
         elseif name=="AccessChassis" then
-            local routeUnderframes=trussCap>0 and (promenadeVariant or variant=="Harbor")
+            local routeUnderframes=trussCap>0 and promenadeVariant
             if variant=="Orbital" or routeUnderframes then
                 local source=sourceFor(name)
                 if variant=="Orbital" then src[name]=source end
@@ -1456,8 +1459,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
                     src.SpineUnderframe=source
                 end
             end
-        elseif not kind or ((promenadeVariant or kind=="junction"
-            or (kind=="stay" and variant=="Harbor")) and caps(tier,touch,pressure,kind)>0) then
+        elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
     end

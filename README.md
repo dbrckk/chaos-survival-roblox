@@ -1,3 +1,7 @@
+## P4 — Traverses ajourées des Promenades de Storm Harbor
+
+Les six traverses supérieures peuvent recevoir le treillis approuvé des portiques. Le modèle suit la largeur du tablier pendant la contraction et utilise les créneaux existants, dont une traverse proche en qualité Low. Le portique de fret complet prend la priorité. Si le treillis ne peut plus s’afficher, la traverse d’origine reprend le relais.
+
 ## P4 — Renforts ajourés des Promenades de Storm Harbor
 
 Les 12 diagonales des six portiques peuvent recevoir le treillis approuvé des passerelles. Les deux côtés d’un portique s’affichent ensemble dans les créneaux de renforts Medium et High. Le portique de fret complet prend la priorité. Les diagonales d’origine reprennent le relais si une pièce se décharge, si la pression graphique augmente ou si l’arène se contracte au-delà du dégagement disponible.

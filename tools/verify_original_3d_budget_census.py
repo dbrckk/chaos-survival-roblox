@@ -2439,7 +2439,10 @@ for contract in (
 assert 'UnderdeckTruss' not in promenade_collector
 assert 'LoadPylon' not in promenade_collector
 assert 'Low={arch=0,casing=0,helix=0,promenade=0}' in P4_CLIENT
-print("PASS four promenade variants use the approved truss with exact native footprint and Low backoff")
+assert 'part.Name:match("_MonumentalCrosshead$") ~= nil' in HARBOR
+assert 'not native or Trim.hasPrimaryStructure(native)' in promenade_collector
+assert 'return category=="junction" or category=="stay" or category=="promenade"' in P4_CLIENT
+print("PASS 30 promenade crossheads use the approved truss with gantry precedence and Low backoff")
 
 # The four themed columns are existing creator-approved sources. An
 # unusually tall 16.2-stud promenade pylon still costs one source module.
@@ -2488,7 +2491,7 @@ for clause in (
 ):
     assert clause in P4_CLIENT,clause
 assert 'LocalOriginalPromenadeDiagonalStay3DCount' in SIDE_LOD
-assert 'kind=="stay" and variant=="Harbor"' in P4_CLIENT
+assert 'Crossroads=true,Orbital=true,Harbor=true}' in P4_CLIENT
 assert 'part.Name:match("_DiagonalStay%-?1$") ~= nil' in HARBOR
 assert 'Trim.setPromenadeStructureMask(part,true,visible)' in HARBOR
 print("PASS 60 native diagonal stays use fitted girder pairs with gantry precedence and GPU backoff")
