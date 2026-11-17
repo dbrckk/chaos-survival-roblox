@@ -2502,6 +2502,7 @@ for name,asset_id in (
     ("service_maintenance","106083832432833"),
     ("variant_crossroads_forged_gantry","90844491148907"),
     ("variant_orbital_sculpted_node","104654294187035"),
+    ("harbor_gantry_kinetic_container","75684193304551"),
 ):
     equipment = P4_MODELS[name]
     assert equipment["asset_id"] == asset_id and equipment["moderation"] == "Approved"
@@ -2521,7 +2522,13 @@ assert 'or ((isPortico(entry.category) or entry.category=="archBase" or entry.ca
 assert 'and not sameOriginals(entry,data))' in P4_CLIENT
 assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
 assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD
-print("PASS four approved promenade equipment sources, exact native owners and shared touch budget")
+hoist_art=(CLIENT/"HarborPromenadeHoistArt.lua").read_text(encoding="utf8")
+assert 'Art.PartCount = 6' in hoist_art
+assert 'PlatformSide.harborGirderSource()' in hoist_art
+for native in ("FreightHoistArm","SuspendedCrate","CargoChain"):
+    assert native in equipment_collector or native in P4_CLIENT
+    assert f'part.Name:match("_{native}$") ~= nil' in HARBOR
+print("PASS five approved promenade equipment profiles, exact native owners and shared touch budget")
 
 # New roof pairs reuse already moderated original art with no extra import.
 for name,asset_id in (

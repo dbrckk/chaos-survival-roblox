@@ -974,6 +974,10 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
         for _,piece in ipairs(girder:GetChildren()) do
             if piece.Size.X>8 then piece.Size=Vector3.new(9.62,1.505,.6175) end
         end
+        girder:FindFirstChild("BraceMesh1").Size=Vector3.new(9.62,.39,.55)
+        girder:FindFirstChild("BraceMesh2").Size=Vector3.new(9.18,.42,.34)
+        girder:FindFirstChild("BraceMesh3").Size=Vector3.new(7.8371,.9701,.1465)
+        girder:FindFirstChild("BraceMesh4").Size=Vector3.new(.16,1.505,.6175)
         girder.Parent=sideHolder
         local profiles={
             Classic={"ApprovedServiceEquipmentTemplates","Classic",
@@ -988,6 +992,9 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             Orbital={"ApprovedOrbitalReactorLandmarkTemplates","Node",
                 "OriginalOrbitalReactorLandmark3D",104654294187035,Vector3.new(4.36,4.36,4.36),
                 {"GyroCore"}},
+            Harbor={"ApprovedHarborKineticGantryTemplates","ContainerGantry",
+                "OriginalHarborKineticGantry3D",75684193304551,Vector3.new(21.86,36.08949,44),
+                {"FreightHoistArm","SuspendedCrate","CargoChain"}},
         }
         local fittings={
             Towers={
@@ -1029,6 +1036,16 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
             gear:SetAttribute(tag,true)
             gear:SetAttribute("Original3DAssetId",id)
             gear:FindFirstChild("BraceMesh1").Size=size
+            if name=="ContainerGantry" then
+                local roles={"Static","Trolley","Cable","Load","Static","Static","Static"}
+                local sizes={size,Vector3.new(7.9,3.9,4.5),Vector3.new(7.41,12.45,.21),
+                    Vector3.new(9.15,8.48,5.5)}
+                for i,role in ipairs(roles) do
+                    local part=gear:FindFirstChild("BraceMesh"..i)
+                    part:SetAttribute("OriginalHarborGantryKineticRole",role)
+                    part.Size=sizes[i] or part.Size
+                end
+            end
             gear.Parent=equipmentFolder
         end
         for _,profile in pairs(profiles) do provide(profile) end
@@ -1150,8 +1167,17 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                         expect(detail.LocalTransparencyModifier).toBe(1)
                     end
                     if variant=="Harbor" then
-                        local detail=decor:FindFirstChild("Promenade"..index.."_SuspendedCrate")
-                        expect(detail.LocalTransparencyModifier).toBe(0)
+                        local cargo={}
+                        for _,name in ipairs(profile[6]) do
+                            cargo[#cargo+1]=assert(decor:FindFirstChild("Promenade"..index.."_"..name))
+                        end
+                        Trim.setPromenadeStructureMask(cargo[2],true,true)
+                        expect(Remaining.count("equipment")).toBe(5)
+                        expect(cargo[1].LocalTransparencyModifier).toBe(0)
+                        expect(cargo[2].LocalTransparencyModifier).toBe(1)
+                        expect(cargo[3].LocalTransparencyModifier).toBe(0)
+                        Trim.setPromenadeStructureMask(cargo[2],true,false)
+                        expect(Remaining.count("equipment")).toBe(6)
                         Trim.setPromenadeStructureMask(native,true,true)
                         expect(Remaining.count("promenade")).toBe(5)
                         expect(native.LocalTransparencyModifier).toBe(1)
@@ -1266,7 +1292,46 @@ describe("P4 approved long cradle streaming fallback (engine)",function()
                     deck:SetAttribute("CollapsePhase","Normal")
                     task.wait()
                     expect(Remaining.count("promenade")).toBe(1)
-                    assert(deck.CanCollide)
+                    local bucket=workspace.ApprovedRemainingStructureMeshesLocal
+                    local hoist=assert(bucket:FindFirstChild("ApprovedP4_PromenadeHarbor"))
+                    expect(#hoist:GetChildren()).toBe(6)
+                    local bridge=hoist:FindFirstChild("HarborHoistArm")
+                    local trolley=hoist:FindFirstChild("HarborHoistTrolley")
+                    local cable=hoist:FindFirstChild("HarborHoistCable")
+                    local load=hoist:FindFirstChild("HarborHoistLoad")
+                    assert(bridge and trolley and cable and load and deck.CanCollide)
+                    local function checkRig()
+                        assert(cable.Position.Y+cable.Size.Y*.5 > trolley.Position.Y-trolley.Size.Y*.5)
+                        assert(cable.Position.Y-cable.Size.Y*.5 < load.Position.Y+load.Size.Y*.5)
+                    end
+                    checkRig()
+                    local width=math.max(load.Size.X,load.Size.Z)
+                    local prefix="Promenade"..deck.Name:match("%d+").."_"
+                    local scale=.75
+                    local function scaled(size)
+                        return Vector3.new(size.X*scale,size.Y,size.Z*scale)
+                    end
+                    base.Size=scaled(base.Size)
+                    deck.Size=scaled(deck.Size)
+                    for _,suffix in ipairs({"MonumentalCrosshead","FreightHoistArm","SuspendedCrate","CargoChain"}) do
+                        local part=assert(decor:FindFirstChild(prefix..suffix))
+                        local frame=deck.CFrame:ToObjectSpace(part.CFrame)
+                        part.CFrame=deck.CFrame*CFrame.new(scaled(frame.Position))*frame.Rotation
+                        part.Size=scaled(part.Size)
+                    end
+                    task.wait()
+                    expect(Remaining.count("equipment")).toBe(1)
+                    assert(math.abs(math.max(load.Size.X,load.Size.Z)-width*scale)<.02)
+                    checkRig()
+                    girder:SetAttribute("OwnerVerified",false)
+                    task.wait()
+                    expect(Remaining.count("equipment")).toBe(0)
+                    girder:SetAttribute("OwnerVerified",true)
+                    task.wait()
+                    expect(Remaining.count("equipment")).toBe(1)
+                    cable:Destroy()
+                    task.wait()
+                    expect(Remaining.count("equipment")).toBe(0)
                 end
                 if variant~="Crossroads" then continue end
                 local deck,native=nil,nil

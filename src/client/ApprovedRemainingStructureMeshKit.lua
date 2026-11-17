@@ -14,6 +14,9 @@ local LargeStructure=if script and script.Parent and script.Parent:FindFirstChil
 local Crown=if script and script.Parent and script.Parent:FindFirstChild("SkySpineCrownMeshKit")
     then require(script.Parent.SkySpineCrownMeshKit)
     else require("./SkySpineCrownMeshKit")
+local HarborHoist=if script and script.Parent and script.Parent:FindFirstChild("HarborPromenadeHoistArt")
+    then require(script.Parent.HarborPromenadeHoistArt)
+    else require("./HarborPromenadeHoistArt")
 local shared=ReplicatedStorage:FindFirstChild("Shared")
 local connectionModule=shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local Connection=if connectionModule then require(connectionModule)
@@ -79,6 +82,17 @@ local EQUIPMENT={
             holder="ApprovedOrbitalReactorLandmarkTemplates",template="Node",tag="OriginalOrbitalReactorLandmark3D"},
         natives={{name="GyroCore",size=Vector3.new(4.2,4.2,4.2),x=0,y=3.3}},
         size=Vector3.new(4.12,4.12,4.12),y=3.3,
+    },
+    Harbor={
+        name="PromenadeHarbor",
+        source={id=75684193304551,major=44,minor=21.86,height=36.08949,centerY=0,
+            holder="ApprovedHarborKineticGantryTemplates",template="ContainerGantry",
+            tag="OriginalHarborKineticGantry3D"},
+        natives={
+            {name="FreightHoistArm",size=Vector3.new(16.8,1.6,2.3),x=1,y=1.9},
+            {name="SuspendedCrate",size=Vector3.new(4.2,3.8,4.2),x=8.1,y=-2.3,z=-4},
+            {name="CargoChain",size=Vector3.new(.3,3.2,.3),x=8.1,y=.8,z=-4},
+        },
     },
 }
 local FITTING_SOURCE={
@@ -600,7 +614,7 @@ end
 local function collectRoofNative(decor,index,orientation,scale,spec)
     local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge)
     if not native then return nil end
-    local expected=orientation*CFrame.new(spec.x*scale,spec.y,0)
+    local expected=orientation*CFrame.new(spec.x*scale,spec.y,(spec.z or 0)*scale)
         *CFrame.Angles(0,0,math.rad(spec.roll or 0))
     local size=spec.size
     if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
@@ -619,8 +633,17 @@ local function collectEquipment(arena,deck,decor,scale,equipment)
     local natives={}
     for _,spec in ipairs(equipment.natives) do
         local native=collectRoofNative(decor,index,crosshead.orientation,scale,spec)
-        if not native then return nil end
+        if not native or (equipment.name=="PromenadeHarbor" and Trim.hasPrimaryStructure(native)) then
+            return nil
+        end
         natives[#natives+1]=native
+    end
+    if equipment.name=="PromenadeHarbor" then
+        local targets=HarborHoist.targets(natives[1],natives[2],natives[3],scale)
+        if not targets then return nil end
+        return {category="equipment",name=equipment.name,spec=equipment.source,
+            owner=deck,key=natives[1],arena=arena,originals=natives,anchor=crosshead.originals[1],
+            center=natives[1].Position,hoistTargets=targets,expectedParent=decor}
     end
     -- The long dimension of each roof source runs along the real deck X
     -- axis. The common importer correction handles source X/Z swaps.
@@ -878,15 +901,17 @@ local function isPortico(category)
         or category=="junction"
 end
 
-local function usesStructureMask(category)
+local function usesStructureMask(entry)
+    local category=entry.category
     return category=="junction" or category=="stay" or category=="promenade"
+        or entry.name=="PromenadeHarbor"
 end
 
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
         if entry.category=="command" then
             Trim.setSkySpineRoofMask(n.part,true,false)
-        elseif usesStructureMask(entry.category) then
+        elseif usesStructureMask(entry) then
             Trim.setPromenadeStructureMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
             or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
@@ -906,6 +931,7 @@ end
 
 local function sourceIntact(entry)
     local spec=entry.spec
+    local partCount=entry.hoistBeam and HarborHoist.PartCount or 7
     if entry.disposing or entry.corrupt or not entry.model
         or entry.model.Parent~=folder
         or not entry.source or entry.source.Parent~=entry.sourceFolder
@@ -916,7 +942,7 @@ local function sourceIntact(entry)
         or entry.source:GetAttribute("CosmeticOnly")~=true
         or entry.source:GetAttribute("Original3DAssetId")
             ~= spec.id
-        or not entry.pieces or #entry.pieces~=7 then return false end
+        or not entry.pieces or #entry.pieces~=partCount then return false end
     -- A streamed-in eighth mesh, stray Part or injected script must NEVER
     -- survive hidden inside a supposedly approved seven-piece sculpture.
     local actual=0
@@ -928,7 +954,7 @@ local function sourceIntact(entry)
             return false
         end
     end
-    if actual~=7 then return false end
+    if actual~=partCount then return false end
     -- Check the *source* as well as its resident clone. A streamed-out
     -- material region, new unapproved part or Lua code invalidates the
     -- imported original without waiting for the next camera sample.
@@ -944,6 +970,13 @@ local function sourceIntact(entry)
         end
     end
     if sourceCount~=7 then return false end
+    if entry.hoistBeam then
+        local beam=HarborHoist.beamSource()
+        if not beam or beam.model~=entry.hoistBeam.model or not HarborHoist.roles(entry.source) then return false end
+        for i,part in ipairs(beam.parts) do
+            if entry.hoistBeam.parts[i]~=part then return false end
+        end
+    end
     for _,p in ipairs(entry.pieces) do
         if not p.part:IsA("MeshPart")
             or not p.part:IsDescendantOf(entry.model)
@@ -1049,43 +1082,50 @@ local function refresh(entry)
         reveal(entry)
         return false
     end
-    local rule=entry.spec
-    local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
-    if data.fitSize then
-        local size,bounds=data.fitSize,entry.bounds
-        local major,minor=math.max(bounds.X,bounds.Z),math.min(bounds.X,bounds.Z)
-        sx=size.X/(entry.category=="casing" and major or minor)
-        sy=size.Y/bounds.Y
-        sz=size.Z/(entry.category=="casing" and minor or major)
-    elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
-        reveal(entry)
-        return false
-    end
-    local ax,az=sx,sz
-    if entry.longX then ax,az=sz,sx end
-    local aim=data.orientation*CFrame.new(0,rule.centerY,0)
-        * CFrame.Angles(0,entry.longX and math.pi*.5 or 0,0)
-    local fitChanged=data.fitSize~=entry.lastFitSize or aim~=entry.lastFitFrame
-    for _,piece in ipairs(entry.pieces) do
-        if not data.fitSize or fitChanged then
-            local p=piece.frame.Position
-            local rotation=piece.frame-p
-            piece.part.Size=Vector3.new(
-                math.max(.025,piece.size.X*ax),math.max(.025,piece.size.Y*sy),
-                math.max(.025,piece.size.Z*az))
-            piece.part.CFrame=aim*CFrame.new(p.X*ax,p.Y*sy,p.Z*az)*rotation
+    if data.hoistTargets then
+        for _,piece in ipairs(entry.pieces) do
+            HarborHoist.refit(piece,data.hoistTargets[piece.role])
+            piece.part.LocalTransparencyModifier=0
         end
-        piece.part.LocalTransparencyModifier=0
-    end
-    if data.fitSize then
-        entry.lastFitSize=data.fitSize
-        entry.lastFitFrame=aim
+    else
+        local rule=entry.spec
+        local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
+        if data.fitSize then
+            local size,bounds=data.fitSize,entry.bounds
+            local major,minor=math.max(bounds.X,bounds.Z),math.min(bounds.X,bounds.Z)
+            sx=size.X/(entry.category=="casing" and major or minor)
+            sy=size.Y/bounds.Y
+            sz=size.Z/(entry.category=="casing" and minor or major)
+        elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
+            reveal(entry)
+            return false
+        end
+        local ax,az=sx,sz
+        if entry.longX then ax,az=sz,sx end
+        local aim=data.orientation*CFrame.new(0,rule.centerY,0)
+            * CFrame.Angles(0,entry.longX and math.pi*.5 or 0,0)
+        local fitChanged=data.fitSize~=entry.lastFitSize or aim~=entry.lastFitFrame
+        for _,piece in ipairs(entry.pieces) do
+            if not data.fitSize or fitChanged then
+                local p=piece.frame.Position
+                local rotation=piece.frame-p
+                piece.part.Size=Vector3.new(
+                    math.max(.025,piece.size.X*ax),math.max(.025,piece.size.Y*sy),
+                    math.max(.025,piece.size.Z*az))
+                piece.part.CFrame=aim*CFrame.new(p.X*ax,p.Y*sy,p.Z*az)*rotation
+            end
+            piece.part.LocalTransparencyModifier=0
+        end
+        if data.fitSize then
+            entry.lastFitSize=data.fitSize
+            entry.lastFitFrame=aim
+        end
     end
     for _,n in ipairs(entry.native) do
         if n.part.Parent==entry.expectedParent then
             if entry.category=="command" then
                 Trim.setSkySpineRoofMask(n.part,true,true)
-            elseif usesStructureMask(entry.category) then
+            elseif usesStructureMask(entry) then
                 Trim.setPromenadeStructureMask(n.part,false,true)
             else
                 n.part.LocalTransparencyModifier=1
@@ -1131,13 +1171,18 @@ folder.ChildRemoved:Connect(function(child)
 end)
 
 local function mount(data,source)
-    local clone=source:Clone()
+    local clone,hoistPieces
+    if data.hoistTargets then
+        clone,hoistPieces=HarborHoist.build(source,data.hoistBeam)
+    else
+        clone=source:Clone()
+    end
     if not clone then return nil end
     local cf,b=clone:GetBoundingBox()
     local entry={category=data.category,name=data.name,spec=data.spec or SOURCE[data.name],
         owner=data.owner,side=data.side,other=data.other,arena=data.arena,
         component=data.component,
-        otherDeck=data.otherDeck,
+        otherDeck=data.otherDeck,hoistBeam=data.hoistBeam,
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,anchor=data.anchor,
         native={},model=clone,pieces={},connections={},bounds=b,
@@ -1159,8 +1204,9 @@ local function mount(data,source)
     for _,piece in ipairs(clone:GetDescendants()) do
         if piece:IsA("BasePart") then
             if not piece:IsA("MeshPart") then clone:Destroy();return nil end
-            entry.pieces[#entry.pieces+1]={
-                part=piece,frame=cf:ToObjectSpace(piece.CFrame),size=piece.Size}
+            local fit=hoistPieces and hoistPieces[piece] or {frame=cf:ToObjectSpace(piece.CFrame)}
+            fit.part,fit.size=piece,piece.Size
+            entry.pieces[#entry.pieces+1]=fit
             piece.Anchored=true
             piece.Massless=true
             piece.CanCollide=false
@@ -1170,7 +1216,8 @@ local function mount(data,source)
             piece.LocalTransparencyModifier=1
         end
     end
-    if #entry.pieces~=7 then clone:Destroy();return nil end
+    local partCount=hoistPieces and HarborHoist.PartCount or 7
+    if #entry.pieces~=partCount then clone:Destroy();return nil end
     clone.Name="ApprovedP4_"..data.name
     -- Observability only: identical approved Access models may serve four
     -- distinct routes. Bind diagnostics and stream-loss proof to the
@@ -1232,7 +1279,7 @@ local function mount(data,source)
                 data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
         end
     end
-    if usesStructureMask(data.category) then
+    if usesStructureMask(data) then
         local disconnects={}
         for _,part in ipairs(data.originals) do
             disconnects[#disconnects+1]=Trim.observePrimaryStructure(part,changed)
@@ -1290,6 +1337,16 @@ local function mount(data,source)
         end
     end
     if data.anchor then watchPorticoNative(data.anchor) end
+    if data.hoistBeam then
+        local beam=data.hoistBeam.model
+        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","OriginalStructuralSide3D","CosmeticOnly"}) do
+            entry.connections[#entry.connections+1]=beam:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        entry.connections[#entry.connections+1]=beam.Parent:GetAttributeChangedSignal("OwnerVerified"):Connect(changed)
+        entry.connections[#entry.connections+1]=beam.AncestryChanged:Connect(changed)
+        entry.connections[#entry.connections+1]=beam.ChildAdded:Connect(changed)
+        entry.connections[#entry.connections+1]=beam.ChildRemoved:Connect(changed)
+    end
     if data.category=="helix" then
         local routeTag=data.name=="AccessChassis" and "OrbitalAccessRamp" or "OrbitalHelixRamp"
         for _,tag in ipairs({routeTag,"OrbitalCoreRamp","OrbitRouteGroup","HelixLane","HelixStart","HelixFinish"}) do
@@ -1464,8 +1521,14 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
     end
     local equipment=EQUIPMENT[variant]
+    local hoistBeam
     if equipment and caps(tier,touch,pressure,"equipment")>0 then
-        src[equipment.name]=sourceFor(equipment.name,equipment.source)
+        local source=sourceFor(equipment.name,equipment.source)
+        if source and equipment.name=="PromenadeHarbor" then
+            hoistBeam=HarborHoist.beamSource()
+            if not hoistBeam or not HarborHoist.roles(source) then source=nil end
+        end
+        src[equipment.name]=source
     end
     local fittings=ROOF_FITTINGS[variant]
     local fittingSourcesReady=false
@@ -1560,6 +1623,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             if equipment and src[equipment.name] and deck:GetAttribute("PromenadeStep") then
                 local gear=collectEquipment(arena,deck,decor,scale,equipment)
                 if gear then
+                    gear.hoistBeam=hoistBeam
                     local resident=mounted[gear.key]~=nil
                     local priority,distance=score(gear,cameraPoint,cameraLook,resident)
                     if distance<=EQUIPMENT_DISTANCE[tier]+(resident and 18 or 0) then

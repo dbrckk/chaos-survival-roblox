@@ -1,3 +1,7 @@
+## P4 — Ensembles de levage des Promenades de Storm Harbor
+
+Les six portiques peuvent afficher un bras ajouré, un chariot, deux câbles et une caisse nervurée. Six maillages issus de deux modèles approuvés remplacent ensemble les trois pièces de secours de chaque portique sélectionné. Les câbles relient le chariot à la caisse au fur et à mesure que l’arène rétrécit. Le portique de fret complet reste prioritaire et les pièces d’origine reviennent si l’ensemble est incomplet ou sous pression graphique.
+
 ## P4 — Traverses ajourées des Promenades de Storm Harbor
 
 Les six traverses supérieures peuvent recevoir le treillis approuvé des portiques. Le modèle suit la largeur du tablier pendant la contraction et utilise les créneaux existants, dont une traverse proche en qualité Low. Le portique de fret complet prend la priorité. Si le treillis ne peut plus s’afficher, la traverse d’origine reprend le relais.

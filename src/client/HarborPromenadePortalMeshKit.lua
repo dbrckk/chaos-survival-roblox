@@ -309,7 +309,10 @@ local function mount(arena,base,decor,deck,template,expected)
             original=part.LocalTransparencyModifier,
             structure=part.Name:match("_UnderdeckTruss$") ~= nil
                 or part.Name:match("_DiagonalStay%-?1$") ~= nil
-                or part.Name:match("_MonumentalCrosshead$") ~= nil,
+                or part.Name:match("_MonumentalCrosshead$") ~= nil
+                or part.Name:match("_FreightHoistArm$") ~= nil
+                or part.Name:match("_SuspendedCrate$") ~= nil
+                or part.Name:match("_CargoChain$") ~= nil,
             pylon=part.Name:match("_LoadPylon%-?1$") ~= nil,
         }
         if entry.model.Parent == folder and isAlive(entry) then refresh(entry) end
