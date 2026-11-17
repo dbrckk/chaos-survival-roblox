@@ -4,6 +4,11 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 
 local OrbitalRampRegistry = require("../../src/client/OrbitalRampRegistry")
 local OrbitalRouteSignKit = require("../../src/client/OrbitalRouteSignKit")
+local RemainingStructureKit = require("../../src/client/ApprovedRemainingStructureMeshKit")
+local OrbitalHelix = require("../../src/server/OrbitalHelix")
+local MapBuilder = require("../../src/server/MapBuilder")
+local ArenaVariants = require("../../src/server/ArenaVariants")
+local Config = require("../../src/shared/Config")
 
 local function ramp(root, name, tag, lane)
     local part = Instance.new("Part")
@@ -142,6 +147,124 @@ describe("Orbital event-driven ramp discovery", function()
         original:Destroy()
         replacement:Destroy()
     end)
+
+    it("fits the approved access chassis on all 15 Orbital ramps with instant native rollback", function()
+        local replicated=game:GetService("ReplicatedStorage")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        local previousSource=replicated:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if previousMap then previousMap.Parent=nil end
+        if previousSource then previousSource.Parent=nil end
+
+        local templates=Instance.new("Folder")
+        templates.Name="ApprovedRemainingStructureTemplates"
+        templates:SetAttribute("OwnerVerified",true)
+        templates.Parent=replicated
+        local model=Instance.new("Model")
+        model.Name="AccessChassis"
+        model:SetAttribute("OwnerVerified",true)
+        model:SetAttribute("CosmeticOnly",true)
+        model:SetAttribute("Original3DAssetId",106401955318567)
+        model:SetAttribute("P4OriginalRemainingStructure3D",true)
+        -- Stand-in material regions test the mounting lifecycle in the engine.
+        for index=1,7 do
+            local part=Instance.new("MeshPart")
+            part.Name="OriginalMaterialRegion"..index
+            part.Size=Vector3.new(5.17,.5065,12.8)
+            part.CFrame=CFrame.identity
+            part.Anchored=true
+            part.Massless=true
+            part.CanCollide=false
+            part.CanTouch=false
+            part.CanQuery=false
+            part.Parent=model
+        end
+        model.Parent=templates
+
+        local generated
+        local phase="build Orbital"
+        local ok,why=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Orbital",ArenaVariants)
+            generated=arena.Parent
+            local base=arena:FindFirstChild("Base")
+            local circuit=arena:FindFirstChild("HelixCircuit")
+            local chassisCount=0
+            for _,piece in ipairs(circuit:GetChildren()) do
+                local kind,index=piece.Name:match("^(%a+)Chassis([1-8])$")
+                if piece:IsA("BasePart") and (kind=="Entry" or kind=="Core") then
+                    phase="Orbital access chassis Low "..piece.Name
+                    local deck=circuit:FindFirstChild(kind.."Ramp"..index)
+                    expect(deck~=nil and deck.CanCollide).toBe(true)
+                    RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
+                    RemainingStructureKit.sync(arena,deck.Position,"Low",true,nil,0,true)
+                    expect(RemainingStructureKit.count("helix","AccessChassis")).toBe(1)
+                    expect(RemainingStructureKit.count("casing")).toBe(0)
+                    expect(RemainingStructureKit.nativeCount("helix")).toBe(1)
+                    expect(piece.LocalTransparencyModifier).toBe(1)
+                    chassisCount+=1
+                end
+            end
+            expect(chassisCount).toBe(15)
+
+            phase="Orbital access chassis hazards and streaming"
+            RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
+            local entry=circuit:FindFirstChild("EntryRamp1")
+            local chassis=circuit:FindFirstChild("EntryChassis1")
+            local signal=circuit:FindFirstChild("EntrySignal1_-1")
+            chassis.LocalTransparencyModifier=.21
+            local nativeAlpha=chassis.LocalTransparencyModifier
+            RemainingStructureKit.sync(arena,entry.Position,"Low",true,nil,0,true)
+            local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_AccessChassis
+            expect(art:GetAttribute("OriginalP4OwnerPlatform")).toBe(entry.Name)
+            for _,mesh in ipairs(art:GetChildren()) do
+                local center=entry.CFrame:PointToObjectSpace(mesh.Position)
+                expect(center.Y+mesh.Size.Y*.5 < -entry.Size.Y*.5).toBe(true)
+                expect(not mesh.CanCollide and not mesh.CanTouch and not mesh.CanQuery).toBe(true)
+            end
+            expect(signal.LocalTransparencyModifier).toBe(0)
+            entry:SetAttribute("CollapsePhase","Warning")
+            task.wait()
+            expect(chassis.LocalTransparencyModifier).toBe(nativeAlpha)
+            expect(RemainingStructureKit.count("helix","AccessChassis")).toBe(0)
+            entry:SetAttribute("CollapsePhase",nil)
+            task.wait()
+            expect(chassis.LocalTransparencyModifier).toBe(1)
+            chassis.Parent=nil
+            task.wait()
+            expect(chassis.LocalTransparencyModifier).toBe(nativeAlpha)
+            chassis.Parent=circuit
+            task.wait()
+            expect(chassis.LocalTransparencyModifier).toBe(1)
+
+            phase="Orbital access chassis shrink and pressure"
+            local snapshot=OrbitalHelix.capture(circuit)
+            local originalWidth=art:FindFirstChildWhichIsA("MeshPart").Size.X
+            OrbitalHelix.scale(snapshot,base.Position,.6)
+            task.wait()
+            expect(chassis.LocalTransparencyModifier).toBe(1)
+            expect(art:FindFirstChildWhichIsA("MeshPart").Size.X<originalWidth).toBe(true)
+            expect(entry.CanCollide and signal.LocalTransparencyModifier==0).toBe(true)
+            OrbitalHelix.restore(snapshot)
+            task.wait()
+            expect(chassis.LocalTransparencyModifier).toBe(1)
+            RemainingStructureKit.sync(arena,entry.Position,"Low",true,nil,1,true)
+            expect(RemainingStructureKit.count("helix","AccessChassis")).toBe(0)
+            expect(chassis.LocalTransparencyModifier).toBe(nativeAlpha)
+            phase="source eviction"
+            RemainingStructureKit.sync(arena,entry.Position,"Low",true,nil,0,true)
+            expect(chassis.LocalTransparencyModifier).toBe(1)
+            model:FindFirstChildWhichIsA("MeshPart"):Destroy()
+            task.wait()
+            expect(RemainingStructureKit.count("helix","AccessChassis")).toBe(0)
+            expect(chassis.LocalTransparencyModifier).toBe(nativeAlpha)
+        end)
+        RemainingStructureKit.sync(nil,Vector3.zero,"Low",false)
+        if generated then generated:Destroy() end
+        templates:Destroy()
+        if previousMap then previousMap.Parent=workspace end
+        if previousSource then previousSource.Parent=replicated end
+        if not ok then error(phase..": "..tostring(why)) end
+    end)
+
 end)
 
 return nil

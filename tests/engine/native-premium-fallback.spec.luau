@@ -1118,6 +1118,7 @@ describe("Original 3D native fallback isolation (engine)", function()
                     Summit=127049813505254,
                     Casing=130196548599769,
                     Helix=106863534763803,
+                    AccessChassis=106401955318567,
                 }
                 for name,id in pairs(expectedIds) do
                     expect(RemainingStructureAssets.approvedId(name)).toBe(id)

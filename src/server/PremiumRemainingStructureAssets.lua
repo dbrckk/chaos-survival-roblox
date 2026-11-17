@@ -1,7 +1,7 @@
--- Five genuinely imported, creator-owned Roblox Approved original models.
--- Three stage-specific overhead arches, one nonphysical architectural casing
--- and one non-walkable Orbital ramp underframe. Never imports client requests.
--- These source IDs were verified by Roblox Asset API upload/moderation run
+-- Creator-owned Roblox Approved original models.
+-- Stage-specific arches, architectural casing and cosmetic Orbital ramp frames.
+-- Never imports client requests.
+-- The first five IDs were verified by Roblox Asset API upload/moderation run
 -- 43467373476. Geometry bounds and exact 7-MeshPart provenance fail closed.
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,8 +15,9 @@ local APPROVED = {
     Summit = {id=127049813505254, major=17.6, minor=5.2, height=19.73},
     Casing = {id=130196548599769, major=8.58, minor=5.3, height=10.378},
     Helix = {id=106863534763803, major=23.6, minor=5.08, height=1.453},
+    AccessChassis = {id=106401955318567, major=12.8, minor=5.17, height=.5065, heightTolerance=.09},
 }
-local ORDER = {"Access", "Transfer", "Summit", "Casing", "Helix"}
+local ORDER = {"Access", "Transfer", "Summit", "Casing", "Helix", "AccessChassis"}
 local started = false
 
 function Kit.approvedId(name)
@@ -44,7 +45,7 @@ local function genuine(model, spec)
     local major, minor = math.max(box.X, box.Z), math.min(box.X, box.Z)
     return math.abs(major-spec.major) < .75
         and math.abs(minor-spec.minor) < .75
-        and math.abs(box.Y-spec.height) < .8
+        and math.abs(box.Y-spec.height) < (spec.heightTolerance or .8)
 end
 
 function Kit.start()
@@ -63,7 +64,13 @@ function Kit.start()
     -- the shared GlobalApprovedImportGate also limits all Roblox imports.
     task.spawn(function()
         task.wait(38)
-        for _, name in ipairs(ORDER) do
+        local order = table.clone(ORDER)
+        local map = workspace:FindFirstChild("GeneratedMap")
+        local arena = map and map:FindFirstChild("Arena")
+        if arena and arena:GetAttribute("VariantId") == "Orbital" then
+            table.insert(order, 1, table.remove(order))
+        end
+        for _, name in ipairs(order) do
             local spec = APPROVED[name]
             for attempt=1,3 do
                 local ok, raw = pcall(GlobalApprovedImportGate.load, AssetService, spec.id)

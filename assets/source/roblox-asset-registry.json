@@ -917,6 +917,19 @@
       "cosmetic_only": true
     },
     {
+      "name": "orbital_access_chassis",
+      "asset_id": "106401955318567",
+      "moderation": "Approved",
+      "triangles": 2352,
+      "groups": 84,
+      "source_sha256": "3206b7c64b57cd1624155c72ea8d10a918b614573c0e3fe9bd52cc40ce4cf72b",
+      "source": "tools/generate_original_remaining_structures.py",
+      "source_materials": "assets/source/chaos_orbital_access_chassis.mtl",
+      "source_generator": "tools/generate_original_remaining_structures.py",
+      "workflow_run_id": 44064536419,
+      "cosmetic_only": true
+    },
+    {
       "name": "platform_rim_rect",
       "asset_id": "131482590870627",
       "moderation": "Approved",

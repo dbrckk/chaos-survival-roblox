@@ -6,4 +6,6 @@ La planche de référence générée le 17 novembre 2026 a guidé la forme des l
 
 Le modèle `orbital_access_chassis` est reproductible à partir de `tools/generate_original_remaining_structures.py` et de sa palette MTL. Il contient 2 352 triangles et sept régions de matériaux PBR, dans une enveloppe de 5,17 × 0,507 × 12,8 studs. Quatre attaches relient la cassette aux longerons. Le modèle est destiné à la sous-face et ne comprend ni collision ni signal lumineux.
 
-L’import du modèle seul utilise le flux d’assets Roblox du dépôt. La connexion au décor du jeu exige l’identifiant du modèle approuvé et la validation du montage sur les rampes existantes.
+Roblox a approuvé le modèle `106401955318567` lors de l’import [44064536419](https://github.com/dbrckk/chaos-survival-roblox/actions/runs/44064536419).
+
+Le montage utilise la boucle LOD existante. Les 15 rampes sont éligibles. En qualité basse, un châssis à moins de 65 studs peut prendre la place du casing décoratif dans le budget existant. En qualité moyenne et haute, les châssis partagent le quota des grandes rampes Helix. Le remplacement suit le rétrécissement de l’arène. Si un danger se déclenche ou si le maillage disparaît, la pièce native reprend sa transparence d’origine. La mesure `LocalOriginalOrbitalAccessChassis3DCount` indique combien de châssis sont affichés côté joueur.

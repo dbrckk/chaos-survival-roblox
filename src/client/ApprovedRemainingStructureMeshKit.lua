@@ -22,6 +22,8 @@ local SOURCE={
     Summit={id=127049813505254,major=17.6,minor=5.2,height=19.73,centerY=7.955},
     Casing={id=130196548599769,major=8.58,minor=5.3,height=10.378,centerY=0},
     Helix={id=106863534763803,major=23.6,minor=5.08,height=1.453,centerY=-.97125},
+    AccessChassis={id=106401955318567,major=12.8,minor=5.17,height=.5065,
+        centerY=0,heightTolerance=.09},
     Crosshead={id=108452611210970,major=8.94,minor=1.12,height=.5675,
         centerY=0,holder="ApprovedPerimeterStructuresTemplates",
         template="Brace",tag="OriginalPerimeterStructure3D"},
@@ -282,7 +284,7 @@ local function sourceFor(name,spec)
     local portico=spec.holder~=nil
     if math.abs(math.max(b.X,b.Z)-spec.major)>(portico and .30 or .75)
         or math.abs(math.min(b.X,b.Z)-spec.minor)>(portico and .22 or .75)
-        or math.abs(b.Y-spec.height)>(portico and .16 or .8) then return nil end
+        or math.abs(b.Y-spec.height)>(spec.heightTolerance or (portico and .16 or .8)) then return nil end
     return model
 end
 
@@ -759,6 +761,46 @@ local function collectHelix(arena,ramp,circuit)
         expectedParent=circuit,index=index}
 end
 
+local function collectAccessChassis(arena,ramp,circuit)
+    if arena:GetAttribute("VariantId")~="Orbital" or not ramp:IsA("BasePart")
+        or ramp.Parent~=circuit or not ramp.Anchored or not ramp.CanCollide
+        or ramp.Transparency>=.75 then return nil end
+    local kind,number=ramp.Name:match("^(%a+)Ramp([1-8])$")
+    if kind~="Entry" and (kind~="Core" or number=="2") then return nil end
+    local attribute=kind=="Entry" and "OrbitalAccessRamp" or "OrbitalCoreRamp"
+    local group=kind..number
+    local phase=ramp:GetAttribute("CollapsePhase")
+    local shutter=ramp:GetAttribute("BridgeShutterPhase")
+    if ramp:GetAttribute(attribute)~=true or ramp:GetAttribute("OrbitRouteGroup")~=group
+        or typeof(ramp:GetAttribute("HelixStart"))~="Vector3"
+        or typeof(ramp:GetAttribute("HelixFinish"))~="Vector3"
+        or phase=="Warning" or phase=="Gone" or (shutter and shutter~="Idle") then
+        return nil
+    end
+    local size=ramp.Size
+    local fullWidth=kind=="Entry" and 5.4 or 4.6
+    if size.X<2.38 or size.X>fullWidth+.025 or math.abs(size.Y-.92)>.04
+        or size.Z<2.6 or size.Z>55 then return nil end
+    local native=circuit:FindFirstChild(kind.."Chassis"..number)
+    if not visualNative(native,circuit) or not native:IsA("Part")
+        or native.Shape~=Enum.PartType.Block or native:GetAttribute("OrbitRouteGroup")~=group then
+        return nil
+    end
+    local expected=Vector3.new(size.X*(1-.38/fullWidth),.22,size.Z-.45)
+    local relative=ramp.CFrame:ToObjectSpace(native.CFrame)
+    if (native.Size-expected).Magnitude>.08
+        or (relative.Position-Vector3.new(0,-.58,0)).Magnitude>.07
+        or relative.LookVector:Dot(-Vector3.zAxis)<.998
+        or relative.UpVector:Dot(Vector3.yAxis)<.998 then
+        return nil
+    end
+    local depth=math.min(.44,size.X*.16)
+    return {category="helix",name="AccessChassis",owner=ramp,arena=arena,
+        originals={native},center=ramp.Position,expectedParent=circuit,
+        orientation=ramp.CFrame*CFrame.new(0,-size.Y*.5-.012-depth*.5,0),
+        fitSize=Vector3.new(native.Size.X*.985,depth,native.Size.Z*.985)}
+end
+
 local function isPortico(category)
     return category=="promenade" or category=="stay"
         or category=="equipment" or category=="fitting" or category=="command"
@@ -772,7 +814,8 @@ local function reveal(entry)
         elseif entry.category=="junction" then
             Trim.setJunctionTrussMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
-            or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing")
+            or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
+                or entry.name=="AccessChassis")
                 and entry.visible))
             and n.part.LocalTransparencyModifier==1 then
             n.part.LocalTransparencyModifier=n.alpha
@@ -912,7 +955,11 @@ local function refresh(entry)
         else
             local circuit=entry.arena:FindFirstChild("HelixCircuit")
             if circuit==entry.expectedParent then
-                data=collectHelix(entry.arena,entry.owner,circuit)
+                if entry.name=="AccessChassis" then
+                    data=collectAccessChassis(entry.arena,entry.owner,circuit)
+                else
+                    data=collectHelix(entry.arena,entry.owner,circuit)
+                end
             end
         end
     end
@@ -1077,7 +1124,8 @@ local function mount(data,source)
         entry.connections[#entry.connections+1]=
             data.owner.AncestryChanged:Connect(changed)
     end
-    if data.category=="arch" or data.category=="archBase" or isPortico(data.category) then
+    if data.category=="arch" or data.category=="archBase" or isPortico(data.category)
+        or data.name=="AccessChassis" then
         -- A collapsing/shutter warning takes precedence over decorative
         -- art IMMEDIATELY, not after the next 0.65-second scenery sample.
         entry.connections[#entry.connections+1]=
@@ -1134,6 +1182,11 @@ local function mount(data,source)
                     entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
                 end
             end
+        elseif data.name=="AccessChassis" then
+            watch(native,{"CFrame","Size","Transparency","Anchored","CanCollide",
+                "CanTouch","CanQuery","Name","Shape"})
+            entry.connections[#entry.connections+1]=
+                native:GetAttributeChangedSignal("OrbitRouteGroup"):Connect(changed)
         elseif isPortico(data.category) then
             watchPorticoNative(native)
         else
@@ -1141,6 +1194,12 @@ local function mount(data,source)
         end
     end
     if data.anchor then watchPorticoNative(data.anchor) end
+    if data.name=="AccessChassis" then
+        for _,tag in ipairs({"OrbitalAccessRamp","OrbitalCoreRamp","OrbitRouteGroup","HelixStart","HelixFinish"}) do
+            entry.connections[#entry.connections+1]=data.owner:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        entry.connections[#entry.connections+1]=data.owner:GetPropertyChangedSignal("Name"):Connect(changed)
+    end
     if data.category=="archBase" or data.category=="casing" then
         local tags=data.category=="casing"
             and {"FrameColumnIndex","OriginalFrameCladding","SourceIsOriginal","CosmeticOnly"}
@@ -1148,6 +1207,8 @@ local function mount(data,source)
         for _,tag in ipairs(tags) do
             entry.connections[#entry.connections+1]=data.owner:GetAttributeChangedSignal(tag):Connect(changed)
         end
+    end
+    if data.category=="archBase" or data.category=="casing" or data.name=="AccessChassis" then
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
             entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
@@ -1288,6 +1349,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             or (name=="JunctionTruss" and "junction")
         if name=="ArchAbutment" or name=="ArchGirder" then
             if archBaseCap>0 then src[name]=sourceFor(name) end
+        elseif name=="AccessChassis" then
+            if variant=="Orbital" then src[name]=sourceFor(name) end
         elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
@@ -1408,27 +1471,39 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
     end
     local circuit=arena:FindFirstChild("HelixCircuit")
-    if circuit and circuit:IsA("Folder") and src.Helix
-        and caps(tier,touch,pressure,"helix")>0 then
+    local helixCap=caps(tier,touch,pressure,"helix")
+    -- A close access stair can borrow the one existing Low casing slot.
+    -- Standard Helix and access chassis share the same higher-tier pool.
+    local borrowCasing=tier=="Low" and caps(tier,touch,pressure,"casing")>0
+    if circuit and circuit:IsA("Folder") and ((src.Helix and helixCap>0)
+        or (src.AccessChassis and (helixCap>0 or borrowCasing))) then
         for _,ramp in ipairs(circuit:GetChildren()) do
-            local data=collectHelix(arena,ramp,circuit)
+            local data=src.AccessChassis and collectAccessChassis(arena,ramp,circuit)
+            if not data and src.Helix and helixCap>0 then
+                data=collectHelix(arena,ramp,circuit)
+            end
             if data then
                 local priority,distance=score(data,cameraPoint,cameraLook,
                     mounted[ramp]~=nil)
-                if distance<=(DISTANCE[tier] or DISTANCE.Low).helix+
-                    (mounted[ramp] and 18 or 0) then
+                local limit=borrowCasing and 65 or (DISTANCE[tier] or DISTANCE.Low).helix
+                if distance<=limit+(mounted[ramp] and 18 or 0) then
                     data.priority=priority
                     candidates.helix[#candidates.helix+1]=data
                 end
             end
         end
     end
+    borrowCasing=borrowCasing and #candidates.helix>0
     for _,kind in ipairs({"arch","archBase","casing","helix","promenade","stay","equipment","fitting","command","junction"}) do
         table.sort(candidates[kind],function(a,b)
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
         end)
         local cap=caps(tier,touch,pressure,kind)
+        if borrowCasing then
+            if kind=="casing" then cap=0 end
+            if kind=="helix" then cap=1 end
+        end
         local taken=0
         -- Healthy DESKTOP Medium/High: distribute only existing approved
         -- source modules over four real escape routes first, then reserve
@@ -1526,7 +1601,8 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             or data.category~=entry.category or data.arena~=entry.arena
             or data.otherDeck~=entry.otherDeck
             or src[entry.name]~=entry.source
-            or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing")
+            or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
+                or entry.name=="AccessChassis")
                 and not sameOriginals(entry,data))
             or not sourceIntact(entry) then
             -- A streamed/lost local MeshPart is not a valid seven-piece
@@ -1549,11 +1625,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     for _,entry in pairs(mounted) do refresh(entry) end
 end
 
-function Kit.count(category)
+function Kit.count(category,name)
     local count=0
     for _,entry in pairs(mounted) do
         if entry.visible and sourceIntact(entry)
-            and (category==nil or category==entry.category) then
+            and (category==nil or category==entry.category)
+            and (name==nil or name==entry.name) then
             count+=1
         end
     end

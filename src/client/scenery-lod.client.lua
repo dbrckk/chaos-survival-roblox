@@ -2229,7 +2229,9 @@ task.spawn(function()
             LocalOriginalColumnCasing3DCount =
                 ApprovedRemainingStructureMeshKit.count("casing"),
             LocalOriginalOrbitalHelixUnderframe3DCount =
-                ApprovedRemainingStructureMeshKit.count("helix"),
+                ApprovedRemainingStructureMeshKit.count("helix", "Helix"),
+            LocalOriginalOrbitalAccessChassis3DCount =
+                ApprovedRemainingStructureMeshKit.count("helix", "AccessChassis"),
             LocalOriginalPromenadeCrosshead3DCount =
                 ApprovedRemainingStructureMeshKit.count("promenade"),
             LocalSkySpineJunctionTrussesReplaced =
