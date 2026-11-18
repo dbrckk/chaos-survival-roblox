@@ -1503,8 +1503,19 @@ local function addFloorChevron(decor, name, facing, profile, style, color, alpha
     end
 end
 
+-- Each approved floor relief has a continuous bevelled base in one material region.
+local FLOOR_RELIEF_BASE_REGIONS = {
+    Classic = Vector3.new(8.00, 0.12, 4.34),
+    Towers = Vector3.new(10.22, 0.12, 0.94),
+    Crossroads = Vector3.new(3.50, 0.12, 0.66),
+    Orbital = Vector3.new(5.42, 0.168, 1.08),
+    Harbor = Vector3.new(7.55, 0.12, 2.74),
+}
+
 local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
     local center = base.Position
+    local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
+    local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
 
     if variant.Id == "Classic" then
         local gridThickness = 0.05
@@ -1545,7 +1556,6 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
             Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
         }
-        local entryProfile = floorReliefRegion("Classic", Vector3.new(8.00, 0.12, 4.34))
         local entryStyle = {size = Vector3.new(0.15, 0.05, 1.35), spread = 0.36, angle = math.rad(36)}
         for routeIndex, direction in ipairs(routeDirections) do
             -- Outside the raised tiers, adjacent to each cardinal entry
@@ -1555,7 +1565,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
                 + Vector3.new(0, 1.28, 0)
             local facing = CFrame.lookAt(position,
                 position - direction, Vector3.yAxis)
-            addFloorChevron(decor, "ClassicEntryChevron" .. routeIndex, facing, entryProfile,
+            addFloorChevron(decor, "ClassicEntryChevron" .. routeIndex, facing, floorProfile,
                 entryStyle, routeIndex % 2 == 0 and theme.Secondary or theme.Accent, 0.47)
         end
     elseif variant.Id == "Towers" then
@@ -1602,18 +1612,16 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
         local approaches = {
             {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
         }
-        local ascentProfile = floorReliefRegion("Towers", Vector3.new(10.22, 0.12, 0.94))
         local ascentStyle = {size = Vector3.new(0.14, 0.055, 1.25), spread = 0.37, angle = math.rad(34)}
         for index, signs in ipairs(approaches) do
             local x, z = signs[1], signs[2]
             local origin = center + Vector3.new(x * 10, 1.22, z * 23)
             local firstDeck = center + Vector3.new(x * 6, 1.22, z * 14)
             local facing = CFrame.lookAt(origin, firstDeck, Vector3.yAxis)
-            addFloorChevron(decor, "TowerAscentChevron" .. index, facing, ascentProfile,
+            addFloorChevron(decor, "TowerAscentChevron" .. index, facing, floorProfile,
                 ascentStyle, index % 2 == 0 and theme.Accent or theme.Secondary, 0.47)
         end
     elseif variant.Id == "Crossroads" then
-        local laneProfile = floorReliefRegion("Crossroads", Vector3.new(3.50, 0.12, 0.66))
         local laneWidth, laneThickness = 13, 0.08
         local hubWidth, hubThickness = 22, 0.10
         -- Keep the far ends at 53 studs and tuck the other ends under the hub.
@@ -1630,7 +1638,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
         }
         for i, def in ipairs(laneDefs) do
             local lane = fitDecorMesh(
-                laneProfile,
+                floorProfile,
                 "CrossroadLaneFill" .. i,
                 CFrame.new(center + def.offset),
                 def.size,
@@ -1656,7 +1664,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
                 local position = relayCenter + direction * distance
                 local facing = CFrame.lookAt(position, relayCenter)
                 addFloorChevron(decor, "FluxRouteChevron" .. laneIndex .. "_" .. stepIndex,
-                    facing, laneProfile, relayStyle, stepIndex == 3 and theme.Accent or theme.Secondary,
+                    facing, floorProfile, relayStyle, stepIndex == 3 and theme.Accent or theme.Secondary,
                     0.36 + (3 - stepIndex) * 0.06)
             end
         end
@@ -1686,14 +1694,13 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             {x = -23, z = 89, alongX = true},
             {x = 23, z = 89, alongX = true},
         }
-        local quayProfile = floorReliefRegion("Harbor", Vector3.new(7.55, 0.12, 2.74))
         local thickness = 0.055
         local quayY = ArenaPresentation.deckArtOffset(base, thickness) + 0.02
         for index, lane in ipairs(lanes) do
             local size = lane.alongX and Vector3.new(52, thickness, 0.45)
                 or Vector3.new(0.45, thickness, 52)
             local line = fitDecorMesh(
-                quayProfile, "HarborQuayInlay" .. index,
+                floorProfile, "HarborQuayInlay" .. index,
                 CFrame.new(center + Vector3.new(lane.x, quayY, lane.z)),
                 size,
                 index % 2 == 0 and theme.Accent or theme.Secondary,
@@ -1750,31 +1757,32 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
         coreMark.Parent = decor
     end
 
+    local panelSize = Vector3.new(15, 0.05, 9)
+    -- Clear the sculpted client ground tiles as well as the native finish.
+    local panelY = ArenaPresentation.deckArtOffset(base, panelSize.Y) + 0.03
     local panelOffsetX = math.max(18, (variant.BaseSize.X * 0.5) - 17)
     local panelOffsetZ = math.max(18, (variant.BaseSize.Z * 0.5) - 17)
     local panelRotation = variant.Id == "Orbital" and 45
         or (variant.Id == "Crossroads" and 0 or 8)
     local panelOffsets = {
-        Vector3.new(-panelOffsetX, 1.17, -panelOffsetZ),
-        Vector3.new(panelOffsetX, 1.17, -panelOffsetZ),
-        Vector3.new(-panelOffsetX, 1.17, panelOffsetZ),
-        Vector3.new(panelOffsetX, 1.17, panelOffsetZ),
+        Vector3.new(-panelOffsetX, panelY, -panelOffsetZ),
+        Vector3.new(panelOffsetX, panelY, -panelOffsetZ),
+        Vector3.new(-panelOffsetX, panelY, panelOffsetZ),
+        Vector3.new(panelOffsetX, panelY, panelOffsetZ),
     }
     for i, offset in ipairs(panelOffsets) do
-        local maintenance = decorPart(
-            decor,
+        local pose = CFrame.new(center + offset)
+            * CFrame.Angles(0, math.rad((i % 2 == 0 and -1 or 1) * panelRotation), 0)
+        local maintenance = fitDecorMesh(
+            floorProfile,
             "FloorMaintenancePanel" .. i,
-            Vector3.new(15, 0.045, 9),
-            center + offset,
+            pose,
+            panelSize,
             theme.Surface:Lerp(theme.Structure, 0.38),
             theme.PanelMaterial or VisualTheme.Materials.Panel
         )
-        maintenance.CFrame = CFrame.new(maintenance.Position)
-            * CFrame.Angles(0, math.rad((i % 2 == 0 and -1 or 1) * panelRotation), 0)
         maintenance.Transparency = 0.32
-        maintenance.CanCollide = false
-        maintenance.CanTouch = false
-        maintenance.CanQuery = false
+        maintenance.Parent = decor
     end
 end
 

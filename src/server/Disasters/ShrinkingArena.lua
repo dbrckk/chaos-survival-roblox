@@ -97,6 +97,7 @@ function D.start(ctx)
                     or name:match("^CrossroadLaneFill%d+$")
                     or name == "CrossroadHubMark"
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
+                    or name:match("^FloorMaintenancePanel%d+$")
                     or name:match("^EdgeBeacon%d+$")
                     or name:match("^EdgeBeaconGlow%d+$")
                     -- Keep 320-stud district navigation markings on the

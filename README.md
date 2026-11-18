@@ -1,3 +1,7 @@
+## P4 — Panneaux de maintenance au sol
+
+Les vingt panneaux de maintenance peuvent reprendre le socle biseauté du revêtement approuvé de chaque arène. Ils restent visibles au-dessus des dalles et se contractent avec le sol. Chaque panneau utilise une seule pièce, avec une forme plate de secours si le maillage est indisponible à la construction.
+
 ## P4 — Chevrons de montée et de retour au carrefour
 
 Les quatre chevrons de montée de Tower Run et les douze chevrons du Flux Relay peuvent reprendre les profils moulés de leurs arènes. Les pointes du Flux Relay se rejoignent au-dessus des voies et indiquent le retour au centre. Les pièces plates servent de secours et suivent le sol pendant le rétrécissement.
