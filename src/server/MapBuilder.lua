@@ -1068,7 +1068,7 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     end
 end
 
-local function addVariantIdentity(decor, config, variant, theme)
+local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile)
     local center = config.ArenaCenter
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
@@ -1092,15 +1092,16 @@ local function addVariantIdentity(decor, config, variant, theme)
             )
             tower.Transparency = 0.06
 
-            local crown = decorPart(
-                decor,
+            local crown = fitDecorMesh(
+                castProfile,
                 "GridMarkerGlow" .. i,
+                CFrame.new(tower.Position + Vector3.new(0, 6.1, 0)),
                 Vector3.new(3.8, 0.32, 3.8),
-                tower.Position + Vector3.new(0, 6.1, 0),
                 (i % 2 == 0) and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
             crown.Transparency = 0.16
+            crown.Parent = decor
         end
     elseif variant.Id == "Towers" then
         local corners = {
@@ -1122,15 +1123,16 @@ local function addVariantIdentity(decor, config, variant, theme)
             mast.Transparency = 0.04
 
             for level = 1, 3 do
-                local band = decorPart(
-                    decor,
+                local band = fitDecorMesh(
+                    sweptProfile,
                     "TowerBand" .. i .. "_" .. level,
+                    CFrame.new(mast.Position + Vector3.new(0, -6 + (level * 4.5), 0)),
                     Vector3.new(4.4, 0.28, 4.4),
-                    mast.Position + Vector3.new(0, -6 + (level * 4.5), 0),
                     level == 2 and theme.Secondary or theme.Accent,
                     VisualTheme.Materials.Glow
                 )
                 band.Transparency = 0.22
+                band.Parent = decor
             end
         end
     elseif variant.Id == "Crossroads" then
@@ -2869,7 +2871,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     addSouthHorizonMonument(decor, config, variant, theme)
     addExteriorCornerRidges(decor, config, variant, theme)
     addExteriorSilhouettePairs(decor, config, variant, theme)
-    addVariantIdentity(decor, config, variant, theme)
+    addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile)
     addVariantLandmarks(decor, config, variant, theme)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.

@@ -1995,7 +1995,7 @@ describe("Android arena identity ornament motion", function()
             * rules.resumeEnvelope(2)).toBe(0)
 
         local holder = Instance.new("Folder")
-        local part = Instance.new("Part")
+        local part = Instance.new("MeshPart")
         part.Parent = holder
         local baseline = {
             baseCFrame = CFrame.new(7, 9, -2)

@@ -1,3 +1,7 @@
+## P4 — Couronnes et bandes lumineuses sculptées
+
+Les quatre couronnes de Classic et les douze bandes de Tower Run peuvent reprendre des maillages approuvés. Elles gardent leurs couleurs, leurs mouvements et leur réduction d’animation sur mobile. Les mâts 3D et les ornements restent indépendants. Les pièces simples prennent le relais si les maillages approuvés sont indisponibles à la construction.
+
 ## P4 — Noyaux polygonaux des colonnes
 
 Les 20 noyaux derrière les coques peuvent reprendre le profil polygonal de la colonne approuvée de chaque arène. Ils gardent leur gabarit et se déplacent avec leurs socles et bandeaux pendant le rétrécissement. La forme d’origine sert de secours si le maillage est indisponible à la construction.
