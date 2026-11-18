@@ -1431,6 +1431,11 @@ describe("Shrinking Arena mobility integration", function()
 
     local function checkFloorPerimeter(arena, scale)
         local base = arena.Base
+        for _, rail in ipairs(arena.Decor.ArenaUndercarriage:GetChildren()) do
+            assert(rail:IsA("MeshPart") and not rail.CanCollide)
+            local span = rail.Name:find("FoundryX", 1, true) and base.Size.X or base.Size.Z
+            assert(math.abs(math.max(rail.Size.X, rail.Size.Z) - span + 6 * scale) < .02)
+        end
         local girders, cladding = 0, 0
         for _, piece in ipairs(arena.Decor:GetChildren()) do
             if piece.Name:match("^PremiumGroundUndergirder") then

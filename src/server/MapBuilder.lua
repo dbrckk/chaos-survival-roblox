@@ -74,6 +74,18 @@ local function decorPart(parent, name, size, position, color, material)
     return p
 end
 
+local function fitDecorMesh(profile, name, pose, size, color, material)
+    local detail = RouteSignalGeometry.fit(profile, pose, size)
+    if not detail then
+        detail = decorPart(nil, name, size, pose.Position, color, material)
+        detail.CFrame = pose
+    end
+    detail.Name = name
+    detail.Color = color
+    detail.Material = material
+    return detail
+end
+
 local function bindLandingBillboard(billboard, deck)
     local function refresh()
         local phase = deck:GetAttribute("CollapsePhase")
@@ -924,16 +936,11 @@ local function addExteriorSilhouettePairs(decor, config, variant, theme)
     end
 end
 
-local function addArenaFoundation(decor, config, variant, theme)
+local function addArenaFoundation(decor, config, variant, theme, sweptProfile)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
 
-    -- The previous 315 x 315 x 2.4 decorative brick visually swallowed
-    -- the source-authentic sculpted keel and underside beam MeshParts.
-    -- Keep the nonphysical foundation identity, but make it an OPEN
-    -- manufactured load frame: no giant generic slab, no fake floor and
-    -- no overlapping walkable collision. Its slim native steel rails are
-    -- only a graceful fallback if the owner-approved 3D art is unavailable.
+    -- Four rails meet at their centerlines and leave the keel visible.
     local undercarriage = Instance.new("Model")
     undercarriage.Name = "ArenaUndercarriage"
     undercarriage:SetAttribute("CosmeticOnly", true)
@@ -941,20 +948,21 @@ local function addArenaFoundation(decor, config, variant, theme)
     local insetX = math.max(4, baseSize.X * 0.5 - 3.0)
     local insetZ = math.max(4, baseSize.Z * 0.5 - 3.0)
     for side = -1, 1, 2 do
-        local northSouth = decorPart(
-            undercarriage, "FoundryX" .. tostring(side),
-            Vector3.new(math.max(8, baseSize.X - 12), 2.2, 2.8),
-            center + Vector3.new(0, -2.25, side * insetZ),
+        local northSouth = fitDecorMesh(
+            sweptProfile, "FoundryX" .. tostring(side),
+            CFrame.new(center + Vector3.new(0, -2.25, side * insetZ)),
+            Vector3.new(2 * insetX, 2.2, 2.8),
             theme.Structure, VisualTheme.Materials.Structure)
-        northSouth.Transparency = 0.06
-        northSouth:SetAttribute("PremiumArchitecturalSurface", true)
-        local eastWest = decorPart(
-            undercarriage, "FoundryZ" .. tostring(side),
-            Vector3.new(2.8, 2.2, math.max(8, baseSize.Z - 12)),
-            center + Vector3.new(side * insetX, -2.25, 0),
+        local eastWest = fitDecorMesh(
+            sweptProfile, "FoundryZ" .. tostring(side),
+            CFrame.new(center + Vector3.new(side * insetX, -2.25, 0)),
+            Vector3.new(2.8, 2.2, 2 * insetZ),
             theme.Structure, VisualTheme.Materials.Structure)
-        eastWest.Transparency = 0.06
-        eastWest:SetAttribute("PremiumArchitecturalSurface", true)
+        for _, rail in ipairs({northSouth, eastWest}) do
+            rail.Transparency = 0.06
+            rail:SetAttribute("PremiumArchitecturalSurface", true)
+            rail.Parent = undercarriage
+        end
     end
 
     local deckInset = decorPart(
@@ -1719,18 +1727,6 @@ local function beaconShaftSource(variant)
         or model:GetAttribute("OriginalLargeStructure3D") ~= true
         or model:GetAttribute("Original3DAssetId") ~= id then return nil end
     return approvedMeshRegion(model, "BeaconShaft")
-end
-
-local function fitDecorMesh(profile, name, pose, size, color, material)
-    local detail = RouteSignalGeometry.fit(profile, pose, size)
-    if not detail then
-        detail = decorPart(nil, name, size, pose.Position, color, material)
-        detail.CFrame = pose
-    end
-    detail.Name = name
-    detail.Color = color
-    detail.Material = material
-    return detail
 end
 
 local BRANCH_CHEVRON = {
@@ -2835,7 +2831,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local chassis = accessChassisSource()
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     local wayfinderBase = wayfinderBaseSource()
-    addArenaFoundation(decor, config, variant, theme)
+    addArenaFoundation(decor, config, variant, theme, sweptProfile)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.

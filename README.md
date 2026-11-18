@@ -1,3 +1,7 @@
+## P4 — Longerons forgés du soubassement
+
+Les 20 longerons sous les cinq arènes peuvent reprendre la traverse forgée continue du pont de Tower Run. Les quatre longerons de chaque cadre se rejoignent aux angles et laissent le dessous de l’arène dégagé. Ils suivent le rétrécissement du sol. Les longerons simples prennent le relais si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Inserts et goussets sculptés des dalles
 
 Les 60 inserts de maintenance et les 45 goussets des cinq arènes peuvent reprendre la traverse forgée de Tower Run et le blindage moulé du périmètre. Ces détails restent à la hauteur du revêtement, suivent le rétrécissement et cèdent la place à la dalle 3D complète quand elle est affichée. Les inserts et goussets simples servent de secours si les maillages approuvés sont indisponibles à la construction.
