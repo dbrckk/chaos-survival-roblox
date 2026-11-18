@@ -913,9 +913,6 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         local priorMap=workspace:FindFirstChild("GeneratedMap")
         if priorTemplates then priorTemplates.Parent=nil end
         if priorMap then priorMap.Parent=nil end
-        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
-        local visuals=Instance.new("Folder")
-        visuals.Parent=arena.Parent
         local templates=Instance.new("Folder")
         templates.Name="ApprovedLargeStructureTemplates"
         templates:SetAttribute("OwnerVerified",true)
@@ -929,6 +926,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         for i=1,7 do
             local mesh=Instance.new("MeshPart")
             mesh.Size=i==1 and Vector3.new(2,14,1.8) or Vector3.one*.2
+            if i==1 then mesh.Name="BeaconShaft" end
             mesh.Anchored=true
             mesh.CanCollide=false
             mesh.CanTouch=false
@@ -936,6 +934,9 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             mesh.Parent=source
         end
         source.Parent=templates
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local visuals=Instance.new("Folder")
+        visuals.Parent=arena.Parent
         local running=false
         local cleanup,connections={},{}
         local ok,why=pcall(function()
@@ -956,6 +957,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local tall=platforms.Platform84
             assert(tall:GetAttribute("HarborSkywayStep")~=nil)
             local shortPile,tallPile=decor.PlatformSupport96_1,decor.PlatformSupport84_2
+            assert(tallPile:IsA("MeshPart") and tallPile:GetAttribute("OriginalPlatformSupport3D"))
             local function install(deck,pile)
                 local index=tonumber(deck.Name:match("%d+"))
                 local _,chosen=Large.selectNearRouteStructures(
@@ -985,6 +987,12 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local initial=shaft.Size
             Kit.bind(arena,{},nil,{shortPile,tallPile},visuals)
             expect(Kit.breakdown().harborPile).toBe(2)
+            tallPile:SetAttribute("OriginalPlatformSupport3D",false)
+            task.wait()
+            expect(tallPile.LocalTransparencyModifier).toBe(0)
+            tallPile:SetAttribute("OriginalPlatformSupport3D",true)
+            task.wait()
+            expect(tallPile.LocalTransparencyModifier).toBe(1)
             short:SetAttribute("CollapsePhase","Warning")
             task.wait()
             expect(shortPile.LocalTransparencyModifier).toBe(0)

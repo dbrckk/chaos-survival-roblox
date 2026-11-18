@@ -2163,7 +2163,9 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
             coreColor, VisualTheme.Materials.Glow)
         fallback.Transparency = coreAlpha
     end
+end
 
+local function addPlatformSupports(decor, platform, index, theme, shaft)
     local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
     local deckTop = 1.15
     local supportHeight = platformBottom - deckTop
@@ -2182,23 +2184,27 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
             table.insert(supportOffsets, Vector3.new(insetX, 0, -insetZ))
         end
 
+        -- Keep the authored axes for client overlays and bridge contraction.
+        local shaftAlongX = shaft and shaft.Size.X > shaft.Size.Z
         for supportIndex, offset in ipairs(supportOffsets) do
-            local support = decorPart(
-                decor,
+            local support = fitDecorMesh(
+                shaft,
                 "PlatformSupport" .. index .. "_" .. supportIndex,
-                Vector3.new(supportWidth, supportHeight, supportWidth),
-                Vector3.new(
+                CFrame.new(
                     platform.Position.X + offset.X,
                     deckTop + (supportHeight * 0.5),
                     platform.Position.Z + offset.Z
                 ),
+                Vector3.new(supportWidth, supportHeight, supportWidth),
                 supportColor,
-                VisualTheme.Materials.Structure
+                VisualTheme.Materials.Structure,
+                shaftAlongX
             )
             support.Transparency = 0.14
-            support.CanCollide = false
-            support.CanTouch = false
-            support.CanQuery = false
+            if support:IsA("MeshPart") then
+                support:SetAttribute("OriginalPlatformSupport3D", true)
+            end
+            support.Parent = decor
         end
     end
 end
@@ -3335,6 +3341,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
             underdeckSpars, skybridge and sweptProfile or nil, harborAlongX)
+        addPlatformSupports(decor, platform, i, theme, beaconShaft)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating

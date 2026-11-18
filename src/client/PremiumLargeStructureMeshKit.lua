@@ -193,6 +193,11 @@ local function validNativeSupport(part,index)
         and part.Size.Y <= 47
 end
 
+local function isAuthoredSupportShape(part)
+    return (part:IsA("Part") and part.Shape == Enum.PartType.Block)
+        or (part:IsA("MeshPart") and part:GetAttribute("OriginalPlatformSupport3D") == true)
+end
+
 -- MapBuilder places two .72-stud square posts at the ends of each
 -- Towers span. ShrinkingArena moves their longitudinal offset by the
 -- same ratio as the 49-stud deck and keeps their cross-section constant.
@@ -207,7 +212,7 @@ function Kit.matchesSkybridgeSupport(part, deck)
         or arena:FindFirstChild("Platforms") ~= platforms
         or arena:FindFirstChild("Decor") ~= part.Parent
         or not validNativeSupport(part, tonumber(id))
-        or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+        or not isAuthoredSupportShape(part)
         or part.Transparency >= .95 then return false end
 
     local size = deck.Size
@@ -489,7 +494,7 @@ function Kit.routeSupportScale(part, deck)
     local x = (corner == "1" or corner == "3") and -insetX or insetX
     local z = (corner == "1" or corner == "4") and -insetZ or insetZ
     local expected = deck.CFrame*CFrame.new(x,-(deck.Size.Y+height)*.5,z)
-    if part.Transparency >= .95 or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+    if part.Transparency >= .95 or not isAuthoredSupportShape(part)
         or (part.Size-Vector3.new(width,height,width)).Magnitude > .10
         or (part.Position-expected.Position).Magnitude > .15
         or part.CFrame.UpVector:Dot(expected.UpVector) < .999

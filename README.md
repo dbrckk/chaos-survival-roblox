@@ -1,3 +1,7 @@
+## P4 — Supports verticaux sous les plateformes
+
+Les poteaux sous les plateformes peuvent reprendre le profil polygonal de la colonne approuvée de leur arène. Ils gardent leurs points d’appui et se rétractent avec les plateformes. Les habillages locaux peuvent masquer ces poteaux puis les réafficher lors de leur retrait. Des poteaux rectangulaires servent de secours si le maillage est indisponible à la construction.
+
 ## P4 — Longerons sous les plateformes
 
 Les cadres rectangulaires sous les plateformes peuvent reprendre les longerons du châssis approuvé, à raison d’une pièce par cadre. Les habillages locaux vérifient leur alignement avant de les masquer et les réaffichent à leur retrait. Les cadres pleins servent de secours si le maillage est indisponible à la construction.

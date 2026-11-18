@@ -864,10 +864,13 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     pylons[#pylons + 1] = part
                     local function changed() reconcilePylon(part) end
                     for _, property in ipairs({"Size","CFrame","Anchored",
-                        "CanCollide","CanTouch","CanQuery","Shape","Name","Transparency"}) do
+                        "CanCollide","CanTouch","CanQuery","Name","Transparency"}) do
                         watchers[#watchers + 1] =
                             part:GetPropertyChangedSignal(property):Connect(changed)
                     end
+                    local geometryChanged = part:IsA("Part") and part:GetPropertyChangedSignal("Shape")
+                        or part:GetAttributeChangedSignal("OriginalPlatformSupport3D")
+                    watchers[#watchers + 1] = geometryChanged:Connect(changed)
                     for _, attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
                         watchers[#watchers + 1] =
                             part:GetAttributeChangedSignal(attribute):Connect(changed)
