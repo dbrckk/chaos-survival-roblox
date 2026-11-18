@@ -22,6 +22,7 @@ local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 local HarborScenery = require("./HarborScenery")
 local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
+local RouteSignalGeometry = require("./RouteSignalGeometry")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
 local ArenaGroundArchitecture = require("./ArenaGroundArchitecture")
@@ -1674,7 +1675,7 @@ local function approvedMeshRegion(model, name)
     return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
 end
 
-local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand)
+local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand, edgeOverhang)
     local name = "PlatformGlow" .. index
     local color = (index % 2 == 0) and theme.Secondary or theme.Accent
     local transparency = 0.64
@@ -1687,21 +1688,16 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     end
 
     local size = platform.Size
-    if edgeBand then
-        -- Both outboard bands share one inert mesh. The upper face
-        -- clears the bottom of the original flat underframe by .01 studs.
-        local glow = edgeBand:Clone()
-        glow:ClearAllChildren()
-        glow.TextureID = ""
-        glow.MaterialVariant = ""
-        local deckAlongX = size.X > size.Z
-        local bandAlongX = glow.Size.X > glow.Size.Z
-        local length = math.max(size.X, size.Z) + 0.28
-        local width = math.min(size.X, size.Z) + 0.42
-        glow.Size = bandAlongX and Vector3.new(length, 0.14, width)
-            or Vector3.new(width, 0.14, length)
-        glow.CFrame = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.47, 0)
-            * CFrame.Angles(0, deckAlongX ~= bandAlongX and math.pi * 0.5 or 0, 0)
+    local alongX = size.X > size.Z
+    local glow = edgeBand and RouteSignalGeometry.fit(edgeBand,
+        platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.47, 0),
+        Vector3.new(
+            size.X + (alongX and 0.28 or edgeOverhang),
+            0.14,
+            size.Z + (alongX and edgeOverhang or 0.28)
+        ))
+    if glow then
+        -- The two bands clear the underside of the frame and share one mesh.
         glow.Name = name
         glow.Material = VisualTheme.Materials.Glow
         glow.Color = color
@@ -2799,9 +2795,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local chassis = accessChassisSource()
     local underdeckSignal = approvedMeshRegion(chassis, "UnderdeckSignal")
     local towerLattice = variant.Id == "Towers" and approvedMeshRegion(chassis, "UnderdeckLattice") or nil
-    local forgedBridge = variant.Id == "Towers" and towersForgedBridgeSource() or nil
-    local towerCrossbeam = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
-    local towerEdgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
+    local forgedBridge = towersForgedBridgeSource()
+    local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
+    local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -3045,27 +3041,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 )
                 local railName = "SkybridgeRail" .. i .. "_" .. tostring(side)
                 local color = side < 0 and theme.Accent or theme.Secondary
-                local rail
-                if towerCrossbeam then
-                    local mesh = towerCrossbeam:Clone()
-                    local meshAlongX = mesh.Size.X > mesh.Size.Z
-                    mesh:ClearAllChildren()
-                    mesh.TextureID = ""
-                    mesh.MaterialVariant = ""
-                    mesh.Name = railName
-                    mesh.Size = meshAlongX and Vector3.new(span, 0.08, 0.18)
-                        or Vector3.new(0.18, 0.08, span)
-                    mesh.CFrame = railFrame
-                        * CFrame.Angles(0, meshAlongX ~= alongX and math.pi * 0.5 or 0, 0)
-                    mesh.Material = VisualTheme.Materials.Glow
-                    mesh.Color = color
-                    rail = mesh
-                else
-                    rail = decorPart(nil, railName,
-                        alongX and Vector3.new(span, 0.08, 0.18)
-                            or Vector3.new(0.18, 0.08, span),
-                        railFrame.Position, color, VisualTheme.Materials.Glow)
-                end
+                local railSize = alongX and Vector3.new(span, 0.08, 0.18)
+                    or Vector3.new(0.18, 0.08, span)
+                local rail = RouteSignalGeometry.fit(sweptProfile, railFrame, railSize)
+                    or decorPart(nil, railName, railSize, railFrame.Position, color,
+                        VisualTheme.Materials.Glow)
+                rail.Name = railName
+                rail.Material = VisualTheme.Materials.Glow
+                rail.Color = color
                 rail.Transparency = 0.16
                 rail:SetAttribute("ChaosWayfinding", true)
                 rail.Parent = decor
@@ -3080,8 +3063,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                     -platform.Size.Y * 0.5,
                     alongX and 0 or distance
                 )
-                if towerCrossbeam then
-                    local rib = towerCrossbeam:Clone()
+                if sweptProfile then
+                    local rib = sweptProfile:Clone()
                     local sourceAlongX = rib.Size.X > rib.Size.Z
                     rib.Name = ribName
                     rib.Size = sourceAlongX and Vector3.new(width + 0.22, 0.62, 0.76)
@@ -3105,9 +3088,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         end
 
         local skybridge = definition.Skybridge == true
-        addPlatformGlow(decor, platform, i, theme, routeTier, skybridge and towerEdgeBand or nil)
+        local elevatedRoute = definition.PromenadeLane or definition.SkySpineStep
+        addPlatformGlow(decor, platform, i, theme, routeTier,
+            (skybridge or elevatedRoute) and edgeBand or nil, skybridge and 0.42 or 0.96)
         addPlatformFinish(decor, platform, i, theme, underdeckSignal,
-            skybridge and towerLattice or nil, skybridge and towerCrossbeam or nil)
+            skybridge and towerLattice or nil, skybridge and sweptProfile or nil)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
@@ -3124,7 +3109,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- None adds a blocking wall beneath the high walkways.
         if definition.SkySpineStep then
             SkySpineArchitecture.decorate(
-                decor, platform, i, definition, variant.Id, theme)
+                decor, platform, i, definition, variant.Id, theme, sweptProfile)
         end
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(

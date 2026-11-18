@@ -603,8 +603,7 @@ describe("Shrinking Arena mobility integration", function()
         return glow
     end
 
-    it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
-        local storage = game:GetService("ReplicatedStorage")
+    local function forgedSignalFixture(alongZ)
         local holder = Instance.new("Folder")
         holder.Name = "ApprovedTowersSignatureBridgeTemplates"
         holder:SetAttribute("OwnerVerified", true)
@@ -617,7 +616,8 @@ describe("Shrinking Arena mobility integration", function()
         source.Parent = holder
         local beam = Instance.new("MeshPart")
         beam.Name = "SweptCrossbeam"
-        beam.Size = Vector3.new(40.64, 3.1108, 5.96)
+        beam.Size = alongZ and Vector3.new(5.96, 3.1108, 40.64)
+            or Vector3.new(40.64, 3.1108, 5.96)
         beam.Anchored = true
         beam.CanCollide = false
         beam.CanTouch = false
@@ -625,8 +625,35 @@ describe("Shrinking Arena mobility integration", function()
         beam.Parent = source
         local edgeBand = beam:Clone()
         edgeBand.Name = "SculptedEdgeBand"
-        edgeBand.Size = Vector3.new(39.38, .1625, 5.43)
+        edgeBand.Size = alongZ and Vector3.new(5.43, .1625, 39.38)
+            or Vector3.new(39.38, .1625, 5.43)
         edgeBand.Parent = source
+        return holder
+    end
+
+    local function checkRouteSignal(deck, piece, targetSize, targetOffset)
+        assert(piece:IsA("MeshPart") and piece.Material==Enum.Material.Neon)
+        assert(piece.Anchored and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+        local frame = deck.CFrame:ToObjectSpace(piece.CFrame)
+        local swap = math.abs(frame.RightVector.Z)>.999
+        local extent = swap and Vector3.new(piece.Size.Z,piece.Size.Y,piece.Size.X) or piece.Size
+        assert((extent-targetSize).Magnitude<.025)
+        assert((frame.Position-targetOffset).Magnitude<.025)
+    end
+
+    local function checkAerialBand(arena,deck,scale)
+        local index=assert(deck.Name:match("^Platform(%d+)$"))
+        local piece=arena.Decor["PlatformGlow"..index]
+        local alongX=deck.Size.X>deck.Size.Z
+        checkRouteSignal(deck,piece,deck.Size*Vector3.new(1,0,1)+Vector3.new(
+            (alongX and .28 or .96)*scale,.14,(alongX and .96 or .28)*scale),
+            Vector3.new(0,-deck.Size.Y*.5-.47,0))
+        return piece
+    end
+
+    it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
+        local storage = game:GetService("ReplicatedStorage")
+        local holder = forgedSignalFixture(false)
         local previous = storage:FindFirstChild(holder.Name)
         if previous then previous.Parent = nil end
         holder.Parent = storage
@@ -1131,6 +1158,10 @@ describe("Shrinking Arena mobility integration", function()
         if oldMap then oldMap.Parent=nil end
         if oldSource then oldSource.Parent=nil end
         local holder=shortChassisFixture(storage)
+        local signalHolder=forgedSignalFixture(true)
+        local oldSignalSource=storage:FindFirstChild(signalHolder.Name)
+        if oldSignalSource then oldSignalSource.Parent=nil end
+        signalHolder.Parent=storage
 
         local generated,context
         local active,callbacks=false,{}
@@ -1168,6 +1199,7 @@ describe("Shrinking Arena mobility integration", function()
                         assert(Remaining.nativeCount("junction")==(truss and 2 or 1))
                         assert(frame.LocalTransparencyModifier==1 and deck.CanCollide)
                         checkUnderdeckSignal(arena,deck)
+                        checkAerialBand(arena,deck,1)
                         for _,piece in ipairs(model:GetChildren()) do
                             local center=deck.CFrame:PointToObjectSpace(piece.Position)
                             local bounds=deck.CFrame:ToObjectSpace(piece.CFrame)
@@ -1214,6 +1246,8 @@ describe("Shrinking Arena mobility integration", function()
                     local width=mesh.Size.X
                     local glow=checkUnderdeckSignal(arena,finalDeck)
                     local originalGlowSize=glow.Size
+                    local band=checkAerialBand(arena,finalDeck,1)
+                    local originalBandSize=band.Size
                     NativeTrim.setPromenadeStructureMask(finalTruss,true,true)
                     assert(mesh.LocalTransparencyModifier==1 and finalTruss.LocalTransparencyModifier==1)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1228,12 +1262,14 @@ describe("Shrinking Arena mobility integration", function()
                     task.wait()
                     assert(arena.Base.Size.X<=144.05 and math.abs(mesh.Size.X-width*.45)<.025)
                     assert(checkUnderdeckSignal(arena,finalDeck)==glow)
+                    assert(checkAerialBand(arena,finalDeck,.45)==band)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
                     assert(math.abs(finalTruss.LocalTransparencyModifier-.22)<.01)
                     cleanup(callbacks,{})
                     assert((glow.Size-originalGlowSize).Magnitude<.01)
+                    assert((band.Size-originalBandSize).Magnitude<.01)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
@@ -1247,6 +1283,8 @@ describe("Shrinking Arena mobility integration", function()
         cleanup(callbacks,{})
         if generated then generated:Destroy() end
         holder:Destroy()
+        signalHolder:Destroy()
+        if oldSignalSource then oldSignalSource.Parent=storage end
         if oldSource then oldSource.Parent=storage end
         if oldMap then oldMap.Parent=workspace end
         if not okay then error(tostring(context)..": "..tostring(why)) end
@@ -1260,6 +1298,10 @@ describe("Shrinking Arena mobility integration", function()
         if oldMap then oldMap.Parent=nil end
         if oldSource then oldSource.Parent=nil end
         local holder=shortChassisFixture(storage)
+        local signalHolder=forgedSignalFixture(true)
+        local oldSignalSource=storage:FindFirstChild(signalHolder.Name)
+        if oldSignalSource then oldSignalSource.Parent=nil end
+        signalHolder.Parent=storage
         local generated,context
         local active,callbacks=false,{}
         local okay,why=pcall(function()
@@ -1267,7 +1309,7 @@ describe("Shrinking Arena mobility integration", function()
             for _,variant in ipairs(ArenaVariants.Order) do
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
-                local count,owner=0,nil
+                local count,owner,overheads=0,nil,0
                 for _,deck in ipairs(arena.Platforms:GetChildren()) do
                     if deck:GetAttribute("SkySpineStep") then
                         context=variant.." "..deck.Name
@@ -1289,13 +1331,26 @@ describe("Shrinking Arena mobility integration", function()
                             assert(not mesh.CanCollide and not mesh.CanQuery)
                         end
                         local id=deck.Name:match("^Platform(%d+)$")
-                        assert(arena.Decor["SkySpine"..id.."_LightedEdge1"].LocalTransparencyModifier==0)
+                        local prefix="SkySpine"..id
+                        for _,side in ipairs({-1,1}) do
+                            local rail=arena.Decor[prefix.."_LightedEdge"..side]
+                            checkRouteSignal(deck,rail,Vector3.new(.26,.17,deck.Size.Z-1.1),
+                                Vector3.new(side*(deck.Size.X*.5-.32),deck.Size.Y*.5+.12,0))
+                            assert(rail.LocalTransparencyModifier==0 and math.abs(rail.Transparency-.36)<.001)
+                        end
+                        local pulse=arena.Decor:FindFirstChild(prefix.."_OverheadPulse")
+                        if pulse then
+                            checkRouteSignal(deck,pulse,Vector3.new(13,.35,.7),
+                                Vector3.new(0,deck.Size.Y*.5+12.7,-.58))
+                            overheads+=1
+                        end
                         checkUnderdeckSignal(arena,deck)
+                        checkAerialBand(arena,deck,1)
                         count+=1
                         owner=deck
                     end
                 end
-                assert(count==10,variant)
+                assert(count==10 and overheads==4,variant)
                 total+=count
                 if variant=="Harbor" and owner then
                     context="Sky Spine streaming, shared claims and contraction"
@@ -1303,6 +1358,9 @@ describe("Shrinking Arena mobility integration", function()
                     local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_SpineUnderframe
                     local mesh=art:FindFirstChildWhichIsA("MeshPart")
                     local size=mesh.Size
+                    local id=assert(owner.Name:match("^Platform(%d+)$"))
+                    local rail=arena.Decor["SkySpine"..id.."_LightedEdge1"]
+                    local originalRailSize=rail.Size
                     for _,index in ipairs({1,3}) do
                         NativeTrim.setRouteUnderdeckMask(native[index],true)
                         assert(mesh.LocalTransparencyModifier==1 and native[index].LocalTransparencyModifier==1)
@@ -1339,11 +1397,15 @@ describe("Shrinking Arena mobility integration", function()
                     assert(arena.Base.Size.X<=144.05 and mesh.LocalTransparencyModifier==0)
                     assert(math.abs(mesh.Size.X-size.X*.45)<.03 and math.abs(mesh.Size.Z-size.Z*.45)<.03)
                     checkUnderdeckSignal(arena,owner)
+                    checkAerialBand(arena,owner,.45)
+                    checkRouteSignal(owner,rail,Vector3.new(.26*.45,.17,owner.Size.Z-1.1*.45),
+                        Vector3.new(owner.Size.X*.5-.32*.45,owner.Size.Y*.5+.12,0))
                     Remaining.sync(arena,owner.Position,"Low",true,nil,1,true)
                     for _,part in ipairs(native) do
                         assert(math.abs(part.LocalTransparencyModifier-.21)<.01)
                     end
                     cleanup(callbacks,{})
+                    assert((rail.Size-originalRailSize).Magnitude<.01)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
@@ -1357,6 +1419,8 @@ describe("Shrinking Arena mobility integration", function()
         cleanup(callbacks,{})
         if generated then generated:Destroy() end
         holder:Destroy()
+        signalHolder:Destroy()
+        if oldSignalSource then oldSignalSource.Parent=storage end
         if oldSource then oldSource.Parent=storage end
         if oldMap then oldMap.Parent=workspace end
         if not okay then error(tostring(context)..": "..tostring(why)) end

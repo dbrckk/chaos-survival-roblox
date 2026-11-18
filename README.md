@@ -1,3 +1,7 @@
+## P4 — Bandes et rails lumineux sculptés sur les traversées aériennes
+
+Les 130 tabliers des Promenades et de l’Épine céleste peuvent afficher deux bandes biseautées sous leurs bords à la place d’une plaque pleine. Les 100 rails de surface et les 20 bandeaux des portiques de l’Épine céleste reprennent le profil sculpté du pont forgé de Tower Run. Chaque remplacement conserve le nombre de pièces, les couleurs propres à l’arène et le suivi du rétrécissement. Les formes d’origine servent de secours si le modèle approuvé n’est pas disponible à la construction de l’arène.
+
 ## P4 — Repère de réouverture à Tower Run
 
 Le panneau du volet affiche « VOLET OUVERT » avec un liseré vert pendant 1,6 seconde après une réouverture confirmée. L’indication est visible sans le son et se limite à la passerelle concernée. Une fermeture annulée ne l’affiche pas.
