@@ -549,6 +549,40 @@ describe("Shrinking Arena mobility integration", function()
             generated:Destroy()
         end
     end)
+    local function shortChassisFixture(storage)
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedRemainingStructureTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="AccessChassis"
+        source:SetAttribute("Original3DAssetId",106401955318567)
+        for _,attribute in ipairs({"OwnerVerified","CosmeticOnly","P4OriginalRemainingStructure3D"}) do
+            source:SetAttribute(attribute,true)
+        end
+        for index=1,7 do
+            local piece=Instance.new("MeshPart")
+            if index==7 then
+                piece.Name="UnderdeckSignal"
+                piece.Size=Vector3.new(1.09,.05,12.15)
+            elseif index==6 then
+                piece.Name="UnderdeckLattice"
+                piece.Size=Vector3.new(4.492,.215,11.5957)
+            else
+                piece.Name="Region"..index
+                piece.Size=Vector3.new(5.17,.5065,12.8)
+            end
+            piece.Anchored=true
+            piece.Massless=true
+            piece.CanCollide=false
+            piece.CanTouch=false
+            piece.CanQuery=false
+            piece.Parent=source
+        end
+        source.Parent=holder
+        return holder
+    end
+
     it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
         local storage = game:GetService("ReplicatedStorage")
         local holder = Instance.new("Folder")
@@ -572,9 +606,14 @@ describe("Shrinking Arena mobility integration", function()
         local previous = storage:FindFirstChild(holder.Name)
         if previous then previous.Parent = nil end
         holder.Parent = storage
+        local previousChassis = storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if previousChassis then previousChassis.Parent = nil end
+        local chassisHolder = shortChassisFixture(storage)
         local built, root = pcall(MapBuilder.build, Config, "Towers", ArenaVariants)
         holder:Destroy()
+        chassisHolder:Destroy()
         if previous then previous.Parent = storage end
+        if previousChassis then previousChassis.Parent = storage end
         if not built then error(root) end
         local arena = root:FindFirstChild("Arena")
         local platforms = arena:FindFirstChild("Platforms")
@@ -630,12 +669,16 @@ describe("Shrinking Arena mobility integration", function()
         local bridge18 = platforms:FindFirstChild("Skybridge18")
         local pressure = SkybridgePressure.snapshot(bridge18, decor)
         local guardedRib = decor:FindFirstChild("SkybridgeRib18_0")
+        local guardedFrame = decor:FindFirstChild("PlatformUnderFrame18")
         SkybridgePressure.setPhase(pressure, "Warning", workspace:GetServerTimeNow())
         expect(math.abs(guardedRib.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedFrame.Transparency - 0.65) < 0.001).toBe(true)
         SkybridgePressure.setPhase(pressure, "Gone")
         expect(guardedRib.Transparency).toBe(1)
+        expect(guardedFrame.Transparency).toBe(1)
         SkybridgePressure.setPhase(pressure, nil)
         expect(guardedRib.Transparency).toBe(0)
+        expect(math.abs(guardedFrame.Transparency - 0.04) < 0.001).toBe(true)
         local pier2 = decor:FindFirstChild("PlatformSupport18_2")
         local visual = Instance.new("Folder")
         visual.Parent = root
@@ -689,9 +732,18 @@ describe("Shrinking Arena mobility integration", function()
             for _, name in ipairs(prefix) do
                 local part = decor:FindFirstChild(name)
                 expect(part ~= nil).toBe(true)
-                if name:match("^SkybridgeRib") then
-                    local alongX = bridge.Size.X > bridge.Size.Z
-                    local lateral = alongX and Vector3.zAxis or Vector3.xAxis
+                local alongX = bridge.Size.X > bridge.Size.Z
+                local lateral = alongX and Vector3.zAxis or Vector3.xAxis
+                if name:match("^PlatformUnderFrame") then
+                    local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
+                    local below = bridge.CFrame:PointToObjectSpace(part.Position).Y
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(math.abs(part.CFrame.LookVector:Dot(longitudinal)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - 4.5 * 0.93) < 0.01).toBe(true)
+                    expect(math.abs(part.Size.Z - 49 * 0.98) < 0.01).toBe(true)
+                    expect(below + part.Size.Y * 0.5 < 0).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^SkybridgeRib") then
                     expect(part:IsA("MeshPart")).toBe(true)
                     expect(math.abs(part.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
                     expect(math.abs(part.Size.X - math.min(bridge.Size.X, bridge.Size.Z) - 0.22) < 0.01).toBe(true)
@@ -754,6 +806,10 @@ describe("Shrinking Arena mobility integration", function()
                             or Vector3.new(before.X, before.Y, before.Z * ratio)
                         expect((after - target).Magnitude < 0.01).toBe(true)
                         expect((detail.Size - prior.size).Magnitude < 0.01).toBe(true)
+                    elseif detail.Name:match("^PlatformUnderFrame") then
+                        expect(math.abs(detail.Size.Z - shrunkSpan * 0.98) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.X - prior.size.X) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Y - prior.size.Y) < 0.01).toBe(true)
                     elseif d0 > 2.2 then
                         expect(d1 < d0).toBe(true)
                     end
@@ -981,33 +1037,6 @@ describe("Shrinking Arena mobility integration", function()
         end
         root:Destroy()
     end)
-
-    local function shortChassisFixture(storage)
-        local holder=Instance.new("Folder")
-        holder.Name="ApprovedRemainingStructureTemplates"
-        holder:SetAttribute("OwnerVerified",true)
-        holder.Parent=storage
-        local source=Instance.new("Model")
-        source.Name="AccessChassis"
-        source:SetAttribute("Original3DAssetId",106401955318567)
-        for _,attribute in ipairs({"OwnerVerified","CosmeticOnly","P4OriginalRemainingStructure3D"}) do
-            source:SetAttribute(attribute,true)
-        end
-        for index=1,7 do
-            local piece=Instance.new("MeshPart")
-            piece.Name=index==7 and "UnderdeckSignal" or "Region"..index
-            piece.Size=index==7 and Vector3.new(1.09,.05,12.15)
-                or Vector3.new(5.17,.5065,12.8)
-            piece.Anchored=true
-            piece.Massless=true
-            piece.CanCollide=false
-            piece.CanTouch=false
-            piece.CanQuery=false
-            piece.Parent=source
-        end
-        source.Parent=holder
-        return holder
-    end
 
     local function checkUnderdeckSignal(arena,deck)
         local index=assert(deck.Name:match("^Platform(%d+)$"))

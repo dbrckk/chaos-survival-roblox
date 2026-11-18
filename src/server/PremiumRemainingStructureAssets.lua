@@ -48,22 +48,26 @@ local function genuine(model, spec)
         and math.abs(box.Y-spec.height) < (spec.heightTolerance or .8)
 end
 
-local function identifyAccessChassisSignal(model)
-    -- The two BrassIdentificationInsert ends share one material mesh.
-    -- It is the only thin region that spans nearly the entire chassis.
-    local signal
+local function identifyAccessChassisRegions(model)
+    -- The importer joins the two brass inserts into SIGNAL and the four
+    -- open bays and cassette mounts into ALLOY. Each has unique bounds.
+    local signal, lattice
     for _, piece in ipairs(model:GetChildren()) do
-        if not piece:IsA("MeshPart") then continue end
+        if not piece:IsA("MeshPart") or not piece.Archivable or piece.MeshId == "" then continue end
         local size = piece.Size
         local major, minor = math.max(size.X, size.Z), math.min(size.X, size.Z)
         if math.abs(major - 12.15) < .18 and math.abs(minor - 1.09) < .10
-            and size.Y > 0 and size.Y < .09
-            and piece.Archivable and piece.MeshId ~= "" then
+            and size.Y > 0 and size.Y < .09 then
             if signal then return end
             signal = piece
+        elseif math.abs(major - 11.5957) < .12 and math.abs(minor - 4.492) < .12
+            and math.abs(size.Y - .215) < .055 then
+            if lattice then return end
+            lattice = piece
         end
     end
     if signal then signal.Name = "UnderdeckSignal" end
+    if lattice then lattice.Name = "UnderdeckLattice" end
 end
 
 function Kit.start()
@@ -105,7 +109,7 @@ function Kit.start()
                     clean:SetAttribute("CosmeticOnly", true)
                     clean:SetAttribute("Original3DAssetId", spec.id)
                     clean:SetAttribute("P4OriginalRemainingStructure3D", true)
-                    if name == "AccessChassis" then identifyAccessChassisSignal(clean) end
+                    if name == "AccessChassis" then identifyAccessChassisRegions(clean) end
                     clean.Parent = folder
                     folder:SetAttribute(name.."Ready", true)
                     break

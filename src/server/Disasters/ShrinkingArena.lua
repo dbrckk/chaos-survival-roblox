@@ -245,13 +245,20 @@ function D.start(ctx)
                 local bridge = bridgeStates[bridgeIndex or platformIndex]
                 local deck = platformIndex and platformStates[platformIndex]
                 if bridge then
+                    local localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame)
+                    local stretchX = bridge.alongX
+                    if item:IsA("MeshPart") then
+                        local axis = bridge.alongX and Vector3.xAxis or Vector3.zAxis
+                        stretchX = math.abs(localCFrame.RightVector:Dot(axis)) > .999
+                    end
                     table.insert(bridgeDetails, {
                         part = item,
                         bridge = bridge,
                         transverseRib = ribIndex ~= nil,
+                        stretchX = stretchX,
                         size = item.Size,
                         cframe = item.CFrame,
-                        localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame),
+                        localCFrame = localCFrame,
                     })
                 elseif deck then
                     table.insert(platformDetails, {
@@ -420,7 +427,7 @@ function D.start(ctx)
                     -- own local axis, which can be the bridge's long axis.
                     if detail.transverseRib then continue end
                     local size = detail.size
-                    piece.Size = bridge.alongX
+                    piece.Size = detail.stretchX
                         and Vector3.new(
                             size.X > 2.2 and size.X * ratio or size.X,
                             size.Y, size.Z)

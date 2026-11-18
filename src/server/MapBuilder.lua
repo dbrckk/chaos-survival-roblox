@@ -1658,7 +1658,7 @@ local function towerCrossbeamSource()
     return beam and beam:IsA("MeshPart") and beam.Archivable and beam or nil
 end
 
-local function underdeckSignalSource()
+local function accessChassisSource()
     local templates = ReplicatedStorage:FindFirstChild("ApprovedRemainingStructureTemplates")
     if not templates or templates:GetAttribute("OwnerVerified") ~= true then return nil end
     local chassis = templates:FindFirstChild("AccessChassis")
@@ -1667,11 +1667,15 @@ local function underdeckSignalSource()
         or chassis:GetAttribute("CosmeticOnly") ~= true
         or chassis:GetAttribute("P4OriginalRemainingStructure3D") ~= true
         or chassis:GetAttribute("Original3DAssetId") ~= 106401955318567 then return nil end
-    local signal = chassis:FindFirstChild("UnderdeckSignal")
-    return signal and signal:IsA("MeshPart") and signal.Archivable and signal or nil
+    return chassis
 end
 
-local function addPlatformFinish(decor, platform, index, theme, underdeckSignal)
+local function chassisRegion(chassis, name)
+    local mesh = chassis and chassis:FindFirstChild(name)
+    return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
+end
+
+local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice)
     local topPanel = decorPart(
         decor,
         "PlatformPanel" .. index,
@@ -1785,16 +1789,34 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal)
         bevel.Parent = decor
     end
 
-    local underFrame = decorPart(
-        decor,
-        "PlatformUnderFrame" .. index,
-        Vector3.new(platform.Size.X + 0.5, 0.42, platform.Size.Z + 0.5),
-        platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.18, 0),
-        theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
-        VisualTheme.Materials.Structure
-    )
-    underFrame.Transparency = 0.04
-    underFrame:SetAttribute("PremiumArchitecturalSurface", true)
+    local frameName = "PlatformUnderFrame" .. index
+    local frameColor = theme.Structure:Lerp(VisualTheme.World.Deep, 0.30)
+    if lattice then
+        local frame = lattice:Clone()
+        local meshAlongX = frame.Size.X > frame.Size.Z
+        local deckAlongX = platform.Size.X > platform.Size.Z
+        local length = math.max(platform.Size.X, platform.Size.Z) * 0.98
+        local width = math.min(platform.Size.X, platform.Size.Z) * 0.93
+        frame.Name = frameName
+        frame.Size = meshAlongX and Vector3.new(length, 0.56, width)
+            or Vector3.new(width, 0.56, length)
+        frame.CFrame = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.27, 0)
+            * CFrame.Angles(0, meshAlongX ~= deckAlongX and math.pi * 0.5 or 0, 0)
+        frame.Color = frameColor
+        frame.Material = VisualTheme.Materials.Structure
+        frame.Transparency = 0.04
+        frame:SetAttribute("PremiumArchitecturalSurface", true)
+        frame.Parent = decor
+    else
+        local underFrame = decorPart(
+            decor, frameName,
+            Vector3.new(platform.Size.X + 0.5, 0.42, platform.Size.Z + 0.5),
+            platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.18, 0),
+            frameColor, VisualTheme.Materials.Structure
+        )
+        underFrame.Transparency = 0.04
+        underFrame:SetAttribute("PremiumArchitecturalSurface", true)
+    end
 
     local coreName = "PlatformCoreGlow" .. index
     local coreColor = (index % 2 == 0) and theme.Secondary or theme.Accent
@@ -2722,7 +2744,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Keeping the combined parts under Platforms lets all server-owned
     -- disaster and AI systems treat outer routes as real gameplay geometry.
     local platformDefinitions = table.clone(variant.Platforms)
-    local underdeckSignal = underdeckSignalSource()
+    local chassis = accessChassisSource()
+    local underdeckSignal = chassisRegion(chassis, "UnderdeckSignal")
+    local towerLattice = variant.Id == "Towers" and chassisRegion(chassis, "UnderdeckLattice") or nil
     local towerCrossbeam = variant.Id == "Towers" and towerCrossbeamSource() or nil
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
@@ -3035,7 +3059,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         else
             trim.Transparency = 0.64
         end
-        addPlatformFinish(decor, platform, i, theme, underdeckSignal)
+        addPlatformFinish(decor, platform, i, theme, underdeckSignal,
+            definition.Skybridge == true and towerLattice or nil)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating

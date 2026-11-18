@@ -1,3 +1,7 @@
+## P4 — Cadres ajourés sous les passerelles de Tower Run
+
+Les quatre passerelles peuvent afficher le treillis à quatre travées du châssis approuvé d’Orbital sous leur tablier. Un seul maillage par passerelle remplace la plaque rectangulaire. Il se raccourcit avec le tablier, garde sa largeur et s’atténue puis disparaît quand la passerelle s’effondre. La plaque d’origine sert de secours si la source est indisponible à la construction de l’arène.
+
 ## P4 — Traverses sculptées sous les passerelles de Tower Run
 
 Les quatre passerelles peuvent remplacer leurs douze nervures rectangulaires par des traverses au profil métallique forgé. Chaque traverse reprend un maillage du pont approuvé de Tower Run et suit le raccourcissement du tablier en gardant sa largeur. Les traverses restent décoratives et suivent les règles de visibilité des passerelles. Les nervures d’origine servent de secours si le modèle est indisponible à la construction de l’arène.
