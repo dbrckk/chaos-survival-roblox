@@ -1,3 +1,7 @@
+## P4 — Grille et chevrons d’entrée de Classic
+
+Les huit lignes de la grille peuvent reprendre le profil forgé du pont de Tower Run et les quatre chevrons celui du revêtement approuvé de Classic. Les lignes restent sous les avertissements de balayage. Les flèches pointent toujours vers les premières terrasses. Les marquages plats servent de secours si les maillages sont indisponibles à la construction.
+
 ## P4 — Plaques et noyaux lumineux au sol de Tower Run
 
 Les quatre plaques peuvent reprendre le profil biseauté de la machinerie approuvée de Tower Run. Leurs noyaux à douze faces restent faiblement lumineux et centrés sur les plaques pendant le rétrécissement. Les formes plates prennent le relais si leurs maillages respectifs sont indisponibles à la construction.

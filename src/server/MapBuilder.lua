@@ -1495,28 +1495,34 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
     local center = base.Position
 
     if variant.Id == "Classic" then
-        for i = -2, 2 do
-            if i ~= 0 then
-                local xLine = decorPart(
-                    decor,
-                    "ClassicGridX" .. tostring(i),
-                    Vector3.new(0.16, 0.06, variant.BaseSize.Z - 14),
-                    center + Vector3.new(i * 16, 1.19, 0),
-                    i % 2 == 0 and theme.Secondary or theme.Accent,
-                    VisualTheme.Materials.Glow
-                )
-                xLine.Transparency = 0.54
+        local gridThickness = 0.05
+        local gridY = ArenaPresentation.deckArtOffset(base, gridThickness) + 0.015
+        local xLineSize = Vector3.new(0.16, gridThickness, variant.BaseSize.Z - 14)
+        local zLineSize = Vector3.new(variant.BaseSize.X - 14, gridThickness, 0.16)
+        for _, i in ipairs({-2, -1, 1, 2}) do
+            local color = i % 2 == 0 and theme.Secondary or theme.Accent
+            local xLine = fitDecorMesh(
+                sweptProfile,
+                "ClassicGridX" .. tostring(i),
+                CFrame.new(center + Vector3.new(i * 16, gridY, 0)),
+                xLineSize,
+                color,
+                VisualTheme.Materials.Glow
+            )
+            xLine.Transparency = 0.54
+            xLine.Parent = decor
 
-                local zLine = decorPart(
-                    decor,
-                    "ClassicGridZ" .. tostring(i),
-                    Vector3.new(variant.BaseSize.X - 14, 0.06, 0.16),
-                    center + Vector3.new(0, 1.19, i * 16),
-                    i % 2 == 0 and theme.Secondary or theme.Accent,
-                    VisualTheme.Materials.Glow
-                )
-                zLine.Transparency = 0.54
-            end
+            -- Lift the crossing rail slightly while keeping both axes below sweep warnings.
+            local zLine = fitDecorMesh(
+                sweptProfile,
+                "ClassicGridZ" .. tostring(i),
+                CFrame.new(center + Vector3.new(0, gridY + 0.008, i * 16)),
+                zLineSize,
+                color,
+                VisualTheme.Materials.Glow
+            )
+            zLine.Transparency = 0.54
+            zLine.Parent = decor
         end
 
         -- Four restrained, flush floor chevrons guide new players toward
@@ -1527,6 +1533,8 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
             Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
         }
+        local entryProfile = floorReliefRegion("Classic", Vector3.new(8.00, 0.12, 4.34))
+        local chevronSize = Vector3.new(0.15, 0.05, 1.35)
         for routeIndex, direction in ipairs(routeDirections) do
             -- Outside the raised tiers, adjacent to each cardinal entry
             -- spawn. The arrow points IN toward the first reachable deck;
@@ -1536,18 +1544,19 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             local facing = CFrame.lookAt(position,
                 position - direction, Vector3.yAxis)
             for side = -1, 1, 2 do
-                local marker = decorPart(
-                    decor,
+                -- Separate the wing surfaces where they meet at the tip.
+                local pose = facing * CFrame.new(side * 0.36, side * 0.003, 0)
+                    * CFrame.Angles(0, math.rad(side * 36), 0)
+                local marker = fitDecorMesh(
+                    entryProfile,
                     "ClassicEntryChevron" .. routeIndex .. "_" .. tostring(side),
-                    Vector3.new(0.15, 0.05, 1.35),
-                    position,
+                    pose,
+                    chevronSize,
                     routeIndex % 2 == 0 and theme.Secondary or theme.Accent,
                     VisualTheme.Materials.Glow
                 )
-                marker.CFrame = facing
-                    * CFrame.new(side * 0.36, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 36), 0)
                 marker.Transparency = 0.47
+                marker.Parent = decor
             end
         end
     elseif variant.Id == "Towers" then
