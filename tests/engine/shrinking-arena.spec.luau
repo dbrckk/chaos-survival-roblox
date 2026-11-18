@@ -670,15 +670,19 @@ describe("Shrinking Arena mobility integration", function()
         local pressure = SkybridgePressure.snapshot(bridge18, decor)
         local guardedRib = decor:FindFirstChild("SkybridgeRib18_0")
         local guardedFrame = decor:FindFirstChild("PlatformUnderFrame18")
+        local guardedBevel = decor:FindFirstChild("PlatformBevel18_1")
         SkybridgePressure.setPhase(pressure, "Warning", workspace:GetServerTimeNow())
         expect(math.abs(guardedRib.Transparency - 0.65) < 0.001).toBe(true)
         expect(math.abs(guardedFrame.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedBevel.Transparency - 0.65) < 0.001).toBe(true)
         SkybridgePressure.setPhase(pressure, "Gone")
         expect(guardedRib.Transparency).toBe(1)
         expect(guardedFrame.Transparency).toBe(1)
+        expect(guardedBevel.Transparency).toBe(1)
         SkybridgePressure.setPhase(pressure, nil)
         expect(guardedRib.Transparency).toBe(0)
         expect(math.abs(guardedFrame.Transparency - 0.04) < 0.001).toBe(true)
+        expect(math.abs(guardedBevel.Transparency - 0.08) < 0.001).toBe(true)
         local pier2 = decor:FindFirstChild("PlatformSupport18_2")
         local visual = Instance.new("Folder")
         visual.Parent = root
@@ -725,6 +729,8 @@ describe("Shrinking Arena mobility integration", function()
                 "PlatformCoreGlow" .. index,
                 "PlatformSupport" .. index .. "_1",
                 "PlatformBevel" .. index .. "_1",
+                "PlatformBevel" .. index .. "_2",
+                "PlatformBevel" .. index .. "_3",
                 "PlatformBevel" .. index .. "_4",
             }
             originals[bridge] = {cf = bridge.CFrame, size = bridge.Size}
@@ -747,6 +753,16 @@ describe("Shrinking Arena mobility integration", function()
                     expect(part:IsA("MeshPart")).toBe(true)
                     expect(math.abs(part.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
                     expect(math.abs(part.Size.X - math.min(bridge.Size.X, bridge.Size.Z) - 0.22) < 0.01).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^PlatformBevel") then
+                    local edge = tonumber(name:match("_(%d)$"))
+                    local edgeLength = edge <= 2 and bridge.Size.X or bridge.Size.Z
+                    local tangent = edge <= 2 and Vector3.xAxis or Vector3.zAxis
+                    local top = bridge.Position.Y + bridge.Size.Y * 0.5
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(tangent)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - edgeLength - 0.12) < 0.01).toBe(true)
+                    expect(part.Position.Y + part.Size.Y * 0.5 < top).toBe(true)
                     expect(part.CanTouch or part.CanQuery).toBe(false)
                 end
                 originals[part] = {cf = part.CFrame, size = part.Size}
@@ -810,6 +826,13 @@ describe("Shrinking Arena mobility integration", function()
                         expect(math.abs(detail.Size.Z - shrunkSpan * 0.98) < 0.01).toBe(true)
                         expect(math.abs(detail.Size.X - prior.size.X) < 0.01).toBe(true)
                         expect(math.abs(detail.Size.Y - prior.size.Y) < 0.01).toBe(true)
+                    elseif detail.Name:match("^PlatformBevel") then
+                        local axis = alongX and Vector3.xAxis or Vector3.zAxis
+                        local followsSpan = math.abs(prior.cf.RightVector:Dot(axis)) > 0.999
+                        local expected = followsSpan and prior.size.X * shrunkSpan / originalSpan
+                            or prior.size.X
+                        expect(math.abs(detail.Size.X - expected) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
                     elseif d0 > 2.2 then
                         expect(d1 < d0).toBe(true)
                     end

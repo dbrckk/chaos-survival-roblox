@@ -230,6 +230,7 @@ function D.start(ctx)
         for _, item in ipairs(decor:GetChildren()) do
             if item:IsA("BasePart") then
                 local ribIndex = item.Name:match("^SkybridgeRib(%d+)_")
+                local bevelIndex = item.Name:match("^PlatformBevel(%d+)_%d+$")
                 local bridgeIndex = tonumber(ribIndex or item.Name:match("^SkybridgeRail(%d+)_"))
                 local platformIndex = tonumber(
                     item.Name:match("^PlatformGlow(%d+)$")
@@ -237,7 +238,7 @@ function D.start(ctx)
                     or item.Name:match("^PlatformUnderFrame(%d+)$")
                     or item.Name:match("^PlatformCoreGlow(%d+)$")
                     or item.Name:match("^PlatformSupport(%d+)_%d+$")
-                    or item.Name:match("^PlatformBevel(%d+)_%d+$")
+                    or bevelIndex
                     -- Original outer-route facades are linked by an
                     -- explicit owning deck, not guessed from an art name.
                     or item:GetAttribute("PerimeterPlatformIndex")
@@ -247,7 +248,7 @@ function D.start(ctx)
                 if bridge then
                     local localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame)
                     local stretchX = bridge.alongX
-                    if item:IsA("MeshPart") then
+                    if item:IsA("MeshPart") or bevelIndex then
                         local axis = bridge.alongX and Vector3.xAxis or Vector3.zAxis
                         stretchX = math.abs(localCFrame.RightVector:Dot(axis)) > .999
                     end

@@ -1,3 +1,7 @@
+## P4 — Biseaux forgés autour des passerelles de Tower Run
+
+Les quatre passerelles peuvent remplacer leurs seize biseaux par le profil sculpté du pont forgé de Tower Run. Les pièces gardent leur empreinte horizontale et descendent sous la lèvre du tablier, sous les rails lumineux. Le rétrécissement agit sur l’axe réel de chaque pièce, y compris quand une extrémité est tournée de 90°. Les biseaux d’origine servent de secours si le modèle est indisponible à la construction de l’arène.
+
 ## P4 — Cadres ajourés sous les passerelles de Tower Run
 
 Les quatre passerelles peuvent afficher le treillis à quatre travées du châssis approuvé d’Orbital sous leur tablier. Un seul maillage par passerelle remplace la plaque rectangulaire. Il se raccourcit avec le tablier, garde sa largeur et s’atténue puis disparaît quand la passerelle s’effondre. La plaque d’origine sert de secours si la source est indisponible à la construction de l’arène.

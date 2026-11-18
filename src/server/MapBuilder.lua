@@ -1675,7 +1675,7 @@ local function chassisRegion(chassis, name)
     return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
 end
 
-local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice)
+local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice, forgedBevel)
     local topPanel = decorPart(
         decor,
         "PlatformPanel" .. index,
@@ -1759,22 +1759,33 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal,
         {Vector3.new(bevelDepth, 0.30, platform.Size.Z + 0.12),
             Vector3.new(halfX + bevelDepth * 0.27, bevelY, 0)},
     }
+    local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
     for edgeIndex, spec in ipairs(edgeSpecs) do
-        -- All four previously rectangular strips now have a genuine
-        -- *sloped* bevel silhouette. Use the same four Parts, sizes,
-        -- exact names and real deck owner, so collapse/shrink tracking
-        -- still follows the actual playable platform with zero extra
-        -- geometry, lights or physics load even on Low-tier Android.
-        local bevel = Instance.new("WedgePart")
-        bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex
-        bevel.Size = edgeIndex <= 2 and spec[1]
-            or Vector3.new(spec[1].Z, spec[1].Y, spec[1].X)
+        local size = spec[1]
+        if edgeIndex > 2 then size = Vector3.new(size.Z, size.Y, size.X) end
         local where = Vector3.new(
             platform.Position.X, 0, platform.Position.Z) + spec[2]
-        local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
-        local direction = facings[edgeIndex]
-        bevel.CFrame = CFrame.new(where)
-            * CFrame.Angles(0, direction, 0)
+        local yaw = facings[edgeIndex]
+        local bevel
+        if forgedBevel then
+            -- Keep the footprint of the native wedge. The swept face
+            -- extends downwards to show its facets below the deck lip.
+            local mesh = forgedBevel:Clone()
+            local sourceAlongX = mesh.Size.X > mesh.Size.Z
+            mesh.Size = sourceAlongX and Vector3.new(size.X, .44, size.Z)
+                or Vector3.new(size.Z, .44, size.X)
+            mesh.CFrame = CFrame.new(where - Vector3.new(0, .08, 0))
+                * CFrame.Angles(0, yaw + (sourceAlongX and 0 or math.pi * .5), 0)
+            bevel = mesh
+        else
+            local wedge = Instance.new("WedgePart")
+            wedge.Size = size
+            wedge.CFrame = CFrame.new(where) * CFrame.Angles(0, yaw, 0)
+            wedge.TopSurface = Enum.SurfaceType.Smooth
+            wedge.BottomSurface = Enum.SurfaceType.Smooth
+            bevel = wedge
+        end
+        bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex
         bevel.Color = edgeColor
         bevel.Material = theme.StructureMaterial or edgeMaterial
         bevel.Transparency = 0.08
@@ -1783,8 +1794,6 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal,
         bevel.CanTouch = false
         bevel.CanQuery = false
         bevel.CastShadow = false
-        bevel.TopSurface = Enum.SurfaceType.Smooth
-        bevel.BottomSurface = Enum.SurfaceType.Smooth
         bevel:SetAttribute("OriginalStructuralBevel", true)
         bevel.Parent = decor
     end
@@ -3059,8 +3068,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         else
             trim.Transparency = 0.64
         end
+        local skybridge = definition.Skybridge == true
         addPlatformFinish(decor, platform, i, theme, underdeckSignal,
-            definition.Skybridge == true and towerLattice or nil)
+            skybridge and towerLattice or nil, skybridge and towerCrossbeam or nil)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
