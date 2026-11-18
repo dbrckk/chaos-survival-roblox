@@ -15,9 +15,10 @@ local MATERIALS = {
 }
 
 local function piece(model, origin, name, kind, size, frame, color, material, alpha,
-    meshProfile: MeshPart?, alongX: boolean?)
+    meshProfile: MeshPart?, alongX: boolean?, meshYaw: number?)
     local pose = origin * frame
-    local p = RouteSignalGeometry.fit(meshProfile, pose, size, nil, alongX)
+    local meshPose = if meshYaw then pose * CFrame.Angles(0, meshYaw, 0) else pose
+    local p = RouteSignalGeometry.fit(meshProfile, meshPose, size, nil, alongX)
     if not p then
         p = Instance.new(kind)
         p.Size = size
@@ -80,14 +81,15 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
         -- Architectural mass, not a single unsupported straight cuboid.
         local foot = piece(casing, origin, "FoundationFoot", "Part",
             Vector3.new(5.5, 1.0, 5.5),
-            CFrame.new(0, base.Size.Y*.5 - 3.68, 0), dark, finish.shell, 0.03)
+            CFrame.new(0, base.Size.Y*.5 - 3.68, 0), dark, finish.shell, 0.03, forgedProfile)
         casing.PrimaryPart = foot
+        -- Turn each casting's tall face outward and keep the native fallback frame.
         piece(casing, origin, "ArmoredFrontShell", "Part",
             Vector3.new(3.35, 6.4, 0.65),
-            CFrame.new(0, 0, -1.7), shell, finish.shell, 0.04)
+            CFrame.new(0, 0, -1.7), shell, finish.shell, 0.04, headProfile, true, math.pi)
         piece(casing, origin, "ArmoredRearShell", "Part",
             Vector3.new(3.1, 5.7, 0.55),
-            CFrame.new(0, 0.18, 1.65), machined, finish.inset, 0.05)
+            CFrame.new(0, 0.18, 1.65), machined, finish.inset, 0.05, headProfile, true)
         -- Keep the molded slope facing along the fin's depth, across either import axis.
         for side = -1, 1, 2 do
             piece(casing, origin, "AngledArmorFin" .. tostring(side), "WedgePart",

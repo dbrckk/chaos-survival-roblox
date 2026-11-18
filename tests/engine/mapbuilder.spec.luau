@@ -886,11 +886,12 @@ describe("Chaos Survival engine", function()
                 local slit = decor["FrameColumnGlow" .. index]
                 expect(slit.Material).toBe(Enum.Material.Neon)
                 expect(not slit.CanCollide and not slit.CanTouch and not slit.CanQuery).toBe(true)
-                local pose = shell.CFrame:ToObjectSpace(slit.CFrame)
+                local aim = (shell.Position - foot.Position) * Vector3.new(1, 0, 1)
+                local face = CFrame.lookAt(shell.Position, shell.Position + aim)
+                local pose = face:ToObjectSpace(slit.CFrame)
                 local halfDepth = (math.abs(pose.RightVector.Z) * slit.Size.X
                     + math.abs(pose.LookVector.Z) * slit.Size.Z) * .5
-                expect(pose.Position.Z - halfDepth < -shell.Size.Z * .5).toBe(true)
-                expect(pose.Position.Z + halfDepth > -shell.Size.Z * .5).toBe(true)
+                assert(math.abs(pose.Position.Z + .325) < halfDepth)
                 expect(slit.Position.Y - slit.Size.Y * .5 > foot.Position.Y + foot.Size.Y * .5).toBe(true)
                 local head = casing.LandmarkNavigationHead
                 local socket = casing.RecessedCrown
@@ -901,7 +902,7 @@ describe("Chaos Survival engine", function()
                 expect(math.abs(collar.Position.Y + collar.Size.Y * .5 - socket.Position.Y
                     + socket.Size.Y * .5 - .105) < .01).toBe(true)
                 local spine = casing.CrownInstrumentSpine
-                local spinePosition = shell.CFrame:VectorToObjectSpace(spine.Position - socket.Position)
+                local spinePosition = face:VectorToObjectSpace(spine.Position - socket.Position)
                 expect(spine.Material).toBe(Enum.Material.Metal)
                 expect(not spine.CanCollide and not spine.CanTouch and not spine.CanQuery).toBe(true)
                 expect(math.abs(spinePosition.Y - (socket.Size.Y + spine.Size.Y) * .5 + .02) < .01).toBe(true)

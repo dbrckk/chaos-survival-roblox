@@ -758,6 +758,18 @@ local function collectCommandArt(arena,deck,decor,scale,profiles)
     return group
 end
 
+local function casingSlotSize(part,forward)
+    local alignment=part.CFrame.LookVector:Dot(forward)
+    local size=part.Size
+    if part:IsA("MeshPart") then
+        if math.abs(alignment)>.999 then return size end
+        if math.abs(alignment)<.001 then return Vector3.new(size.Z,size.Y,size.X) end
+    elseif part:IsA("Part") and part.Shape==Enum.PartType.Block and alignment>.999 then
+        return size
+    end
+    return nil
+end
+
 local function collectCasing(arena,casing,group)
     if not casing:IsA("Model") or casing.Parent~=group
         or casing:GetAttribute("OriginalFrameCladding")~=true
@@ -776,16 +788,20 @@ local function collectCasing(arena,casing,group)
         natives[#natives+1]=part
     end
     local foot,front=natives[1],natives[2]
-    if not foot:IsA("Part") or foot.Shape~=Enum.PartType.Block
-        or (foot.Size-Vector3.new(5.5,1,5.5)).Magnitude>.13
-        or not front:IsA("Part") or front.Shape~=Enum.PartType.Block
-        or (front.Size-Vector3.new(3.35,6.4,.65)).Magnitude>.13
-        or foot.CFrame.LookVector:Dot(front.CFrame.LookVector)<.999
-        or foot.CFrame.UpVector:Dot(front.CFrame.UpVector)<.999 then return nil end
-    local origin=front.CFrame*CFrame.new(0,0,1.7)
-    local localFoot=origin:PointToObjectSpace(foot.Position)
-    if math.abs(localFoot.X)>.08 or math.abs(localFoot.Z)>.08
-        or localFoot.Y< -3.65 or localFoot.Y> -2.55 then return nil end
+    if foot~=casing.PrimaryPart then return nil end
+    -- The authored fascia faces away from its foot along a 1.7-stud offset.
+    -- Imported mesh axes and the outward-facing casting can rotate independently.
+    local up=foot.CFrame.UpVector
+    local offset=front.Position-foot.Position
+    local rise=offset:Dot(up)
+    local drift=offset-up*rise
+    if math.abs(drift.Magnitude-1.7)>.08 or rise<2.55 or rise>3.65
+        or up:Dot(front.CFrame.UpVector)<.999 then return nil end
+    local forward=drift.Unit
+    local footSize,frontSize=casingSlotSize(foot,forward),casingSlotSize(front,forward)
+    if not footSize or (footSize-Vector3.new(5.5,1,5.5)).Magnitude>.13
+        or not frontSize or (frontSize-Vector3.new(3.35,6.4,.65)).Magnitude>.13 then return nil end
+    local origin=CFrame.lookAt(front.Position,front.Position+forward,up)*CFrame.new(0,0,1.7)
 
     -- Fit bottom to the actual slab without raising the crown into the
     -- separate navigation head. Yaw the detailed front toward the center

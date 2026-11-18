@@ -88,8 +88,8 @@ describe("Shrinking Arena mobility integration", function()
             expect(casing.PrimaryPart).toBe(foot)
             local toward = base.Position-foot.Position
             toward = Vector3.new(toward.X,0,toward.Z)
-            assert(front.CFrame.LookVector:Dot(toward.Unit)>.999,
-                "column front faces away from the arena: "..casing.Name)
+            assert((front.Position-foot.Position):Dot(toward.Unit)>1.6,
+                "front shell is outside the column: "..casing.Name)
             assert(foot.Position.Y-foot.Size.Y*.5>=base.Position.Y+base.Size.Y*.5,
                 "native casing foot is below the floor: "..casing.Name)
             columnParts[i] = {foot,core,light,casing:FindFirstChild("LandmarkNavigationHead")}
@@ -139,7 +139,7 @@ describe("Shrinking Arena mobility integration", function()
             expect(foot.LocalTransparencyModifier).toBe(1)
             expect(head.LocalTransparencyModifier).toBe(0)
             expect(mesh.LocalTransparencyModifier).toBe(0)
-            local widthAxis = owned.ArmoredFrontShell.CFrame.RightVector
+            local widthAxis = Vector3.yAxis:Cross(owned.ArmoredFrontShell.Position-foot.Position).Unit
             assert(math.abs(mesh.CFrame.LookVector:Dot(widthAxis))>.999,
                 "long-Z casing was not rotated onto the native fascia")
             local limits = {}

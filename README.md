@@ -1,3 +1,7 @@
+## P4 — Socles forgés et coques moulées des colonnes
+
+Les 20 socles et les 40 coques avant et arrière des cinq arènes peuvent reprendre les profils approuvés du pont de Tower Run et du blindage périphérique. Le socle conserve le pivot de rétrécissement. La coque 3D complète se cale sur les positions du socle et de la façade, quelle que soit l’orientation des axes du maillage. Les blocs d’origine restent disponibles en secours.
+
 ## P4 — Bras supérieurs forgés des colonnes
 
 Les 40 bras supérieurs peuvent reprendre le profil forgé de Tower Run. Chaque arène conserve la portée et l’épaisseur de ses bras. Ils suivent les colonnes pendant le rétrécissement et cèdent la place à la coque 3D complète lorsqu’elle s’affiche. Les bras simples servent de secours si le maillage est indisponible à la construction.
