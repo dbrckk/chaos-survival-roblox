@@ -893,10 +893,16 @@ describe("Chaos Survival engine", function()
                 expect(pose.Position.Z + halfDepth > -shell.Size.Z * .5).toBe(true)
                 expect(slit.Position.Y - slit.Size.Y * .5 > foot.Position.Y + foot.Size.Y * .5).toBe(true)
                 local head = casing.LandmarkNavigationHead
+                local socket = casing.RecessedCrown
+                local spine = casing.CrownInstrumentSpine
+                local spinePosition = socket.CFrame:PointToObjectSpace(spine.Position)
+                expect(spine.Material).toBe(Enum.Material.Metal)
+                expect(not spine.CanCollide and not spine.CanTouch and not spine.CanQuery).toBe(true)
+                expect(math.abs(spinePosition.Y - (socket.Size.Y + spine.Size.Y) * .5 + .02) < .01).toBe(true)
+                expect(math.abs(spinePosition.Z + socket.Size.Z * .5 - .2) < .01).toBe(true)
                 expect(head.Anchored and not head.CanCollide and not head.CanTouch and not head.CanQuery).toBe(true)
                 expect(head.Material ~= Enum.Material.Neon).toBe(true)
                 if head:IsA("MeshPart") then
-                    local socket = casing.RecessedCrown
                     local gap = head.Position.Y - head.Size.Y * .5 - socket.Position.Y - socket.Size.Y * .5
                     expect(math.abs(gap + .05) < .02).toBe(true)
                     expect(head.Position.Y + head.Size.Y * .5 > shell.Position.Y + 6.3384).toBe(true)

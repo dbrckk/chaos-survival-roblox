@@ -1,3 +1,7 @@
+## P4 — Barres d’instrumentation forgées
+
+Les 20 barres d’instrumentation des colonnes reprennent le profil forgé du pont approuvé de Tower Run. Elles s’encastrent au bord avant des couronnes, sous les têtes de navigation. Leur finition métallique et leur déplacement avec les colonnes sont conservés. Les barres simples servent de secours si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Têtes de navigation moulées des colonnes
 
 Les 20 têtes de navigation peuvent reprendre le blindage moulé approuvé du périmètre. Le maillage s’encastre dans la couronne d’origine et son sommet reste visible au-dessus de la coque 3D. Les têtes gardent leur teinte par arène et suivent les colonnes pendant le rétrécissement. Les pièces d’origine servent de secours si le maillage approuvé est indisponible à la construction.

@@ -1,6 +1,6 @@
 --!strict
 -- Original volumetric cladding of the four existing structural corner columns.
--- The navigation head can use an approved profile supplied by MapBuilder.
+-- The navigation head and instrument spine can use approved profiles supplied by MapBuilder.
 -- Native geometry remains available without physics or contacts.
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
@@ -14,11 +14,17 @@ local MATERIALS = {
     Harbor = {shell = Enum.Material.CorrodedMetal, inset = Enum.Material.DiamondPlate},
 }
 
-local function piece(model, origin, name, kind, size, frame, color, material, alpha)
-    local p = Instance.new(kind)
+local function piece(model, origin, name, kind, size, frame, color, material, alpha, meshProfile: MeshPart?)
+    local pose = origin * frame
+    local p = RouteSignalGeometry.fit(meshProfile, pose, size)
+    if not p then
+        p = Instance.new(kind)
+        p.Size = size
+        p.CFrame = pose
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
+    end
     p.Name = name
-    p.Size = size
-    p.CFrame = origin * frame
     p.Color = color
     p.Material = material
     p.Transparency = alpha or 0
@@ -27,8 +33,6 @@ local function piece(model, origin, name, kind, size, frame, color, material, al
     p.CanTouch = false
     p.CanQuery = false
     p.CastShadow = false
-    p.TopSurface = Enum.SurfaceType.Smooth
-    p.BottomSurface = Enum.SurfaceType.Smooth
     p.Parent = model
     return p
 end
@@ -40,7 +44,7 @@ local function beam(model, origin, name, from, to, thick, tone, material)
         CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05)
 end
 
-function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?)
+function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?, spineProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") then return 0 end
     local finish = MATERIALS[variantId]
     if not finish or not theme then return 0 end
@@ -129,12 +133,13 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
                 Vector3.new(1.55, 1.55, 1.55), CFrame.new(0, 6.8, 0), headColor, headMaterial, 0.06)
             fallback.Shape = variantId == "Orbital" and Enum.PartType.Ball or Enum.PartType.Cylinder
         end
-        -- Fine mechanical seams remain reflective, but NEVER red/orange
-        -- warning colors, blinking lights or a fake entry/exit cue.
-        piece(casing, origin, "CrownInstrumentSpine", "Part",
-            Vector3.new(2.4, 0.16, 0.28), CFrame.new(0, 5.1, -1.7),
+        -- Seat the spine in the native crown and clear the slightly higher fitted cap.
+        local spineSize = Vector3.new(2.4, 0.28, 0.28)
+        local spineFrame = CFrame.new(0, (socket.Size.Y + spineSize.Y) * 0.5 - 0.02,
+            -socket.Size.Z * 0.5 + 0.20)
+        piece(casing, socket.CFrame, "CrownInstrumentSpine", "Part", spineSize, spineFrame,
             theme.Secondary:Lerp(theme.Detail, 0.55),
-            Enum.Material.Metal, 0.18)
+            Enum.Material.Metal, 0.18, spineProfile)
         count += #casing:GetChildren()
     end
     return count
