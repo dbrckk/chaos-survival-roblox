@@ -1015,14 +1015,19 @@ local function rebuild()
     -- Side rails and braces cost one module each in Medium, two in High.
     -- Preserve rail coverage and leave room for the existing columns.
     local railTargets,braceTargets,keelTargets,cornerTargets = {},{},{},{}
-    local girderSource,cornerSource
+    local girderSource
+    local cornerSource = platformArtProfiles and PremiumFloorHardwareMeshKit.harborCornerSource() or nil
     local armorProfile = (PlatformFinishKit.armorCount(tier.Name) > 0
         or (variant == "Towers" and platformArtProfiles ~= nil))
         and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
-    if platformArtProfiles then platformArtProfiles.lens = armorProfile end
     local forgedTrimProfile = tier.Name ~= "Low"
         and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
         and ForgedBridge.sweptProfile() or nil
+    if platformArtProfiles then
+        platformArtProfiles.lens = armorProfile
+        platformArtProfiles.skirt = cornerSource
+        platformArtProfiles.spar = forgedTrimProfile
+    end
     local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
         and supportBudget >= girderCost and cameraPoint
@@ -1070,12 +1075,9 @@ local function rebuild()
                 supportBudget -= 1
             end
             -- At most one corner set, funded after rails, braces and keels.
-            if railCount > 0 and supportBudget >= girderCost+1 then
-                cornerSource = PremiumFloorHardwareMeshKit.harborCornerSource()
-                if cornerSource then
-                    cornerTargets[candidates[1].deck] = true
-                    supportBudget -= girderCost
-                end
+            if cornerSource and railCount > 0 and supportBudget >= girderCost+1 then
+                cornerTargets[candidates[1].deck] = true
+                supportBudget -= girderCost
             end
         end
     end
@@ -1164,9 +1166,9 @@ local function rebuild()
             if authenticRim then mountedRimDecks += 1 end
             local carapacePieces = largeHullPieces
                 or (staged and staged.kind == "carapace" and staged.parts)
-                or (not authenticRim and PlatformFinishKit.buildCarapace(
-                    folder, platform, variant, tier.Name, theme, visualIndex,
-                    nearCameraCarapaces[platform] == true)) or {}
+                or (not authenticRim and nearCameraCarapaces[platform] == true
+                    and PremiumPlatformSideMeshKit.carapace(
+                        folder, platform, variant, tier.Name, visualIndex, true)) or {}
             if carapacePieces[1] and carapacePieces[1]:GetAttribute(
                 "NearCameraCarapace3D") == true then
                 mountedCameraCarapaces += 1
@@ -1201,6 +1203,11 @@ local function rebuild()
                         originalLargeCount += 1
                     end
                 end
+            end
+            if not authenticCarapace and not authenticRim and not authenticLongCradle then
+                carapacePieces = PlatformFinishKit.buildCarapace(
+                    folder, platform, variant, tier.Name, theme, visualIndex, false,
+                    platformArtProfiles)
             end
             local authenticUnderdeck = authenticCarapace
                 or authenticLongCradle
@@ -1965,7 +1972,7 @@ local function relevantPlatformRelief(name)
     if not arena then return false end
     local variant = arena:GetAttribute("VariantId") or "Classic"
     return name == variant or name == "AnchorBolt" or name == "HarborTie"
-        or (variant == "Harbor" and name == "CornerGuard")
+        or name == "CornerGuard"
 end
 
 local function watchVerifiedTemplateReadiness(holder, connections, marker)

@@ -915,6 +915,13 @@ local function loadBraceFrame(size, corner, harbor)
     return CFrame.lookAt((start+finish)*.5,finish),(finish-start).Magnitude
 end
 
+local function carapaceSparFrame(size, side)
+    local bottom = -size.Y * .5
+    local start = Vector3.new(side * size.X * .35, bottom - .14, -size.Z * .24)
+    local finish = Vector3.new(side * size.X * .11, bottom - .65, size.Z * .10)
+    return CFrame.lookAt((start + finish) * .5, finish), (finish - start).Magnitude
+end
+
 -- Classic's authored zigzag decks shrink along BOTH horizontal axes.
 -- Keep every welded client-only stripe, armor/brace and axis cue strictly
 -- inside its real collision deck instead of showing a phantom 10-stud top.
@@ -948,10 +955,18 @@ function PlatformFinishKit.captureRouteFootprint(platform, pieces)
             }
             local harborCorner = piece:GetAttribute("HarborLoadBraceCorner")
             local corner = harborCorner or piece:GetAttribute("ChaosLoadBraceCorner")
-            if BRACE_CORNERS[corner] and welded then
-                local frame, length = loadBraceFrame(snapshot.originalSize, corner, harborCorner ~= nil)
-                entry.braceCorner = corner
-                entry.harborBrace = harborCorner ~= nil
+            local sparSide = piece:GetAttribute("CarapaceSparSide")
+            local isSpar = sparSide == -1 or sparSide == 1
+            if welded and (BRACE_CORNERS[corner] or isSpar) then
+                local frame, length
+                if isSpar then
+                    frame, length = carapaceSparFrame(snapshot.originalSize, sparSide)
+                    entry.sparSide = sparSide
+                else
+                    frame, length = loadBraceFrame(snapshot.originalSize, corner, harborCorner ~= nil)
+                    entry.braceCorner = corner
+                    entry.harborBrace = harborCorner ~= nil
+                end
                 entry.braceLength = length
                 entry.braceOffset = frame:ToObjectSpace(joint.C1)
             end
@@ -993,10 +1008,15 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                 part.Size = Vector3.new(data.size.X,
                     math.max(data.minimum, data.size.Y * ratioX),
                     math.max(data.minimum, data.size.Z * ratioZ))
-            elseif data.braceCorner then
+            elseif data.braceLength then
                 -- Keep the socket at the deck edge and refit the diagonal
                 -- to the new lower anchor instead of squashing its width.
-                local frame, length = loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)
+                local frame, length
+                if data.sparSide then
+                    frame, length = carapaceSparFrame(deck.Size, data.sparSide)
+                else
+                    frame, length = loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)
+                end
                 local offset = data.braceOffset
                 local ratio = length/data.braceLength
                 local position = offset.Position
@@ -1163,7 +1183,8 @@ function PlatformFinishKit.carapaceCount(tier, index)
     return 0
 end
 
-function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index, selectedForOriginal)
+function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index,
+    selectedForOriginal, profiles)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not CARAPACE_PROFILES[variant]
         or platform:GetAttribute("ChaosSkybridge") == true then
@@ -1184,8 +1205,8 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
 
     -- Source-authenticated sculpted full underside/side facings replace
     -- seven crude WedgePart/Part modules on sparse High/Medium decks.
-    -- The native art below is only built when the genuine mesh is absent.
-    if PremiumPlatformSideMeshKit then
+    -- The individual fittings are used when the whole model does not mount.
+    if PremiumPlatformSideMeshKit and selectedForOriginal ~= false then
         local original = PremiumPlatformSideMeshKit.carapace(
             parent, platform, variant, tier, index, selectedForOriginal)
         if original then return original end
@@ -1196,12 +1217,46 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
     local shellColor = theme.Structure:Lerp(theme.Detail, p.tint)
     local coreColor = theme.Surface:Lerp(theme.Structure, 0.54)
     local accent = theme.Detail:Lerp(theme.Secondary, 0.09)
+    local skirt = profiles and profiles.skirt
+    local casting = skirt and skirt.parts[1]
+    local castingRotation = casting and skirt.frame:ToObjectSpace(casting.CFrame).Rotation
+    if castingRotation and (casting.MeshId == "" or math.abs(casting.Size.Y - .33) > .04
+        or castingRotation.UpVector.Y < .999
+        or math.max(math.abs(castingRotation.RightVector.X),
+            math.abs(castingRotation.RightVector.Z)) < .999) then
+        casting, castingRotation = nil, nil
+    end
     local built = {}
-    local function piece(name, frame, size, color, material, alpha, shape)
+    local function piece(name, frame, size, color, material, alpha, shape, sideFin, sparSide)
+        local mesh, swapped
+        if shape == "WedgePart" and casting then
+            mesh = PlatformFinishKit.fitTrimProfile(casting, frame, size,
+                casting.Size.X > casting.Size.Z, skirt.assetId)
+            if mesh then
+                frame *= castingRotation
+                swapped = math.abs(castingRotation.RightVector.Z) > .999
+                if swapped then size = Vector3.new(size.Z, size.Y, size.X) end
+            end
+        elseif not shape and profiles then
+            local spar = sparSide and profiles.spar
+            mesh, frame, size = PlatformFinishKit.fitTrimProfile(
+                spar or profiles.hatch, frame, size, sparSide == nil,
+                spar and 126298311664881 or profiles.assetId)
+            swapped = mesh and mesh:GetAttribute("PlatformTrimAxisSwap") == true
+        end
         local item = add(parent, platform, variant .. "DeckCarapace"
             .. tostring(index) .. name, frame, size,
-            color, material, alpha, shape)
+            color, material, alpha, shape, mesh)
         item:SetAttribute("OriginalDeckCarapace", true)
+        item:SetAttribute("Original3DStructuralSide", nil)
+        -- The port/starboard fins are already quarter-turned relative to
+        -- the deck, independently of the imported casting's own axes.
+        if (sideFin == true) ~= (swapped == true) then
+            item:SetAttribute("PlatformTrimAxisSwap", true)
+        else
+            item:SetAttribute("PlatformTrimAxisSwap", nil)
+        end
+        if sparSide then item:SetAttribute("CarapaceSparSide", sparSide) end
         built[#built + 1] = item
     end
 
@@ -1222,7 +1277,7 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
         -- An inset keel below the deck cuts away the toy floating-cube look.
         -- It is noncolliding, massless, and cannot change real jump height.
         piece("RecessedLoadKeel",
-            CFrame.new(0, -sy * 0.5 - 0.36, 0),
+            CFrame.new(0, -sy * 0.5 - 0.33, 0),
             Vector3.new(math.max(3.0, sx * 0.61), 0.68,
                 math.max(3.0, sz * 0.57)),
             coreColor, p.core, 0.055)
@@ -1230,7 +1285,7 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
             CFrame.new(-sx * 0.5 + 0.12, y, 0)
                 * CFrame.Angles(0, math.pi * 0.5, 0),
             Vector3.new(sz * 0.66, 0.84, 0.90),
-            accent, p.shell, 0.075, "WedgePart")
+            accent, p.shell, 0.075, "WedgePart", true)
     end
 
     if budget >= 7 then
@@ -1238,17 +1293,12 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
             CFrame.new(sx * 0.5 - 0.12, y, 0)
                 * CFrame.Angles(0, -math.pi * 0.5, 0),
             Vector3.new(sz * 0.66, 0.84, 0.90),
-            accent, p.shell, 0.075, "WedgePart")
+            accent, p.shell, 0.075, "WedgePart", true)
         for side = -1, 1, 2 do
-            local start = Vector3.new(side * sx * 0.35,
-                -sy * 0.5 - 0.14, -sz * 0.24)
-            local finish = Vector3.new(side * sx * 0.11,
-                -sy * 0.5 - 1.70, sz * 0.10)
-            local delta = finish - start
+            local frame, length = carapaceSparFrame(platform.Size, side)
             piece(side == -1 and "PortDiagonalSpar" or "StarboardDiagonalSpar",
-                CFrame.lookAt((start + finish) * 0.5, finish),
-                Vector3.new(0.44, 0.51, delta.Magnitude),
-                coreColor, p.core, 0.07)
+                frame, Vector3.new(0.44, 0.51, length),
+                coreColor, p.core, 0.07, nil, false, side)
         end
     end
     return built

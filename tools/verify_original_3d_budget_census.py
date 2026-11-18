@@ -1810,13 +1810,15 @@ print("PASS source-verified platform hull eliminates duplicate local underdeck"
 # underside paint and load braces are chosen, not layered underneath.
 start=OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil')
 cradle=OWNER.index('PremiumLargeStructureMeshKit.longCradle(',start)
+carapace_fallback=OWNER.index('carapacePieces = PlatformFinishKit.buildCarapace(',cradle)
 finish=OWNER.index('for _, piece in ipairs(PlatformFinishKit.build(',start)
 braces=OWNER.index('local pieces,meshes,braceFallback = PlatformFinishKit.buildLoadBraces(',start)
-assert start < cradle < finish < braces
+assert start < cradle < carapace_fallback < finish < braces
 assert 'local authenticLongCradle = false' in OWNER[start:finish]
 assert 'if cradle and #cradle == 7 then' in OWNER[start:finish]
 assert 'and (not authenticRim or elevatedRim) and nearCradles[platform] == true' in OWNER[start:finish]
 assert 'authenticLongCradle = true' in OWNER[start:finish]
+assert 'if not authenticCarapace and not authenticRim and not authenticLongCradle then' in OWNER[cradle:carapace_fallback]
 assert 'local authenticUnderdeck = authenticCarapace' in OWNER[start:finish]
 assert 'and not authenticRim and not authenticLongCradle then' in OWNER
 print("PASS genuine long-cradle mounted before native underside trims, "

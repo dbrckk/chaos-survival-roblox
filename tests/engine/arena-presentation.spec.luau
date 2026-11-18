@@ -1113,9 +1113,21 @@ describe("Moving platform premium trim kit", function()
             visuals, deck, "Medium", theme, "Classic", 1, false, nil, profile)
         local braces = PlatformFinishKit.buildLoadBraces(
             visuals, deck, "Medium", "Classic", theme, nil, profile)
+        local shell = PlatformFinishKit.buildCarapace(
+            visuals, deck, "Classic", "High", theme, 1, false,
+            {hatch = profile, assetId = 126298311664881, spar = profile})
         profile:Destroy()
         expect(#rails).toBe(2)
         expect(#braces).toBe(2)
+        expect(#shell).toBe(7)
+        expect(shell[3]:IsA("MeshPart")).toBe(true)
+        expect(shell[4]:IsA("WedgePart")).toBe(true)
+        expect(shell[6]:IsA("MeshPart")).toBe(true)
+        expect(shell[6]:GetAttribute("Original3DStructuralSide")).toBe(nil)
+        for _, part in ipairs(shell) do
+            expect(part:GetAttribute("OriginalDeckCarapace")).toBe(true)
+            table.insert(pieces, part)
+        end
         for _, family in ipairs({rails, braces}) do
             for _, piece in ipairs(family) do
                 expect(piece:IsA("MeshPart")).toBe(true)
@@ -1171,12 +1183,23 @@ describe("Moving platform premium trim kit", function()
         local expectedSocket = Vector3.new(-deck.Size.X * .36, -1.22, -deck.Size.Z * .30)
         expect((socket - expectedSocket).Magnitude < .01).toBe(true)
         expect(math.abs(brace.Size.Z - .55) < .005).toBe(true)
+        local fin, spar = shell[4], shell[6]
+        expect((fin.Size - Vector3.new(7 * .66, .84, .90 * .45)).Magnitude < .005)
+            .toBe(true)
+        local sparFrame = spar.ChaosPlatformTrimWeld.C1
+        local length = Vector3.xAxis * spar.Size.X * .5
+        local upperSocket = Vector3.new(-deck.Size.X * .35, -1.14, -deck.Size.Z * .24)
+        local lowerSocket = Vector3.new(-deck.Size.X * .11, -1.65, deck.Size.Z * .10)
+        expect((sparFrame:PointToWorldSpace(-length) - upperSocket).Magnitude < .01).toBe(true)
+        expect((sparFrame:PointToWorldSpace(length) - lowerSocket).Magnitude < .01).toBe(true)
         PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
         expect(rails[1].Transparency).toBe(1)
         expect(brace.Transparency).toBe(1)
+        expect(spar.Transparency).toBe(1)
         PlatformFinishKit.applyCollapseVisibility(pieces, "Restored")
         expect(math.abs(rails[1].Transparency - .08) < .001).toBe(true)
         expect(math.abs(brace.Transparency - .14) < .001).toBe(true)
+        expect(math.abs(spar.Transparency - .07) < .001).toBe(true)
 
         deck.Size = Vector3.new(10, 2, 10)
         PlatformFinishKit.applyRouteFootprint(snapshot)

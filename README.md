@@ -1,3 +1,7 @@
+## P4 — Carapaces de secours des plateformes
+
+Les cinq arènes peuvent utiliser des jupes et ailettes moulées, des quilles biseautées et des longerons forgés dans les deux, quatre ou sept emplacements existants. Les ailettes suivent le bon axe pendant le rétrécissement et les longerons se recalent entre leurs points d’appui. Les carapaces et berceaux complets gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
+
 ## P4 — Marquages secondaires et supports des plateformes
 
 Les axes de Classic, les voies de Crossroads, les rails d’Orbital et les bandes d’amarrage de Harbor peuvent reprendre les profils approuvés en gardant leur fini et leurs emplacements. Tower Run reçoit des noyaux de levage à douze facettes et des traverses biseautées. Les marquages suivent la contraction des plateformes, les traverses suivent celle des passerelles et les habillages complets gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.

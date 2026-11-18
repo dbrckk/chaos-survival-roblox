@@ -123,7 +123,7 @@ function Kit.harborCornerSource()
     end
     if not parts[1] or not parts[2] or not parts[3] then return nil end
     local frame,bounds = source:GetBoundingBox()
-    return {frame=frame,bounds=bounds,parts=parts}
+    return {frame=frame,bounds=bounds,parts=parts,assetId=PROFILES.CornerGuard.id}
 end
 
 local function nativePart(folder, name)
