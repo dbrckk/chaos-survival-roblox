@@ -1302,11 +1302,26 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                     continue
                 end
 
-                context="rectangular shrink, hazard, source and native owner"
+                context="rectangular shrink, hazard, source and sculpted owner"
                 local deck=arena.Platforms.Platform2
-                local panel=arena.Decor.PlatformPanel2
+                local previousPanel=arena.Decor.PlatformPanel2
+                local panel=Instance.new("MeshPart")
+                for _,property in ipairs({"Name","Size","CFrame","Material","Color","Transparency",
+                    "Anchored","CanCollide","CanTouch","CanQuery","LocalTransparencyModifier"}) do
+                    panel[property]=previousPanel[property]
+                end
+                panel:SetAttribute("PremiumArchitecturalSurface",true)
+                panel:SetAttribute("OriginalPlatformPanel3D",true)
+                previousPanel:Destroy()
+                panel.Parent=arena.Decor
                 local tread=mount(arena,deck,2)
                 assert(Route.landingTreadCount()==1)
+                panel:SetAttribute("OriginalPlatformPanel3D",false)
+                task.wait()
+                assert(tread.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+                panel:SetAttribute("OriginalPlatformPanel3D",true)
+                task.wait()
+                assert(tread.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
                 panel.Color=Color3.fromRGB(71,86,93)
                 task.wait()
                 assert(tread.Color==panel.Color)

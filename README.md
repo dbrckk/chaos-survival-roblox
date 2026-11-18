@@ -1,3 +1,7 @@
+## P4 — Panneaux des plateformes d’atterrissage
+
+Les panneaux serveur peuvent reprendre le profil biseauté du revêtement approuvé de chaque arène. Leur empreinte et leur hauteur gardent les repères d’atterrissage et les avertissements lisibles. Les habillages 3D locaux continuent de masquer ces panneaux lorsqu’ils prennent le relais. Chaque emplacement conserve une seule pièce côté serveur, avec une forme plate de secours.
+
 ## P4 — Panneaux de maintenance au sol
 
 Les vingt panneaux de maintenance peuvent reprendre le socle biseauté du revêtement approuvé de chaque arène. Ils restent visibles au-dessus des dalles et se contractent avec le sol. Chaque panneau utilise une seule pièce, avec une forme plate de secours si le maillage est indisponible à la construction.

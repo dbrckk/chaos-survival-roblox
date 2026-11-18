@@ -75,8 +75,8 @@ local function decorPart(parent, name, size, position, color, material)
     return p
 end
 
-local function fitDecorMesh(profile, name, pose, size, color, material)
-    local detail = RouteSignalGeometry.fit(profile, pose, size)
+local function fitDecorMesh(profile, name, pose, size, color, material, alongX)
+    local detail = RouteSignalGeometry.fit(profile, pose, size, nil, alongX)
     if not detail then
         detail = decorPart(nil, name, size, pose.Position, color, material)
         detail.CFrame = pose
@@ -1512,10 +1512,8 @@ local FLOOR_RELIEF_BASE_REGIONS = {
     Harbor = Vector3.new(7.55, 0.12, 2.74),
 }
 
-local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
+local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
     local center = base.Position
-    local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
-    local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
 
     if variant.Id == "Classic" then
         local gridThickness = 0.05
@@ -1966,20 +1964,26 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     end
 end
 
-local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice,
+local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
     forgedBevel, harborAlongX)
-    local topPanel = decorPart(
-        decor,
+    -- Keep the panel's authored size and axes for route-mask and shrink checks.
+    local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
+    local topPanel = fitDecorMesh(
+        panelProfile,
         "PlatformPanel" .. index,
+        CFrame.new(platform.Position + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)),
         Vector3.new(
             math.max(1, platform.Size.X - 0.8),
             0.10,
             math.max(1, platform.Size.Z - 0.8)
         ),
-        platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + 0.055, 0),
         theme.Surface:Lerp(theme.Detail, 0.48),
-        theme.PanelMaterial or VisualTheme.Materials.Panel
+        theme.PanelMaterial or VisualTheme.Materials.Panel,
+        panelAlongX
     )
+    if topPanel:IsA("MeshPart") then
+        topPanel:SetAttribute("OriginalPlatformPanel3D", true)
+    end
     -- Neutral midtone landings remain visible without light emitters;
     -- progression changes tint, while hazards still own bright warning hues.
     -- Quiet, durable walking inset: hazards keep visual priority and the
@@ -2025,6 +2029,7 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal,
             perimeterStep == 8 and 0.13 or 0.06
         )
     end
+    topPanel.Parent = decor
 
     -- Four separate, shallow edge chamfers give the deck a deliberate
     -- machined silhouette instead of the default square Roblox slab.
@@ -2976,7 +2981,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
     StructureRetrofit.buildArena(decor, base, variant.Id, theme)
-    addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
+    local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
+    local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
+    addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
     addArenaHologram(decor, config, variant, theme)
 
     local halfX = variant.BaseSize.X * 0.5
@@ -3318,7 +3325,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         addPlatformGlow(decor, platform, i, theme, routeTier,
             (skybridge or elevatedRoute or harborLanding or lookoutAccess) and edgeBand or nil,
             skybridge and 0.42 or 0.96, glowAlongX)
-        addPlatformFinish(decor, platform, i, theme, underdeckSignal,
+        addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
             skybridge and sweptProfile or nil, harborAlongX)
         -- Real 320-stud arenas need strong visual destinations, not more

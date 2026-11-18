@@ -111,7 +111,8 @@ assert 'nearCameraCarapaces[platform] == true' in identity
 low_visual_gate = identity.split(
     'if tier.Name ~= "Low" or visualIndex % 2 ~= 0',1)[1].split('then',1)[0]
 assert 'or nearCameraCarapaces[platform] == true' in low_visual_gate
-assert 'local bevel = Instance.new("WedgePart")' in builder
+assert 'local wedge = Instance.new("WedgePart")' in builder
+assert 'bevel = wedge' in builder
 assert 'bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex' in builder
 assert 'bevel:SetAttribute("OriginalStructuralBevel", true)' in builder
 assert 'bevel.CanCollide = false' in builder

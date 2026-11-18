@@ -970,7 +970,7 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
     -- The server may stream a live Platforms folder BEFORE Decor. Previously
     -- an approved route shell mounted in this window never acquired its
     -- PlatformPanel owner until the camera happened to evict/reload the mesh.
-    -- That left a basic, flat native panel drawn OVER genuine approved art.
+    -- That left the server panel drawn over the fitted art.
     -- Bind the ONE existing panel for this physical route as its folder and
     -- Part arrive, without another poll, model clone or update loop.
     local function ownedPanel(panel)
@@ -991,7 +991,9 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
                 if not valid then return false end
             end
             local expected = insetPanelSize(platform,scale,gatedBridge)
-            return panel:IsA("Part") and panel.Shape == Enum.PartType.Block
+            local authoredPanel = (panel:IsA("Part") and panel.Shape == Enum.PartType.Block)
+                or (panel:IsA("MeshPart") and panel:GetAttribute("OriginalPlatformPanel3D") == true)
+            return authoredPanel
                 and panel.Anchored and (panel.Position-intended).Magnitude < .10
                 and (entry.timber or panel:GetAttribute("PremiumArchitecturalSurface") == true)
                 and (panel.Size-expected).Magnitude < .10
@@ -1021,17 +1023,19 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         entry.panel = panel
         entry.originalPanelAlpha = panel.LocalTransparencyModifier
         if entry.inset then
+            local function refreshPanel()
+                syncVisibility(entry, platform)
+            end
             for _,property in ipairs({"Material","Color","Transparency","Size","CFrame",
-                "Anchored","CanCollide","CanTouch","CanQuery","Shape","Name"}) do
+                "Anchored","CanCollide","CanTouch","CanQuery","Name"}) do
                 entry.panelConnections[#entry.panelConnections+1] =
-                    panel:GetPropertyChangedSignal(property):Connect(function()
-                        syncVisibility(entry,platform)
-                    end)
+                    panel:GetPropertyChangedSignal(property):Connect(refreshPanel)
             end
             entry.panelConnections[#entry.panelConnections+1] =
-                panel:GetAttributeChangedSignal("PremiumArchitecturalSurface"):Connect(function()
-                    syncVisibility(entry,platform)
-                end)
+                panel:GetAttributeChangedSignal("PremiumArchitecturalSurface"):Connect(refreshPanel)
+            local geometryChanged = panel:IsA("Part") and panel:GetPropertyChangedSignal("Shape")
+                or panel:GetAttributeChangedSignal("OriginalPlatformPanel3D")
+            entry.panelConnections[#entry.panelConnections+1] = geometryChanged:Connect(refreshPanel)
         end
         syncVisibility(entry, platform)
         return true
@@ -1431,7 +1435,7 @@ function PremiumRouteMeshKit.sync(arena, cameraPoint, quality, cameraReady,
         -- not reserve slots for early native rectangles whose footprint
         -- cannot fit the approved sculpted jump-deck import. Preflight the
         -- same exact imported bounds the mount uses; prefer covers that can
-        -- actually retire the original flat PlatformPanel. No extra models,
+        -- actually cover the server-owned PlatformPanel. No extra models,
         -- new assets, rendering loop or physical platform changes.
         local _, deckBounds = deckTemplate:GetBoundingBox()
         local fittedDecks = {}
