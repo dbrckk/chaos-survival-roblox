@@ -134,6 +134,8 @@ describe("Audio configuration", function()
             "Hit",
             "Reward",
             "LevelUp",
+            "ShutterClosing",
+            "ShutterReopened",
         }
 
         for _, name in ipairs(required) do
@@ -143,6 +145,10 @@ describe("Audio configuration", function()
             expect((cue.Volume or 0) > 0).toBe(true)
             expect((cue.Volume or 0) <= 0.7).toBe(true)
         end
+        local shutterClosing = AudioConfig.Sfx.ShutterClosing
+        local shutterReopened = AudioConfig.Sfx.ShutterReopened
+        expect(shutterClosing.SoundId ~= shutterReopened.SoundId).toBe(true)
+        expect(shutterClosing.PlaybackSpeed < shutterReopened.PlaybackSpeed).toBe(true)
     end)
 
     it("keeps composite cue layers valid", function()

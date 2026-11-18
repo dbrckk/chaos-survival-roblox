@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
 
 local AudioConfig = require(ReplicatedStorage.Shared.AudioConfig)
 local AudioMixRules = require(ReplicatedStorage.Shared.AudioMixRules)
@@ -135,6 +136,8 @@ local HAZARD_SOUNDS = {
     LowGravity = true,
     Lava = true,
     PlatformWarning = true,
+    ShutterClosing = true,
+    ShutterReopened = true,
     Tornado = true,
     Freeze = true,
     Speed = true,
@@ -665,10 +668,8 @@ local function alertNearbyHarborSweep()
     end
 end
 
--- Tower Run's rising metal sill uses exactly the same already
--- licensed local warning asset and RoundState cadence as Harbor. Only
--- runners near the REAL currently warning gate hear a short cue, once per
--- unique server warning timestamp; no extra threads or replication.
+-- React to the real shutter transitions. The existing RoundState beat
+-- also covers a runner entering the lane during an active warning.
 local shutterHeard = setmetatable({}, {__mode = "k"})
 local function alertNearbySkybridgeShutter()
     if player:GetAttribute("RoundParticipant") ~= true
@@ -678,7 +679,8 @@ local function alertNearbySkybridgeShutter()
     if not arena or arena:GetAttribute("VariantId") ~= "Towers" then return end
     local mechanics = arena:FindFirstChild("Mechanics")
     local folder = mechanics and mechanics:FindFirstChild("SkybridgeShutters")
-    if not folder then return end
+    local platforms = arena:FindFirstChild("Platforms")
+    if not folder or not platforms then return end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local hum = character and character:FindFirstChildOfClass("Humanoid")
@@ -686,23 +688,59 @@ local function alertNearbySkybridgeShutter()
         or not hum or hum.Health <= 0 then return end
 
     for _, gate in ipairs(folder:GetChildren()) do
-        if gate:IsA("BasePart")
-            and gate:GetAttribute("BridgeShutter") == true
-            and gate:GetAttribute("ShutterPhase") == "Warning" then
-            local startedAt = gate:GetAttribute("ShutterWarningAt")
-            local point = gate.CFrame:PointToObjectSpace(root.Position)
-            local near = math.abs(point.X) <= gate.Size.X * 0.5 + 10
-                and math.abs(point.Z) <= gate.Size.Z * 0.5 + 5
-                and point.Y >= -2 and point.Y <= 7.5
-            if near and type(startedAt) == "number"
-                and shutterHeard[gate] ~= startedAt then
-                shutterHeard[gate] = startedAt
-                playRaw("PlatformWarning", 0, 0.33, -0.08)
-                break
-            end
+        if not gate:IsA("BasePart") or gate:GetAttribute("BridgeShutter") ~= true then continue end
+        local shutterPhase = gate:GetAttribute("ShutterPhase")
+        local cue, stamp
+        if shutterPhase == "Warning" then
+            cue, stamp = "ShutterClosing", gate:GetAttribute("ShutterWarningAt")
+        elseif shutterPhase == "Idle" then
+            cue, stamp = "ShutterReopened", gate:GetAttribute("ShutterReopenedAt")
+        end
+        if not cue or type(stamp) ~= "number" then continue end
+        local age = workspace:GetServerTimeNow() - stamp
+        if age < -0.15 or age > (shutterPhase == "Warning" and 2.6 or 1.25) then continue end
+        local heard = shutterHeard[gate]
+        if heard and heard[cue] == stamp then continue end
+
+        local bridgeName = gate:GetAttribute("BridgeName")
+        local bridge = type(bridgeName) == "string" and platforms:FindFirstChild(bridgeName)
+        if not bridge or not bridge:IsA("BasePart") or not bridge.CanCollide
+            or bridge:GetAttribute("ChaosSkybridge") ~= true then continue end
+        local point = bridge.CFrame:PointToObjectSpace(root.Position)
+        local alongX = bridge.Size.X > bridge.Size.Z
+        local along = math.abs(alongX and point.X or point.Z)
+        local across = math.abs(alongX and point.Z or point.X)
+        if along <= 18 and across <= math.min(bridge.Size.X, bridge.Size.Z) * 0.5 + 3.25
+            and point.Y >= -0.75 and point.Y <= 7.5 then
+            heard = heard or {}
+            heard[cue] = stamp
+            shutterHeard[gate] = heard
+            playRaw(cue, 0, 1, 0)
+            break
         end
     end
 end
+
+local shutterConnections = {}
+local function watchShutter(gate)
+    if not gate:IsA("BasePart") or shutterConnections[gate] then return end
+    local function changed()
+        if lastPhase == "round" then alertNearbySkybridgeShutter() end
+    end
+    shutterConnections[gate] = {
+        gate:GetAttributeChangedSignal("ShutterPhase"):Connect(changed),
+        gate:GetAttributeChangedSignal("ShutterWarningAt"):Connect(changed),
+        gate:GetAttributeChangedSignal("ShutterReopenedAt"):Connect(changed),
+    }
+    changed()
+end
+
+CollectionService:GetInstanceAddedSignal("TowerSkybridgeShutter"):Connect(watchShutter)
+CollectionService:GetInstanceRemovedSignal("TowerSkybridgeShutter"):Connect(function(gate)
+    for _, connection in ipairs(shutterConnections[gate] or {}) do connection:Disconnect() end
+    shutterConnections[gate] = nil
+end)
+for _, gate in ipairs(CollectionService:GetTagged("TowerSkybridgeShutter")) do watchShutter(gate) end
 
 -- Physical parkour mastery has an authoritative RoundPeakTier attribute.
 -- One small reward chime on a newly validated tier (at most four per

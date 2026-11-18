@@ -524,6 +524,9 @@ describe("Arena mechanics", function()
             for _, entry in ipairs(state.rails) do
                 expect(math.abs(entry.part.Transparency - 0.46) < 0.001).toBe(true)
             end
+            expect(SkybridgeShutters.setPhase(state, "Idle", 101)).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Warning", 110)).toBe(true)
             expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(true)
             expect(gate.CanCollide).toBe(false)
             gate.CFrame = state.lowered:Lerp(state.raised, 0.5)
@@ -549,7 +552,8 @@ describe("Arena mechanics", function()
             release()
             -- The actual bridge remains solid; no lethal gap is created.
             expect(bridge.CanCollide).toBe(true)
-            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Idle", 115)).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt")).toBe(115)
             expect(gate.CanCollide).toBe(false)
             expect(gate.CanQuery).toBe(false)
             expect(gate.Transparency).toBe(1)
@@ -564,6 +568,11 @@ describe("Arena mechanics", function()
             for _, entry in ipairs(state.rails) do
                 expect(entry.part.Transparency).toBe(entry.transparency)
             end
+            expect(SkybridgeShutters.setPhase(state, "Warning", 125)).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
             states[#states + 1] = state
         end
         expect(#states).toBe(4)

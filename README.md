@@ -1,3 +1,7 @@
+## P4 — Sons de fermeture et de réouverture à Tower Run
+
+Un claquement grave annonce la montée du volet. Un carillon plus clair confirme la réouverture aux joueurs proches. Le carillon se joue une seule fois après une fermeture réelle. Une fermeture annulée ou la fin de la manche ne déclenche pas le signal.
+
 ## P4 — Marquage d’alerte des volets de Tower Run
 
 Deux chevrons ambre en miroir encadrent le volet sur chaque passerelle. Ils pointent vers les deux entrées pour signaler que la voie va se fermer. La barre centrale indique l’emplacement du volet. Le marquage apparaît dès l’alerte, s’atténue quand le volet est levé et disparaît à la réouverture.

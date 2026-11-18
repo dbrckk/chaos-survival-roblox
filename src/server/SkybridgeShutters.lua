@@ -149,11 +149,14 @@ function SkybridgeShutters.setPhase(state, phase, timestamp)
         return false
     end
     local gate = state.gate
+    local reopened = phase == "Idle" and type(timestamp) == "number"
+        and gate.CanCollide and gate:GetAttribute("ShutterPhase") == "Raised"
     -- Put collision behind the visible status transition so observers
     -- never get struck by a gate which still appears to be inactive.
     gate.CanCollide = false
     gate.CanQuery = false
     if phase == "Warning" then
+        gate:SetAttribute("ShutterReopenedAt", nil)
         gate.CFrame = state.lowered
         gate.Color = Color3.fromRGB(233, 180, 72)
         gate.Transparency = 0.28
@@ -196,6 +199,7 @@ function SkybridgeShutters.setPhase(state, phase, timestamp)
     if state.bridge and state.bridge.Parent then
         state.bridge:SetAttribute("BridgeShutterPhase", phase)
     end
+    if reopened then gate:SetAttribute("ShutterReopenedAt", timestamp) end
     return true
 end
 
@@ -273,9 +277,9 @@ function SkybridgeShutters.start(ctx, arena)
 
     local active = true
     local current = nil
-    local function restore()
+    local function restore(reopenedAt)
         if current then
-            SkybridgeShutters.setPhase(current, "Idle")
+            SkybridgeShutters.setPhase(current, "Idle", reopenedAt)
             current = nil
         end
     end
@@ -329,14 +333,18 @@ function SkybridgeShutters.start(ctx, arena)
             end
             -- A late arrival in the exact shutter volume cancels closure.
             -- Waiting is always safe; no unavoidable forced collision.
+            local reopenedAt
             if not SkybridgeShutters.occupied(
                 current, ctx.HazardContestants or ctx.Contestants or {},
                 ctx.IsContestantActive
             ) then
                 SkybridgeShutters.setPhase(current, "Raised")
                 task.wait(SkybridgeShutters.RaisedSeconds)
+                if active and ctx.Active() and selected.bridge.Parent and selected.bridge.CanCollide then
+                    reopenedAt = workspace:GetServerTimeNow()
+                end
             end
-            restore()
+            restore(reopenedAt)
             if not active or not ctx.Active() then break end
             task.wait(SkybridgeShutters.BetweenSeconds)
         end

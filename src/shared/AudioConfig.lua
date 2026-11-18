@@ -35,6 +35,8 @@ AudioConfig.Sfx = {
     LowGravity = {SoundId = "rbxasset://sounds/action_swim.mp3", Volume = 0.12, PlaybackSpeed = 0.72, Looped = true},
     Lava = {SoundId = "rbxasset://sounds/action_falling.ogg", Volume = 0.16, PlaybackSpeed = 0.62},
     PlatformWarning = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.28, PlaybackSpeed = 1.55},
+    ShutterClosing = {SoundId = "rbxasset://sounds/switch.wav", Volume = 0.19, PlaybackSpeed = 1.02},
+    ShutterReopened = {SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.13, PlaybackSpeed = 1.64},
     Tornado = {SoundId = "rbxasset://sounds/action_falling.ogg", Volume = 0.24, PlaybackSpeed = 0.78},
     Freeze = {SoundId = "rbxasset://sounds/impact_water.mp3", Volume = 0.22, PlaybackSpeed = 1.35},
     Speed = {SoundId = "rbxasset://sounds/swoosh.wav", Volume = 0.28, PlaybackSpeed = 1.65},
