@@ -1068,6 +1068,31 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     end
 end
 
+local function orbitalCoreSource()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local node = holder:FindFirstChild("Node")
+    if not node or not node:IsA("Model")
+        or node:GetAttribute("OwnerVerified") ~= true
+        or node:GetAttribute("CosmeticOnly") ~= true
+        or node:GetAttribute("OriginalOrbitalReactorLandmark3D") ~= true
+        or node:GetAttribute("Original3DAssetId") ~= 104654294187035 then return nil end
+
+    -- The imported node is split by material. Bounds identify the forged
+    -- core without depending on the names assigned to the imported pieces.
+    local coreSize = Vector3.new(2.96, 2.9503, 2.96)
+    local core
+    for _, piece in ipairs(node:GetChildren()) do
+        if piece:IsA("MeshPart") and (piece.Size - coreSize).Magnitude < 0.075 then
+            if core or not piece.Archivable or piece.MeshId == "" then return nil end
+            core = piece
+        end
+    end
+    return core
+end
+
 local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
     local center = config.ArenaCenter
     local halfX = variant.BaseSize.X * 0.5
@@ -1183,27 +1208,27 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
                 math.sin(angle) * ringRadius
             )
 
-            local segment = decorPart(
-                decor,
+            local segment = fitDecorMesh(
+                sweptProfile,
                 "OrbitalCrown" .. i,
+                CFrame.new(position) * CFrame.Angles(0, -angle, math.rad(4)),
                 Vector3.new(7.4, 0.42, 0.8),
-                position,
                 (i % 2 == 0) and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
-            segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, math.rad(4))
             segment.Transparency = 0.20
+            segment.Parent = decor
         end
 
-        local core = decorPart(
-            decor,
+        local core = fitDecorMesh(
+            orbitalCoreSource(),
             "OrbitalCore",
+            CFrame.new(center + Vector3.new(0, 13, 0)),
             Vector3.new(5, 5, 5),
-            center + Vector3.new(0, 13, 0),
             theme.Secondary,
             VisualTheme.Materials.Glow
         )
-        core.Shape = Enum.PartType.Ball
+        if core:IsA("Part") then core.Shape = Enum.PartType.Ball end
         core.Transparency = 0.34
 
         local coreLight = Instance.new("PointLight")
@@ -1213,6 +1238,7 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
         coreLight.Range = 24
         coreLight.Shadows = false
         coreLight.Parent = core
+        core.Parent = decor
     end
 end
 

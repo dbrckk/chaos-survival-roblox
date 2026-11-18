@@ -1,3 +1,7 @@
+## P4 — Couronne et noyau lumineux d’Orbital
+
+Les douze segments animés peuvent reprendre le profil forgé de Tower Run. Le noyau lumineux peut reprendre la forme facettée du réacteur approuvé et conserve sa lumière ponctuelle. Les segments plats et la sphère restent disponibles si leurs maillages respectifs sont indisponibles à la construction.
+
 ## P4 — Portiques de Crossroads ancrés au sol
 
 Les quatre traverses et les huit montants peuvent utiliser des maillages approuvés. Les deux montants de chaque portique reposent sur le sol. La traverse a été remontée de cinq studs pour conserver leurs dix studs de hauteur et aligner le modèle 3D complet. L’animation et les formes de secours restent disponibles.

@@ -2200,7 +2200,7 @@ describe("Android arena identity ornament motion", function()
 
         arena:SetAttribute("VariantId", "Orbital")
         expect(observedVariant).toBe("Orbital")
-        local crown = Instance.new("Part")
+        local crown = Instance.new("MeshPart")
         crown.Name = "OrbitalCrown12"
         crown.Parent = decor
         local afterCrown = count
