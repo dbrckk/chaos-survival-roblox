@@ -18,6 +18,12 @@ function Rules.isHarborLanding(deck)
         or deck:GetAttribute("HarborSkywayLane") ~= nil
 end
 
+function Rules.isAuthoredUnderFrameMesh(part)
+    return part:IsA("MeshPart")
+        and part.Name:match("^PlatformUnderFrame%d+$") ~= nil
+        and part:GetAttribute("OriginalPlatformUnderFrame3D") == true
+end
+
 function Rules.harborLandingWidth(deck)
     if routeIndex(deck:GetAttribute("HarborSkywayLane"), 2)
         and routeIndex(deck:GetAttribute("HarborSkywayStep"), 7) then

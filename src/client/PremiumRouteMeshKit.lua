@@ -734,7 +734,8 @@ local function collectUnderdeckNative(decor, platform, scale)
     local parts = {}
     local function take(name, tag, size, offset)
         local part = decor:FindFirstChild(name)
-        if not part or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+        if not part or not ((part:IsA("Part") and part.Shape == Enum.PartType.Block)
+            or PlatformIdentityLodRules.isAuthoredUnderFrameMesh(part))
             or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
             or part.Transparency >= .95 or part:GetAttribute(tag) ~= true
             or (tag ~= "PremiumArchitecturalSurface"
@@ -1053,14 +1054,17 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         }
     end
     local function watchUnderdeckNative(part)
-        if not part or not nativeNames[part.Name] or not part:IsA("Part")
+        if not part or not nativeNames[part.Name] or not part:IsA("BasePart")
             or underdeckWatchers[part] then return end
         local connections = {}
         local function changed() syncVisibility(entry, platform) end
         for _, prop in ipairs({"CFrame", "Size", "CanCollide", "CanTouch",
-            "CanQuery", "Transparency", "Anchored", "Name", "Shape"}) do
+            "CanQuery", "Transparency", "Anchored", "Name"}) do
             connections[#connections + 1] = part:GetPropertyChangedSignal(prop):Connect(changed)
         end
+        local geometryChanged = part:IsA("Part") and part:GetPropertyChangedSignal("Shape")
+            or part:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D")
+        connections[#connections + 1] = geometryChanged:Connect(changed)
         for _, tag in ipairs({"PremiumArchitecturalSurface", "PromenadeVisualOnly",
             "SkySpineDecor", "PerimeterPlatformIndex"}) do
             connections[#connections + 1] = part:GetAttributeChangedSignal(tag):Connect(changed)

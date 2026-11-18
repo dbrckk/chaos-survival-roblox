@@ -1339,6 +1339,9 @@ local function mount(data,source)
         if native:IsA("Part") then
             entry.connections[#entry.connections+1]=
                 native:GetPropertyChangedSignal("Shape"):Connect(changed)
+        elseif native:IsA("MeshPart") and native.Name:match("^PlatformUnderFrame%d+$") then
+            entry.connections[#entry.connections+1]=
+                native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"):Connect(changed)
         end
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
         if data.name=="SpineUnderframe" then

@@ -263,7 +263,12 @@ local function bindCradle(arena,deck,folder,pieces)
     for _,native in ipairs(natives or {}) do
         watch(native.AncestryChanged,evict)
         properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery",
-            "Shape","Name","Transparency"})
+            "Name","Transparency"})
+        if native:IsA("Part") then
+            watch(native:GetPropertyChangedSignal("Shape"))
+        else
+            watch(native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"))
+        end
         attributes(native,{"SkySpineDecor","PromenadeVisualOnly","PerimeterPlatformIndex","PremiumArchitecturalSurface"})
     end
     if source then

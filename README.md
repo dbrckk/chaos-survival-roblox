@@ -1,3 +1,7 @@
+## P4 — Longerons sous les plateformes
+
+Les cadres rectangulaires sous les plateformes peuvent reprendre les longerons du châssis approuvé, à raison d’une pièce par cadre. Les habillages locaux vérifient leur alignement avant de les masquer et les réaffichent à leur retrait. Les cadres pleins servent de secours si le maillage est indisponible à la construction.
+
 ## P4 — Panneaux des plateformes d’atterrissage
 
 Les panneaux serveur peuvent reprendre le profil biseauté du revêtement approuvé de chaque arène. Leur empreinte et leur hauteur gardent les repères d’atterrissage et les avertissements lisibles. Les habillages 3D locaux continuent de masquer ces panneaux lorsqu’ils prennent le relais. Chaque emplacement conserve une seule pièce côté serveur, avec une forme plate de secours.

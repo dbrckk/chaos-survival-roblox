@@ -1965,7 +1965,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    forgedBevel, harborAlongX)
+    underdeckSpars, forgedBevel, harborAlongX)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2117,14 +2117,20 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         underFrame.Size = frameSize
         underFrame.CFrame = framePose
     else
-        underFrame = decorPart(nil, frameName, frameSize, framePose.Position,
-            frameColor, VisualTheme.Materials.Structure)
+        -- Preserve the original frame envelope and deck-relative axes so
+        -- route chassis and cradles can still claim this exact owner.
+        local sparsAlongX = underdeckSpars and underdeckSpars.Size.X > underdeckSpars.Size.Z
+        underFrame = fitDecorMesh(underdeckSpars, frameName, framePose, frameSize,
+            frameColor, VisualTheme.Materials.Structure, sparsAlongX)
     end
     underFrame.Name = frameName
     underFrame.Color = frameColor
     underFrame.Material = VisualTheme.Materials.Structure
     underFrame.Transparency = 0.04
     underFrame:SetAttribute("PremiumArchitecturalSurface", true)
+    if underFrame:IsA("MeshPart") then
+        underFrame:SetAttribute("OriginalPlatformUnderFrame3D", true)
+    end
     underFrame.Parent = decor
 
     local coreName = "PlatformCoreGlow" .. index
@@ -2949,6 +2955,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
 
     local chassis = accessChassisSource()
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
+    local underdeckSpars = approvedMeshRegion(chassis, "UnderdeckSpars")
     local wayfinderBase = wayfinderBaseSource()
     local beaconShaft = beaconShaftSource(variant.Id)
     addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
@@ -3327,7 +3334,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             skybridge and 0.42 or 0.96, glowAlongX)
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            skybridge and sweptProfile or nil, harborAlongX)
+            underdeckSpars, skybridge and sweptProfile or nil, harborAlongX)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
