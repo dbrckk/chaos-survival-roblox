@@ -49,17 +49,20 @@ assert 'ApprovedCrossroadsEntrancePortalMeshKit.sync(arena,cameraPoint,' in LOD
 assert 'LocalCrossroadsEntrance3DCount' in LOD
 assert 'LocalCrossroadsEntranceNativePartsReplaced' in LOD
 for marker in (
-    'Vector3.new(0, 6, -halfZ + 7)',
-    'Vector3.new(0, 6, halfZ - 7)',
-    'Vector3.new(-halfX + 7, 6, 0)',
-    'Vector3.new(halfX - 7, 6, 0)',
+    'Vector3.new(0, gateY, -halfZ + 7)',
+    'Vector3.new(0, gateY, halfZ - 7)',
+    'Vector3.new(-halfX + 7, gateY, 0)',
+    'Vector3.new(halfX - 7, gateY, 0)',
     '"CrossroadGate" .. i',
     '"CrossroadPost" .. i',
     'Vector3.new(18, 1.2, 1.4)',
     'Vector3.new(1.4, 1.2, 18)',
     'Vector3.new(1.2, 10, 1.2)',
-    'Vector3.new(8.5, -5, 0)',
-    'Vector3.new(0, -5, 8.5)',
+    'Vector3.new(8.5, 0, 0)',
+    'Vector3.new(0, 0, 8.5)',
+    'local gateY = variant.BaseSize.Y * 0.5 + 10',
+    'local postCenter = rail.Position - Vector3.new(0, 5, 0)',
+    'CFrame.new(postCenter + lateral * sign)',
     'rail.Transparency = 0.18',
     'post.Transparency = 0.05',
     'base:SetAttribute("OriginalSizeX", base.Size.X)',
@@ -77,12 +80,15 @@ for marker in (
     'nativeAlongX=index<=2',
     'sourceAlongX=size.X>=size.Z',
     'CFrame.Angles(0,yaw,0)',
-    'rail.CFrame*CFrame.new(0,-4.7,0)',
+    'frame*CFrame.new(0,-4.7,0)',
+    'local gateY=base.Size.Y*.5+10',
+    'CFrame.new(postCenter+lateral*sign)',
+    'actualSize=Vector3.new(actualSize.Z,actualSize.Y,actualSize.X)',
     'Vector3.new(18,1.2,1.4)',
     'Vector3.new(1.4,1.2,18)',
     'Vector3.new(1.2,10,1.2)',
-    'Vector3.new(8.5,-5,0)',
-    'Vector3.new(0,-5,8.5)',
+    'Vector3.new(8.5,0,0)',
+    'Vector3.new(0,0,8.5)',
     'model.Parent=bucket',
     'native.Transparency=1',
     'native.Transparency=alpha',
@@ -129,16 +135,22 @@ with tempfile.TemporaryDirectory(prefix="chaos-crossroads-portal-approved-") as 
     print("PASS authentic 3D:",info["triangles"],
           info["groups"],info["bounds"],info["sha256"])
 
-# The 3D portal is CENTERED (6 - 4.7) above the arena center and
-# its bottom matches the existing posts (6 -5 -5 = -4).
-for size in (320,324,328,360):
-    for index in range(1,5):
-        postBottom=6-5-10/2
-        modelBottom=6-4.7-10.59/2
-        beamTop=6+1.2/2
-        modelTop=6-4.7+10.59/2
-        assert abs(postBottom-modelBottom)<.02,(size,index)
-        assert abs(beamTop-modelTop)<.02,(size,index)
-        gateHalf=19.2/2
-        assert gateHalf<10
-print("PASS 4 portals / 8 posts eligible, matching envelope and LOD rollback")
+# Both posts touch the floor on all four sides, and the full mesh meets the
+# same ground and rail envelope. Moving either horizontal sign never affects Y.
+for width in (320,324,328,360):
+    floor_top=1
+    gate_y=floor_top+10
+    edge=width*.5-7
+    for along_x in (True,False):
+        rail_top=gate_y+1.2/2
+        for sign in (-1,1):
+            side_offset=8.5*sign
+            post_bottom=gate_y-5-10/2
+            source_bottom=gate_y-4.7-10.59/2
+            source_top=gate_y-4.7+10.59/2
+            assert post_bottom==floor_top
+            assert abs(post_bottom-source_bottom)<.02
+            assert abs(rail_top-source_top)<.02
+            post=(side_offset,edge) if along_x else (edge,side_offset)
+            assert max(map(abs,post))+.6 < width*.5
+print("PASS 4 portals / 8 grounded posts, matching envelope and LOD rollback")

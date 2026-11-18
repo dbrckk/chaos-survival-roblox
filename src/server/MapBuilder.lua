@@ -1068,7 +1068,7 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     end
 end
 
-local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile)
+local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
     local center = config.ArenaCenter
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
@@ -1136,36 +1136,39 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
             end
         end
     elseif variant.Id == "Crossroads" then
+        local gateY = variant.BaseSize.Y * 0.5 + 10
         local gates = {
-            {pos = Vector3.new(0, 6, -halfZ + 7), size = Vector3.new(18, 1.2, 1.4)},
-            {pos = Vector3.new(0, 6, halfZ - 7), size = Vector3.new(18, 1.2, 1.4)},
-            {pos = Vector3.new(-halfX + 7, 6, 0), size = Vector3.new(1.4, 1.2, 18)},
-            {pos = Vector3.new(halfX - 7, 6, 0), size = Vector3.new(1.4, 1.2, 18)},
+            {pos = Vector3.new(0, gateY, -halfZ + 7), size = Vector3.new(18, 1.2, 1.4)},
+            {pos = Vector3.new(0, gateY, halfZ - 7), size = Vector3.new(18, 1.2, 1.4)},
+            {pos = Vector3.new(-halfX + 7, gateY, 0), size = Vector3.new(1.4, 1.2, 18)},
+            {pos = Vector3.new(halfX - 7, gateY, 0), size = Vector3.new(1.4, 1.2, 18)},
         }
 
         for i, def in ipairs(gates) do
-            local rail = decorPart(
-                decor,
+            local rail = fitDecorMesh(
+                sweptProfile,
                 "CrossroadGate" .. i,
+                CFrame.new(center + def.pos),
                 def.size,
-                center + def.pos,
                 (i % 2 == 0) and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
             rail.Transparency = 0.18
+            rail.Parent = decor
 
-            local postSize = def.size.X > def.size.Z and Vector3.new(1.2, 10, 1.2) or Vector3.new(1.2, 10, 1.2)
-            local lateral = def.size.X > def.size.Z and Vector3.new(8.5, -5, 0) or Vector3.new(0, -5, 8.5)
+            local lateral = def.size.X > def.size.Z and Vector3.new(8.5, 0, 0) or Vector3.new(0, 0, 8.5)
+            local postCenter = rail.Position - Vector3.new(0, 5, 0)
             for sign = -1, 1, 2 do
-                local post = decorPart(
-                    decor,
+                local post = fitDecorMesh(
+                    beaconShaft,
                     "CrossroadPost" .. i .. "_" .. tostring(sign),
-                    postSize,
-                    rail.Position + (lateral * sign),
+                    CFrame.new(postCenter + lateral * sign),
+                    Vector3.new(1.2, 10, 1.2),
                     theme.Structure,
                     VisualTheme.Materials.Structure
                 )
                 post.Transparency = 0.05
+                post.Parent = decor
             end
         end
     elseif variant.Id == "Orbital" then
@@ -2871,7 +2874,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     addSouthHorizonMonument(decor, config, variant, theme)
     addExteriorCornerRidges(decor, config, variant, theme)
     addExteriorSilhouettePairs(decor, config, variant, theme)
-    addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile)
+    addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     addVariantLandmarks(decor, config, variant, theme)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.

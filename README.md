@@ -1,3 +1,7 @@
+## P4 — Portiques de Crossroads ancrés au sol
+
+Les quatre traverses et les huit montants peuvent utiliser des maillages approuvés. Les deux montants de chaque portique reposent sur le sol. La traverse a été remontée de cinq studs pour conserver leurs dix studs de hauteur et aligner le modèle 3D complet. L’animation et les formes de secours restent disponibles.
+
 ## P4 — Couronnes et bandes lumineuses sculptées
 
 Les quatre couronnes de Classic et les douze bandes de Tower Run peuvent reprendre des maillages approuvés. Elles gardent leurs couleurs, leurs mouvements et leur réduction d’animation sur mobile. Les mâts 3D et les ornements restent indépendants. Les pièces simples prennent le relais si les maillages approuvés sont indisponibles à la construction.

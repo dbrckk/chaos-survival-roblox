@@ -90,13 +90,20 @@ local function sourceFor()
 end
 
 local function exactPart(part,decor,name,size,frame,alpha,animated)
-    return part and part:IsA("Part") and part.Parent==decor
-        and part.Name==name and part.Shape==Enum.PartType.Block
+    if not part or not (part:IsA("MeshPart") or part:IsA("Part") and part.Shape==Enum.PartType.Block)
+        then return false end
+    local alignment=part.CFrame.LookVector:Dot(frame.LookVector)
+    local actualSize=part.Size
+    if part:IsA("MeshPart") and math.abs(alignment)<.001 then
+        actualSize=Vector3.new(actualSize.Z,actualSize.Y,actualSize.X)
+    elseif alignment<.999 then
+        return false
+    end
+    return part.Parent==decor and part.Name==name
         and part.Anchored and not part.CanCollide
         and not part.CanTouch and not part.CanQuery
-        and (part.Size-size).Magnitude<=.10
+        and (actualSize-size).Magnitude<=.10
         and (part.Position-frame.Position).Magnitude<=.17
-        and part.CFrame.LookVector:Dot(frame.LookVector)>=.999
         and part.CFrame.UpVector:Dot(frame.UpVector)>=.999
         and ((animated and (
             (part.Transparency>=.04 and part.Transparency<=.66)
@@ -135,17 +142,18 @@ local function genuine(arena,index)
     local alongX=index<=2
     local railSize=alongX and Vector3.new(18,1.2,1.4)
         or Vector3.new(1.4,1.2,18)
-    local lateral=alongX and Vector3.new(8.5,-5,0)
-        or Vector3.new(0,-5,8.5)
-    local frame=CFrame.new(base.Position+Vector3.new(x,6,z))
+    local lateral=alongX and Vector3.new(8.5,0,0) or Vector3.new(0,0,8.5)
+    local gateY=base.Size.Y*.5+10
+    local frame=CFrame.new(base.Position+Vector3.new(x,gateY,z))
     local rail=decor:FindFirstChild("CrossroadGate"..index)
     if not exactPart(rail,decor,"CrossroadGate"..index,
         railSize,frame,.18,true) then return nil end
     local posts={}
+    local postCenter=frame.Position-Vector3.new(0,5,0)
     for _,sign in ipairs({-1,1}) do
         local name="CrossroadPost"..index.."_"..tostring(sign)
         local part=decor:FindFirstChild(name)
-        local post=CFrame.new(frame.Position+lateral*sign)
+        local post=CFrame.new(postCenter+lateral*sign)
         if not exactPart(part,decor,name,
             Vector3.new(1.2,10,1.2),post,.05) then
             return nil
@@ -154,7 +162,7 @@ local function genuine(arena,index)
     end
     -- Each source gate/column is a noncolliding decor part; its MeshPart
     -- replacement may be more detailed but never blocks player passage.
-    return rail,posts,base,decor
+    return rail,posts,base,decor,frame
 end
 
 local function valid(entry)
@@ -180,12 +188,12 @@ local function valid(entry)
 end
 
 local function mount(arena,index,source,holder)
-    local rail,posts,base,decor=genuine(arena,index)
+    local rail,posts,base,decor,frame=genuine(arena,index)
     if not rail then return end
     -- Do not steal a native already hidden by a different scenery LOD.
     if rail:GetAttribute("SceneryLodHidden")==true then return end
     local model=source:Clone()
-    local frame,size=model:GetBoundingBox()
+    local sourceFrame,size=model:GetBoundingBox()
     local sourceAlongX=size.X>=size.Z
     local nativeAlongX=index<=2
     local yaw=sourceAlongX==nativeAlongX and 0 or math.pi*.5
@@ -197,9 +205,8 @@ local function mount(arena,index,source,holder)
         model:Destroy()
         return
     end
-    -- Original gate rail is at Y+6 relative to floor center. The
-    -- combined rail+columns envelope is centered 4.7 studs lower.
-    local target=rail.CFrame*CFrame.new(0,-4.7,0)
+    -- Use the authored gate frame so mesh axes and animated offsets do not move the portal.
+    local target=frame*CFrame.new(0,-4.7,0)
         *CFrame.Angles(0,yaw,0)
     local meshParts={}
     for _,part in ipairs(model:GetDescendants()) do
@@ -208,7 +215,7 @@ local function mount(arena,index,source,holder)
                 model:Destroy()
                 return
             end
-            part.CFrame=target*frame:ToObjectSpace(part.CFrame)
+            part.CFrame=target*sourceFrame:ToObjectSpace(part.CFrame)
             part.Anchored=true
             part.Massless=true
             part.CanCollide=false
