@@ -1,3 +1,7 @@
+## P4 — Bandes lumineuses des plateformes
+
+Les plateformes ordinaires peuvent reprendre les deux bandes sculptées du pont approuvé de Tower Run, réunies dans un seul maillage. Les bandes des terrasses ancrées au sol suivent le rebord supérieur pour rester visibles. Les teintes de guidage, les avertissements et le suivi du rétrécissement gardent leurs réglages. Une bande plate sert de secours si le maillage est indisponible à la construction.
+
 ## P4 — Noyaux lumineux sous les plateformes
 
 Les noyaux lumineux peuvent reprendre les deux inserts sculptés du châssis approuvé dans un seul maillage par plateforme. Les plateformes ordinaires gardent leur gabarit lumineux et les itinéraires spécialisés conservent leurs dimensions ajustées. Les noyaux suivent le rétrécissement et s’effacent avec leur plateforme. Une forme plate sert de secours si le maillage est indisponible à la construction.

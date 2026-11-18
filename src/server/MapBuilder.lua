@@ -1937,31 +1937,29 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 
     local size = platform.Size
     local alongX = if routeAlongX ~= nil then routeAlongX else size.X > size.Z
-    local atRim = platform:GetAttribute("BranchStep") ~= nil
+    local atRim = platform:GetAttribute("PerimeterStep") ~= nil
+        or platform:GetAttribute("BranchStep") ~= nil
         or platform:GetAttribute("CrosslinkRoute") ~= nil
     -- The grounded riser reaches the arena floor. Place the band below
     -- the sculpted fascia near the landing surface, rather than at its foot.
     local height = if atRim then size.Y * 0.5 - 1.02 else -size.Y * 0.5 - 0.47
-    local glow = edgeBand and RouteSignalGeometry.fit(edgeBand,
+    local glow = RouteSignalGeometry.fit(edgeBand,
         platform.CFrame * CFrame.new(0, height, 0),
         Vector3.new(
             size.X + (alongX and 0.28 or edgeOverhang),
             0.14,
             size.Z + (alongX and edgeOverhang or 0.28)
         ), nil, alongX)
-    if glow then
-        -- The two bands clear the underside of the frame and share one mesh.
-        glow.Name = name
-        glow.Material = VisualTheme.Materials.Glow
-        glow.Color = color
-        glow.Transparency = transparency
-        glow.Parent = decor
-    else
-        local glow = decorPart(decor, name, Vector3.new(size.X + 0.28, 0.12, size.Z + 0.28),
-            platform.Position - Vector3.new(0, size.Y * 0.5 + 0.13, 0),
-            color, VisualTheme.Materials.Glow)
-        glow.Transparency = transparency
+    if not glow then
+        local fallbackHeight = if atRim then height else -size.Y * 0.5 - 0.13
+        glow = decorPart(nil, name, Vector3.new(size.X + 0.28, 0.12, size.Z + 0.28),
+            platform.Position + Vector3.new(0, fallbackHeight, 0), color, VisualTheme.Materials.Glow)
     end
+    glow.Name = name
+    glow.Material = VisualTheme.Materials.Glow
+    glow.Color = color
+    glow.Transparency = transparency
+    glow.Parent = decor
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
@@ -3330,9 +3328,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local harborLanding = harborAlongX ~= nil
         local lookoutAccess = definition.BranchRoute or definition.CrosslinkRoute
         local glowAlongX = if lookoutAccess then definition.BranchStep == 4 else harborAlongX
-        addPlatformGlow(decor, platform, i, theme, routeTier,
-            (skybridge or elevatedRoute or harborLanding or lookoutAccess) and edgeBand or nil,
-            skybridge and 0.42 or 0.96, glowAlongX)
+        -- Both stripes must clear the exposed sides of the grounded riser.
+        local edgeOverhang = if skybridge then 0.42
+            elseif definition.PerimeterStep then 1.20
+            elseif elevatedRoute or harborLanding or lookoutAccess then 0.96
+            else 0.28
+        addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand, edgeOverhang, glowAlongX)
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
             underdeckSpars, skybridge and sweptProfile or nil, harborAlongX)
