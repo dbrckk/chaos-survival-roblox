@@ -1327,10 +1327,12 @@ describe("Moving platform premium trim kit", function()
     end)
 
 
-    it("creates four distinctive, bounded, non-colliding welded motifs", function()
+    it("fits five distinctive welded motifs within the existing trim budget", function()
         local parent = Instance.new("Folder")
         local platform = Instance.new("Part")
         platform.Size = Vector3.new(12, 2, 12)
+        platform.Anchored = true
+        platform:SetAttribute("RouteTier", 3)
         platform.Parent = workspace
         -- The server panel has its upper face at physicalTop + 0.105.
         -- Local glyph geometry must be ABOVE it or it vanishes beneath
@@ -1352,15 +1354,41 @@ describe("Moving platform premium trim kit", function()
             PlatformFinishKit.surfacePaintOffset(platform, 0.05) - surfaceY
         ) < 0.0001).toBe(true)
         expect(PlatformFinishKit.surfacePaintOffset(nil, 0.05) == nil).toBe(true)
-        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        local plate = Instance.new("MeshPart")
+        plate.Size = Vector3.new(4.34, .12, 8)
+        local lens = Instance.new("MeshPart")
+        lens.Size = Vector3.new(3.04, .85, 3.04)
+        local profiles = {hatch = plate, collar = plate, assetId = 102746904688141,
+            lens = {part = lens, assetId = 92226531849432}}
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local names = PlatformFinishKit.names(variant)
             expect(#names).toBe(3)
             for _, tier in ipairs({"Low", "Medium", "High"}) do
                 local built = PlatformFinishKit.build(parent, platform, variant,
-                    tier, VisualTheme.arena(variant))
+                    tier, VisualTheme.arena(variant), false, profiles)
                 expect(#built).toBe(PlatformFinishKit.count(tier))
+                if variant == "Crossroads" and tier == "High" then
+                    local snapshot = PlatformFinishKit.captureRouteFootprint(platform, built)
+                    platform.Size = Vector3.new(8.4, 2, 5.4)
+                    expect(PlatformFinishKit.applyRouteFootprint(snapshot)).toBe(3)
+                    for index = 1, 2 do
+                        local arm = built[index]
+                        local frame = arm.ChaosPlatformTrimWeld.C1
+                        local reach = math.abs(frame.Position.Z)
+                            + (math.abs(frame.RightVector.Z) * arm.Size.X
+                                + math.abs(frame.LookVector.Z) * arm.Size.Z) * .5
+                        expect(reach < platform.Size.Z * .5).toBe(true)
+                    end
+                    platform.Size = Vector3.new(12, 2, 12)
+                    PlatformFinishKit.applyRouteFootprint(snapshot)
+                end
                 for index, item in ipairs(built) do
                     expect(item.Name).toBe(names[index])
+                    expect(item:IsA("MeshPart")).toBe(true)
+                    if index == 3 and (variant == "Crossroads" or variant == "Orbital") then
+                        expect(item:GetAttribute("Original3DAssetId")).toBe(92226531849432)
+                        expect(item.Material).toBe(Enum.Material.Glass)
+                    end
                     expect(item:GetAttribute("ChaosPlatformTrim")).toBe(true)
                     expect(item.Massless).toBe(true)
                     expect(item.Anchored).toBe(false)
@@ -1433,6 +1461,8 @@ describe("Moving platform premium trim kit", function()
                 end
             end
         end
+        plate:Destroy()
+        lens:Destroy()
         platform:Destroy()
         parent:Destroy()
     end)

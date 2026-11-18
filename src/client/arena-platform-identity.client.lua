@@ -707,9 +707,8 @@ local function rebuild()
     local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
-    local hatchProfiles = tier.Name ~= "Low"
-        and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
-        and PlatformFinishKit.serviceHatchProfiles(variant) or nil
+    local platformArtProfiles = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+        and PlatformFinishKit.artProfiles(variant, tier.Name ~= "Low") or nil
     local nearRims = ApprovedPlatformRimMeshKit.selectVisibleDecks(
         ordered, tier.Name, base, cameraPoint,
         player:GetAttribute("OptionalVfxPressure"),
@@ -987,6 +986,7 @@ local function rebuild()
     local girderSource,cornerSource
     local armorProfile = PlatformFinishKit.armorCount(tier.Name) > 0
         and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
+    if platformArtProfiles then platformArtProfiles.lens = armorProfile end
     local forgedTrimProfile = tier.Name ~= "Low"
         and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
         and ForgedBridge.sweptProfile() or nil
@@ -1179,7 +1179,7 @@ local function rebuild()
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme,
-                    authenticUnderdeck
+                    authenticUnderdeck, platformArtProfiles
                 )) do
                     registerVisual(platform, piece)
                     if keelTargets[platform] and piece.Name == "HarborUndersideKeel" then
@@ -1271,7 +1271,7 @@ local function rebuild()
             local hatchPieces = (staged and staged.kind == "hatch"
                 and staged.parts) or PlatformFinishKit.buildServiceHatch(
                 folder, platform, variant, tier.Name, theme, visualIndex,
-                nearServiceHatches[platform] == true, hatchProfiles)
+                nearServiceHatches[platform] == true, platformArtProfiles)
             -- Only count a COMPLETE, actually mounted verified 3D source;
             -- individually fitted regions do not spend a full-model slot.
             if hatchPieces[1] and hatchPieces[1]:IsA("MeshPart")

@@ -1667,7 +1667,12 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 return natives,meshes,map
             end
             local function buildKeel()
-                local keel=Finish.build(owner,deck,"Harbor","High",theme)[3]
+                local profile=Instance.new("MeshPart")
+                profile.Size=Vector3.new(2.74,.12,7.55)
+                local keel=Finish.build(owner,deck,"Harbor","High",theme,false,
+                    {hatch=profile,assetId=94830155055482})[3]
+                profile:Destroy()
+                assert(keel:IsA("MeshPart") and keel:GetAttribute("PlatformTrimAxisSwap"))
                 local mount=Instance.new("Part")
                 mount.Name="HarborKeelMount96"
                 mount.Size=Finish.harborKeelMountSize(deck)

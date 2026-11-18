@@ -1,3 +1,7 @@
+## P4 — Plaques, chevrons et lentilles des plateformes
+
+Les cinq arènes utilisent les reliefs approuvés pour les plaques et bandes des plateformes. Crossroads reçoit des chevrons à pans coupés et les lentilles de Crossroads et d’Orbital reprennent un profil à douze facettes. Les pièces suivent le rétrécissement et les alertes des plateformes. Les habillages complets de dessous de plateforme gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
+
 ## P4 — Trappes de service des plateformes
 
 En qualité moyenne ou haute, les trappes des cinq arènes peuvent reprendre un couvercle et une collerette biseautés de leurs revêtements approuvés, ainsi qu’une poignée arquée issue du modèle d’amarrage de Harbor. Les trois pièces suivent les plateformes pendant le rétrécissement et s’effacent à l’effondrement. Les modèles complets gardent leur priorité dans les emplacements réservés. Chaque pièce simple reprend le relais si son maillage manque ou si la charge graphique augmente.

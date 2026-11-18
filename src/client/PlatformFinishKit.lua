@@ -40,7 +40,7 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     part.Material = material
     part.Transparency = alpha
     part:SetAttribute("ChaosBaseTransparency", alpha)
-    if shape and shape ~= "WedgePart" then part.Shape = shape end
+    if not mesh and shape and shape ~= "WedgePart" then part.Shape = shape end
     part.Anchored = false
     part.Massless = true
     part.CanCollide = false
@@ -308,7 +308,12 @@ function PlatformFinishKit.mountHarborLandingKeel(parent, platform, keel, mount,
         fallback[mount] = mount.Transparency
     end
     local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
-    local meshes = sideKit.harborLandingKeel(source,platform,joint.C1,keel.Size)
+    local frame, size = joint.C1, keel.Size
+    if keel:GetAttribute("PlatformTrimAxisSwap") == true then
+        frame *= CFrame.Angles(0, -math.pi * 0.5, 0)
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    local meshes = sideKit.harborLandingKeel(source, platform, frame, size)
     if not meshes then return nil end
     publishHarborTrim(parent,nil,meshes,fallback)
     return meshes,fallback
@@ -551,6 +556,11 @@ local SERVICE_HATCH_REGIONS = {
     Harbor = {Vector3.new(7.55, .12, 2.74), Vector3.new(4.983, .038, 1.507)},
 }
 local SERVICE_HANDLE_REGION = Vector3.new(.82, .22446, .26955)
+local PLATFORM_DETAIL_REGIONS = {
+    Classic = Vector3.new(1.42, .033, .12), -- survey notch
+    Orbital = Vector3.new(2.85, .025, .11), -- diagnostic trace
+    Harbor = Vector3.new(2.50, .16, .16), -- cast load roller
+}
 
 local function approvedFloorRelief(name, assetId)
     local holder = game:GetService("ReplicatedStorage")
@@ -613,15 +623,18 @@ local function serviceDetailRegion(source, dimensions)
     return match
 end
 
-function PlatformFinishKit.serviceHatchProfiles(variant)
+function PlatformFinishKit.artProfiles(variant, includeHandle)
     local regions = SERVICE_HATCH_REGIONS[variant]
     if not regions then return nil end
     local source, _, assetId = serviceHatchSource(variant)
-    local handleSource = approvedFloorRelief("HarborTie", SERVICE_HANDLE_ASSET)
+    local handleSource = if includeHandle then approvedFloorRelief("HarborTie", SERVICE_HANDLE_ASSET)
+        else nil
+    local detail = PLATFORM_DETAIL_REGIONS[variant]
     return {
         hatch = serviceDetailRegion(source, regions[1]),
         collar = serviceDetailRegion(source, regions[2]),
         handle = serviceDetailRegion(handleSource, SERVICE_HANDLE_REGION),
+        detail = detail and serviceDetailRegion(source, detail) or nil,
         assetId = assetId,
     }
 end
@@ -983,10 +996,18 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                     data.size.Y,
                     math.max(.05, data.size.Z*scaleZ))
             else
+                local scaleX = axesSwapped and ratioZ or ratioX
+                local scaleZ = axesSwapped and ratioX or ratioZ
+                if part:GetAttribute("PlatformFinishDiagonal") == true then
+                    -- These slanted chevron arms keep their angle. Fit to
+                    -- the narrower contraction so neither tip can overhang.
+                    scaleX = math.min(ratioX, ratioZ)
+                    scaleZ = scaleX
+                end
                 part.Size = Vector3.new(
-                    math.max(data.minimum, data.size.X*(axesSwapped and ratioZ or ratioX)),
+                    math.max(data.minimum, data.size.X * scaleX),
                     data.size.Y,
-                    math.max(data.minimum, data.size.Z*(axesSwapped and ratioX or ratioZ)))
+                    math.max(data.minimum, data.size.Z * scaleZ))
             end
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
                 or part:FindFirstChild("PlatformIdentityWeld")
@@ -1248,11 +1269,9 @@ function PlatformFinishKit.applyCollapseVisibility(parts, phase)
 end
 
 -- The actual approved full underside owns its structural silhouette.
--- Omit only redundant primitive underside paint after a complete genuine
--- 3D carapace/hull mount. Surface guidance and all source-failure native
--- fallback detail remain unchanged. The optional flag defaults to false.
+-- The full underside has priority over individual visual fittings.
 function PlatformFinishKit.build(parent, platform, variant, tier, theme,
-    genuineUnderdeck)
+    genuineUnderdeck, profiles)
     local names = NAMES[variant]
     if not parent or not platform or not platform:IsA("BasePart")
         or not names or not theme
@@ -1263,6 +1282,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
     local top = PlatformFinishKit.surfacePaintOffset(platform, 0.05)
     local count = PlatformFinishKit.count(tier)
+    local hasLens = variant == "Crossroads" or variant == "Orbital"
     local built = {}
     local function piece(i, localFrame, size, color, material, alpha, shape)
         if i > count then return end
@@ -1274,8 +1294,31 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
             -- Keep all surface markings on the other three variants.
             return
         end
-        table.insert(built, add(parent, platform, names[i], localFrame, size,
-            color, material, alpha, shape))
+        local mesh
+        if profiles then
+            local profile, assetId
+            if i == 3 and hasLens then
+                local lens = profiles.lens
+                profile, assetId = lens and lens.part, lens and lens.assetId
+            else
+                assetId = profiles.assetId
+                if i == 2 then
+                    profile = profiles.detail or profiles.collar
+                elseif i == 3 and variant == "Towers" then
+                    profile = profiles.collar
+                else
+                    profile = profiles.hatch
+                end
+            end
+            mesh, localFrame, size = fitTrimProfile(profile, localFrame, size,
+                size.X >= size.Z, assetId)
+        end
+        local item = add(parent, platform, names[i], localFrame, size,
+            color, material, alpha, shape, mesh)
+        if variant == "Crossroads" and i <= 2 then
+            item:SetAttribute("PlatformFinishDiagonal", true)
+        end
+        table.insert(built, item)
     end
 
     if variant == "Classic" then
@@ -1286,7 +1329,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
         piece(2, CFrame.new(-sx * 0.23, top + 0.015, -sz * 0.23),
             Vector3.new(0.12, 0.027, sz * 0.22),
             theme.Secondary, Enum.Material.Metal, 0.25)
-        piece(3, CFrame.new(-sx * 0.43, -sy * 0.11, 0),
+        piece(3, CFrame.new(-sx * 0.5 + 0.04, -sy * 0.11, 0),
             Vector3.new(0.24, sy * 0.68, sz * 0.26),
             theme.Structure, Enum.Material.DiamondPlate, 0.08)
 
@@ -1295,7 +1338,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
         piece(1, CFrame.new(0, -sy * 0.5 - 0.16, 0),
             Vector3.new(sx * 0.58, 0.27, sz * 0.20),
             theme.Structure, Enum.Material.DiamondPlate, 0.10)
-        piece(2, CFrame.new(sx * 0.36, -sy * 0.24, 0),
+        piece(2, CFrame.new(sx * 0.36, -sy * 0.735 + 0.035, 0),
             Vector3.new(0.33, sy * 0.47, sz * 0.51),
             theme.Detail, Enum.Material.Metal, 0.11)
         piece(3, CFrame.new(0, -sy * 0.5 - 0.33, 0),
