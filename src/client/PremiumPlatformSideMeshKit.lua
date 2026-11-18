@@ -134,8 +134,10 @@ end
 function Kit.harborRail(source, platform, native, index, shrink)
     local nativeWeld = native:FindFirstChild("ChaosPlatformTrimWeld")
     if not nativeWeld or not nativeWeld:IsA("Weld") or nativeWeld.Part1 ~= platform then return nil end
-    local alongZ = native.Size.Z > native.Size.X
-    local target = nativeWeld.C1 * CFrame.Angles(0,alongZ and math.pi*.5 or 0,0)
+    local swapped = native:GetAttribute("PlatformTrimAxisSwap") == true
+    local alongZ = (native.Size.Z > native.Size.X) ~= swapped
+    local turn = (alongZ and 1 or 0) - (swapped and 1 or 0)
+    local target = nativeWeld.C1 * CFrame.Angles(0, turn * math.pi * 0.5, 0)
     local dimensions = Vector3.new(math.max(native.Size.X,native.Size.Z),.42,.22*shrink)
     return fitHarborGirder(source,platform,target,dimensions,
         "OriginalHarborRecessedRail_"..index,"OriginalHarborRecessedRail3D")

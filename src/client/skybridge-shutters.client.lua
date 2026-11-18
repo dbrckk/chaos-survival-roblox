@@ -73,7 +73,7 @@ end
 
 local function refreshSkins()
     if not next(tracked) then return end
-    local source = ForgedBridge.shutterProfile()
+    local source = ForgedBridge.sweptProfile()
     if not source then return end
     local meshId = source.MeshId
     if not readyMeshes[meshId]

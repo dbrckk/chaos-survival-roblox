@@ -95,7 +95,7 @@ local function approvedSource()
     return source
 end
 
-function Kit.shutterProfile()
+function Kit.sweptProfile()
     local model = approvedSource()
     local profile = model and model:FindFirstChild("SweptCrossbeam")
     if profile and profile:IsA("MeshPart") and profile.Archivable and profile.MeshId ~= "" then

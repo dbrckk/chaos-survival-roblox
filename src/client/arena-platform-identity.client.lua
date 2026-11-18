@@ -13,6 +13,7 @@ local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdenti
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
 local ApprovedPlatformRimMeshKit = require(script.Parent.ApprovedPlatformRimMeshKit)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local PlatformNativeTrimReplacementKit = require(
     script.Parent.PlatformNativeTrimReplacementKit)
 local PremiumLargeStructureMeshKit = require(
@@ -983,6 +984,9 @@ local function rebuild()
     local girderSource,cornerSource
     local armorProfile = PlatformFinishKit.armorCount(tier.Name) > 0
         and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
+    local forgedTrimProfile = tier.Name ~= "Low"
+        and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+        and ForgedBridge.sweptProfile() or nil
     local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
         and supportBudget >= girderCost and cameraPoint
@@ -1189,7 +1193,8 @@ local function rebuild()
                 else
                     sidePieces,harborRails,railFallback = PlatformFinishKit.buildSideRails(
                         folder, platform, tier.Name, theme, variant, visualIndex,
-                        nearBridgeGirders[platform] == true, railTargets[platform] and girderSource)
+                        nearBridgeGirders[platform] == true, railTargets[platform] and girderSource,
+                        forgedTrimProfile)
                 end
             end
             if harborRails then
@@ -1243,7 +1248,8 @@ local function rebuild()
             if not authenticCarapace and not authenticBridge
                 and not authenticRim and not authenticLongCradle then
                 local pieces,meshes,braceFallback = PlatformFinishKit.buildLoadBraces(
-                    folder, platform, variant, tier.Name, theme, braceTargets[platform] and girderSource)
+                    folder, platform, variant, tier.Name, theme,
+                    braceTargets[platform] and girderSource, forgedTrimProfile)
                 braceMeshes = meshes
                 for _, piece in ipairs(pieces) do
                     registerVisual(platform, piece)
@@ -1909,7 +1915,7 @@ local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
     LongCradle = true, ShortCradle = true, LargeDeckHull = true,
-    Rect = true, Long = true, CornerGuard = true, AnchorBolt = true,
+    Rect = true, Long = true, CornerGuard = true, AnchorBolt = true, ForgedBridge = true,
 }
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
     if not holder or not holder:IsA("Folder") then return end
@@ -1929,7 +1935,7 @@ local function watchVerifiedTemplateReadiness(holder, connections, marker)
                 end)
         end
         if model.Name == "Bridge" or model.Name == "CornerGuard"
-            or model.Name == "AnchorBolt" then
+            or model.Name == "AnchorBolt" or model.Name == "ForgedBridge" then
             local function meshChanged(child)
                 if child:IsA("BasePart") and model.Parent == holder then scheduleRebuild() end
             end
@@ -1939,6 +1945,27 @@ local function watchVerifiedTemplateReadiness(holder, connections, marker)
     end
     for _, model in ipairs(holder:GetChildren()) do attach(model) end
     connections[#connections + 1] = holder.ChildAdded:Connect(attach)
+end
+
+-- The same late-arriving bridge profile fits trim in any arena.
+local forgedBridgeTemplateConnections = {}
+local function watchForgedBridgeTemplates(holder)
+    for _, connection in ipairs(forgedBridgeTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(forgedBridgeTemplateConnections)
+    if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            forgedBridgeTemplateConnections, "OriginalTowersSignatureBridge3D")
+        local function changed(child)
+            if child.Name == "ForgedBridge" then scheduleRebuild() end
+        end
+        forgedBridgeTemplateConnections[#forgedBridgeTemplateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        forgedBridgeTemplateConnections[#forgedBridgeTemplateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+    end
+    scheduleRebuild()
 end
 
 -- Original service hatches are loaded in a late server asset lane.
@@ -2152,7 +2179,9 @@ for _,holder in ipairs(ReplicatedStorage:GetChildren()) do watchOutpostTemplates
 ReplicatedStorage.ChildAdded:Connect(watchOutpostTemplates)
 
 ReplicatedStorage.ChildAdded:Connect(function(child)
-    if child.Name == "ApprovedFloorReliefTemplates" then
+    if child.Name == "ApprovedTowersSignatureBridgeTemplates" then
+        watchForgedBridgeTemplates(child)
+    elseif child.Name == "ApprovedFloorReliefTemplates" then
         watchPlatformReliefTemplates(child)
     elseif child.Name == "ApprovedPlatformSideTemplates" then
         watchSideTemplates(child)
@@ -2165,7 +2194,9 @@ ReplicatedStorage.ChildAdded:Connect(function(child)
     end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
-    if child == currentPlatformReliefTemplates then
+    if child.Name == "ApprovedTowersSignatureBridgeTemplates" then
+        watchForgedBridgeTemplates(ReplicatedStorage:FindFirstChild(child.Name))
+    elseif child == currentPlatformReliefTemplates then
         watchPlatformReliefTemplates(nil)
         scheduleRebuild()
     elseif child == watchedSideTemplates then
@@ -2182,6 +2213,8 @@ ReplicatedStorage.ChildRemoved:Connect(function(child)
         scheduleRebuild()
     end
 end)
+watchForgedBridgeTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates"))
 watchPlatformReliefTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates"))
 watchSideTemplates(

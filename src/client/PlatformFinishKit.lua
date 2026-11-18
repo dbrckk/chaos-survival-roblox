@@ -1,6 +1,6 @@
 -- Chaos Signal: minimal, recognizable platform detailing on moving geometry.
 -- Decorative welds follow the authoritative platform without collisions.
--- No custom asset IDs, dynamic emitters, scripted physics or animation loops.
+-- Approved sculpture fits the same slots and welds as its basic fallback.
 local PlatformFinishKit = {}
 -- This module is also loaded as a pure helper by Roblox Cloud engine suites:
 -- their ModuleScript sandbox has no global 'script'. Runtime Roblox clients
@@ -67,6 +67,22 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     end
     joint.Parent = part
     return part
+end
+
+local function fitForgedTrim(profile, frame, size, alongX)
+    local mesh = profile and profile:Clone()
+    if not mesh then return nil, frame, size end
+    local swapped = (profile.Size.X > profile.Size.Z) ~= alongX
+    mesh:ClearAllChildren()
+    mesh.TextureID = ""
+    mesh.MaterialVariant = ""
+    mesh:SetAttribute("Original3DAssetId", 126298311664881)
+    if swapped then
+        mesh:SetAttribute("PlatformTrimAxisSwap", true)
+        frame *= CFrame.Angles(0, math.pi * 0.5, 0)
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    return mesh, frame, size
 end
 
 -- StreamingEnabled does not guarantee the order in which platform Parts
@@ -305,7 +321,8 @@ function PlatformFinishKit.harborKeelMountSize(platform)
     return Vector3.new(math.min(size.X*.58,7*scale),.27,math.min(size.Z*.22,1.8*scale))
 end
 
-function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge, harborSource)
+function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant,
+    index, selectedBridge, harborSource, forgedProfile)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not NAMES[variant] then
         return {}
@@ -358,9 +375,10 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
     local built = {}
     for railIndex, segment in ipairs(segments) do
         if count == 4 or railIndex <= 2 then
+            local mesh, frame, size = fitForgedTrim(forgedProfile,
+                CFrame.new(segment[1]), segment[2], railIndex <= 2)
             local piece = add(parent, platform, "PlatformRecessedSideRail" .. railIndex,
-                CFrame.new(segment[1]), segment[2], color,
-                material, 0.08)
+                frame, size, color, material, 0.08, nil, mesh)
             table.insert(built, piece)
         end
     end
@@ -455,7 +473,11 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
                 piece.Size = Vector3.new(
                     size.X, size.Y, math.max(0.05, size.Z * ratio))
             else
-                piece.Size = snapshot.alongX
+                local alongX = snapshot.alongX
+                if piece:GetAttribute("PlatformTrimAxisSwap") == true then
+                    alongX = not alongX
+                end
+                piece.Size = alongX
                     and Vector3.new(size.X > 2.2 and size.X * ratio or size.X,
                         size.Y, size.Z)
                     or Vector3.new(size.X, size.Y,
@@ -853,10 +875,12 @@ function PlatformFinishKit.captureRouteFootprint(platform, pieces)
                 localCFrame = if welded then joint.C1
                     else platform.CFrame:ToObjectSpace(piece.CFrame),
             }
-            local corner = piece:GetAttribute("HarborLoadBraceCorner")
+            local harborCorner = piece:GetAttribute("HarborLoadBraceCorner")
+            local corner = harborCorner or piece:GetAttribute("ChaosLoadBraceCorner")
             if BRACE_CORNERS[corner] and welded then
-                local frame,length = loadBraceFrame(snapshot.originalSize,corner,true)
+                local frame, length = loadBraceFrame(snapshot.originalSize, corner, harborCorner ~= nil)
                 entry.braceCorner = corner
+                entry.harborBrace = harborCorner ~= nil
                 entry.braceLength = length
                 entry.braceOffset = frame:ToObjectSpace(joint.C1)
             end
@@ -890,12 +914,12 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
             local rimSwapped = part:GetAttribute(
                 "OriginalPlatformRimAxisSwap") == true
             local armorCorner = part:GetAttribute("ChaosArmorCorner")
-            local axesSwapped = rimSwapped
+            local axesSwapped = rimSwapped or part:GetAttribute("PlatformTrimAxisSwap") == true
                 or (type(armorCorner) == "number" and armorCorner % 2 == 0)
             if data.braceCorner then
                 -- Keep the socket at the deck edge and refit the diagonal
                 -- to the new lower anchor instead of squashing its width.
-                local frame,length = loadBraceFrame(deck.Size,data.braceCorner,true)
+                local frame, length = loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)
                 local offset = data.braceOffset
                 local ratio = length/data.braceLength
                 local position = offset.Position
@@ -959,7 +983,8 @@ function PlatformFinishKit.braceCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme, harborSource)
+function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme,
+    harborSource, forgedProfile)
     if not parent or not platform or not platform:IsA("BasePart")
         or not NAMES[variant] or not theme
         or platform:GetAttribute("ChaosSkybridge") == true then
@@ -993,14 +1018,13 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     local color = profile.tone
     local built = {}
     for i = 1, count do
-        local frame,length = loadBraceFrame(size,i,harbor)
-        local brace = add(
-            parent, platform, variant .. "LoadBrace" .. i, frame,
-            Vector3.new(profile.width, profile.depth, length),
-            color, profile.material, tier == "High" and 0.08 or 0.14
-        )
+        local frame, length = loadBraceFrame(size, i, harbor)
+        local mesh, pose, dimensions = fitForgedTrim(forgedProfile, frame,
+            Vector3.new(profile.width, profile.depth, length), false)
+        local brace = add(parent, platform, variant .. "LoadBrace" .. i, pose, dimensions,
+            color, profile.material, tier == "High" and 0.08 or 0.14, nil, mesh)
         brace:SetAttribute("ChaosLoadBrace", true)
-        if harbor then brace:SetAttribute("HarborLoadBraceCorner",i) end
+        brace:SetAttribute(harbor and "HarborLoadBraceCorner" or "ChaosLoadBraceCorner", i)
         built[#built + 1] = brace
     end
     local phase = platform:GetAttribute("CollapsePhase")
@@ -1010,8 +1034,8 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
     local meshes,fallback = {},{}
     for i,native in ipairs(built) do
-        local pieces = sideKit.harborLoadBrace(harborSource,platform,
-            native.ChaosPlatformTrimWeld.C1,native.Size.Z,i)
+        local frame, length = loadBraceFrame(size, i, true)
+        local pieces = sideKit.harborLoadBrace(harborSource, platform, frame, length, i)
         if not pieces then
             for _,piece in ipairs(meshes) do piece:Destroy() end
             return built

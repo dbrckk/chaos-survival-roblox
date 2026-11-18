@@ -1,3 +1,7 @@
+## P4 — Rails et renforts diagonaux des plateformes
+
+Dans les cinq arènes, les rails latéraux et les renforts diagonaux peuvent reprendre le profil forgé du pont approuvé de Tower Run. Chaque pièce occupe son emplacement existant en qualité moyenne ou haute. Les rails suivent la bonne direction de contraction et les renforts restent reliés à leurs deux points d’appui. Les treillis complets de Harbor et de Tower Run gardent la priorité. Les formes simples servent de secours si le maillage est indisponible ou si la charge graphique augmente.
+
 ## P4 — Renforts d’angle des plateformes
 
 Les angles des plateformes peuvent recevoir une tête de fixation à douze facettes issue d’un modèle approuvé. Le nombre de pièces reste lié à la qualité graphique. Les renforts suivent les angles quand une passerelle raccourcit et les habillages de Harbor gardent la priorité sur les plateformes qu’ils couvrent. Un renfort simple sert de secours si la fixation est indisponible.

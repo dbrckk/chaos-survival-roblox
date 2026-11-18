@@ -1775,7 +1775,8 @@ assert 'function PlatformFinishKit.build(parent, platform, variant, tier, theme,
 assert '"OriginalHarborLoadBrace3D"' in PLATFORM_SIDE
 assert 'piece:SetAttribute("ChaosLoadBrace",true)' in PLATFORM_SIDE
 assert 'descendant:GetAttribute("ChaosLoadBrace") == true' in SIDE_LOD
-assert 'loadBraceFrame(deck.Size,data.braceCorner,true)' in FINISH
+assert 'loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)' in FINISH
+assert 'entry.harborBrace = harborCorner ~= nil' in FINISH
 assert 'or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in FINISH
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,braceMeshes,braceFallback,scheduleRebuild)' in OWNER
 print("PASS Harbor diagonals refit the anchor geometry and share the column budget and caisson priority")

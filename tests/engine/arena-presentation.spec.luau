@@ -1105,10 +1105,25 @@ describe("Moving platform premium trim kit", function()
         deck.Parent = root
         local visuals = Instance.new("Folder")
         visuals.Parent = root
-        local pieces = PlatformFinishKit.build(
-            visuals, deck, "Classic", "High", VisualTheme.arena("Classic")
-        )
-        expect(#pieces > 0).toBe(true)
+        local theme = VisualTheme.arena("Classic")
+        local pieces = PlatformFinishKit.build(visuals, deck, "Classic", "High", theme)
+        local profile = Instance.new("MeshPart")
+        profile.Size = Vector3.new(40.64, 3.1108, 5.96)
+        local rails = PlatformFinishKit.buildSideRails(
+            visuals, deck, "Medium", theme, "Classic", 1, false, nil, profile)
+        local braces = PlatformFinishKit.buildLoadBraces(
+            visuals, deck, "Medium", "Classic", theme, nil, profile)
+        profile:Destroy()
+        expect(#rails).toBe(2)
+        expect(#braces).toBe(2)
+        for _, family in ipairs({rails, braces}) do
+            for _, piece in ipairs(family) do
+                expect(piece:IsA("MeshPart")).toBe(true)
+                expect(piece:GetAttribute("Original3DAssetId")).toBe(126298311664881)
+                expect(piece.CanCollide or piece.CanTouch or piece.CanQuery).toBe(false)
+                table.insert(pieces, piece)
+            end
+        end
         local first = pieces[1]
         local weld = first:FindFirstChild("ChaosPlatformTrimWeld")
         expect(weld ~= nil and weld:IsA("Weld")).toBe(true)
@@ -1127,6 +1142,23 @@ describe("Moving platform premium trim kit", function()
             - Vector3.new(firstOffset.X * 0.45,
                 firstOffset.Y, firstOffset.Z * 0.45)).Magnitude < 0.01)
             .toBe(true)
+
+        deck.Size = Vector3.new(4.5, 2, 7)
+        PlatformFinishKit.applyRouteFootprint(snapshot)
+        expect(math.abs(rails[1].Size.X - deck.Size.X * .72) < .005).toBe(true)
+        expect(math.abs(rails[1].Size.Z - .13 * .7) < .005).toBe(true)
+        local brace = braces[1]
+        local braceFrame = brace.ChaosPlatformTrimWeld.C1
+        local socket = braceFrame:PointToWorldSpace(-Vector3.xAxis * brace.Size.X * .5)
+        local expectedSocket = Vector3.new(-deck.Size.X * .36, -1.22, -deck.Size.Z * .30)
+        expect((socket - expectedSocket).Magnitude < .01).toBe(true)
+        expect(math.abs(brace.Size.Z - .55) < .005).toBe(true)
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
+        expect(rails[1].Transparency).toBe(1)
+        expect(brace.Transparency).toBe(1)
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Restored")
+        expect(math.abs(rails[1].Transparency - .08) < .001).toBe(true)
+        expect(math.abs(brace.Transparency - .14) < .001).toBe(true)
 
         deck.Size = Vector3.new(10, 2, 10)
         PlatformFinishKit.applyRouteFootprint(snapshot)
@@ -1162,9 +1194,12 @@ describe("Moving platform premium trim kit", function()
         local visual = Instance.new("Folder")
         visual.Parent = root
         local theme = VisualTheme.arena("Towers")
+        local railProfile = Instance.new("MeshPart")
+        railProfile.Size = Vector3.new(5.96, 3.1108, 40.64)
         local rails = PlatformFinishKit.buildSideRails(
-            visual, platform, "High", theme, "Towers"
+            visual, platform, "High", theme, "Towers", 1, false, nil, railProfile
         )
+        railProfile:Destroy()
         local paint = PlatformFinishKit.build(
             visual, platform, "Towers", "High", theme
         )
@@ -1182,6 +1217,7 @@ describe("Moving platform premium trim kit", function()
         end
         expect(#rails).toBe(4)
         for _, rail in ipairs(rails) do
+            expect(rail:IsA("MeshPart")).toBe(true)
             expect(rail.Material).toBe(Enum.Material.CorrodedMetal)
         end
         for _, part in ipairs(pieces) do
@@ -1208,13 +1244,13 @@ describe("Moving platform premium trim kit", function()
                     .. " expected=" .. tostring(expected))
             end
         end
-        assertNear("rail span", rails[1].Size.X,
-            originalRailSize.X * 0.5, 0.005)
+        assertNear("rail span", rails[1].Size.Z,
+            originalRailSize.Z * 0.5, 0.005)
         assertNear("rigid armor", armor[1].Size.X,
             originalRigidSize.X, 0.005)
         assertNear("rail end", platform.CFrame:PointToObjectSpace(rails[3].Position).X,
             endBefore.X * 0.5, 0.01)
-        expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.5)
+        expect(math.abs(rails[1].Size.Z - originalRailSize.Z * 0.5)
             < 0.005).toBe(true)
         expect((armor[1].Size - originalRigidSize).Magnitude < 0.005)
             .toBe(true)
@@ -1241,9 +1277,9 @@ describe("Moving platform premium trim kit", function()
         )
         platform.Size = Vector3.new(43.5, 2, 7)
         task.wait(0.06)
-        assertNear("size listener", rails[1].Size.X,
-            originalRailSize.X * 0.75, 0.005)
-        expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.75)
+        assertNear("size listener", rails[1].Size.Z,
+            originalRailSize.Z * 0.75, 0.005)
+        expect(math.abs(rails[1].Size.Z - originalRailSize.Z * 0.75)
             < 0.005).toBe(true)
         disconnect()
         local sizeBeforeStop = rails[1].Size
