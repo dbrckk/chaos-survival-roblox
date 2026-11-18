@@ -1,3 +1,7 @@
+## P4 — Bandeaux sculptés des colonnes de ceinture
+
+Les 20 bandeaux lumineux reprennent le profil polygonal de la colonne approuvée de chaque arène. Ils affleurent la face tournée vers le centre, au-dessus du socle, et se déplacent avec leur colonne pendant le rétrécissement. Les bandeaux simples prennent le relais si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Segments sculptés du halo extérieur
 
 Les 80 segments des cinq arènes peuvent reprendre le profil forgé du pont approuvé de Tower Run. Quatre segments longent chaque côté, hors du sol jouable et sous son rebord. Le halo reste fixe pendant le rétrécissement, tandis que la bordure lumineuse suit le sol. Des segments simples prennent le relais si le maillage approuvé est indisponible à la construction.

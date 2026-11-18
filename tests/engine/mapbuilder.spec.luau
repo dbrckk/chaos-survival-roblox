@@ -880,6 +880,19 @@ describe("Chaos Survival engine", function()
                 expect(line.Material).toBe(Enum.Material.Neon)
                 expect(line.Transparency >= 0.55).toBe(true)
             end
+            for index = 1, 4 do
+                local casing = decor.OriginalPremiumColumnCladding[id .. "ArchitecturalCasing" .. index]
+                local shell, foot = casing.ArmoredFrontShell, casing.FoundationFoot
+                local slit = decor["FrameColumnGlow" .. index]
+                expect(slit.Material).toBe(Enum.Material.Neon)
+                expect(not slit.CanCollide and not slit.CanTouch and not slit.CanQuery).toBe(true)
+                local pose = shell.CFrame:ToObjectSpace(slit.CFrame)
+                local halfDepth = (math.abs(pose.RightVector.Z) * slit.Size.X
+                    + math.abs(pose.LookVector.Z) * slit.Size.Z) * .5
+                expect(pose.Position.Z - halfDepth < -shell.Size.Z * .5).toBe(true)
+                expect(pose.Position.Z + halfDepth > -shell.Size.Z * .5).toBe(true)
+                expect(slit.Position.Y - slit.Size.Y * .5 > foot.Position.Y + foot.Size.Y * .5).toBe(true)
+            end
             if id == "Towers" then
                 local core = decor:FindFirstChild("TowerGroundCore1")
                 expect(core.Material).toBe(Enum.Material.Neon)

@@ -936,7 +936,7 @@ local function addExteriorSilhouettePairs(decor, config, variant, theme)
     end
 end
 
-local function addArenaFoundation(decor, config, variant, theme, sweptProfile)
+local function addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
 
@@ -1052,15 +1052,18 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile)
         )
         column.Transparency = 0.05
 
-        local slit = decorPart(
-            decor,
+        -- Seat the slit in front of the inward-facing shell, above the foot.
+        local face = CFrame.lookAt(column.Position, center + Vector3.new(0, offset.Y, 0))
+        local slit = fitDecorMesh(
+            beaconShaft,
             "FrameColumnGlow" .. i,
-            Vector3.new(0.42, 5.6, 1.48),
-            column.Position,
+            face * CFrame.new(0, 0.4, -2.08),
+            Vector3.new(0.42, 4.8, 0.28),
             (i % 2 == 0) and theme.Secondary or theme.Accent,
             VisualTheme.Materials.Glow
         )
         slit.Transparency = 0.20
+        slit.Parent = decor
     end
 end
 
@@ -2839,7 +2842,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local chassis = accessChassisSource()
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     local wayfinderBase = wayfinderBaseSource()
-    addArenaFoundation(decor, config, variant, theme, sweptProfile)
+    local beaconShaft = beaconShaftSource(variant.Id)
+    addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
@@ -2893,7 +2897,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         border.Parent = decor
     end
 
-    local beaconShaft = beaconShaftSource(variant.Id)
     -- The client uses the center of this part for the orbit and particles.
     local beacon = fitDecorMesh(
         beaconShaft,
