@@ -523,7 +523,10 @@ describe("Chaos Survival engine", function()
                 for _, piece in ipairs(skyline:GetDescendants()) do
                     if piece:IsA("BasePart") then
                         parts += 1
-                        if piece:IsA("WedgePart") then
+                        if piece:IsA("WedgePart")
+                            or (piece:IsA("MeshPart")
+                                and piece:GetAttribute("OriginalExteriorDetail3D") == true
+                                and piece:GetAttribute("Original3DAssetId") == 88962643359267) then
                             distinctGeometry += 1
                         end
                         expect(piece.Anchored).toBe(true)

@@ -67,6 +67,19 @@ local profiles = {
     ArenaSignatureMegastructure = northProfiles,
     SouthHorizonMonument = southProfiles,
 }
+local skylineProfiles = {
+    Foundation = "bevel", StructuralCore = "shaft", TopCap = "cast",
+    OuterRibL = "cast", OuterRibR = "cast", InsetL = "shaft", InsetR = "shaft",
+    ReceiverHead = "rotor", ExchangeMast = "shaft", CrossAntenna = "beam",
+    ServiceMast = "shaft", RelayAerial = "cast",
+}
+local depthProfiles = {DistantRoofMass = "depthHull", DistantAerial = "shaft"}
+for _, direction in ipairs({"North", "East", "South", "West"}) do
+    profiles["SkylineStructure" .. direction] = skylineProfiles
+    for layer = 1, 2 do
+        profiles["SkylineDepth" .. direction .. layer] = depthProfiles
+    end
+end
 
 local assets = {
     bevel = 102746904688141,
@@ -74,6 +87,8 @@ local assets = {
     cast = 88962643359267,
     lens = 104654294187035,
     roller = 94830155055482,
+    rotor = 133526819668194,
+    depthHull = 80692067525256,
 }
 local shafts = {
     Classic = 91626128452597,

@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SceneryLodRules = if script then require(ReplicatedStorage.Shared.SceneryLodRules)
     else require("../shared/SceneryLodRules")
 
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
+
 local Kit = {}
 local SOURCE_ID = 80692067525256
 local SOURCE_SIZE = Vector3.new(11.4,33.95,7.19)
@@ -180,10 +182,9 @@ local function genuineAerial(owner, body, layer)
     local aerial = owner:FindFirstChild("DistantAerial")
     local size = Vector3.new(.38,4+layer*2,.38)
     local position = body.Position+Vector3.new(0,(body.Size.Y+size.Y)*.5,0)
-    if not aerial or not aerial:IsA("Part") or aerial.Shape ~= Enum.PartType.Block
-        or not aerial.Anchored or aerial.CanCollide or aerial.CanTouch or aerial.CanQuery
-        or (aerial.Size-size).Magnitude > .08 or (aerial.Position-position).Magnitude > .20
-        or aerial.CFrame.UpVector:Dot(Vector3.yAxis) < .999
+    local fittedSize, pose = ExteriorDetailGeometry.monumentFootprint(aerial, owner, "Part")
+    if not fittedSize or (fittedSize-size).Magnitude > .08 or (pose.Position-position).Magnitude > .20
+        or pose.UpVector:Dot(Vector3.yAxis) < .999
         or aerial.LocalTransparencyModifier >= .95
         or aerial:GetAttribute("SceneryLodHidden") == true then return nil end
     return aerial
@@ -220,13 +221,11 @@ local function realOwner(arena,decor,base,direction,index,layer)
         * CFrame.Angles(0,direction.yaw,0)
     local sourceSize = Vector3.new(10+layer*3,height,8)
     local original = .14+layer*.12
-    if not body or not body:IsA("WedgePart")
-        or body.Parent ~= owner
-        or not body.Anchored or body.CanCollide or body.CanTouch
-        or body.CanQuery or (body.Size-sourceSize).Magnitude > .12
-        or (body.Position-expected.Position).Magnitude > .20
-        or body.CFrame.LookVector:Dot(expected.LookVector) < .999
-        or body.CFrame.UpVector:Dot(expected.UpVector) < .999
+    local size, pose = ExteriorDetailGeometry.monumentFootprint(body, owner, "WedgePart")
+    if not size or (size-sourceSize).Magnitude > .12
+        or (pose.Position-expected.Position).Magnitude > .20
+        or pose.LookVector:Dot(expected.LookVector) < .999
+        or pose.UpVector:Dot(expected.UpVector) < .999
         or (math.abs(body.Transparency-original) > .035
             and body.Transparency ~= 1) then
         return nil
@@ -235,7 +234,8 @@ local function realOwner(arena,decor,base,direction,index,layer)
 end
 
 local function valid(entry)
-    if entry.arena ~= activeArena
+    local size, pose = ExteriorDetailGeometry.monumentFootprint(entry.body, entry.owner, "WedgePart")
+    if not size or entry.arena ~= activeArena
         or entry.model.Parent ~= bucket
         or entry.owner.Parent ~= entry.decor
         or entry.decor.Parent ~= entry.arena
@@ -243,12 +243,10 @@ local function valid(entry)
         or not authenticFootprint(entry.base, entry.arena)
         or entry.source.Parent ~= entry.holder
         or entry.holder.Parent ~= ReplicatedStorage
-        or entry.body.Parent ~= entry.owner
-        or entry.body.Size ~= entry.size
-        or (entry.body.Position-entry.position).Magnitude > .08
-        or entry.body.CFrame.LookVector:Dot(entry.look) < .999
-        or not entry.body.Anchored or entry.body.CanCollide
-        or entry.body.CanTouch or entry.body.CanQuery
+        or size ~= entry.size
+        or (pose.Position-entry.pose.Position).Magnitude > .08
+        or pose.LookVector:Dot(entry.pose.LookVector) < .999
+        or pose.UpVector:Dot(entry.pose.UpVector) < .999
         or #entry.pieces ~= 7 then return false end
     for _,part in ipairs(entry.pieces) do
         if not part:IsDescendantOf(entry.model) then return false end
@@ -264,8 +262,8 @@ local function mountAerial(entry, native, layer, approved)
     clone:SetAttribute("Original3DAssetId",AERIAL_ID)
     local height = native.Size.Y
     local width = layer == 1 and .94 or 1.08
-    local frame = entry.body.CFrame * CFrame.new(0,
-        entry.roofHeight-entry.body.Size.Y*.5+height*.5-.16,0)
+    local frame = entry.pose * CFrame.new(0,
+        entry.roofHeight-entry.size.Y*.5+height*.5-.16,0)
     local scale = Vector3.new(width/AERIAL_SIZE.X,height/AERIAL_SIZE.Y,width/AERIAL_SIZE.Z)
     for _,part in ipairs({approved.hull,approved.sockets}) do
         local mesh = part:Clone()
@@ -311,9 +309,17 @@ local function mountAerial(entry, native, layer, approved)
     end
     watch(native.AncestryChanged,checkNative)
     watch(native:GetAttributeChangedSignal("SceneryLodHidden"),checkNative)
-    for _,property in ipairs({"Name","CFrame","Size","Shape","Anchored","CanCollide",
+    for _,property in ipairs({"Name","CFrame","Size","Anchored","CanCollide",
         "CanTouch","CanQuery","LocalTransparencyModifier"}) do
         watch(native:GetPropertyChangedSignal(property),checkNative)
+    end
+    if native:IsA("Part") then
+        watch(native:GetPropertyChangedSignal("Shape"),checkNative)
+    elseif native:IsA("MeshPart") then
+        watch(native:GetPropertyChangedSignal("MeshId"),checkNative)
+        for _,attribute in ipairs({"OriginalExteriorDetail3D","Original3DAssetId","ExteriorDetailAxisSwap"}) do
+            watch(native:GetAttributeChangedSignal(attribute),checkNative)
+        end
     end
     native.Transparency = 1
 end
@@ -340,6 +346,8 @@ end
 
 local function mount(arena,decor,base,owner,body,original,source,
         holder,id,yaw)
+    local size, pose = ExteriorDetailGeometry.monumentFootprint(body, owner, "WedgePart")
+    if not size then return end
     local clone = source:Clone()
     if not clone then return end
     local _,bounds = clone:GetBoundingBox()
@@ -348,8 +356,8 @@ local function mount(arena,decor,base,owner,body,original,source,
     -- tower. No procedural Parts, renderer loops or physical effects.
     local rawWidth = yaw == 0 and bounds.X or bounds.Z
     local rawDepth = yaw == 0 and bounds.Z or bounds.X
-    local scale = math.min(body.Size.Y/bounds.Y,
-        body.Size.X*1.15/rawWidth,body.Size.Z*1.28/rawDepth)
+    local scale = math.min(size.Y/bounds.Y,
+        size.X*1.15/rawWidth,size.Z*1.28/rawDepth)
     if scale < .72 or scale > 1.55
         or not pcall(function() clone:ScaleTo(scale) end) then
         clone:Destroy()
@@ -358,15 +366,15 @@ local function mount(arena,decor,base,owner,body,original,source,
     local frame,scaled = clone:GetBoundingBox()
     local width = yaw == 0 and scaled.X or scaled.Z
     local depth = yaw == 0 and scaled.Z or scaled.X
-    if scaled.Y < body.Size.Y*.79
-        or scaled.Y > body.Size.Y*1.07
-        or width > body.Size.X*1.15
-        or depth > body.Size.Z*1.28 then
+    if scaled.Y < size.Y*.79
+        or scaled.Y > size.Y*1.07
+        or width > size.X*1.15
+        or depth > size.Z*1.28 then
         clone:Destroy()
         return
     end
-    local target = body.CFrame
-        * CFrame.new(0,(scaled.Y-body.Size.Y)*.5,0)
+    local target = pose
+        * CFrame.new(0,(scaled.Y-size.Y)*.5,0)
         * CFrame.Angles(0,yaw,0)
     local pieces = {}
     for _,part in ipairs(clone:GetDescendants()) do
@@ -393,8 +401,7 @@ local function mount(arena,decor,base,owner,body,original,source,
     local entry = {
         arena=arena,decor=decor,base=base,owner=owner,body=body,
         original=original,source=source,holder=holder,model=clone,
-        pieces=pieces,connections={},size=body.Size,
-        position=body.Position,look=body.CFrame.LookVector,roofHeight=scaled.Y,
+        pieces=pieces,connections={},size=size,pose=pose,roofHeight=scaled.Y,
     }
     mounted[owner] = entry
     if not valid(entry) then restore(owner);return end
@@ -416,6 +423,12 @@ local function mount(arena,decor,base,owner,body,original,source,
         clone.AncestryChanged,
     }) do
         entry.connections[#entry.connections+1] = signal:Connect(changed)
+    end
+    if body:IsA("MeshPart") then
+        entry.connections[#entry.connections+1] = body:GetPropertyChangedSignal("MeshId"):Connect(changed)
+        for _,attribute in ipairs({"OriginalExteriorDetail3D","Original3DAssetId","ExteriorDetailAxisSwap"}) do
+            entry.connections[#entry.connections+1] = body:GetAttributeChangedSignal(attribute):Connect(changed)
+        end
     end
     entry.connections[#entry.connections+1] =
         source.DescendantRemoving:Connect(function(part)

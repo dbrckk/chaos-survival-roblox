@@ -1,3 +1,7 @@
+## P4 — Silhouettes d’arrière-plan
+
+Les 20 tours principales et les 40 silhouettes lointaines des cinq arènes peuvent utiliser des maillages approuvés dans 244 emplacements existants. Les toitures lointaines reprennent la coque octogonale du modèle complet, surmontée d’un mât facetté. Les sources chargées à la construction déterminent quelles pièces sont sculptées. Les modèles complets utilisent les mêmes repères et gardent leurs limites de proximité.
+
 ## P4 — Monuments des horizons nord et sud
 
 Les maillages approuvés peuvent habiller 80 pièces de secours au nord et 73 au sud, réparties sur les cinq arènes. Les deux horizons partagent les mêmes sources de géométrie. Les modèles complets de proximité masquent les pièces sur leurs repères d’origine, puis les restaurent lorsque la distance ou la pression graphique l’exige. Chaque pièce garde sa forme d’origine si son maillage manque à la construction.

@@ -28,8 +28,9 @@ assert "local ID = "+ASSET_ID in SERVER
 for guard in ('"OwnerVerified"','"OriginalSkylineDepthSculpt3D"',
               '"Original3DAssetId"','"CosmeticOnly"',
               'part:IsA("MeshPart")','count ~= 7',
-              'body:IsA("WedgePart")','body.Anchored',
-              'body.CanCollide','body.CanTouch','body.CanQuery',
+              'ExteriorDetailGeometry.monumentFootprint(body, owner, "WedgePart")',
+              'ExteriorDetailGeometry.monumentFootprint(aerial, owner, "Part")',
+              'pose.LookVector:Dot(expected.LookVector)',
               'source.DescendantRemoving:Connect',
               'clone.DescendantRemoving:Connect',
               'part.CanCollide = false','part.CanTouch = false',
@@ -96,7 +97,7 @@ assert 'AERIAL_ID = 105555650820011' in KIT
 assert MODELS["variant_classic_grid_marker_sculpt"]["asset_id"] == "105555650820011"
 assert MODELS["variant_classic_grid_marker_sculpt"]["moderation"] == "Approved"
 for guard in ('trustedAerial(source, holder)', 'local function genuineAerial',
-              'approved.hull,approved.sockets', 'entry.roofHeight-entry.body.Size.Y',
+              'approved.hull,approved.sockets', 'entry.roofHeight-entry.size.Y',
               'clone.Parent = entry.model', 'stress == 0 and source and approvedAerial()',
               'aerial.native.Transparency = aerial.alpha', 'return roofs,aerials'):
     assert guard in KIT,guard

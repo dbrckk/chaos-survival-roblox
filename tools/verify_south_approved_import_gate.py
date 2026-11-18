@@ -60,7 +60,7 @@ geometry = (ROOT/"src/shared/HorizonMonumentGeometry.lua").read_text()
 asset_ids = set(re.findall(r"= (\d{9,})\b", geometry))
 models = json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())["models"]
 approved = {model["asset_id"] for model in models if model.get("moderation") == "Approved"}
-assert len(asset_ids) == 10 and asset_ids <= approved, asset_ids-approved
+assert len(asset_ids) == 12 and asset_ids <= approved, asset_ids-approved
 
 builder = (SERVER/"MapBuilder.lua").read_text()
 piece_builder = builder.split("local function horizonPieceBuilder",1)[1].split("\nend",1)[0]

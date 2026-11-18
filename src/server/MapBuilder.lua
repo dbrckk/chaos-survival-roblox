@@ -269,160 +269,6 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
     end
 end
 
--- The enlarged 150+ stud maps need a believable horizon, not just
--- extra empty floor. Four purpose-built exterior silhouettes provide depth
--- from the player's ground-height camera while remaining OUTSIDE the
--- hazard arena. These are original, lightweight Roblox-native 3D objects:
--- no remote models, texture IDs, scripts, draw loops, physics or lights.
--- Taller roofs remain outside every safe player/AI route and kill plane.
-local function addDistantSkyline(decor, config, variant, theme)
-    local halfX = variant.BaseSize.X * 0.5
-    local halfZ = variant.BaseSize.Z * 0.5
-    local directions = {
-        {id = "North", x = -22, z = -halfZ - 23, yaw = 0},
-        {id = "East", x = halfX + 23, z = -22, yaw = math.pi * 0.5},
-        {id = "South", x = 22, z = halfZ + 23, yaw = math.pi},
-        {id = "West", x = -halfX - 23, z = 22, yaw = -math.pi * 0.5},
-    }
-    local floorTop = variant.BaseSize.Y * 0.5
-    for index, direction in ipairs(directions) do
-        local model = Instance.new("Model")
-        model.Name = "SkylineStructure" .. direction.id
-        model:SetAttribute("ChaosDistantScenery", true)
-        model.Parent = decor
-
-        local height = (variant.Id == "Towers" and 25
-            or (variant.Id == "Crossroads" and 20
-                or (variant.Id == "Orbital" and 22 or 17)))
-            + (index % 2) * 3
-        local base = CFrame.new(
-            config.ArenaCenter
-                + Vector3.new(direction.x, floorTop, direction.z)
-        ) * CFrame.Angles(0, direction.yaw, 0)
-        local hullColor = theme.Structure:Lerp(theme.Surface, 0.14)
-        local metalColor = theme.Detail:Lerp(theme.Structure, 0.65)
-        local signalColor = theme.Secondary:Lerp(theme.Structure, 0.54)
-
-        local function detail(name, kind, size, offset, material, color,
-                transparency)
-            local p = Instance.new(kind)
-            p.Name = name
-            p.Size = size
-            p.CFrame = base * offset
-            p.Anchored = true
-            p.CanCollide = false
-            p.CanTouch = false
-            p.CanQuery = false
-            p.CastShadow = false
-            p.Material = material
-            p.Color = color
-            p.Transparency = transparency or 0
-            p.Parent = model
-            return p
-        end
-
-        -- Deep metal masses and recessed details are the main read, not
-        -- fluorescent slabs. No visual object is a fake walkable platform.
-        detail("Foundation", "Part", Vector3.new(14, 2.3, 10),
-            CFrame.new(0, -1.1, 0), Enum.Material.Concrete,
-            hullColor, 0.04)
-        detail("StructuralCore", "Part", Vector3.new(8.5, height, 7.4),
-            CFrame.new(0, height * 0.5, 0),
-            Enum.Material.Metal, hullColor, 0.03)
-        detail("TopCap", "WedgePart", Vector3.new(11.4, 3, 8.8),
-            CFrame.new(0, height + 1.3, 0),
-            Enum.Material.Metal, metalColor, 0.06)
-        for side = -1, 1, 2 do
-            detail(side < 0 and "OuterRibL" or "OuterRibR",
-                "WedgePart", Vector3.new(2.2, 5.4, 8),
-                CFrame.new(side * 4.6, 2.8, 0)
-                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
-                Enum.Material.Metal, metalColor, 0.06)
-            detail(side < 0 and "InsetL" or "InsetR",
-                "Part", Vector3.new(0.24, height * 0.54, 0.85),
-                CFrame.new(side * 4.30, height * 0.52, -3.6),
-                Enum.Material.Metal, signalColor, 0.28)
-        end
-
-        if variant.Id == "Orbital" then
-            local dish = detail("ReceiverHead", "Part",
-                Vector3.new(5.5, 0.75, 5.5),
-                CFrame.new(0, height + 3.4, 0),
-                Enum.Material.Metal, metalColor, 0.06)
-            dish.Shape = Enum.PartType.Cylinder
-        elseif variant.Id == "Crossroads" then
-            detail("ExchangeMast", "Part", Vector3.new(0.7, 5.5, 0.7),
-                CFrame.new(0, height + 4.0, 0),
-                Enum.Material.Metal, metalColor, 0.04)
-            detail("CrossAntenna", "Part", Vector3.new(7.5, 0.4, 0.4),
-                CFrame.new(0, height + 6.1, 0),
-                Enum.Material.Metal, metalColor, 0.05)
-        elseif variant.Id == "Towers" then
-            detail("ServiceMast", "Part", Vector3.new(0.85, 7, 0.85),
-                CFrame.new(0, height + 4.6, 0),
-                Enum.Material.Metal, metalColor, 0.06)
-        else
-            detail("RelayAerial", "WedgePart", Vector3.new(3.4, 3.2, 2),
-                CFrame.new(0, height + 3.2, 0),
-                Enum.Material.Metal, metalColor, 0.06)
-        end
-    end
-
-    -- Two additional depth layers behind each primary skyline silhouette.
-    -- These structures are far beyond the playable floor and cannot be
-    -- mistaken for traversable decks. No lights, particles, or updates.
-    -- Dark layered silhouettes break up the boxy horizon in Android view.
-    local farColor = theme.Structure:Lerp(Color3.fromRGB(11, 15, 24), 0.46)
-    for index, direction in ipairs(directions) do
-        local side = Vector3.new(math.cos(direction.yaw), 0,
-            -math.sin(direction.yaw))
-        local outward = Vector3.new(
-            math.sin(direction.yaw), 0, -math.cos(direction.yaw)
-        )
-        for layer = 1, 2 do
-            local model = Instance.new("Model")
-            model.Name = "SkylineDepth" .. direction.id .. layer
-            model:SetAttribute("ChaosDistantScenery", true)
-            model.Parent = decor
-            local height = (variant.Id == "Towers" and 31 or 22)
-                + layer * 5 + ((index + layer) % 3) * 3
-            local origin = config.ArenaCenter
-                + Vector3.new(direction.x, variant.BaseSize.Y * 0.5,
-                    direction.z)
-                + outward * (16 + layer * 10)
-                + side * (layer == 1 and -17 or 19)
-            local body = Instance.new("WedgePart")
-            body.Name = "DistantRoofMass"
-            body.Size = Vector3.new(10 + layer * 3, height, 8)
-            body.CFrame = CFrame.new(origin + Vector3.new(0, height * 0.5, 0))
-                * CFrame.Angles(0, direction.yaw, 0)
-            body.Material = Enum.Material.Metal
-            body.Color = farColor
-            body.Transparency = 0.14 + layer * 0.12
-            body.Anchored = true
-            body.CanCollide = false
-            body.CanTouch = false
-            body.CanQuery = false
-            body.CastShadow = false
-            body.Parent = model
-            local spire = Instance.new("Part")
-            spire.Name = "DistantAerial"
-            spire.Size = Vector3.new(0.38, 4 + layer * 2, 0.38)
-            spire.CFrame = CFrame.new(origin
-                + Vector3.new(0, height + 2 + layer, 0))
-            spire.Material = Enum.Material.Metal
-            spire.Color = farColor
-            spire.Transparency = 0.20 + layer * 0.10
-            spire.Anchored = true
-            spire.CanCollide = false
-            spire.CanTouch = false
-            spire.CanQuery = false
-            spire.CastShadow = false
-            spire.Parent = model
-        end
-    end
-end
-
 local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass)
     local mesh = source and RouteSignalGeometry.fit(source.part, frame, size, nil, alongX)
     local item = mesh or Instance.new(fallbackClass or "Part")
@@ -459,6 +305,123 @@ local function horizonPieceBuilder(model, origin, hull, variant, templates)
         if shape and item:IsA("Part") then item.Shape = shape end
         item.Transparency = opacity or 0
         item.Parent = model
+    end
+end
+
+-- The enlarged 150+ stud maps need a believable horizon, not just
+-- extra empty floor. Four purpose-built exterior silhouettes provide depth
+-- from the player's ground-height camera while remaining OUTSIDE the
+-- hazard arena. Each slot uses one fitted approved profile when available.
+-- Taller roofs remain outside every safe player/AI route and kill plane.
+local function addDistantSkyline(decor, config, variant, theme, templates)
+    local halfX = variant.BaseSize.X * 0.5
+    local halfZ = variant.BaseSize.Z * 0.5
+    local directions = {
+        {id = "North", x = -22, z = -halfZ - 23, yaw = 0},
+        {id = "East", x = halfX + 23, z = -22, yaw = math.pi * 0.5},
+        {id = "South", x = 22, z = halfZ + 23, yaw = math.pi},
+        {id = "West", x = -halfX - 23, z = 22, yaw = -math.pi * 0.5},
+    }
+    local floorTop = variant.BaseSize.Y * 0.5
+    for index, direction in ipairs(directions) do
+        local model = Instance.new("Model")
+        model.Name = "SkylineStructure" .. direction.id
+        model:SetAttribute("ChaosDistantScenery", true)
+        model:SetAttribute("SignatureVariant", variant.Id)
+        model.Parent = decor
+
+        local height = (variant.Id == "Towers" and 25
+            or (variant.Id == "Crossroads" and 20
+                or (variant.Id == "Orbital" and 22 or 17)))
+            + (index % 2) * 3
+        local base = CFrame.new(
+            config.ArenaCenter
+                + Vector3.new(direction.x, floorTop, direction.z)
+        ) * CFrame.Angles(0, direction.yaw, 0)
+        local hullColor = theme.Structure:Lerp(theme.Surface, 0.14)
+        local metalColor = theme.Detail:Lerp(theme.Structure, 0.65)
+        local signalColor = theme.Secondary:Lerp(theme.Structure, 0.54)
+
+        local detail = horizonPieceBuilder(model, base, hullColor, variant.Id, templates)
+
+        -- Deep metal masses and recessed details are the main read, not
+        -- fluorescent slabs. No visual object is a fake walkable platform.
+        detail("Foundation", "Part", Vector3.new(14, 2.3, 10),
+            CFrame.new(0, -1.1, 0), Enum.Material.Concrete,
+            hullColor, 0.04)
+        detail("StructuralCore", "Part", Vector3.new(8.5, height, 7.4),
+            CFrame.new(0, height * 0.5, 0),
+            Enum.Material.Metal, hullColor, 0.03)
+        detail("TopCap", "WedgePart", Vector3.new(11.4, 3, 8.8),
+            CFrame.new(0, height + 1.3, 0),
+            Enum.Material.Metal, metalColor, 0.06)
+        for side = -1, 1, 2 do
+            detail(side < 0 and "OuterRibL" or "OuterRibR",
+                "WedgePart", Vector3.new(2.2, 5.4, 8),
+                CFrame.new(side * 4.6, 2.8, 0)
+                    * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+            detail(side < 0 and "InsetL" or "InsetR",
+                "Part", Vector3.new(0.24, height * 0.54, 0.85),
+                CFrame.new(side * 4.30, height * 0.52, -3.6),
+                Enum.Material.Metal, signalColor, 0.28)
+        end
+
+        if variant.Id == "Orbital" then
+            detail("ReceiverHead", "Part",
+                Vector3.new(5.5, 0.75, 5.5),
+                CFrame.new(0, height + 3.4, 0),
+                Enum.Material.Metal, metalColor, 0.06, Enum.PartType.Cylinder)
+        elseif variant.Id == "Crossroads" then
+            detail("ExchangeMast", "Part", Vector3.new(0.7, 5.5, 0.7),
+                CFrame.new(0, height + 4.0, 0),
+                Enum.Material.Metal, metalColor, 0.04)
+            detail("CrossAntenna", "Part", Vector3.new(7.5, 0.4, 0.4),
+                CFrame.new(0, height + 6.1, 0),
+                Enum.Material.Metal, metalColor, 0.05)
+        elseif variant.Id == "Towers" then
+            detail("ServiceMast", "Part", Vector3.new(0.85, 7, 0.85),
+                CFrame.new(0, height + 4.6, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+        else
+            detail("RelayAerial", "WedgePart", Vector3.new(3.4, 3.2, 2),
+                CFrame.new(0, height + 3.2, 0),
+                Enum.Material.Metal, metalColor, 0.06)
+        end
+    end
+
+    -- Two additional depth layers behind each primary skyline silhouette.
+    -- These structures are far beyond the playable floor and cannot be
+    -- mistaken for traversable decks. No lights, particles, or updates.
+    -- Dark layered silhouettes break up the boxy horizon in Android view.
+    local farColor = theme.Structure:Lerp(Color3.fromRGB(11, 15, 24), 0.46)
+    for index, direction in ipairs(directions) do
+        local side = Vector3.new(math.cos(direction.yaw), 0,
+            -math.sin(direction.yaw))
+        local outward = Vector3.new(
+            math.sin(direction.yaw), 0, -math.cos(direction.yaw)
+        )
+        for layer = 1, 2 do
+            local model = Instance.new("Model")
+            model.Name = "SkylineDepth" .. direction.id .. layer
+            model:SetAttribute("ChaosDistantScenery", true)
+            model:SetAttribute("SignatureVariant", variant.Id)
+            model.Parent = decor
+            local height = (variant.Id == "Towers" and 31 or 22)
+                + layer * 5 + ((index + layer) % 3) * 3
+            local origin = config.ArenaCenter
+                + Vector3.new(direction.x, variant.BaseSize.Y * 0.5,
+                    direction.z)
+                + outward * (16 + layer * 10)
+                + side * (layer == 1 and -17 or 19)
+            local detail = horizonPieceBuilder(model, CFrame.new(origin), farColor, variant.Id, templates)
+            detail("DistantRoofMass", "WedgePart", Vector3.new(10 + layer * 3, height, 8),
+                CFrame.new(0, height * .5, 0) * CFrame.Angles(0, direction.yaw, 0),
+                Enum.Material.Metal, farColor, .14 + layer * .12)
+            detail("DistantAerial", "Part", Vector3.new(.38, 4 + layer * 2, .38),
+                CFrame.new(0, height + 2 + layer, 0),
+                Enum.Material.Metal, farColor, .20 + layer * .10)
+        end
     end
 end
 
@@ -1083,19 +1046,24 @@ local function meshRegionByBounds(model, regionSize)
     return region
 end
 
-local function orbitalReactorNodeRegion(regionSize)
-    local holder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
+local function approvedHorizonRegion(holderName, name, tag, assetId, regionSize)
+    local holder = ReplicatedStorage:FindFirstChild(holderName)
     if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
         return nil
     end
-    local node = holder:FindFirstChild("Node")
-    if not node or not node:IsA("Model")
-        or node:GetAttribute("OwnerVerified") ~= true
-        or node:GetAttribute("CosmeticOnly") ~= true
-        or node:GetAttribute("OriginalOrbitalReactorLandmark3D") ~= true
-        or node:GetAttribute("Original3DAssetId") ~= 104654294187035 then return nil end
+    local model = holder:FindFirstChild(name)
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute(tag) ~= true
+        or model:GetAttribute("Original3DAssetId") ~= assetId then return nil end
 
-    return meshRegionByBounds(node, regionSize)
+    return meshRegionByBounds(model, regionSize)
+end
+
+local function orbitalReactorNodeRegion(regionSize)
+    return approvedHorizonRegion("ApprovedOrbitalReactorLandmarkTemplates", "Node",
+        "OriginalOrbitalReactorLandmark3D", 104654294187035, regionSize)
 end
 
 local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
@@ -2973,7 +2941,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         lens = {part = orbitalLens, assetId = 104654294187035},
         rail = {part = rimBevel, assetId = 94830155055482},
     })
-    addDistantSkyline(decor, config, variant, theme)
     local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     local horizonTemplates = {
         bevel = bevelCasting,
@@ -2982,7 +2949,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         lens = orbitalLens,
         roller = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil,
         shaft = beaconShaft,
+        rotor = if variant.Id == "Orbital" then approvedHorizonRegion(
+            "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
+            HorizonMonumentGeometry.assetId("rotor"), Vector3.new(2.56, .72, 2.56)) else nil,
+        depthHull = approvedHorizonRegion(
+            "ApprovedSkylineDepthSculptTemplates", "Roof", "OriginalSkylineDepthSculpt3D",
+            HorizonMonumentGeometry.assetId("depthHull"), Vector3.new(11.4, 33.95, 6.94)),
     }
+    addDistantSkyline(decor, config, variant, theme, horizonTemplates)
     addArenaSignatureMegastructure(decor, config, variant, theme, horizonTemplates)
     -- One distinctive real 3D skyline per arena. No external asset ID is
     -- required; this is the always-available mobile-friendly model layer.

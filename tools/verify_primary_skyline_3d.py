@@ -7,6 +7,7 @@ or a claim that every eligible MeshPart was instantiated on a real device.
 from pathlib import Path
 import json
 import math
+import re
 
 ROOT=Path(__file__).resolve().parents[1]
 CLIENT=(ROOT/"src/client/ApprovedPrimarySkylineMeshKit.lua").read_text()
@@ -143,3 +144,33 @@ assert 'and (arena:GetAttribute("VariantId") == "Crossroads" and 88 or 84) or 0'
 assert sum(4*(2+1+(2 if variant=="Crossroads" else 1)) for variant in variants)==84
 print("PASS 84 additional foundation, facade and rooftop native shapes across 20 skyline towers")
 print("PASS LOD/camera pressure caps, safe rollback and unchanged gameplay")
+
+geometry = (ROOT/"src/shared/HorizonMonumentGeometry.lua").read_text()
+skyline = BUILDER.split("local function addDistantSkyline", 1)[1].split(
+    "-- One large, scene-specific architectural silhouette", 1)[0]
+primary, depth = skyline.split("-- Two additional depth layers", 1)
+profiles = geometry.split("local skylineProfiles = {", 1)[1].split("}", 1)[0]
+names = set(re.findall(r'(\w+) = "\w+"', profiles))
+common, orbital, crossroads, towers, relay = re.split(
+    r'^        (?:(?:if|elseif) variant.Id == "\w+" then|else)$', primary, flags=re.M)
+
+
+def fitted_names(section):
+    calls = re.findall(
+        r'detail\(\s*(?:side < 0 and "(\w+)" or "(\w+)"|"(\w+)")', section)
+    return {name for call in calls for name in call if name}
+
+
+slots = [fitted_names(common) | fitted_names(top)
+         for top in (orbital, crossroads, towers, relay, relay)]
+assert set.union(*slots) == names
+assert sum(map(len, slots))*4 == 164
+assert fitted_names(depth) == {"DistantRoofMass", "DistantAerial"}
+assert 'depthProfiles = {DistantRoofMass = "depthHull", DistantAerial = "shaft"}' in geometry
+assert 'profiles["SkylineDepth" .. direction .. layer] = depthProfiles' in geometry
+assert 'profiles["SkylineStructure" .. direction] = skylineProfiles' in geometry
+assert 'local detail = horizonPieceBuilder' in primary and 'local detail = horizonPieceBuilder' in depth
+assert 'ExteriorDetailGeometry.monumentFootprint(part, owner, kind, shape)' in CLIENT
+assert MODEL["skyline_depth_sculpt"]["asset_id"] == "80692067525256"
+assert MODEL["skyline_depth_sculpt"]["moderation"] == "Approved"
+print("PASS 164 primary and 80 depth fallback slots use approved mesh profiles")
