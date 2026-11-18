@@ -2,6 +2,7 @@
 -- 13 visual-only original natives (including two Cylinder radar dishes) are
 -- swapped atomically for seven MeshParts. Never touches playable Classic.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These southern monuments were authored at the ORIGINAL outer perimeter.
@@ -148,16 +149,13 @@ local function context(arena)
     for index,spec in ipairs(specs) do
         local part=owner:FindFirstChild(spec[1])
         local expected=origin*spec[4]
-        if not part or not part:IsA(spec[2]) or part.Parent~=owner
-            or not part.Anchored or part.CanCollide
-            or part.CanTouch or part.CanQuery
-            or (part.Size-spec[3]).Magnitude>.1
-            or (part.Position-expected.Position).Magnitude>.16
-            or part.CFrame.LookVector:Dot(expected.LookVector)<.999
-            or part.CFrame.UpVector:Dot(expected.UpVector)<.999
-            or (part:IsA("Part") and part.Shape~=
-                ((spec[1]=="WestRadarDish" or spec[1]=="EastRadarDish")
-                    and Enum.PartType.Cylinder or Enum.PartType.Block)) then
+        local shape=(spec[1]=="WestRadarDish" or spec[1]=="EastRadarDish")
+            and Enum.PartType.Cylinder or Enum.PartType.Block
+        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,spec[2],shape)
+        if not size or (size-spec[3]).Magnitude>.10
+            or (pose.Position-expected.Position).Magnitude>.16
+            or pose.LookVector:Dot(expected.LookVector)<.999
+            or pose.UpVector:Dot(expected.UpVector)<.999 then
             return nil
         end
         natives[index]=part

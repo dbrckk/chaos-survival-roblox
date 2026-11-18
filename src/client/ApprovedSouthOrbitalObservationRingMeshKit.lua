@@ -2,6 +2,7 @@
 -- Atomically replaces 14 nonphysical SouthHorizonMonument ObservationArcs.
 -- Distinct from NORTH Orbital reactor; no physics/network or extra loop.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These southern monuments were authored at the ORIGINAL outer perimeter.
@@ -48,7 +49,7 @@ local function restore()
     entry=nil
     for _,c in ipairs(current.connections) do c:Disconnect() end
     for part,alpha in pairs(current.natives) do
-        if part.Parent==current.owner and part:IsA("Part")
+        if part.Parent==current.owner and part:IsA("BasePart")
             and part.Anchored and not part.CanCollide
             and not part.CanTouch and not part.CanQuery
             and part.Transparency==1 then
@@ -126,20 +127,17 @@ local function context(arena)
     local arcs={}
     for k=0,SEGMENTS-1 do
         local arc=owner:FindFirstChild("ObservationArc"..(k+1))
-        if not arc or not arc:IsA("Part") or arc.Parent~=owner
-            or arc.Shape~=Enum.PartType.Block
-            or not arc.Anchored or arc.CanCollide
-            or arc.CanTouch or arc.CanQuery
-            or (arc.Size-Vector3.new(CHORD,1.6,1.85)).Magnitude>.10 then
+        local size,pose=ExteriorDetailGeometry.southFootprint(arc,owner,"Part")
+        if not size or (size-Vector3.new(CHORD,1.6,1.85)).Magnitude>.10 then
             return nil
         end
         local angle=k*(2*math.pi)/SEGMENTS
         local intended=CFrame.new(center+Vector3.new(
             RADIUS*math.sin(angle),RADIUS*math.cos(angle),0))
             *CFrame.Angles(0,0,-angle)
-        if (arc.Position-intended.Position).Magnitude>.16
-            or arc.CFrame.LookVector:Dot(intended.LookVector)<.999
-            or arc.CFrame.UpVector:Dot(intended.UpVector)<.999 then
+        if (pose.Position-intended.Position).Magnitude>.16
+            or pose.LookVector:Dot(intended.LookVector)<.999
+            or pose.UpVector:Dot(intended.UpVector)<.999 then
             return nil
         end
         arcs[#arcs+1]=arc
@@ -148,25 +146,17 @@ local function context(arena)
     -- support system; also reject partially streamed core structures.
     local core=owner:FindFirstChild("SuspendedOrb")
     local retainer=owner:FindFirstChild("OrbClamp")
-    if not core or not core:IsA("Part") or core.Parent~=owner
-        or core.Shape~=Enum.PartType.Ball or not core.Anchored
-        or core.CanCollide or core.CanTouch or core.CanQuery
-        or (core.Size-Vector3.new(6.4,6.4,6.4)).Magnitude>.1
-        or not retainer or not retainer:IsA("Part")
-        or retainer.Parent~=owner or not retainer.Anchored
-        or retainer.CanCollide or retainer.CanTouch or retainer.CanQuery then
-        return nil
-    end
-    if (retainer.Size-Vector3.new(9.5,.8,2.4)).Magnitude>.12
-        or (retainer.Position-(origin+Vector3.new(0,LEVEL,-.2))).Magnitude>.16 then
+    local coreSize=ExteriorDetailGeometry.southFootprint(core,owner,"Part",Enum.PartType.Ball)
+    local retainerSize,retainerPose=ExteriorDetailGeometry.southFootprint(retainer,owner,"Part")
+    if not coreSize or (coreSize-Vector3.new(6.4,6.4,6.4)).Magnitude>.10
+        or not retainerSize or (retainerSize-Vector3.new(9.5,.8,2.4)).Magnitude>.12
+        or (retainerPose.Position-(origin+Vector3.new(0,LEVEL,-.2))).Magnitude>.16 then
         return nil
     end
     for _,name in ipairs({"LeftRingSupport","RightRingSupport"}) do
         local support=owner:FindFirstChild(name)
-        if not support or not support:IsA("Part") or support.Parent~=owner
-            or not support.Anchored or support.CanCollide
-            or support.CanTouch or support.CanQuery
-            or (support.Size-Vector3.new(2.6,23,3)).Magnitude>.12 then
+        local size=ExteriorDetailGeometry.southFootprint(support,owner,"Part")
+        if not size or (size-Vector3.new(2.6,23,3)).Magnitude>.12 then
             return nil
         end
     end

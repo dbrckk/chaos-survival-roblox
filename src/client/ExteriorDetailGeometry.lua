@@ -1,14 +1,20 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local southGeometryModule = shared and shared:FindFirstChild("SouthMonumentGeometry")
+local SouthMonumentGeometry = if southGeometryModule then require(southGeometryModule)
+    else require("../shared/SouthMonumentGeometry")
+
 local ExteriorDetailGeometry = {}
 
 -- The complete LOD models use the authored poses, even when an imported
 -- fallback region is a quarter-turn away from that reference frame.
-function ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass)
+function ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass, fallbackShape)
     if not part or not part:IsA("BasePart") or part.Parent ~= owner
         or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery then
         return nil
     end
     if part:IsA("MeshPart") then
-        if part.MeshId == "" or part:GetAttribute("OriginalExteriorDetail3D") ~= true
+        if not assetId or part.MeshId == "" or part:GetAttribute("OriginalExteriorDetail3D") ~= true
             or part:GetAttribute("Original3DAssetId") ~= assetId then
             return nil
         end
@@ -18,10 +24,17 @@ function ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass)
                 part.CFrame * CFrame.Angles(0, -math.pi * .5, 0)
         end
     elseif not part:IsA(fallbackClass)
-        or (fallbackClass == "Part" and part.Shape ~= Enum.PartType.Block) then
+        or (fallbackClass == "Part" and part.Shape ~= (fallbackShape or Enum.PartType.Block)) then
         return nil
     end
     return part.Size, part.CFrame
+end
+
+function ExteriorDetailGeometry.southFootprint(part, owner, fallbackClass, fallbackShape)
+    if not part then return nil end
+    local profile = SouthMonumentGeometry.profile(part.Name)
+    local assetId = SouthMonumentGeometry.assetId(profile, owner:GetAttribute("SignatureVariant"))
+    return ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass, fallbackShape)
 end
 
 return ExteriorDetailGeometry

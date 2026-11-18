@@ -10,6 +10,9 @@ local arenaPresentationModule = shared and shared:FindFirstChild("ArenaPresentat
 local ArenaPresentation = if arenaPresentationModule
     then require(arenaPresentationModule)
     else require("../shared/ArenaPresentation")
+local southGeometryModule = shared and shared:FindFirstChild("SouthMonumentGeometry")
+local SouthMonumentGeometry = if southGeometryModule then require(southGeometryModule)
+    else require("../shared/SouthMonumentGeometry")
 local skyRouteConnectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local SkyRouteConnectionRules = if skyRouteConnectionModule
     then require(skyRouteConnectionModule)
@@ -639,12 +642,35 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
     model.Parent = decor
 end
 
+local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass)
+    local mesh = source and RouteSignalGeometry.fit(source.part, frame, size, nil, alongX)
+    local item = mesh or Instance.new(fallbackClass or "Part")
+    if mesh then
+        mesh:SetAttribute("OriginalExteriorDetail3D", true)
+        mesh:SetAttribute("Original3DAssetId", source.assetId)
+        local turned = math.abs(mesh.CFrame.RightVector:Dot(frame.RightVector)) < .5
+        mesh:SetAttribute("ExteriorDetailAxisSwap", if turned then true else nil)
+    else
+        item.Size = size
+        item.CFrame = frame
+    end
+    item.Name = name
+    item.Anchored = true
+    item.CanCollide = false
+    item.CanTouch = false
+    item.CanQuery = false
+    item.CastShadow = false
+    item.Material = material
+    item.Color = color
+    return item
+end
+
 -- Give the southern horizon a second, independently authored silhouette.
 -- The northern hero is intentionally asymmetrical; without an opposite
 -- landmark, half the camera directions still show mostly empty distance.
 -- Keep every piece outside the playable deck AND outside the kill plane.
 -- All parts are static, shadowless and noninteractive for Android budgets.
-local function addSouthHorizonMonument(decor, config, variant, theme)
+local function addSouthHorizonMonument(decor, config, variant, theme, templates)
     local model = Instance.new("Model")
     model.Name = "SouthHorizonMonument"
     model:SetAttribute("ChaosDistantScenery", true)
@@ -660,21 +686,19 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
     local alloy = theme.Detail:Lerp(theme.Structure, 0.57)
     local signal = theme.Secondary:Lerp(theme.Structure, 0.36)
 
-    local function piece(name, kind, size, offset, material, color, opacity)
-        local item = Instance.new(kind or "Part")
-        item.Name = name
-        item.Size = size
-        item.CFrame = origin * offset
-        item.Anchored = true
-        item.CanCollide = false
-        item.CanTouch = false
-        item.CanQuery = false
-        item.CastShadow = false
-        item.Material = material or Enum.Material.Metal
-        item.Color = color or hull
+    local function piece(name, kind, size, offset, material, color, opacity, shape)
+        local profile = SouthMonumentGeometry.profile(name)
+        local template = templates[profile]
+        local assetId = SouthMonumentGeometry.assetId(profile, variant.Id)
+        local source = template and template.MeshId ~= "" and assetId
+            and {part = template, assetId = assetId} or nil
+        -- The casting keeps its slope in Z. Radar drums keep their
+        -- short fitted X axis pointing toward the receivers.
+        local item = exteriorPart(name, origin * offset, size, material or Enum.Material.Metal,
+            color or hull, source, true, kind)
+        if shape and item:IsA("Part") then item.Shape = shape end
         item.Transparency = opacity or 0
         item.Parent = model
-        return item
     end
 
     piece("Foundation", "Part", Vector3.new(47, 2, 13),
@@ -703,10 +727,9 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
                 CFrame.new(side * 15.5, 11.5, 0),
                 Enum.Material.Metal, hull)
         end
-        local orb = piece("SuspendedOrb", "Part",
+        piece("SuspendedOrb", "Part",
             Vector3.new(6.4, 6.4, 6.4), CFrame.new(0, 23, 0),
-            Enum.Material.Glass, signal, 0.38)
-        orb.Shape = Enum.PartType.Ball
+            Enum.Material.Glass, signal, 0.38, Enum.PartType.Ball)
         piece("OrbClamp", "Part", Vector3.new(9.5, 0.8, 2.4),
             CFrame.new(0, 23, -0.2), Enum.Material.Metal, alloy)
     elseif variant.Id == "Towers" then
@@ -809,13 +832,12 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
                 "Part", Vector3.new(3.5, 28, 4.5),
                 CFrame.new(side * 16, 14, 0),
                 Enum.Material.Concrete, hull)
-            local dish = piece(
+            piece(
                 side < 0 and "WestRadarDish" or "EastRadarDish",
                 "Part", Vector3.new(0.9, 12, 12),
                 CFrame.new(side * 16, 34, 0)
                     * CFrame.Angles(0, math.pi * 0.5, 0),
-                Enum.Material.Metal, alloy, 0.08)
-            dish.Shape = Enum.PartType.Cylinder
+                Enum.Material.Metal, alloy, 0.08, Enum.PartType.Cylinder)
             piece(side < 0 and "WestReceiver" or "EastReceiver",
                 "Part", Vector3.new(2.1, 2.1, 2.1),
                 CFrame.new(side * 16, 34, -2.2),
@@ -834,29 +856,6 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
             CFrame.new(0, 29, -3.6),
             Enum.Material.Glass, signal, 0.25)
     end
-end
-
-local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass)
-    local mesh = source and RouteSignalGeometry.fit(source.part, frame, size, nil, alongX)
-    local item = mesh or Instance.new(fallbackClass or "Part")
-    if mesh then
-        mesh:SetAttribute("OriginalExteriorDetail3D", true)
-        mesh:SetAttribute("Original3DAssetId", source.assetId)
-        local turned = math.abs(mesh.CFrame.RightVector:Dot(frame.RightVector)) < .5
-        mesh:SetAttribute("ExteriorDetailAxisSwap", if turned then true else nil)
-    else
-        item.Size = size
-        item.CFrame = frame
-    end
-    item.Name = name
-    item.Anchored = true
-    item.CanCollide = false
-    item.CanTouch = false
-    item.CanQuery = false
-    item.CastShadow = false
-    item.Material = material
-    item.Color = color
-    return item
 end
 
 -- The four corner groups sit beyond both axes of the arena floor.
@@ -2981,11 +2980,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
     ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile, wayfinderBase)
+    local orbitalLens = orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96))
     addPerimeterStations(decor, config, variant, theme, {
         plate = {part = wayfinderBase, assetId = 88962643359267},
         signal = {part = sweptProfile, assetId = 126298311664881},
-        lens = {part = orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96)),
-            assetId = 104654294187035},
+        lens = {part = orbitalLens, assetId = 104654294187035},
         rail = {part = rimBevel, assetId = 94830155055482},
     })
     addDistantSkyline(decor, config, variant, theme)
@@ -3004,11 +3003,19 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
     ArenaDistrictArchitecture.build(decor, base, variant.Id, theme)
-    addSouthHorizonMonument(decor, config, variant, theme)
+    local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
+    addSouthHorizonMonument(decor, config, variant, theme, {
+        bevel = bevelCasting,
+        beam = sweptProfile,
+        cast = wayfinderBase,
+        lens = orbitalLens,
+        roller = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil,
+        shaft = beaconShaft,
+    })
     local exteriorCasting = {part = wayfinderBase, assetId = 88962643359267}
     addExteriorCornerRidges(decor, config, variant, theme, exteriorCasting)
     addExteriorSilhouettes(decor, config, variant, theme, {
-        shell = {part = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic),
+        shell = {part = bevelCasting,
             assetId = PremiumFloorReliefAssets.approvedId("Classic")},
         roof = exteriorCasting,
         shaft = {part = beaconShaft, assetId = PremiumLargeStructureAssets.approvedId(variant.Id)},

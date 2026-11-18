@@ -2,6 +2,7 @@
 -- Atomically replaces 14 nonphysical SouthHorizonMonument SkyTransfers.
 -- Distinct from NORTH Towers reactor; no physics/network or extra loop.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These southern monuments were authored at the ORIGINAL outer perimeter.
@@ -44,7 +45,7 @@ local function restore()
     entry=nil
     for _,c in ipairs(current.connections) do c:Disconnect() end
     for part,alpha in pairs(current.natives) do
-        if part.Parent==current.owner and part:IsA("Part")
+        if part.Parent==current.owner and part:IsA("BasePart")
             and part.Anchored and not part.CanCollide
             and not part.CanTouch and not part.CanQuery
             and part.Transparency==1 then
@@ -123,13 +124,11 @@ local function context(arena)
     local natives={}
     for i,name in ipairs(names) do
         local part=owner:FindFirstChild(name)
-        if not part or not part:IsA("Part") or part.Parent~=owner
-            or part.Shape~=Enum.PartType.Block or not part.Anchored
-            or part.CanCollide or part.CanTouch or part.CanQuery
-            or (part.Size-sizes[i]).Magnitude>.10
-            or (part.Position-(origin+offsets[i])).Magnitude>.16
-            or part.CFrame.LookVector:Dot(Vector3.new(0,0,-1))<.999
-            or part.CFrame.UpVector:Dot(Vector3.new(0,1,0))<.999 then
+        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,"Part")
+        if not size or (size-sizes[i]).Magnitude>.10
+            or (pose.Position-(origin+offsets[i])).Magnitude>.16
+            or pose.LookVector:Dot(Vector3.new(0,0,-1))<.999
+            or pose.UpVector:Dot(Vector3.new(0,1,0))<.999 then
             return nil
         end
         natives[i]=part

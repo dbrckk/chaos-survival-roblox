@@ -2,6 +2,7 @@
 -- 14 visual-only original natives (including two WedgePart rigs) are
 -- swapped atomically for seven MeshParts. Never touches playable Harbor.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 local MODEL_ID=125428569657840
@@ -145,15 +146,11 @@ local function context(arena)
     for index,spec in ipairs(specs) do
         local part=owner:FindFirstChild(spec[1])
         local expected=origin*spec[4]
-        if not part or not part:IsA(spec[2]) or part.Parent~=owner
-            or not part.Anchored or part.CanCollide
-            or part.CanTouch or part.CanQuery
-            or (part.Size-spec[3]).Magnitude>.1
-            or (part.Position-expected.Position).Magnitude>.16
-            or part.CFrame.LookVector:Dot(expected.LookVector)<.999
-            or part.CFrame.UpVector:Dot(expected.UpVector)<.999
-            or (part:IsA("Part")
-                and part.Shape~=Enum.PartType.Block) then
+        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,spec[2])
+        if not size or (size-spec[3]).Magnitude>.10
+            or (pose.Position-expected.Position).Magnitude>.16
+            or pose.LookVector:Dot(expected.LookVector)<.999
+            or pose.UpVector:Dot(expected.UpVector)<.999 then
             return nil
         end
         natives[index]=part
