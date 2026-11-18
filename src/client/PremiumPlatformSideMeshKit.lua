@@ -2,6 +2,10 @@
 -- jump decks. Six asset IDs matched to #41798024000. No new collider,
 -- hazard layer, movable platform or frame-update owner.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local lodRulesModule = script and shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule
+    then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
 
 local Kit = {}
 local IDS = {
@@ -255,10 +259,9 @@ function Kit.hasNativeCarapaceFallback(decor, platform)
     for edge = 1,4 do
         local bevel = decor:FindFirstChild(
             "PlatformBevel" .. id .. "_" .. edge)
-        if not bevel or not bevel:IsA("WedgePart")
+        if not PlatformIdentityLodRules.isAuthoredPlatformBevel(bevel)
             or bevel.Parent ~= decor or not bevel.Anchored
-            or bevel.CanCollide or bevel.CanTouch or bevel.CanQuery
-            or bevel:GetAttribute("OriginalStructuralBevel") ~= true then
+            or bevel.CanCollide or bevel.CanTouch or bevel.CanQuery then
             return false
         end
     end

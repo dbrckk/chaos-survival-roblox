@@ -1,8 +1,12 @@
 -- True creator-approved seven-MeshPart perimeter sculptures for real
 -- rectangular / long playable platforms. Replaces the FOUR server
--- WedgePart bevels only AFTER a complete authentic model is welded.
+-- Platform bevels only AFTER a complete authentic model is welded.
 -- NO new colliders, new update loop, fake MeshId or primitive fallback.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local lodRulesModule = script and shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule
+    then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
 local LargeStructure = if script and script.Parent
     and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
     then require(script.Parent.PremiumLargeStructureMeshKit)
@@ -82,10 +86,9 @@ local function nativeParts(decor,deck,original,scale)
     local edges = {}
     for i=1,4 do
         local edge=decor:FindFirstChild("PlatformBevel"..id.."_"..i)
-        if not edge or not edge:IsA("WedgePart")
+        if not PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)
             or edge.Parent~=decor or not edge.Anchored
-            or edge.CanCollide or edge.CanTouch or edge.CanQuery
-            or edge:GetAttribute("OriginalStructuralBevel")~=true then
+            or edge.CanCollide or edge.CanTouch or edge.CanQuery then
             return nil
         end
         if original then
@@ -314,7 +317,7 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
     -- distribute the SAME remaining approved 3D slots across authentic
     -- platforms in other visible sectors. Previously all eight High PC
     -- rims could crowd the same walkway while distant foreground-sized
-    -- WedgePart bevels stayed primitive. Touch and GPU-stressed profiles
+    -- bevels used the standalone server visuals. Touch and GPU-stressed profiles
     -- spend their slots on the best foreground candidates.
     if touch~=true and stress==0 and tier~="Low" and count>2 then
         local foreground=math.min(count,tier=="High" and 3 or 2)

@@ -567,13 +567,14 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             frame:SetAttribute("PremiumArchitecturalSurface",true)
             frame.Parent=decor
             for side=1,4 do
-                local edge=Instance.new("WedgePart")
+                local edge=Instance.new("MeshPart")
                 edge.Name="PlatformBevel"..id.."_"..side
                 edge.Anchored=true
                 edge.CanCollide=false
                 edge.CanTouch=false
                 edge.CanQuery=false
                 edge:SetAttribute("OriginalStructuralBevel",true)
+                edge:SetAttribute("OriginalPlatformBevel3D",true)
                 edge.Parent=decor
             end
             return platform
@@ -640,7 +641,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             end
             expect(near[1].CanCollide).toBe(true)
             local edge=decor:FindFirstChild("PlatformBevel101_1")
-            expect(edge~=nil and edge:IsA("WedgePart")).toBe(true)
+            expect(PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)).toBe(true)
             -- A partially streamed native edge must NEVER reserve an
             -- approved model or leave its real fallback hidden.
             edge:Destroy()

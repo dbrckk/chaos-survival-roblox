@@ -319,7 +319,7 @@ print("PASS station geometry and source-template mutation revocation")
 
 # Creator-owned rectangular/long 7-MeshPart rim art added 13 November.
 # Unlike a full underside carapace, rim replacement may mask ONLY four
-# WedgePart edges and must keep the native underframe and all hazard cues.
+# bevels and must keep the native underframe and all hazard cues.
 rim_server = (ROOT / "src/server/PremiumPlatformRimAssets.lua").read_text(
     encoding="utf8")
 rim_client = (ROOT / "src/client/ApprovedPlatformRimMeshKit.lua").read_text(
@@ -352,7 +352,7 @@ for clause in (
 for clause in (
     "if pieces~=7 then return nil end",
     "if #parts~=7 then copy:Destroy();return nil end",
-    'edge:GetAttribute("OriginalStructuralBevel")~=true',
+    'PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)',
     'underside:GetAttribute("PremiumArchitecturalSurface")~=true',
     "if scale<.60 or coverLong<.90 or coverShort<.87",
     'piece:SetAttribute("OriginalPlatformRim3D",true)',
@@ -388,7 +388,7 @@ assert "task.defer(PremiumPlatformRimAssets.start)" in rim_init
 # Healthy desktop uses the SAME 4/8 existing approved slots over
 # separated physical routes; Android and pressured clients remain nearest
 # only. Source provenance is sampled once each rebuild, but rechecked at
-# mounting so an invalidated source never masks native WedgeParts.
+# mounting so an invalidated source never masks native bevels.
 for clause in (
     'local cap=tier=="High" and (touch and 2 or 12)',
     'or tier=="Medium" and (touch and 1 or 6) or 1',
@@ -432,7 +432,7 @@ print("PASS two genuine approved perimeter rim assets: PC four-sector spread, un
 
 # P4 large-deck bevel coverage must not regress to a hard-coded first-24
 # physical platform gate. Only approved 18-stud, seven-mesh hulls may
-# mask all four fully replicated, noncolliding server WedgeParts.
+# mask all four fully replicated, noncolliding server bevels.
 hull = (ROOT / "src/client/PremiumLargeDeckHullMeshKit.lua").read_text(
     encoding="utf8")
 identity = (ROOT / "src/client/arena-platform-identity.client.lua").read_text(
@@ -442,7 +442,7 @@ for clause in (
     'deck.Name ~= "Platform" .. tostring(n)',
     "n > 512",
     "local function nativeFallback(decor, deck)",
-    'bevel:GetAttribute("OriginalStructuralBevel") ~= true',
+    'PlatformIdentityLodRules.isAuthoredPlatformBevel(bevel)',
     'frame:GetAttribute("PremiumArchitecturalSurface") ~= true',
     'local cap = tier == "High" and (touch and 3 or 6)',
     "if stress >= 2 or type(platforms)",

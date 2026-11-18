@@ -1,3 +1,7 @@
+## P4 — Biseaux des plateformes
+
+Les quatre biseaux des plateformes peuvent reprendre le profil à douze facettes d’une pièce de fonderie approuvée de Harbor. Ils gardent leur empreinte et accompagnent leur plateforme pendant le rétrécissement ou l’effondrement. Les carapaces, rebords et caissons locaux les masquent quand leur habillage est complet. Des biseaux simples servent de secours si le maillage est indisponible à la construction.
+
 ## P4 — Bandes lumineuses des plateformes
 
 Les plateformes ordinaires peuvent reprendre les deux bandes sculptées du pont approuvé de Tower Run, réunies dans un seul maillage. Les bandes des terrasses ancrées au sol suivent le rebord supérieur pour rester visibles. Les teintes de guidage, les avertissements et le suivi du rétrécissement gardent leurs réglages. Une bande plate sert de secours si le maillage est indisponible à la construction.

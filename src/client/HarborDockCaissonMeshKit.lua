@@ -369,6 +369,7 @@ local function mount(deck, arena, base, source, expected)
             watch(native:GetPropertyChangedSignal(property))
         end
         watch(native:GetAttributeChangedSignal("OriginalStructuralBevel"))
+        watch(native:GetAttributeChangedSignal("OriginalPlatformBevel3D"))
         watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
     end
     for _,piece in ipairs(pieces) do

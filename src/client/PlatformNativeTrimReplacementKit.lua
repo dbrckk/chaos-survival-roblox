@@ -379,6 +379,7 @@ local function bindRouteRim(arena,deck,folder,pieces)
             watch(native.AncestryChanged,evict)
             properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery","Name"})
             watch(native:GetAttributeChangedSignal("OriginalStructuralBevel"))
+            watch(native:GetAttributeChangedSignal("OriginalPlatformBevel3D"))
             watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
         end
     end
@@ -485,10 +486,7 @@ local function eligible(part)
     end
     local id = name:match("^PlatformBevel(%d+)_[1-4]$")
     if id and (active[id] == "carapace" or active[id] == "rim") then
-        -- Sloped WedgePart server edge, now replaced by a real sculpted
-        -- SIDE face, not a gameplay warning or a walkable landing.
-        return part:IsA("WedgePart")
-            and part:GetAttribute("OriginalStructuralBevel") == true
+        return PlatformIdentityLodRules.isAuthoredPlatformBevel(part)
     end
     id = name:match("^PlatformUnderFrame(%d+)$")
     if id and (active[id] == "carapace" or active[id] == "cradle") then

@@ -115,6 +115,7 @@ assert 'local wedge = Instance.new("WedgePart")' in builder
 assert 'bevel = wedge' in builder
 assert 'bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex' in builder
 assert 'bevel:SetAttribute("OriginalStructuralBevel", true)' in builder
+assert 'bevel:SetAttribute("OriginalPlatformBevel3D", true)' in builder
 assert 'bevel.CanCollide = false' in builder
 assert '"PlatformUnderFrame" .. index' in builder
 assert 'underFrame:SetAttribute("PremiumArchitecturalSurface", true)' in builder
@@ -123,7 +124,7 @@ assert 'owner.CanCollide' in source
 print("PASS P0 Low near-camera premium carapace can replace authentic even-index"
       " four-bevel underside without increasing 1-model/7-MeshPart cap")
 
-# The real owner has all FOUR server-authored sloped WedgeParts + ONE
+# The real owner has all FOUR server-authored sloped bevels + ONE
 # authentic underside before consuming any of 1/8/16 approved 3D slots.
 # This is a residency / streaming improvement, not new geometry or budget.
 assert "function Kit.hasNativeCarapaceFallback(decor, platform)" in side
@@ -131,8 +132,7 @@ assert 'decor:FindFirstChild("PlatformUnderFrame" .. id)' in side
 assert 'decor:FindFirstChild(' in side
 assert '"PlatformBevel" .. id .. "_" .. edge' in side
 assert 'for edge = 1,4 do' in side
-assert 'bevel:IsA("WedgePart")' in side
-assert 'bevel:GetAttribute("OriginalStructuralBevel") ~= true' in side
+assert 'PlatformIdentityLodRules.isAuthoredPlatformBevel(bevel)' in side
 assert 'frame:GetAttribute("PremiumArchitecturalSurface") ~= true' in side
 assert 'or Kit.hasNativeCarapaceFallback(decor, platform)' in side
 assert 'player:GetAttribute("OptionalVfxPressure"), decor)' in identity

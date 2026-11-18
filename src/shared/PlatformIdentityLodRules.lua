@@ -24,6 +24,12 @@ function Rules.isAuthoredUnderFrameMesh(part)
         and part:GetAttribute("OriginalPlatformUnderFrame3D") == true
 end
 
+function Rules.isAuthoredPlatformBevel(part)
+    return part ~= nil and part:GetAttribute("OriginalStructuralBevel") == true
+        and (part:IsA("WedgePart") or (part:IsA("MeshPart")
+            and part:GetAttribute("OriginalPlatformBevel3D") == true))
+end
+
 function Rules.harborLandingWidth(deck)
     if routeIndex(deck:GetAttribute("HarborSkywayLane"), 2)
         and routeIndex(deck:GetAttribute("HarborSkywayStep"), 7) then

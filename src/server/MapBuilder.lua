@@ -1963,7 +1963,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    underdeckSpars, forgedBevel, harborAlongX)
+    underdeckSpars, bevelProfile, harborAlongX)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2055,27 +2055,32 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
             Vector3.new(halfX + bevelDepth * 0.27, bevelY, 0)},
     }
     local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
+    local useBridgeBevel = bevelProfile and bevelProfile.Name == "SweptCrossbeam"
+    local bevelAlongX = bevelProfile and bevelProfile.Size.X > bevelProfile.Size.Z
     for edgeIndex, spec in ipairs(edgeSpecs) do
         local size = spec[1]
         if edgeIndex > 2 then size = Vector3.new(size.Z, size.Y, size.X) end
         local where = Vector3.new(
             platform.Position.X, 0, platform.Position.Z) + spec[2]
         local yaw = facings[edgeIndex]
-        local bevel
-        if forgedBevel then
+        local pose = CFrame.new(where) * CFrame.Angles(0, yaw, 0)
+        local bevel = useBridgeBevel and bevelProfile:Clone()
+        if bevel then
             -- Keep the footprint of the native wedge. The swept face
             -- extends downwards to show its facets below the deck lip.
-            local mesh = forgedBevel:Clone()
-            local sourceAlongX = mesh.Size.X > mesh.Size.Z
-            mesh.Size = sourceAlongX and Vector3.new(size.X, .44, size.Z)
+            bevel.Size = bevelAlongX and Vector3.new(size.X, .44, size.Z)
                 or Vector3.new(size.Z, .44, size.X)
-            mesh.CFrame = CFrame.new(where - Vector3.new(0, .08, 0))
-                * CFrame.Angles(0, yaw + (sourceAlongX and 0 or math.pi * .5), 0)
-            bevel = mesh
-        else
+            bevel.CFrame = CFrame.new(where - Vector3.new(0, .08, 0))
+                * CFrame.Angles(0, yaw + (bevelAlongX and 0 or math.pi * .5), 0)
+        elseif not useBridgeBevel then
+            -- Preserve the exact fallback axes and dimensions for the local rim owners.
+            bevel = RouteSignalGeometry.fit(bevelProfile, pose, size, nil, true)
+            if bevel then bevel:SetAttribute("OriginalPlatformBevel3D", true) end
+        end
+        if not bevel then
             local wedge = Instance.new("WedgePart")
             wedge.Size = size
-            wedge.CFrame = CFrame.new(where) * CFrame.Angles(0, yaw, 0)
+            wedge.CFrame = pose
             wedge.TopSurface = Enum.SurfaceType.Smooth
             wedge.BottomSurface = Enum.SurfaceType.Smooth
             bevel = wedge
@@ -2989,6 +2994,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     StructureRetrofit.buildArena(decor, base, variant.Id, theme)
     local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
     local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
+    -- The Harbor floor relief has a closed twelve-facet cast roller.
+    local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
+    if rimBevel and rimBevel.Size.X <= rimBevel.Size.Z then rimBevel = nil end
     addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
     addArenaHologram(decor, config, variant, theme)
 
@@ -3336,7 +3344,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand, edgeOverhang, glowAlongX)
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars, skybridge and sweptProfile or nil, harborAlongX)
+            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX)
         addPlatformSupports(decor, platform, i, theme, beaconShaft)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
