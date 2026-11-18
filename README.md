@@ -1,3 +1,7 @@
+## P4 — Monuments des horizons nord et sud
+
+Les maillages approuvés peuvent habiller 80 pièces de secours au nord et 73 au sud, réparties sur les cinq arènes. Les deux horizons partagent les mêmes sources de géométrie. Les modèles complets de proximité masquent les pièces sur leurs repères d’origine, puis les restaurent lorsque la distance ou la pression graphique l’exige. Chaque pièce garde sa forme d’origine si son maillage manque à la construction.
+
 ## P4 — Reliefs d’angle et silhouettes industrielles
 
 Les cinq arènes peuvent afficher des maillages approuvés sur 60 reliefs d’angle et 120 pièces de silhouettes industrielles. Les reliefs, coques, auvents, renforts verticaux, bandeaux et antennes gardent leurs emplacements hors du terrain jouable. Les modèles complets de proximité prennent le relais sur les mêmes ancrages. Les formes d’origine servent de secours si un maillage manque à la construction.

@@ -2,6 +2,7 @@
 -- Replaces exactly two big nonphysical native slab Parts on the true Towers
 -- ArenaSignatureMegastructure and supplies the sculpted timed shutter profile.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These outboard landmarks are fixed to the BUILDER's initial perimeter.
@@ -44,7 +45,7 @@ local function restore()
     mounted=nil
     for _,c in ipairs(state.connections) do c:Disconnect() end
     for native,original in pairs(state.originals) do
-        if native.Parent==state.owner and native:IsA("Part")
+        if native.Parent==state.owner and native:IsA("BasePart")
             and native.Anchored and not native.CanCollide
             and not native.CanTouch and not native.CanQuery
             and native.Transparency==1 then
@@ -194,47 +195,39 @@ local function nativeContext(arena)
     local bridge=owner:FindFirstChild("OverheadServiceBridge")
     local truss=owner:FindFirstChild("LowerTruss")
     local signal=owner:FindFirstChild("HangingSignal")
-    if not bridge or not bridge:IsA("Part") or bridge.Parent~=owner
-        or bridge.Shape~=Enum.PartType.Block or not bridge.Anchored
-        or bridge.CanCollide or bridge.CanTouch or bridge.CanQuery
-        or (bridge.Size-Vector3.new(41,2.4,6.5)).Magnitude>.10
-        or not truss or not truss:IsA("Part") or truss.Parent~=owner
-        or truss.Shape~=Enum.PartType.Block or not truss.Anchored
-        or truss.CanCollide or truss.CanTouch or truss.CanQuery
-        or (truss.Size-Vector3.new(35,.8,1.2)).Magnitude>.10
-        or not signal or not signal:IsA("WedgePart")
-        or signal.Parent~=owner or not signal.Anchored
-        or signal.CanCollide or signal.CanTouch or signal.CanQuery
-        or (signal.Size-Vector3.new(4.8,3,2)).Magnitude>.10 then
+    local bridgeSize,bridgePose=ExteriorDetailGeometry.monumentFootprint(bridge,owner,"Part")
+    local trussSize,trussPose=ExteriorDetailGeometry.monumentFootprint(truss,owner,"Part")
+    local signalSize,signalPose=ExteriorDetailGeometry.monumentFootprint(signal,owner,"WedgePart")
+    if not bridgeSize or (bridgeSize-Vector3.new(41,2.4,6.5)).Magnitude>.10
+        or not trussSize or (trussSize-Vector3.new(35,.8,1.2)).Magnitude>.10
+        or not signalSize or (signalSize-Vector3.new(4.8,3,2)).Magnitude>.10 then
         return nil
     end
     for _,name in ipairs({"LiftTowerWest","LiftTowerEast"}) do
         local lift=owner:FindFirstChild(name)
-        if not lift or not lift:IsA("Part") or lift.Parent~=owner
-            or not lift.Anchored or lift.CanCollide or lift.CanTouch
-            or lift.CanQuery or
-            (lift.Size-Vector3.new(7,41,8)).Magnitude>.10 then
+        local size=ExteriorDetailGeometry.monumentFootprint(lift,owner,"Part")
+        if not size or (size-Vector3.new(7,41,8)).Magnitude>.10 then
             return nil
         end
     end
     -- The true distant landmark sits outside the negative Z arena edge.
     local expected=base.Position+Vector3.new(
         originalX*.24,base.Size.Y*.5+39,-(originalZ*.5+66))
-    if (bridge.Position-expected).Magnitude>.20 then return nil end
-    local relative=bridge.CFrame:PointToObjectSpace(truss.Position)
+    if (bridgePose.Position-expected).Magnitude>.20 then return nil end
+    local relative=bridgePose:PointToObjectSpace(trussPose.Position)
     if (relative-Vector3.new(0,-3.4,-3.2)).Magnitude>.12
-        or bridge.CFrame.LookVector:Dot(truss.CFrame.LookVector)<.999
-        or bridge.CFrame.UpVector:Dot(truss.CFrame.UpVector)<.999 then
+        or bridgePose.LookVector:Dot(trussPose.LookVector)<.999
+        or bridgePose.UpVector:Dot(trussPose.UpVector)<.999 then
         return nil
     end
-    local signalRelative=bridge.CFrame:PointToObjectSpace(signal.Position)
+    local signalRelative=bridgePose:PointToObjectSpace(signalPose.Position)
     if (signalRelative-Vector3.new(0,-5.3,-3)).Magnitude>.12 then
         return nil
     end
-    return base,owner,bridge,truss
+    return base,owner,bridge,truss,bridgePose
 end
 
-local function fittedModel(source,bridge)
+local function fittedModel(source,bridgePose)
     local clone=source:Clone()
     local _,dims=clone:GetBoundingBox()
     local localUnion=Vector3.new(41,5,7.05)
@@ -265,7 +258,7 @@ local function fittedModel(source,bridge)
     end
     -- Union midpoint relative to the real 41-stud bridge:
     -- native Y spans 35.2..40.2, center 37.7; Z spans -3.8..3.25.
-    local target=bridge.CFrame*CFrame.new(0,-1.3,-.275)
+    local target=bridgePose*CFrame.new(0,-1.3,-.275)
         *CFrame.Angles(0,yaw,0)
     local pieces={}
     for _,part in ipairs(clone:GetDescendants()) do
@@ -295,9 +288,9 @@ end
 
 local function mount(arena,source)
     if mounted then return end
-    local base,owner,bridge,truss=nativeContext(arena)
+    local base,owner,bridge,truss,bridgePose=nativeContext(arena)
     if not base then return end
-    local clone,pieces=fittedModel(source,bridge)
+    local clone,pieces=fittedModel(source,bridgePose)
     if not clone then return end
     local stillBase,stillOwner,stillBridge,stillTruss=nativeContext(arena)
     if stillBase~=base or stillOwner~=owner

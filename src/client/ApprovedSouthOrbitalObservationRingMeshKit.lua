@@ -127,7 +127,7 @@ local function context(arena)
     local arcs={}
     for k=0,SEGMENTS-1 do
         local arc=owner:FindFirstChild("ObservationArc"..(k+1))
-        local size,pose=ExteriorDetailGeometry.southFootprint(arc,owner,"Part")
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(arc,owner,"Part")
         if not size or (size-Vector3.new(CHORD,1.6,1.85)).Magnitude>.10 then
             return nil
         end
@@ -146,8 +146,8 @@ local function context(arena)
     -- support system; also reject partially streamed core structures.
     local core=owner:FindFirstChild("SuspendedOrb")
     local retainer=owner:FindFirstChild("OrbClamp")
-    local coreSize=ExteriorDetailGeometry.southFootprint(core,owner,"Part",Enum.PartType.Ball)
-    local retainerSize,retainerPose=ExteriorDetailGeometry.southFootprint(retainer,owner,"Part")
+    local coreSize=ExteriorDetailGeometry.monumentFootprint(core,owner,"Part",Enum.PartType.Ball)
+    local retainerSize,retainerPose=ExteriorDetailGeometry.monumentFootprint(retainer,owner,"Part")
     if not coreSize or (coreSize-Vector3.new(6.4,6.4,6.4)).Magnitude>.10
         or not retainerSize or (retainerSize-Vector3.new(9.5,.8,2.4)).Magnitude>.12
         or (retainerPose.Position-(origin+Vector3.new(0,LEVEL,-.2))).Magnitude>.16 then
@@ -155,7 +155,7 @@ local function context(arena)
     end
     for _,name in ipairs({"LeftRingSupport","RightRingSupport"}) do
         local support=owner:FindFirstChild(name)
-        local size=ExteriorDetailGeometry.southFootprint(support,owner,"Part")
+        local size=ExteriorDetailGeometry.monumentFootprint(support,owner,"Part")
         if not size or (size-Vector3.new(2.6,23,3)).Magnitude>.12 then
             return nil
         end

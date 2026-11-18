@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit South 3D imports and the approved fallback coverage."""
+"""Audit South 3D imports and both horizons’ approved fallback coverage."""
 import json
 from pathlib import Path
 import re
@@ -56,38 +56,51 @@ for name in items:
 print("PASS all 8 Approved South owners use one exception-safe shared permit")
 print("PASS no direct South LoadAssetAsync or new per-frame loop")
 
-geometry=(ROOT/"src/shared/SouthMonumentGeometry.lua").read_text()
-profiles=dict(re.findall(r'(\w+) = "(\w+)"', geometry.split("local assets =",1)[0]))
-arc_count=int(re.search(r"for index = 1, (\d+) do", geometry)[1])
-profiles.update({f"ObservationArc{i}": "bevel" for i in range(1,arc_count+1)})
-asset_ids=set(re.findall(r"= (\d{9,})\b", geometry))
-models=json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())["models"]
-approved={model["asset_id"] for model in models if model.get("moderation")=="Approved"}
-assert len(asset_ids)==10 and asset_ids <= approved,asset_ids-approved
+geometry = (ROOT/"src/shared/HorizonMonumentGeometry.lua").read_text()
+asset_ids = set(re.findall(r"= (\d{9,})\b", geometry))
+models = json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())["models"]
+approved = {model["asset_id"] for model in models if model.get("moderation") == "Approved"}
+assert len(asset_ids) == 10 and asset_ids <= approved, asset_ids-approved
 
-builder=(SERVER/"MapBuilder.lua").read_text()
-monument=builder.split("local function addSouthHorizonMonument",1)[1].split("-- The four corner groups",1)[0]
-foundation,orbital,towers,crossroads,harbor,classic=re.split(
-    r'^    (?:(?:if|elseif) variant.Id == "\w+" then|else)$', monument, flags=re.M)
-def targets(section):
-    calls=re.findall(r'^\s*piece\(\s*(?:side < 0 and "(\w+)" or "(\w+)"|"(\w+)")', section, re.M)
-    names={name for call in calls for name in call if name}
-    if "ObservationArc" in names:
-        names.remove("ObservationArc")
-        names.update(f"ObservationArc{i}" for i in range(1,arc_count+1))
+builder = (SERVER/"MapBuilder.lua").read_text()
+piece_builder = builder.split("local function horizonPieceBuilder",1)[1].split("\nend",1)[0]
+assert 'template and template.MeshId ~= ""' in piece_builder
+assert "HorizonMonumentGeometry.assetId(profile, variant)" in piece_builder
+assert 'if shape and item:IsA("Part") then item.Shape = shape end' in piece_builder
+
+
+def targets(section, arc, count):
+    calls = re.findall(r'^\s*piece\(\s*(?:side < 0 and "(\w+)" or "(\w+)"|"(\w+)")', section, re.M)
+    names = {name for call in calls for name in call if name}
+    if arc in names:
+        names.remove(arc)
+        names.update(f"{arc}{i}" for i in range(1, count+1))
     return names
 
-shared_targets=targets(foundation)
-all_targets=set()
-for name,section,count in (("Classic",classic,13),("Towers",towers,13),
-                           ("Crossroads",crossroads,13),("Orbital",orbital,20),
-                           ("Harbor",harbor,14)):
-    names=shared_targets | targets(section)
-    assert len(names)==count and names <= profiles.keys(),(name,names-profiles.keys())
-    all_targets.update(names)
-assert all_targets==profiles.keys(),(all_targets ^ profiles.keys())
-assert 'template and template.MeshId ~= ""' in monument
-assert "SouthMonumentGeometry.assetId(profile, variant.Id)" in monument
-assert "if shape and item:IsA(\"Part\") then item.Shape = shape end" in monument
-print("PASS 73 South fallback slots use profiles from 10 approved asset IDs")
+
+def audit_horizon(label, builder_name, boundary, arc, totals):
+    profile_name = label.lower() + "Profiles"
+    profile_section = geometry.split(f"local {profile_name} = {{",1)[1].split("local ",1)[0]
+    profiles = dict(re.findall(r'(\w+) = "(\w+)"', profile_section))
+    arc_count = int(re.search(r"for index = 1, (\d+) do", profile_section)[1])
+    arc_profile = re.search(rf'{profile_name}\["{arc}" \.\. index\] = "(\w+)"', profile_section)[1]
+    profiles.update({f"{arc}{i}": arc_profile for i in range(1, arc_count+1)})
+    monument = builder.split(f"local function {builder_name}",1)[1].split(boundary,1)[0]
+    foundation, *sections = re.split(
+        r'^    (?:(?:if|elseif) variant.Id == "\w+" then|else)$', monument, flags=re.M)
+    shared_targets = targets(foundation, arc, arc_count)
+    all_targets = set()
+    variants = ("Orbital", "Towers", "Crossroads", "Harbor", "Classic")
+    for name, section, total in zip(variants, sections, totals, strict=True):
+        names = shared_targets | targets(section, arc, arc_count)
+        assert len(names) == total and names <= profiles.keys(), (name, names-profiles.keys())
+        all_targets.update(names)
+    assert all_targets == profiles.keys(), all_targets ^ profiles.keys()
+    print(f"PASS {sum(totals)} {label} fallback slots use profiles from 10 approved asset IDs")
+
+
+audit_horizon("South", "addSouthHorizonMonument", "-- The four corner groups", "ObservationArc",
+              (20, 13, 13, 14, 13))
+audit_horizon("North", "addArenaSignatureMegastructure", "-- Give the southern horizon", "ReactorArc",
+              (24, 13, 13, 16, 14))
 print("NOTE Roblox engine runtime/network behavior not measured in source CI")

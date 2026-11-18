@@ -43,7 +43,7 @@ assert len(set(k for k,v in pairs))==14
 assert all('"'+name+'"' in builder for name in expected)
 assert 'arena:GetAttribute("VariantId")~="Harbor"' in context
 assert 'owner:GetAttribute("SignatureVariant")~="Harbor"' in context
-assert 'ExteriorDetailGeometry.southFootprint(part,owner,spec[2])' in context
+assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2])' in context
 assert 'pose.LookVector:Dot(expected.LookVector)' in context
 assert 'pose.UpVector:Dot(expected.UpVector)' in context
 print("PASS exact 14 southern Harbor Part/WedgePart native targets and transform guard")

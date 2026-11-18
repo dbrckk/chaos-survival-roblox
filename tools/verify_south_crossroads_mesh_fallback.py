@@ -41,7 +41,7 @@ assert len(set(k for k,v in pairs))==13
 assert all('"'+key+'"' in builder for key in expect)
 assert 'arena:GetAttribute("VariantId")~="Crossroads"' in context
 assert 'owner:GetAttribute("SignatureVariant")~="Crossroads"' in context
-assert 'ExteriorDetailGeometry.southFootprint(part,owner,spec[2])' in context
+assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2])' in context
 assert 'pose.LookVector:Dot(intended.LookVector)' in context
 assert 'pose.UpVector:Dot(intended.UpVector)' in context
 print("PASS exact Crossroads source landmark types and 13 nonphysical native targets")

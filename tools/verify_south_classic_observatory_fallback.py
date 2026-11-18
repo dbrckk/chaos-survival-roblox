@@ -43,7 +43,7 @@ assert len(set(k for k,v in pairs))==13
 assert all('"'+name+'"' in builder for name in expected)
 assert 'arena:GetAttribute("VariantId")~="Classic"' in context
 assert 'owner:GetAttribute("SignatureVariant")~="Classic"' in context
-assert 'ExteriorDetailGeometry.southFootprint(part,owner,spec[2],shape)' in context
+assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2],shape)' in context
 assert 'pose.LookVector:Dot(expected.LookVector)' in context
 assert 'pose.UpVector:Dot(expected.UpVector)' in context
 assert "Enum.PartType.Cylinder" in context

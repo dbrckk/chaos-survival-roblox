@@ -2,6 +2,7 @@
 -- seven original nonphysical tower/dish primitives, all at once.
 -- True client-only cosmetic LOD, no new frame loop or physics mutations.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These outboard landmarks are fixed to the BUILDER's initial perimeter.
@@ -144,32 +145,25 @@ local function context(arena)
         return nil
     end
 
-    local originals={}
+    local originals,poses={},{}
     for i,name in ipairs(NAMES) do
         local part=owner:FindFirstChild(name)
-        local wedge=i==2
-        if not part or part.Parent~=owner
-            or (wedge and not part:IsA("WedgePart"))
-            or (not wedge and (not part:IsA("Part")))
-            or not part.Anchored or part.CanCollide
-            or part.CanTouch or part.CanQuery
-            or (part.Size-SIZES[i]).Magnitude>.11 then return nil end
-        if not wedge then
-            local shape=(i==4 or i==5)
-                and Enum.PartType.Cylinder or Enum.PartType.Block
-            if part.Shape~=shape then return nil end
-        end
+        local kind=if i==2 then "WedgePart" else "Part"
+        local shape=(i==4 or i==5) and Enum.PartType.Cylinder or Enum.PartType.Block
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,kind,shape)
+        if not size or (size-SIZES[i]).Magnitude>.11 then return nil end
+        poses[i]=pose
         originals[i]=part
     end
 
-    local mast=originals[1]
+    local mastPose=poses[1]
     local expected=base.Position+Vector3.new(
         originalX*.24,
         base.Size.Y*.5+27.5,
         -(originalZ*.5+66))
-    if (mast.Position-expected).Magnitude>.20 then return nil end
+    if (mastPose.Position-expected).Magnitude>.20 then return nil end
     for i=2,7 do
-        local actual=mast.CFrame:ToObjectSpace(originals[i].CFrame)
+        local actual=mastPose:ToObjectSpace(poses[i])
         local target=RELATIVE[i-1]
         if (actual.Position-target.Position).Magnitude>.12
             or actual.LookVector:Dot(target.LookVector)<.999
@@ -189,17 +183,15 @@ local function context(arena)
     }
     for _,spec in ipairs(companionNames) do
         local native=owner:FindFirstChild(spec[1])
-        if not native or not native:IsA("Part") or native.Parent~=owner
-            or not native.Anchored or native.CanCollide
-            or native.CanTouch or native.CanQuery
-            or (native.Size-spec[2]).Magnitude>.12 then
+        local size=ExteriorDetailGeometry.monumentFootprint(native,owner,"Part")
+        if not size or (size-spec[2]).Magnitude>.12 then
             return nil
         end
     end
-    return base,owner,originals
+    return base,owner,originals,mastPose
 end
 
-local function fit(source,mast)
+local function fit(source,mastPose)
     local model=source:Clone()
     -- Full native seven-Part union (not whole landmark foundation):
     -- X=±18.25, Y=0..60.35, Z=±2.10. Source normalized 1:4.
@@ -231,7 +223,7 @@ local function fit(source,mast)
         model:Destroy()
         return nil
     end
-    local target=mast.CFrame*CFrame.new(0,2.675,0)
+    local target=mastPose*CFrame.new(0,2.675,0)
         *CFrame.Angles(0,yaw,0)
     local parts={}
     for _,item in ipairs(model:GetDescendants()) do
@@ -261,9 +253,9 @@ end
 
 local function mount(arena,source)
     if mounted then return end
-    local base,owner,originals=context(arena)
+    local base,owner,originals,mastPose=context(arena)
     if not base then return end
-    local model,parts=fit(source,originals[1])
+    local model,parts=fit(source,mastPose)
     if not model then return end
     local againBase,againOwner,again=context(arena)
     if againBase~=base or againOwner~=owner

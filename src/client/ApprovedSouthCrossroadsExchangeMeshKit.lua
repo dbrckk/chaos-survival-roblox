@@ -148,7 +148,7 @@ local function context(arena)
     for index,spec in ipairs(specs) do
         local part=owner:FindFirstChild(spec[1])
         local intended=origin*spec[4]
-        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,spec[2])
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2])
         if not size or (size-spec[3]).Magnitude>.10
             or (pose.Position-intended.Position).Magnitude>.16
             or pose.LookVector:Dot(intended.LookVector)<.999

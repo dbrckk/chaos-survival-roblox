@@ -124,7 +124,7 @@ local function context(arena)
     local natives={}
     for i,name in ipairs(names) do
         local part=owner:FindFirstChild(name)
-        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,"Part")
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part")
         if not size or (size-sizes[i]).Magnitude>.10
             or (pose.Position-(origin+offsets[i])).Magnitude>.16
             or pose.LookVector:Dot(Vector3.new(0,0,-1))<.999

@@ -151,7 +151,7 @@ local function context(arena)
         local expected=origin*spec[4]
         local shape=(spec[1]=="WestRadarDish" or spec[1]=="EastRadarDish")
             and Enum.PartType.Cylinder or Enum.PartType.Block
-        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,spec[2],shape)
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2],shape)
         if not size or (size-spec[3]).Magnitude>.10
             or (pose.Position-expected.Position).Magnitude>.16
             or pose.LookVector:Dot(expected.LookVector)<.999

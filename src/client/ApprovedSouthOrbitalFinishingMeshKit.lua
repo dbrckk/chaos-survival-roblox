@@ -134,7 +134,7 @@ local function context(arena)
         local expected=origin*spec[3]
         local desiredShape=index==5 and Enum.PartType.Ball
             or Enum.PartType.Block
-        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,"Part",desiredShape)
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part",desiredShape)
         if not size or (size-spec[2]).Magnitude>.10
             or (pose.Position-expected.Position).Magnitude>.16
             or pose.LookVector:Dot(expected.LookVector)<.999
@@ -149,7 +149,7 @@ local function context(arena)
     local chord=2*radius*math.sin(math.pi/14)+.08
     for i=1,14 do
         local part=owner:FindFirstChild("ObservationArc"..i)
-        local size=ExteriorDetailGeometry.southFootprint(part,owner,"Part")
+        local size=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part")
         if not size or (size-Vector3.new(chord,1.6,1.85)).Magnitude>.12 then
             return nil
         end

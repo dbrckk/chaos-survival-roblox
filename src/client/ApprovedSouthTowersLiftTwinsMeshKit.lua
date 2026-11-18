@@ -132,7 +132,7 @@ local function context(arena)
     for i,name in ipairs(names) do
         local part=owner:FindFirstChild(name)
         local kind=if i<=2 then "Part" else "WedgePart"
-        local size,pose=ExteriorDetailGeometry.southFootprint(part,owner,kind)
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,kind)
         if not size or (size-sizes[i]).Magnitude>.10
             or (pose.Position-(origin+offsets[i])).Magnitude>.16
             or pose.LookVector:Dot(

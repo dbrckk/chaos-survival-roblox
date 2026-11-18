@@ -29,7 +29,7 @@ for filename,asset,names,count in specs:
     assert "local MODEL_ID="+asset in source,filename
     restore=source.split("local function restore()",1)[1].split("local function clear()",1)[0]
     assert 'part:IsA("BasePart")' in restore,filename
-    assert 'ExteriorDetailGeometry.southFootprint(part,owner,' in source,filename
+    assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,' in source,filename
     assert 'part.Transparency=alpha' in source,filename
     assert 'native.Transparency=1' in source,filename
     assert 'model.Parent=bucket' in source,filename

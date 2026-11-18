@@ -1,8 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local shared = ReplicatedStorage:FindFirstChild("Shared")
-local southGeometryModule = shared and shared:FindFirstChild("SouthMonumentGeometry")
-local SouthMonumentGeometry = if southGeometryModule then require(southGeometryModule)
-    else require("../shared/SouthMonumentGeometry")
+local horizonGeometryModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonGeometryModule then require(horizonGeometryModule)
+    else require("../shared/HorizonMonumentGeometry")
 
 local ExteriorDetailGeometry = {}
 
@@ -30,10 +30,10 @@ function ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass, f
     return part.Size, part.CFrame
 end
 
-function ExteriorDetailGeometry.southFootprint(part, owner, fallbackClass, fallbackShape)
+function ExteriorDetailGeometry.monumentFootprint(part, owner, fallbackClass, fallbackShape)
     if not part then return nil end
-    local profile = SouthMonumentGeometry.profile(part.Name)
-    local assetId = SouthMonumentGeometry.assetId(profile, owner:GetAttribute("SignatureVariant"))
+    local profile = HorizonMonumentGeometry.profile(owner.Name, part.Name)
+    local assetId = HorizonMonumentGeometry.assetId(profile, owner:GetAttribute("SignatureVariant"))
     return ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass, fallbackShape)
 end
 

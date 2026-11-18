@@ -33,15 +33,15 @@ specs=context.split("local specs={",1)[1].split("\n    }",1)[0]
 targets=re.findall(r'\{"([^"]+)",Vector3.new\(',specs)
 assert targets==names,(targets,names)
 assert 'local desiredShape=index==5 and Enum.PartType.Ball' in context
-assert 'ExteriorDetailGeometry.southFootprint(part,owner,"Part",desiredShape)' in context
+assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,"Part",desiredShape)' in context
 assert 'arena:GetAttribute("VariantId")~="Orbital"' in context
 assert 'owner:GetAttribute("SignatureVariant")~="Orbital"' in context
 assert '"ObservationArc"..i' in context
 assert "for i=1,14 do" in context
 assert 'pose.LookVector:Dot(expected.LookVector)' in context
 assert 'pose.UpVector:Dot(expected.UpVector)' in context
-assert 'ExteriorDetailGeometry.southFootprint(arc,owner,"Part")' in ring
-assert 'ExteriorDetailGeometry.southFootprint(core,owner,"Part",Enum.PartType.Ball)' in ring
+assert 'ExteriorDetailGeometry.monumentFootprint(arc,owner,"Part")' in ring
+assert 'ExteriorDetailGeometry.monumentFootprint(core,owner,"Part",Enum.PartType.Ball)' in ring
 assert 'part:IsA("BasePart")' in ring.split("local function restore()",1)[1].split("local function clear()",1)[0]
 assert '"LeftRingSupport"' in ring and '"RightRingSupport"' in ring
 assert 'RADIUS=17' in ring and 'SEGMENTS=14' in ring
