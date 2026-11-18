@@ -895,7 +895,9 @@ describe("Chaos Survival engine", function()
                 local head = casing.LandmarkNavigationHead
                 local socket = casing.RecessedCrown
                 local collar = casing.MachinedUpperCollar
-                expect(not collar.CanCollide and not socket.CanCollide).toBe(true)
+                for _, trim in ipairs({collar, socket, casing.AngledArmorFin1, casing.DiagonalLoadSpar1}) do
+                    assert(not trim.CanCollide and not trim.CanTouch and not trim.CanQuery)
+                end
                 expect(math.abs(collar.Position.Y + collar.Size.Y * .5 - socket.Position.Y
                     + socket.Size.Y * .5 - .105) < .01).toBe(true)
                 local spine = casing.CrownInstrumentSpine

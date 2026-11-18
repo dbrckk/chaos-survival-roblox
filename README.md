@@ -1,3 +1,7 @@
+## P4 — Ailettes moulées et renforts forgés des colonnes
+
+Les 40 ailettes latérales peuvent reprendre le blindage moulé du périmètre et les 40 renforts diagonaux le profil forgé de Tower Run. Les pièces conservent leur inclinaison et suivent les colonnes pendant le rétrécissement. La coque 3D complète garde la priorité à l’affichage. Les formes d’origine prennent le relais si les maillages sont indisponibles à la construction.
+
 ## P4 — Colliers et couronnes forgés des colonnes
 
 Les 20 colliers supérieurs et les 20 couronnes encastrées peuvent reprendre le profil forgé approuvé de Tower Run. Les pièces conservent leur recouvrement et les points d’ancrage des têtes et des instruments. La coque 3D complète garde la priorité lorsqu’elle est affichée. Les formes d’origine prennent le relais si le maillage est indisponible à la construction.

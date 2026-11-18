@@ -1,6 +1,6 @@
 --!strict
 -- Original volumetric cladding of the four existing structural corner columns.
--- Upper cladding and instruments can reuse approved profiles supplied by MapBuilder.
+-- Cladding and instruments can reuse approved profiles supplied by MapBuilder.
 -- Native geometry remains available without physics or contacts.
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
@@ -14,9 +14,10 @@ local MATERIALS = {
     Harbor = {shell = Enum.Material.CorrodedMetal, inset = Enum.Material.DiamondPlate},
 }
 
-local function piece(model, origin, name, kind, size, frame, color, material, alpha, meshProfile: MeshPart?)
+local function piece(model, origin, name, kind, size, frame, color, material, alpha,
+    meshProfile: MeshPart?, alongX: boolean?)
     local pose = origin * frame
-    local p = RouteSignalGeometry.fit(meshProfile, pose, size)
+    local p = RouteSignalGeometry.fit(meshProfile, pose, size, nil, alongX)
     if not p then
         p = Instance.new(kind)
         p.Size = size
@@ -37,11 +38,11 @@ local function piece(model, origin, name, kind, size, frame, color, material, al
     return p
 end
 
-local function beam(model, origin, name, from, to, thick, tone, material)
+local function beam(model, origin, name, from, to, thick, tone, material, meshProfile: MeshPart?)
     local delta = to - from
     return piece(model, origin, name, "Part",
         Vector3.new(thick, thick, delta.Magnitude),
-        CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05)
+        CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05, meshProfile)
 end
 
 function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?, forgedProfile: MeshPart?)
@@ -87,16 +88,17 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
         piece(casing, origin, "ArmoredRearShell", "Part",
             Vector3.new(3.1, 5.7, 0.55),
             CFrame.new(0, 0.18, 1.65), machined, finish.inset, 0.05)
+        -- Keep the molded slope facing along the fin's depth, across either import axis.
         for side = -1, 1, 2 do
             piece(casing, origin, "AngledArmorFin" .. tostring(side), "WedgePart",
                 Vector3.new(1.35, 5.8, 2.0),
                 CFrame.new(side * 2.05, -0.12, 0)
                     * CFrame.Angles(0, side * 0.14, 0),
-                shell:Lerp(machined, 0.28), finish.inset, 0.05)
+                shell:Lerp(machined, 0.28), finish.inset, 0.05, headProfile, true)
             beam(casing, origin, "DiagonalLoadSpar" .. tostring(side),
                 Vector3.new(side * 2.2, -3.3, -1.15),
                 Vector3.new(side * 0.85, 3.15, -1.15),
-                0.36, machined, finish.shell)
+                0.36, machined, finish.shell, forgedProfile)
         end
         piece(casing, origin, "MachinedUpperCollar", "Part",
             Vector3.new(5.9, 0.65, 5.0), CFrame.new(0, 4.15, 0),
