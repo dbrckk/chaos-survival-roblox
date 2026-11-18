@@ -69,14 +69,14 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     return part
 end
 
-local function fitForgedTrim(profile, frame, size, alongX)
+local function fitTrimProfile(profile, frame, size, alongX, assetId)
     local mesh = profile and profile:Clone()
     if not mesh then return nil, frame, size end
     local swapped = (profile.Size.X > profile.Size.Z) ~= alongX
     mesh:ClearAllChildren()
     mesh.TextureID = ""
     mesh.MaterialVariant = ""
-    mesh:SetAttribute("Original3DAssetId", 126298311664881)
+    mesh:SetAttribute("Original3DAssetId", assetId)
     if swapped then
         mesh:SetAttribute("PlatformTrimAxisSwap", true)
         frame *= CFrame.Angles(0, math.pi * 0.5, 0)
@@ -375,8 +375,8 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
     local built = {}
     for railIndex, segment in ipairs(segments) do
         if count == 4 or railIndex <= 2 then
-            local mesh, frame, size = fitForgedTrim(forgedProfile,
-                CFrame.new(segment[1]), segment[2], railIndex <= 2)
+            local mesh, frame, size = fitTrimProfile(forgedProfile,
+                CFrame.new(segment[1]), segment[2], railIndex <= 2, 126298311664881)
             local piece = add(parent, platform, "PlatformRecessedSideRail" .. railIndex,
                 frame, size, color, material, 0.08, nil, mesh)
             table.insert(built, piece)
@@ -525,8 +525,8 @@ end
 -- carapace/hub slot; never add the native hatch geometry on Low.
 -- No extra lights, textures, gameplay collision or update loops.
 -- Use already approved five-arena floor sculptures for genuine welded
--- service-hatch detail on actual moving decks. The native three-layer hatch
--- below remains a fallback until the approved source has replicated.
+-- service-hatch detail on actual moving decks. The three-layer finish
+-- also fits individual approved regions into the existing fallback slots.
 -- No new asset upload, physics, render loop or server-side platform change.
 -- The same five creator-approved reliefs are used for both legacy
 -- source mounting and the near-camera selection. Never reserve a scarce
@@ -539,12 +539,23 @@ local SERVICE_HATCH_ASSETS = {
     Harbor = 94830155055482,
 }
 
-local function serviceHatchSource(variant)
-    local assetId = SERVICE_HATCH_ASSETS[variant]
-    if not assetId then return nil end
+local SERVICE_HANDLE_ASSET = 135412901717584
+local FULL_SERVICE_HATCH_PARTS = 7
+-- The source is split into material regions. Use only the closed beveled
+-- castings for the lid and collar, plus the dock fitting's open hoop.
+local SERVICE_HATCH_REGIONS = {
+    Classic = {Vector3.new(8.00, .12, 4.34), Vector3.new(6.32, .022, 3.1682)},
+    Towers = {Vector3.new(10.22, .12, .94), Vector3.new(8.0738, .022, .6862)},
+    Crossroads = {Vector3.new(3.50, .12, .66), Vector3.new(2.765, .022, .4818)},
+    Orbital = {Vector3.new(4.60, .041, .57), Vector3.new(4.2818, .022, .7884)},
+    Harbor = {Vector3.new(7.55, .12, 2.74), Vector3.new(4.983, .038, 1.507)},
+}
+local SERVICE_HANDLE_REGION = Vector3.new(.82, .22446, .26955)
+
+local function approvedFloorRelief(name, assetId)
     local holder = game:GetService("ReplicatedStorage")
         :FindFirstChild("ApprovedFloorReliefTemplates")
-    local source = holder and holder:FindFirstChild(variant)
+    local source = holder and holder:FindFirstChild(name)
     if not holder or not holder:IsA("Folder")
         or holder:GetAttribute("OwnerVerified") ~= true
         or not source or not source:IsA("Model") or source.Parent ~= holder
@@ -567,6 +578,14 @@ local function serviceHatchSource(variant)
         end
     end
     if count < 1 or count > 12 then return nil end
+    return source, count
+end
+
+local function serviceHatchSource(variant)
+    local assetId = SERVICE_HATCH_ASSETS[variant]
+    if not assetId then return nil end
+    local source, count = approvedFloorRelief(variant, assetId)
+    if not source then return nil end
     local _, dimensions = source:GetBoundingBox()
     if math.max(dimensions.X, dimensions.Z) < 2.7
         or math.min(dimensions.X, dimensions.Z) < .45
@@ -574,6 +593,37 @@ local function serviceHatchSource(variant)
         return nil
     end
     return source, dimensions, assetId, count
+end
+
+local function serviceDetailRegion(source, dimensions)
+    if not source then return nil end
+    local match
+    for _, part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") then continue end
+        local size = part.Size
+        local bounds = Vector3.new(math.max(size.X, size.Z), size.Y, math.min(size.X, size.Z))
+        if (bounds - dimensions).Magnitude < .04 then
+            if match or not part.Anchored or not part.Archivable or part.MeshId == ""
+                or part.Transparency >= 1 or part.CFrame.UpVector.Y < .999 then
+                return nil
+            end
+            match = part
+        end
+    end
+    return match
+end
+
+function PlatformFinishKit.serviceHatchProfiles(variant)
+    local regions = SERVICE_HATCH_REGIONS[variant]
+    if not regions then return nil end
+    local source, _, assetId = serviceHatchSource(variant)
+    local handleSource = approvedFloorRelief("HarborTie", SERVICE_HANDLE_ASSET)
+    return {
+        hatch = serviceDetailRegion(source, regions[1]),
+        collar = serviceDetailRegion(source, regions[2]),
+        handle = serviceDetailRegion(handleSource, SERVICE_HANDLE_REGION),
+        assetId = assetId,
+    }
 end
 
 local function harborLashingWidth(platform, variant)
@@ -604,7 +654,7 @@ function PlatformFinishKit.selectOriginalServiceHatches(
         or type(ordered) ~= "table"
         or not base or not base:IsA("BasePart") then return chosen end
     local source, sourceSize, _, sourceParts = serviceHatchSource(variant)
-    if not source or (lowReady and sourceParts ~= 7) then return chosen end
+    if not source or sourceParts ~= FULL_SERVICE_HATCH_PARTS then return chosen end
     local sourceLong = math.max(sourceSize.X, sourceSize.Z)
     local sourceShort = math.min(sourceSize.X, sourceSize.Z)
     local legacyStep = tier == "High" and 9 or 18
@@ -641,7 +691,7 @@ function PlatformFinishKit.selectOriginalServiceHatches(
             local nominal = harborLashingWidth(platform,variant)
             local legacy = id % 3 == 1 and (nominal or math.min(sx,sz)) >= 8
                 and (nominal or math.max(sx,sz)) <= 36
-            local lashing = sourceParts == 7 and nominal
+            local lashing = nominal
             if (lashing or (legacy and not nominal))
                 and (phase == nil or phase == "Normal" or phase == "Safe")
                 and (shutter == nil or shutter == "Idle") then
@@ -701,8 +751,7 @@ local function originalServiceHatch(parent, platform, variant, tier,
     end
     local source, original, assetId, expectedPieces =
         serviceHatchSource(variant)
-    if not source or (tier == "Low" and expectedPieces ~= 7)
-        or (lashingWidth and expectedPieces ~= 7) then
+    if not source or expectedPieces ~= FULL_SERVICE_HATCH_PARTS then
         return nil
     end
     local copy = source:Clone()
@@ -776,7 +825,7 @@ local function originalServiceHatch(parent, platform, variant, tier,
 end
 
 function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
-        tier, theme, index, selected)
+        tier, theme, index, selected, profiles)
     if not parent or not platform or not platform:IsA("BasePart")
         or (tier == "Low" and selected ~= true)
         or not NAMES[variant] or not theme
@@ -814,22 +863,25 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     }
     local color = theme.Structure:Lerp(theme.Detail, 0.28)
     local accent = theme.Detail:Lerp(theme.Surface, 0.42)
-    local hatch = add(parent, platform, variant .. "ServiceHatch",
-        CFrame.new(0, upper, -sz * 0.19),
+    local function detail(name, height, size, tint, material, alpha, profile, assetId)
+        local mesh, frame, dimensions = fitTrimProfile(
+            profile, CFrame.new(0, height, -sz * 0.19), size, true, assetId)
+        local item = add(parent, platform, variant .. name, frame, dimensions,
+            tint, material, alpha, nil, mesh)
+        item:SetAttribute("ChaosServiceHatch", true)
+        return item
+    end
+    profiles = profiles or {}
+    local hatch = detail("ServiceHatch", upper,
         Vector3.new(hatchWidth, 0.18, hatchDepth), color,
-        materials[variant], 0.05)
-    hatch:SetAttribute("ChaosServiceHatch", true)
-    local collar = add(parent, platform, variant .. "ServiceCollar",
-        CFrame.new(0, upper + 0.11, -sz * 0.19),
+        materials[variant], 0.05, profiles.hatch, profiles.assetId)
+    local collar = detail("ServiceCollar", upper + 0.11,
         Vector3.new(math.max(1.0, hatchWidth - 0.70), 0.08,
             math.max(1.0, hatchDepth - 0.70)),
-        accent, Enum.Material.Metal, 0.11)
-    collar:SetAttribute("ChaosServiceHatch", true)
-    local handle = add(parent, platform, variant .. "ServiceHandle",
-        CFrame.new(0, upper + 0.18, -sz * 0.19),
+        accent, Enum.Material.Metal, 0.11, profiles.collar, profiles.assetId)
+    local handle = detail("ServiceHandle", upper + 0.18,
         Vector3.new(math.min(1.7, hatchWidth * 0.36), 0.10, 0.25),
-        theme.Structure, Enum.Material.DiamondPlate, 0.02)
-    handle:SetAttribute("ChaosServiceHatch", true)
+        theme.Structure, Enum.Material.DiamondPlate, 0.02, profiles.handle, SERVICE_HANDLE_ASSET)
     return {hatch, collar, handle}
 end
 
@@ -1019,8 +1071,8 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     local built = {}
     for i = 1, count do
         local frame, length = loadBraceFrame(size, i, harbor)
-        local mesh, pose, dimensions = fitForgedTrim(forgedProfile, frame,
-            Vector3.new(profile.width, profile.depth, length), false)
+        local mesh, pose, dimensions = fitTrimProfile(forgedProfile, frame,
+            Vector3.new(profile.width, profile.depth, length), false, 126298311664881)
         local brace = add(parent, platform, variant .. "LoadBrace" .. i, pose, dimensions,
             color, profile.material, tier == "High" and 0.08 or 0.14, nil, mesh)
         brace:SetAttribute("ChaosLoadBrace", true)

@@ -67,8 +67,26 @@ describe("Disaster visual identities", function()
         platform.Parent = parent
         local theme = require("../../src/shared/VisualTheme").arena("Classic")
         local pieces = PlatformFinishKit.buildServiceHatch(
-            parent, platform, "Classic", "Medium", theme, 1)
+            parent, platform, "Classic", "Medium", theme, 1, false)
         expect(#pieces).toBe(3)
+        expect(pieces[1]:IsA("Part")).toBe(true)
+        for _, part in ipairs(pieces) do part:Destroy() end
+
+        platform:SetAttribute("RouteTier", 3)
+        local lid = Instance.new("MeshPart")
+        lid.Size = Vector3.new(8, .12, 4.34)
+        local grip = Instance.new("MeshPart")
+        grip.Size = Vector3.new(.26955, .22446, .82)
+        pieces = PlatformFinishKit.buildServiceHatch(
+            parent, platform, "Classic", "Medium", theme, 1, false,
+            {hatch = lid, handle = grip, assetId = 102746904688141})
+        lid:Destroy()
+        grip:Destroy()
+        expect(#pieces).toBe(3)
+        expect(pieces[1]:IsA("MeshPart")).toBe(true)
+        expect(pieces[2]:IsA("Part")).toBe(true)
+        expect(pieces[3]:IsA("MeshPart")).toBe(true)
+        expect(pieces[3]:GetAttribute("Original3DAssetId")).toBe(135412901717584)
         for _, part in ipairs(pieces) do
             expect(part:GetAttribute("ChaosServiceHatch")).toBe(true)
             expect(part:GetAttribute("ChaosPlatformTrim")).toBe(true)
@@ -79,8 +97,17 @@ describe("Disaster visual identities", function()
             expect(part:FindFirstChild("ChaosPlatformTrimWeld") ~= nil)
                 .toBe(true)
         end
+        local snapshot = PlatformFinishKit.captureRouteFootprint(platform, pieces)
+        platform.Size = Vector3.new(6, 2, 8.25)
+        expect(PlatformFinishKit.applyRouteFootprint(snapshot)).toBe(3)
+        expect(math.abs(pieces[3].Size.Z - .85) < .01).toBe(true)
+        expect(math.abs(pieces[3].Size.X - .1875) < .01).toBe(true)
+        expect(math.abs(pieces[3].ChaosPlatformTrimWeld.C1.Position.Z + 8.25 * .19) < .01)
+            .toBe(true)
+        platform.Size = Vector3.new(12, 2, 11)
         PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
         expect(pieces[1].Transparency).toBe(1)
+        expect(pieces[3].Transparency).toBe(1)
         PlatformFinishKit.applyCollapseVisibility(pieces, "Restore")
         expect(pieces[1].Transparency < 1).toBe(true)
         expect(#PlatformFinishKit.buildServiceHatch(

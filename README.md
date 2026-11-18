@@ -1,3 +1,7 @@
+## P4 — Trappes de service des plateformes
+
+En qualité moyenne ou haute, les trappes des cinq arènes peuvent reprendre un couvercle et une collerette biseautés de leurs revêtements approuvés, ainsi qu’une poignée arquée issue du modèle d’amarrage de Harbor. Les trois pièces suivent les plateformes pendant le rétrécissement et s’effacent à l’effondrement. Les modèles complets gardent leur priorité dans les emplacements réservés. Chaque pièce simple reprend le relais si son maillage manque ou si la charge graphique augmente.
+
 ## P4 — Rails et renforts diagonaux des plateformes
 
 Dans les cinq arènes, les rails latéraux et les renforts diagonaux peuvent reprendre le profil forgé du pont approuvé de Tower Run. Chaque pièce occupe son emplacement existant en qualité moyenne ou haute. Les rails suivent la bonne direction de contraction et les renforts restent reliés à leurs deux points d’appui. Les treillis complets de Harbor et de Tower Run gardent la priorité. Les formes simples servent de secours si le maillage est indisponible ou si la charge graphique augmente.

@@ -1617,12 +1617,13 @@ print("PASS authentic original station deck 3D and six protected cues")
 FINISH=(CLIENT/"PlatformFinishKit.lua").read_text(encoding="utf8")
 OWNER=(CLIENT/"arena-platform-identity.client.lua").read_text(encoding="utf8")
 assert 'local lowReady = tier == "Low" and (tonumber(pressure) or 0) == 0' in FINISH
-assert 'if not source or (lowReady and sourceParts ~= 7) then return chosen end' in FINISH
+assert 'local FULL_SERVICE_HATCH_PARTS = 7' in FINISH
+assert 'if not source or sourceParts ~= FULL_SERVICE_HATCH_PARTS then return chosen end' in FINISH
 assert 'if lowReady and not hasCamera then return chosen end' in FINISH
 assert '(platform.Position-cameraPoint).Magnitude' in FINISH
 assert '<= 100' in FINISH
 assert 'quota = 1' in FINISH
-assert 'or (tier == "Low" and expectedPieces ~= 7)' in FINISH
+assert 'if not source or expectedPieces ~= FULL_SERVICE_HATCH_PARTS then' in FINISH
 assert 'or (tier == "Low" and selected ~= true)' in FINISH
 assert 'if tier == "Low" or landing then return {} end' in FINISH
 assert 'part.CanCollide = false' in FINISH
@@ -1867,7 +1868,7 @@ assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
 assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
 print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero native hatch fallback")
-assert 'local lashing = sourceParts == 7 and nominal' in FINISH
+assert 'local lashing = nominal' in FINISH
 assert 'elseif legacy and id % legacyStep == 1 then' in FINISH
 assert 'platform.Size.Y*.5+.174-height*.5' in FINISH
 assert 'selected, lashing)' in FINISH

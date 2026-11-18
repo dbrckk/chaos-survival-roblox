@@ -707,6 +707,9 @@ local function rebuild()
     local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
+    local hatchProfiles = tier.Name ~= "Low"
+        and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+        and PlatformFinishKit.serviceHatchProfiles(variant) or nil
     local nearRims = ApprovedPlatformRimMeshKit.selectVisibleDecks(
         ordered, tier.Name, base, cameraPoint,
         player:GetAttribute("OptionalVfxPressure"),
@@ -1263,15 +1266,14 @@ local function rebuild()
             if braceTargets[platform] and not braceMeshes then
                 supportBudget += girderCost
             end
-            -- Textured-looking three-layer native hardware on a strictly
-            -- bounded subset of actual jump decks. Shares this existing
+            -- The complete model and fitted three-piece finish share the
             -- platform's weld, collapse visibility and shrinking footprint.
             local hatchPieces = (staged and staged.kind == "hatch"
                 and staged.parts) or PlatformFinishKit.buildServiceHatch(
                 folder, platform, variant, tier.Name, theme, visualIndex,
-                nearServiceHatches[platform] == true)
+                nearServiceHatches[platform] == true, hatchProfiles)
             -- Only count a COMPLETE, actually mounted verified 3D source;
-            -- three-piece native fallback does not count as imported art.
+            -- individually fitted regions do not spend a full-model slot.
             if hatchPieces[1] and hatchPieces[1]:IsA("MeshPart")
                 and hatchPieces[1]:GetAttribute("OriginalServiceHatch3D")
                     == true then
@@ -1915,29 +1917,42 @@ local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
     LongCradle = true, ShortCradle = true, LargeDeckHull = true,
-    Rect = true, Long = true, CornerGuard = true, AnchorBolt = true, ForgedBridge = true,
+    Rect = true, Long = true, CornerGuard = true, AnchorBolt = true,
+    HarborTie = true, ForgedBridge = true,
 }
+local function relevantPlatformRelief(name)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not arena then return false end
+    local variant = arena:GetAttribute("VariantId") or "Classic"
+    return name == variant or name == "AnchorBolt" or name == "HarborTie"
+        or (variant == "Harbor" and name == "CornerGuard")
+end
+
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
     if not holder or not holder:IsA("Folder") then return end
     connections[#connections + 1] = holder:GetAttributeChangedSignal(
         "OwnerVerified"):Connect(scheduleRebuild)
     local observed = {}
+    local relief = marker == "OriginalFloorRelief3D"
     local function attach(model)
         if not model:IsA("Model") or not approvedTemplateNames[model.Name]
             or observed[model] then return end
         observed[model] = true
+        local function changed()
+            if model.Parent == holder and (not relief or relevantPlatformRelief(model.Name)) then
+                scheduleRebuild()
+            end
+        end
         for _, attribute in ipairs({
             "OwnerVerified", "Original3DAssetId", "CosmeticOnly", marker,
         }) do
             connections[#connections + 1] =
-                model:GetAttributeChangedSignal(attribute):Connect(function()
-                    if model.Parent == holder then scheduleRebuild() end
-                end)
+                model:GetAttributeChangedSignal(attribute):Connect(changed)
         end
-        if model.Name == "Bridge" or model.Name == "CornerGuard"
-            or model.Name == "AnchorBolt" or model.Name == "ForgedBridge" then
+        if relief or model.Name == "Bridge" or model.Name == "ForgedBridge" then
             local function meshChanged(child)
-                if child:IsA("BasePart") and model.Parent == holder then scheduleRebuild() end
+                if child:IsA("BasePart") then changed() end
             end
             connections[#connections+1] = model.ChildAdded:Connect(meshChanged)
             connections[#connections+1] = model.ChildRemoved:Connect(meshChanged)
@@ -1971,8 +1986,7 @@ end
 -- Original service hatches are loaded in a late server asset lane.
 -- Rebuild the existing platform visual owner once the current arena's
 -- approved model becomes available; otherwise first-join players would
--- retain native three-Part hatches until the next map transition.
--- Only model arrivals/removals matter; no polling or extra render loop.
+-- retain the basic three-piece finish until the next map transition.
 local platformReliefTemplateConnections = {}
 local currentPlatformReliefTemplates = nil
 local function watchPlatformReliefTemplates(holder)
@@ -1986,14 +2000,7 @@ local function watchPlatformReliefTemplates(holder)
         watchVerifiedTemplateReadiness(holder,
             platformReliefTemplateConnections, "OriginalFloorRelief3D")
         local function changed(child)
-            local generated = workspace:FindFirstChild("GeneratedMap")
-            local arena = generated and generated:FindFirstChild("Arena")
-            local variant = arena and tostring(
-                arena:GetAttribute("VariantId") or "Classic")
-            if variant == child.Name or child.Name == "AnchorBolt"
-                or (variant == "Harbor" and child.Name == "CornerGuard") then
-                scheduleRebuild()
-            end
+            if relevantPlatformRelief(child.Name) then scheduleRebuild() end
         end
         platformReliefTemplateConnections[#platformReliefTemplateConnections + 1] =
             holder.ChildAdded:Connect(changed)
