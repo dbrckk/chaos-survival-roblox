@@ -2869,47 +2869,22 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local halfZ = variant.BaseSize.Z * 0.5
     local edgeThickness = 0.35
     local edgeHeight = 0.45
-
+    local edgeY = base.Size.Y * 0.5 + 0.25
     local edgeColor = theme.Accent
-    local north = decorPart(
-        decor,
-        "EdgeNorth",
-        Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
-        config.ArenaCenter + Vector3.new(0, 1.25, -halfZ + 0.4),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    north.CanCollide = false
-
-    local south = decorPart(
-        decor,
-        "EdgeSouth",
-        Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
-        config.ArenaCenter + Vector3.new(0, 1.25, halfZ - 0.4),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    south.CanCollide = false
-
-    local west = decorPart(
-        decor,
-        "EdgeWest",
-        Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
-        config.ArenaCenter + Vector3.new(-halfX + 0.4, 1.25, 0),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    west.CanCollide = false
-
-    local east = decorPart(
-        decor,
-        "EdgeEast",
-        Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
-        config.ArenaCenter + Vector3.new(halfX - 0.4, 1.25, 0),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    east.CanCollide = false
+    local edgeSizeX = Vector3.new(base.Size.X, edgeHeight, edgeThickness)
+    local edgeSizeZ = Vector3.new(edgeThickness, edgeHeight, base.Size.Z)
+    -- The swept crossbeam is continuous end to end, including the joins at the corners.
+    for _, edge in ipairs({
+        {name = "EdgeNorth", size = edgeSizeX, offset = Vector3.new(0, edgeY, -halfZ + 0.4)},
+        {name = "EdgeSouth", size = edgeSizeX, offset = Vector3.new(0, edgeY, halfZ - 0.4)},
+        {name = "EdgeWest", size = edgeSizeZ, offset = Vector3.new(-halfX + 0.4, edgeY, 0)},
+        {name = "EdgeEast", size = edgeSizeZ, offset = Vector3.new(halfX - 0.4, edgeY, 0)},
+    }) do
+        local border = fitDecorMesh(sweptProfile, edge.name, base.CFrame * CFrame.new(edge.offset),
+            edge.size, edgeColor, Enum.Material.Neon)
+        border.Transparency = 0
+        border.Parent = decor
+    end
 
     local beaconShaft = beaconShaftSource(variant.Id)
     -- The client uses the center of this part for the orbit and particles.

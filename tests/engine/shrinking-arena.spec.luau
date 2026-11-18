@@ -1431,6 +1431,20 @@ describe("Shrinking Arena mobility integration", function()
 
     local function checkPerimeterDecor(arena, scale)
         local base = arena.Base
+        local edgeX, edgeZ = base.Size.X * .5 - .4 * scale, base.Size.Z * .5 - .4 * scale
+        local edgeY = base.Size.Y * .5 + .25
+        local sizeX = Vector3.new(base.Size.X, .45, .35)
+        local sizeZ = Vector3.new(.35, .45, base.Size.Z)
+        for _, side in ipairs({
+            {"EdgeNorth", sizeX, Vector3.new(0, edgeY, -edgeZ)},
+            {"EdgeSouth", sizeX, Vector3.new(0, edgeY, edgeZ)},
+            {"EdgeWest", sizeZ, Vector3.new(-edgeX, edgeY, 0)},
+            {"EdgeEast", sizeZ, Vector3.new(edgeX, edgeY, 0)},
+        }) do
+            local border = arena.Decor[side[1]]
+            checkRouteSignal(base, border, side[2], side[3])
+            assert(not border.CastShadow and border.Transparency == 0)
+        end
         local center = arena.Decor.CenterBeacon
         assert(center:IsA("MeshPart") and center.Material == Enum.Material.Neon)
         assert(center.Anchored and not center.CastShadow)

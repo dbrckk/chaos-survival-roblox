@@ -1,3 +1,7 @@
+## P4 — Bordures lumineuses sculptées au sol
+
+Les 20 bordures lumineuses des cinq arènes peuvent reprendre la traverse forgée continue du pont de Tower Run. Elles couvrent les quatre côtés jusqu’aux angles et gardent leur section pendant que le sol rétrécit. Une bordure simple garde la limite visible si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Balisage sculpté des points d’apparition
 
 Les 40 points d’apparition des cinq arènes peuvent afficher 80 chevrons forgés et 40 halos à deux bandes issus du pont approuvé de Tower Run. Les pointes indiquent la direction de départ et les repères lumineux dépassent du revêtement du sol. Les positions et les orientations d’apparition restent en place. Des formes simples assurent le balisage si le modèle approuvé est indisponible à la construction.
