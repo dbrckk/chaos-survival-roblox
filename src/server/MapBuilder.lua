@@ -1473,6 +1473,24 @@ local function floorReliefRegion(name, regionSize)
     return meshRegionByBounds(relief, regionSize)
 end
 
+local function towersFloorProfiles()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedVariantTowersLandmarkTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local machinery = holder:FindFirstChild("Machinery")
+    if not machinery or not machinery:IsA("Model")
+        or machinery:GetAttribute("OwnerVerified") ~= true
+        or machinery:GetAttribute("CosmeticOnly") ~= true
+        or machinery:GetAttribute("OriginalTowersMachinery3D") ~= true
+        or machinery:GetAttribute("Original3DAssetId") ~= 72143366927826 then
+        return nil
+    end
+    -- The canopy and the twelve-sided core are separate material regions.
+    return meshRegionByBounds(machinery, Vector3.new(7.36, 1.0, 7.36)),
+        meshRegionByBounds(machinery, Vector3.new(5.30, 24, 5.28))
+end
+
 local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
     local center = base.Position
 
@@ -1533,34 +1551,43 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             end
         end
     elseif variant.Id == "Towers" then
+        local plateProfile, coreProfile = towersFloorProfiles()
+        local plateSize = Vector3.new(17, 0.08, 17)
+        local coreSize = Vector3.new(5.5, 0.10, 5.5)
+        local plateY = ArenaPresentation.deckArtOffset(base, plateSize.Y) + 0.015
+        -- Keep the translucent core just above the plate to avoid surface overlap.
+        local coreRise = (plateSize.Y + coreSize.Y) * 0.5 + 0.006
         local pads = {
-            Vector3.new(-28, 1.20, -28),
-            Vector3.new(28, 1.20, -28),
-            Vector3.new(-28, 1.20, 28),
-            Vector3.new(28, 1.20, 28),
+            Vector3.new(-28, plateY, -28),
+            Vector3.new(28, plateY, -28),
+            Vector3.new(-28, plateY, 28),
+            Vector3.new(28, plateY, 28),
         }
         for i, offset in ipairs(pads) do
-            local plate = decorPart(
-                decor,
+            local pose = CFrame.new(center + offset)
+            local plate = fitDecorMesh(
+                plateProfile,
                 "TowerGroundPlate" .. i,
-                Vector3.new(17, 0.08, 17),
-                center + offset,
+                pose,
+                plateSize,
                 theme.Surface:Lerp(
                     i % 2 == 0 and theme.Secondary or theme.Accent, 0.24
                 ),
                 theme.PanelMaterial or Enum.Material.Metal
             )
             plate.Transparency = 0.34
+            plate.Parent = decor
 
-            local core = decorPart(
-                decor,
+            local core = fitDecorMesh(
+                coreProfile,
                 "TowerGroundCore" .. i,
-                Vector3.new(5.5, 0.10, 5.5),
-                center + offset + Vector3.new(0, 0.03, 0),
+                pose * CFrame.new(0, coreRise, 0),
+                coreSize,
                 theme.Accent,
                 VisualTheme.Materials.Glow
             )
             core.Transparency = 0.74
+            core.Parent = decor
         end
 
         -- Eight small floor-inlaid chevrons at four genuine tower ascent

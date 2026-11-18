@@ -1,3 +1,7 @@
+## P4 — Plaques et noyaux lumineux au sol de Tower Run
+
+Les quatre plaques peuvent reprendre le profil biseauté de la machinerie approuvée de Tower Run. Leurs noyaux à douze faces restent faiblement lumineux et centrés sur les plaques pendant le rétrécissement. Les formes plates prennent le relais si leurs maillages respectifs sont indisponibles à la construction.
+
 ## P4 — Voies au sol et carrefour de Crossroads
 
 Les quatre voies peuvent reprendre le profil moulé du revêtement de Crossroads et rejoindre une plaque centrale usinée. Les chevrons du Flux Relay restent au-dessus des voies. La plaque et les voies se contractent avec le sol. Des marquages plats servent de secours si les maillages sont indisponibles à la construction.
