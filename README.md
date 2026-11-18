@@ -1,3 +1,7 @@
+## P4 — Inserts lumineux sous les passerelles de Tower Run
+
+Deux inserts biseautés issus du châssis approuvé d’Orbital remplacent la plaque lumineuse sous chacune des quatre passerelles. Les deux inserts partagent un seul maillage et gardent leur largeur lorsque le tablier se raccourcit. Ils s’atténuent pendant l’alerte et s’éteignent pendant l’effondrement. La plaque d’origine sert de secours si le modèle est indisponible à la construction de l’arène.
+
 ## P4 — Biseaux forgés autour des passerelles de Tower Run
 
 Les quatre passerelles peuvent remplacer leurs seize biseaux par le profil sculpté du pont forgé de Tower Run. Les pièces gardent leur empreinte horizontale et descendent sous la lèvre du tablier, sous les rails lumineux. Le rétrécissement agit sur l’axe réel de chaque pièce, y compris quand une extrémité est tournée de 90°. Les biseaux d’origine servent de secours si le modèle est indisponible à la construction de l’arène.

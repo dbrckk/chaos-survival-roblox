@@ -1830,7 +1830,8 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal,
     local coreName = "PlatformCoreGlow" .. index
     local coreColor = (index % 2 == 0) and theme.Secondary or theme.Accent
     local coreAlpha = routeTier and (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
-    if underdeckSignal and (promenadeLane or skySpineStep) then
+    local skybridge = platform:GetAttribute("ChaosSkybridge") == true
+    if underdeckSignal and (promenadeLane or skySpineStep or skybridge) then
         -- Keep the same decor name/owner so the existing disaster rules
         -- resize and hide both emitters as a single cosmetic piece.
         local lens = underdeckSignal:Clone()
@@ -1844,7 +1845,9 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal,
         local deckAlongX = platform.Size.X > platform.Size.Z
         local lensAlongX = lens.Size.X > lens.Size.Z
         local length = math.max(platform.Size.X, platform.Size.Z) * 0.62
-        local width = math.min(platform.Size.X, platform.Size.Z) * 0.22
+        -- The narrow Tower Run deck needs a wider relative lens. The
+        -- paired inserts sit just outside its two transverse ribs.
+        local width = math.min(platform.Size.X, platform.Size.Z) * (skybridge and 0.34 or 0.22)
         lens.Size = lensAlongX and Vector3.new(length, 0.30, width)
             or Vector3.new(width, 0.30, length)
         -- The top overlaps the native frame by .02 studs. The luminous

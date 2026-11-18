@@ -583,6 +583,26 @@ describe("Shrinking Arena mobility integration", function()
         return holder
     end
 
+    local function checkUnderdeckSignal(arena,deck)
+        local bridgeIndex=deck.Name:match("^Skybridge(%d+)$")
+        local index=assert(bridgeIndex or deck.Name:match("^Platform(%d+)$"))
+        local glow=arena.Decor:FindFirstChild("PlatformCoreGlow"..index)
+        assert(glow and glow:IsA("MeshPart") and glow.Material==Enum.Material.Neon)
+        assert(glow.Anchored and not glow.CanCollide and not glow.CanTouch and not glow.CanQuery)
+        assert(#glow:GetChildren()==0 and glow.Transparency<1)
+        local offset=deck.CFrame:ToObjectSpace(glow.CFrame)
+        local acrossX=math.abs(offset.LookVector.X)>.99
+        local extentX=acrossX and glow.Size.Z or glow.Size.X
+        local extentZ=acrossX and glow.Size.X or glow.Size.Z
+        local alongX=deck.Size.X>deck.Size.Z
+        local relativeWidth=bridgeIndex and .34 or .22
+        assert(math.abs(extentX-deck.Size.X*(alongX and .62 or relativeWidth))<.025)
+        assert(math.abs(extentZ-deck.Size.Z*(alongX and relativeWidth or .62))<.025)
+        assert(math.abs(offset.Y+deck.Size.Y*.5+.52)<.015)
+        assert(math.abs(glow.Size.Y-.30)<.01)
+        return glow
+    end
+
     it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
         local storage = game:GetService("ReplicatedStorage")
         local holder = Instance.new("Folder")
@@ -671,18 +691,25 @@ describe("Shrinking Arena mobility integration", function()
         local guardedRib = decor:FindFirstChild("SkybridgeRib18_0")
         local guardedFrame = decor:FindFirstChild("PlatformUnderFrame18")
         local guardedBevel = decor:FindFirstChild("PlatformBevel18_1")
+        local guardedGlow = checkUnderdeckSignal(arena, bridge18)
+        local surfaceRail = decor:FindFirstChild("SkybridgeRail18_1")
+        local railTransparency = surfaceRail.Transparency
         SkybridgePressure.setPhase(pressure, "Warning", workspace:GetServerTimeNow())
         expect(math.abs(guardedRib.Transparency - 0.65) < 0.001).toBe(true)
         expect(math.abs(guardedFrame.Transparency - 0.65) < 0.001).toBe(true)
         expect(math.abs(guardedBevel.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedGlow.Transparency - 0.65) < 0.001).toBe(true)
         SkybridgePressure.setPhase(pressure, "Gone")
         expect(guardedRib.Transparency).toBe(1)
         expect(guardedFrame.Transparency).toBe(1)
         expect(guardedBevel.Transparency).toBe(1)
+        expect(guardedGlow.Transparency).toBe(1)
         SkybridgePressure.setPhase(pressure, nil)
         expect(guardedRib.Transparency).toBe(0)
         expect(math.abs(guardedFrame.Transparency - 0.04) < 0.001).toBe(true)
         expect(math.abs(guardedBevel.Transparency - 0.08) < 0.001).toBe(true)
+        expect(math.abs(guardedGlow.Transparency - 0.56) < 0.001).toBe(true)
+        expect(surfaceRail.Transparency).toBe(railTransparency)
         local pier2 = decor:FindFirstChild("PlatformSupport18_2")
         local visual = Instance.new("Folder")
         visual.Parent = root
@@ -714,6 +741,7 @@ describe("Shrinking Arena mobility integration", function()
             expect(bridge ~= nil).toBe(true)
             expect(bridge.CanCollide).toBe(true)
             expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+            checkUnderdeckSignal(arena, bridge)
             for side = 1, 2 do
                 local post = decor:FindFirstChild("PlatformSupport" .. index .. "_" .. side)
                 expect(LargeStructure.matchesSkybridgeSupport(post,bridge)).toBe(true)
@@ -833,6 +861,8 @@ describe("Shrinking Arena mobility integration", function()
                             or prior.size.X
                         expect(math.abs(detail.Size.X - expected) < 0.01).toBe(true)
                         expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
+                    elseif detail.Name:match("^PlatformCoreGlow") then
+                        checkUnderdeckSignal(arena, bridge)
                     elseif d0 > 2.2 then
                         expect(d1 < d0).toBe(true)
                     end
@@ -1060,24 +1090,6 @@ describe("Shrinking Arena mobility integration", function()
         end
         root:Destroy()
     end)
-
-    local function checkUnderdeckSignal(arena,deck)
-        local index=assert(deck.Name:match("^Platform(%d+)$"))
-        local glow=arena.Decor:FindFirstChild("PlatformCoreGlow"..index)
-        assert(glow and glow:IsA("MeshPart") and glow.Material==Enum.Material.Neon)
-        assert(glow.Anchored and not glow.CanCollide and not glow.CanTouch and not glow.CanQuery)
-        assert(#glow:GetChildren()==0 and glow.Transparency<1)
-        local offset=deck.CFrame:ToObjectSpace(glow.CFrame)
-        local acrossX=math.abs(offset.LookVector.X)>.99
-        local extentX=acrossX and glow.Size.Z or glow.Size.X
-        local extentZ=acrossX and glow.Size.X or glow.Size.Z
-        local alongX=deck.Size.X>deck.Size.Z
-        assert(math.abs(extentX-deck.Size.X*(alongX and .62 or .22))<.025)
-        assert(math.abs(extentZ-deck.Size.Z*(alongX and .22 or .62))<.025)
-        assert(math.abs(offset.Y+deck.Size.Y*.5+.52)<.015)
-        assert(math.abs(glow.Size.Y-.30)<.01)
-        return glow
-    end
 
     it("fits the short approved chassis beneath every Promenade deck",function()
         local storage=game:GetService("ReplicatedStorage")
