@@ -1423,6 +1423,24 @@ describe("Shrinking Arena mobility integration", function()
                 assert(label.Adornee == base and label.Enabled and label.MaxDistance == 85)
                 assert(math.abs(pose.Y + label.StudsOffsetWorldSpace.Y - owner.Size.Y * .5 - 4.9) < .02)
             end
+            for marker = 1, 5 do
+                for side = -1, 1, 2 do
+                    local arrow = arena.Decor["OuterRouteChevron" .. route .. "_" .. marker .. "_" .. side]
+                    assert(arrow:IsA("MeshPart") and arrow:GetAttribute("ChaosWayfinding") == true)
+                    assert((arrow.Size - Vector3.new(.28 * scale, .055, 2.5 * scale)).Magnitude < .02)
+                end
+            end
+            for step = 1, ArenaVariants.PerimeterSteps do
+                for side = -1, 1, 2 do
+                    local arrow = arena.Decor["OuterStepChevron" .. route .. "_" .. step .. "_" .. side]
+                    local id = arrow:GetAttribute("PerimeterPlatformIndex")
+                    local deck = arena.Platforms["Platform" .. id]
+                    local panel = arena.Decor["PlatformPanel" .. id]
+                    assert(arrow:IsA("MeshPart") and deck:GetAttribute("PerimeterStep") == step)
+                    assert((arrow.Size - Vector3.new(.26 * scale, .07, 1.8 * scale)).Magnitude < .02)
+                    assert(arrow.Position.Y - arrow.Size.Y * .5 > panel.Position.Y + panel.Size.Y * .5)
+                end
+            end
             for marker = 1, 3 do
                 for side = -1, 1, 2 do
                     local arrow = arena.Decor["DistrictArrow" .. route .. "_" .. marker .. "_" .. side]

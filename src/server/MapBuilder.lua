@@ -1725,6 +1725,9 @@ local FORK_CHEVRON = {
     size = Vector3.new(0.33, 0.065, 2.4), spread = 0.55, angle = math.rad(36), alpha = 0.32,
 }
 
+local PERIMETER_STEP_CHEVRON = {
+    size = Vector3.new(0.26, 0.07, 1.80), spread = 0.42, angle = math.rad(35), alpha = 0.43,
+}
 local PROMENADE_CHEVRON = {
     size = Vector3.new(0.30, 0.08, 2.55), spread = 0.62, angle = math.rad(35), alpha = 0.34,
 }
@@ -3490,63 +3493,46 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local startIndex = (route - 1) * perRoute
         local entry = variant.PerimeterPlatforms[startIndex + 1]
         local lookout = variant.PerimeterPlatforms[startIndex + perRoute]
-        local outward = Vector3.new(entry.offset.X, 0, entry.offset.Z).Unit
-        local alongSteps = Vector3.new(
-            lookout.offset.X - entry.offset.X, 0,
-            lookout.offset.Z - entry.offset.Z
-        ).Unit
+        local approach = Vector3.new(entry.offset.X, 0, entry.offset.Z)
+        local outward = approach.Unit
+        local approachDepth = (math.abs(outward.X) * entry.size.X
+            + math.abs(outward.Z) * entry.size.Z) * 0.5
+        local approachEnd = approach.Magnitude - approachDepth - 1.6
         local routeColor = route % 2 == 0 and theme.Secondary or theme.Accent
 
-        -- Five chevrons on the floor end at the exact entry platform.
+        -- End just short of the entry terrace so the last arrow remains
+        -- visible instead of passing underneath the grounded platform.
         for step = 1, 5 do
-            local fraction = 0.30 + 0.13 * step
-            local point = config.ArenaCenter + Vector3.new(
-                entry.offset.X * fraction,
-                variant.BaseSize.Y * 0.5 + 0.04,
-                entry.offset.Z * fraction
-            )
+            local distance = approachEnd * (0.45 + 0.55 * (step - 1) / 4)
+            local point = config.ArenaCenter + outward * distance
+                + Vector3.new(0, variant.BaseSize.Y * 0.5 + 0.04, 0)
             local facing = CFrame.lookAt(point, point + outward)
             for side = -1, 1, 2 do
-                local arrow = decorPart(
-                    decor, "OuterRouteChevron" .. route .. "_" .. step
-                        .. "_" .. tostring(side),
-                    Vector3.new(0.28, 0.055, 2.5),
-                    point, routeColor, VisualTheme.Materials.Glow
-                )
-                arrow.CFrame = facing
-                    * CFrame.new(side * 0.57, 0, 0)
+                local name = "OuterRouteChevron" .. route .. "_" .. step .. "_" .. side
+                local pose = facing * CFrame.new(side * 0.57, 0, 0)
                     * CFrame.Angles(0, math.rad(side * 33), 0)
+                local arrow = fitDecorMesh(sweptProfile, name, pose, Vector3.new(0.28, 0.055, 2.5),
+                    routeColor, VisualTheme.Materials.Glow)
                 arrow.Transparency = 0.45
-                arrow.CastShadow = false
                 arrow:SetAttribute("ChaosWayfinding", true)
+                arrow.Parent = decor
             end
         end
 
-        -- A consistent double-chevron etched onto each of the EIGHT real
-        -- destinations. Attach its owning platform ID so Shrinking Arena
-        -- moves/scales the cosmetics WITH that collidable deck.
-        local deckFacing = CFrame.lookAt(Vector3.zero, alongSteps)
+        -- Face the next real landing, or the way back at the terminal.
+        -- Offsetting each arrow keeps the central signs and forks clear.
         for step = 1, perRoute do
-            local deck = variant.PerimeterPlatforms[startIndex + step]
             local platformIndex = #variant.Platforms + startIndex + step
-            local center = config.ArenaCenter + deck.offset
-                + Vector3.new(0, deck.size.Y * 0.5 + 0.07, 0)
-            for side = -1, 1, 2 do
-                local segment = decorPart(
-                    decor, "OuterStepChevron" .. route .. "_" .. step
-                        .. "_" .. tostring(side),
-                    Vector3.new(0.26, 0.07, 1.8),
-                    center, routeColor, VisualTheme.Materials.Glow
-                )
-                segment.CFrame = CFrame.new(center)
-                    * (deckFacing - deckFacing.Position)
-                    * CFrame.new(side * 0.42, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 35), 0)
-                segment.Transparency = 0.43
-                segment.CastShadow = false
-                segment:SetAttribute("ChaosWayfinding", true)
-                segment:SetAttribute("PerimeterPlatformIndex", platformIndex)
-            end
+            local neighborIndex = platformIndex + (step < perRoute and 1 or -1)
+            local deck = platforms:FindFirstChild("Platform" .. platformIndex)
+            local neighbor = platforms:FindFirstChild("Platform" .. neighborIndex)
+            if not deck or not neighbor then continue end
+            local delta = (neighbor.Position - deck.Position) * Vector3.new(1, 0, 1)
+            if delta.Magnitude <= 0.01 then continue end
+            local forward = delta.Unit
+            local name = "OuterStepChevron" .. route .. "_" .. step
+            addRouteChevron(decor, name, deck, platformIndex, forward, routeColor,
+                PERIMETER_STEP_CHEVRON, sweptProfile, forward * 2.4)
         end
 
         -- Three-part destination beacon on open FLOOR beside (never on)

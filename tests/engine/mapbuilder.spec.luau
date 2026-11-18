@@ -1252,6 +1252,10 @@ describe("Chaos Survival engine", function()
                 local entry = variant.PerimeterPlatforms[firstIndex + 1]
                 local finalPlatformIndex = original + firstIndex
                     + ArenaVariants.PerimeterSteps
+                local entryVector = Vector3.new(entry.offset.X, 0, entry.offset.Z)
+                local outward = entryVector.Unit
+                local nearEdge = entryVector.Magnitude
+                    - (math.abs(outward.X) * entry.size.X + math.abs(outward.Z) * entry.size.Z) * .5
                 for step = 1, 5 do
                     for side = -1, 1, 2 do
                         local cue = decor:FindFirstChild(
@@ -1270,6 +1274,10 @@ describe("Chaos Survival engine", function()
                             < math.abs(entry.offset.X) + 2).toBe(true)
                         expect(math.abs(localPosition.Z)
                             < math.abs(entry.offset.Z) + 2).toBe(true)
+                        local outwardReach = localPosition:Dot(outward)
+                            + (math.abs(cue.CFrame.RightVector:Dot(outward)) * cue.Size.X
+                                + math.abs(cue.CFrame.LookVector:Dot(outward)) * cue.Size.Z) * .5
+                        expect(outwardReach < nearEdge).toBe(true)
                     end
                 end
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -1277,6 +1285,10 @@ describe("Chaos Survival engine", function()
                     local deck = platforms:FindFirstChild(
                         "Platform" .. platformIndex
                     )
+                    local offset = step < ArenaVariants.PerimeterSteps and 1 or -1
+                    local nextDeck = platforms:FindFirstChild("Platform" .. (platformIndex + offset))
+                    local delta = nextDeck.Position - deck.Position
+                    local toward = Vector3.new(delta.X,0,delta.Z).Unit
                     for side = -1, 1, 2 do
                         local cue = decor:FindFirstChild(
                             "OuterStepChevron" .. route .. "_" .. step
@@ -1288,8 +1300,10 @@ describe("Chaos Survival engine", function()
                         expect(cue:GetAttribute("ChaosWayfinding")).toBe(true)
                         expect(cue.CanCollide).toBe(false)
                         expect(math.abs(cue.Position.Y
-                            - (deck.Position.Y + deck.Size.Y * 0.5 + 0.07))
+                            - (deck.Position.Y + deck.Size.Y * 0.5 + 0.155))
                             < 0.001).toBe(true)
+                        expect(math.abs((cue.Position - deck.Position):Dot(toward) - 2.4) < .01).toBe(true)
+                        expect(cue.CanTouch or cue.CanQuery).toBe(false)
                     end
                 end
                 for _, suffix in ipairs({"", "Lens", "Crown"}) do
