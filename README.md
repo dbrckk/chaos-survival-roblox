@@ -1,3 +1,7 @@
+## P4 — Segments sculptés du halo extérieur
+
+Les 80 segments des cinq arènes peuvent reprendre le profil forgé du pont approuvé de Tower Run. Quatre segments longent chaque côté, hors du sol jouable et sous son rebord. Le halo reste fixe pendant le rétrécissement, tandis que la bordure lumineuse suit le sol. Des segments simples prennent le relais si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Lignes de guidage centrales sculptées
 
 Les 20 lignes centrales des cinq arènes peuvent reprendre le profil biseauté du pont approuvé de Tower Run. Leur éclat reste atténué et leur relief affleure le revêtement sous les alertes d’impact. Elles suivent le rétrécissement du sol, avec des lignes simples en secours si le maillage est indisponible à la construction.

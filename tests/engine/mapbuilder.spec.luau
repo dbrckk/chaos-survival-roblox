@@ -895,6 +895,22 @@ describe("Chaos Survival engine", function()
             local arena = root:FindFirstChild("Arena")
             local base = arena:FindFirstChild("Base")
             local decor = arena:FindFirstChild("Decor")
+            for index = 1, 16 do
+                local light = decor:FindFirstChild("OuterHalo" .. index)
+                expect(light ~= nil and light:IsA("BasePart")).toBe(true)
+                expect(light.Material).toBe(Enum.Material.Neon)
+                expect(light.Anchored and not light.CastShadow).toBe(true)
+                expect(not light.CanCollide and not light.CanTouch and not light.CanQuery).toBe(true)
+                local pose = base.CFrame:ToObjectSpace(light.CFrame)
+                local normal = (index - 1) % 8 < 4 and Vector3.zAxis or Vector3.xAxis
+                local size = light.Size
+                local cross = math.abs(pose.RightVector:Dot(normal)) * size.X
+                    + math.abs(pose.LookVector:Dot(normal)) * size.Z
+                local floorWidth = base.Size:Dot(normal)
+                expect(math.abs(cross - .42) < .02).toBe(true)
+                expect(math.abs(pose.Position:Dot(normal)) - cross * .5 > floorWidth * .5 + 4).toBe(true)
+                expect(pose.Position.Y + size.Y * .5 < -base.Size.Y * .5).toBe(true)
+            end
             for _, corner in ipairs({"NW", "NE", "SW", "SE"}) do
                 local ridge = decor:FindFirstChild("ExteriorRidge" .. corner)
                 expect(ridge ~= nil and ridge:IsA("Model")).toBe(true)

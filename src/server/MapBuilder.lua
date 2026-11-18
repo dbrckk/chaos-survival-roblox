@@ -1010,23 +1010,28 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile)
         line.Parent = decor
     end
 
-    local radiusX = (baseSize.X * 0.5) + 4.5
-    local radiusZ = (baseSize.Z * 0.5) + 4.5
-    local segmentCount = 16
-    for i = 1, segmentCount do
-        local angle = ((i - 1) / segmentCount) * math.pi * 2
-        local x = math.cos(angle) * radiusX
-        local z = math.sin(angle) * radiusZ
-        local halo = decorPart(
-            decor,
-            "OuterHalo" .. i,
-            Vector3.new(5.5, 0.18, 0.42),
-            center + Vector3.new(x, -1.15, z),
-            (i % 2 == 0) and theme.Accent or theme.Secondary,
-            VisualTheme.Materials.Glow
-        )
-        halo.CFrame = CFrame.new(halo.Position) * CFrame.Angles(0, -angle, 0)
-        halo.Transparency = 0.34
+    -- Place the static exterior accents along the floor's four sides.
+    local outerX = baseSize.X * 0.5 + 4.5
+    local outerZ = baseSize.Z * 0.5 + 4.5
+    local haloY = -baseSize.Y * 0.5 - 0.15
+    local segmentsPerSide = 4
+    local haloSize = Vector3.new(5.5, 0.18, 0.42)
+    for side, edge in ipairs({
+        {offset = Vector3.new(0, haloY, -outerZ), span = baseSize.X, yaw = 0},
+        {offset = Vector3.new(outerX, haloY, 0), span = baseSize.Z, yaw = -math.pi * 0.5},
+        {offset = Vector3.new(0, haloY, outerZ), span = baseSize.X, yaw = math.pi},
+        {offset = Vector3.new(-outerX, haloY, 0), span = baseSize.Z, yaw = math.pi * 0.5},
+    }) do
+        local frame = CFrame.new(center + edge.offset) * CFrame.Angles(0, edge.yaw, 0)
+        for slot = 1, segmentsPerSide do
+            local index = (side - 1) * segmentsPerSide + slot
+            local along = edge.span * ((slot - 0.5) / segmentsPerSide - 0.5)
+            local color = index % 2 == 0 and theme.Accent or theme.Secondary
+            local halo = fitDecorMesh(sweptProfile, "OuterHalo" .. index,
+                frame * CFrame.new(along, 0, 0), haloSize, color, VisualTheme.Materials.Glow)
+            halo.Transparency = 0.34
+            halo.Parent = decor
+        end
     end
 
     local frameOffsets = {
