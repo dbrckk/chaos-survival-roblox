@@ -892,6 +892,15 @@ describe("Chaos Survival engine", function()
                 expect(pose.Position.Z - halfDepth < -shell.Size.Z * .5).toBe(true)
                 expect(pose.Position.Z + halfDepth > -shell.Size.Z * .5).toBe(true)
                 expect(slit.Position.Y - slit.Size.Y * .5 > foot.Position.Y + foot.Size.Y * .5).toBe(true)
+                local head = casing.LandmarkNavigationHead
+                expect(head.Anchored and not head.CanCollide and not head.CanTouch and not head.CanQuery).toBe(true)
+                expect(head.Material ~= Enum.Material.Neon).toBe(true)
+                if head:IsA("MeshPart") then
+                    local socket = casing.RecessedCrown
+                    local gap = head.Position.Y - head.Size.Y * .5 - socket.Position.Y - socket.Size.Y * .5
+                    expect(math.abs(gap + .05) < .02).toBe(true)
+                    expect(head.Position.Y + head.Size.Y * .5 > shell.Position.Y + 6.3384).toBe(true)
+                end
             end
             if id == "Towers" then
                 local core = decor:FindFirstChild("TowerGroundCore1")

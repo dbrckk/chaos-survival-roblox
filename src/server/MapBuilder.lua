@@ -2856,7 +2856,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
     -- Faceted original 3D shells, machined collars, diagonal load spars
     -- and cantilevers on the four EXISTING foundation towers. No physics.
-    ArchitecturalCladding.build(decor, base, variant.Id, theme)
+    ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase)
     if variant.Id == "Harbor" then
         -- Exterior harbor cranes distinguish the new cargo port without
         -- extra colliders, sound loops or cameras tracking scenic models.

@@ -1,3 +1,7 @@
+## P4 — Têtes de navigation moulées des colonnes
+
+Les 20 têtes de navigation peuvent reprendre le blindage moulé approuvé du périmètre. Le maillage s’encastre dans la couronne d’origine et son sommet reste visible au-dessus de la coque 3D. Les têtes gardent leur teinte par arène et suivent les colonnes pendant le rétrécissement. Les pièces d’origine servent de secours si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Bandeaux sculptés des colonnes de ceinture
 
 Les 20 bandeaux lumineux reprennent le profil polygonal de la colonne approuvée de chaque arène. Ils affleurent la face tournée vers le centre, au-dessus du socle, et se déplacent avec leur colonne pendant le rétrécissement. Les bandeaux simples prennent le relais si le maillage approuvé est indisponible à la construction.

@@ -1,8 +1,9 @@
 --!strict
 -- Original volumetric cladding of the four existing structural corner columns.
--- No remote meshes, fabricated asset IDs, physics, contacts or fake walkable
--- geometry. Native geometry is always available while licensed 2K PBR
--- MaterialVariants are owned by the existing camera-budgeted client selector.
+-- The navigation head can use an approved profile supplied by MapBuilder.
+-- Native geometry remains available without physics or contacts.
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+
 local ArchitecturalCladding = {}
 
 local MATERIALS = {
@@ -39,7 +40,7 @@ local function beam(model, origin, name, from, to, thick, tone, material)
         CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05)
 end
 
-function ArchitecturalCladding.build(decor, base, variantId, theme)
+function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") then return 0 end
     local finish = MATERIALS[variantId]
     if not finish or not theme then return 0 end
@@ -96,7 +97,7 @@ function ArchitecturalCladding.build(decor, base, variantId, theme)
         piece(casing, origin, "MachinedUpperCollar", "Part",
             Vector3.new(5.9, 0.65, 5.0), CFrame.new(0, 4.15, 0),
             machined, finish.shell, 0.02)
-        piece(casing, origin, "RecessedCrown", "Part",
+        local socket = piece(casing, origin, "RecessedCrown", "Part",
             Vector3.new(4.5, 0.42, 3.8), CFrame.new(0, 4.58, 0),
             dark, finish.inset, 0.04)
         -- The arena-specific upper silhouette reads even at mobile distance.
@@ -109,13 +110,25 @@ function ArchitecturalCladding.build(decor, base, variantId, theme)
                 variantId == "Harbor" and 0.70 or 0.43,
                 machined, finish.shell)
         end
-        local crown = piece(casing, origin, "LandmarkNavigationHead", "Part",
-            Vector3.new(1.55, 1.55, 1.55), CFrame.new(0, 6.8, 0),
-            theme.Detail:Lerp(theme.Accent, 0.24),
-            variantId == "Orbital" and Enum.Material.CeramicTiles
-                or finish.shell, 0.06)
-        crown.Shape = variantId == "Orbital"
-            and Enum.PartType.Ball or Enum.PartType.Cylinder
+        local headName = "LandmarkNavigationHead"
+        local headColor = theme.Detail:Lerp(theme.Accent, 0.24)
+        local headMaterial = variantId == "Orbital" and Enum.Material.CeramicTiles or finish.shell
+        -- Start inside the native socket and keep the sculpted tip above the approved casing.
+        local headSize = Vector3.new(1.55, 2.75, 1.55)
+        local headFrame = socket.CFrame * CFrame.new(0, (socket.Size.Y + headSize.Y) * 0.5 - 0.05, 0)
+            * CFrame.Angles(0, math.pi, 0)
+        local head = RouteSignalGeometry.fit(headProfile, headFrame, headSize, nil, true)
+        if head then
+            head.Name = headName
+            head.Color = headColor
+            head.Material = headMaterial
+            head.Transparency = 0.06
+            head.Parent = casing
+        else
+            local fallback = piece(casing, origin, headName, "Part",
+                Vector3.new(1.55, 1.55, 1.55), CFrame.new(0, 6.8, 0), headColor, headMaterial, 0.06)
+            fallback.Shape = variantId == "Orbital" and Enum.PartType.Ball or Enum.PartType.Cylinder
+        end
         -- Fine mechanical seams remain reflective, but NEVER red/orange
         -- warning colors, blinking lights or a fake entry/exit cue.
         piece(casing, origin, "CrownInstrumentSpine", "Part",
