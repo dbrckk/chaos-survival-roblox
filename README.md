@@ -1,3 +1,7 @@
+## P4 — Dessous sculptés sur les paliers de Storm Harbor
+
+Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.
+
 ## P4 — Inserts verticaux sculptés sur l’Épine céleste
 
 Les 40 inserts des portiques reprennent le profil forgé de Tower Run. Ils s’encastrent sur la face intérieure des pylônes pour rester visibles depuis le tablier. Ils gardent leur hauteur et se resserrent avec les portiques quand l’arène rétrécit. En l’absence du modèle approuvé à la construction, un insert lumineux simple reprend le même emplacement.

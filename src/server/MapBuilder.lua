@@ -1675,7 +1675,17 @@ local function approvedMeshRegion(model, name)
     return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
 end
 
-local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand, edgeOverhang)
+local function harborLandingAlongX(definition)
+    if definition.HarborSkywayLane then return true end
+    if definition.HarborSpokeRoute then return definition.HarborSpokeRoute % 2 == 0 end
+    if definition.HarborRoute then
+        -- Each freight switchback alternates X and Z after the first landing.
+        return definition.HarborStep % 2 == 1
+    end
+    return nil
+end
+
+local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand, edgeOverhang, routeAlongX)
     local name = "PlatformGlow" .. index
     local color = (index % 2 == 0) and theme.Secondary or theme.Accent
     local transparency = 0.64
@@ -1688,14 +1698,14 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     end
 
     local size = platform.Size
-    local alongX = size.X > size.Z
+    local alongX = if routeAlongX ~= nil then routeAlongX else size.X > size.Z
     local glow = edgeBand and RouteSignalGeometry.fit(edgeBand,
         platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.47, 0),
         Vector3.new(
             size.X + (alongX and 0.28 or edgeOverhang),
             0.14,
             size.Z + (alongX and edgeOverhang or 0.28)
-        ))
+        ), nil, alongX)
     if glow then
         -- The two bands clear the underside of the frame and share one mesh.
         glow.Name = name
@@ -1711,7 +1721,8 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     end
 end
 
-local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice, forgedBevel)
+local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice,
+    forgedBevel, harborAlongX)
     local topPanel = decorPart(
         decor,
         "PlatformPanel" .. index,
@@ -1836,75 +1847,65 @@ local function addPlatformFinish(decor, platform, index, theme, underdeckSignal,
 
     local frameName = "PlatformUnderFrame" .. index
     local frameColor = theme.Structure:Lerp(VisualTheme.World.Deep, 0.30)
-    if lattice then
-        local frame = lattice:Clone()
-        local meshAlongX = frame.Size.X > frame.Size.Z
-        local deckAlongX = platform.Size.X > platform.Size.Z
-        local length = math.max(platform.Size.X, platform.Size.Z) * 0.98
-        local width = math.min(platform.Size.X, platform.Size.Z) * 0.93
-        frame.Name = frameName
-        frame.Size = meshAlongX and Vector3.new(length, 0.56, width)
-            or Vector3.new(width, 0.56, length)
-        frame.CFrame = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.27, 0)
-            * CFrame.Angles(0, meshAlongX ~= deckAlongX and math.pi * 0.5 or 0, 0)
-        frame.Color = frameColor
-        frame.Material = VisualTheme.Materials.Structure
-        frame.Transparency = 0.04
-        frame:SetAttribute("PremiumArchitecturalSurface", true)
-        frame.Parent = decor
+    local size = platform.Size
+    local frameSize = Vector3.new(size.X + 0.5, 0.42, size.Z + 0.5)
+    local framePose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.18, 0)
+    local underFrame = lattice and lattice:Clone()
+    if underFrame then
+        if harborAlongX == nil then
+            local meshAlongX = underFrame.Size.X > underFrame.Size.Z
+            local deckAlongX = size.X > size.Z
+            local length = math.max(size.X, size.Z) * 0.98
+            local width = math.min(size.X, size.Z) * 0.93
+            frameSize = meshAlongX and Vector3.new(length, 0.56, width)
+                or Vector3.new(width, 0.56, length)
+            framePose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.27, 0)
+                * CFrame.Angles(0, meshAlongX ~= deckAlongX and math.pi * 0.5 or 0, 0)
+        end
+        -- Harbor retains the original frame envelope so a fully loaded
+        -- sculpted caisson can claim the same structural fallback.
+        underFrame.Size = frameSize
+        underFrame.CFrame = framePose
     else
-        local underFrame = decorPart(
-            decor, frameName,
-            Vector3.new(platform.Size.X + 0.5, 0.42, platform.Size.Z + 0.5),
-            platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.18, 0),
-            frameColor, VisualTheme.Materials.Structure
-        )
-        underFrame.Transparency = 0.04
-        underFrame:SetAttribute("PremiumArchitecturalSurface", true)
+        underFrame = decorPart(nil, frameName, frameSize, framePose.Position,
+            frameColor, VisualTheme.Materials.Structure)
     end
+    underFrame.Name = frameName
+    underFrame.Color = frameColor
+    underFrame.Material = VisualTheme.Materials.Structure
+    underFrame.Transparency = 0.04
+    underFrame:SetAttribute("PremiumArchitecturalSurface", true)
+    underFrame.Parent = decor
 
     local coreName = "PlatformCoreGlow" .. index
     local coreColor = (index % 2 == 0) and theme.Secondary or theme.Accent
     local coreAlpha = routeTier and (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
     local skybridge = platform:GetAttribute("ChaosSkybridge") == true
-    if underdeckSignal and (promenadeLane or skySpineStep or skybridge) then
-        -- Keep the same decor name/owner so the existing disaster rules
-        -- resize and hide both emitters as a single cosmetic piece.
-        local lens = underdeckSignal:Clone()
-        lens:ClearAllChildren()
-        lens.TextureID = ""
-        lens.Name = coreName
-        lens.Color = coreColor
-        lens.Material = VisualTheme.Materials.Glow
-        lens.MaterialVariant = ""
-        lens.Transparency = coreAlpha
-        local deckAlongX = platform.Size.X > platform.Size.Z
-        local lensAlongX = lens.Size.X > lens.Size.Z
-        local length = math.max(platform.Size.X, platform.Size.Z) * 0.62
-        -- The narrow Tower Run deck needs a wider relative lens. The
-        -- paired inserts sit just outside its two transverse ribs.
-        local width = math.min(platform.Size.X, platform.Size.Z) * (skybridge and 0.34 or 0.22)
-        lens.Size = lensAlongX and Vector3.new(length, 0.30, width)
+    local signalTemplate = (promenadeLane or skySpineStep or skybridge or harborAlongX ~= nil)
+        and underdeckSignal
+    local core
+    if signalTemplate then
+        local alongX = if harborAlongX ~= nil then harborAlongX else size.X > size.Z
+        local length = (alongX and size.X or size.Z) * 0.62
+        -- A narrow Tower Run deck needs more relative width to clear the ribs.
+        local width = (alongX and size.Z or size.X) * (skybridge and 0.34 or 0.22)
+        local signalSize = alongX and Vector3.new(length, 0.30, width)
             or Vector3.new(width, 0.30, length)
-        -- The top overlaps the native frame by .02 studs. The luminous
-        -- faces sit below both the native frame and the shallow chassis.
-        lens.CFrame = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.52, 0)
-            * CFrame.Angles(0, deckAlongX ~= lensAlongX and math.pi * 0.5 or 0, 0)
-        lens.Parent = decor
-    else
-        local core = decorPart(
-            decor,
-            coreName,
-            Vector3.new(
-                math.max(0.8, platform.Size.X * 0.32),
-                0.12,
-                math.max(0.8, platform.Size.Z * 0.32)
-            ),
-            platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.42, 0),
-            coreColor,
-            VisualTheme.Materials.Glow
-        )
+        core = RouteSignalGeometry.fit(signalTemplate,
+            platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.52, 0), signalSize, nil, alongX)
+    end
+    if core then
+        core.Name = coreName
+        core.Color = coreColor
+        core.Material = VisualTheme.Materials.Glow
         core.Transparency = coreAlpha
+        core.Parent = decor
+    else
+        local fallback = decorPart(decor, coreName,
+            Vector3.new(math.max(0.8, size.X * 0.32), 0.12, math.max(0.8, size.Z * 0.32)),
+            platform.Position - Vector3.new(0, size.Y * 0.5 + 0.42, 0),
+            coreColor, VisualTheme.Materials.Glow)
+        fallback.Transparency = coreAlpha
     end
 
     local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
@@ -2794,7 +2795,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local platformDefinitions = table.clone(variant.Platforms)
     local chassis = accessChassisSource()
     local underdeckSignal = approvedMeshRegion(chassis, "UnderdeckSignal")
-    local towerLattice = variant.Id == "Towers" and approvedMeshRegion(chassis, "UnderdeckLattice") or nil
+    local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     local forgedBridge = towersForgedBridgeSource()
     local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
     local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
@@ -3089,10 +3090,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
 
         local skybridge = definition.Skybridge == true
         local elevatedRoute = definition.PromenadeLane or definition.SkySpineStep
+        local harborAlongX = harborLandingAlongX(definition)
+        local harborLanding = harborAlongX ~= nil
         addPlatformGlow(decor, platform, i, theme, routeTier,
-            (skybridge or elevatedRoute) and edgeBand or nil, skybridge and 0.42 or 0.96)
+            (skybridge or elevatedRoute or harborLanding) and edgeBand or nil,
+            skybridge and 0.42 or 0.96, harborAlongX)
         addPlatformFinish(decor, platform, i, theme, underdeckSignal,
-            skybridge and towerLattice or nil, skybridge and sweptProfile or nil)
+            (skybridge or harborLanding) and underdeckLattice or nil,
+            skybridge and sweptProfile or nil, harborAlongX)
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating

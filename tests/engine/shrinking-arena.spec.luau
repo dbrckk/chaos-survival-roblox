@@ -9,6 +9,8 @@ local LargeStructure = require("../../src/client/PremiumLargeStructureMeshKit")
 local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
 local NativeTrim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
+local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
+local Rim = require("../../src/client/ApprovedPlatformRimMeshKit")
 local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
@@ -1154,6 +1156,114 @@ describe("Shrinking Arena mobility integration", function()
             expect((part.Size - state.size).Magnitude < 0.001).toBe(true)
         end
         root:Destroy()
+    end)
+
+    it("fits the existing Harbor landing trims to all three real route families",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldChassis=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        local signals=forgedSignalFixture(true)
+        local oldSignals=storage:FindFirstChild(signals.Name)
+        if oldMap then oldMap.Parent=nil end
+        if oldChassis then oldChassis.Parent=nil end
+        if oldSignals then oldSignals.Parent=nil end
+        local chassis=shortChassisFixture(storage)
+        signals.Parent=storage
+        local generated
+        local active,callbacks=false,{}
+        local ok,why=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
+            generated=arena.Parent
+            local landings={}
+            local lookup={}
+            local counts={cargo=0,spoke=0,crossing=0}
+            for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                local cargo=deck:GetAttribute("HarborRoute")
+                local spoke=deck:GetAttribute("HarborSpokeRoute")
+                local crossing=deck:GetAttribute("HarborSkywayLane")
+                if cargo or spoke or crossing then
+                    local group=cargo and "cargo" or spoke and "spoke" or "crossing"
+                    counts[group]+=1
+                    local step=deck:GetAttribute("HarborStep") or deck:GetAttribute("HarborSpokeStep")
+                        or deck:GetAttribute("HarborSkywayStep")
+                    local key=group..tostring(cargo or spoke or crossing).."_"
+                    lookup[key..step]=deck
+                    landings[deck]={key=key, step=step, forward=step < (spoke and 4 or 7)}
+                end
+            end
+            assert(counts.cargo==28 and counts.spoke==16 and counts.crossing==14)
+            local function checkLanding(deck,data,scale)
+                local id=assert(deck.Name:match("^Platform(%d+)$"))
+                local band=arena.Decor["PlatformGlow"..id]
+                local lens=arena.Decor["PlatformCoreGlow"..id]
+                local frame=arena.Decor["PlatformUnderFrame"..id]
+                local alongX=data.alongX
+                local sx,sz,halfY=deck.Size.X,deck.Size.Z,deck.Size.Y*.5
+                checkRouteSignal(deck,band,Vector3.new(
+                    sx+(alongX and .28 or .96)*scale,.14,sz+(alongX and .96 or .28)*scale),
+                    Vector3.new(0,-halfY-.47,0))
+                checkRouteSignal(deck,lens,
+                    Vector3.new(sx*(alongX and .62 or .22),.30,sz*(alongX and .22 or .62)),
+                    Vector3.new(0,-halfY-.52,0))
+                for _,piece in ipairs({band,lens}) do
+                    local direction=deck.CFrame:VectorToObjectSpace(piece.CFrame.LookVector)
+                    assert(math.abs(alongX and direction.X or direction.Z)>.999)
+                end
+                local _,acceptedFrame=Rim.nativeParts(arena.Decor,deck,data.size,scale)
+                assert(acceptedFrame==frame and frame:IsA("MeshPart") and deck.CanCollide)
+                return band,lens,frame
+            end
+            for deck,data in pairs(landings) do
+                local nextStep=data.forward and data.step+1 or data.step-1
+                local neighbor=lookup[data.key..nextStep]
+                local delta=neighbor.Position-deck.Position
+                -- The four cargo summits turn onto their adjoining skyway.
+                data.alongX=(deck:GetAttribute("HarborStep")==7)
+                    or math.abs(delta.X)>math.abs(delta.Z)
+                data.size=deck.Size
+                checkLanding(deck,data,1)
+            end
+
+            local sample=lookup.crossing1_1
+            local band,lens,frame=checkLanding(sample,landings[sample],1)
+            local cosmetics=DisappearingPlatforms.cosmeticsForPlatform(arena.Decor,sample)
+            DisappearingPlatforms.setCosmeticsPhase(cosmetics,"Warning")
+            assert(band.Transparency>.59 and lens.Transparency>.59 and frame.Transparency>.59)
+            DisappearingPlatforms.setCosmeticsPhase(cosmetics,"Gone")
+            assert(band.Transparency==1 and lens.Transparency==1 and frame.Transparency==1)
+            DisappearingPlatforms.setCosmeticsPhase(cosmetics,"Safe")
+            assert(band.Transparency<.60 and lens.Transparency<.60 and frame.Transparency<.06)
+            active=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,
+                Active=function() return active end})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            active=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05)
+            for deck,data in pairs(landings) do checkLanding(deck,data,.45) end
+            cleanup(callbacks,{})
+            table.clear(callbacks)
+            for deck,data in pairs(landings) do checkLanding(deck,data,1) end
+
+            chassis.Parent=nil
+            signals.Parent=nil
+            local fallback=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
+            local fallbackDeck=fallback.Platforms[sample.Name]
+            local id=assert(fallbackDeck.Name:match("^Platform(%d+)$"))
+            for _,prefix in ipairs({"PlatformGlow","PlatformCoreGlow","PlatformUnderFrame"}) do
+                assert(fallback.Decor[prefix..id]:IsA("Part"))
+            end
+        end)
+        active=false
+        cleanup(callbacks,{})
+        if generated then generated:Destroy() end
+        chassis:Destroy()
+        signals:Destroy()
+        if oldMap then oldMap.Parent=workspace end
+        if oldChassis then oldChassis.Parent=storage end
+        if oldSignals then oldSignals.Parent=storage end
+        if not ok then error(why) end
     end)
 
     it("fits the short approved chassis beneath every Promenade deck",function()

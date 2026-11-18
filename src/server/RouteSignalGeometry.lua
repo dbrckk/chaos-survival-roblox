@@ -2,7 +2,7 @@ local RouteSignalGeometry = {}
 
 -- Fit the longest source axis to the signal. A vertical inlay turns the
 -- raised face toward the path, mirroring the profile on the other pylon.
-function RouteSignalGeometry.fit(template, frame, size, inlaySide)
+function RouteSignalGeometry.fit(template, frame, size, inlaySide, alongX)
     if not template then return nil end
     local mesh = template:Clone()
     if not mesh then return nil end
@@ -11,7 +11,9 @@ function RouteSignalGeometry.fit(template, frame, size, inlaySide)
         frame *= CFrame.Angles(0, 0, inlaySide * math.pi * 0.5)
         size = Vector3.new(size.Y, size.X, size.Z)
     end
-    local rotate = longAxisX ~= (size.X > size.Z)
+    -- A nearly square deck can have a wider lip than its intended span.
+    local targetAlongX = if alongX ~= nil then alongX else size.X > size.Z
+    local rotate = longAxisX ~= targetAlongX
     mesh:ClearAllChildren()
     mesh.TextureID = ""
     mesh.MaterialVariant = ""
