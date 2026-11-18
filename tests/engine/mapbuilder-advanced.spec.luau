@@ -16,6 +16,7 @@ local CornerMonument = require("../../src/client/ApprovedCornerMonumentMeshKit")
 local SkylineDepth = require("../../src/client/ApprovedSkylineDepthMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local ArenaGroundArchitecture = require("../../src/server/ArenaGroundArchitecture")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local OrbitalRouteSignKit = require("../../src/client/OrbitalRouteSignKit")
@@ -1255,27 +1256,18 @@ describe("Chaos Survival engine", function()
         local decor = Instance.new("Folder")
         decor.Name = "Decor"
         decor.Parent = arena
-        -- The real builder uses a 6x6 grid, not an unrelated 4x2 stand-in.
-        -- Choose eight genuine central bays so Low has two within 125 studs.
-        local cell = (320 - 18) / 6
+        ArenaGroundArchitecture.build(decor, base, "Classic", VisualTheme.arena("Classic"), nil, mesh, mesh)
+        -- Keep eight central bays so Low has two within 125 studs.
         local centerBays = {14, 15, 16, 17, 20, 21, 22, 23}
-        for _, index in ipairs(centerBays) do
-            local ix = math.floor((index - 1) / 6) + 1
-            local iz = (index - 1) % 6 + 1
-            local ground = Instance.new("Part")
-            ground.Name = "PremiumGroundModule" .. index
-            ground.Size = Vector3.new(cell - 1.2, 0.035, cell - 1.2)
-            ground.CFrame = base.CFrame * CFrame.new(
-                (ix - 3.5) * cell, base.Size.Y * .5 + .153,
-                (iz - 3.5) * cell)
-            ground.Anchored = true
-            ground.CastShadow = false
-            ground.CanCollide = false
-            ground.CanTouch = false
-            ground.CanQuery = false
-            ground:SetAttribute("OriginalGroundFinish", true)
-            ground:SetAttribute("PremiumArchitecturalSurface", true)
-            ground.Parent = decor
+        for _, child in ipairs(decor:GetChildren()) do
+            local index = tonumber(child.Name:match("^PremiumGroundModule(%d+)$"))
+            if index and not table.find(centerBays, index) then child:Destroy() end
+        end
+        local overlays = {decor.PremiumGroundServiceInlay15, decor.PremiumGroundGusset17}
+        for _, overlay in ipairs(overlays) do
+            expect(overlay:IsA("MeshPart")).toBe(true)
+            expect(not overlay.CanCollide and not overlay.CanTouch and not overlay.CanQuery).toBe(true)
+            overlay.LocalTransparencyModifier = .25
         end
         local camera = Vector3.new(0, 14, 0)
         -- The verified 2,976-triangle source now uses 2/8/24 resident
@@ -1286,6 +1278,9 @@ describe("Chaos Survival engine", function()
         expect(PremiumGroundMeshKit.count()).toBe(8)
         PremiumGroundMeshKit.sync(arena, camera, "High", true)
         expect(PremiumGroundMeshKit.count()).toBe(8)
+        for _, overlay in ipairs(overlays) do
+            expect(overlay.LocalTransparencyModifier).toBe(1)
+        end
         local cosmeticBucket = workspace:FindFirstChild("OriginalPremiumGroundMeshesLocal")
         expect(cosmeticBucket ~= nil).toBe(true)
         for _, clone in ipairs(cosmeticBucket:GetChildren()) do
@@ -1308,6 +1303,9 @@ describe("Chaos Survival engine", function()
         expect(PremiumGroundMeshKit.count()).toBe(0)
         expect(base.CanCollide).toBe(true)
         expect(base.Size).toBe(Vector3.new(231, 2, 231))
+        for _, overlay in ipairs(overlays) do
+            expect(overlay.LocalTransparencyModifier).toBe(.25)
+        end
         PremiumGroundMeshKit.sync(nil, Vector3.zero, "Low", false)
         generated:Destroy()
         holder:Destroy()

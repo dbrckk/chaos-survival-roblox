@@ -1,3 +1,7 @@
+## P4 — Inserts et goussets sculptés des dalles
+
+Les 60 inserts de maintenance et les 45 goussets des cinq arènes peuvent reprendre la traverse forgée de Tower Run et le blindage moulé du périmètre. Ces détails restent à la hauteur du revêtement, suivent le rétrécissement et cèdent la place à la dalle 3D complète quand elle est affichée. Les inserts et goussets simples servent de secours si les maillages approuvés sont indisponibles à la construction.
+
 ## P4 — Habillage sculpté du pourtour du sol
 
 Les cinq arènes peuvent afficher 20 plaques latérales forgées et 20 plaques d’angle issues de maillages approuvés. Les pièces conservent leurs joints et leur hauteur sous les repères de danger. Elles suivent le rétrécissement du sol. Les plaques simples servent de secours si les maillages approuvés sont indisponibles à la construction.

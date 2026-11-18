@@ -3,7 +3,7 @@
 -- Only decorative, thin, non-colliding sections: collision, warning telegraphs,
 -- spawn pads, AI ground pathfinding and shrink geometry remain authoritative.
 -- Original licensed MaterialService textures are selected by the existing
--- camera-budgeted PBR client. Perimeter cladding and underfloor girders
+-- camera-budgeted PBR client. Floor details, cladding and underfloor girders
 -- can reuse approved mesh profiles supplied by MapBuilder.
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
@@ -63,7 +63,7 @@ local function part(decor, name, kind, frame, size, tone, material, alpha, pbr, 
 end
 
 function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: MeshPart?,
-    apronProfile: MeshPart?, cornerProfile: MeshPart?)
+    sweptProfile: MeshPart?, castProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") or not theme then
         return 0
     end
@@ -109,13 +109,11 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: M
                     origin * CFrame.new(
                         x + cellX * 0.19, finishY + 0.024, z - cellZ * 0.16),
                     Vector3.new(cellX * 0.29, 0.016, 0.27),
-                    mark, profile.detail, 0.14, false)
+                    mark, profile.detail, 0.14, false, sweptProfile)
                 count += 1
             end
 
-            -- Three-dimensional, flush, angled corner mounts on only one
-            -- tile per four. An original WedgePart breaks the blockout
-            -- silhouette without creating a walkable raised surface.
+            -- Keep the cast corner mounts shallow and tied to their tile slot.
             if (ix + iz) % 4 == 0 then
                 part(decor, "PremiumGroundGusset" .. index, "WedgePart",
                     origin * CFrame.new(
@@ -123,7 +121,7 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: M
                         z + cellZ * 0.32),
                     Vector3.new(2.4, 0.045, 2.4),
                     theme.Structure:Lerp(theme.Detail, 0.32),
-                    profile.detail, 0.065, false)
+                    profile.detail, 0.065, false, castProfile)
                 count += 1
             end
         end
@@ -147,11 +145,11 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: M
         part(decor, "PremiumGroundApronX" .. tostring(side), "Part",
             origin * CFrame.new(x, finishY, 0),
             Vector3.new(apronX - 0.08, 0.035, innerZ),
-            armorTone, profile.panel, 0.035, false, apronProfile)
+            armorTone, profile.panel, 0.035, false, sweptProfile)
         part(decor, "PremiumGroundApronZ" .. tostring(side), "Part",
             origin * CFrame.new(0, finishY, z),
             Vector3.new(innerX, 0.035, apronZ - 0.08),
-            armorTone, profile.panel, 0.035, false, apronProfile)
+            armorTone, profile.panel, 0.035, false, sweptProfile)
         count += 2
     end
     for sx = -1, 1, 2 do
@@ -162,7 +160,7 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: M
                     .. "_" .. tostring(sz), "Part",
                 origin * CFrame.new(cornerX, finishY, cornerZ),
                 Vector3.new(apronX - 0.08, 0.035, apronZ - 0.08),
-                outerTone, profile.detail, 0.045, false, cornerProfile)
+                outerTone, profile.detail, 0.045, false, castProfile)
             count += 1
         end
     end
