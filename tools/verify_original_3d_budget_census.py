@@ -1750,13 +1750,13 @@ print("PASS Harbor recessed rails trade existing support slots and yield to moun
 # fallback on unsculpted decks (and on edge-only rims); Harbor cargo
 # markings, physical decks, collapse warnings and wayfinding persist.
 for marker in (
-    'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)',
+    'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck, profiles)',
     'if genuineUnderdeck then return end',
-    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, profiles)',
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
-    'authenticUnderdeck)',
+    'authenticUnderdeck, platformArtProfiles)',
     '"HarborCargoLashing" .. index',
 ):
     assert marker in OWNER, ("no native block overlay on approved hull",marker)

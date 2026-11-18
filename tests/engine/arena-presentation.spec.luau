@@ -1093,7 +1093,7 @@ describe("Streaming-independent platform identity", function()
 end)
 
 describe("Moving platform premium trim kit", function()
-    it("scales Classic's welded route paint with actual shrinking geometry", function()
+    it("scales welded route detailing with actual shrinking geometry", function()
         local root = Instance.new("Folder")
         root.Parent = workspace
         local deck = Instance.new("Part")
@@ -1124,6 +1124,22 @@ describe("Moving platform premium trim kit", function()
                 table.insert(pieces, piece)
             end
         end
+        local core = Instance.new("Part")
+        core.Shape = Enum.PartType.Cylinder
+        core.Size = Vector3.new(.24, 2, 2)
+        core:SetAttribute("TowerLiftCoreCylinder", true)
+        core.CanCollide = false
+        core.CanTouch = false
+        core.CanQuery = false
+        core.Massless = true
+        local coreWeld = Instance.new("Weld")
+        coreWeld.Name = "PlatformIdentityWeld"
+        coreWeld.Part0, coreWeld.Part1 = core, deck
+        coreWeld.C1 = CFrame.new(0, -1.11, 0) * CFrame.Angles(0, 0, math.pi * .5)
+        core.CFrame = deck.CFrame * coreWeld.C1
+        coreWeld.Parent = core
+        core.Parent = visuals
+        table.insert(pieces, core)
         local first = pieces[1]
         local weld = first:FindFirstChild("ChaosPlatformTrimWeld")
         expect(weld ~= nil and weld:IsA("Weld")).toBe(true)
@@ -1145,6 +1161,8 @@ describe("Moving platform premium trim kit", function()
 
         deck.Size = Vector3.new(4.5, 2, 7)
         PlatformFinishKit.applyRouteFootprint(snapshot)
+        expect((core.Size - Vector3.new(.24, .9, 1.4)).Magnitude < .005).toBe(true)
+        expect(math.abs(coreWeld.C1.RightVector.Y - 1) < .001).toBe(true)
         expect(math.abs(rails[1].Size.X - deck.Size.X * .72) < .005).toBe(true)
         expect(math.abs(rails[1].Size.Z - .13 * .7) < .005).toBe(true)
         local brace = braces[1]
@@ -1226,6 +1244,21 @@ describe("Moving platform premium trim kit", function()
             expect(joint.Part0).toBe(part)
             expect(joint.Part1).toBe(platform)
         end
+        local brace = Instance.new("MeshPart")
+        brace.Size = Vector3.new(.84, .32, 33.64)
+        brace.CanCollide = false
+        brace.CanTouch = false
+        brace.CanQuery = false
+        brace.Massless = true
+        brace:SetAttribute("PlatformTrimAxisSwap", true)
+        local braceWeld = Instance.new("Weld")
+        braceWeld.Name = "PlatformIdentityWeld"
+        braceWeld.Part0, braceWeld.Part1 = brace, platform
+        braceWeld.C1 = CFrame.new(6, -1.37, 0) * CFrame.Angles(0, math.pi * .5, 0)
+        brace.CFrame = platform.CFrame * braceWeld.C1
+        braceWeld.Parent = brace
+        brace.Parent = visual
+        table.insert(pieces, brace)
         local originalRailSize = rails[1].Size
         local originalRigidSize = armor[1].Size
         local endBefore = platform.CFrame:PointToObjectSpace(rails[3].Position)
@@ -1246,6 +1279,9 @@ describe("Moving platform premium trim kit", function()
         end
         assertNear("rail span", rails[1].Size.Z,
             originalRailSize.Z * 0.5, 0.005)
+        assertNear("brace span", brace.Size.Z, 16.82, 0.005)
+        assertNear("brace width", brace.Size.X, .84, 0.005)
+        assertNear("brace weld offset", braceWeld.C1.Position.X, 3, 0.005)
         assertNear("rigid armor", armor[1].Size.X,
             originalRigidSize.X, 0.005)
         assertNear("rail end", platform.CFrame:PointToObjectSpace(rails[3].Position).X,

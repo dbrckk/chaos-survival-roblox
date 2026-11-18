@@ -265,12 +265,13 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     if anchorPart and anchorPart:IsA("BasePart") then
         registerVisual(anchorPart, part)
         part.Massless = true
-        local compactRoute = tonumber(anchorPart:GetAttribute("RouteTier")) ~= nil
-        local weld = Instance.new(compactRoute and "Weld" or "WeldConstraint")
+        local adjustable = anchorPart:GetAttribute("ChaosSkybridge") == true
+            or tonumber(anchorPart:GetAttribute("RouteTier")) ~= nil
+        local weld = Instance.new(adjustable and "Weld" or "WeldConstraint")
         weld.Name = "PlatformIdentityWeld"
         weld.Part0 = part
         weld.Part1 = anchorPart
-        if compactRoute then
+        if adjustable then
             weld.C0 = CFrame.identity
             weld.C1 = anchorPart.CFrame:ToObjectSpace(part.CFrame)
         end
@@ -280,7 +281,15 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     return part
 end
 
-local function decorateClassic(platform, index, theme, tier)
+local function makeFittedPart(name, size, frame, color, material, transparency,
+    platform, profiles, region)
+    local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(
+        profiles and profiles[region], frame, size, size.X >= size.Z,
+        profiles and profiles.assetId)
+    return makePart(name, dimensions, pose, color, material, transparency, platform, mesh)
+end
+
+local function decorateClassic(platform, index, theme, tier, profiles)
     local top = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.56)
     -- Quiet calibration engraving: it shows deck construction, not a
@@ -288,70 +297,80 @@ local function decorateClassic(platform, index, theme, tier)
     -- exclusively for geometry-verified parkour takeoffs.
     local transparency = tier.Name == "Low" and 0.48 or 0.29
 
-    makePart(
+    makeFittedPart(
         "ClassicPlatformAxisA" .. index,
         Vector3.new(length, 0.045, 0.16),
         top,
         theme.Detail:Lerp(theme.Structure, index % 2 == 0 and 0.38 or 0.28),
         Enum.Material.Metal,
         transparency,
-        platform
+        platform, profiles, "detail"
     )
 
     if tier.Name == "High" then
-        makePart(
+        makeFittedPart(
             "ClassicPlatformAxisB" .. index,
             Vector3.new(0.16, 0.045, length),
-            top,
+            top * CFrame.new(0, .004, 0),
             theme.Detail,
             Enum.Material.Metal,
             0.28,
-            platform
+            platform, profiles, "detail"
         )
     end
 end
 
-local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)
+local function decorateTowers(platform, index, theme, tier, genuineUnderdeck, profiles)
     -- A complete, already mounted approved carapace/hull owns this
     -- deck's underside. Do not overlay it with a primitive cylinder and
     -- rectangular brace; retain both as genuine fallback otherwise.
     -- Rims/bridge girders alone do not cover the central underside.
     if genuineUnderdeck then return end
-    local bottom = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.18, 0)
-    local radius = math.max(2.0, math.min(platform.Size.X, platform.Size.Z) * 0.28)
+    local bottom = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - .11, 0)
+    local diameter = math.max(2.0, math.min(platform.Size.X, platform.Size.Z) * 0.28)
+    local head = profiles and profiles.lens
+    local upright = Vector3.new(diameter, .24, diameter)
+    local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(
+        head and head.part, bottom, upright, false, head and head.assetId)
+    if not mesh then
+        -- Roblox cylinders have local X as their axis. Put the thickness
+        -- on X before rolling the cylinder flat into the deck underside.
+        pose = bottom * CFrame.Angles(0, 0, math.pi * .5)
+        dimensions = Vector3.new(upright.Y, upright.X, upright.Z)
+    end
 
     local core = makePart(
         "TowerPlatformLiftCore" .. index,
-        Vector3.new(radius, 0.24, radius),
-        -- Establish the final cylinder orientation BEFORE welding it
-        -- to the authoritative platform. Rotating an already-welded
-        -- Part can fight the constraint and move/snaps its assembly.
-        bottom * CFrame.Angles(0, 0, math.rad(90)),
+        dimensions,
+        pose,
         index % 2 == 0 and theme.Secondary or theme.Accent,
         tier.Name == "High" and index % 3 == 1 and Enum.Material.Neon or Enum.Material.Metal,
         tier.Name == "High" and index % 3 == 1 and 0.48 or (tier.Name == "Low" and 0.36 or 0.22),
-        platform
+        platform, mesh
     )
-    core.Shape = Enum.PartType.Cylinder
+    if not mesh then
+        core.Shape = Enum.PartType.Cylinder
+        core:SetAttribute("TowerLiftCoreCylinder", true)
+    end
 
     if tier.Name == "High" and platform.Position.Y >= 10 then
-        makePart(
+        makeFittedPart(
             "TowerPlatformBrace" .. index,
             Vector3.new(
                 math.max(3.2, platform.Size.X * 0.58),
                 0.32,
                 math.max(0.7, platform.Size.Z * 0.12)
             ),
-            platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.42, 0),
+            platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - .37, 0),
             theme.Structure:Lerp(theme.Detail, 0.20),
             Enum.Material.DiamondPlate,
             0.18,
-            platform
+            platform, profiles, "hatch"
         )
     end
 end
 
-local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
+local function decorateCrossroads(platform, index, theme, tier, arenaCenter, profiles)
     local center = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local arenaDelta = Vector3.new(
         platform.Position.X - arenaCenter.X,
@@ -364,14 +383,14 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
         and Vector3.new(math.max(2.5, length * 0.64), 0.05, 0.24)
         or Vector3.new(0.24, 0.05, math.max(2.5, length * 0.64))
 
-    makePart(
+    makeFittedPart(
         "CrossroadPlatformLane" .. index,
         size,
         center,
         theme.Detail:Lerp(theme.Structure, 0.35),
         Enum.Material.Metal,
         tier.Name == "Low" and 0.48 or 0.30,
-        platform
+        platform, profiles, "hatch"
     )
 
     if tier.Name == "High" then
@@ -383,7 +402,7 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
             or Vector3.new(0.13, 0.045, math.max(2.0, platform.Size.Z * 0.34))
 
         for side = -1, 1, 2 do
-            makePart(
+            makeFittedPart(
                 "CrossroadPlatformBranch" .. index .. "_" .. tostring(side),
                 capSize,
                 center * CFrame.new(
@@ -394,13 +413,13 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
                 theme.Detail,
                 Enum.Material.Metal,
                 0.30,
-                platform
+                platform, profiles, "collar"
             )
         end
     end
 end
 
-local function decorateOrbital(platform, index, theme, tier, arenaCenter)
+local function decorateOrbital(platform, index, theme, tier, arenaCenter, profiles)
     local radial = Vector3.new(
         platform.Position.X - arenaCenter.X,
         0,
@@ -419,7 +438,7 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
     ) * CFrame.Angles(0, yaw, 0)
 
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.70)
-    makePart(
+    local tangentMark = makeFittedPart(
         "OrbitalPlatformTangent" .. index,
         Vector3.new(length, 0.05, 0.22),
         center,
@@ -428,20 +447,22 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
         theme.Detail:Lerp(theme.Structure, index % 2 == 0 and 0.32 or 0.46),
         Enum.Material.Metal,
         tier.Name == "Low" and 0.43 or 0.25,
-        platform
+        platform, profiles, "detail"
     )
+    tangentMark:SetAttribute("PlatformFinishDiagonal", true)
 
     if tier.Name ~= "Low" then
         local innerOffset = radial * -math.min(platform.Size.X, platform.Size.Z) * 0.22
-        makePart(
+        local innerRail = makeFittedPart(
             "OrbitalPlatformInnerRail" .. index,
             Vector3.new(length * 0.56, 0.045, 0.12),
             center + innerOffset,
             theme.Detail,
             Enum.Material.Glass,
             tier.Name == "High" and 0.40 or 0.52,
-            platform
+            platform, profiles, "collar"
         )
+        innerRail:SetAttribute("PlatformFinishDiagonal", true)
     end
 end
 
@@ -451,7 +472,7 @@ end
 -- pieces, takeoff chevrons and physical panels still display normally.
 -- All pieces are inside the real deck, linked to its shrink footprint
 -- and inherit collapse visibility from the existing single owner.
-local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
+local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, profiles)
     if tier.Name == "Low" then return end
     local width = math.min(platform.Size.X, platform.Size.Z)
     local nominal = PlatformIdentityLodRules.harborLandingWidth(platform)
@@ -463,18 +484,18 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
     -- crossbar, NOT a fake bridge or hazard arrow.
     if not nominal then
         local top = PlatformFinishKit.surfacePaintOffset(platform, 0.045)
-        makePart(
+        makeFittedPart(
             "HarborCargoLashing" .. index,
             Vector3.new(math.min(platform.Size.X * 0.55, 6.8), 0.045, 0.24),
             platform.CFrame * CFrame.new(0, top, platform.Size.Z * 0.26),
-            hardware, Enum.Material.CorrodedMetal, 0.26, platform
+            hardware, Enum.Material.CorrodedMetal, 0.26, platform, profiles, "detail"
         )
     end
     -- The approved seven-MeshPart underside replaces this flat native
     -- keel block, but NOT Harbor's useful top-surface cargo lashing.
     local keelMount
     if tier.Name == "High" and not genuineUnderdeck then
-        keelMount = makePart(
+        keelMount = makeFittedPart(
             "HarborKeelMount" .. index,
             PlatformFinishKit.harborKeelMountSize(platform),
             platform.CFrame * CFrame.new(
@@ -483,7 +504,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
             theme.Detail:Lerp(hardware, 0.58),
             Enum.Material.WoodPlanks,
             0.13,
-            platform
+            platform, profiles, "hatch"
         )
     end
     return keelMount
@@ -995,7 +1016,8 @@ local function rebuild()
     -- Preserve rail coverage and leave room for the existing columns.
     local railTargets,braceTargets,keelTargets,cornerTargets = {},{},{},{}
     local girderSource,cornerSource
-    local armorProfile = PlatformFinishKit.armorCount(tier.Name) > 0
+    local armorProfile = (PlatformFinishKit.armorCount(tier.Name) > 0
+        or (variant == "Towers" and platformArtProfiles ~= nil))
         and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
     if platformArtProfiles then platformArtProfiles.lens = armorProfile end
     local forgedTrimProfile = tier.Name ~= "Low"
@@ -1335,15 +1357,15 @@ local function rebuild()
             -- an edge-only rim must preserve the native accents.
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier,
-                    authenticUnderdeck)
+                    authenticUnderdeck, platformArtProfiles)
             elseif variant == "Crossroads" then
-                decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
+                decorateCrossroads(platform, visualIndex, theme, tier, base.Position, platformArtProfiles)
             elseif variant == "Orbital" then
-                decorateOrbital(platform, visualIndex, theme, tier, base.Position)
+                decorateOrbital(platform, visualIndex, theme, tier, base.Position, platformArtProfiles)
             elseif variant == "Harbor" then
                 local tieDown = hatchPieces[1] and hatchPieces[1]:GetAttribute("OriginalHarborCargoTieDown3D") == true
                 local keelMount = decorateHarbor(platform, visualIndex, theme, tier,
-                    authenticUnderdeck)
+                    authenticUnderdeck, platformArtProfiles)
                 if platformKeel and not authenticRim and not authenticUnderdeck then
                     local keelMeshes,keelFallback = PlatformFinishKit.mountHarborLandingKeel(
                         folder,platform,platformKeel,keelMount,girderSource)
@@ -1413,7 +1435,7 @@ local function rebuild()
                     end
                 end
             elseif variant == "Classic" then
-                decorateClassic(platform, visualIndex, theme, tier)
+                decorateClassic(platform, visualIndex, theme, tier, platformArtProfiles)
             end
             end
 

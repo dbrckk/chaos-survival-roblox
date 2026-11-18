@@ -495,7 +495,8 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
             end
             local localFrame = CFrame.new(scaled) * rotation
             local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
-            if joint and joint:IsA("Weld") then
+                or piece:FindFirstChild("PlatformIdentityWeld")
+            if joint and joint:IsA("Weld") and joint.Part1 == platform then
                 -- C0 is identity, so C1 is the exact platform-relative
                 -- frame. Updating it changes the physical weld offset.
                 joint.C1 = localFrame
@@ -986,7 +987,13 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
             local armorCorner = part:GetAttribute("ChaosArmorCorner")
             local axesSwapped = rimSwapped or part:GetAttribute("PlatformTrimAxisSwap") == true
                 or (type(armorCorner) == "number" and armorCorner % 2 == 0)
-            if data.braceCorner then
+            if part:GetAttribute("TowerLiftCoreCylinder") == true then
+                -- The rolled cylinder's X is vertical and its Y spans
+                -- the deck's X, so keep its axial thickness unchanged.
+                part.Size = Vector3.new(data.size.X,
+                    math.max(data.minimum, data.size.Y * ratioX),
+                    math.max(data.minimum, data.size.Z * ratioZ))
+            elseif data.braceCorner then
                 -- Keep the socket at the deck edge and refit the diagonal
                 -- to the new lower anchor instead of squashing its width.
                 local frame, length = loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)
@@ -1004,7 +1011,7 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                 local scaleX = axesSwapped and ratioZ or ratioX
                 local scaleZ = axesSwapped and ratioX or ratioZ
                 if part:GetAttribute("PlatformFinishDiagonal") == true then
-                    -- These slanted chevron arms keep their angle. Fit to
+                    -- Slanted markings keep their angle. Fit to
                     -- the narrower contraction so neither tip can overhang.
                     scaleX = math.min(ratioX, ratioZ)
                     scaleZ = scaleX

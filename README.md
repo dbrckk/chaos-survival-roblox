@@ -1,3 +1,7 @@
+## P4 — Marquages secondaires et supports des plateformes
+
+Les axes de Classic, les voies de Crossroads, les rails d’Orbital et les bandes d’amarrage de Harbor peuvent reprendre les profils approuvés en gardant leur fini et leurs emplacements. Tower Run reçoit des noyaux de levage à douze facettes et des traverses biseautées. Les marquages suivent la contraction des plateformes, les traverses suivent celle des passerelles et les habillages complets gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
+
 ## P4 — Chevrons de départ des sauts
 
 Sur Classic, Tower Run, Crossroads et Storm Harbor, les deux branches de chaque chevron peuvent utiliser le profil biseauté approuvé de l’arène. Les repères conservent leur couleur et suivent le saut recalculé quand les plateformes bougent. Ils s’effacent si le saut devient impraticable ou dangereux. Les formes simples prennent le relais si le maillage manque ou si la charge graphique augmente.
