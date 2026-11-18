@@ -1394,7 +1394,7 @@ task.spawn(function()
                 nativeApexesReplaced)
         end
         -- Source-approved complete-height forged industrial skyline. Only
-        -- four big native tower body/cap/rib Parts are replaced. The original
+        -- four server tower body/cap/rib pieces are covered. The original
         -- SignalBand and Antenna stay readable. Existing LOD camera sample
         -- controls proximity, quality, pressure and fallback; no new loop.
         ApprovedExteriorTowerMeshKit.sync(arena,cameraPoint,
@@ -1406,7 +1406,7 @@ task.spawn(function()
             player:SetAttribute("LocalApprovedExteriorTowerCount",
                 exteriorTowers)
         end
-        local nativeTowersReplaced=ApprovedExteriorTowerMeshKit.replacedNativeCount()
+        local nativeTowersReplaced=ApprovedExteriorTowerMeshKit.replacedNativeCount(true)
         if player:GetAttribute("LocalExteriorPrimitiveTowerPartsReplaced")
             ~=nativeTowersReplaced then
             player:SetAttribute("LocalExteriorPrimitiveTowerPartsReplaced",
@@ -1433,7 +1433,7 @@ task.spawn(function()
                 atmosphereNatives)
         end
         -- Four source-authored exterior corner sculptural ridges.
-        -- Each approved Model replaces three WedgeParts with real art,
+        -- Each approved Model covers three server ridge pieces,
         -- sharing the existing LOD sampler and mobile pressure budget.
         ApprovedExteriorRidgeMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,isTouch,
@@ -1444,7 +1444,7 @@ task.spawn(function()
             player:SetAttribute("LocalApprovedExteriorRidgeModelCount",
                 ridgesModels)
         end
-        local ridgesHidden=ApprovedExteriorRidgeMeshKit.replacedNativeCount()
+        local ridgesHidden=ApprovedExteriorRidgeMeshKit.replacedNativeCount(true)
         if player:GetAttribute("LocalExteriorRidgePrimitivesReplaced")
             ~=ridgesHidden then
             player:SetAttribute("LocalExteriorRidgePrimitivesReplaced",

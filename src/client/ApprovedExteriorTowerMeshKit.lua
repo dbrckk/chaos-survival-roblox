@@ -1,11 +1,12 @@
 -- Premium original skyline replacements for four REAL exterior towers.
--- Per tower, four rectangular native bodies disappear ONLY after one
+-- Per tower, four server fallback pieces disappear after one
 -- source-approved seven-MeshPart sculpt is fully mounted; signal and antenna
 -- stay. Existing scenery LOD timer only; zero physics or network calls.
 -- On Low, show ONE nearest approved seven-piece forged tower at normal
 -- pressure; restore native silhouettes immediately at pressure level 1/2.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit = {}
 local STATIONS = {"North","East","South","West"}
@@ -17,6 +18,13 @@ local IDS = {
     [30] = 112172520488996,
 }
 local NAMES = {"ReactorShell","RoofCanopy","LeftRib","RightRib"}
+local SHAFT_ASSETS = {
+    Classic = 91626128452597,
+    Towers = 107521411452905,
+    Crossroads = 93993697329658,
+    Orbital = 119010829781313,
+    Harbor = 76194593490199,
+}
 local QUALITIES = {Low=1,Medium=2,High=4}
 local DISTANCE = {Low=275,Medium=330,High=450}
 local RETAIN = 24
@@ -129,57 +137,56 @@ local function realTower(arena,owner,index)
         Vector3.new(1.2,height*.75,1.4),
         Vector3.new(1.2,height*.75,1.4),
     }
-    local natives={}
+    local shaftAsset = SHAFT_ASSETS[arena:GetAttribute("VariantId")]
+    local assets = {102746904688141, 88962643359267, shaftAsset, shaftAsset}
+    local natives, poses = {}, {}
     for i,name in ipairs(NAMES) do
         local part=owner:FindFirstChild(name)
-        if not part or not part:IsA("Part")
-            or part.Parent~=owner or part.Shape~=Enum.PartType.Block
-            or not part.Anchored or part.CanCollide or part.CanTouch
-            or part.CanQuery or (part.Size-expected[i]).Magnitude>.10 then
+        local size, pose = ExteriorDetailGeometry.footprint(part, owner, assets[i], "Part")
+        if not size or (size-expected[i]).Magnitude>.10 then
             return nil
         end
         natives[#natives+1]=part
+        poses[i] = pose
     end
     -- Keep original neon SignalBand and mast antenna, but also require
     -- their real authored presence so a partially streamed model is refused.
     local signal=owner:FindFirstChild("SignalBand")
     local antenna=owner:FindFirstChild("Antenna")
-    if not signal or not signal:IsA("Part") or signal.Parent~=owner
-        or not signal.Anchored or signal.CanCollide
-        or (signal.Size-Vector3.new(6,.35,.18)).Magnitude>.1
-        or not antenna or not antenna:IsA("Part")
-        or antenna.Parent~=owner or not antenna.Anchored
-        or antenna.CanCollide
-        or (antenna.Size-Vector3.new(.55,6,.55)).Magnitude>.1 then
+    local signalSize = ExteriorDetailGeometry.footprint(signal, owner, 126298311664881, "Part")
+    local antennaSize = ExteriorDetailGeometry.footprint(antenna, owner, shaftAsset, "Part")
+    if not signalSize or (signalSize-Vector3.new(6,.35,.18)).Magnitude>.1
+        or signal.Material ~= Enum.Material.Neon
+        or not antennaSize or (antennaSize-Vector3.new(.55,6,.55)).Magnitude>.1 then
         return nil
     end
-    local shell=natives[1]
+    local shellFrame=poses[1]
     local expectedOffsets={
         Vector3.new(0,height*.5+.6,0),
         Vector3.new(-5,-height*.08,-2.8),
         Vector3.new(5,-height*.08,-2.8),
     }
     for i=2,4 do
-        local observed=shell.CFrame:PointToObjectSpace(natives[i].Position)
+        local observed=shellFrame:PointToObjectSpace(poses[i].Position)
         if (observed-expectedOffsets[i-1]).Magnitude>.12
-            or shell.CFrame.LookVector:Dot(natives[i].CFrame.LookVector)<.999
-            or shell.CFrame.UpVector:Dot(natives[i].CFrame.UpVector)<.999 then
+            or shellFrame.LookVector:Dot(poses[i].LookVector)<.999
+            or shellFrame.UpVector:Dot(poses[i].UpVector)<.999 then
             return nil
         end
     end
     -- Bound the owner to the true external horizon, not an unrelated
     -- same-named object near a playable platform or lobby.
-    local offset=shell.Position-base.Position
+    local offset=shellFrame.Position-base.Position
     if offset.Y<height*.5-5 or offset.Y>height*.5+5
         or math.max(math.abs(offset.X),math.abs(offset.Z))
             <math.min(base:GetAttribute("OriginalSizeX"),
                 base:GetAttribute("OriginalSizeZ"))*.48 then
         return nil
     end
-    return natives
+    return natives, shellFrame
 end
 
-local function fit(source,shell,height)
+local function fit(source,shellFrame,height)
     local model=source:Clone()
     local native=Vector3.new(12,height+1.2,10)
     local _,bounds=model:GetBoundingBox()
@@ -204,7 +211,7 @@ local function fit(source,shell,height)
         model:Destroy()
         return nil
     end
-    local target=shell.CFrame*CFrame.new(0,.6,0)*CFrame.Angles(0,yaw,0)
+    local target=shellFrame*CFrame.new(0,.6,0)*CFrame.Angles(0,yaw,0)
     local pieces={}
     for _,p in ipairs(model:GetDescendants()) do
         if p:IsA("BasePart") then
@@ -230,10 +237,10 @@ end
 
 local function mount(arena,owner,index,source)
     if mounted[owner] then return end
-    local natives=realTower(arena,owner,index)
+    local natives,shellFrame=realTower(arena,owner,index)
     if not natives then return end
     local height=HEIGHTS[index]
-    local model,pieces=fit(source,natives[1],height)
+    local model,pieces=fit(source,shellFrame,height)
     if not model then return end
     if not realTower(arena,owner,index) or not source.Parent then
         model:Destroy()
@@ -384,8 +391,19 @@ function Kit.count()
     return count
 end
 
-function Kit.replacedNativeCount()
-    return Kit.count()*4
+function Kit.replacedNativeCount(primitivesOnly)
+    local count = 0
+    for owner, entry in pairs(mounted) do
+        if entry.model.Parent == bucket and #entry.pieces == 7 then
+            for part in pairs(entry.originals) do
+                if part.Parent == owner and part.Transparency == 1
+                    and (not primitivesOnly or part:IsA("Part")) then
+                    count += 1
+                end
+            end
+        end
+    end
+    return count
 end
 
 return Kit

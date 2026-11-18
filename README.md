@@ -1,3 +1,7 @@
+## P4 — Reliefs d’angle et silhouettes industrielles
+
+Les cinq arènes peuvent afficher des maillages approuvés sur 60 reliefs d’angle et 120 pièces de silhouettes industrielles. Les reliefs, coques, auvents, renforts verticaux, bandeaux et antennes gardent leurs emplacements hors du terrain jouable. Les modèles complets de proximité prennent le relais sur les mêmes ancrages. Les formes d’origine servent de secours si un maillage manque à la construction.
+
 ## P4 — Socles et signaux des stations périphériques
 
 Les vingt stations des cinq arènes peuvent utiliser des maillages approuvés pour leurs socles, lentilles, repères d’approche, encoches lumineuses et rails latéraux. Les sept pièces gardent leurs dimensions et leurs emplacements. Le revêtement complet de proximité peut encore masquer le socle, avec le même décalage derrière le repère d’approche. Les formes simples prennent le relais si leur source manque lors de la construction de l’arène.

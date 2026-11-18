@@ -836,11 +836,32 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
     end
 end
 
--- Four original sculpted exterior corner ridges close the empty diagonal
--- horizon. They sit beyond both axes of the arena floor, so no collision,
--- hazards, NPC navigation or playable jumps depend on their presence.
--- Twelve anchored wedge shapes per map; no runtime updates or textures.
-local function addExteriorCornerRidges(decor, config, variant, theme)
+local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass)
+    local mesh = source and RouteSignalGeometry.fit(source.part, frame, size, nil, alongX)
+    local item = mesh or Instance.new(fallbackClass or "Part")
+    if mesh then
+        mesh:SetAttribute("OriginalExteriorDetail3D", true)
+        mesh:SetAttribute("Original3DAssetId", source.assetId)
+        local turned = math.abs(mesh.CFrame.RightVector:Dot(frame.RightVector)) < .5
+        mesh:SetAttribute("ExteriorDetailAxisSwap", if turned then true else nil)
+    else
+        item.Size = size
+        item.CFrame = frame
+    end
+    item.Name = name
+    item.Anchored = true
+    item.CanCollide = false
+    item.CanTouch = false
+    item.CanQuery = false
+    item.CastShadow = false
+    item.Material = material
+    item.Color = color
+    return item
+end
+
+-- The four corner groups sit beyond both axes of the arena floor.
+-- Each crest uses one fitted casting or the original wedge.
+local function addExteriorCornerRidges(decor, config, variant, theme, casting)
     local x = variant.BaseSize.X * 0.5 + 28
     local z = variant.BaseSize.Z * 0.5 + 28
     local stone = theme.Structure:Lerp(Color3.fromRGB(25, 31, 39), 0.45)
@@ -863,22 +884,14 @@ local function addExteriorCornerRidges(decor, config, variant, theme)
         for index = 1, 3 do
             local height = 9 + ((index * 7 + corner.sx * 3
                 + corner.sz * 5 + 20) % 11)
-            local ridge = Instance.new("WedgePart")
-            ridge.Name = "Ridge" .. index
-            ridge.Size = Vector3.new(11 + index * 3, height,
-                13 + index * 2)
-            ridge.CFrame = CFrame.new(center + Vector3.new(
+            local size = Vector3.new(11 + index * 3, height, 13 + index * 2)
+            local frame = CFrame.new(center + Vector3.new(
                 (index - 2) * corner.sx * 8, height * 0.5 - 1.5,
                 (index - 2) * corner.sz * 6
             )) * CFrame.Angles(0, yaw + (index - 2) * 0.32, 0)
-            ridge.Anchored = true
-            ridge.CanCollide = false
-            ridge.CanTouch = false
-            ridge.CanQuery = false
-            ridge.CastShadow = false
-            ridge.Material = index == 2 and Enum.Material.Concrete
-                or Enum.Material.Metal
-            ridge.Color = index == 2 and stone or metal
+            local ridge = exteriorPart("Ridge" .. index, frame, size,
+                index == 2 and Enum.Material.Concrete or Enum.Material.Metal,
+                index == 2 and stone or metal, casting, true, "WedgePart")
             ridge.Transparency = 0.07 + index * 0.04
             ridge.Parent = model
         end
@@ -886,9 +899,9 @@ local function addExteriorCornerRidges(decor, config, variant, theme)
 end
 
 -- Low-cost original skyline silhouettes beyond the playable boundary.
--- Two offset industrial structures per side add perspective and scale.
+-- One six-piece industrial silhouette per side adds perspective and scale.
 -- All geometry is noninteractive and cannot trap players or NPCs.
-local function addExteriorSilhouettePairs(decor, config, variant, theme)
+local function addExteriorSilhouettes(decor, config, variant, theme, profiles)
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local positions = {
@@ -912,38 +925,28 @@ local function addExteriorSilhouettePairs(decor, config, variant, theme)
             + Vector3.new(position.x, floorTop, position.z))
             * CFrame.Angles(0, position.yaw, 0)
 
-        local function segment(name, size, offset, material, color)
-            local p = Instance.new("Part")
-            p.Name = name
-            p.Size = size
-            p.CFrame = frame * CFrame.new(offset)
-            p.Anchored = true
-            p.CanCollide = false
-            p.CanTouch = false
-            p.CanQuery = false
-            p.CastShadow = false
-            p.Material = material
-            p.Color = color
+        local function segment(name, size, offset, material, color, source, alongX)
+            local p = exteriorPart(name, frame * CFrame.new(offset), size, material,
+                color, source, alongX)
             p.Parent = model
-            return p
         end
 
         segment("ReactorShell", Vector3.new(9, height, 8),
-            Vector3.new(0, height * 0.5, 0), Enum.Material.Metal, shell)
+            Vector3.new(0, height * 0.5, 0), Enum.Material.Metal, shell, profiles.shell)
         segment("RoofCanopy", Vector3.new(12, 1.2, 10),
-            Vector3.new(0, height + 0.6, 0), Enum.Material.Metal, trim)
+            Vector3.new(0, height + 0.6, 0), Enum.Material.Metal, trim, profiles.roof, true)
         for side = -1, 1, 2 do
             segment(side < 0 and "LeftRib" or "RightRib",
                 Vector3.new(1.2, height * 0.75, 1.4),
                 Vector3.new(side * 5, height * 0.42, -2.8),
-                Enum.Material.Metal, trim)
+                Enum.Material.Metal, trim, profiles.shaft)
         end
         segment("SignalBand", Vector3.new(6, 0.35, 0.18),
             Vector3.new(0, height * 0.68, -4.08),
-            Enum.Material.Neon, signal)
+            Enum.Material.Neon, signal, profiles.signal)
         segment("Antenna", Vector3.new(0.55, 6, 0.55),
             Vector3.new(0, height + 3.5, 0),
-            Enum.Material.Metal, trim)
+            Enum.Material.Metal, trim, profiles.shaft)
     end
 end
 
@@ -3002,8 +3005,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
     ArenaDistrictArchitecture.build(decor, base, variant.Id, theme)
     addSouthHorizonMonument(decor, config, variant, theme)
-    addExteriorCornerRidges(decor, config, variant, theme)
-    addExteriorSilhouettePairs(decor, config, variant, theme)
+    local exteriorCasting = {part = wayfinderBase, assetId = 88962643359267}
+    addExteriorCornerRidges(decor, config, variant, theme, exteriorCasting)
+    addExteriorSilhouettes(decor, config, variant, theme, {
+        shell = {part = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic),
+            assetId = PremiumFloorReliefAssets.approvedId("Classic")},
+        roof = exteriorCasting,
+        shaft = {part = beaconShaft, assetId = PremiumLargeStructureAssets.approvedId(variant.Id)},
+        signal = {part = sweptProfile, assetId = 126298311664881},
+    })
     addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     addVariantLandmarks(decor, config, variant, theme)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.

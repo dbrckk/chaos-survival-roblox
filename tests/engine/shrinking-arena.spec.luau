@@ -1683,6 +1683,31 @@ describe("Shrinking Arena mobility integration", function()
                         assert(math.abs(signal.Size.Z - 1.8) < .01)
                         assert(signal.Anchored and not signal.CanCollide and not signal.CanQuery)
                     end
+                    local silhouette = arena.Decor["ExteriorSilhouette" .. direction]
+                    local canopy, band = silhouette.RoofCanopy, silhouette.SignalBand
+                    assert(#silhouette:GetChildren() == 6)
+                    assert(canopy:IsA("MeshPart") and canopy:GetAttribute("Original3DAssetId") == 88962643359267)
+                    assert(canopy:GetAttribute("ExteriorDetailAxisSwap") == (variant ~= "Towers" and true or nil))
+                    assert(band:IsA("MeshPart") and band.Material == Enum.Material.Neon)
+                    assert(silhouette.Antenna:IsA("MeshPart") and silhouette.LeftRib:IsA("MeshPart"))
+                    local radius = canopy.Size.Magnitude * .5
+                    local offset = canopy.Position - arena.Base.Position
+                    assert(math.max(math.abs(offset.X), math.abs(offset.Z)) - radius > 172)
+                end
+                for _, direction in ipairs({"NW", "NE", "SW", "SE"}) do
+                    local ridge = arena.Decor["ExteriorRidge" .. direction]
+                    assert(#ridge:GetChildren() == 3)
+                    for index = 1, 3 do
+                        local crest = ridge["Ridge" .. index]
+                        assert(crest:IsA("MeshPart") and crest:GetAttribute("OriginalExteriorDetail3D"))
+                        assert(crest.Anchored and not crest.CanCollide and not crest.CanQuery and not crest.CanTouch)
+                        local size = crest.Size
+                        if crest:GetAttribute("ExteriorDetailAxisSwap") then
+                            size = Vector3.new(size.Z, size.Y, size.X)
+                        end
+                        assert(math.abs(size.X - (11 + index * 3)) < .01)
+                        assert(math.abs(size.Z - (13 + index * 2)) < .01)
+                    end
                 end
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
