@@ -1,3 +1,7 @@
+## P4 — Noyaux lumineux sous les plateformes
+
+Les noyaux lumineux peuvent reprendre les deux inserts sculptés du châssis approuvé dans un seul maillage par plateforme. Les plateformes ordinaires gardent leur gabarit lumineux et les itinéraires spécialisés conservent leurs dimensions ajustées. Les noyaux suivent le rétrécissement et s’effacent avec leur plateforme. Une forme plate sert de secours si le maillage est indisponible à la construction.
+
 ## P4 — Supports verticaux sous les plateformes
 
 Les poteaux sous les plateformes peuvent reprendre le profil polygonal de la colonne approuvée de leur arène. Ils gardent leurs points d’appui et se rétractent avec les plateformes. Les habillages locaux peuvent masquer ces poteaux puis les réafficher lors de leur retrait. Des poteaux rectangulaires servent de secours si le maillage est indisponible à la construction.

@@ -2137,32 +2137,27 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local coreColor = (index % 2 == 0) and theme.Secondary or theme.Accent
     local coreAlpha = routeTier and (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
     local skybridge = platform:GetAttribute("ChaosSkybridge") == true
-    local signalTemplate = (promenadeLane or skySpineStep or skybridge or harborAlongX ~= nil)
-        and underdeckSignal
-    local core
-    if signalTemplate then
-        local alongX = if harborAlongX ~= nil then harborAlongX else size.X > size.Z
+    local flatSize = Vector3.new(math.max(0.8, size.X * 0.32), 0.12, math.max(0.8, size.Z * 0.32))
+    local flatPose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.42, 0)
+    local signalSize, signalPose = flatSize, flatPose
+    local alongX
+    if promenadeLane or skySpineStep or skybridge or harborAlongX ~= nil then
+        alongX = if harborAlongX ~= nil then harborAlongX else size.X > size.Z
         local length = (alongX and size.X or size.Z) * 0.62
         -- A narrow Tower Run deck needs more relative width to clear the ribs.
         local width = (alongX and size.Z or size.X) * (skybridge and 0.34 or 0.22)
-        local signalSize = alongX and Vector3.new(length, 0.30, width)
+        signalSize = alongX and Vector3.new(length, 0.30, width)
             or Vector3.new(width, 0.30, length)
-        core = RouteSignalGeometry.fit(signalTemplate,
-            platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.52, 0), signalSize, nil, alongX)
+        signalPose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.52, 0)
     end
-    if core then
-        core.Name = coreName
-        core.Color = coreColor
-        core.Material = VisualTheme.Materials.Glow
-        core.Transparency = coreAlpha
-        core.Parent = decor
-    else
-        local fallback = decorPart(decor, coreName,
-            Vector3.new(math.max(0.8, size.X * 0.32), 0.12, math.max(0.8, size.Z * 0.32)),
-            platform.Position - Vector3.new(0, size.Y * 0.5 + 0.42, 0),
-            coreColor, VisualTheme.Materials.Glow)
-        fallback.Transparency = coreAlpha
-    end
+
+    local core = RouteSignalGeometry.fit(underdeckSignal, signalPose, signalSize, nil, alongX)
+        or decorPart(nil, coreName, flatSize, flatPose.Position, coreColor, VisualTheme.Materials.Glow)
+    core.Name = coreName
+    core.Color = coreColor
+    core.Material = VisualTheme.Materials.Glow
+    core.Transparency = coreAlpha
+    core.Parent = decor
 end
 
 local function addPlatformSupports(decor, platform, index, theme, shaft)
