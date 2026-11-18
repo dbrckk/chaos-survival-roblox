@@ -1408,6 +1408,15 @@ describe("Shrinking Arena mobility integration", function()
 
     local function checkPerimeterDecor(arena, scale)
         local base = arena.Base
+        local center = arena.Decor.CenterBeacon
+        assert(center:IsA("MeshPart") and center.Material == Enum.Material.Neon)
+        assert(center.Anchored and not center.CastShadow)
+        assert(not center.CanCollide and not center.CanTouch and not center.CanQuery)
+        assert((center.Size - Vector3.new(1.4, 14, 1.4)).Magnitude < .02)
+        assert((base.CFrame:PointToObjectSpace(center.Position) - Vector3.new(0, 7, 0)).Magnitude < .02)
+        local centerLight = center:FindFirstChild("ArenaGlow")
+        assert(centerLight and centerLight:IsA("PointLight") and centerLight.Color == center.Color)
+        assert(centerLight.Range == 28 and math.abs(centerLight.Brightness - 1.2) < .01 and not centerLight.Shadows)
         for route = 1, 4 do
             local corner = arena.Decor["EdgeBeacon" .. route]
             local glow = arena.Decor["EdgeBeaconGlow" .. route]

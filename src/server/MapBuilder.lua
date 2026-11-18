@@ -2905,15 +2905,16 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     )
     east.CanCollide = false
 
-    local beacon = decorPart(
-        decor,
+    local beaconShaft = beaconShaftSource(variant.Id)
+    -- The client uses the center of this part for the orbit and particles.
+    local beacon = fitDecorMesh(
+        beaconShaft,
         "CenterBeacon",
+        base.CFrame * CFrame.new(0, 7, 0),
         Vector3.new(1.4, 14, 1.4),
-        config.ArenaCenter + Vector3.new(0, 7, 0),
         edgeColor,
         Enum.Material.Neon
     )
-    beacon.CanCollide = false
     beacon.Transparency = 0.35
 
     local light = Instance.new("PointLight")
@@ -2923,6 +2924,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     light.Range = 28
     light.Shadows = false
     light.Parent = beacon
+    beacon.Parent = decor
 
     -- PerimeterRoutes are appended AFTER every original platform ID.
     -- Keeping the combined parts under Platforms lets all server-owned
@@ -2934,7 +2936,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local forgedBridge = towersForgedBridgeSource()
     local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
     local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
-    local beaconShaft = beaconShaftSource(variant.Id)
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end

@@ -1,3 +1,7 @@
+## P4 — Balises centrales sculptées
+
+La balise centrale de chacune des cinq arènes reprend le profil polygonal de sa colonne approuvée. Le néon réagit toujours à la couleur du danger. La lampe, les particules et les effets orbitaux gardent leurs points d’ancrage. La balise d’origine sert de secours si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Balises sculptées aux angles de l’arène
 
 Dans les cinq arènes, les 20 balises d’angle peuvent afficher un montant polygonal et une coiffe forgée lumineuse. Les balises se déplacent avec les angles du sol pendant le rétrécissement. Les lampes, particules et liens d’énergie suivent leur coiffe. Les formes d’origine prennent le relais si les maillages approuvés sont indisponibles à la construction.
