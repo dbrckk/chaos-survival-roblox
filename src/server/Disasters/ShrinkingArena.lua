@@ -96,6 +96,8 @@ function D.start(ctx)
                     or name:match("^TowerAscentChevron%d+_%-?%d+$")
                     or name:match("^CrossroadLaneFill%d+$")
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
+                    or name:match("^EdgeBeacon%d+$")
+                    or name:match("^EdgeBeaconGlow%d+$")
                     -- Keep 320-stud district navigation markings on the
                     -- contracting floor, not floating beyond lethal edges.
                     -- All original thin floor panels, recessed seams,

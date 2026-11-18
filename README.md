@@ -1,3 +1,7 @@
+## P4 — Balises sculptées aux angles de l’arène
+
+Dans les cinq arènes, les 20 balises d’angle peuvent afficher un montant polygonal et une coiffe forgée lumineuse. Les balises se déplacent avec les angles du sol pendant le rétrécissement. Les lampes, particules et liens d’énergie suivent leur coiffe. Les formes d’origine prennent le relais si les maillages approuvés sont indisponibles à la construction.
+
 ## P4 — Façades sculptées des terrasses hautes
 
 Les 20 façades de sortie des cinq arènes peuvent afficher deux nervures polygonales issues de leur colonne approuvée et une couronne forgée issue du pont de Tower Run. Les pièces longent la face extérieure du dernier palier et suivent son rétrécissement. La lentille en verre garde sa place. Les formes d’origine servent de secours si les maillages approuvés sont indisponibles à la construction.

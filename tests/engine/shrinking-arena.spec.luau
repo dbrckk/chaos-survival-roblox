@@ -1407,7 +1407,24 @@ describe("Shrinking Arena mobility integration", function()
     end
 
     local function checkPerimeterDecor(arena, scale)
+        local base = arena.Base
         for route = 1, 4 do
+            local corner = arena.Decor["EdgeBeacon" .. route]
+            local glow = arena.Decor["EdgeBeaconGlow" .. route]
+            for _, piece in ipairs({corner, glow}) do
+                assert(piece:IsA("MeshPart") and piece.Anchored and not piece.CastShadow)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+            end
+            assert((corner.Size - Vector3.new(.8 * scale, 7, .8 * scale)).Magnitude < .02)
+            assert((glow.Size - Vector3.new(1.35 * scale, .36, 1.35 * scale)).Magnitude < .02)
+            local point = base.CFrame:PointToObjectSpace(corner.Position)
+            assert(math.abs(base.Size.X * .5 - math.abs(point.X) - 3 * scale) < .02)
+            assert(math.abs(base.Size.Z * .5 - math.abs(point.Z) - 3 * scale) < .02)
+            assert(math.abs(point.Y - (base.Size.Y + corner.Size.Y) * .5) < .02)
+            assert((glow.Position - corner.Position - Vector3.new(0, 3.55, 0)).Magnitude < .02)
+            local light = glow:FindFirstChild("EdgeBeaconLight")
+            assert(light and light:IsA("PointLight") and light.Color == glow.Color)
+            assert(light.Range == 11 and math.abs(light.Brightness - .55) < .01 and not light.Shadows)
             local mast = arena.Decor["OuterRouteSignal" .. route]
             local crown = arena.Decor["OuterRouteSignalCrown" .. route]
             local lens = arena.Decor["OuterRouteSignalLens" .. route]
@@ -1417,7 +1434,6 @@ describe("Shrinking Arena mobility integration", function()
             assert((crown.Size - Vector3.new(5 * scale, .85, 5 * scale)).Magnitude < .03)
             assert((lens.Position - mast.Position - Vector3.new(0, 18.5, 0)).Magnitude < .03)
             assert((crown.Position - mast.Position - Vector3.new(0, 15.9, 0)).Magnitude < .03)
-            local base = arena.Base
             local offset = base.CFrame:PointToObjectSpace(mast.Position)
             assert(math.abs(offset.Y - mast.Size.Y * .5 - base.Size.Y * .5) < .02)
             assert(math.abs(offset.X) + crown.Size.X * .5 <= base.Size.X * .5

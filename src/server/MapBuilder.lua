@@ -3587,41 +3587,46 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         end
     end
 
+    local pillarSize = Vector3.new(0.8, 7, 0.8)
+    local pillarY = (base.Size.Y + pillarSize.Y) * 0.5
     local beaconOffsets = {
-        Vector3.new(-halfX + 3, 4.5, -halfZ + 3),
-        Vector3.new(halfX - 3, 4.5, -halfZ + 3),
-        Vector3.new(-halfX + 3, 4.5, halfZ - 3),
-        Vector3.new(halfX - 3, 4.5, halfZ - 3),
+        Vector3.new(-halfX + 3, pillarY, -halfZ + 3),
+        Vector3.new(halfX - 3, pillarY, -halfZ + 3),
+        Vector3.new(-halfX + 3, pillarY, halfZ - 3),
+        Vector3.new(halfX - 3, pillarY, halfZ - 3),
     }
 
     for i, offset in ipairs(beaconOffsets) do
-        local pillar = decorPart(
-            decor,
+        local frame = base.CFrame * CFrame.new(offset)
+        local pillar = fitDecorMesh(
+            beaconShaft,
             "EdgeBeacon" .. i,
-            Vector3.new(0.8, 7, 0.8),
-            config.ArenaCenter + offset,
+            frame,
+            pillarSize,
             theme.Structure:Lerp(Color3.new(1, 1, 1), 0.08),
             VisualTheme.Materials.Structure
         )
-        pillar.CanCollide = false
+        pillar.Parent = decor
 
-        local cap = decorPart(
-            decor,
+        local color = i % 2 == 0 and theme.Secondary or theme.Accent
+        local cap = fitDecorMesh(
+            wayfinderBase,
             "EdgeBeaconGlow" .. i,
+            frame * CFrame.new(0, pillarSize.Y * 0.5 + 0.05, 0),
             Vector3.new(1.35, 0.36, 1.35),
-            pillar.Position + Vector3.new(0, 3.55, 0),
-            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            color,
             VisualTheme.Materials.Glow
         )
         cap.Transparency = 0.10
 
         local capLight = Instance.new("PointLight")
         capLight.Name = "EdgeBeaconLight"
-        capLight.Color = (i % 2 == 0) and theme.Secondary or theme.Accent
+        capLight.Color = color
         capLight.Brightness = 0.55
         capLight.Range = 11
         capLight.Shadows = false
         capLight.Parent = cap
+        cap.Parent = decor
     end
 
     return arena
