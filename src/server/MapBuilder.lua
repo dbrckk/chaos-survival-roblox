@@ -73,6 +73,19 @@ local function decorPart(parent, name, size, position, color, material)
     return p
 end
 
+local function bindLandingBillboard(billboard, deck)
+    local function refresh()
+        local phase = deck:GetAttribute("CollapsePhase")
+        billboard.Enabled = deck.Parent ~= nil
+            and deck.CanCollide and deck.Transparency < 0.75
+            and phase ~= "Warning" and phase ~= "Gone"
+    end
+    deck:GetAttributeChangedSignal("CollapsePhase"):Connect(refresh)
+    deck:GetPropertyChangedSignal("CanCollide"):Connect(refresh)
+    deck:GetPropertyChangedSignal("Transparency"):Connect(refresh)
+    refresh()
+end
+
 -- Four authored 3D perimeter landmarks make an expanded arena read as a
 -- destination rather than a bare enlarged slab. These are original
 -- Roblox-native model assemblies (not externally licensed/imported meshes).
@@ -1679,6 +1692,32 @@ local function approvedMeshRegion(model, name)
     return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
 end
 
+local function wayfinderBaseSource()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedPerimeterArmorTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local model = holder:FindFirstChild("Cap")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalPerimeterArmor3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= 88962643359267 then return nil end
+    return approvedMeshRegion(model, "WayfinderBase")
+end
+
+local function fitDecorMesh(profile, name, pose, size, color, material)
+    local detail = RouteSignalGeometry.fit(profile, pose, size)
+    if not detail then
+        detail = decorPart(nil, name, size, pose.Position, color, material)
+        detail.CFrame = pose
+    end
+    detail.Name = name
+    detail.Color = color
+    detail.Material = material
+    return detail
+end
+
 local BRANCH_CHEVRON = {
     size = Vector3.new(0.25, 0.065, 2.0), spread = 0.48, angle = math.rad(34), alpha = 0.44,
 }
@@ -1702,14 +1741,7 @@ local function addRouteChevron(decor, name, deck, index, forward, color, style, 
         local arrowName = name .. "_" .. tostring(side)
         local pose = look * CFrame.new(side * style.spread, 0, 0)
             * CFrame.Angles(0, side * style.angle, 0)
-        local mark = RouteSignalGeometry.fit(profile, pose, style.size)
-        if not mark then
-            mark = decorPart(nil, arrowName, style.size, pose.Position, color, VisualTheme.Materials.Glow)
-            mark.CFrame = pose
-        end
-        mark.Name = arrowName
-        mark.Color = color
-        mark.Material = VisualTheme.Materials.Glow
+        local mark = fitDecorMesh(profile, arrowName, pose, style.size, color, VisualTheme.Materials.Glow)
         mark.Transparency = style.alpha
         mark:SetAttribute("PerimeterPlatformIndex", index)
         mark:SetAttribute("ChaosWayfinding", true)
@@ -3235,22 +3267,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             outpost.MaxDistance = 64
             outpost.AlwaysOnTop = false
             outpost.Parent = platform
-            -- Never advertise a look-out whose solid footing is about to
-            -- disappear. Keep the marker event-driven and tied to the real
-            -- server-owned collision/visibility state, not a new loop.
-            local function refreshOutpost()
-                local phase = platform:GetAttribute("CollapsePhase")
-                outpost.Enabled = platform.Parent ~= nil
-                    and platform.CanCollide and platform.Transparency < 0.75
-                    and phase ~= "Warning" and phase ~= "Gone"
-            end
-            platform:GetAttributeChangedSignal("CollapsePhase")
-                :Connect(refreshOutpost)
-            platform:GetPropertyChangedSignal("CanCollide")
-                :Connect(refreshOutpost)
-            platform:GetPropertyChangedSignal("Transparency")
-                :Connect(refreshOutpost)
-            refreshOutpost()
+            bindLandingBillboard(outpost, platform)
             local sign = Instance.new("TextLabel")
             sign.Name = "OutpostLabel"
             sign.Size = UDim2.fromScale(1, 1)
@@ -3386,35 +3403,36 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Wayfinding is physically anchored to the REAL first/last platforms,
     -- not virtual markers that could point to an inaccessible decoration.
     -- Only 8 small labels and 24 ground-inlaid arrows for all four routes.
+    local wayfinderBase = wayfinderBaseSource()
     for route = 1, 4 do
         local path = variant.PerimeterPlatforms
         local perRoute = #path / 4
         local entry = path[(route - 1) * perRoute + 1]
-        local exit = path[route * perRoute]
         for _, cue in ipairs({
-            {name = "Entry", definition = entry, title = "CLIMB / DODGE"},
-            {name = "Lookout", definition = exit, title = "HIGH GROUND"},
+            {name = "Entry", step = 1, title = "CLIMB / DODGE"},
+            {name = "Lookout", step = perRoute, title = "HIGH GROUND"},
         }) do
-            local top = config.ArenaCenter + cue.definition.offset
-                + Vector3.new(0, cue.definition.size.Y * 0.5 + 0.5, 0)
-            local pedestal = decorPart(
-                decor, "DistrictWayfinder" .. route .. cue.name,
-                Vector3.new(1.8, 0.20, 1.8), top, theme.Detail,
-                Enum.Material.Metal
-            )
+            local platformIndex = #variant.Platforms + (route - 1) * perRoute + cue.step
+            local deck = platforms:FindFirstChild("Platform" .. platformIndex)
+            if not deck or not deck:IsA("BasePart") then continue end
+
+            local pedestalHeight = 0.46
+            local center = 0.09 + pedestalHeight * 0.5
+            local pose = deck.CFrame * CFrame.new(0, deck.Size.Y * 0.5 + center, 0)
+            local pedestal = fitDecorMesh(wayfinderBase, "DistrictWayfinder" .. route .. cue.name,
+                pose, Vector3.new(1.8, pedestalHeight, 1.6), theme.Detail, Enum.Material.Metal)
             pedestal.Transparency = 0.22
-            local platformIndex = #variant.Platforms
-                + (route - 1) * perRoute
-                + (cue.name == "Entry" and 1 or perRoute)
             pedestal:SetAttribute("PerimeterPlatformIndex", platformIndex)
+            pedestal.Parent = decor
             local billboard = Instance.new("BillboardGui")
             billboard.Name = "ObjectiveLabel"
             billboard.Size = UDim2.fromOffset(158, 38)
-            billboard.StudsOffsetWorldSpace = Vector3.new(0, 4.4, 0)
+            billboard.StudsOffsetWorldSpace = Vector3.new(0, 4.9 - center, 0)
             billboard.MaxDistance = 85
             billboard.AlwaysOnTop = false
             billboard.Adornee = pedestal
             billboard.Parent = pedestal
+            bindLandingBillboard(billboard, deck)
             local text = Instance.new("TextLabel")
             text.Name = "Objective"
             text.Size = UDim2.fromScale(1, 1)
@@ -3444,17 +3462,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 arrowPoint, arrowPoint + Vector3.new(sx, 0, 0)
             )
             for side = -1, 1, 2 do
-                local chevron = decorPart(
-                    decor, "DistrictArrow" .. route .. "_" .. marker
-                        .. "_" .. tostring(side),
-                    Vector3.new(0.17, 0.055, 1.50), arrowPoint,
-                    marker == 3 and theme.Accent or theme.Secondary,
-                    VisualTheme.Materials.Glow
-                )
-                chevron.CFrame = forward
-                    * CFrame.new(side * 0.43, 0, 0)
+                local pose = forward * CFrame.new(side * 0.43, 0, 0)
                     * CFrame.Angles(0, math.rad(side * 38), 0)
+                local name = "DistrictArrow" .. route .. "_" .. marker .. "_" .. tostring(side)
+                local color = marker == 3 and theme.Accent or theme.Secondary
+                local chevron = fitDecorMesh(sweptProfile, name, pose, Vector3.new(0.17, 0.055, 1.50),
+                    color, VisualTheme.Materials.Glow)
                 chevron.Transparency = 0.42
+                chevron:SetAttribute("ChaosWayfinding", true)
+                chevron.Parent = decor
             end
         end
     end

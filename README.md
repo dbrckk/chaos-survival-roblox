@@ -1,3 +1,7 @@
+## P4 — Socles et chevrons sculptés du réseau périphérique
+
+Les 40 panneaux d’orientation des cinq arènes peuvent reposer sur un socle forgé. Les socles affleurent le platelage et gardent les panneaux à leur hauteur d’origine. Un panneau s’efface dès que son palier passe en alerte ou devient impraticable. Les 60 chevrons d’approche reprennent aussi le profil sculpté, avec des formes simples comme secours si les modèles approuvés ne sont pas chargés.
+
 ## P4 — Sorties de l’Épine céleste vers les Promenades
 
 Aux dix extrémités de l’Épine céleste, une paire de chevrons forgés indique les deux directions de la Promenade. Les flèches tiennent entièrement dans la zone de recouvrement des tabliers. Elles restent fixées au tablier de l’Épine céleste pendant le rétrécissement. Un chevron simple sert de secours si le modèle approuvé n’est pas disponible.

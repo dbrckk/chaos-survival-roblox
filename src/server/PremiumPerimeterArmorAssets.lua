@@ -38,6 +38,24 @@ local function validGeometry(model, profile)
         and math.abs(z - sz) <= 0.32
 end
 
+local function markWayfinderBase(model)
+    -- The ARMOR region of the approved cap is one closed swept casting.
+    -- Its source bounds identify it in either horizontal import orientation.
+    local base
+    for _, mesh in ipairs(model:GetChildren()) do
+        if mesh:IsA("MeshPart") and mesh.Archivable and mesh.MeshId ~= "" then
+            local size = mesh.Size
+            if math.abs(math.max(size.X, size.Z) - 2.76985) < 0.12
+                and math.abs(math.min(size.X, size.Z) - 2.34) < 0.12
+                and math.abs(size.Y - 2.14) < 0.10 then
+                if base then return end
+                base = mesh
+            end
+        end
+    end
+    if base then base.Name = "WayfinderBase" end
+end
+
 function Assets.start()
     if started then return end
     started = true
@@ -73,6 +91,7 @@ function Assets.start()
                         sanitized:SetAttribute("OwnerVerified", true)
                         sanitized:SetAttribute("CosmeticOnly", true)
                         sanitized:SetAttribute("OriginalPerimeterArmor3D", true)
+                        if profile.name == "Cap" then markWayfinderBase(sanitized) end
                         sanitized.Parent = holder
                         holder:SetAttribute(profile.name .. "Ready", true)
                         break

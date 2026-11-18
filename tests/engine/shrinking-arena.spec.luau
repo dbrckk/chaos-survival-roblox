@@ -1406,6 +1406,33 @@ describe("Shrinking Arena mobility integration", function()
         assert(junctions == 2)
     end
 
+    local function checkDistrictWayfinders(arena, scale)
+        for route = 1, 4 do
+            for _, point in ipairs({"Entry","Lookout"}) do
+                local base = arena.Decor["DistrictWayfinder" .. route .. point]
+                local owner = arena.Platforms["Platform" .. base:GetAttribute("PerimeterPlatformIndex")]
+                local label = base.ObjectiveLabel
+                assert(owner:GetAttribute("PerimeterRoute") == route)
+                assert(owner:GetAttribute("PerimeterStep") == (point == "Entry" and 1 or 8))
+                assert(base:IsA("MeshPart") and base.Anchored
+                    and not base.CanCollide and not base.CanTouch and not base.CanQuery)
+                assert((base.Size - Vector3.new(1.6 * scale, .46, 1.8 * scale)).Magnitude < .02)
+                local pose = owner.CFrame:PointToObjectSpace(base.Position)
+                assert(math.abs(pose.X) < .01 and math.abs(pose.Z) < .01)
+                assert(math.abs(pose.Y - base.Size.Y * .5 - owner.Size.Y * .5 - .09) < .01)
+                assert(label.Adornee == base and label.Enabled and label.MaxDistance == 85)
+                assert(math.abs(pose.Y + label.StudsOffsetWorldSpace.Y - owner.Size.Y * .5 - 4.9) < .02)
+            end
+            for marker = 1, 3 do
+                for side = -1, 1, 2 do
+                    local arrow = arena.Decor["DistrictArrow" .. route .. "_" .. marker .. "_" .. side]
+                    assert(arrow:IsA("MeshPart") and arrow:GetAttribute("ChaosWayfinding") == true)
+                    assert((arrow.Size - Vector3.new(.17 * scale, .055, 1.5 * scale)).Magnitude < .02)
+                end
+            end
+        end
+    end
+
     it("fits the short approved chassis beneath every Promenade deck",function()
         local storage=game:GetService("ReplicatedStorage")
         local oldMap=workspace:FindFirstChild("GeneratedMap")
@@ -1417,6 +1444,23 @@ describe("Shrinking Arena mobility integration", function()
         local oldSignalSource=storage:FindFirstChild(signalHolder.Name)
         if oldSignalSource then oldSignalSource.Parent=nil end
         signalHolder.Parent=storage
+        local oldArmor = storage:FindFirstChild("ApprovedPerimeterArmorTemplates")
+        if oldArmor then oldArmor.Parent = nil end
+        local armor = Instance.new("Folder")
+        armor.Name = "ApprovedPerimeterArmorTemplates"
+        armor:SetAttribute("OwnerVerified", true)
+        local cap = Instance.new("Model")
+        cap.Name = "Cap"
+        cap:SetAttribute("OwnerVerified", true)
+        cap:SetAttribute("CosmeticOnly", true)
+        cap:SetAttribute("OriginalPerimeterArmor3D", true)
+        cap:SetAttribute("Original3DAssetId", 88962643359267)
+        cap.Parent = armor
+        local baseMesh = Instance.new("MeshPart")
+        baseMesh.Name = "WayfinderBase"
+        baseMesh.Size = Vector3.new(2.34, 2.14, 2.76985)
+        baseMesh.Parent = cap
+        armor.Parent = storage
 
         local generated,context
         local active,callbacks=false,{}
@@ -1427,6 +1471,7 @@ describe("Shrinking Arena mobility integration", function()
                 generated=arena.Parent
                 checkLookoutLinks(arena,1)
                 checkPromenadeChevrons(arena,1)
+                checkDistrictWayfinders(arena,1)
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}
@@ -1496,6 +1541,18 @@ describe("Shrinking Arena mobility integration", function()
                 total+=count
                 if variant=="Harbor" then
                     context="Harbor truss ownership and shrink"
+                    local wayfinder = arena.Decor.DistrictWayfinder1Lookout
+                    local lookout = arena.Platforms["Platform" .. wayfinder:GetAttribute("PerimeterPlatformIndex")]
+                    lookout:SetAttribute("CollapsePhase", "Warning")
+                    task.wait()
+                    assert(not wayfinder.ObjectiveLabel.Enabled)
+                    lookout:SetAttribute("CollapsePhase", nil)
+                    lookout.CanCollide = false
+                    task.wait()
+                    assert(not wayfinder.ObjectiveLabel.Enabled)
+                    lookout.CanCollide = true
+                    task.wait()
+                    assert(wayfinder.ObjectiveLabel.Enabled)
                     Remaining.sync(nil,Vector3.zero,"Low",false)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,0,true)
                     local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_JunctionUnderframe
@@ -1522,6 +1579,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert(checkAerialBand(arena,finalDeck,.45)==band)
                     checkLookoutLinks(arena,.45)
                     checkPromenadeChevrons(arena,.45)
+                    checkDistrictWayfinders(arena,.45)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1531,6 +1589,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert((band.Size-originalBandSize).Magnitude<.01)
                     checkLookoutLinks(arena,1)
                     checkPromenadeChevrons(arena,1)
+                    checkDistrictWayfinders(arena,1)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
@@ -1545,6 +1604,8 @@ describe("Shrinking Arena mobility integration", function()
         if generated then generated:Destroy() end
         holder:Destroy()
         signalHolder:Destroy()
+        armor:Destroy()
+        if oldArmor then oldArmor.Parent = storage end
         if oldSignalSource then oldSignalSource.Parent=storage end
         if oldSource then oldSource.Parent=storage end
         if oldMap then oldMap.Parent=workspace end
