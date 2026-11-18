@@ -1,3 +1,7 @@
+## P4 — Chevrons sculptés sur les Promenades
+
+Les 160 chevrons longitudinaux des cinq arènes reprennent le profil forgé de Tower Run. Aux dix jonctions, une flèche transversale indique l’Épine céleste lorsque les deux tabliers se recouvrent réellement. Les flèches restent au-dessus du platelage et suivent le rétrécissement sans ajouter de collision. Des chevrons simples assurent le balisage si le modèle approuvé est indisponible à la construction de l’arène.
+
 ## P4 — Liaisons sculptées entre les belvédères et les Promenades
 
 Les cinq arènes équipent 80 paliers latéraux et 20 liaisons de secours de bandes biseautées sous le bord supérieur. Les 100 chevrons des paliers et des embranchements reprennent le profil forgé et restent visibles au-dessus du platelage. Aux vingt belvédères, les chevrons tournent vers l’entrée réelle de la Promenade. Les décors restent liés à leur palier pendant le rétrécissement, et les formes simples servent de secours si le modèle approuvé est indisponible.

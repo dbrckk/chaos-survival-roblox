@@ -1332,6 +1332,53 @@ describe("Shrinking Arena mobility integration", function()
         assert(branches==16 and crosslinks==4)
     end
 
+    local function checkPromenadeChevrons(arena, scale)
+        local decks = arena.Platforms:GetChildren()
+        local endpoints = {}
+        for _, deck in ipairs(decks) do
+            local step = deck:GetAttribute("SkySpineStep")
+            if step == 1 or step == 10 then endpoints[step == 1 and 1 or 2] = deck end
+        end
+        local junctions = 0
+        for _, deck in ipairs(decks) do
+            local lane = deck:GetAttribute("PromenadeLane")
+            if not lane then continue end
+            local id = assert(deck.Name:match("^Platform(%d+)$"))
+            local prefix = "PromenadeJumpChevron" .. id .. "_"
+            local panel = arena.Decor["PlatformPanel" .. id]
+            local function checkChevron(name, forward, offset, width, alpha)
+                local point = deck.Position + Vector3.new(0, deck.Size.Y * .5 + .155, 0)
+                    + forward * offset
+                local look = CFrame.lookAt(point, point + forward)
+                for side = -1, 1, 2 do
+                    local part = arena.Decor[prefix .. name .. "_" .. side]
+                    local pose = look * CFrame.new(side * .62 * scale, 0, 0)
+                        * CFrame.Angles(0, math.rad(side * 35), 0)
+                    assert(part:IsA("MeshPart") and part.Material == Enum.Material.Neon)
+                    assert(part:GetAttribute("PerimeterPlatformIndex") == tonumber(id)
+                        and part:GetAttribute("ChaosWayfinding") == true)
+                    assert(not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                    assert((part.Position - pose.Position).Magnitude < .025
+                        and part.CFrame.LookVector:Dot(pose.LookVector) > .999)
+                    assert((part.Size - Vector3.new(width * scale, .08, 2.55 * scale)).Magnitude < .025)
+                    assert(part.Position.Y - part.Size.Y * .5 > panel.Position.Y + panel.Size.Y * .5)
+                    assert(math.abs(part.Transparency - alpha) < .001)
+                end
+            end
+            local inset = math.min(5 * scale, deck.Size.X * .24)
+            checkChevron("-1", -Vector3.xAxis, inset, .30, .34)
+            checkChevron("1", Vector3.xAxis, inset, .30, .34)
+            if deck:GetAttribute("PromenadeStep") == 4 then
+                local toward = endpoints[lane].Position.Z > deck.Position.Z and 1 or -1
+                checkChevron("Spine", Vector3.zAxis * toward, deck.Size.Z * .25, .35, .24)
+                junctions += 1
+            else
+                assert(not arena.Decor:FindFirstChild(prefix .. "Spine_1"))
+            end
+        end
+        assert(junctions == 2)
+    end
+
     it("fits the short approved chassis beneath every Promenade deck",function()
         local storage=game:GetService("ReplicatedStorage")
         local oldMap=workspace:FindFirstChild("GeneratedMap")
@@ -1352,6 +1399,7 @@ describe("Shrinking Arena mobility integration", function()
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
                 checkLookoutLinks(arena,1)
+                checkPromenadeChevrons(arena,1)
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}
@@ -1446,6 +1494,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert(checkUnderdeckSignal(arena,finalDeck)==glow)
                     assert(checkAerialBand(arena,finalDeck,.45)==band)
                     checkLookoutLinks(arena,.45)
+                    checkPromenadeChevrons(arena,.45)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1454,6 +1503,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert((glow.Size-originalGlowSize).Magnitude<.01)
                     assert((band.Size-originalBandSize).Magnitude<.01)
                     checkLookoutLinks(arena,1)
+                    checkPromenadeChevrons(arena,1)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)

@@ -10,6 +10,10 @@ local arenaPresentationModule = shared and shared:FindFirstChild("ArenaPresentat
 local ArenaPresentation = if arenaPresentationModule
     then require(arenaPresentationModule)
     else require("../shared/ArenaPresentation")
+local skyRouteConnectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
+local SkyRouteConnectionRules = if skyRouteConnectionModule
+    then require(skyRouteConnectionModule)
+    else require("../shared/SkyRouteConnectionRules")
 -- Cloud engine specs can import new source modules before the published
 -- place has received them; prefer sibling ModuleScript, otherwise source.
 local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
@@ -1682,9 +1686,17 @@ local FORK_CHEVRON = {
     size = Vector3.new(0.33, 0.065, 2.4), spread = 0.55, angle = math.rad(36), alpha = 0.32,
 }
 
-local function addLookoutChevron(decor, name, deck, index, forward, color, style, profile)
-    -- Clear the landing panel and retain the original visual owner.
+local PROMENADE_CHEVRON = {
+    size = Vector3.new(0.30, 0.08, 2.55), spread = 0.62, angle = math.rad(35), alpha = 0.34,
+}
+local SPINE_TURN_CHEVRON = {
+    size = Vector3.new(0.35, 0.08, 2.55), spread = 0.62, angle = math.rad(35), alpha = 0.24,
+}
+
+local function addRouteChevron(decor, name, deck, index, forward, color, style, profile, offset)
+    -- Clear the landing panel and keep the marker tied to the physical deck.
     local point = deck.Position + Vector3.new(0, deck.Size.Y * 0.5 + 0.155, 0)
+        + (offset or Vector3.zero)
     local look = CFrame.lookAt(point, point + forward)
     for side = -1, 1, 2 do
         local arrowName = name .. "_" .. tostring(side)
@@ -2877,6 +2889,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         table.insert(platformDefinitions, definition)
     end
 
+    local promenadeJunctions = {}
+    local spineEndpoints = {}
+    local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
@@ -3034,7 +3049,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 local towardEntry = (entry - definition.offset) * Vector3.new(1, 0, 1)
                 if towardEntry.Magnitude > 0.01 then forward = towardEntry.Unit end
             end
-            addLookoutChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
+            addRouteChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
                 platform, i, forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile)
         end
 
@@ -3144,42 +3159,25 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if definition.SkySpineStep then
             SkySpineArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme, sweptProfile)
+            if definition.SkySpineStep == 1 then
+                spineEndpoints[1] = platform
+            elseif definition.SkySpineStep == 10 then
+                spineEndpoints[2] = platform
+            end
         end
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme)
 
-            -- These long cross-arena lanes are LEVEL jumping routes:
-            -- JumpRouteCueRules intentionally advertises only ascending
-            -- steps. Give both directions a genuinely physical, visible
-            -- trail of two V-shaped arrows per deck, aligned to the
-            -- actual collider. They follow the platform when it shrinks
-            -- and never create a deceptive secondary collision surface.
-            local arrowY = platform.Size.Y * 0.5 + 0.155
-            local tone = theme.Accent:Lerp(theme.Detail, 0.34)
-            for _, direction in ipairs({-1, 1}) do
-                local point = platform.CFrame * CFrame.new(
-                    direction * math.min(5.0, platform.Size.X * 0.24),
-                    arrowY, 0)
-                local heading = CFrame.lookAt(
-                    point.Position, point.Position
-                        + Vector3.new(direction, 0, 0))
-                for _, side in ipairs({-1, 1}) do
-                    local mark = decorPart(
-                        decor,
-                        "PromenadeJumpChevron" .. i .. "_"
-                            .. tostring(direction) .. "_"
-                            .. tostring(side),
-                        Vector3.new(0.30, 0.08, 2.55), point.Position,
-                        tone, Enum.Material.Neon
-                    )
-                    mark.CFrame = heading
-                        * CFrame.new(side * 0.62, 0, 0)
-                        * CFrame.Angles(0, math.rad(side * 35), 0)
-                    mark.Transparency = 0.34
-                    mark:SetAttribute("PerimeterPlatformIndex", i)
-                    mark:SetAttribute("ChaosWayfinding", true)
-                end
+            if definition.PromenadeStep == 4 then
+                promenadeJunctions[definition.PromenadeLane] = platform
+            end
+            local arrowName = "PromenadeJumpChevron" .. i .. "_"
+            local inset = math.min(5.0, platform.Size.X * 0.24)
+            for direction = -1, 1, 2 do
+                local forward = platform.CFrame.RightVector * direction
+                addRouteChevron(decor, arrowName .. direction, platform, i,
+                    forward, promenadeTone, PROMENADE_CHEVRON, sweptProfile, forward * inset)
             end
         end
 
@@ -3318,6 +3316,20 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         end
     end
 
+    -- Place the transverse chevron only where the real bridge overlaps
+    -- this landing. A nearby disconnected deck must not show a turn cue.
+    for lane = 1, 2 do
+        local deck, spine = promenadeJunctions[lane], spineEndpoints[lane]
+        if SkyRouteConnectionRules.spineJunction(spine, deck) then
+            local index = tonumber(deck.Name:match("^Platform(%d+)$"))
+            local along = deck.CFrame.LookVector
+            local side = (spine.Position - deck.Position):Dot(along) >= 0 and 1 or -1
+            local forward = along * side
+            addRouteChevron(decor, "PromenadeJumpChevron" .. index .. "_Spine", deck, index,
+                forward, theme.Secondary, SPINE_TURN_CHEVRON, sweptProfile, forward * (deck.Size.Z * 0.25))
+        end
+    end
+
     -- The branching choice also needs to be readable AT THE FORK,
     -- without guessing where sixteen peripheral platforms lead.
     for route = 1, 4 do
@@ -3327,7 +3339,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if fork and fork:IsA("BasePart") then
             local forwardZ = fork.Position.Z >= config.ArenaCenter.Z
                 and 1 or -1
-            addLookoutChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
+            addRouteChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
                 Vector3.new(0, 0, forwardZ), theme.Secondary, FORK_CHEVRON, sweptProfile)
         end
     end
