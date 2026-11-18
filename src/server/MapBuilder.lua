@@ -2832,11 +2832,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     decor:SetAttribute("PremiumSurfaceSkinSource", true)
     decor.Parent = arena
 
+    local chassis = accessChassisSource()
+    local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     addArenaFoundation(decor, config, variant, theme)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
-    ArenaGroundArchitecture.build(decor, base, variant.Id, theme)
+    ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
@@ -2911,9 +2913,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Keeping the combined parts under Platforms lets all server-owned
     -- disaster and AI systems treat outer routes as real gameplay geometry.
     local platformDefinitions = table.clone(variant.Platforms)
-    local chassis = accessChassisSource()
     local underdeckSignal = approvedMeshRegion(chassis, "UnderdeckSignal")
-    local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end

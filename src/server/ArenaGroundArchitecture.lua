@@ -3,7 +3,10 @@
 -- Only decorative, thin, non-colliding sections: collision, warning telegraphs,
 -- spawn pads, AI ground pathfinding and shrink geometry remain authoritative.
 -- Original licensed MaterialService textures are selected by the existing
--- camera-budgeted PBR client; no external mesh/texture IDs are requested.
+-- camera-budgeted PBR client. Underfloor girders can reuse an approved mesh
+-- supplied by MapBuilder.
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+
 local ArenaGroundArchitecture = {}
 
 local PROFILES = {
@@ -56,7 +59,7 @@ local function part(decor, name, kind, frame, size, tone, material, alpha, pbr)
     return instance
 end
 
-function ArenaGroundArchitecture.build(decor, base, variantId, theme)
+function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") or not theme then
         return 0
     end
@@ -160,26 +163,33 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme)
         end
     end
 
-    -- Eight structural fins cut real depth into the already existing
-    -- undercarriage silhouette. They are BELOW the real survival floor,
-    -- not a new deck, railing, collider or false supported route.
-    local insetX = base.Size.X * 0.5 - 2.8
-    local insetZ = base.Size.Z * 0.5 - 2.8
+    -- Eight cross girders meet the undercarriage and end just inside the floor lip.
+    local girderSize = Vector3.new(3.8, 1.2, 15)
+    local inset = girderSize.Z * 0.5 + 0.15
+    local insetX = base.Size.X * 0.5 - inset
+    local insetZ = base.Size.Z * 0.5 - inset
+    local girderY = -top - 2.2
+    local girderTone = theme.Structure:Lerp(theme.Detail, 0.34)
     for axis = 1, 2 do
         for side = -1, 1, 2 do
             for slot = -1, 1, 2 do
                 local along = slot * (axis == 1 and base.Size.Z or base.Size.X) * 0.27
                 local frame = axis == 1
-                    and CFrame.new(side * insetX, -2.9, along)
+                    and CFrame.new(side * insetX, girderY, along)
                         * CFrame.Angles(0, math.rad(90), 0)
-                    or CFrame.new(along, -2.9, side * insetZ)
-                part(decor,
-                    "PremiumGroundUndergirder" .. axis .. "_"
-                        .. tostring(side) .. "_" .. tostring(slot),
-                    "WedgePart", origin * frame,
-                    Vector3.new(3.8, 2.0, 15.0),
-                    theme.Structure:Lerp(theme.Detail, 0.34),
-                    profile.detail, 0.06, false)
+                    or CFrame.new(along, girderY, side * insetZ)
+                local name = "PremiumGroundUndergirder" .. axis .. "_" .. side .. "_" .. slot
+                local girder = RouteSignalGeometry.fit(lattice, origin * frame, girderSize)
+                if girder then
+                    girder.Name = name
+                    girder.Color = girderTone
+                    girder.Material = profile.detail
+                    girder.Transparency = 0.06
+                    girder.Parent = decor
+                else
+                    part(decor, name, "WedgePart", origin * (frame + Vector3.new(0, 0.3, 0)),
+                        Vector3.new(girderSize.X, 2, girderSize.Z), girderTone, profile.detail, 0.06, false)
+                end
                 count += 1
             end
         end

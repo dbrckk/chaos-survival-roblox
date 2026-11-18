@@ -1,3 +1,7 @@
+## P4 — Renforts ajourés sous le sol
+
+Les 40 renforts sous les cinq arènes peuvent reprendre le treillis à quatre travées du châssis approuvé d’Orbital. Ils rejoignent le cadre du soubassement et restent sous l’emprise du sol pendant le rétrécissement. Les renforts en biseau prennent le relais si le maillage approuvé est indisponible à la construction.
+
 ## P4 — Bordures lumineuses sculptées au sol
 
 Les 20 bordures lumineuses des cinq arènes peuvent reprendre la traverse forgée continue du pont de Tower Run. Elles couvrent les quatre côtés jusqu’aux angles et gardent leur section pendant que le sol rétrécit. Une bordure simple garde la limite visible si le maillage approuvé est indisponible à la construction.

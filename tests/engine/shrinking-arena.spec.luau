@@ -1429,6 +1429,30 @@ describe("Shrinking Arena mobility integration", function()
         end
     end
 
+    local function checkUnderfloorGirders(arena, scale)
+        local base = arena.Base
+        local count = 0
+        for _, girder in ipairs(arena.Decor:GetChildren()) do
+            if girder.Name:match("^PremiumGroundUndergirder") then
+                count += 1
+                assert(girder:IsA("MeshPart") and girder.Anchored and not girder.CastShadow)
+                assert(not girder.CanCollide and not girder.CanTouch and not girder.CanQuery)
+                local localFrame = base.CFrame:ToObjectSpace(girder.CFrame)
+                local axisX = girder.Name:match("^PremiumGroundUndergirder1_") ~= nil
+                local span = axisX and base.Size.X or base.Size.Z
+                local along = axisX and localFrame.Position.X or localFrame.Position.Z
+                local axis = axisX and Vector3.xAxis or Vector3.zAxis
+                local reach = girder.Size.X * math.abs(localFrame.RightVector:Dot(axis))
+                    + girder.Size.Z * math.abs(localFrame.LookVector:Dot(axis))
+                assert(math.abs(reach - 15 * scale) < .02)
+                assert(math.abs(span * .5 - math.abs(along) - reach * .5 - .15 * scale) < .02)
+                assert(math.abs(girder.Size.Y - 1.2) < .02)
+                assert(localFrame.Position.Y + girder.Size.Y * .5 < -base.Size.Y * .5)
+            end
+        end
+        assert(count == 8)
+    end
+
     local function checkPerimeterDecor(arena, scale)
         local base = arena.Base
         local edgeX, edgeZ = base.Size.X * .5 - .4 * scale, base.Size.Z * .5 - .4 * scale
@@ -1615,6 +1639,7 @@ describe("Shrinking Arena mobility integration", function()
                 checkPromenadeChevrons(arena,1)
                 checkPerimeterDecor(arena,1)
                 checkSpawnGuides(arena,variant)
+                checkUnderfloorGirders(arena,1)
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}
@@ -1724,6 +1749,7 @@ describe("Shrinking Arena mobility integration", function()
                     checkPromenadeChevrons(arena,.45)
                     checkPerimeterDecor(arena,.45)
                     checkSpawnGuides(arena,variant)
+                    checkUnderfloorGirders(arena,.45)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1734,6 +1760,7 @@ describe("Shrinking Arena mobility integration", function()
                     checkLookoutLinks(arena,1)
                     checkPromenadeChevrons(arena,1)
                     checkPerimeterDecor(arena,1)
+                    checkUnderfloorGirders(arena,1)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
