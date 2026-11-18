@@ -1,3 +1,7 @@
+## P4 — Repère de réouverture à Tower Run
+
+Le panneau du volet affiche « VOLET OUVERT » avec un liseré vert pendant 1,6 seconde après une réouverture confirmée. L’indication est visible sans le son et se limite à la passerelle concernée. Une fermeture annulée ne l’affiche pas.
+
 ## P4 — Sons de fermeture et de réouverture à Tower Run
 
 Un claquement grave annonce la montée du volet. Un carillon plus clair confirme la réouverture aux joueurs proches. Le carillon se joue une seule fois après une fermeture réelle. Une fermeture annulée ou la fin de la manche ne déclenche pas le signal.

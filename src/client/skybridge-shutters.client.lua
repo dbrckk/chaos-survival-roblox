@@ -15,6 +15,7 @@ local phase = "waiting"
 local tracked = {}
 local requestedMeshes = {}
 local readyMeshes = {}
+local REOPEN_SECONDS = 1.6
 
 local function participantCanSee()
     return phase == "round"
@@ -29,12 +30,33 @@ local function update(gate, bundle)
         return
     end
     local status = gate:GetAttribute("ShutterPhase")
-    if status ~= "Warning" and status ~= "Raising"
-        and status ~= "Raised" then
+    local locale = player.LocaleId
+    if status == "Idle" and not gate.CanCollide then
+        local stamp = gate:GetAttribute("ShutterReopenedAt")
+        local age = type(stamp) == "number" and workspace:GetServerTimeNow() - stamp
+        if type(age) == "number" and age >= -0.15 and age < REOPEN_SECONDS then
+            bundle.label.Text = CoreLocalization.text(locale, "TOWER_SHUTTER_OPEN")
+            bundle.label.TextColor3 = Color3.fromRGB(217, 255, 232)
+            bundle.outline.Color = Color3.fromRGB(87, 202, 151)
+            bundle.sign.MaxDistance = 40
+            bundle.sign.Enabled = true
+            if bundle.reopenStamp ~= stamp then
+                bundle.reopenStamp = stamp
+                task.delay(REOPEN_SECONDS - age, function()
+                    if tracked[gate] ~= bundle or bundle.reopenStamp ~= stamp then return end
+                    bundle.reopenStamp = nil
+                    update(gate, bundle)
+                end)
+            end
+            return
+        end
+    end
+    if status ~= "Warning" and status ~= "Raising" and status ~= "Raised" then
         bundle.sign.Enabled = false
         return
     end
-    local locale = player.LocaleId
+    bundle.outline.Color = Color3.fromRGB(235, 182, 95)
+    bundle.sign.MaxDistance = 55
     if status == "Raised" then
         bundle.label.Text = CoreLocalization.text(
             locale, "TOWER_SHUTTER_JUMP"
@@ -81,7 +103,7 @@ local function remove(gate)
     local bundle = tracked[gate]
     if not bundle then return end
     tracked[gate] = nil
-    if bundle.connection then bundle.connection:Disconnect() end
+    for _, connection in ipairs(bundle.connections) do connection:Disconnect() end
     if bundle.releaseSkin then bundle.releaseSkin() end
     bundle.sign:Destroy()
 end
@@ -123,11 +145,15 @@ local function attach(gate)
     outline.Transparency = 0.2
     outline.Parent = label
 
-    local bundle = {sign = sign, label = label}
+    local bundle = {sign = sign, label = label, outline = outline}
     tracked[gate] = bundle
-    bundle.connection = gate:GetAttributeChangedSignal("ShutterPhase")
-        :Connect(function() update(gate, bundle) end)
-    update(gate, bundle)
+    local function changed() update(gate, bundle) end
+    bundle.connections = {
+        gate:GetAttributeChangedSignal("ShutterPhase"):Connect(changed),
+        gate:GetAttributeChangedSignal("ShutterReopenedAt"):Connect(changed),
+        gate:GetPropertyChangedSignal("CanCollide"):Connect(changed),
+    }
+    changed()
     refreshSkins()
 end
 
