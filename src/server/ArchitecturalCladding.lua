@@ -116,7 +116,7 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
                 Vector3.new(side * 1.1, 4.65, 0),
                 Vector3.new(side * reach * 0.63, 6.4, -2.1),
                 variantId == "Harbor" and 0.70 or 0.43,
-                machined, finish.shell)
+                machined, finish.shell, forgedProfile)
         end
         local headName = "LandmarkNavigationHead"
         local headColor = theme.Detail:Lerp(theme.Accent, 0.24)

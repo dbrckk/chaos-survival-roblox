@@ -1,3 +1,7 @@
+## P4 — Bras supérieurs forgés des colonnes
+
+Les 40 bras supérieurs peuvent reprendre le profil forgé de Tower Run. Chaque arène conserve la portée et l’épaisseur de ses bras. Ils suivent les colonnes pendant le rétrécissement et cèdent la place à la coque 3D complète lorsqu’elle s’affiche. Les bras simples servent de secours si le maillage est indisponible à la construction.
+
 ## P4 — Ailettes moulées et renforts forgés des colonnes
 
 Les 40 ailettes latérales peuvent reprendre le blindage moulé du périmètre et les 40 renforts diagonaux le profil forgé de Tower Run. Les pièces conservent leur inclinaison et suivent les colonnes pendant le rétrécissement. La coque 3D complète garde la priorité à l’affichage. Les formes d’origine prennent le relais si les maillages sont indisponibles à la construction.
