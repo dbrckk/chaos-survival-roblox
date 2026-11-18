@@ -1,3 +1,7 @@
+## P4 — Incrustations des quais de Storm Harbor
+
+Les huit bandes de quai peuvent reprendre le socle biseauté d’une fixation d’amarrage approuvée. Les marquages gardent leur longueur, leur orientation et leurs teintes au ras du revêtement. Les bandes plates d’origine servent de secours si le maillage est indisponible à la construction.
+
 ## P4 — Rayons et médaillon au sol d’Orbital
 
 Les huit rayons lumineux peuvent reprendre le profil forgé de Tower Run. Ils rejoignent le bord du médaillon sans traverser son centre. Le médaillon peut reprendre l’anneau horizontal du réacteur approuvé. Les rayons plats et le disque horizontal prennent le relais si les maillages sont indisponibles à la construction.

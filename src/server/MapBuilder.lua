@@ -28,6 +28,7 @@ local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 local PremiumLargeStructureAssets = require("./PremiumLargeStructureAssets")
+local PremiumFloorReliefAssets = require("./PremiumFloorReliefAssets")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
 local ArenaGroundArchitecture = require("./ArenaGroundArchitecture")
@@ -1068,6 +1069,22 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     end
 end
 
+-- Imported models are split by material and can swap horizontal axes.
+-- Match the unique region by its long, vertical and short dimensions.
+local function meshRegionByBounds(model, regionSize)
+    local region
+    for _, piece in ipairs(model:GetChildren()) do
+        if not piece:IsA("MeshPart") then continue end
+        local size = piece.Size
+        local bounds = Vector3.new(math.max(size.X, size.Z), size.Y, math.min(size.X, size.Z))
+        if (bounds - regionSize).Magnitude < 0.075 then
+            if region or not piece.Archivable or piece.MeshId == "" then return nil end
+            region = piece
+        end
+    end
+    return region
+end
+
 local function orbitalReactorNodeRegion(regionSize)
     local holder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
     if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
@@ -1080,15 +1097,7 @@ local function orbitalReactorNodeRegion(regionSize)
         or node:GetAttribute("OriginalOrbitalReactorLandmark3D") ~= true
         or node:GetAttribute("Original3DAssetId") ~= 104654294187035 then return nil end
 
-    -- The imported node is split by material with no stable piece names.
-    local region
-    for _, piece in ipairs(node:GetChildren()) do
-        if piece:IsA("MeshPart") and (piece.Size - regionSize).Magnitude < 0.075 then
-            if region or not piece.Archivable or piece.MeshId == "" then return nil end
-            region = piece
-        end
-    end
-    return region
+    return meshRegionByBounds(node, regionSize)
 end
 
 local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
@@ -1448,6 +1457,23 @@ local function addArenaHologram(decor, config, variant, theme)
     hint.Parent = gui
 end
 
+local function harborQuayInlaySource()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local relief = holder:FindFirstChild("Harbor")
+    if not relief or not relief:IsA("Model")
+        or relief:GetAttribute("OwnerVerified") ~= true
+        or relief:GetAttribute("CosmeticOnly") ~= true
+        or relief:GetAttribute("OriginalFloorRelief3D") ~= true
+        or relief:GetAttribute("Original3DAssetId") ~= PremiumFloorReliefAssets.approvedId("Harbor") then
+        return nil
+    end
+    -- The dock tie-down's solid beveled base spans the entire strip.
+    return meshRegionByBounds(relief, Vector3.new(7.55, 0.12, 2.74))
+end
+
 local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
     local center = base.Position
 
@@ -1639,17 +1665,21 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             {x = -23, z = 89, alongX = true},
             {x = 23, z = 89, alongX = true},
         }
+        local quayProfile = harborQuayInlaySource()
+        local thickness = 0.055
+        local quayY = ArenaPresentation.deckArtOffset(base, thickness) + 0.02
         for index, lane in ipairs(lanes) do
-            local line = decorPart(
-                decor, "HarborQuayInlay" .. index,
-                lane.alongX and Vector3.new(52, 0.055, 0.45)
-                    or Vector3.new(0.45, 0.055, 52),
-                center + Vector3.new(lane.x, 1.20, lane.z),
+            local size = lane.alongX and Vector3.new(52, thickness, 0.45)
+                or Vector3.new(0.45, thickness, 52)
+            local line = fitDecorMesh(
+                quayProfile, "HarborQuayInlay" .. index,
+                CFrame.new(center + Vector3.new(lane.x, quayY, lane.z)),
+                size,
                 index % 2 == 0 and theme.Accent or theme.Secondary,
                 theme.PanelMaterial
             )
             line.Transparency = 0.38
-            line.CastShadow = false
+            line.Parent = decor
         end
     elseif variant.Id == "Orbital" then
         local hubDiameter = 14
