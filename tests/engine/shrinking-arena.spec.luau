@@ -1431,6 +1431,7 @@ describe("Shrinking Arena mobility integration", function()
 
     local function checkFloorPerimeter(arena, scale)
         local base = arena.Base
+        assert(arena.Decor.DeckLineNorth:IsA("MeshPart") and arena.Decor.DeckLineEast:IsA("MeshPart"))
         for _, rail in ipairs(arena.Decor.ArenaUndercarriage:GetChildren()) do
             assert(rail:IsA("MeshPart") and not rail.CanCollide)
             local span = rail.Name:find("FoundryX", 1, true) and base.Size.X or base.Size.Z

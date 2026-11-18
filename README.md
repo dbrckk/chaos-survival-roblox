@@ -1,3 +1,7 @@
+## P4 — Lignes de guidage centrales sculptées
+
+Les 20 lignes centrales des cinq arènes peuvent reprendre le profil biseauté du pont approuvé de Tower Run. Leur éclat reste atténué et leur relief affleure le revêtement sous les alertes d’impact. Elles suivent le rétrécissement du sol, avec des lignes simples en secours si le maillage est indisponible à la construction.
+
 ## P4 — Longerons forgés du soubassement
 
 Les 20 longerons sous les cinq arènes peuvent reprendre la traverse forgée continue du pont de Tower Run. Les quatre longerons de chaque cadre se rejoignent aux angles et laissent le dessous de l’arène dégagé. Ils suivent le rétrécissement du sol. Les longerons simples prennent le relais si le maillage approuvé est indisponible à la construction.

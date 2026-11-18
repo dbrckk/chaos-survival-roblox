@@ -986,25 +986,28 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile)
 
     local laneLengthX = math.max(18, baseSize.X - 18)
     local laneLengthZ = math.max(18, baseSize.Z - 18)
+    local laneY = baseSize.Y * 0.5 + 0.17
+    local laneX = Vector3.new(laneLengthX, 0.06, 0.36)
+    local laneZ = Vector3.new(0.36, 0.06, laneLengthZ)
     local lanes = {
-        {name = "DeckLineNorth", size = Vector3.new(laneLengthX, 0.08, 0.36), pos = Vector3.new(0, 1.17, -12), color = theme.Accent},
-        {name = "DeckLineSouth", size = Vector3.new(laneLengthX, 0.08, 0.36), pos = Vector3.new(0, 1.17, 12), color = theme.Secondary},
-        {name = "DeckLineWest", size = Vector3.new(0.36, 0.08, laneLengthZ), pos = Vector3.new(-12, 1.17, 0), color = theme.Secondary},
-        {name = "DeckLineEast", size = Vector3.new(0.36, 0.08, laneLengthZ), pos = Vector3.new(12, 1.17, 0), color = theme.Accent},
+        {name = "DeckLineNorth", size = laneX, pos = Vector3.new(0, laneY, -12), color = theme.Accent},
+        {name = "DeckLineSouth", size = laneX, pos = Vector3.new(0, laneY, 12), color = theme.Secondary},
+        {name = "DeckLineWest", size = laneZ, pos = Vector3.new(-12, laneY, 0), color = theme.Secondary},
+        {name = "DeckLineEast", size = laneZ, pos = Vector3.new(12, laneY, 0), color = theme.Accent},
     }
 
     for _, def in ipairs(lanes) do
-        local line = decorPart(
-            decor,
+        local line = fitDecorMesh(
+            sweptProfile,
             def.name,
+            CFrame.new(center + def.pos),
             def.size,
-            center + def.pos,
             def.color,
             VisualTheme.Materials.Glow
         )
-        -- These 130+ stud navigation seams should not bloom brighter
-        -- than actual hazard telegraphs on short Android sightlines.
+        -- The shallow section and muted glow keep warning contours readable.
         line.Transparency = 0.58
+        line.Parent = decor
     end
 
     local radiusX = (baseSize.X * 0.5) + 4.5
