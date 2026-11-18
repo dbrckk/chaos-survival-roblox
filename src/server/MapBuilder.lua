@@ -3038,22 +3038,37 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local span = math.max(platform.Size.X, platform.Size.Z) - 0.8
             local width = math.min(platform.Size.X, platform.Size.Z)
             for side = -1, 1, 2 do
-                local railOffset = (width * 0.5 - 0.34) * side
-                local rail = decorPart(
-                    decor,
-                    "SkybridgeRail" .. i .. "_" .. tostring(side),
-                    alongX and Vector3.new(span, 0.14, 0.20)
-                        or Vector3.new(0.20, 0.14, span),
-                    platform.Position + Vector3.new(
-                        alongX and 0 or railOffset,
-                        (platform.Size.Y * 0.5) + 0.10,
-                        alongX and railOffset or 0
-                    ),
-                    side < 0 and theme.Accent or theme.Secondary,
-                    VisualTheme.Materials.Glow
+                local railOffset = (width * 0.5 - 0.28) * side
+                local railFrame = platform.CFrame * CFrame.new(
+                    alongX and 0 or railOffset, platform.Size.Y * 0.5 + 0.045,
+                    alongX and railOffset or 0
                 )
+                local railName = "SkybridgeRail" .. i .. "_" .. tostring(side)
+                local color = side < 0 and theme.Accent or theme.Secondary
+                local rail
+                if towerCrossbeam then
+                    local mesh = towerCrossbeam:Clone()
+                    local meshAlongX = mesh.Size.X > mesh.Size.Z
+                    mesh:ClearAllChildren()
+                    mesh.TextureID = ""
+                    mesh.MaterialVariant = ""
+                    mesh.Name = railName
+                    mesh.Size = meshAlongX and Vector3.new(span, 0.08, 0.18)
+                        or Vector3.new(0.18, 0.08, span)
+                    mesh.CFrame = railFrame
+                        * CFrame.Angles(0, meshAlongX ~= alongX and math.pi * 0.5 or 0, 0)
+                    mesh.Material = VisualTheme.Materials.Glow
+                    mesh.Color = color
+                    rail = mesh
+                else
+                    rail = decorPart(nil, railName,
+                        alongX and Vector3.new(span, 0.08, 0.18)
+                            or Vector3.new(0.18, 0.08, span),
+                        railFrame.Position, color, VisualTheme.Materials.Glow)
+                end
                 rail.Transparency = 0.16
-                rail.CastShadow = false
+                rail:SetAttribute("ChaosWayfinding", true)
+                rail.Parent = decor
             end
             -- Three transverse ribs share the existing trim replacement,
             -- hazard visibility and contraction code through their names.

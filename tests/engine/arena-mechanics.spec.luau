@@ -467,6 +467,16 @@ describe("Arena mechanics", function()
             expect(width > 4 and width < 4.5).toBe(true)
             expect(bridge.CanCollide).toBe(true)
             expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+            expect(#state.rails).toBe(2)
+            local stripeTop = state.stripe.Position.Y + state.stripe.Size.Y * 0.5
+            local index = bridge.Name:match("^Skybridge(%d+)$")
+            local deckPanel = arena.Decor:FindFirstChild("PlatformPanel" .. index)
+            expect(stripeTop > deckPanel.Position.Y + deckPanel.Size.Y * 0.5).toBe(true)
+            for _, entry in ipairs(state.rails) do
+                local rail = entry.part
+                expect(rail:GetAttribute("ChaosWayfinding")).toBe(true)
+                expect(rail.Position.Y + rail.Size.Y * 0.5 < stripeTop).toBe(true)
+            end
 
             expect(SkybridgeShutters.setPhase(state, "Warning", 100))
                 .toBe(true)
@@ -475,6 +485,9 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(state.stripe.Transparency < 0.4).toBe(true)
             expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Warning")
+            for _, entry in ipairs(state.rails) do
+                expect(math.abs(entry.part.Transparency - 0.46) < 0.001).toBe(true)
+            end
             expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(true)
             expect(gate.CanCollide).toBe(false)
             expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
@@ -492,6 +505,9 @@ describe("Arena mechanics", function()
             expect(gate:GetAttribute("ShutterWarningAt") == nil)
                 .toBe(true)
             expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Idle")
+            for _, entry in ipairs(state.rails) do
+                expect(entry.part.Transparency).toBe(entry.transparency)
+            end
             states[#states + 1] = state
         end
         expect(#states).toBe(4)

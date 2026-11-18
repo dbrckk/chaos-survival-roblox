@@ -755,6 +755,7 @@ describe("Shrinking Arena mobility integration", function()
                 expect(LargeStructure.matchesSkybridgeSupport(post,bridge)).toBe(true)
             end
             local prefix = {
+                "SkybridgeRail" .. index .. "_-1",
                 "SkybridgeRail" .. index .. "_1",
                 "SkybridgeRib" .. index .. "_-1",
                 "SkybridgeRib" .. index .. "_0",
@@ -776,7 +777,17 @@ describe("Shrinking Arena mobility integration", function()
                 expect(part ~= nil).toBe(true)
                 local alongX = bridge.Size.X > bridge.Size.Z
                 local lateral = alongX and Vector3.zAxis or Vector3.xAxis
-                if name:match("^PlatformUnderFrame") then
+                if name:match("^SkybridgeRail") then
+                    local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
+                    local offset = bridge.CFrame:PointToObjectSpace(part.Position)
+                    expect(part:IsA("MeshPart") and part.Material == Enum.Material.Neon).toBe(true)
+                    expect(part:GetAttribute("ChaosWayfinding")).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(longitudinal)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - 48.2) < 0.01).toBe(true)
+                    expect(math.abs(part.Size.Z - 0.18) < 0.01).toBe(true)
+                    expect(math.abs(offset:Dot(lateral)) > 1.95).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^PlatformUnderFrame") then
                     local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
                     local below = bridge.CFrame:PointToObjectSpace(part.Position).Y
                     expect(part:IsA("MeshPart")).toBe(true)
@@ -880,7 +891,8 @@ describe("Shrinking Arena mobility integration", function()
                         expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
                     elseif detail.Name:match("^PlatformCoreGlow") then
                         checkUnderdeckSignal(arena, bridge)
-                    elseif detail.Name:match("^PlatformGlow") then
+                    elseif detail.Name:match("^PlatformGlow")
+                        or detail.Name:match("^SkybridgeRail") then
                         expect(math.abs(detail.Size.X - prior.size.X * shrunkSpan / originalSpan) < 0.01).toBe(true)
                         expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
                         expect(math.abs(detail.Size.Y - prior.size.Y) < 0.01).toBe(true)

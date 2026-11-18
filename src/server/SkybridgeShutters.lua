@@ -68,16 +68,15 @@ function SkybridgeShutters.gateFor(bridge, folder)
     -- Tags replicate with streamed-in gates; no descendant polling.
     CollectionService:AddTag(gate, "TowerSkybridgeShutter")
 
-    -- A flush, non-colliding warning strip is readable BEFORE the shutter
-    -- emerges from beneath the deck. This avoids an invisible late blocker
-    -- and preserves the genuine jumpable bridge collision.
+    -- Keep the stripe's top above both the metal panel and its fitted
+    -- tread. Both finishes reach .105 above the physical deck.
     local stripe = Instance.new("Part")
     stripe.Name = "BridgeShutterWarning" .. bridge.Name
     stripe.Size = alongX
         and Vector3.new(1.1, 0.08, width)
         or Vector3.new(width, 0.08, 1.1)
     stripe.CFrame = bridge.CFrame * CFrame.new(
-        0, bridge.Size.Y * 0.5 + 0.055, 0
+        0, bridge.Size.Y * 0.5 + 0.105, 0
     )
     stripe.Anchored = true
     stripe.CanCollide = false
@@ -89,10 +88,23 @@ function SkybridgeShutters.gateFor(bridge, folder)
     stripe.Transparency = 1
     stripe.Parent = folder
 
+    local rails = {}
+    local index = bridge.Name:match("^Skybridge(%d+)$")
+    local arena = bridge.Parent and bridge.Parent.Parent
+    local decor = arena and arena:FindFirstChild("Decor")
+    if index and decor then
+        for side = -1, 1, 2 do
+            local rail = decor:FindFirstChild("SkybridgeRail" .. index .. "_" .. side)
+            if rail and rail:IsA("BasePart") then
+                rails[#rails + 1] = {part = rail, transparency = rail.Transparency}
+            end
+        end
+    end
     return {
         bridge = bridge,
         gate = gate,
         stripe = stripe,
+        rails = rails,
         raised = gate.CFrame,
         lowered = gate.CFrame * CFrame.new(0, -SkybridgeShutters.Height, 0),
     }
@@ -132,6 +144,13 @@ function SkybridgeShutters.setPhase(state, phase, timestamp)
         state.stripe.Transparency = phase == "Warning" and 0.20
             or (phase == "Raising" and 0.12
                 or (phase == "Raised" and 0.62 or 1))
+    end
+    -- Let the amber stripe take priority while keeping the route visible.
+    for _, entry in ipairs(state.rails) do
+        if entry.part.Parent then
+            entry.part.Transparency = phase == "Idle" and entry.transparency
+                or math.max(entry.transparency, 0.46)
+        end
     end
     -- Skyrail boosts must not throw a runner toward a forming barrier.
     if state.bridge and state.bridge.Parent then

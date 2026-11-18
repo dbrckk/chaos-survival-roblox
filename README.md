@@ -1,3 +1,7 @@
+## P4 — Rails de surface des passerelles de Tower Run
+
+Les huit rails reprennent le profil du pont forgé quand le modèle est disponible. Plus fins, ils restent lisibles en qualité mobile basse. La bande ambre ressort au-dessus du platelage pendant l’alerte. Le cyan et le bleu s’atténuent sur la passerelle concernée dès l’alerte, puis reprennent leur intensité quand la voie se libère.
+
 ## P4 — Bandes lumineuses sous les passerelles de Tower Run
 
 Les quatre passerelles peuvent afficher deux bandes fines aux extrémités biseautées sous leur tablier. Un seul maillage du pont forgé remplace chaque plaque lumineuse. Les bandes gardent leur largeur pendant la contraction, s’atténuent pendant l’alerte et disparaissent avec la passerelle. La plaque d’origine sert de secours si le modèle est indisponible à la construction de l’arène.
