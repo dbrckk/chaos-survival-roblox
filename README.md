@@ -1,3 +1,7 @@
+## P4 — Colliers et couronnes forgés des colonnes
+
+Les 20 colliers supérieurs et les 20 couronnes encastrées peuvent reprendre le profil forgé approuvé de Tower Run. Les pièces conservent leur recouvrement et les points d’ancrage des têtes et des instruments. La coque 3D complète garde la priorité lorsqu’elle est affichée. Les formes d’origine prennent le relais si le maillage est indisponible à la construction.
+
 ## P4 — Barres d’instrumentation forgées
 
 Les 20 barres d’instrumentation des colonnes reprennent le profil forgé du pont approuvé de Tower Run. Elles s’encastrent au bord avant des couronnes, sous les têtes de navigation. Leur finition métallique et leur déplacement avec les colonnes sont conservés. Les barres simples servent de secours si le maillage approuvé est indisponible à la construction.

@@ -1,6 +1,6 @@
 --!strict
 -- Original volumetric cladding of the four existing structural corner columns.
--- The navigation head and instrument spine can use approved profiles supplied by MapBuilder.
+-- Upper cladding and instruments can reuse approved profiles supplied by MapBuilder.
 -- Native geometry remains available without physics or contacts.
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
@@ -44,7 +44,7 @@ local function beam(model, origin, name, from, to, thick, tone, material)
         CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05)
 end
 
-function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?, spineProfile: MeshPart?)
+function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?, forgedProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") then return 0 end
     local finish = MATERIALS[variantId]
     if not finish or not theme then return 0 end
@@ -100,10 +100,12 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
         end
         piece(casing, origin, "MachinedUpperCollar", "Part",
             Vector3.new(5.9, 0.65, 5.0), CFrame.new(0, 4.15, 0),
-            machined, finish.shell, 0.02)
-        local socket = piece(casing, origin, "RecessedCrown", "Part",
-            Vector3.new(4.5, 0.42, 3.8), CFrame.new(0, 4.58, 0),
-            dark, finish.inset, 0.04)
+            machined, finish.shell, 0.02, forgedProfile)
+        -- Instrument mounts use the authored front, even if the imported axes are swapped.
+        local socketFrame = origin * CFrame.new(0, 4.58, 0)
+        local socketSize = Vector3.new(4.5, 0.42, 3.8)
+        piece(casing, socketFrame, "RecessedCrown", "Part", socketSize, CFrame.identity,
+            dark, finish.inset, 0.04, forgedProfile)
         -- The arena-specific upper silhouette reads even at mobile distance.
         local reach = variantId == "Towers" and 8.8
             or (variantId == "Harbor" and 7.8 or 6.7)
@@ -119,7 +121,7 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
         local headMaterial = variantId == "Orbital" and Enum.Material.CeramicTiles or finish.shell
         -- Start inside the native socket and keep the sculpted tip above the approved casing.
         local headSize = Vector3.new(1.55, 2.75, 1.55)
-        local headFrame = socket.CFrame * CFrame.new(0, (socket.Size.Y + headSize.Y) * 0.5 - 0.05, 0)
+        local headFrame = socketFrame * CFrame.new(0, (socketSize.Y + headSize.Y) * 0.5 - 0.05, 0)
             * CFrame.Angles(0, math.pi, 0)
         local head = RouteSignalGeometry.fit(headProfile, headFrame, headSize, nil, true)
         if head then
@@ -135,11 +137,11 @@ function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile:
         end
         -- Seat the spine in the native crown and clear the slightly higher fitted cap.
         local spineSize = Vector3.new(2.4, 0.28, 0.28)
-        local spineFrame = CFrame.new(0, (socket.Size.Y + spineSize.Y) * 0.5 - 0.02,
-            -socket.Size.Z * 0.5 + 0.20)
-        piece(casing, socket.CFrame, "CrownInstrumentSpine", "Part", spineSize, spineFrame,
+        local spineFrame = CFrame.new(0, (socketSize.Y + spineSize.Y) * 0.5 - 0.02,
+            -socketSize.Z * 0.5 + 0.20)
+        piece(casing, socketFrame, "CrownInstrumentSpine", "Part", spineSize, spineFrame,
             theme.Secondary:Lerp(theme.Detail, 0.55),
-            Enum.Material.Metal, 0.18, spineProfile)
+            Enum.Material.Metal, 0.18, forgedProfile)
         count += #casing:GetChildren()
     end
     return count
