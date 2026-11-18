@@ -635,8 +635,13 @@ describe("Shrinking Arena mobility integration", function()
         assert(piece:IsA("MeshPart") and piece.Material==Enum.Material.Neon)
         assert(piece.Anchored and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
         local frame = deck.CFrame:ToObjectSpace(piece.CFrame)
-        local swap = math.abs(frame.RightVector.Z)>.999
-        local extent = swap and Vector3.new(piece.Size.Z,piece.Size.Y,piece.Size.X) or piece.Size
+        local x, y, z = frame.RightVector, frame.UpVector, frame.LookVector
+        local size = piece.Size
+        local extent = Vector3.new(
+            math.abs(x.X)*size.X+math.abs(y.X)*size.Y+math.abs(z.X)*size.Z,
+            math.abs(x.Y)*size.X+math.abs(y.Y)*size.Y+math.abs(z.Y)*size.Z,
+            math.abs(x.Z)*size.X+math.abs(y.Z)*size.Y+math.abs(z.Z)*size.Z
+        )
         assert((extent-targetSize).Magnitude<.025)
         assert((frame.Position-targetOffset).Magnitude<.025)
     end
@@ -1306,10 +1311,24 @@ describe("Shrinking Arena mobility integration", function()
         local active,callbacks=false,{}
         local okay,why=pcall(function()
             local total=0
+            local beam=signalHolder.ForgedBridge.SweptCrossbeam
             for _,variant in ipairs(ArenaVariants.Order) do
+                local heightAxis=variant=="Harbor" and "Z" or "X"
+                beam.Size=heightAxis=="Z" and Vector3.new(5.96,3.1108,40.64)
+                    or Vector3.new(40.64,3.1108,5.96)
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
                 local count,owner,overheads=0,nil,0
+                local inlays={}
+                local function checkInlay(deck,signal,side,scale)
+                    local deckHeight=deck.Size.Y*.5
+                    checkRouteSignal(deck,signal,Vector3.new(.30*scale,7.5,.42*scale),
+                        Vector3.new(side*7.22*scale,deckHeight+6.4,0))
+                    local frame=deck.CFrame:ToObjectSpace(signal.CFrame)
+                    assert(frame.UpVector.X*side<-.999)
+                    assert(signal:GetAttribute("RouteSignalHeightAxis")==heightAxis)
+                    assert(math.abs(signal.Transparency-.24)<.001)
+                end
                 for _,deck in ipairs(arena.Platforms:GetChildren()) do
                     if deck:GetAttribute("SkySpineStep") then
                         context=variant.." "..deck.Name
@@ -1343,6 +1362,16 @@ describe("Shrinking Arena mobility integration", function()
                             checkRouteSignal(deck,pulse,Vector3.new(13,.35,.7),
                                 Vector3.new(0,deck.Size.Y*.5+12.7,-.58))
                             overheads+=1
+                            for _,side in ipairs({-1,1}) do
+                                local pylon=arena.Decor[prefix.."_MonumentalPylon"..side]
+                                local inlay=arena.Decor[prefix.."_SignalInlay"..side]
+                                checkInlay(deck,inlay,side,1)
+                                local face=math.abs(deck.CFrame:PointToObjectSpace(pylon.Position).X)
+                                    -pylon.Size.X*.5
+                                local center=math.abs(deck.CFrame:PointToObjectSpace(inlay.Position).X)
+                                assert(center-.15<face and center+.15>face and center-.15>deck.Size.X*.5)
+                                inlays[#inlays+1]={deck=deck,part=inlay,side=side,size=inlay.Size}
+                            end
                         end
                         checkUnderdeckSignal(arena,deck)
                         checkAerialBand(arena,deck,1)
@@ -1350,9 +1379,9 @@ describe("Shrinking Arena mobility integration", function()
                         owner=deck
                     end
                 end
-                assert(count==10 and overheads==4,variant)
+                assert(count==10 and overheads==4 and #inlays==8,variant)
                 total+=count
-                if variant=="Harbor" and owner then
+                if (variant=="Harbor" or variant=="Towers") and owner then
                     context="Sky Spine streaming, shared claims and contraction"
                     local native=assert(LargeStructure.spineNativeParts(arena.Decor,owner))
                     local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_SpineUnderframe
@@ -1398,6 +1427,9 @@ describe("Shrinking Arena mobility integration", function()
                     assert(math.abs(mesh.Size.X-size.X*.45)<.03 and math.abs(mesh.Size.Z-size.Z*.45)<.03)
                     checkUnderdeckSignal(arena,owner)
                     checkAerialBand(arena,owner,.45)
+                    for _,inlay in ipairs(inlays) do
+                        checkInlay(inlay.deck,inlay.part,inlay.side,.45)
+                    end
                     checkRouteSignal(owner,rail,Vector3.new(.26*.45,.17,owner.Size.Z-1.1*.45),
                         Vector3.new(owner.Size.X*.5-.32*.45,owner.Size.Y*.5+.12,0))
                     Remaining.sync(arena,owner.Position,"Low",true,nil,1,true)
@@ -1406,6 +1438,10 @@ describe("Shrinking Arena mobility integration", function()
                     end
                     cleanup(callbacks,{})
                     assert((rail.Size-originalRailSize).Magnitude<.01)
+                    for _,inlay in ipairs(inlays) do
+                        checkInlay(inlay.deck,inlay.part,inlay.side,1)
+                        assert((inlay.part.Size-inlay.size).Magnitude<.01)
+                    end
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
@@ -1413,6 +1449,22 @@ describe("Shrinking Arena mobility integration", function()
                 generated=nil
             end
             expect(total).toBe(50)
+
+            -- Build a real arena while the forged detail is unavailable.
+            signalHolder.Parent=nil
+            local fallback=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
+            generated=fallback.Parent
+            local restored=0
+            for _,piece in ipairs(fallback.Decor:GetChildren()) do
+                if piece.Name:match("^SkySpine%d+_SignalInlay%-?1$") then
+                    assert(piece:IsA("Part") and piece.Size.Y==7.5
+                        and piece.Material==Enum.Material.Neon
+                        and math.abs(piece.Transparency-.24)<.001)
+                    assert(piece:GetAttribute("RouteSignalHeightAxis")==nil and not piece.CanCollide)
+                    restored+=1
+                end
+            end
+            assert(restored==8)
         end)
         active=false
         Remaining.sync(nil,Vector3.zero,"Low",false)

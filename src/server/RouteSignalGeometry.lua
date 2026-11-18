@@ -1,12 +1,17 @@
 local RouteSignalGeometry = {}
 
--- Fit a horizontal light mesh by its long axis, allowing either Roblox
--- import orientation while leaving the route owner's footprint intact.
-function RouteSignalGeometry.fit(template, frame, size)
+-- Fit the longest source axis to the signal. A vertical inlay turns the
+-- raised face toward the path, mirroring the profile on the other pylon.
+function RouteSignalGeometry.fit(template, frame, size, inlaySide)
     if not template then return nil end
     local mesh = template:Clone()
     if not mesh then return nil end
-    local rotate = (mesh.Size.X > mesh.Size.Z) ~= (size.X > size.Z)
+    local longAxisX = mesh.Size.X > mesh.Size.Z
+    if inlaySide then
+        frame *= CFrame.Angles(0, 0, inlaySide * math.pi * 0.5)
+        size = Vector3.new(size.Y, size.X, size.Z)
+    end
+    local rotate = longAxisX ~= (size.X > size.Z)
     mesh:ClearAllChildren()
     mesh.TextureID = ""
     mesh.MaterialVariant = ""
@@ -17,6 +22,7 @@ function RouteSignalGeometry.fit(template, frame, size)
     mesh.CanTouch = false
     mesh.CanQuery = false
     mesh.CastShadow = false
+    mesh:SetAttribute("RouteSignalHeightAxis", inlaySide and (longAxisX and "X" or "Z") or nil)
     return mesh
 end
 

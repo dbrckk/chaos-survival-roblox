@@ -266,6 +266,7 @@ function D.start(ctx)
                         part = item,
                         deck = deck,
                         size = item.Size,
+                        heightAxis = item:GetAttribute("RouteSignalHeightAxis"),
                         cframe = item.CFrame,
                         localCFrame = deck.part.CFrame:ToObjectSpace(item.CFrame),
                     })
@@ -398,10 +399,14 @@ function D.start(ctx)
                         detail.part.CFrame = detail.deck.part.CFrame
                             * CFrame.new(p.X * scale, p.Y, p.Z * scale)
                             * rotationOnly
+                        -- Upright route signals can store their height on
+                        -- local X or Z. Contract only the horizontal axes.
+                        local size = detail.size
+                        local heightAxis = detail.heightAxis
                         detail.part.Size = Vector3.new(
-                            math.max(0.05, detail.size.X * scale),
-                            detail.size.Y,
-                            math.max(0.05, detail.size.Z * scale)
+                            heightAxis == "X" and size.X or math.max(0.05, size.X * scale),
+                            heightAxis and math.max(0.05, size.Y * scale) or size.Y,
+                            heightAxis == "Z" and size.Z or math.max(0.05, size.Z * scale)
                         )
                     else
                         detail.part.CFrame = detail.deck.part.CFrame * detail.localCFrame

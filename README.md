@@ -1,3 +1,7 @@
+## P4 — Inserts verticaux sculptés sur l’Épine céleste
+
+Les 40 inserts des portiques reprennent le profil forgé de Tower Run. Ils s’encastrent sur la face intérieure des pylônes pour rester visibles depuis le tablier. Ils gardent leur hauteur et se resserrent avec les portiques quand l’arène rétrécit. En l’absence du modèle approuvé à la construction, un insert lumineux simple reprend le même emplacement.
+
 ## P4 — Bandes et rails lumineux sculptés sur les traversées aériennes
 
 Les 130 tabliers des Promenades et de l’Épine céleste peuvent afficher deux bandes biseautées sous leurs bords à la place d’une plaque pleine. Les 100 rails de surface et les 20 bandeaux des portiques de l’Épine céleste reprennent le profil sculpté du pont forgé de Tower Run. Chaque remplacement conserve le nombre de pièces, les couleurs propres à l’arène et le suivi du rétrécissement. Les formes d’origine servent de secours si le modèle approuvé n’est pas disponible à la construction de l’arène.

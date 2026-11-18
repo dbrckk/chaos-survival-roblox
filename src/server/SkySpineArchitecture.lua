@@ -6,9 +6,9 @@ local RouteSignalGeometry = require("./RouteSignalGeometry")
 
 local SkySpineArchitecture = {}
 
-local function detail(decor, deck, index, name, size, cf, color, material, kind, mesh)
+local function detail(decor, deck, index, name, size, cf, color, material, kind, mesh, inlaySide)
     local frame = deck.CFrame * cf
-    local item = RouteSignalGeometry.fit(mesh, frame, size)
+    local item = RouteSignalGeometry.fit(mesh, frame, size, inlaySide)
     if not item then
         item = Instance.new(kind or "Part")
         item.Size = size
@@ -40,10 +40,10 @@ function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, 
     local secondary = theme.Secondary:Lerp(theme.Structure, 0.32)
     local metal = theme.Structure:Lerp(theme.Detail, 0.38)
     local count = 0
-    local function add(name, size, cf, color, material, kind, mesh)
+    local function add(name, size, cf, color, material, kind, mesh, inlaySide)
         count += 1
         return detail(decor, deck, index, name, size,
-            cf, color, material, kind, mesh)
+            cf, color, material, kind, mesh, inlaySide)
     end
 
     -- Actual cross-arena silhouette: repeated, thin surface borders and
@@ -68,15 +68,19 @@ function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, 
     -- high bridge recognizable from the 320x320 combat floor. Their
     -- pylons remain OUTSIDE the true 12-stud-wide walking footprint.
     if step == 2 or step == 5 or step == 6 or step == 9 then
+        local pylonOffset = 8
+        local pylonSize = Vector3.new(1.5, 12.2, 1.7)
+        -- Seat the light into the inward face of the pylon. Its raised
+        -- face clears the metal so players on the deck can see it.
+        local inlayOffset = pylonOffset - pylonSize.X * 0.5 - 0.03
         for side = -1, 1, 2 do
-            add("MonumentalPylon" .. side,
-                Vector3.new(1.5, 12.2, 1.7),
-                CFrame.new(side * 8, top + 6.1, 0),
+            add("MonumentalPylon" .. side, pylonSize,
+                CFrame.new(side * pylonOffset, top + 6.1, 0),
                 metal, Enum.Material.Metal)
             add("SignalInlay" .. side,
                 Vector3.new(0.30, 7.5, 0.42),
-                CFrame.new(side * 8.5, top + 6.4, 0),
-                accent, Enum.Material.Neon).Transparency = 0.24
+                CFrame.new(side * inlayOffset, top + 6.4, 0),
+                accent, Enum.Material.Neon, nil, signalProfile, side).Transparency = 0.24
         end
         add("InterchangeCrown", Vector3.new(17.2, 1.4, 2.5),
             CFrame.new(0, top + 13, 0), metal, Enum.Material.Metal)
