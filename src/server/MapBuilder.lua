@@ -27,6 +27,7 @@ local HarborScenery = require("./HarborScenery")
 local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
+local PremiumLargeStructureAssets = require("./PremiumLargeStructureAssets")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
 local ArenaGroundArchitecture = require("./ArenaGroundArchitecture")
@@ -1704,6 +1705,20 @@ local function wayfinderBaseSource()
         or model:GetAttribute("OriginalPerimeterArmor3D") ~= true
         or model:GetAttribute("Original3DAssetId") ~= 88962643359267 then return nil end
     return approvedMeshRegion(model, "WayfinderBase")
+end
+
+local function beaconShaftSource(variant)
+    local id = PremiumLargeStructureAssets.approvedId(variant)
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates")
+    if not id or not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild(variant)
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalLargeStructure3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= id then return nil end
+    return approvedMeshRegion(model, "BeaconShaft")
 end
 
 local function fitDecorMesh(profile, name, pose, size, color, material)
@@ -3489,6 +3504,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- goal must be a walkable entry terrace, then every real climb step.
     -- Floor-painted cues are cosmetic and retracted with the shrinking floor.
     local perRoute = #(variant.PerimeterPlatforms or {}) / 4
+    local beaconShaft = beaconShaftSource(variant.Id)
     for route = 1, 4 do
         local startIndex = (route - 1) * perRoute
         local entry = variant.PerimeterPlatforms[startIndex + 1]
@@ -3541,18 +3557,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local signX = lookout.offset.X >= 0 and 1 or -1
         local signZ = lookout.offset.Z >= 0 and 1 or -1
         local beaconPoint = config.ArenaCenter + Vector3.new(
-            lookout.offset.X + signX * 11,
+            math.clamp(lookout.offset.X + signX * 11, -halfX + 3, halfX - 3),
             variant.BaseSize.Y * 0.5 + 17,
-            lookout.offset.Z + signZ * 9
+            math.clamp(lookout.offset.Z + signZ * 9, -halfZ + 3, halfZ - 3)
         )
         local terminalIndex = #variant.Platforms + startIndex + perRoute
-        local mast = decorPart(
-            decor, "OuterRouteSignal" .. route,
-            Vector3.new(1.15, 34, 1.15), beaconPoint,
-            theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal
-        )
+        local mast = fitDecorMesh(beaconShaft, "OuterRouteSignal" .. route, CFrame.new(beaconPoint),
+            Vector3.new(1.55, 34, 1.55), theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal)
         mast.Transparency = 0.12
-        mast.CastShadow = false
         local lens = decorPart(
             decor, "OuterRouteSignalLens" .. route,
             Vector3.new(3.8, 3.8, 3.8),
@@ -3561,16 +3573,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         )
         lens.Shape = Enum.PartType.Ball
         lens.Transparency = 0.20
-        local crown = decorPart(
-            decor, "OuterRouteSignalCrown" .. route,
-            Vector3.new(5.0, 0.85, 5.0),
-            beaconPoint + Vector3.new(0, 15.9, 0),
-            theme.Detail, Enum.Material.Metal
-        )
+        local crown = fitDecorMesh(wayfinderBase, "OuterRouteSignalCrown" .. route,
+            CFrame.new(beaconPoint + Vector3.new(0, 15.9, 0)), Vector3.new(5.0, 0.85, 5.0),
+            theme.Detail, Enum.Material.Metal)
         for _, piece in ipairs({mast, lens, crown}) do
             piece:SetAttribute("ChaosWayfinding", true)
             piece:SetAttribute("PerimeterPlatformIndex", terminalIndex)
-            piece.CastShadow = false
+            piece.Parent = decor
         end
     end
 

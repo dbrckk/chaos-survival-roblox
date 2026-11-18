@@ -81,6 +81,24 @@ local function geometryAllowed(model,name)
         and xzShort >= 1.5 and xzShort <= 2.7
 end
 
+local function markBeaconShaft(model)
+    -- Every approved variant column has one 13.56-stud polygonal ARMOR
+    -- shaft. The wider collars and taller boots are separate regions.
+    local shaft
+    for _, mesh in ipairs(model:GetChildren()) do
+        if mesh:IsA("MeshPart") and mesh.Archivable and mesh.MeshId ~= "" then
+            local size = mesh.Size
+            if math.abs(size.Y - 13.56) < 0.13
+                and math.min(size.X, size.Z) >= 1.27
+                and math.max(size.X, size.Z) <= 1.70 then
+                if shaft then return end
+                shaft = mesh
+            end
+        end
+    end
+    if shaft then shaft.Name = "BeaconShaft" end
+end
+
 function Kit.start()
     if started then return end
     started = true
@@ -117,6 +135,9 @@ function Kit.start()
                         safe:SetAttribute("Original3DAssetId",APPROVED[name])
                         safe:SetAttribute("OriginalLargeStructure3D",true)
                         safe:SetAttribute("CosmeticOnly",true)
+                        if name ~= "LongCradle" and name ~= "ShortCradle" then
+                            markBeaconShaft(safe)
+                        end
                         safe.Parent = holder
                         holder:SetAttribute(name.."Ready",true)
                         break

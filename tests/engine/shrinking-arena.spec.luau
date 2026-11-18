@@ -1408,6 +1408,27 @@ describe("Shrinking Arena mobility integration", function()
 
     local function checkDistrictWayfinders(arena, scale)
         for route = 1, 4 do
+            local mast = arena.Decor["OuterRouteSignal" .. route]
+            local crown = arena.Decor["OuterRouteSignalCrown" .. route]
+            local lens = arena.Decor["OuterRouteSignalLens" .. route]
+            assert(mast:IsA("MeshPart") and crown:IsA("MeshPart"))
+            assert(lens:IsA("Part") and lens.Shape == Enum.PartType.Ball and lens.Material == Enum.Material.Glass)
+            assert((mast.Size - Vector3.new(1.55 * scale, 34, 1.55 * scale)).Magnitude < .03)
+            assert((crown.Size - Vector3.new(5 * scale, .85, 5 * scale)).Magnitude < .03)
+            assert((lens.Position - mast.Position - Vector3.new(0, 18.5, 0)).Magnitude < .03)
+            assert((crown.Position - mast.Position - Vector3.new(0, 15.9, 0)).Magnitude < .03)
+            local base = arena.Base
+            local offset = base.CFrame:PointToObjectSpace(mast.Position)
+            assert(math.abs(offset.Y - mast.Size.Y * .5 - base.Size.Y * .5) < .02)
+            assert(math.abs(offset.X) + crown.Size.X * .5 <= base.Size.X * .5
+                and math.abs(offset.Z) + crown.Size.Z * .5 <= base.Size.Z * .5)
+            local owner = arena.Platforms["Platform" .. mast:GetAttribute("PerimeterPlatformIndex")]
+            assert(owner:GetAttribute("PerimeterStep") == ArenaVariants.PerimeterSteps)
+            for _, piece in ipairs({mast,crown,lens}) do
+                assert(piece:GetAttribute("PerimeterPlatformIndex") == mast:GetAttribute("PerimeterPlatformIndex"))
+                assert(piece:GetAttribute("ChaosWayfinding") == true)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+            end
             for _, point in ipairs({"Entry","Lookout"}) do
                 local base = arena.Decor["DistrictWayfinder" .. route .. point]
                 local owner = arena.Platforms["Platform" .. base:GetAttribute("PerimeterPlatformIndex")]
@@ -1479,6 +1500,27 @@ describe("Shrinking Arena mobility integration", function()
         baseMesh.Size = Vector3.new(2.34, 2.14, 2.76985)
         baseMesh.Parent = cap
         armor.Parent = storage
+
+        local oldColumns = storage:FindFirstChild("ApprovedLargeStructureTemplates")
+        if oldColumns then oldColumns.Parent = nil end
+        local columns = Instance.new("Folder")
+        columns.Name = "ApprovedLargeStructureTemplates"
+        columns:SetAttribute("OwnerVerified", true)
+        for name, id in pairs({Classic=91626128452597,Towers=107521411452905,
+            Crossroads=93993697329658,Orbital=119010829781313,Harbor=76194593490199}) do
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("OwnerVerified", true)
+            model:SetAttribute("CosmeticOnly", true)
+            model:SetAttribute("OriginalLargeStructure3D", true)
+            model:SetAttribute("Original3DAssetId", id)
+            local shaft = Instance.new("MeshPart")
+            shaft.Name = "BeaconShaft"
+            shaft.Size = Vector3.new(1.48, 13.56, 1.43)
+            shaft.Parent = model
+            model.Parent = columns
+        end
+        columns.Parent = storage
 
         local generated,context
         local active,callbacks=false,{}
@@ -1623,6 +1665,8 @@ describe("Shrinking Arena mobility integration", function()
         holder:Destroy()
         signalHolder:Destroy()
         armor:Destroy()
+        columns:Destroy()
+        if oldColumns then oldColumns.Parent = storage end
         if oldArmor then oldArmor.Parent = storage end
         if oldSignalSource then oldSignalSource.Parent=storage end
         if oldSource then oldSource.Parent=storage end

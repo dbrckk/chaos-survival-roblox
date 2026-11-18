@@ -1,3 +1,7 @@
+## P4 — Balises sculptées des terrasses hautes
+
+Les 20 balises des cinq arènes peuvent afficher un mât polygonal issu de la colonne approuvée de leur arène et une couronne forgée sous la lentille colorée. Les balises restent sur le sol jouable et suivent le rétrécissement. Les formes simples servent de secours si les maillages approuvés ne sont pas disponibles à la construction.
+
 ## P4 — Chevrons sculptés des montées périphériques
 
 Les 100 chevrons au sol et les 160 chevrons de palier reprennent le profil forgé dans les cinq arènes. Le dernier repère au sol reste devant le premier palier. Sur la montée, les flèches dégagent le platelage et les panneaux d’orientation. Chaque palier indique le suivant, et la flèche du sommet indique le retour. Des chevrons simples prennent le relais si le modèle approuvé est indisponible à la construction.
