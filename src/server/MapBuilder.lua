@@ -2760,6 +2760,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     entryGuides.Name = "EntryGuides"
     entryGuides.Parent = arena
 
+    local forgedBridge = towersForgedBridgeSource()
+    local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
+    local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
+    local spawnGlowSize = Vector3.new(5.2, 0.12, 5.2)
+    -- Clear the visible floor finish while keeping the gameplay spawn in place.
+    local guideY = base.Position.Y + ArenaPresentation.deckArtOffset(base, spawnGlowSize.Y) + 0.025
     for i, offset in ipairs(variant.SpawnOffsets) do
         -- Markers sit ON the arena floor, never as floating solid slabs
         -- directly inside the player's feet or beneath a mezzanine.
@@ -2787,34 +2793,34 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         s.Transparency = 0.34
 
         local guideColor = i % 2 == 0 and theme.Secondary or theme.Accent
+        local guideFrame = s.CFrame + Vector3.new(0, guideY - spawnPosition.Y, 0)
         for side = -1, 1, 2 do
-            local guide = decorPart(
-                entryGuides,
+            -- Each arm's inner tip points along the spawn's forward axis.
+            local pose = guideFrame * CFrame.new(side * 0.78, 0, -3)
+                * CFrame.Angles(0, math.rad(-side * 34), 0)
+            local guide = fitDecorMesh(
+                sweptProfile,
                 "EntryChevron" .. i .. "_" .. tostring(side),
+                pose,
                 Vector3.new(2.6, 0.08, 0.24),
-                spawnPosition,
                 guideColor,
                 VisualTheme.Materials.Glow
             )
-            guide.CFrame = s.CFrame
-                * CFrame.new(side * 0.78, 0.04, -3.0)
-                * CFrame.Angles(0, math.rad(side * 34), 0)
             guide.Transparency = 0.22
+            guide:SetAttribute("ChaosWayfinding", true)
+            guide.Parent = entryGuides
         end
 
-        local glow = part(
-            arena,
+        local glow = fitDecorMesh(
+            edgeBand,
             "SpawnGlow" .. i,
-            Vector3.new(5.2, 0.12, 5.2),
-            spawnPosition + Vector3.new(0, -0.03, 0),
-            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            guideFrame,
+            spawnGlowSize,
+            guideColor,
             VisualTheme.Materials.Glow
         )
-        glow.CanCollide = false
-        glow.CanTouch = false
-        glow.CanQuery = false
-        glow.CastShadow = false
         glow.Transparency = 0.16
+        glow.Parent = arena
     end
 
     local platforms = Instance.new("Folder")
@@ -2933,9 +2939,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local chassis = accessChassisSource()
     local underdeckSignal = approvedMeshRegion(chassis, "UnderdeckSignal")
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
-    local forgedBridge = towersForgedBridgeSource()
-    local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
-    local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end

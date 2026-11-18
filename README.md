@@ -1,3 +1,7 @@
+## P4 — Balisage sculpté des points d’apparition
+
+Les 40 points d’apparition des cinq arènes peuvent afficher 80 chevrons forgés et 40 halos à deux bandes issus du pont approuvé de Tower Run. Les pointes indiquent la direction de départ et les repères lumineux dépassent du revêtement du sol. Les positions et les orientations d’apparition restent en place. Des formes simples assurent le balisage si le modèle approuvé est indisponible à la construction.
+
 ## P4 — Balises centrales sculptées
 
 La balise centrale de chacune des cinq arènes reprend le profil polygonal de sa colonne approuvée. Le néon réagit toujours à la couleur du danger. La lampe, les particules et les effets orbitaux gardent leurs points d’ancrage. La balise d’origine sert de secours si le maillage approuvé est indisponible à la construction.

@@ -1406,6 +1406,29 @@ describe("Shrinking Arena mobility integration", function()
         assert(junctions == 2)
     end
 
+    local function checkSpawnGuides(arena, variant)
+        local base = arena.Base
+        local surface = base.Position.Y + base.Size.Y * .5
+        for index, offset in ipairs(ArenaVariants.get(variant).SpawnOffsets) do
+            local spawn = arena.Spawns["Spawn" .. index]
+            local expected = base.Position + Vector3.new(offset.X, base.Size.Y * .5 + .14, offset.Z)
+            assert((spawn.Position - expected).Magnitude < .02)
+            local glow = arena["SpawnGlow" .. index]
+            checkRouteSignal(spawn, glow, Vector3.new(5.2, .12, 5.2), Vector3.new(0, .107, 0))
+            assert(glow.Position.Y - glow.Size.Y * .5 > surface + .18)
+            for side = -1, 1, 2 do
+                local guide = arena.EntryGuides["EntryChevron" .. index .. "_" .. side]
+                assert(guide:IsA("MeshPart") and guide:GetAttribute("ChaosWayfinding") == true)
+                assert(guide.Anchored and not guide.CanCollide and not guide.CanTouch and not guide.CanQuery)
+                assert(guide.Position.Y - guide.Size.Y * .5 > surface + .18)
+                local pose = spawn.CFrame:ToObjectSpace(guide.CFrame)
+                assert((pose.Position - Vector3.new(side * .78, .107, -3)).Magnitude < .02)
+                local axis = guide.Size.X > guide.Size.Z and pose.RightVector or pose.LookVector
+                assert(side * axis.X * axis.Z > .45)
+            end
+        end
+    end
+
     local function checkPerimeterDecor(arena, scale)
         local base = arena.Base
         local center = arena.Decor.CenterBeacon
@@ -1577,6 +1600,7 @@ describe("Shrinking Arena mobility integration", function()
                 checkLookoutLinks(arena,1)
                 checkPromenadeChevrons(arena,1)
                 checkPerimeterDecor(arena,1)
+                checkSpawnGuides(arena,variant)
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}
@@ -1685,6 +1709,7 @@ describe("Shrinking Arena mobility integration", function()
                     checkLookoutLinks(arena,.45)
                     checkPromenadeChevrons(arena,.45)
                     checkPerimeterDecor(arena,.45)
+                    checkSpawnGuides(arena,variant)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
