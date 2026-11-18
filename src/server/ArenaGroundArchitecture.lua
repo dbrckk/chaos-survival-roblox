@@ -3,8 +3,8 @@
 -- Only decorative, thin, non-colliding sections: collision, warning telegraphs,
 -- spawn pads, AI ground pathfinding and shrink geometry remain authoritative.
 -- Original licensed MaterialService textures are selected by the existing
--- camera-budgeted PBR client. Underfloor girders can reuse an approved mesh
--- supplied by MapBuilder.
+-- camera-budgeted PBR client. Perimeter cladding and underfloor girders
+-- can reuse approved mesh profiles supplied by MapBuilder.
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
 local ArenaGroundArchitecture = {}
@@ -37,11 +37,16 @@ local PROFILES = {
     },
 }
 
-local function part(decor, name, kind, frame, size, tone, material, alpha, pbr)
-    local instance = Instance.new(kind)
+local function part(decor, name, kind, frame, size, tone, material, alpha, pbr, meshProfile: MeshPart?)
+    local instance = RouteSignalGeometry.fit(meshProfile, frame, size)
+    if not instance then
+        instance = Instance.new(kind)
+        instance.Size = size
+        instance.CFrame = frame
+        instance.TopSurface = Enum.SurfaceType.Smooth
+        instance.BottomSurface = Enum.SurfaceType.Smooth
+    end
     instance.Name = name
-    instance.Size = size
-    instance.CFrame = frame
     instance.Color = tone
     instance.Material = material
     instance.Transparency = alpha
@@ -50,8 +55,6 @@ local function part(decor, name, kind, frame, size, tone, material, alpha, pbr)
     instance.CanTouch = false
     instance.CanQuery = false
     instance.CastShadow = false
-    instance.TopSurface = Enum.SurfaceType.Smooth
-    instance.BottomSurface = Enum.SurfaceType.Smooth
     if pbr then
         instance:SetAttribute("PremiumArchitecturalSurface", true)
     end
@@ -59,7 +62,8 @@ local function part(decor, name, kind, frame, size, tone, material, alpha, pbr)
     return instance
 end
 
-function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: MeshPart?)
+function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: MeshPart?,
+    apronProfile: MeshPart?, cornerProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") or not theme then
         return 0
     end
@@ -139,15 +143,15 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: M
     for side = -1, 1, 2 do
         local x = side * (innerX * 0.5 + apronX * 0.5)
         local z = side * (innerZ * 0.5 + apronZ * 0.5)
-        -- Match the 0.035-stud modules' exact visible top height.
+        -- Keep the full-length castings inside the original flush apron envelope.
         part(decor, "PremiumGroundApronX" .. tostring(side), "Part",
             origin * CFrame.new(x, finishY, 0),
             Vector3.new(apronX - 0.08, 0.035, innerZ),
-            armorTone, profile.panel, 0.035, false)
+            armorTone, profile.panel, 0.035, false, apronProfile)
         part(decor, "PremiumGroundApronZ" .. tostring(side), "Part",
             origin * CFrame.new(0, finishY, z),
             Vector3.new(innerX, 0.035, apronZ - 0.08),
-            armorTone, profile.panel, 0.035, false)
+            armorTone, profile.panel, 0.035, false, apronProfile)
         count += 2
     end
     for sx = -1, 1, 2 do
@@ -158,7 +162,7 @@ function ArenaGroundArchitecture.build(decor, base, variantId, theme, lattice: M
                     .. "_" .. tostring(sz), "Part",
                 origin * CFrame.new(cornerX, finishY, cornerZ),
                 Vector3.new(apronX - 0.08, 0.035, apronZ - 0.08),
-                outerTone, profile.detail, 0.045, false)
+                outerTone, profile.detail, 0.045, false, cornerProfile)
             count += 1
         end
     end

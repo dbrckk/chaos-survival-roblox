@@ -1,3 +1,7 @@
+## P4 — Habillage sculpté du pourtour du sol
+
+Les cinq arènes peuvent afficher 20 plaques latérales forgées et 20 plaques d’angle issues de maillages approuvés. Les pièces conservent leurs joints et leur hauteur sous les repères de danger. Elles suivent le rétrécissement du sol. Les plaques simples servent de secours si les maillages approuvés sont indisponibles à la construction.
+
 ## P4 — Renforts ajourés sous le sol
 
 Les 40 renforts sous les cinq arènes peuvent reprendre le treillis à quatre travées du châssis approuvé d’Orbital. Ils rejoignent le cadre du soubassement et restent sous l’emprise du sol pendant le rétrécissement. Les renforts en biseau prennent le relais si le maillage approuvé est indisponible à la construction.

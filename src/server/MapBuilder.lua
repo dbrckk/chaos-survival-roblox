@@ -2834,11 +2834,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
 
     local chassis = accessChassisSource()
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
+    local wayfinderBase = wayfinderBaseSource()
     addArenaFoundation(decor, config, variant, theme)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
-    ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice)
+    ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile, wayfinderBase)
     addPerimeterStations(decor, config, variant, theme)
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
@@ -3405,7 +3406,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Wayfinding is physically anchored to the REAL first/last platforms,
     -- not virtual markers that could point to an inaccessible decoration.
     -- Only 8 small labels and 24 ground-inlaid arrows for all four routes.
-    local wayfinderBase = wayfinderBaseSource()
     for route = 1, 4 do
         local path = variant.PerimeterPlatforms
         local perRoute = #path / 4
