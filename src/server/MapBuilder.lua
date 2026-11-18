@@ -1491,6 +1491,18 @@ local function towersFloorProfiles()
         meshRegionByBounds(machinery, Vector3.new(5.30, 24, 5.28))
 end
 
+local function addFloorChevron(decor, name, facing, profile, style, color, alpha)
+    for side = -1, 1, 2 do
+        -- Separate the wing surfaces where they meet at the tip.
+        local pose = facing * CFrame.new(side * style.spread, side * 0.003, 0)
+            * CFrame.Angles(0, side * style.angle, 0)
+        local mark = fitDecorMesh(profile, name .. "_" .. tostring(side), pose,
+            style.size, color, VisualTheme.Materials.Glow)
+        mark.Transparency = alpha
+        mark.Parent = decor
+    end
+end
+
 local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
     local center = base.Position
 
@@ -1534,7 +1546,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
         }
         local entryProfile = floorReliefRegion("Classic", Vector3.new(8.00, 0.12, 4.34))
-        local chevronSize = Vector3.new(0.15, 0.05, 1.35)
+        local entryStyle = {size = Vector3.new(0.15, 0.05, 1.35), spread = 0.36, angle = math.rad(36)}
         for routeIndex, direction in ipairs(routeDirections) do
             -- Outside the raised tiers, adjacent to each cardinal entry
             -- spawn. The arrow points IN toward the first reachable deck;
@@ -1543,21 +1555,8 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
                 + Vector3.new(0, 1.28, 0)
             local facing = CFrame.lookAt(position,
                 position - direction, Vector3.yAxis)
-            for side = -1, 1, 2 do
-                -- Separate the wing surfaces where they meet at the tip.
-                local pose = facing * CFrame.new(side * 0.36, side * 0.003, 0)
-                    * CFrame.Angles(0, math.rad(side * 36), 0)
-                local marker = fitDecorMesh(
-                    entryProfile,
-                    "ClassicEntryChevron" .. routeIndex .. "_" .. tostring(side),
-                    pose,
-                    chevronSize,
-                    routeIndex % 2 == 0 and theme.Secondary or theme.Accent,
-                    VisualTheme.Materials.Glow
-                )
-                marker.Transparency = 0.47
-                marker.Parent = decor
-            end
+            addFloorChevron(decor, "ClassicEntryChevron" .. routeIndex, facing, entryProfile,
+                entryStyle, routeIndex % 2 == 0 and theme.Secondary or theme.Accent, 0.47)
         end
     elseif variant.Id == "Towers" then
         local plateProfile, coreProfile = towersFloorProfiles()
@@ -1599,32 +1598,19 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             core.Parent = decor
         end
 
-        -- Eight small floor-inlaid chevrons at four genuine tower ascent
-        -- approaches, not false arrows beneath elevated collision decks.
-        -- Two restrained cyan wings per route are visible to first-time
-        -- players arriving at the original corner and cardinal spawns.
+        -- Four floor chevrons guide the approach to the first tower decks.
         local approaches = {
             {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
         }
+        local ascentProfile = floorReliefRegion("Towers", Vector3.new(10.22, 0.12, 0.94))
+        local ascentStyle = {size = Vector3.new(0.14, 0.055, 1.25), spread = 0.37, angle = math.rad(34)}
         for index, signs in ipairs(approaches) do
             local x, z = signs[1], signs[2]
             local origin = center + Vector3.new(x * 10, 1.22, z * 23)
             local firstDeck = center + Vector3.new(x * 6, 1.22, z * 14)
             local facing = CFrame.lookAt(origin, firstDeck, Vector3.yAxis)
-            for side = -1, 1, 2 do
-                local arrow = decorPart(
-                    decor,
-                    "TowerAscentChevron" .. index .. "_" .. tostring(side),
-                    Vector3.new(0.14, 0.055, 1.25),
-                    origin,
-                    index % 2 == 0 and theme.Accent or theme.Secondary,
-                    VisualTheme.Materials.Glow
-                )
-                arrow.CFrame = facing
-                    * CFrame.new(side * 0.37, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 34), 0)
-                arrow.Transparency = 0.47
-            end
+            addFloorChevron(decor, "TowerAscentChevron" .. index, facing, ascentProfile,
+                ascentStyle, index % 2 == 0 and theme.Accent or theme.Secondary, 0.47)
         end
     elseif variant.Id == "Crossroads" then
         local laneProfile = floorReliefRegion("Crossroads", Vector3.new(3.50, 0.12, 0.66))
@@ -1656,8 +1642,10 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
         end
 
         -- Flux Relay navigation is physically readable from the floor.
-        -- Inlaid cyan chevrons teach the return-to-hub loop rather than
-        -- forcing the player to decode a HUD paragraph during a disaster.
+        -- Keep the chevrons above the lanes and close the gap at their tips.
+        local relayStyle = {size = Vector3.new(0.13, 0.05, 0.95), spread = 0.28, angle = math.rad(34)}
+        local relayY = laneY + (laneThickness + relayStyle.size.Y) * 0.5 + 0.008
+        local relayCenter = center + Vector3.new(0, relayY, 0)
         for laneIndex = 1, 4 do
             local direction = laneIndex == 1 and Vector3.new(1, 0, 0)
                 or (laneIndex == 2 and Vector3.new(0, 0, 1)
@@ -1665,25 +1653,11 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
                         or Vector3.new(0, 0, -1)))
             for stepIndex = 1, 3 do
                 local distance = 23 + stepIndex * 3.15
-                local position = center + direction * distance
-                    + Vector3.new(0, 1.29, 0)
-                local facing = CFrame.lookAt(position,
-                    center + Vector3.new(0, 1.29, 0))
-                for side = -1, 1, 2 do
-                    local mark = decorPart(
-                        decor,
-                        "FluxRouteChevron" .. laneIndex .. "_" ..
-                            stepIndex .. "_" .. tostring(side),
-                        Vector3.new(0.13, 0.05, 0.95),
-                        position,
-                        stepIndex == 3 and theme.Accent or theme.Secondary,
-                        VisualTheme.Materials.Glow
-                    )
-                    mark.CFrame = facing * CFrame.new(side * 0.38, 0, 0)
-                        * CFrame.Angles(0, math.rad(side * 34), 0)
-                    mark.Transparency = 0.36 + (3 - stepIndex) * 0.06
-                    mark.CastShadow = false
-                end
+                local position = relayCenter + direction * distance
+                local facing = CFrame.lookAt(position, relayCenter)
+                addFloorChevron(decor, "FluxRouteChevron" .. laneIndex .. "_" .. stepIndex,
+                    facing, laneProfile, relayStyle, stepIndex == 3 and theme.Accent or theme.Secondary,
+                    0.36 + (3 - stepIndex) * 0.06)
             end
         end
 

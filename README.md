@@ -1,3 +1,7 @@
+## P4 — Chevrons de montée et de retour au carrefour
+
+Les quatre chevrons de montée de Tower Run et les douze chevrons du Flux Relay peuvent reprendre les profils moulés de leurs arènes. Les pointes du Flux Relay se rejoignent au-dessus des voies et indiquent le retour au centre. Les pièces plates servent de secours et suivent le sol pendant le rétrécissement.
+
 ## P4 — Grille et chevrons d’entrée de Classic
 
 Les huit lignes de la grille peuvent reprendre le profil forgé du pont de Tower Run et les quatre chevrons celui du revêtement approuvé de Classic. Les lignes restent sous les avertissements de balayage. Les flèches pointent toujours vers les premières terrasses. Les marquages plats servent de secours si les maillages sont indisponibles à la construction.
