@@ -11,6 +11,7 @@ local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
 local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local SkybridgeShutters = require("../../src/server/SkybridgeShutters")
+local ForgedBridge = require("../../src/client/ApprovedTowersSignatureBridgeMeshKit")
 local HarborCargoSweep = require("../../src/server/HarborCargoSweep")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local ClassicGridSweep = require("../../src/server/ClassicGridSweep")
@@ -443,6 +444,8 @@ describe("Arena mechanics", function()
         local folder = Instance.new("Folder")
         folder.Name = "ShutterSpecFolder"
         folder.Parent = arena
+        local profile = Instance.new("MeshPart")
+        profile.Size = Vector3.new(40.64, 3.1108, 5.96)
         local states = {}
         for _, bridge in ipairs(SkybridgePressure.bridges(platforms)) do
             local state = SkybridgeShutters.gateFor(bridge, folder)
@@ -455,6 +458,16 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(gate.Transparency).toBe(1)
             expect(gate.Material).toBe(Enum.Material.Metal)
+            local colliderSize = gate.Size
+            gate.LocalTransparencyModifier = 0.12
+            local skin, release = ForgedBridge.bindShutterSkin(gate, profile)
+            assert(skin and release)
+            local lateral = gate.Size.X > gate.Size.Z and gate.CFrame.RightVector or gate.CFrame.LookVector
+            expect(math.abs(skin.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
+            expect(math.abs(skin.Size.X - math.max(colliderSize.X, colliderSize.Z)) < .001).toBe(true)
+            expect(math.abs(skin.Size.Z - 0.85) < .001).toBe(true)
+            expect(skin.CanCollide or skin.CanTouch or skin.CanQuery).toBe(false)
+            expect(gate.LocalTransparencyModifier).toBe(1)
             -- BasePart.Size has float32 storage, 2.05 studs serializes
             -- as approximately 2.04999995; test geometry, not bit equality.
             expect(math.abs(gate.Size.Y - SkybridgeShutters.Height) < 0.001)
@@ -490,10 +503,24 @@ describe("Arena mechanics", function()
             end
             expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(true)
             expect(gate.CanCollide).toBe(false)
+            gate.CFrame = state.lowered:Lerp(state.raised, 0.5)
+            task.wait()
+            expect((skin.Position - gate.Position).Magnitude < 0.01).toBe(true)
+            expect(skin.Color).toBe(gate.Color)
+            expect(skin.Transparency).toBe(gate.Transparency)
             expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
             expect(gate.CanCollide).toBe(true)
             expect(gate.CanQuery).toBe(true)
             expect(gate.Material).toBe(Enum.Material.Metal)
+            expect(gate.Size).toBe(colliderSize)
+            local joint = skin:FindFirstChildOfClass("WeldConstraint")
+            assert(joint)
+            joint:Destroy()
+            task.wait()
+            expect(skin.Parent == nil).toBe(true)
+            expect(math.abs(gate.LocalTransparencyModifier - 0.12) < 0.001).toBe(true)
+            expect(gate.CanCollide).toBe(true)
+            release()
             -- The actual bridge remains solid; no lethal gap is created.
             expect(bridge.CanCollide).toBe(true)
             expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
@@ -511,6 +538,7 @@ describe("Arena mechanics", function()
             states[#states + 1] = state
         end
         expect(#states).toBe(4)
+        profile:Destroy()
         folder:Destroy()
         map:Destroy()
     end)

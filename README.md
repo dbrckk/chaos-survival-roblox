@@ -1,3 +1,7 @@
+## P4 — Volets mobiles sculptés de Tower Run
+
+Les quatre volets peuvent reprendre le profil métallique du pont forgé. L’habillage suit le volet et reprend sa couleur pendant la montée. Chaque joueur garde le volet d’origine à l’écran tant que le maillage est indisponible. Les collisions et les temps d’alerte restent pilotés par le serveur.
+
 ## P4 — Rails de surface des passerelles de Tower Run
 
 Les huit rails reprennent le profil du pont forgé quand le modèle est disponible. Plus fins, ils restent lisibles en qualité mobile basse. La bande ambre ressort au-dessus du platelage pendant l’alerte. Le cyan et le bleu s’atténuent sur la passerelle concernée dès l’alerte, puis reprennent leur intensité quand la voie se libère.

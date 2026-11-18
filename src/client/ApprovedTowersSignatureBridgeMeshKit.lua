@@ -1,6 +1,6 @@
 -- Genuine original forged bridge, 7 physical MeshParts (cosmetic only).
 -- Replaces exactly two big nonphysical native slab Parts on the true Towers
--- ArenaSignatureMegastructure. Nothing here changes playable Skyrail bridges.
+-- ArenaSignatureMegastructure and supplies the sculpted timed shutter profile.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
@@ -93,6 +93,77 @@ local function approvedSource()
         or math.abs(minHorizontal-6.77)>.35
         or math.abs(maxHorizontal-40.64)>.50 then return nil end
     return source
+end
+
+function Kit.shutterProfile()
+    local model = approvedSource()
+    local profile = model and model:FindFirstChild("SweptCrossbeam")
+    if profile and profile:IsA("MeshPart") and profile.Archivable and profile.MeshId ~= "" then
+        return profile
+    end
+    return nil
+end
+
+function Kit.bindShutterSkin(gate, profile)
+    if not gate:IsA("Part") or not gate.Parent or not gate.Anchored
+        or gate:GetAttribute("BridgeShutter") ~= true then return nil end
+    local skin = profile:Clone()
+    if not skin then return nil end
+    local acrossX = gate.Size.X > gate.Size.Z
+    local sourceAlongX = skin.Size.X > skin.Size.Z
+    skin:ClearAllChildren()
+    skin.TextureID = ""
+    skin.MaterialVariant = ""
+    skin.Name = "SculptedShutterFace"
+    skin.Size = sourceAlongX == acrossX and gate.Size
+        or Vector3.new(gate.Size.Z, gate.Size.Y, gate.Size.X)
+    skin.CFrame = gate.CFrame * CFrame.Angles(0, sourceAlongX ~= acrossX and math.pi * .5 or 0, 0)
+    skin.Color = gate.Color
+    skin.Material = gate.Material
+    skin.Transparency = gate.Transparency
+    skin.LocalTransparencyModifier = 0
+    skin.CanCollide = false
+    skin.CanTouch = false
+    skin.CanQuery = false
+    skin.CastShadow = false
+    skin.Massless = true
+
+    local joint = Instance.new("WeldConstraint")
+    joint.Name = "ShutterSkinWeld"
+    joint.Part0 = gate
+    joint.Part1 = skin
+    joint.Parent = skin
+    skin.Anchored = false
+    skin.Parent = gate
+
+    local nativeAlpha = gate.LocalTransparencyModifier
+    local connections = {}
+    local released = false
+    local function release()
+        if released then return end
+        released = true
+        for _, connection in ipairs(connections) do connection:Disconnect() end
+        if gate.LocalTransparencyModifier == 1 then
+            gate.LocalTransparencyModifier = nativeAlpha
+        end
+        skin:Destroy()
+    end
+    connections = {
+        gate:GetPropertyChangedSignal("Color"):Connect(function()
+            skin.Color = gate.Color
+        end),
+        gate:GetPropertyChangedSignal("Transparency"):Connect(function()
+            skin.Transparency = gate.Transparency
+        end),
+        skin.AncestryChanged:Connect(function()
+            if skin.Parent ~= gate or not gate.Parent then release() end
+        end),
+        joint.AncestryChanged:Connect(function()
+            if joint.Parent ~= skin then release() end
+        end),
+    }
+    gate.LocalTransparencyModifier = 1
+    return skin, release
 end
 
 -- Establish identity from real MapBuilder dimensions and authored position.
