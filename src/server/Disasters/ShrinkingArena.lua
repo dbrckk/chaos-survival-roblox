@@ -229,10 +229,8 @@ function D.start(ctx)
     if decor then
         for _, item in ipairs(decor:GetChildren()) do
             if item:IsA("BasePart") then
-                local bridgeIndex = tonumber(
-                    item.Name:match("^SkybridgeRail(%d+)_")
-                    or item.Name:match("^SkybridgeRib(%d+)_")
-                )
+                local ribIndex = item.Name:match("^SkybridgeRib(%d+)_")
+                local bridgeIndex = tonumber(ribIndex or item.Name:match("^SkybridgeRail(%d+)_"))
                 local platformIndex = tonumber(
                     item.Name:match("^PlatformGlow(%d+)$")
                     or item.Name:match("^PlatformPanel(%d+)$")
@@ -250,6 +248,7 @@ function D.start(ctx)
                     table.insert(bridgeDetails, {
                         part = item,
                         bridge = bridge,
+                        transverseRib = ribIndex ~= nil,
                         size = item.Size,
                         cframe = item.CFrame,
                         localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame),
@@ -416,6 +415,10 @@ function D.start(ctx)
                         or Vector3.new(p.X, p.Y, p.Z * ratio)
                     piece.CFrame = bridge.part.CFrame
                         * CFrame.new(relative) * rotationOnly
+                    -- The rib moves along the span but fits the unchanged
+                    -- width. A rotated MeshPart stores that width on its
+                    -- own local axis, which can be the bridge's long axis.
+                    if detail.transverseRib then continue end
                     local size = detail.size
                     piece.Size = bridge.alongX
                         and Vector3.new(

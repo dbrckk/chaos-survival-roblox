@@ -1,3 +1,7 @@
+## P4 — Traverses sculptées sous les passerelles de Tower Run
+
+Les quatre passerelles peuvent remplacer leurs douze nervures rectangulaires par des traverses au profil métallique forgé. Chaque traverse reprend un maillage du pont approuvé de Tower Run et suit le raccourcissement du tablier en gardant sa largeur. Les traverses restent décoratives et suivent les règles de visibilité des passerelles. Les nervures d’origine servent de secours si le modèle est indisponible à la construction de l’arène.
+
 ## P4 — Éclairage biseauté sous les tabliers aériens
 
 Les 80 tabliers des Promenades et les 50 tabliers de l’Épine céleste peuvent recevoir deux inserts lumineux biseautés à la place de leur plaque rectangulaire. La paire forme un seul maillage issu du châssis approuvé d’Orbital. Elle reprend la teinte de l’arène, suit la contraction du tablier et utilise les règles de visibilité existantes. Les plaques d’origine prennent le relais si la source 3D est indisponible lors de la construction de l’arène.

@@ -9,6 +9,7 @@ local LargeStructure = require("../../src/client/PremiumLargeStructureMeshKit")
 local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
 local NativeTrim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
+local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 
@@ -549,7 +550,32 @@ describe("Shrinking Arena mobility integration", function()
         end
     end)
     it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
-        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local storage = game:GetService("ReplicatedStorage")
+        local holder = Instance.new("Folder")
+        holder.Name = "ApprovedTowersSignatureBridgeTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        local source = Instance.new("Model")
+        source.Name = "ForgedBridge"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("OriginalTowersSignatureBridge3D", true)
+        source:SetAttribute("Original3DAssetId", 126298311664881)
+        source.Parent = holder
+        local beam = Instance.new("MeshPart")
+        beam.Name = "SweptCrossbeam"
+        beam.Size = Vector3.new(40.64, 3.1108, 5.96)
+        beam.Anchored = true
+        beam.CanCollide = false
+        beam.CanTouch = false
+        beam.CanQuery = false
+        beam.Parent = source
+        local previous = storage:FindFirstChild(holder.Name)
+        if previous then previous.Parent = nil end
+        holder.Parent = storage
+        local built, root = pcall(MapBuilder.build, Config, "Towers", ArenaVariants)
+        holder:Destroy()
+        if previous then previous.Parent = storage end
+        if not built then error(root) end
         local arena = root:FindFirstChild("Arena")
         local platforms = arena:FindFirstChild("Platforms")
         local decor = arena:FindFirstChild("Decor")
@@ -602,6 +628,14 @@ describe("Shrinking Arena mobility integration", function()
         end
         towers.Parent = templates
         local bridge18 = platforms:FindFirstChild("Skybridge18")
+        local pressure = SkybridgePressure.snapshot(bridge18, decor)
+        local guardedRib = decor:FindFirstChild("SkybridgeRib18_0")
+        SkybridgePressure.setPhase(pressure, "Warning", workspace:GetServerTimeNow())
+        expect(math.abs(guardedRib.Transparency - 0.65) < 0.001).toBe(true)
+        SkybridgePressure.setPhase(pressure, "Gone")
+        expect(guardedRib.Transparency).toBe(1)
+        SkybridgePressure.setPhase(pressure, nil)
+        expect(guardedRib.Transparency).toBe(0)
         local pier2 = decor:FindFirstChild("PlatformSupport18_2")
         local visual = Instance.new("Folder")
         visual.Parent = root
@@ -639,7 +673,9 @@ describe("Shrinking Arena mobility integration", function()
             end
             local prefix = {
                 "SkybridgeRail" .. index .. "_1",
+                "SkybridgeRib" .. index .. "_-1",
                 "SkybridgeRib" .. index .. "_0",
+                "SkybridgeRib" .. index .. "_1",
                 "PlatformGlow" .. index,
                 "PlatformPanel" .. index,
                 "PlatformUnderFrame" .. index,
@@ -653,6 +689,14 @@ describe("Shrinking Arena mobility integration", function()
             for _, name in ipairs(prefix) do
                 local part = decor:FindFirstChild(name)
                 expect(part ~= nil).toBe(true)
+                if name:match("^SkybridgeRib") then
+                    local alongX = bridge.Size.X > bridge.Size.Z
+                    local lateral = alongX and Vector3.zAxis or Vector3.xAxis
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - math.min(bridge.Size.X, bridge.Size.Z) - 0.22) < 0.01).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                end
                 originals[part] = {cf = part.CFrame, size = part.Size}
                 table.insert(details[bridge], part)
             end
@@ -702,7 +746,15 @@ describe("Shrinking Arena mobility integration", function()
                     local prior = originals[detail]
                     local d0 = alongX and prior.size.X or prior.size.Z
                     local d1 = alongX and detail.Size.X or detail.Size.Z
-                    if d0 > 2.2 then
+                    if detail.Name:match("^SkybridgeRib") then
+                        local before = old.cf:PointToObjectSpace(prior.cf.Position)
+                        local after = bridge.CFrame:PointToObjectSpace(detail.Position)
+                        local ratio = shrunkSpan / originalSpan
+                        local target = alongX and Vector3.new(before.X * ratio, before.Y, before.Z)
+                            or Vector3.new(before.X, before.Y, before.Z * ratio)
+                        expect((after - target).Magnitude < 0.01).toBe(true)
+                        expect((detail.Size - prior.size).Magnitude < 0.01).toBe(true)
+                    elseif d0 > 2.2 then
                         expect(d1 < d0).toBe(true)
                     end
                     expect(detail.CanCollide).toBe(false)

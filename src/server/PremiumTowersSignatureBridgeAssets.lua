@@ -30,6 +30,24 @@ local function valid(source)
         and math.abs(z-40.64)<.50
 end
 
+local function markSweptCrossbeam(model)
+    -- The imported ARMOR region contains the continuous swept section.
+    -- Its dimensions distinguish it from the rails and other detail meshes.
+    local crossbeam
+    for _, piece in ipairs(model:GetChildren()) do
+        if not piece:IsA("MeshPart") then continue end
+        local size=piece.Size
+        if math.abs(math.max(size.X,size.Z)-40.64)<.30
+            and math.abs(math.min(size.X,size.Z)-5.96)<.20
+            and math.abs(size.Y-3.1108)<.18
+            and piece.Archivable and piece.MeshId~="" then
+            if crossbeam then return end
+            crossbeam=piece
+        end
+    end
+    if crossbeam then crossbeam.Name="SweptCrossbeam" end
+end
+
 function Assets.start()
     if started then return end
     started=true
@@ -63,6 +81,7 @@ function Assets.start()
                 clean:SetAttribute("CosmeticOnly",true)
                 clean:SetAttribute("OriginalTowersSignatureBridge3D",true)
                 clean:SetAttribute("Original3DAssetId",ID)
+                markSweptCrossbeam(clean)
                 clean.Parent=holder
                 holder:SetAttribute("ForgedBridgeReady",true)
                 return

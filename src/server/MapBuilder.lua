@@ -1645,6 +1645,19 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
     end
 end
 
+local function towerCrossbeamSource()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates")
+    if not holder or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild("ForgedBridge")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalTowersSignatureBridge3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= 126298311664881 then return nil end
+    local beam = model:FindFirstChild("SweptCrossbeam")
+    return beam and beam:IsA("MeshPart") and beam.Archivable and beam or nil
+end
+
 local function underdeckSignalSource()
     local templates = ReplicatedStorage:FindFirstChild("ApprovedRemainingStructureTemplates")
     if not templates or templates:GetAttribute("OwnerVerified") ~= true then return nil end
@@ -2710,6 +2723,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- disaster and AI systems treat outer routes as real gameplay geometry.
     local platformDefinitions = table.clone(variant.Platforms)
     local underdeckSignal = underdeckSignalSource()
+    local towerCrossbeam = variant.Id == "Towers" and towerCrossbeamSource() or nil
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -2963,24 +2977,37 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 rail.Transparency = 0.16
                 rail.CastShadow = false
             end
-            -- Three under-deck ribs per bridge suggest structural engineering
-            -- at no collision cost. The bridge itself remains the only
-            -- physical route.
+            -- Three transverse ribs share the existing trim replacement,
+            -- hazard visibility and contraction code through their names.
             for ribIndex = -1, 1 do
-                local rib = decorPart(
-                    decor,
-                    "SkybridgeRib" .. i .. "_" .. tostring(ribIndex),
-                    alongX and Vector3.new(0.46, 0.38, width + 0.22)
-                        or Vector3.new(width + 0.22, 0.38, 0.46),
-                    platform.Position + Vector3.new(
-                        alongX and ribIndex * span * 0.27 or 0,
-                        -(platform.Size.Y * 0.5) - 0.24,
-                        alongX and 0 or ribIndex * span * 0.27
-                    ),
-                    theme.Structure,
-                    VisualTheme.Materials.Structure
+                local ribName = "SkybridgeRib" .. i .. "_" .. tostring(ribIndex)
+                local distance = ribIndex * span * 0.27
+                local ribFrame = platform.CFrame * CFrame.new(
+                    alongX and distance or 0,
+                    -platform.Size.Y * 0.5,
+                    alongX and 0 or distance
                 )
-                rib.CastShadow = false
+                if towerCrossbeam then
+                    local rib = towerCrossbeam:Clone()
+                    local sourceAlongX = rib.Size.X > rib.Size.Z
+                    rib.Name = ribName
+                    rib.Size = sourceAlongX and Vector3.new(width + 0.22, 0.62, 0.76)
+                        or Vector3.new(0.76, 0.62, width + 0.22)
+                    rib.CFrame = ribFrame * CFrame.new(0, -0.48, 0)
+                        * CFrame.Angles(0, sourceAlongX == alongX and math.pi * 0.5 or 0, 0)
+                    rib.Color = theme.Structure
+                    rib.Material = VisualTheme.Materials.Structure
+                    rib.Transparency = 0
+                    rib.Parent = decor
+                else
+                    decorPart(
+                        decor, ribName,
+                        alongX and Vector3.new(0.46, 0.38, width + 0.22)
+                            or Vector3.new(width + 0.22, 0.38, 0.46),
+                        (ribFrame * CFrame.new(0, -0.24, 0)).Position,
+                        theme.Structure, VisualTheme.Materials.Structure
+                    )
+                end
             end
         end
 
