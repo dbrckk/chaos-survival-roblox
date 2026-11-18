@@ -30,22 +30,26 @@ local function valid(source)
         and math.abs(z-40.64)<.50
 end
 
-local function markSweptCrossbeam(model)
-    -- The imported ARMOR region contains the continuous swept section.
-    -- Its dimensions distinguish it from the rails and other detail meshes.
-    local crossbeam
+local function markBridgeRegions(model)
+    -- ARMOR is the swept beam; CERAMIC contains the two continuous
+    -- outboard stripes and the shaped anchor tabs at their ends.
+    local crossbeam, edgeBand
     for _, piece in ipairs(model:GetChildren()) do
-        if not piece:IsA("MeshPart") then continue end
+        if not piece:IsA("MeshPart") or not piece.Archivable or piece.MeshId=="" then continue end
         local size=piece.Size
-        if math.abs(math.max(size.X,size.Z)-40.64)<.30
-            and math.abs(math.min(size.X,size.Z)-5.96)<.20
-            and math.abs(size.Y-3.1108)<.18
-            and piece.Archivable and piece.MeshId~="" then
+        local length,width=math.max(size.X,size.Z),math.min(size.X,size.Z)
+        if math.abs(length-40.64)<.30 and math.abs(width-5.96)<.20
+            and math.abs(size.Y-3.1108)<.18 then
             if crossbeam then return end
             crossbeam=piece
+        elseif math.abs(length-39.38)<.25 and math.abs(width-5.43)<.16
+            and math.abs(size.Y-.1625)<.055 then
+            if edgeBand then return end
+            edgeBand=piece
         end
     end
     if crossbeam then crossbeam.Name="SweptCrossbeam" end
+    if edgeBand then edgeBand.Name="SculptedEdgeBand" end
 end
 
 function Assets.start()
@@ -81,7 +85,7 @@ function Assets.start()
                 clean:SetAttribute("CosmeticOnly",true)
                 clean:SetAttribute("OriginalTowersSignatureBridge3D",true)
                 clean:SetAttribute("Original3DAssetId",ID)
-                markSweptCrossbeam(clean)
+                markBridgeRegions(clean)
                 clean.Parent=holder
                 holder:SetAttribute("ForgedBridgeReady",true)
                 return

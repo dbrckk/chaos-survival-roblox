@@ -1645,7 +1645,7 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
     end
 end
 
-local function towerCrossbeamSource()
+local function towersForgedBridgeSource()
     local holder = ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates")
     if not holder or holder:GetAttribute("OwnerVerified") ~= true then return nil end
     local model = holder:FindFirstChild("ForgedBridge")
@@ -1654,8 +1654,7 @@ local function towerCrossbeamSource()
         or model:GetAttribute("CosmeticOnly") ~= true
         or model:GetAttribute("OriginalTowersSignatureBridge3D") ~= true
         or model:GetAttribute("Original3DAssetId") ~= 126298311664881 then return nil end
-    local beam = model:FindFirstChild("SweptCrossbeam")
-    return beam and beam:IsA("MeshPart") and beam.Archivable and beam or nil
+    return model
 end
 
 local function accessChassisSource()
@@ -1670,9 +1669,50 @@ local function accessChassisSource()
     return chassis
 end
 
-local function chassisRegion(chassis, name)
-    local mesh = chassis and chassis:FindFirstChild(name)
+local function approvedMeshRegion(model, name)
+    local mesh = model and model:FindFirstChild(name)
     return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
+end
+
+local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand)
+    local name = "PlatformGlow" .. index
+    local color = (index % 2 == 0) and theme.Secondary or theme.Accent
+    local transparency = 0.64
+    if routeTier then
+        color = routeTier == 1 and theme.Accent
+            or (routeTier == 2 and theme.Accent:Lerp(theme.Secondary, 0.30)
+                or (routeTier == 3 and theme.Secondary
+                    or theme.Secondary:Lerp(theme.Accent, 0.55)))
+        transparency = 0.72 - routeTier * 0.04
+    end
+
+    local size = platform.Size
+    if edgeBand then
+        -- Both outboard bands share one inert mesh. The upper face
+        -- clears the bottom of the original flat underframe by .01 studs.
+        local glow = edgeBand:Clone()
+        glow:ClearAllChildren()
+        glow.TextureID = ""
+        glow.MaterialVariant = ""
+        local deckAlongX = size.X > size.Z
+        local bandAlongX = glow.Size.X > glow.Size.Z
+        local length = math.max(size.X, size.Z) + 0.28
+        local width = math.min(size.X, size.Z) + 0.42
+        glow.Size = bandAlongX and Vector3.new(length, 0.14, width)
+            or Vector3.new(width, 0.14, length)
+        glow.CFrame = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.47, 0)
+            * CFrame.Angles(0, deckAlongX ~= bandAlongX and math.pi * 0.5 or 0, 0)
+        glow.Name = name
+        glow.Material = VisualTheme.Materials.Glow
+        glow.Color = color
+        glow.Transparency = transparency
+        glow.Parent = decor
+    else
+        local glow = decorPart(decor, name, Vector3.new(size.X + 0.28, 0.12, size.Z + 0.28),
+            platform.Position - Vector3.new(0, size.Y * 0.5 + 0.13, 0),
+            color, VisualTheme.Materials.Glow)
+        glow.Transparency = transparency
+    end
 end
 
 local function addPlatformFinish(decor, platform, index, theme, underdeckSignal, lattice, forgedBevel)
@@ -2757,9 +2797,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- disaster and AI systems treat outer routes as real gameplay geometry.
     local platformDefinitions = table.clone(variant.Platforms)
     local chassis = accessChassisSource()
-    local underdeckSignal = chassisRegion(chassis, "UnderdeckSignal")
-    local towerLattice = variant.Id == "Towers" and chassisRegion(chassis, "UnderdeckLattice") or nil
-    local towerCrossbeam = variant.Id == "Towers" and towerCrossbeamSource() or nil
+    local underdeckSignal = approvedMeshRegion(chassis, "UnderdeckSignal")
+    local towerLattice = variant.Id == "Towers" and approvedMeshRegion(chassis, "UnderdeckLattice") or nil
+    local forgedBridge = variant.Id == "Towers" and towersForgedBridgeSource() or nil
+    local towerCrossbeam = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
+    local towerEdgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -3047,31 +3089,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             end
         end
 
-        local trim = decorPart(
-            decor,
-            "PlatformGlow" .. i,
-            Vector3.new(definition.size.X + 0.28, 0.12, definition.size.Z + 0.28),
-            platformPosition - Vector3.new(0, (definition.size.Y * 0.5) + 0.13, 0),
-            (i % 2 == 0) and theme.Secondary or theme.Accent,
-            VisualTheme.Materials.Glow
-        )
-        trim.CanCollide = false
-        trim.CanTouch = false
-        trim.CanQuery = false
-        -- An exposed fluorescent slab under every deck made the platforms
-        -- read like toy blocks. The engineered shadow lip is primary,
-        -- with a thinner subdued signal layer beneath it.
-        if routeTier then
-            local tierColor = routeTier == 1 and theme.Accent
-                or (routeTier == 2 and theme.Accent:Lerp(theme.Secondary, 0.30)
-                    or (routeTier == 3 and theme.Secondary
-                        or theme.Secondary:Lerp(theme.Accent, 0.55)))
-            trim.Color = tierColor
-            trim.Transparency = 0.72 - routeTier * 0.04
-        else
-            trim.Transparency = 0.64
-        end
         local skybridge = definition.Skybridge == true
+        addPlatformGlow(decor, platform, i, theme, routeTier, skybridge and towerEdgeBand or nil)
         addPlatformFinish(decor, platform, i, theme, underdeckSignal,
             skybridge and towerLattice or nil, skybridge and towerCrossbeam or nil)
         -- Real 320-stud arenas need strong visual destinations, not more

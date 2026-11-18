@@ -1,3 +1,7 @@
+## P4 — Bandes lumineuses sous les passerelles de Tower Run
+
+Les quatre passerelles peuvent afficher deux bandes fines aux extrémités biseautées sous leur tablier. Un seul maillage du pont forgé remplace chaque plaque lumineuse. Les bandes gardent leur largeur pendant la contraction, s’atténuent pendant l’alerte et disparaissent avec la passerelle. La plaque d’origine sert de secours si le modèle est indisponible à la construction de l’arène.
+
 ## P4 — Inserts lumineux sous les passerelles de Tower Run
 
 Deux inserts biseautés issus du châssis approuvé d’Orbital remplacent la plaque lumineuse sous chacune des quatre passerelles. Les deux inserts partagent un seul maillage et gardent leur largeur lorsque le tablier se raccourcit. Ils s’atténuent pendant l’alerte et s’éteignent pendant l’effondrement. La plaque d’origine sert de secours si le modèle est indisponible à la construction de l’arène.

@@ -623,6 +623,10 @@ describe("Shrinking Arena mobility integration", function()
         beam.CanTouch = false
         beam.CanQuery = false
         beam.Parent = source
+        local edgeBand = beam:Clone()
+        edgeBand.Name = "SculptedEdgeBand"
+        edgeBand.Size = Vector3.new(39.38, .1625, 5.43)
+        edgeBand.Parent = source
         local previous = storage:FindFirstChild(holder.Name)
         if previous then previous.Parent = nil end
         holder.Parent = storage
@@ -692,6 +696,7 @@ describe("Shrinking Arena mobility integration", function()
         local guardedFrame = decor:FindFirstChild("PlatformUnderFrame18")
         local guardedBevel = decor:FindFirstChild("PlatformBevel18_1")
         local guardedGlow = checkUnderdeckSignal(arena, bridge18)
+        local guardedBand = decor:FindFirstChild("PlatformGlow18")
         local surfaceRail = decor:FindFirstChild("SkybridgeRail18_1")
         local railTransparency = surfaceRail.Transparency
         SkybridgePressure.setPhase(pressure, "Warning", workspace:GetServerTimeNow())
@@ -699,16 +704,19 @@ describe("Shrinking Arena mobility integration", function()
         expect(math.abs(guardedFrame.Transparency - 0.65) < 0.001).toBe(true)
         expect(math.abs(guardedBevel.Transparency - 0.65) < 0.001).toBe(true)
         expect(math.abs(guardedGlow.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedBand.Transparency - 0.65) < 0.001).toBe(true)
         SkybridgePressure.setPhase(pressure, "Gone")
         expect(guardedRib.Transparency).toBe(1)
         expect(guardedFrame.Transparency).toBe(1)
         expect(guardedBevel.Transparency).toBe(1)
         expect(guardedGlow.Transparency).toBe(1)
+        expect(guardedBand.Transparency).toBe(1)
         SkybridgePressure.setPhase(pressure, nil)
         expect(guardedRib.Transparency).toBe(0)
         expect(math.abs(guardedFrame.Transparency - 0.04) < 0.001).toBe(true)
         expect(math.abs(guardedBevel.Transparency - 0.08) < 0.001).toBe(true)
         expect(math.abs(guardedGlow.Transparency - 0.56) < 0.001).toBe(true)
+        expect(math.abs(guardedBand.Transparency - 0.64) < 0.001).toBe(true)
         expect(surfaceRail.Transparency).toBe(railTransparency)
         local pier2 = decor:FindFirstChild("PlatformSupport18_2")
         local visual = Instance.new("Folder")
@@ -781,6 +789,15 @@ describe("Shrinking Arena mobility integration", function()
                     expect(part:IsA("MeshPart")).toBe(true)
                     expect(math.abs(part.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
                     expect(math.abs(part.Size.X - math.min(bridge.Size.X, bridge.Size.Z) - 0.22) < 0.01).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^PlatformGlow") then
+                    local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
+                    local offset = bridge.CFrame:PointToObjectSpace(part.Position)
+                    expect(part:IsA("MeshPart") and part.Material == Enum.Material.Neon).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(longitudinal)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - 49.28) < 0.01).toBe(true)
+                    expect(math.abs(part.Size.Z - 4.92) < 0.01).toBe(true)
+                    expect(math.abs(offset.Y + bridge.Size.Y * 0.5 + 0.47) < 0.01).toBe(true)
                     expect(part.CanTouch or part.CanQuery).toBe(false)
                 elseif name:match("^PlatformBevel") then
                     local edge = tonumber(name:match("_(%d)$"))
@@ -863,6 +880,10 @@ describe("Shrinking Arena mobility integration", function()
                         expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
                     elseif detail.Name:match("^PlatformCoreGlow") then
                         checkUnderdeckSignal(arena, bridge)
+                    elseif detail.Name:match("^PlatformGlow") then
+                        expect(math.abs(detail.Size.X - prior.size.X * shrunkSpan / originalSpan) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Y - prior.size.Y) < 0.01).toBe(true)
                     elseif d0 > 2.2 then
                         expect(d1 < d0).toBe(true)
                     end
