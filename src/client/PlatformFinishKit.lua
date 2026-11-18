@@ -69,7 +69,15 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     return part
 end
 
-local function fitTrimProfile(profile, frame, size, alongX, assetId)
+function PlatformFinishKit.trimProfilePose(frame, size, swapped)
+    if swapped then
+        return frame * CFrame.Angles(0, math.pi * 0.5, 0),
+            Vector3.new(size.Z, size.Y, size.X)
+    end
+    return frame, size
+end
+
+function PlatformFinishKit.fitTrimProfile(profile, frame, size, alongX, assetId)
     local mesh = profile and profile:Clone()
     if not mesh then return nil, frame, size end
     local swapped = (profile.Size.X > profile.Size.Z) ~= alongX
@@ -77,11 +85,8 @@ local function fitTrimProfile(profile, frame, size, alongX, assetId)
     mesh.TextureID = ""
     mesh.MaterialVariant = ""
     mesh:SetAttribute("Original3DAssetId", assetId)
-    if swapped then
-        mesh:SetAttribute("PlatformTrimAxisSwap", true)
-        frame *= CFrame.Angles(0, math.pi * 0.5, 0)
-        size = Vector3.new(size.Z, size.Y, size.X)
-    end
+    mesh:SetAttribute("PlatformTrimAxisSwap", if swapped then true else nil)
+    frame, size = PlatformFinishKit.trimProfilePose(frame, size, swapped)
     return mesh, frame, size
 end
 
@@ -380,7 +385,7 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
     local built = {}
     for railIndex, segment in ipairs(segments) do
         if count == 4 or railIndex <= 2 then
-            local mesh, frame, size = fitTrimProfile(forgedProfile,
+            local mesh, frame, size = PlatformFinishKit.fitTrimProfile(forgedProfile,
                 CFrame.new(segment[1]), segment[2], railIndex <= 2, 126298311664881)
             local piece = add(parent, platform, "PlatformRecessedSideRail" .. railIndex,
                 frame, size, color, material, 0.08, nil, mesh)
@@ -877,7 +882,7 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     local color = theme.Structure:Lerp(theme.Detail, 0.28)
     local accent = theme.Detail:Lerp(theme.Surface, 0.42)
     local function detail(name, height, size, tint, material, alpha, profile, assetId)
-        local mesh, frame, dimensions = fitTrimProfile(
+        local mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
             profile, CFrame.new(0, height, -sz * 0.19), size, true, assetId)
         local item = add(parent, platform, variant .. name, frame, dimensions,
             tint, material, alpha, nil, mesh)
@@ -1092,7 +1097,7 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     local built = {}
     for i = 1, count do
         local frame, length = loadBraceFrame(size, i, harbor)
-        local mesh, pose, dimensions = fitTrimProfile(forgedProfile, frame,
+        local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(forgedProfile, frame,
             Vector3.new(profile.width, profile.depth, length), false, 126298311664881)
         local brace = add(parent, platform, variant .. "LoadBrace" .. i, pose, dimensions,
             color, profile.material, tier == "High" and 0.08 or 0.14, nil, mesh)
@@ -1245,9 +1250,11 @@ end
 -- Platform disappearance is gameplay, not an artistic overlay: any local
 -- welded armor or painted glyph must also become completely invisible.
 -- Saved base transparencies survive repeated Warning/Gone/Restore cycles.
+-- Takeoff cues use their own visibility because their landing can also close.
 function PlatformFinishKit.applyCollapseVisibility(parts, phase)
     for _, item in ipairs(parts or {}) do
-        if item and item.Parent and item:IsA("BasePart") then
+        if item and item.Parent and item:IsA("BasePart")
+            and item:GetAttribute("ParkourTakeoffCue") ~= true then
             local original = item:GetAttribute("ChaosBaseTransparency")
             if type(original) ~= "number" then
                 original = item.Transparency
@@ -1310,7 +1317,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
                     profile = profiles.hatch
                 end
             end
-            mesh, localFrame, size = fitTrimProfile(profile, localFrame, size,
+            mesh, localFrame, size = PlatformFinishKit.fitTrimProfile(profile, localFrame, size,
                 size.X >= size.Z, assetId)
         end
         local item = add(parent, platform, names[i], localFrame, size,

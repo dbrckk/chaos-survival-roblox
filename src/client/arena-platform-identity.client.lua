@@ -498,26 +498,30 @@ local function takeoffGeometry(platform,target)
     )
 end
 
-local function decorateTakeoff(platform, target, index, theme, quality)
+local function decorateTakeoff(platform, target, index, theme, quality, profiles)
     local left,right,size = takeoffGeometry(platform,target)
     if not left then return end
     local strokes = {}
     -- The verified safe route is restrained cool-white across all arenas;
     -- collapse/hazard warnings remain the more urgent amber/orange cue.
-    -- Enlarge only these TWO existing strokes, not their part count.
+    -- Fit the approved chamfered casting to each existing stroke.
     local opacity = quality.Name == "Low" and 0.34 or 0.43
     local color = Color3.fromRGB(185, 236, 239):Lerp(theme.Accent, 0.24)
     for side = -1, 1, 2 do
+        local mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
+            profiles and profiles.hatch, side == -1 and left or right, size,
+            false, profiles and profiles.assetId)
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
-            size,
-            side == -1 and left or right,
+            dimensions,
+            frame,
             color,
             Enum.Material.Neon,
             opacity,
-            platform
+            platform, mesh
         )
         piece:SetAttribute("SkipRouteFootprint",true)
+        piece:SetAttribute("ParkourTakeoffCue", true)
         strokes[#strokes + 1] = piece
     end
     return strokes
@@ -527,19 +531,24 @@ local function refitTakeoff(platform,target,strokes)
     local left,right,size
     if target then left,right,size = takeoffGeometry(platform,target) end
     for index, stroke in ipairs(strokes) do
-        if stroke.Parent then
-            local joint = stroke:FindFirstChild("PlatformIdentityWeld")
-            local frame = if index == 1 then left else right
-            if frame and joint and joint:IsA("Weld")
-                and joint.Part0 == stroke and joint.Part1 == platform then
-                stroke.Size = size
-                joint.C1 = platform.CFrame:ToObjectSpace(frame)
-                stroke.Transparency = stroke:GetAttribute("ChaosBaseTransparency")
-            else
-                stroke.Transparency = 1
-            end
+        local joint = stroke:FindFirstChild("PlatformIdentityWeld")
+        if stroke.Parent ~= folder or not joint or not joint:IsA("Weld")
+            or joint.Part0 ~= stroke or joint.Part1 ~= platform then
+            for _, arm in ipairs(strokes) do arm:Destroy() end
+            return false
+        end
+        local frame = if index == 1 then left else right
+        if frame then
+            local pose, dimensions = PlatformFinishKit.trimProfilePose(
+                frame, size, stroke:GetAttribute("PlatformTrimAxisSwap") == true)
+            stroke.Size = dimensions
+            joint.C1 = platform.CFrame:ToObjectSpace(pose)
+            stroke.Transparency = stroke:GetAttribute("ChaosBaseTransparency")
+        else
+            stroke.Transparency = 1
         end
     end
+    return true
 end
 
 local ROUTE_DECK_PROPERTIES = {
@@ -563,6 +572,8 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+    local platformArtProfiles = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+        and PlatformFinishKit.artProfiles(variant, tier.Name ~= "Low") or nil
     local index = 0
     local replacements = {}
     local actualSupportParts = {}
@@ -597,10 +608,12 @@ local function rebuild()
         if not refit and cue.hazardBlocked == blocked then return end
         cue.hazardBlocked = blocked
         if blocked then target = nil end
-        if cue.strokes then
-            refitTakeoff(platform, target, cue.strokes)
-        elseif target then
-            cue.strokes = decorateTakeoff(platform, target, cue.index, theme, tier)
+        if cue.strokes and not refitTakeoff(platform, target, cue.strokes) then
+            cue.strokes = nil
+        end
+        if not cue.strokes and target then
+            cue.strokes = decorateTakeoff(platform, target, cue.index, theme, tier,
+                platformArtProfiles)
         end
     end
     local function syncRoute(platform)
@@ -707,8 +720,6 @@ local function rebuild()
     local nearServiceHatches = PlatformFinishKit.selectOriginalServiceHatches(
         ordered, variant, tier.Name, base, cameraPoint, cameraLook,
         player:GetAttribute("OptionalVfxPressure"))
-    local platformArtProfiles = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
-        and PlatformFinishKit.artProfiles(variant, tier.Name ~= "Low") or nil
     local nearRims = ApprovedPlatformRimMeshKit.selectVisibleDecks(
         ordered, tier.Name, base, cameraPoint,
         player:GetAttribute("OptionalVfxPressure"),
@@ -1471,7 +1482,13 @@ local function rebuild()
                         end
                     end
                 end
-                if routeTier and not initial then queueRouteUpdate(platform,routeTier) end
+                if routeTier and not initial then
+                    local cue = routeCueStates[platform]
+                    for _, stroke in ipairs(cue and cue.strokes or {}) do
+                        if stroke.Parent then stroke.Transparency = 1 end
+                    end
+                    queueRouteUpdate(platform,routeTier)
+                end
                 refreshOutpostMotion(platform)
             end
             collapseConnections[platform] =

@@ -1881,8 +1881,12 @@ print("PASS cargo tie-downs share the original service quota and preserve the re
 CUE_RULES=(ROOT/"src/shared/JumpRouteCueRules.lua").read_text(encoding="utf8")
 assert 'JumpRouteCueRules.takeoffChevron(' in OWNER
 assert 'piece:SetAttribute("SkipRouteFootprint",true)' in OWNER
+assert 'piece:SetAttribute("ParkourTakeoffCue", true)' in OWNER
+assert 'and item:GetAttribute("ParkourTakeoffCue") ~= true' in FINISH
+assert 'profiles and profiles.hatch, side == -1 and left or right, size,' in OWNER
 assert 'if target then left,right,size = takeoffGeometry(platform,target) end' in OWNER
-assert 'joint.C1 = platform.CFrame:ToObjectSpace(frame)' in OWNER
+assert 'frame, size, stroke:GetAttribute("PlatformTrimAxisSwap") == true)' in OWNER
+assert 'joint.C1 = platform.CFrame:ToObjectSpace(pose)' in OWNER
 assert 'Size = true, CFrame = true, Parent = true, Anchored = true' in OWNER
 assert 'local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant,isClear)' in OWNER
 assert 'if generation ~= routeGeneration then return end' in OWNER

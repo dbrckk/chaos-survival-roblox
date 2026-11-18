@@ -1,3 +1,7 @@
+## P4 — Chevrons de départ des sauts
+
+Sur Classic, Tower Run, Crossroads et Storm Harbor, les deux branches de chaque chevron peuvent utiliser le profil biseauté approuvé de l’arène. Les repères conservent leur couleur et suivent le saut recalculé quand les plateformes bougent. Ils s’effacent si le saut devient impraticable ou dangereux. Les formes simples prennent le relais si le maillage manque ou si la charge graphique augmente.
+
 ## P4 — Plaques, chevrons et lentilles des plateformes
 
 Les cinq arènes utilisent les reliefs approuvés pour les plaques et bandes des plateformes. Crossroads reçoit des chevrons à pans coupés et les lentilles de Crossroads et d’Orbital reprennent un profil à douze facettes. Les pièces suivent le rétrécissement et les alertes des plateformes. Les habillages complets de dessous de plateforme gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
