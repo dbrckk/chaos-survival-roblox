@@ -1266,6 +1266,72 @@ describe("Shrinking Arena mobility integration", function()
         if not ok then error(why) end
     end)
 
+    local function checkLookoutLinks(arena, scale)
+        local decks=arena.Platforms:GetChildren()
+        local lookoutEntries={}
+        for _,deck in ipairs(decks) do
+            local step=deck:GetAttribute("PromenadeStep")
+            if step==1 or step==8 then
+                local west=(deck:GetAttribute("PromenadeLane")-1)*2+1
+                lookoutEntries[step==1 and west or west+1]=deck
+            end
+        end
+        local branches,crosslinks=0,0
+        for _,deck in ipairs(decks) do
+            local step=deck:GetAttribute("BranchStep")
+            if deck:GetAttribute("PerimeterStep")==5 then
+                local id=assert(deck.Name:match("^Platform(%d+)$"))
+                local panel=arena.Decor["PlatformPanel"..id]
+                local route=deck:GetAttribute("PerimeterRoute")
+                for _,side in ipairs({-1,1}) do
+                    local arm=arena.Decor["BranchForkArrow"..route.."_"..side]
+                    assert(arm:IsA("MeshPart") and arm:GetAttribute("ChaosWayfinding")==true)
+                    assert(arm:GetAttribute("PerimeterPlatformIndex")==tonumber(id))
+                    assert(arm.Position.Y-arm.Size.Y*.5>panel.Position.Y+panel.Size.Y*.5)
+                end
+            end
+            if step or deck:GetAttribute("CrosslinkRoute") then
+                local id=assert(deck.Name:match("^Platform(%d+)$"))
+                local band=arena.Decor["PlatformGlow"..id]
+                local across=step==4
+                local size=deck.Size
+                checkRouteSignal(deck,band,Vector3.new(
+                    size.X+(across and .28 or .96)*scale,.14,
+                    size.Z+(across and .96 or .28)*scale
+                ),Vector3.new(0,size.Y*.5-1.02,0))
+                local axis=deck.CFrame:VectorToObjectSpace(band.CFrame.LookVector)
+                assert(math.abs(across and axis.X or axis.Z)>.999 and deck.CanCollide)
+                if not step then
+                    crosslinks+=1
+                    continue
+                end
+                branches+=1
+                local route=deck:GetAttribute("BranchRoute")
+                local forward=Vector3.new(0,0,deck.Position.Z>=arena.Base.Position.Z and 1 or -1)
+                if across then
+                    local delta=lookoutEntries[route].Position-deck.Position
+                    forward=Vector3.new(delta.X,0,delta.Z).Unit
+                    assert(deck:FindFirstChild("SideLookoutLabel"))
+                end
+                local point=deck.Position+Vector3.new(0,deck.Size.Y*.5+.155,0)
+                local heading=CFrame.lookAt(point,point+forward)
+                local panel=arena.Decor["PlatformPanel"..id]
+                for _,side in ipairs({-1,1}) do
+                    local arm=arena.Decor["BranchStepArrow"..route.."_"..step.."_"..side]
+                    local pose=heading*CFrame.new(side*.48*scale,0,0)*CFrame.Angles(0,math.rad(side*34),0)
+                    assert(arm:IsA("MeshPart") and arm:GetAttribute("ChaosWayfinding")==true)
+                    assert(arm:GetAttribute("PerimeterPlatformIndex")==tonumber(id))
+                    assert(not arm.CanCollide and not arm.CanTouch and not arm.CanQuery)
+                    assert(arm.CFrame.LookVector:Dot(pose.LookVector)>.999)
+                    assert((arm.Position-pose.Position).Magnitude<.025)
+                    assert((arm.Size-Vector3.new(.25*scale,.065,2*scale)).Magnitude<.025)
+                    assert(arm.Position.Y-arm.Size.Y*.5>panel.Position.Y+panel.Size.Y*.5)
+                end
+            end
+        end
+        assert(branches==16 and crosslinks==4)
+    end
+
     it("fits the short approved chassis beneath every Promenade deck",function()
         local storage=game:GetService("ReplicatedStorage")
         local oldMap=workspace:FindFirstChild("GeneratedMap")
@@ -1285,6 +1351,7 @@ describe("Shrinking Arena mobility integration", function()
             for _,variant in ipairs(ArenaVariants.Order) do
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
+                checkLookoutLinks(arena,1)
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}
@@ -1378,6 +1445,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert(arena.Base.Size.X<=144.05 and math.abs(mesh.Size.X-width*.45)<.025)
                     assert(checkUnderdeckSignal(arena,finalDeck)==glow)
                     assert(checkAerialBand(arena,finalDeck,.45)==band)
+                    checkLookoutLinks(arena,.45)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1385,6 +1453,7 @@ describe("Shrinking Arena mobility integration", function()
                     cleanup(callbacks,{})
                     assert((glow.Size-originalGlowSize).Magnitude<.01)
                     assert((band.Size-originalBandSize).Magnitude<.01)
+                    checkLookoutLinks(arena,1)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)

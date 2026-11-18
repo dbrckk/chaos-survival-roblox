@@ -1675,6 +1675,36 @@ local function approvedMeshRegion(model, name)
     return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
 end
 
+local BRANCH_CHEVRON = {
+    size = Vector3.new(0.25, 0.065, 2.0), spread = 0.48, angle = math.rad(34), alpha = 0.44,
+}
+local FORK_CHEVRON = {
+    size = Vector3.new(0.33, 0.065, 2.4), spread = 0.55, angle = math.rad(36), alpha = 0.32,
+}
+
+local function addLookoutChevron(decor, name, deck, index, forward, color, style, profile)
+    -- Clear the landing panel and retain the original visual owner.
+    local point = deck.Position + Vector3.new(0, deck.Size.Y * 0.5 + 0.155, 0)
+    local look = CFrame.lookAt(point, point + forward)
+    for side = -1, 1, 2 do
+        local arrowName = name .. "_" .. tostring(side)
+        local pose = look * CFrame.new(side * style.spread, 0, 0)
+            * CFrame.Angles(0, side * style.angle, 0)
+        local mark = RouteSignalGeometry.fit(profile, pose, style.size)
+        if not mark then
+            mark = decorPart(nil, arrowName, style.size, pose.Position, color, VisualTheme.Materials.Glow)
+            mark.CFrame = pose
+        end
+        mark.Name = arrowName
+        mark.Color = color
+        mark.Material = VisualTheme.Materials.Glow
+        mark.Transparency = style.alpha
+        mark:SetAttribute("PerimeterPlatformIndex", index)
+        mark:SetAttribute("ChaosWayfinding", true)
+        mark.Parent = decor
+    end
+end
+
 local function harborLandingAlongX(definition)
     if definition.HarborSkywayLane then return true end
     if definition.HarborSpokeRoute then return definition.HarborSpokeRoute % 2 == 0 end
@@ -1699,8 +1729,13 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 
     local size = platform.Size
     local alongX = if routeAlongX ~= nil then routeAlongX else size.X > size.Z
+    local atRim = platform:GetAttribute("BranchStep") ~= nil
+        or platform:GetAttribute("CrosslinkRoute") ~= nil
+    -- The grounded riser reaches the arena floor. Place the band below
+    -- the sculpted fascia near the landing surface, rather than at its foot.
+    local height = if atRim then size.Y * 0.5 - 1.02 else -size.Y * 0.5 - 0.47
     local glow = edgeBand and RouteSignalGeometry.fit(edgeBand,
-        platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.47, 0),
+        platform.CFrame * CFrame.new(0, height, 0),
         Vector3.new(
             size.X + (alongX and 0.28 or edgeOverhang),
             0.14,
@@ -2826,8 +2861,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- north/south lookouts of every arena. Always append AFTER Harbor's
     -- dock spurs: no existing platform ID, hazard owner, or bot target
     -- changes. Exactly 16 collision decks, no floor-level collision wall.
+    local lookoutEntries = {}
     for _, definition in ipairs(variant.PromenadePlatforms or {}) do
         table.insert(platformDefinitions, definition)
+        local leftLookout = (definition.PromenadeLane - 1) * 2 + 1
+        if definition.PromenadeStep == 1 then
+            lookoutEntries[leftLookout] = definition.offset
+        elseif definition.PromenadeStep == 8 then
+            lookoutEntries[leftLookout + 1] = definition.offset
+        end
     end
     -- The new REAL transverse Sky Spine is appended after both historical
     -- promenade lanes; no legacy platform, bridge or AI route ID changes.
@@ -2986,29 +3028,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform.Color = theme.Surface:Lerp(theme.Secondary, 0.38)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
-            -- Subtle V-shaped paint on real branch decks: orientation
-            -- follows the branch and shrinking disaster follows the deck.
-            local forwardZ = definition.offset.Z >= 0 and 1 or -1
-            local point = platform.Position
-                + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)
-            local look = CFrame.lookAt(
-                point, point + Vector3.new(0, 0, forwardZ)
-            )
-            for side = -1, 1, 2 do
-                local mark = decorPart(
-                    decor, "BranchStepArrow" .. definition.BranchRoute
-                        .. "_" .. definition.BranchStep .. "_"
-                        .. tostring(side),
-                    Vector3.new(0.25, 0.065, 2.0), point,
-                    theme.Secondary, VisualTheme.Materials.Glow
-                )
-                mark.CFrame = look
-                    * CFrame.new(side * 0.48, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 34), 0)
-                mark.Transparency = 0.44
-                mark:SetAttribute("PerimeterPlatformIndex", i)
-                mark:SetAttribute("ChaosWayfinding", true)
+            local forward = Vector3.new(0, 0, definition.offset.Z >= 0 and 1 or -1)
+            local entry = definition.BranchStep == 4 and lookoutEntries[definition.BranchRoute]
+            if entry then
+                local towardEntry = (entry - definition.offset) * Vector3.new(1, 0, 1)
+                if towardEntry.Magnitude > 0.01 then forward = towardEntry.Unit end
             end
+            addLookoutChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
+                platform, i, forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile)
         end
 
         if definition.CrosslinkRoute then
@@ -3092,9 +3119,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local elevatedRoute = definition.PromenadeLane or definition.SkySpineStep
         local harborAlongX = harborLandingAlongX(definition)
         local harborLanding = harborAlongX ~= nil
+        local lookoutAccess = definition.BranchRoute or definition.CrosslinkRoute
+        local glowAlongX = if lookoutAccess then definition.BranchStep == 4 else harborAlongX
         addPlatformGlow(decor, platform, i, theme, routeTier,
-            (skybridge or elevatedRoute or harborLanding) and edgeBand or nil,
-            skybridge and 0.42 or 0.96, harborAlongX)
+            (skybridge or elevatedRoute or harborLanding or lookoutAccess) and edgeBand or nil,
+            skybridge and 0.42 or 0.96, glowAlongX)
         addPlatformFinish(decor, platform, i, theme, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
             skybridge and sweptProfile or nil, harborAlongX)
@@ -3298,25 +3327,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if fork and fork:IsA("BasePart") then
             local forwardZ = fork.Position.Z >= config.ArenaCenter.Z
                 and 1 or -1
-            local point = fork.Position
-                + Vector3.new(0, fork.Size.Y * 0.5 + 0.055, 0)
-            local facing = CFrame.lookAt(
-                point, point + Vector3.new(0, 0, forwardZ)
-            )
-            for side = -1, 1, 2 do
-                local arrow = decorPart(
-                    decor, "BranchForkArrow" .. route .. "_"
-                        .. tostring(side),
-                    Vector3.new(0.33, 0.065, 2.4), point,
-                    theme.Secondary, VisualTheme.Materials.Glow
-                )
-                arrow.CFrame = facing
-                    * CFrame.new(side * 0.55, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 36), 0)
-                arrow.Transparency = 0.32
-                arrow:SetAttribute("PerimeterPlatformIndex", forkIndex)
-                arrow:SetAttribute("ChaosWayfinding", true)
-            end
+            addLookoutChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
+                Vector3.new(0, 0, forwardZ), theme.Secondary, FORK_CHEVRON, sweptProfile)
         end
     end
 
