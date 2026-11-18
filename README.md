@@ -1,3 +1,7 @@
+## P4 — Rayons et médaillon au sol d’Orbital
+
+Les huit rayons lumineux peuvent reprendre le profil forgé de Tower Run. Ils rejoignent le bord du médaillon sans traverser son centre. Le médaillon peut reprendre l’anneau horizontal du réacteur approuvé. Les rayons plats et le disque horizontal prennent le relais si les maillages sont indisponibles à la construction.
+
 ## P4 — Couronne et noyau lumineux d’Orbital
 
 Les douze segments animés peuvent reprendre le profil forgé de Tower Run. Le noyau lumineux peut reprendre la forme facettée du réacteur approuvé et conserve sa lumière ponctuelle. Les segments plats et la sphère restent disponibles si leurs maillages respectifs sont indisponibles à la construction.

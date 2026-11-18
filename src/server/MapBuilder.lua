@@ -1068,7 +1068,7 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     end
 end
 
-local function orbitalCoreSource()
+local function orbitalReactorNodeRegion(regionSize)
     local holder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
     if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
         return nil
@@ -1080,17 +1080,15 @@ local function orbitalCoreSource()
         or node:GetAttribute("OriginalOrbitalReactorLandmark3D") ~= true
         or node:GetAttribute("Original3DAssetId") ~= 104654294187035 then return nil end
 
-    -- The imported node is split by material. Bounds identify the forged
-    -- core without depending on the names assigned to the imported pieces.
-    local coreSize = Vector3.new(2.96, 2.9503, 2.96)
-    local core
+    -- The imported node is split by material with no stable piece names.
+    local region
     for _, piece in ipairs(node:GetChildren()) do
-        if piece:IsA("MeshPart") and (piece.Size - coreSize).Magnitude < 0.075 then
-            if core or not piece.Archivable or piece.MeshId == "" then return nil end
-            core = piece
+        if piece:IsA("MeshPart") and (piece.Size - regionSize).Magnitude < 0.075 then
+            if region or not piece.Archivable or piece.MeshId == "" then return nil end
+            region = piece
         end
     end
-    return core
+    return region
 end
 
 local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
@@ -1221,7 +1219,7 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
         end
 
         local core = fitDecorMesh(
-            orbitalCoreSource(),
+            orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96)),
             "OrbitalCore",
             CFrame.new(center + Vector3.new(0, 13, 0)),
             Vector3.new(5, 5, 5),
@@ -1450,8 +1448,8 @@ local function addArenaHologram(decor, config, variant, theme)
     hint.Parent = gui
 end
 
-local function addVariantFloorLanguage(decor, config, variant, theme)
-    local center = config.ArenaCenter
+local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
+    local center = base.Position
 
     if variant.Id == "Classic" then
         for i = -2, 2 do
@@ -1654,37 +1652,51 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             line.CastShadow = false
         end
     elseif variant.Id == "Orbital" then
+        local hubDiameter = 14
+        local outerRadius = 25
+        -- End under the outer edge of the ring, leaving its opening clear.
+        local innerRadius = hubDiameter * 0.5 - 0.2
+        local spokeSize = Vector3.new(outerRadius - innerRadius, 0.07, 0.20)
+        local spokeCenter = (innerRadius + outerRadius) * 0.5
+        -- The raised ground modules finish above the inset deck.
+        local spokeY = ArenaPresentation.deckArtOffset(base, spokeSize.Y) + 0.02
         for i = 0, 7 do
             local angle = math.rad(i * 45)
-            local radius = 25
             local position = center + Vector3.new(
-                math.cos(angle) * radius * 0.5,
-                1.20,
-                math.sin(angle) * radius * 0.5
+                math.cos(angle) * spokeCenter,
+                spokeY,
+                math.sin(angle) * spokeCenter
             )
-            local spoke = decorPart(
-                decor,
+            local spoke = fitDecorMesh(
+                sweptProfile,
                 "OrbitalSpoke" .. tostring(i + 1),
-                Vector3.new(radius, 0.07, 0.20),
-                position,
+                CFrame.new(position) * CFrame.Angles(0, -angle, 0),
+                spokeSize,
                 i % 2 == 0 and theme.Accent or theme.Secondary,
                 VisualTheme.Materials.Glow
             )
-            spoke.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
             spoke.Transparency = 0.52
+            spoke.Parent = decor
         end
 
-        local coreMark = decorPart(
-            decor,
+        local markSize = Vector3.new(hubDiameter, 0.10, hubDiameter)
+        local markY = ArenaPresentation.deckArtOffset(base, markSize.Y) + 0.02
+        local markPose = CFrame.new(center + Vector3.new(0, markY, 0))
+        local coreMark = fitDecorMesh(
+            orbitalReactorNodeRegion(Vector3.new(4.11, 0.39, 4.11)),
             "OrbitalCoreMark",
-            Vector3.new(14, 0.10, 14),
-            center + Vector3.new(0, 1.21, 0),
+            markPose,
+            markSize,
             theme.Detail:Lerp(theme.Accent, 0.28),
             theme.PanelMaterial or Enum.Material.Metal
         )
-        coreMark.Shape = Enum.PartType.Cylinder
-        coreMark.CFrame = CFrame.new(coreMark.Position) * CFrame.Angles(0, 0, math.rad(90))
+        if coreMark:IsA("Part") then
+            coreMark.Shape = Enum.PartType.Cylinder
+            coreMark.Size = Vector3.new(markSize.Y, markSize.X, markSize.Z)
+            coreMark.CFrame = markPose * CFrame.Angles(0, 0, math.pi * 0.5)
+        end
         coreMark.Transparency = 0.34
+        coreMark.Parent = decor
     end
 
     local panelOffsetX = math.max(18, (variant.BaseSize.X * 0.5) - 17)
@@ -2905,7 +2917,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
     StructureRetrofit.buildArena(decor, base, variant.Id, theme)
-    addVariantFloorLanguage(decor, config, variant, theme)
+    addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
     addArenaHologram(decor, config, variant, theme)
 
     local halfX = variant.BaseSize.X * 0.5
