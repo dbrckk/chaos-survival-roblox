@@ -1,3 +1,7 @@
+## P4 — Marquage d’alerte des volets de Tower Run
+
+Deux chevrons ambre en miroir encadrent le volet sur chaque passerelle. Ils pointent vers les deux entrées pour signaler que la voie va se fermer. La barre centrale indique l’emplacement du volet. Le marquage apparaît dès l’alerte, s’atténue quand le volet est levé et disparaît à la réouverture.
+
 ## P4 — Volets mobiles sculptés de Tower Run
 
 Les quatre volets peuvent reprendre le profil métallique du pont forgé. L’habillage suit le volet et reprend sa couleur pendant la montée. Chaque joueur garde le volet d’origine à l’écran tant que le maillage est indisponible. Les collisions et les temps d’alerte restent pilotés par le serveur.

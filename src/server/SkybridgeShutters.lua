@@ -31,6 +31,38 @@ function SkybridgeShutters.canComplete(ctx, now)
         + SkybridgeShutters.RaisedSeconds + 2 <= deadline
 end
 
+local function makeWarningChevrons(stripe, alongX, width)
+    local forward = alongX and Vector3.xAxis or Vector3.zAxis
+    local lateral = alongX and Vector3.zAxis or Vector3.xAxis
+    local chevrons = {}
+    -- The opposite tips point back toward the two approaches. The
+    -- crossbar remains the exact location of the rising obstruction.
+    for approach = -1, 1, 2 do
+        local lift = Vector3.new(0, 0.025, 0)
+        local tip = forward * (approach * 2.25) + lift
+        for side = -1, 1, 2 do
+            local tail = forward * (approach * 0.90) + lateral * (side * width * 0.30) + lift
+            local arm = Instance.new("Part")
+            arm.Name = "ShutterWarningChevron"
+            arm.Size = Vector3.new(0.24, 0.04, (tip - tail).Magnitude)
+            arm.CFrame = stripe.CFrame * CFrame.lookAt((tip + tail) * 0.5, tip)
+            arm.Anchored = true
+            arm.CanCollide = false
+            arm.CanTouch = false
+            arm.CanQuery = false
+            arm.CastShadow = false
+            arm.Material = Enum.Material.Neon
+            arm.Color = stripe.Color
+            arm.Transparency = 1
+            arm.TopSurface = Enum.SurfaceType.Smooth
+            arm.BottomSurface = Enum.SurfaceType.Smooth
+            arm.Parent = stripe
+            chevrons[#chevrons + 1] = arm
+        end
+    end
+    return chevrons
+end
+
 function SkybridgeShutters.gateFor(bridge, folder)
     if typeof(bridge) ~= "Instance" or not bridge:IsA("BasePart")
         or bridge:GetAttribute("ChaosSkybridge") ~= true
@@ -86,6 +118,7 @@ function SkybridgeShutters.gateFor(bridge, folder)
     stripe.Material = Enum.Material.Metal
     stripe.Color = Color3.fromRGB(242, 183, 74)
     stripe.Transparency = 1
+    local chevrons = makeWarningChevrons(stripe, alongX, width)
     stripe.Parent = folder
 
     local rails = {}
@@ -104,6 +137,7 @@ function SkybridgeShutters.gateFor(bridge, folder)
         bridge = bridge,
         gate = gate,
         stripe = stripe,
+        chevrons = chevrons,
         rails = rails,
         raised = gate.CFrame,
         lowered = gate.CFrame * CFrame.new(0, -SkybridgeShutters.Height, 0),
@@ -141,9 +175,15 @@ function SkybridgeShutters.setPhase(state, phase, timestamp)
     end
     gate:SetAttribute("ShutterPhase", phase)
     if state.stripe and state.stripe.Parent then
-        state.stripe.Transparency = phase == "Warning" and 0.20
+        local warningAlpha = phase == "Warning" and 0.20
             or (phase == "Raising" and 0.12
                 or (phase == "Raised" and 0.62 or 1))
+        state.stripe.Transparency = warningAlpha
+        for _, arm in ipairs(state.chevrons) do
+            if arm.Parent == state.stripe then
+                arm.Transparency = warningAlpha
+            end
+        end
     end
     -- Let the amber stripe take priority while keeping the route visible.
     for _, entry in ipairs(state.rails) do

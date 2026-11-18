@@ -485,6 +485,26 @@ describe("Arena mechanics", function()
             local index = bridge.Name:match("^Skybridge(%d+)$")
             local deckPanel = arena.Decor:FindFirstChild("PlatformPanel" .. index)
             expect(stripeTop > deckPanel.Position.Y + deckPanel.Size.Y * 0.5).toBe(true)
+            local alongX = bridge.Size.X > bridge.Size.Z
+            local direction = alongX and Vector3.xAxis or Vector3.zAxis
+            local across = alongX and Vector3.zAxis or Vector3.xAxis
+            local positiveTips = 0
+            expect(#state.chevrons).toBe(4)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Parent).toBe(state.stripe)
+                expect(arm.CanCollide or arm.CanTouch or arm.CanQuery).toBe(false)
+                expect(arm.Transparency).toBe(1)
+                local pose = state.stripe.CFrame:ToObjectSpace(arm.CFrame)
+                local tip = pose.Position + pose.LookVector * arm.Size.Z * 0.5
+                local tail = pose.Position - pose.LookVector * arm.Size.Z * 0.5
+                expect(math.abs(tip:Dot(across)) < 0.01).toBe(true)
+                expect(math.abs(math.abs(tip:Dot(direction)) - 2.25) < 0.01).toBe(true)
+                expect(tip:Dot(direction) * tail:Dot(direction) > 0).toBe(true)
+                expect(math.abs(tail:Dot(direction)) > state.stripe.Size:Dot(direction) * 0.5).toBe(true)
+                expect(math.abs(tail:Dot(across)) + arm.Size.X * 0.5 < width * 0.5).toBe(true)
+                if tip:Dot(direction) > 0 then positiveTips += 1 end
+            end
+            expect(positiveTips).toBe(2)
             for _, entry in ipairs(state.rails) do
                 local rail = entry.part
                 expect(rail:GetAttribute("ChaosWayfinding")).toBe(true)
@@ -498,6 +518,9 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(state.stripe.Transparency < 0.4).toBe(true)
             expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Warning")
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Transparency).toBe(state.stripe.Transparency)
+            end
             for _, entry in ipairs(state.rails) do
                 expect(math.abs(entry.part.Transparency - 0.46) < 0.001).toBe(true)
             end
@@ -513,6 +536,9 @@ describe("Arena mechanics", function()
             expect(gate.CanQuery).toBe(true)
             expect(gate.Material).toBe(Enum.Material.Metal)
             expect(gate.Size).toBe(colliderSize)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Transparency > 0.60 and arm.Transparency < 1).toBe(true)
+            end
             local joint = skin:FindFirstChildOfClass("WeldConstraint")
             assert(joint)
             joint:Destroy()
@@ -528,6 +554,9 @@ describe("Arena mechanics", function()
             expect(gate.CanQuery).toBe(false)
             expect(gate.Transparency).toBe(1)
             expect(state.stripe.Transparency).toBe(1)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Transparency).toBe(1)
+            end
             expect(state.stripe.CanCollide).toBe(false)
             expect(gate:GetAttribute("ShutterWarningAt") == nil)
                 .toBe(true)
