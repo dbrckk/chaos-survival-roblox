@@ -1093,8 +1093,8 @@ describe("Chaos Survival engine", function()
                     expect(piece.CanQuery).toBe(false)
                     expect(piece.CastShadow).toBe(false)
                 end
-                expect(decor:FindFirstChild("PerimeterExitCrown" .. route)
-                    :IsA("WedgePart")).toBe(true)
+                local crown = decor:FindFirstChild("PerimeterExitCrown" .. route)
+                expect(crown:IsA("MeshPart") or crown:IsA("WedgePart")).toBe(true)
             end
             -- On the larger map, extra scenery must be volumetric 3D
             -- yet absolutely incapable of blocking R15 routes or stealing

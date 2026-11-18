@@ -2934,6 +2934,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local forgedBridge = towersForgedBridgeSource()
     local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
     local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
+    local beaconShaft = beaconShaftSource(variant.Id)
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -3335,46 +3336,50 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         end
 
         if definition.PerimeterStep == #variant.PerimeterPlatforms / 4 then
-            -- Original native three-dimensional exit facade at the FINAL terrace: four simple
-            -- nonblocking components per route, no extra emitters/lights.
-            -- Mounted on the OUTWARD face of the solid exit pedestal,
-            -- away from the player's approach and central hazard lanes.
+            -- Keep the exit sculpture on the outward face of the final terrace,
+            -- clear of the walkable deck and the approach from the previous step.
             local frontSign = platformPosition.Z >= config.ArenaCenter.Z
                 and 1 or -1
             local outerZ = platformPosition.Z
                 + frontSign * (platform.Size.Z * 0.5 + 0.18)
             for side = -1, 1, 2 do
-                local rib = decorPart(
-                    decor,
+                local rib = fitDecorMesh(
+                    beaconShaft,
                     "PerimeterExitRib" .. definition.PerimeterRoute
                         .. "_" .. tostring(side),
-                    Vector3.new(0.88, platform.Size.Y - 1.05, 0.34),
-                    Vector3.new(platformPosition.X + side * 3.35,
+                    CFrame.new(platformPosition.X + side * 3.35,
                         platformPosition.Y - 0.20, outerZ),
+                    Vector3.new(0.88, platform.Size.Y - 1.05, 0.34),
                     theme.Structure:Lerp(theme.Detail, 0.18),
                     Enum.Material.Metal
                 )
                 rib.Transparency = 0.06
                 rib:SetAttribute("PerimeterPlatformIndex", i)
+                rib.Parent = decor
             end
-            local cap = Instance.new("WedgePart")
-            cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
-            cap.Size = Vector3.new(8.0, 1.15, 1.0)
-            cap.CFrame = CFrame.new(
+            local crownSize = Vector3.new(8.0, 1.15, 1.0)
+            local crownFrame = CFrame.new(
                 platformPosition.X,
                 platformPosition.Y + platform.Size.Y * 0.5 - 0.45,
                 outerZ + frontSign * 0.34
             ) * CFrame.Angles(0, frontSign < 0 and math.pi or 0, 0)
+            local cap = RouteSignalGeometry.fit(sweptProfile, crownFrame, crownSize)
+            if not cap then
+                cap = Instance.new("WedgePart")
+                cap.Size = crownSize
+                cap.CFrame = crownFrame
+                cap.Anchored = true
+                cap.CanCollide = false
+                cap.CanTouch = false
+                cap.CanQuery = false
+                cap.CastShadow = false
+            end
+            cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
             cap.Color = theme.Detail:Lerp(theme.Structure, 0.30)
             cap.Material = Enum.Material.Metal
-            cap.Anchored = true
-            cap.CanCollide = false
-            cap.CanTouch = false
-            cap.CanQuery = false
-            cap.CastShadow = false
             cap.Transparency = 0.08
-            cap.Parent = decor
             cap:SetAttribute("PerimeterPlatformIndex", i)
+            cap.Parent = decor
             local lens = decorPart(
                 decor,
                 "PerimeterExitLens" .. definition.PerimeterRoute,
@@ -3504,7 +3509,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- goal must be a walkable entry terrace, then every real climb step.
     -- Floor-painted cues are cosmetic and retracted with the shrinking floor.
     local perRoute = #(variant.PerimeterPlatforms or {}) / 4
-    local beaconShaft = beaconShaftSource(variant.Id)
     for route = 1, 4 do
         local startIndex = (route - 1) * perRoute
         local entry = variant.PerimeterPlatforms[startIndex + 1]

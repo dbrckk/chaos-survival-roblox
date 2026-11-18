@@ -1,3 +1,7 @@
+## P4 — Façades sculptées des terrasses hautes
+
+Les 20 façades de sortie des cinq arènes peuvent afficher deux nervures polygonales issues de leur colonne approuvée et une couronne forgée issue du pont de Tower Run. Les pièces longent la face extérieure du dernier palier et suivent son rétrécissement. La lentille en verre garde sa place. Les formes d’origine servent de secours si les maillages approuvés sont indisponibles à la construction.
+
 ## P4 — Balises sculptées des terrasses hautes
 
 Les 20 balises des cinq arènes peuvent afficher un mât polygonal issu de la colonne approuvée de leur arène et une couronne forgée sous la lentille colorée. Les balises restent sur le sol jouable et suivent le rétrécissement. Les formes simples servent de secours si les maillages approuvés ne sont pas disponibles à la construction.

@@ -1406,7 +1406,7 @@ describe("Shrinking Arena mobility integration", function()
         assert(junctions == 2)
     end
 
-    local function checkDistrictWayfinders(arena, scale)
+    local function checkPerimeterDecor(arena, scale)
         for route = 1, 4 do
             local mast = arena.Decor["OuterRouteSignal" .. route]
             local crown = arena.Decor["OuterRouteSignalCrown" .. route]
@@ -1424,6 +1424,26 @@ describe("Shrinking Arena mobility integration", function()
                 and math.abs(offset.Z) + crown.Size.Z * .5 <= base.Size.Z * .5)
             local owner = arena.Platforms["Platform" .. mast:GetAttribute("PerimeterPlatformIndex")]
             assert(owner:GetAttribute("PerimeterStep") == ArenaVariants.PerimeterSteps)
+            assert(owner:GetAttribute("PerimeterRoute") == route)
+            local exitLens = arena.Decor["PerimeterExitLens" .. route]
+            assert(exitLens:IsA("Part") and exitLens.Material == Enum.Material.Glass)
+            assert(exitLens:GetAttribute("PerimeterPlatformIndex") == mast:GetAttribute("PerimeterPlatformIndex"))
+            for _, fit in ipairs({
+                {"PerimeterExitRib" .. route .. "_-1", .88, .34},
+                {"PerimeterExitRib" .. route .. "_1", .88, .34},
+                {"PerimeterExitCrown" .. route, 8, 1},
+            }) do
+                local piece = arena.Decor[fit[1]]
+                assert(piece:IsA("MeshPart") and piece.Anchored and not piece.CastShadow)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                assert(piece:GetAttribute("PerimeterPlatformIndex") == exitLens:GetAttribute("PerimeterPlatformIndex"))
+                assert(math.abs(math.max(piece.Size.X, piece.Size.Z) - fit[2] * scale) < .02)
+                assert(math.abs(math.min(piece.Size.X, piece.Size.Z) - fit[3] * scale) < .02)
+                local pose = owner.CFrame:PointToObjectSpace(piece.Position)
+                local depth = math.abs(piece.CFrame.RightVector.Z) * piece.Size.X
+                    + math.abs(piece.CFrame.LookVector.Z) * piece.Size.Z
+                assert(math.abs(pose.Z) - depth * .5 >= owner.Size.Z * .5 - .001)
+            end
             for _, piece in ipairs({mast,crown,lens}) do
                 assert(piece:GetAttribute("PerimeterPlatformIndex") == mast:GetAttribute("PerimeterPlatformIndex"))
                 assert(piece:GetAttribute("ChaosWayfinding") == true)
@@ -1531,7 +1551,7 @@ describe("Shrinking Arena mobility integration", function()
                 generated=arena.Parent
                 checkLookoutLinks(arena,1)
                 checkPromenadeChevrons(arena,1)
-                checkDistrictWayfinders(arena,1)
+                checkPerimeterDecor(arena,1)
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}
@@ -1639,7 +1659,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert(checkAerialBand(arena,finalDeck,.45)==band)
                     checkLookoutLinks(arena,.45)
                     checkPromenadeChevrons(arena,.45)
-                    checkDistrictWayfinders(arena,.45)
+                    checkPerimeterDecor(arena,.45)
                     assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
                     Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
                     assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
@@ -1649,7 +1669,7 @@ describe("Shrinking Arena mobility integration", function()
                     assert((band.Size-originalBandSize).Magnitude<.01)
                     checkLookoutLinks(arena,1)
                     checkPromenadeChevrons(arena,1)
-                    checkDistrictWayfinders(arena,1)
+                    checkPerimeterDecor(arena,1)
                     table.clear(callbacks)
                 end
                 Remaining.sync(nil,Vector3.zero,"Low",false)
