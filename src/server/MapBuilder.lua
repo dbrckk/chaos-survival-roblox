@@ -1042,15 +1042,16 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     }
 
     for i, offset in ipairs(frameOffsets) do
-        local column = decorPart(
-            decor,
+        local column = fitDecorMesh(
+            beaconShaft,
             "FrameColumn" .. i,
+            CFrame.new(center + offset),
             Vector3.new(1.4, 8.4, 1.4),
-            center + offset,
             theme.Structure,
             VisualTheme.Materials.Structure
         )
         column.Transparency = 0.05
+        column.Parent = decor
 
         -- Seat the slit in front of the inward-facing shell, above the foot.
         local face = CFrame.lookAt(column.Position, center + Vector3.new(0, offset.Y, 0))

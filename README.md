@@ -1,3 +1,7 @@
+## P4 — Noyaux polygonaux des colonnes
+
+Les 20 noyaux derrière les coques peuvent reprendre le profil polygonal de la colonne approuvée de chaque arène. Ils gardent leur gabarit et se déplacent avec leurs socles et bandeaux pendant le rétrécissement. La forme d’origine sert de secours si le maillage est indisponible à la construction.
+
 ## P4 — Socles forgés et coques moulées des colonnes
 
 Les 20 socles et les 40 coques avant et arrière des cinq arènes peuvent reprendre les profils approuvés du pont de Tower Run et du blindage périphérique. Le socle conserve le pivot de rétrécissement. La coque 3D complète se cale sur les positions du socle et de la façade, quelle que soit l’orientation des axes du maillage. Les blocs d’origine restent disponibles en secours.
