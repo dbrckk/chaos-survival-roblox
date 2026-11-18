@@ -1371,6 +1371,33 @@ describe("Shrinking Arena mobility integration", function()
             if deck:GetAttribute("PromenadeStep") == 4 then
                 local toward = endpoints[lane].Position.Z > deck.Position.Z and 1 or -1
                 checkChevron("Spine", Vector3.zAxis * toward, deck.Size.Z * .25, .35, .24)
+                local spine = endpoints[lane]
+                local spineId = assert(spine.Name:match("^Platform(%d+)$"))
+                local spinePanel = arena.Decor["PlatformPanel" .. spineId]
+                for direction = -1, 1, 2 do
+                    for side = -1, 1, 2 do
+                        local arm = arena.Decor["SkySpine" .. spineId .. "_PromenadeChevron" .. direction .. "_" .. side]
+                        assert(arm:IsA("MeshPart") and arm.Material == Enum.Material.Neon)
+                        assert(arm:GetAttribute("ChaosWayfinding") == true
+                            and arm:GetAttribute("PerimeterPlatformIndex") == tonumber(spineId))
+                        assert(not arm.CanCollide and not arm.CanTouch and not arm.CanQuery)
+                        assert(arm.CFrame.LookVector.X * direction > .81)
+                        assert(arm.Position.Y - arm.Size.Y * .5
+                            > math.max(panel.Position.Y + panel.Size.Y * .5,
+                                spinePanel.Position.Y + spinePanel.Size.Y * .5))
+                        for x = -1, 1, 2 do
+                            for z = -1, 1, 2 do
+                                local corner = arm.CFrame:PointToWorldSpace(
+                                    Vector3.new(x * arm.Size.X * .5, 0, z * arm.Size.Z * .5))
+                                for _, owner in ipairs({spine, deck}) do
+                                    local point = owner.CFrame:PointToObjectSpace(corner)
+                                    assert(math.abs(point.X) < owner.Size.X * .5
+                                        and math.abs(point.Z) < owner.Size.Z * .5)
+                                end
+                            end
+                        end
+                    end
+                end
                 junctions += 1
             else
                 assert(not arena.Decor:FindFirstChild(prefix .. "Spine_1"))

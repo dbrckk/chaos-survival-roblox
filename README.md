@@ -1,3 +1,7 @@
+## P4 — Sorties de l’Épine céleste vers les Promenades
+
+Aux dix extrémités de l’Épine céleste, une paire de chevrons forgés indique les deux directions de la Promenade. Les flèches tiennent entièrement dans la zone de recouvrement des tabliers. Elles restent fixées au tablier de l’Épine céleste pendant le rétrécissement. Un chevron simple sert de secours si le modèle approuvé n’est pas disponible.
+
 ## P4 — Chevrons sculptés sur les Promenades
 
 Les 160 chevrons longitudinaux des cinq arènes reprennent le profil forgé de Tower Run. Aux dix jonctions, une flèche transversale indique l’Épine céleste lorsque les deux tabliers se recouvrent réellement. Les flèches restent au-dessus du platelage et suivent le rétrécissement sans ajouter de collision. Des chevrons simples assurent le balisage si le modèle approuvé est indisponible à la construction de l’arène.

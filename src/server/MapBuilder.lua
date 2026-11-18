@@ -1717,6 +1717,44 @@ local function addRouteChevron(decor, name, deck, index, forward, color, style, 
     end
 end
 
+local function addSpineExitChevrons(decor, spine, promenade, color, profile)
+    local along = spine.CFrame.LookVector
+    local approachCenter = (promenade.Position - spine.Position):Dot(along)
+    local approachHalf = (math.abs(promenade.CFrame.RightVector:Dot(along)) * promenade.Size.X
+        + math.abs(promenade.CFrame.LookVector:Dot(along)) * promenade.Size.Z) * 0.5
+    local halfSpan = spine.Size.Z * 0.5
+    local near = math.max(-halfSpan, approachCenter - approachHalf)
+    local far = math.min(halfSpan, approachCenter + approachHalf)
+    local style = SPINE_TURN_CHEVRON
+    local sine, cosine = math.sin(style.angle), math.cos(style.angle)
+    local clearance = style.spread + (sine * style.size.Z + cosine * style.size.X) * 0.5
+    -- Keep both arrows inside the shared approach, even if there is only
+    -- a sliver of real overlap at an otherwise valid intersection.
+    if far - near < clearance * 2 then return end
+
+    local center = along * ((near + far) * 0.5)
+    local across = spine.CFrame.RightVector
+    local spacing = spine.Size.X * 0.25
+    local halfWidth = spacing + (cosine * style.size.Z + sine * style.size.X) * 0.5
+    if halfWidth > spine.Size.X * 0.5 then return end
+    local relativeCenter = spine.Position + center - promenade.Position
+    for _, axis in ipairs({promenade.CFrame.RightVector, promenade.CFrame.LookVector}) do
+        local halfDeck = (math.abs(axis:Dot(promenade.CFrame.RightVector)) * promenade.Size.X
+            + math.abs(axis:Dot(promenade.CFrame.LookVector)) * promenade.Size.Z) * 0.5
+        local reach = math.abs(axis:Dot(relativeCenter)) + math.abs(axis:Dot(across)) * halfWidth
+            + math.abs(axis:Dot(along)) * clearance
+        if reach > halfDeck then return end
+    end
+
+    local index = tonumber(spine.Name:match("^Platform(%d+)$"))
+    local prefix = "SkySpine" .. index .. "_PromenadeChevron"
+    for direction = -1, 1, 2 do
+        local forward = across * direction
+        local offset = center + forward * spacing
+        addRouteChevron(decor, prefix .. direction, spine, index, forward, color, style, profile, offset)
+    end
+end
+
 local function harborLandingAlongX(definition)
     if definition.HarborSkywayLane then return true end
     if definition.HarborSpokeRoute then return definition.HarborSpokeRoute % 2 == 0 end
@@ -3327,6 +3365,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local forward = along * side
             addRouteChevron(decor, "PromenadeJumpChevron" .. index .. "_Spine", deck, index,
                 forward, theme.Secondary, SPINE_TURN_CHEVRON, sweptProfile, forward * (deck.Size.Z * 0.25))
+            addSpineExitChevrons(decor, spine, deck, theme.Secondary, sweptProfile)
         end
     end
 
