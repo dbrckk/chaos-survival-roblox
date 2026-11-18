@@ -367,8 +367,8 @@ assert 'active[id] == "carapace" or active[id] == "rim"' in rim_native
 assert 'if id and (active[id] == "carapace" or active[id] == "cradle")' in rim_native
 for clause in (
     "OriginalPlatformRimAxisSwap",
-    "rimSwapped and ratioZ or ratioX",
-    "rimSwapped and ratioX or ratioZ",
+    "axesSwapped and ratioZ or ratioX",
+    "axesSwapped and ratioX or ratioZ",
 ):
     assert clause in rim_finish
 for clause in (

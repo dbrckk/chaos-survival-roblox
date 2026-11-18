@@ -1661,7 +1661,8 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 return Finish.buildLoadBraces(owner,deck,"Harbor",tier,theme,Side.harborGirderSource())
             end
             local function buildCorners(tier)
-                local natives=Finish.buildArmor(owner,deck,"Harbor",tier,theme)
+                local natives=Finish.buildArmor(owner,deck,"Harbor",tier,theme,
+                    {part=sourceParts[1],assetId=92226531849432})
                 local meshes,map=Finish.mountHarborCornerArmor(owner,deck,natives,Hardware.harborCornerSource())
                 return natives,meshes,map
             end

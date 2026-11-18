@@ -981,6 +981,8 @@ local function rebuild()
     -- Preserve rail coverage and leave room for the existing columns.
     local railTargets,braceTargets,keelTargets,cornerTargets = {},{},{},{}
     local girderSource,cornerSource
+    local armorProfile = PlatformFinishKit.armorCount(tier.Name) > 0
+        and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
     local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
         and supportBudget >= girderCost and cameraPoint
@@ -1214,7 +1216,7 @@ local function rebuild()
             if not authenticCarapace and not authenticBridge
                 and not authenticRim then
                 local armor = PlatformFinishKit.buildArmor(
-                    folder, platform, variant, tier.Name, theme
+                    folder, platform, variant, tier.Name, theme, armorProfile
                 )
                 for _,piece in ipairs(armor) do
                     registerVisual(platform, piece)
@@ -1907,7 +1909,7 @@ local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
     LongCradle = true, ShortCradle = true, LargeDeckHull = true,
-    Rect = true, Long = true, CornerGuard = true,
+    Rect = true, Long = true, CornerGuard = true, AnchorBolt = true,
 }
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
     if not holder or not holder:IsA("Folder") then return end
@@ -1926,7 +1928,8 @@ local function watchVerifiedTemplateReadiness(holder, connections, marker)
                     if model.Parent == holder then scheduleRebuild() end
                 end)
         end
-        if model.Name == "Bridge" or model.Name == "CornerGuard" then
+        if model.Name == "Bridge" or model.Name == "CornerGuard"
+            or model.Name == "AnchorBolt" then
             local function meshChanged(child)
                 if child:IsA("BasePart") and model.Parent == holder then scheduleRebuild() end
             end
@@ -1960,7 +1963,8 @@ local function watchPlatformReliefTemplates(holder)
             local arena = generated and generated:FindFirstChild("Arena")
             local variant = arena and tostring(
                 arena:GetAttribute("VariantId") or "Classic")
-            if variant == child.Name or (variant == "Harbor" and child.Name == "CornerGuard") then
+            if variant == child.Name or child.Name == "AnchorBolt"
+                or (variant == "Harbor" and child.Name == "CornerGuard") then
                 scheduleRebuild()
             end
         end

@@ -1,3 +1,7 @@
+## P4 — Renforts d’angle des plateformes
+
+Les angles des plateformes peuvent recevoir une tête de fixation à douze facettes issue d’un modèle approuvé. Le nombre de pièces reste lié à la qualité graphique. Les renforts suivent les angles quand une passerelle raccourcit et les habillages de Harbor gardent la priorité sur les plateformes qu’ils couvrent. Un renfort simple sert de secours si la fixation est indisponible.
+
 ## P4 — Biseaux des plateformes
 
 Les quatre biseaux des plateformes peuvent reprendre le profil à douze facettes d’une pièce de fonderie approuvée de Harbor. Ils gardent leur empreinte et accompagnent leur plateforme pendant le rétrécissement ou l’effondrement. Les carapaces, rebords et caissons locaux les masquent quand leur habillage est complet. Des biseaux simples servent de secours si le maillage est indisponible à la construction.

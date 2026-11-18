@@ -1168,9 +1168,12 @@ describe("Moving platform premium trim kit", function()
         local paint = PlatformFinishKit.build(
             visual, platform, "Towers", "High", theme
         )
+        local cornerHead = Instance.new("MeshPart")
         local armor = PlatformFinishKit.buildArmor(
-            visual, platform, "Towers", "High", theme
+            visual, platform, "Towers", "High", theme,
+            {part=cornerHead, assetId=92226531849432}
         )
+        cornerHead:Destroy()
         local pieces = {}
         for _, family in ipairs({rails, paint, armor}) do
             for _, piece in ipairs(family) do
@@ -1215,6 +1218,12 @@ describe("Moving platform premium trim kit", function()
             < 0.005).toBe(true)
         expect((armor[1].Size - originalRigidSize).Magnitude < 0.005)
             .toBe(true)
+        for _, plate in ipairs(armor) do
+            expect(plate:IsA("MeshPart")).toBe(true)
+            local localFrame = plate.ChaosPlatformTrimWeld.C1
+            expect(math.abs(localFrame.Position.X) + plate.Size.X * 0.5
+                < platform.Size.X * 0.5).toBe(true)
+        end
         local endAfter = platform.CFrame:PointToObjectSpace(rails[3].Position)
         expect(math.abs(endAfter.X - endBefore.X * 0.5) < 0.01)
             .toBe(true)

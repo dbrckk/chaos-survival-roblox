@@ -120,7 +120,7 @@ end
 
 -- Chunky, angled corner armor changes the silhouette without touching
 -- the physical collision deck. Earlier armor sat below the deck bottom:
--- invisible from the mobile third-person camera. Wedges now sit above
+-- invisible from the mobile third-person camera. The plates now sit above
 -- the panel near the corners but INSIDE the true collision footprint,
 -- so decorative armor never suggests a safe overhanging walkway.
 -- High gets all four corners, Medium an opposing diagonal, Low none.
@@ -146,7 +146,7 @@ function PlatformFinishKit.surfacePaintOffset(platform, thickness)
     return platform.Size.Y * 0.5 + 0.055 + 0.05 + halfThickness + 0.012
 end
 
-function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
+function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme, profile)
     if not parent or not platform or not platform:IsA("BasePart")
         or not NAMES[variant] or not theme then
         return {}
@@ -176,6 +176,14 @@ function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
                 sy * 0.5 + 0.05,
                 def[2] * (sz * 0.5 - armorSize * 0.53)
             ) * CFrame.Angles(0, math.rad(def[3]), 0)
+            local mesh = profile and profile.part:Clone()
+            if mesh then
+                mesh:ClearAllChildren()
+                mesh.TextureID = ""
+                mesh.MaterialVariant = ""
+                mesh:SetAttribute("OriginalPlatformCornerArmor3D", true)
+                mesh:SetAttribute("Original3DAssetId", profile.assetId)
+            end
             local plate = add(parent, platform,
                 variant .. "CornerArmor" .. cornerIndex,
                 frame,
@@ -183,7 +191,8 @@ function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
                 color,
                 Enum.Material.Metal,
                 0.04,
-                "WedgePart"
+                "WedgePart",
+                mesh
             )
             plate:SetAttribute("ChaosArmorCorner", cornerIndex)
             table.insert(built, plate)
@@ -223,7 +232,9 @@ function PlatformFinishKit.mountHarborCornerArmor(parent, platform, natives, sou
     for _,native in ipairs(natives) do
         local joint = native:FindFirstChild("ChaosPlatformTrimWeld")
         local corner = native:GetAttribute("ChaosArmorCorner")
-        if native.Parent ~= parent or not native:IsA("WedgePart") or not corner
+        local fittedArmor = native:IsA("MeshPart")
+            and native:GetAttribute("OriginalPlatformCornerArmor3D") == true
+        if native.Parent ~= parent or not (native:IsA("WedgePart") or fittedArmor) or not corner
             or native.Name ~= "HarborCornerArmor"..corner or not joint or not joint:IsA("Weld")
             or joint.Part0 ~= native or joint.Part1 ~= platform then return nil end
         fallback[native] = native.Transparency
@@ -430,7 +441,14 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
             -- Roblox platform axis, or a rotated girder becomes a ghost
             -- structure beyond the shrinking collision deck.
             local importedAxis = piece:GetAttribute("OriginalBridgeLongAxis")
-            if importedAxis == "X" then
+            if piece:GetAttribute("ChaosArmorCorner") then
+                -- Keep the original setback from the moving end of the bridge.
+                local delta = (span - snapshot.originalSpan) * .5
+                scaled = position + (snapshot.alongX
+                    and Vector3.new(math.sign(position.X) * delta, 0, 0)
+                    or Vector3.new(0, 0, math.sign(position.Z) * delta))
+                piece.Size = size
+            elseif importedAxis == "X" then
                 piece.Size = Vector3.new(
                     math.max(0.05, size.X * ratio), size.Y, size.Z)
             elseif importedAxis == "Z" then
@@ -871,6 +889,9 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
             -- contracting bridge while the other collapses incorrectly.
             local rimSwapped = part:GetAttribute(
                 "OriginalPlatformRimAxisSwap") == true
+            local armorCorner = part:GetAttribute("ChaosArmorCorner")
+            local axesSwapped = rimSwapped
+                or (type(armorCorner) == "number" and armorCorner % 2 == 0)
             if data.braceCorner then
                 -- Keep the socket at the deck edge and refit the diagonal
                 -- to the new lower anchor instead of squashing its width.
@@ -887,9 +908,9 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                     math.max(.05, data.size.Z*scaleZ))
             else
                 part.Size = Vector3.new(
-                    math.max(data.minimum, data.size.X*(rimSwapped and ratioZ or ratioX)),
+                    math.max(data.minimum, data.size.X*(axesSwapped and ratioZ or ratioX)),
                     data.size.Y,
-                    math.max(data.minimum, data.size.Z*(rimSwapped and ratioX or ratioZ)))
+                    math.max(data.minimum, data.size.Z*(axesSwapped and ratioX or ratioZ)))
             end
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
                 or part:FindFirstChild("PlatformIdentityWeld")
