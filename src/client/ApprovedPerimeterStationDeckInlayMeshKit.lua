@@ -40,7 +40,7 @@ local function unmount(station)
     for _,c in ipairs(state.listeners) do c:Disconnect() end
     -- Restore even during a transient stream-out: never strand the native
     -- with Transparency=1 if it later streams back into the real station.
-    if state.native and state.native:IsA("Part")
+    if state.native and state.native:IsA("BasePart")
         and state.native.Transparency == 1 then
         state.native.Transparency = state.alpha
     end
@@ -77,6 +77,22 @@ local function realArena(arena)
     return base,decor
 end
 
+local function stationDetailSize(item, station, assetId)
+    if not item or not item:IsA("BasePart") or item.Parent ~= station
+        or not item.Anchored or item.CanCollide or item.CanTouch or item.CanQuery then
+        return nil
+    end
+    if item:IsA("Part") then return item.Size end
+    if not item:IsA("MeshPart") or item.MeshId == ""
+        or item:GetAttribute("OriginalPerimeterStationDetail3D") ~= true
+        or item:GetAttribute("Original3DAssetId") ~= assetId then return nil end
+    local size = item.Size
+    if item:GetAttribute("StationDetailAxisSwap") == true then
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    return size
+end
+
 local function stationNative(decor,index)
     local station = decor:FindFirstChild("PerimeterStation"..STATIONS[index])
     if not station or not station:IsA("Model") or station.Parent ~= decor
@@ -84,13 +100,11 @@ local function stationNative(decor,index)
         or station:GetAttribute("StationIndex") ~= index then return nil end
     local base = station:FindFirstChild("InlaidStationBase")
     local marker = station:FindFirstChild("WayfindingInset")
-    if not base or not base:IsA("Part") or base.Parent ~= station
-        or not base.Anchored or base.CanCollide or base.CanTouch
-        or base.CanQuery or (base.Size-Vector3.new(12,.07,11)).Magnitude>.08
-        or not marker or not marker:IsA("Part") or marker.Parent~=station
-        or not marker.Anchored or marker.CanCollide or marker.CanTouch
-        or marker.CanQuery or marker.Material~=Enum.Material.Neon
-        or (marker.Size-Vector3.new(3.1,.16,1.6)).Magnitude>.08 then
+    local baseSize = stationDetailSize(base, station, 88962643359267)
+    local markerSize = stationDetailSize(marker, station, 126298311664881)
+    if not baseSize or (baseSize - Vector3.new(12,.07,11)).Magnitude > .08
+        or not markerSize or (markerSize - Vector3.new(3.1,.16,1.6)).Magnitude > .08
+        or marker.Material ~= Enum.Material.Neon then
         return nil
     end
     return station,base
@@ -136,7 +150,11 @@ local function mount(station,native,source,size)
     -- Source model stays inside the 12x11 station base. Negative-Z side
     -- is reserved for the WayfindingInset at Z=-4.25; its neon is exposed.
     -- The 3D surface rises just above the optional imported ground relief.
-    local frame = native.CFrame*CFrame.new(0,.162-actual.Y*.5,.90)
+    local stationFrame = native.CFrame
+    if native:IsA("MeshPart") and native:GetAttribute("StationDetailAxisSwap") == true then
+        stationFrame *= CFrame.Angles(0, -math.pi * .5, 0)
+    end
+    local frame = stationFrame*CFrame.new(0,.162-actual.Y*.5,.90)
     local parts = {}
     for _,part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then

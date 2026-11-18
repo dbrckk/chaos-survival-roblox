@@ -1,3 +1,7 @@
+## P4 — Socles et signaux des stations périphériques
+
+Les vingt stations des cinq arènes peuvent utiliser des maillages approuvés pour leurs socles, lentilles, repères d’approche, encoches lumineuses et rails latéraux. Les sept pièces gardent leurs dimensions et leurs emplacements. Le revêtement complet de proximité peut encore masquer le socle, avec le même décalage derrière le repère d’approche. Les formes simples prennent le relais si leur source manque lors de la construction de l’arène.
+
 ## P4 — Carapaces de secours des plateformes
 
 Les cinq arènes peuvent utiliser des jupes et ailettes moulées, des quilles biseautées et des longerons forgés dans les deux, quatre ou sept emplacements existants. Les ailettes suivent le bon axe pendant le rétrécissement et les longerons se recalent entre leurs points d’appui. Les carapaces et berceaux complets gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.

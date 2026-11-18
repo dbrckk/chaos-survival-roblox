@@ -1655,6 +1655,8 @@ describe("Shrinking Arena mobility integration", function()
         local okay,why=pcall(function()
             local total=0
             for _,variant in ipairs(ArenaVariants.Order) do
+                baseMesh.Size = variant == "Towers" and Vector3.new(2.76985, 2.14, 2.34)
+                    or Vector3.new(2.34, 2.14, 2.76985)
                 local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
                 generated=arena.Parent
                 checkLookoutLinks(arena,1)
@@ -1662,6 +1664,26 @@ describe("Shrinking Arena mobility integration", function()
                 checkPerimeterDecor(arena,1)
                 checkSpawnGuides(arena,variant)
                 checkFloorPerimeter(arena,1)
+                for _, direction in ipairs({"North", "East", "South", "West"}) do
+                    local station = arena.Decor["PerimeterStation" .. direction]
+                    local plinth, marker = station.InlaidStationBase, station.WayfindingInset
+                    assert(plinth:IsA("MeshPart") and marker:IsA("MeshPart"))
+                    assert(plinth:GetAttribute("Original3DAssetId") == 88962643359267)
+                    assert(marker:GetAttribute("Original3DAssetId") == 126298311664881)
+                    local pose = plinth.CFrame
+                    if plinth:GetAttribute("StationDetailAxisSwap") then
+                        pose *= CFrame.Angles(0, -math.pi * .5, 0)
+                    end
+                    assert((pose:PointToObjectSpace(marker.Position)
+                        - Vector3.new(0, .075, -4.25)).Magnitude < .01)
+                    for _, name in ipairs({"LeftLightNotch", "RightLightNotch"}) do
+                        local signal = station[name]
+                        assert(signal:IsA("MeshPart") and signal.Material == Enum.Material.Neon)
+                        assert(signal:GetAttribute("RouteSignalHeightAxis") == "Z")
+                        assert(math.abs(signal.Size.Z - 1.8) < .01)
+                        assert(signal.Anchored and not signal.CanCollide and not signal.CanQuery)
+                    end
+                end
                 local count,porticos,junctions=0,0,0
                 local finalDeck,finalFrame,finalTruss
                 local endpoints={}

@@ -106,7 +106,7 @@ end
 -- Keep every piece decorative so the danger floor, humanoid collision,
 -- base-shrinking, AI navigation and platform jump tests stay authoritative.
 -- Exactly four stations, no lights, loops, remote calls or live motion.
-local function addPerimeterStations(decor, config, variant, theme)
+local function addPerimeterStations(decor, config, variant, theme, profiles)
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local anchors = {
@@ -129,11 +129,21 @@ local function addPerimeterStations(decor, config, variant, theme)
             config.ArenaCenter + anchor.position + Vector3.new(0, baseTop, 0)
         ) * CFrame.Angles(0, anchor.yaw, 0)
 
-        local function piece(name, className, size, offset, material, color, opacity)
-            local item = Instance.new(className or "Part")
+        local function piece(name, className, size, offset, material, color, opacity, profile, inlaySide)
+            local frame = origin * offset
+            local item = profile and RouteSignalGeometry.fit(profile.part, frame, size, inlaySide)
+            if item then
+                item:SetAttribute("OriginalPerimeterStationDetail3D", true)
+                item:SetAttribute("Original3DAssetId", profile.assetId)
+                local turned = not inlaySide
+                    and math.abs(item.CFrame.RightVector:Dot(frame.RightVector)) < .5
+                item:SetAttribute("StationDetailAxisSwap", if turned then true else nil)
+            else
+                item = Instance.new(className or "Part")
+                item.Size = size
+                item.CFrame = frame
+            end
             item.Name = name
-            item.Size = size
-            item.CFrame = origin * offset
             item.Anchored = true
             item.CanCollide = false
             item.CanTouch = false
@@ -151,7 +161,7 @@ local function addPerimeterStations(decor, config, variant, theme)
         -- projectiles and does not leave islands after Shrinking Arena.
         piece("InlaidStationBase", "Part", Vector3.new(12, 0.07, 11),
             CFrame.new(0, 0.035, 0), theme.PanelMaterial or Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Surface, 0.18), 0.14)
+            theme.Structure:Lerp(theme.Surface, 0.18), 0.14, profiles.plate)
         for _, side in ipairs({-1, 1}) do
             piece(side < 0 and "LeftButtress" or "RightButtress",
                 "Part", Vector3.new(1.5, 9, 2),
@@ -165,7 +175,7 @@ local function addPerimeterStations(decor, config, variant, theme)
             piece(side < 0 and "LeftLightNotch" or "RightLightNotch",
                 "Part", Vector3.new(0.14, 1.8, 1.1),
                 CFrame.new(side * 5.3, 5.0, -1.06), Enum.Material.Neon,
-                side < 0 and accent or secondary, 0.38)
+                side < 0 and accent or secondary, 0.38, profiles.signal, side)
         end
         piece("CrossBrace", "Part", Vector3.new(9.1, 0.65, 1.25),
             CFrame.new(0, 9.0, -0.2), Enum.Material.Metal,
@@ -175,11 +185,11 @@ local function addPerimeterStations(decor, config, variant, theme)
             theme.Detail:Lerp(theme.Structure, 0.35), 0.06)
         local core = piece("CoreLens", "Part", Vector3.new(2.7, 2.7, 2.7),
             CFrame.new(0, 5.1, -1.65), Enum.Material.Glass,
-            accent:Lerp(secondary, 0.25), 0.33)
-        core.Shape = Enum.PartType.Ball
+            accent:Lerp(secondary, 0.25), 0.33, profiles.lens)
+        if core:IsA("Part") then core.Shape = Enum.PartType.Ball end
         piece("WayfindingInset", "Part", Vector3.new(3.1, 0.16, 1.6),
             CFrame.new(0, 0.11, -4.25), Enum.Material.Neon,
-            accent, 0.57)
+            accent, 0.57, profiles.signal)
 
         -- Distinctive architectural kitbash: actual layered 3D forms rather
         -- than generic floating neon blocks. All authored pieces share the
@@ -207,7 +217,7 @@ local function addPerimeterStations(decor, config, variant, theme)
             piece(side < 0 and "PodDataRailL" or "PodDataRailR",
                 "Part", Vector3.new(0.18, 0.22, 3.1),
                 CFrame.new(side * 8.85, 3.4, 0.7),
-                Enum.Material.Neon, side < 0 and accent or secondary, 0.40)
+                Enum.Material.Neon, side < 0 and accent or secondary, 0.40, profiles.rail)
         end
         local generator = piece("GeneratorRotor", "Part",
             Vector3.new(2.7, 0.9, 2.7),
@@ -2962,12 +2972,19 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local underdeckSpars = approvedMeshRegion(chassis, "UnderdeckSpars")
     local wayfinderBase = wayfinderBaseSource()
     local beaconShaft = beaconShaftSource(variant.Id)
+    local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
     addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
     ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile, wayfinderBase)
-    addPerimeterStations(decor, config, variant, theme)
+    addPerimeterStations(decor, config, variant, theme, {
+        plate = {part = wayfinderBase, assetId = 88962643359267},
+        signal = {part = sweptProfile, assetId = 126298311664881},
+        lens = {part = orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96)),
+            assetId = 104654294187035},
+        rail = {part = rimBevel, assetId = 94830155055482},
+    })
     addDistantSkyline(decor, config, variant, theme)
     addArenaSignatureMegastructure(decor, config, variant, theme)
     -- One distinctive real 3D skyline per arena. No external asset ID is
@@ -2995,7 +3012,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
     local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
     -- The Harbor floor relief has a closed twelve-facet cast roller.
-    local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
     if rimBevel and rimBevel.Size.X <= rimBevel.Size.Z then rimBevel = nil end
     addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
     addArenaHologram(decor, config, variant, theme)
