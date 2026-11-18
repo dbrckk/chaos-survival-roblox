@@ -412,7 +412,7 @@ describe("Shrinking Arena mobility integration", function()
             {
                 id = "Crossroads",
                 names = {"ArenaDeckInset", "DeckLineSouth",
-                    "CrossroadLaneFill1", "FluxRouteChevron1_1_-1"},
+                    "CrossroadHubMark", "CrossroadLaneFill1", "FluxRouteChevron1_1_-1"},
             },
             {
                 id = "Orbital",

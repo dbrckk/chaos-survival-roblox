@@ -1,3 +1,7 @@
+## P4 — Voies au sol et carrefour de Crossroads
+
+Les quatre voies peuvent reprendre le profil moulé du revêtement de Crossroads et rejoindre une plaque centrale usinée. Les chevrons du Flux Relay restent au-dessus des voies. La plaque et les voies se contractent avec le sol. Des marquages plats servent de secours si les maillages sont indisponibles à la construction.
+
 ## P4 — Incrustations des quais de Storm Harbor
 
 Les huit bandes de quai peuvent reprendre le socle biseauté d’une fixation d’amarrage approuvée. Les marquages gardent leur longueur, leur orientation et leurs teintes au ras du revêtement. Les bandes plates d’origine servent de secours si le maillage est indisponible à la construction.

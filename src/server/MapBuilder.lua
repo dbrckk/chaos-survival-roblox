@@ -1457,21 +1457,20 @@ local function addArenaHologram(decor, config, variant, theme)
     hint.Parent = gui
 end
 
-local function harborQuayInlaySource()
+local function floorReliefRegion(name, regionSize)
     local holder = ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates")
     if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
         return nil
     end
-    local relief = holder:FindFirstChild("Harbor")
+    local relief = holder:FindFirstChild(name)
     if not relief or not relief:IsA("Model")
         or relief:GetAttribute("OwnerVerified") ~= true
         or relief:GetAttribute("CosmeticOnly") ~= true
         or relief:GetAttribute("OriginalFloorRelief3D") ~= true
-        or relief:GetAttribute("Original3DAssetId") ~= PremiumFloorReliefAssets.approvedId("Harbor") then
+        or relief:GetAttribute("Original3DAssetId") ~= PremiumFloorReliefAssets.approvedId(name) then
         return nil
     end
-    -- The dock tie-down's solid beveled base spans the entire strip.
-    return meshRegionByBounds(relief, Vector3.new(7.55, 0.12, 2.74))
+    return meshRegionByBounds(relief, regionSize)
 end
 
 local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile)
@@ -1592,22 +1591,32 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             end
         end
     elseif variant.Id == "Crossroads" then
+        local laneProfile = floorReliefRegion("Crossroads", Vector3.new(3.50, 0.12, 0.66))
+        local laneWidth, laneThickness = 13, 0.08
+        local hubWidth, hubThickness = 22, 0.10
+        -- Keep the far ends at 53 studs and tuck the other ends under the hub.
+        local inner, outer = hubWidth * 0.5 - 0.25, 53
+        local laneLength, laneCenter = outer - inner, (outer + inner) * 0.5
+        local laneY = ArenaPresentation.deckArtOffset(base, laneThickness) + 0.015
+        local northSouth = Vector3.new(laneWidth, laneThickness, laneLength)
+        local eastWest = Vector3.new(laneLength, laneThickness, laneWidth)
         local laneDefs = {
-            {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, -25)},
-            {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, 25)},
-            {size = Vector3.new(56, 0.08, 13), offset = Vector3.new(-25, 1.20, 0)},
-            {size = Vector3.new(56, 0.08, 13), offset = Vector3.new(25, 1.20, 0)},
+            {size = northSouth, offset = Vector3.new(0, laneY, -laneCenter)},
+            {size = northSouth, offset = Vector3.new(0, laneY, laneCenter)},
+            {size = eastWest, offset = Vector3.new(-laneCenter, laneY, 0)},
+            {size = eastWest, offset = Vector3.new(laneCenter, laneY, 0)},
         }
         for i, def in ipairs(laneDefs) do
-            local lane = decorPart(
-                decor,
+            local lane = fitDecorMesh(
+                laneProfile,
                 "CrossroadLaneFill" .. i,
+                CFrame.new(center + def.offset),
                 def.size,
-                center + def.offset,
                 theme.Surface:Lerp(theme.Detail, 0.36),
                 theme.PanelMaterial or Enum.Material.Metal
             )
             lane.Transparency = 0.38
+            lane.Parent = decor
         end
 
         -- Flux Relay navigation is physically readable from the floor.
@@ -1642,15 +1651,17 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             end
         end
 
-        local hub = decorPart(
-            decor,
+        local hubY = ArenaPresentation.deckArtOffset(base, hubThickness) + 0.02
+        local hub = fitDecorMesh(
+            floorReliefRegion("AnchorBolt", Vector3.new(4.05, 0.60, 4.05)),
             "CrossroadHubMark",
-            Vector3.new(22, 0.10, 22),
-            center + Vector3.new(0, 1.22, 0),
+            CFrame.new(center + Vector3.new(0, hubY, 0)),
+            Vector3.new(hubWidth, hubThickness, hubWidth),
             theme.Detail:Lerp(theme.Secondary, 0.24),
             theme.PanelMaterial or Enum.Material.Metal
         )
         hub.Transparency = 0.32
+        hub.Parent = decor
     elseif variant.Id == "Harbor" then
         -- Two tiers of flush quay markings break up the large industrial
         -- ground without adding false cover, fake water or collider parts.
@@ -1665,7 +1676,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             {x = -23, z = 89, alongX = true},
             {x = 23, z = 89, alongX = true},
         }
-        local quayProfile = harborQuayInlaySource()
+        local quayProfile = floorReliefRegion("Harbor", Vector3.new(7.55, 0.12, 2.74))
         local thickness = 0.055
         local quayY = ArenaPresentation.deckArtOffset(base, thickness) + 0.02
         for index, lane in ipairs(lanes) do
