@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local MovementSafety = if script then require(script.Parent.MovementSafety) else require("./MovementSafety")
 
 local LobbyActivities = {}
@@ -57,6 +58,33 @@ local function createPad(folder, center, definition, index)
     pad.Transparency = 0.20
     pad:SetAttribute("LobbyPracticePad", true)
     pad.Parent = folder
+
+    -- Four recessed cosmetic cast trims per practice station. The actual
+    -- boost trigger remains the original untouched pad; all trims are
+    -- noncolliding, non-touching and eligible for approved client meshes.
+    local rimColor = pad.Color:Lerp(Color3.fromRGB(38, 48, 67), 0.70)
+    for side = 1, 4 do
+        local alongX = side <= 2
+        local rim = Instance.new("Part")
+        rim.Name = "PracticeCastRim" .. tostring(side)
+        rim.Size = alongX and Vector3.new(7.45, 0.16, 0.42)
+            or Vector3.new(0.42, 0.16, 6.65)
+        rim.CFrame = pad.CFrame * CFrame.new(
+            alongX and 0 or (side == 3 and -3.52 or 3.52),
+            -0.14,
+            alongX and (side == 1 and -3.52 or 3.52) or 0
+        )
+        rim.Anchored = true
+        rim.CanCollide = false
+        rim.CanTouch = false
+        rim.CanQuery = false
+        rim.CastShadow = false
+        rim.Material = Enum.Material.Metal
+        rim.Color = rimColor
+        rim.Transparency = 0.06
+        rim.Parent = folder
+        CollectionService:AddTag(rim, "LobbySculptedCasting")
+    end
 
     local light = Instance.new("PointLight")
     light.Name = "PracticePadLight"
