@@ -242,6 +242,16 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
         piece("GeneratorShield", "Part", Vector3.new(4.0, 0.55, 1.4),
             CFrame.new(0, 7.8, -0.4), Enum.Material.Metal,
             theme.Structure:Lerp(theme.Accent, 0.24), 0.07, profiles.wing)
+        -- Raised cast shoulders frame the generator without replacing the
+        -- native rotor slot owned by the client LOD assembly. Both trims
+        -- are noninteractive and use the already approved station mesh.
+        for _, side in ipairs({-1, 1}) do
+            piece(side < 0 and "GeneratorShoulderL" or "GeneratorShoulderR",
+                "Part", Vector3.new(0.58, 0.75, 2.65),
+                CFrame.new(side * 2.35, 8.05, -1.0),
+                Enum.Material.Metal,
+                theme.Structure:Lerp(theme.Detail, 0.30), 0.06, profiles.housing)
+        end
 
         if variant.Id == "Towers" then
             -- Twin crane masts convey vertical scale without placing an
