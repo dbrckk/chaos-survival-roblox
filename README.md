@@ -294,6 +294,10 @@ Les six traverses supérieures peuvent recevoir le treillis approuvé des portiq
 
 Les 12 diagonales des six portiques peuvent recevoir le treillis approuvé des passerelles. Les deux côtés d’un portique s’affichent ensemble dans les créneaux de renforts Medium et High. Le portique de fret complet prend la priorité. Les diagonales d’origine reprennent le relais si une pièce se décharge, si la pression graphique augmente ou si l’arène se contracte au-delà du dégagement disponible.
 
+## P4 — Diagonales facettées des Promenades
+
+Les 60 diagonales de secours des cinq arènes peuvent reprendre le profil facetté de leur colonne approuvée. Leur inclinaison garde les renforts hors du tablier jusqu’à la contraction maximale. Les formes simples servent de secours si le modèle approuvé est indisponible à la construction.
+
 ## P4 — Colonnes sculptées sur les Promenades
 
 Les 12 montants des Promenades de Storm Harbor peuvent désormais recevoir la colonne portuaire approuvée, dans les créneaux de colonnes existants. Le portique complet prend la priorité dès qu’il s’affiche, et la colonne individuelle prend le relais si elle est déjà montée. Quand un seul montant est sélectionné, le modèle se place du côté le plus proche de la caméra. Les cinq arènes totalisent ainsi 60 montants éligibles à un remplacement individuel.

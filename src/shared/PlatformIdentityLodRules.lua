@@ -61,6 +61,14 @@ function Rules.promenadeUnderdeckGeometry(top, span, scale, sculpted)
     return Vector3.new(5.6 * scale, 1.7, span * scale), CFrame.new(0, top - 1.3, 0)
 end
 
+function Rules.promenadeSculptedStayPose(top, rise, side, scale)
+    -- At full contraction an 8-degree stay still clears the deck's edge.
+    -- Its raised center seats the upper end in the crosshead.
+    local angle = math.rad(8)
+    return CFrame.new(0, top + rise * .66 + .68, side * 8.3 * scale)
+        * CFrame.Angles(side * angle, 0, 0), angle
+end
+
 function Rules.isAuthoredPlatformBevel(part)
     return part ~= nil and part:GetAttribute("OriginalStructuralBevel") == true
         and (part:IsA("WedgePart") or (part:IsA("MeshPart")
