@@ -1296,24 +1296,23 @@ local function addVariantLandmarks(decor, config, variant, theme, castProfile, s
             {offset = Vector3.new(halfX + 4, 8, 0), size = Vector3.new(2.0, 2.0, 28)},
         }
         for i, def in ipairs(defs) do
-            local gantry = decorPart(
-                decor,
-                "CrossroadGantry" .. i,
-                def.size,
-                center + def.offset,
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local gantry = fitDecorMesh(
+                sweptProfile, "CrossroadGantry" .. i,
+                CFrame.new(center + def.offset), def.size,
+                theme.Structure, VisualTheme.Materials.Structure
             )
+            gantry.Parent = decor
             gantry.Transparency = 0.04
 
-            local signal = decorPart(
-                decor,
-                "CrossroadSignal" .. i,
-                def.size.X > def.size.Z and Vector3.new(18, 0.34, 2.12) or Vector3.new(2.12, 0.34, 18),
-                gantry.Position,
+            local signal = fitDecorMesh(
+                sweptProfile, "CrossroadSignal" .. i,
+                CFrame.new(gantry.Position),
+                def.size.X > def.size.Z and Vector3.new(18, 0.34, 2.12)
+                    or Vector3.new(2.12, 0.34, 18),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            signal.Parent = decor
             signal.Transparency = 0.16
         end
     elseif variant.Id == "Orbital" then
@@ -1326,30 +1325,27 @@ local function addVariantLandmarks(decor, config, variant, theme, castProfile, s
                 math.sin(angle) * radius
             )
 
-            local node = decorPart(
-                decor,
-                "OrbitalReactorNode" .. i,
-                Vector3.new(4.4, 4.4, 4.4),
-                position,
+            local node = fitDecorMesh(
+                castProfile, "OrbitalReactorNode" .. i,
+                CFrame.new(position), Vector3.new(4.4, 4.4, 4.4),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
-            node.Shape = Enum.PartType.Ball
+            if node:IsA("Part") then node.Shape = Enum.PartType.Ball end
+            node.Parent = decor
             node.Transparency = 0.20
 
-            local strut = decorPart(
-                decor,
-                "OrbitalReactorStrut" .. i,
-                Vector3.new(8.5, 0.55, 0.55),
-                center + Vector3.new(
-                    math.cos(angle) * (radius - 4.4),
-                    7,
-                    math.sin(angle) * (radius - 4.4)
-                ),
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local strutPosition = center + Vector3.new(
+                math.cos(angle) * (radius - 4.4), 7,
+                math.sin(angle) * (radius - 4.4)
             )
-            strut.CFrame = CFrame.new(strut.Position) * CFrame.Angles(0, -angle, 0)
+            local strut = fitDecorMesh(
+                sweptProfile, "OrbitalReactorStrut" .. i,
+                CFrame.new(strutPosition) * CFrame.Angles(0, -angle, 0),
+                Vector3.new(8.5, 0.55, 0.55),
+                theme.Structure, VisualTheme.Materials.Structure
+            )
+            strut.Parent = decor
             strut.Transparency = 0.10
         end
     end
