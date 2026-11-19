@@ -1,19 +1,24 @@
 -- Massive original ascension landmarks on the REAL outer escape decks.
--- Eight to twelve strategically placed monuments per 320-stud arena:
+-- Twelve strategically placed monuments per 320-stud arena:
 -- visual landmarks are NOT new platforms, physics barriers or fake safety.
 -- The existing authoritative PerimeterPlatformIndex tracking makes them
 -- follow shrinking decks and vanish with their owner's collapse.
+local RouteSignalGeometry = require("./RouteSignalGeometry")
 local SkyRouteMonuments = {}
 
 SkyRouteMonuments.Steps = {[1] = "ACCESS", [4] = "TRANSFER", [8] = "SUMMIT"}
 SkyRouteMonuments.MaxPartsPerMonument = 17
 
 local function piece(decor, deck, index, role, name, size, offset,
-        color, material, kind, transparency, navigation)
-    local part = Instance.new(kind or "Part")
+        color, material, kind, transparency, navigation, mesh)
+    local part = mesh or Instance.new(kind or "Part")
     part.Name = "SkyRouteMonument" .. index .. "_" .. name
-    part.Size = size
-    part.CFrame = deck.CFrame * offset
+    if not mesh then
+        part.Size = size
+        part.CFrame = deck.CFrame * offset
+        part.TopSurface = Enum.SurfaceType.Smooth
+        part.BottomSurface = Enum.SurfaceType.Smooth
+    end
     part.Color = color
     part.Material = material or Enum.Material.Metal
     part.Transparency = transparency or 0
@@ -22,8 +27,6 @@ local function piece(decor, deck, index, role, name, size, offset,
     part.CanTouch = false
     part.CanQuery = false
     part.CastShadow = false
-    part.TopSurface = Enum.SurfaceType.Smooth
-    part.BottomSurface = Enum.SurfaceType.Smooth
     part:SetAttribute("PerimeterPlatformIndex", index)
     part:SetAttribute("SkyRouteMonument", true)
     part:SetAttribute("SkyRouteStage", role)
@@ -36,7 +39,7 @@ local function piece(decor, deck, index, role, name, size, offset,
     return part
 end
 
-function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme)
+function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme, crownProfiles)
     if not decor or not deck or not deck:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table"
         or type(variant) ~= "string" then return 0 end
@@ -63,10 +66,31 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
                 or (variant == "Towers" and Enum.Material.Foil
                     or Enum.Material.Metal)))
     local count = 0
-    local function add(name, size, offset, color, mat, kind, transparency, navigation)
+    local function add(name, size, offset, color, mat, kind, transparency, navigation, mesh)
         count += 1
         return piece(decor, deck, index, stage, name, size, offset,
-            color, mat, kind, transparency, navigation)
+            color, mat, kind, transparency, navigation, mesh)
+    end
+    local function crown(profile, name, size, offset, color, mat, kind, transparency, shape)
+        local source = crownProfiles and crownProfiles[profile]
+        local mesh
+        if source and source.part and source.part.MeshId ~= "" then
+            local frame = deck.CFrame * offset
+            if shape == Enum.PartType.Cylinder then
+                -- The annulus is Y-axial, while a Roblox cylinder is X-axial.
+                -- Its diameter along the original local Y keeps its height on shrink.
+                mesh = RouteSignalGeometry.fit(source.part, frame, size, 1, true)
+            else
+                mesh = RouteSignalGeometry.fit(source.part, frame, size)
+            end
+            if mesh then
+                mesh:SetAttribute("OriginalSkyRouteCrown3D", true)
+                mesh:SetAttribute("Original3DAssetId", source.assetId)
+            end
+        end
+        local item = add(name, size, offset,
+            color, mat, kind, transparency, false, mesh)
+        if shape and item:IsA("Part") then item.Shape = shape end
     end
 
     -- The overhead beam grows from ACCESS to SUMMIT. All load-bearing
@@ -76,6 +100,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     local overpassRise = stage == "SUMMIT" and 14.0
         or (stage == "TRANSFER" and 12.9 or 12.1)
     local overpassHeight = stage == "SUMMIT" and 1.9 or 1.3
+    local overpassTop = top + overpassRise + overpassHeight * 0.5
     local pylonHeight = overpassRise - overpassHeight * 0.5 + 0.42
     local powerRibHeight = math.max(6.4, pylonHeight - 4.4)
 
@@ -162,45 +187,43 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
         beacon.Shape = Enum.PartType.Ball
     end
 
-    -- Distinct original architectural crown for each of the five
-    -- universes. Shapes are not just recolored stock platform cubes.
+    -- Variant-specific crowns are separate from the canopy and underdeck
+    -- assemblies currently managed by the client.
     if variant == "Classic" then
-        add("IndustrialSurveyAntenna",
+        crown("shaft", "IndustrialSurveyAntenna",
             Vector3.new(1.6, 3.2, 3.4),
-            CFrame.new(0, top + 14.5, 0)
+            CFrame.new(0, overpassTop + 1.08, 0)
                 * CFrame.Angles(0, 0, math.rad(22)),
             metal, Enum.Material.DiamondPlate, "WedgePart")
     elseif variant == "Towers" then
-        add("RailwayTransitMonitor",
+        crown("cast", "RailwayTransitMonitor",
             Vector3.new(1.4, 3.8, 5.5),
-            CFrame.new(0, top + 14.7, 0),
+            CFrame.new(0, overpassTop + 1.65, 0),
             accent, Enum.Material.Glass, nil, 0.32)
     elseif variant == "Crossroads" then
-        add("AngledRoadExchange",
+        crown("beam", "AngledRoadExchange",
             Vector3.new(2.2, 3.1, 5.0),
-            CFrame.new(0, top + 14.3, 0)
+            CFrame.new(0, overpassTop + 1.05, 0)
                 * CFrame.Angles(0, math.rad(20), math.rad(17)),
             metal, Enum.Material.CorrodedMetal, "WedgePart")
     elseif variant == "Orbital" then
-        local reactor = add("SatelliteReactor",
+        crown("lens", "SatelliteReactor",
             Vector3.new(3.8, 3.8, 3.8),
-            CFrame.new(0, top + 15.5, 0),
-            accent, Enum.Material.Glass, nil, 0.20)
-        reactor.Shape = Enum.PartType.Ball
-        local ring = add("ContainmentRotor",
+            CFrame.new(0, overpassTop + 1.55, 0),
+            accent, Enum.Material.Glass, nil, 0.20, Enum.PartType.Ball)
+        crown("rotor", "ContainmentRotor",
             Vector3.new(0.38, 5.0, 5.0),
-            CFrame.new(0, top + 15.5, 0)
+            CFrame.new(0, overpassTop + 1.55, 0)
                 * CFrame.Angles(0, 0, math.rad(35)),
-            metal, Enum.Material.Metal)
-        ring.Shape = Enum.PartType.Cylinder
+            metal, Enum.Material.Metal, nil, nil, Enum.PartType.Cylinder)
     elseif variant == "Harbor" then
-        add("PortCargoTraverse",
+        crown("beam", "PortCargoTraverse",
             Vector3.new(5.5, 0.65, 1.8),
-            CFrame.new(0, top + 14.4, 1.8),
+            CFrame.new(0, overpassTop + 0.22, 1.8),
             metal, Enum.Material.CorrodedMetal)
-        add("SuspendedStormHook",
+        crown("shaft", "SuspendedStormHook",
             Vector3.new(0.55, 3.8, 0.55),
-            CFrame.new(0, top + 12.3, 3.5),
+            CFrame.new(0, overpassTop - 1.64, 2.15),
             accent, Enum.Material.Metal)
     end
 

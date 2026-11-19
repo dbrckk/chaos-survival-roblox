@@ -3071,18 +3071,27 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- All floor art follows the shrinking REAL base and is noncolliding.
     ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile, wayfinderBase)
     local orbitalLens = orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96))
-    addPerimeterStations(decor, config, variant, theme, {
-        plate = {part = wayfinderBase, assetId = 88962643359267},
-        signal = {part = sweptProfile, assetId = 126298311664881},
+    local rotorAssetId = HorizonMonumentGeometry.assetId("rotor")
+    local perimeterRotor = approvedHorizonRegion(
+        "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
+        rotorAssetId, Vector3.new(2.56, .72, 2.56))
+    local shaftAssetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)
+    local detailProfiles = {
+        beam = {part = sweptProfile, assetId = 126298311664881},
+        cast = {part = wayfinderBase, assetId = 88962643359267},
         lens = {part = orbitalLens, assetId = 104654294187035},
+        rotor = {part = perimeterRotor, assetId = rotorAssetId},
+        shaft = {part = beaconShaft, assetId = shaftAssetId},
+    }
+    addPerimeterStations(decor, config, variant, theme, {
+        plate = detailProfiles.cast,
+        signal = detailProfiles.beam,
+        lens = detailProfiles.lens,
         rail = {part = rimBevel, assetId = 94830155055482},
-        housing = {part = wayfinderBase, assetId = 88962643359267},
-        shaft = {part = beaconShaft, assetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)},
-        turbine = {part = approvedHorizonRegion(
-            "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
-            HorizonMonumentGeometry.assetId("rotor"), Vector3.new(2.56, .72, 2.56)),
-            assetId = HorizonMonumentGeometry.assetId("rotor")},
-        wing = {part = sweptProfile, assetId = 126298311664881},
+        housing = detailProfiles.cast,
+        shaft = detailProfiles.shaft,
+        turbine = detailProfiles.rotor,
+        wing = detailProfiles.beam,
     })
     local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     local horizonTemplates = {
@@ -3092,9 +3101,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         lens = orbitalLens,
         roller = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil,
         shaft = beaconShaft,
-        rotor = if variant.Id == "Orbital" then approvedHorizonRegion(
-            "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
-            HorizonMonumentGeometry.assetId("rotor"), Vector3.new(2.56, .72, 2.56)) else nil,
+        rotor = if variant.Id == "Orbital" then perimeterRotor else nil,
         depthHull = approvedHorizonRegion(
             "ApprovedSkylineDepthSculptTemplates", "Roof", "OriginalSkylineDepthSculpt3D",
             HorizonMonumentGeometry.assetId("depthHull"), Vector3.new(11.4, 33.95, 6.94)),
@@ -3491,7 +3498,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- and collapse; pre-existing danger telegraphs remain authoritative.
         if definition.PerimeterRoute then
             SkyRouteMonuments.decorate(
-                decor, platform, i, definition, variant.Id, theme)
+                decor, platform, i, definition, variant.Id, theme, detailProfiles)
         end
         -- Six large native-metal arches visibly frame the actual elevated
         -- 200-stud promenades. Every noncolliding part is owned by its
