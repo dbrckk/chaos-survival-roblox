@@ -2349,18 +2349,19 @@ local function buildLobby(root, config)
     local cast = "LobbySculptedCasting"
     local shaft = "LobbySculptedShaft"
     local lobbyLanes = {
-        {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
-        {name = "LobbyLaneSouth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, 24)},
-        {name = "LobbyLaneWest", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(-24, 1.16, 0)},
-        {name = "LobbyLaneEast", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(24, 1.16, 0)},
+        {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24),
+            color = VisualTheme.Accents.Cyan},
+        {name = "LobbyLaneWest", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(-24, 1.16, 0),
+            color = VisualTheme.Accents.Cyan},
+        {name = "LobbyLaneEast", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(24, 1.16, 0),
+            color = VisualTheme.Accents.Violet},
     }
 
-    for i, def in ipairs(lobbyLanes) do
+    for _, def in ipairs(lobbyLanes) do
         local lane = detail(
             cast, def.name,
             CFrame.new(config.LobbyCenter + def.offset), def.size,
-            (i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
-            VisualTheme.Materials.Glow
+            def.color, VisualTheme.Materials.Glow
         )
         lane.Parent = decor
         lane.Transparency = 0.38
@@ -2613,11 +2614,34 @@ local function buildLobby(root, config)
     gateSubstatus.TextScaled = true
     gateSubstatus.Parent = gatePanel
 
-    local runwayCenter = config.LobbyCenter + Vector3.new(0, 1.18, 17.5)
+    local stageFront = centerPlatform.Size.Z * 0.5
+    local guideY = centerPlatform.Size.Y * 0.5 + 0.075
+    local tip = centerPlatform.CFrame:PointToWorldSpace(
+        Vector3.new(0, guideY, stageFront - 1.1))
+    for side = -1, 1, 2 do
+        local shoulder = centerPlatform.CFrame:PointToWorldSpace(
+            Vector3.new(side * 2.25, guideY, stageFront - 3.75))
+        local arm = detail(
+            "LobbySculptedSwept",
+            side < 0 and "StageExitChevronLeft" or "StageExitChevronRight",
+            CFrame.lookAt(shoulder:Lerp(tip, 0.5), tip),
+            Vector3.new(0.34, 0.08, (tip - shoulder).Magnitude),
+            VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
+        )
+        arm.Transparency = 0.24
+        arm.Parent = decor
+    end
+
+    -- Start beyond the forged stage lip and continue to the gate landing.
+    local runwayStart = centerPlatform.Position + arenaDirection * (stageFront + 0.55)
+    local runwayEnd = archCenter + arenaDirection * 5
+    local runwayLength = (runwayEnd - runwayStart):Dot(arenaDirection)
+    local midpoint = runwayStart:Lerp(runwayEnd, 0.5)
+    local runwayCenter = Vector3.new(midpoint.X, floor.Position.Y + 1.18, midpoint.Z)
     local runway = decorPart(
         decor,
         "ArenaRunway",
-        Vector3.new(14, 0.10, 29),
+        Vector3.new(14, 0.10, runwayLength),
         runwayCenter,
         VisualTheme.World.Deep:Lerp(VisualTheme.World.SurfaceRaised, 0.22),
         VisualTheme.Materials.Panel
@@ -2630,7 +2654,7 @@ local function buildLobby(root, config)
         local rail = detail(
             cast, side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
             CFrame.new(runwayCenter + Vector3.new(side * 6.4, 0.10, 0)),
-            Vector3.new(0.30, 0.12, 29),
+            Vector3.new(0.30, 0.12, runwayLength),
             side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
             VisualTheme.Materials.Glow
         )

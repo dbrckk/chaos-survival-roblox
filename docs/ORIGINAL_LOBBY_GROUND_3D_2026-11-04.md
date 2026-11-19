@@ -32,6 +32,10 @@ L’estrade reprend le relief biseauté de la même dalle approuvée sur une emp
 
 Deux attributs diagnostiques du joueur sont renseignés depuis le montage réel : LocalOriginalLobbyGroundTileCount et LocalOriginalLobbyGroundMeshPartCount. Ces compteurs ne mesurent pas le rendu ni la VRAM.
 
+## Raccord vers le portail
+
+Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estrade. L’allée et ses deux rails partent au pied du rebord et se terminent cinq studs après le portail, à l’intérieur du vestibule. Les chevrons de départ et les repères d’approche suivent l’empreinte de l’allée. Le signal de lancement se déplace de l’estrade vers le portail.
+
 ## Acceptation visuelle restante
 
 - Build Rojo et validation moteur des sept suites sur le SHA exact du lot.

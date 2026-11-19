@@ -203,16 +203,16 @@ local function bindMap(generated)
     if generated then
         local disconnectFloor = MapVisualReadiness.watch(
             generated, "Lobby", "Floor", scheduleRefresh)
-        local function onStageChange(item)
-            if item.Name ~= "CenterPlatform" then return end
+        local function onDetailAnchorChange(item)
+            if item.Name ~= "CenterPlatform" and item.Name ~= "ArenaRunway" then return end
             local lobby = generated:FindFirstChild("Lobby")
             local decor = lobby and lobby:FindFirstChild("Decor")
             if decor and item.Parent == decor then scheduleRefresh() end
         end
-        local added = generated.DescendantAdded:Connect(onStageChange)
+        local added = generated.DescendantAdded:Connect(onDetailAnchorChange)
         -- On removal, refresh from the canonical hierarchy after the
-        -- stage (or a streamed ancestor) actually leaves the lobby.
-        local removing = generated.DescendantRemoving:Connect(onStageChange)
+        -- anchor (or a streamed ancestor) actually leaves the lobby.
+        local removing = generated.DescendantRemoving:Connect(onDetailAnchorChange)
         disconnectFloorWatch = function()
             disconnectFloor()
             added:Disconnect()

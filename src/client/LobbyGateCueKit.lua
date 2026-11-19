@@ -21,6 +21,9 @@ function LobbyGateCueKit.build(parent, gateTop, runway, tier, accents)
         return {pieces = pieces, mode = nil}
     end
 
+    local entryZ = -runway.Size.Z * 0.28
+    local gateZ = runway.CFrame:PointToObjectSpace(gateTop.Position).Z
+    local markerZ = math.clamp(gateZ - 1.8, -runway.Size.Z * 0.42, runway.Size.Z * 0.42)
     local specs = {
         {class = "WedgePart", size = Vector3.new(2.75, 1.18, 1.22),
             frame = gateTop.CFrame * CFrame.new(-8.9, -2.24, -0.64)
@@ -28,17 +31,17 @@ function LobbyGateCueKit.build(parent, gateTop, runway, tier, accents)
         {class = "WedgePart", size = Vector3.new(2.75, 1.18, 1.22),
             frame = gateTop.CFrame * CFrame.new(8.9, -2.24, -0.64)
                 * CFrame.Angles(0, 0, math.rad(24)), kind = "fin", side = 1},
-        {class = "WedgePart", size = Vector3.new(2.55, 0.09, 2.9),
-            frame = runway.CFrame * CFrame.new(-2.9, runway.Size.Y * 0.5 + 0.20, -7)
-                * CFrame.Angles(0, math.rad(90), 0), kind = "arrow", side = -1},
-        {class = "WedgePart", size = Vector3.new(2.55, 0.09, 2.9),
-            frame = runway.CFrame * CFrame.new(2.9, runway.Size.Y * 0.5 + 0.20, -7)
-                * CFrame.Angles(0, math.rad(90), 0), kind = "arrow", side = 1},
+        {class = "Part", size = Vector3.new(0.36, 0.075, 2.9),
+            frame = runway.CFrame * CFrame.new(-0.93, runway.Size.Y * 0.5 + 0.065, entryZ)
+                * CFrame.Angles(0, math.rad(38), 0), kind = "arrow", side = -1},
+        {class = "Part", size = Vector3.new(0.36, 0.075, 2.9),
+            frame = runway.CFrame * CFrame.new(0.93, runway.Size.Y * 0.5 + 0.065, entryZ)
+                * CFrame.Angles(0, math.rad(-38), 0), kind = "arrow", side = 1},
         {class = "Part", size = Vector3.new(2.8, 0.075, 0.36),
-            frame = runway.CFrame * CFrame.new(-3, runway.Size.Y * 0.5 + 0.18, 7.7),
+            frame = runway.CFrame * CFrame.new(-3, runway.Size.Y * 0.5 + 0.065, markerZ),
             kind = "marker", side = -1},
         {class = "Part", size = Vector3.new(2.8, 0.075, 0.36),
-            frame = runway.CFrame * CFrame.new(3, runway.Size.Y * 0.5 + 0.18, 7.7),
+            frame = runway.CFrame * CFrame.new(3, runway.Size.Y * 0.5 + 0.065, markerZ),
             kind = "marker", side = 1},
     }
     for index = 1, LobbyGateCueKit.count(tier) do

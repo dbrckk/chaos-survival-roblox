@@ -825,7 +825,7 @@ local function runwaySweep(token)
     sweep.Name = "LobbyRunwaySweep"
     sweep.Size = Vector3.new(runway.Size.X * 0.80, 0.04, 0.55)
     sweep.CFrame = runway.CFrame
-        * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, runway.Size.Z * 0.42)
+        * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, -runway.Size.Z * 0.42)
     sweep.Anchored = true
     sweep.CanCollide = false
     sweep.CanTouch = false
@@ -845,7 +845,7 @@ local function runwaySweep(token)
         ),
         {
             CFrame = runway.CFrame
-                * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, -runway.Size.Z * 0.42),
+                * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, runway.Size.Z * 0.42),
             Transparency = 1,
         }
     ):Play()
