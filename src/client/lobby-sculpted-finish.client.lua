@@ -186,7 +186,10 @@ local function refresh()
                         and (part.Parent == decor or (stage and part.Parent == stage
                             and not part.CanCollide and not part.CanTouch and not part.CanQuery)
                             or (activities and part.Parent == activities
-                                and not part.CanCollide and not part.CanTouch and not part.CanQuery)) then
+                                and not part.CanCollide and not part.CanQuery
+                                and (not part.CanTouch
+                                    or (tag == "LobbySculptedCasting"
+                                        and part:GetAttribute("LobbyPracticePad") == true)))) then
                         candidates[part] = source
                     end
                 end
