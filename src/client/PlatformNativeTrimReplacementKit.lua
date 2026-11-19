@@ -872,10 +872,17 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                         watchers[#watchers + 1] =
                             part:GetPropertyChangedSignal(property):Connect(changed)
                     end
-                    local geometryChanged = part:IsA("Part") and part:GetPropertyChangedSignal("Shape")
-                        or part:GetAttributeChangedSignal("OriginalPlatformSupport3D")
-                    watchers[#watchers + 1] = geometryChanged:Connect(changed)
-                    for _, attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
+                    local geometryProperty = part:IsA("Part") and "Shape" or (isPromenadePylon and "MeshId")
+                    if geometryProperty then
+                        watchers[#watchers + 1] = part:GetPropertyChangedSignal(geometryProperty):Connect(changed)
+                    end
+                    local attributes = {"PromenadeVisualOnly", "PerimeterPlatformIndex"}
+                    if part:IsA("MeshPart") then
+                        table.insert(attributes, isPromenadePylon and "OriginalPromenadePylonShaft3D"
+                            or "OriginalPlatformSupport3D")
+                        if isPromenadePylon then table.insert(attributes, "Original3DAssetId") end
+                    end
+                    for _, attribute in ipairs(attributes) do
                         watchers[#watchers + 1] =
                             part:GetAttributeChangedSignal(attribute):Connect(changed)
                     end

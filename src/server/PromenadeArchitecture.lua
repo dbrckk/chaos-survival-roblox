@@ -100,7 +100,7 @@ local function variantEquipment(decor, platform, index, variant, theme, top)
 end
 
 function PromenadeArchitecture.decorate(decor, platform, index, definition,
-    variant, theme, trussProfile, stayProfile, beamProfile)
+    variant, theme, trussProfile, shaftProfile, beamProfile)
     if not decor or not platform or not platform:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table" then
         return 0
@@ -122,31 +122,34 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local material = variant == "Harbor" and Enum.Material.CorrodedMetal
         or (variant == "Orbital" and Enum.Material.CeramicTiles
             or Enum.Material.Metal)
-    local function structure(name, size, offset, color, finish, className)
-        piece(decor, platform, index, name, size,
-            CFrame.new(0, height, 0) * offset,
-            color, finish or material, className)
-        count += 1
-    end
-
     local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
     local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
-    local shaft = stayProfile and stayProfile.part
+    local shaft = shaftProfile and shaftProfile.part
+    if shaft and shaft.MeshId == "" then shaft = nil end
+    local shaftAlongX = shaft and shaft.Size.X > shaft.Size.Z
+    local pylonSize = Vector3.new(1.6, crownHeight, 1.8)
     local staySize = Vector3.new(0.65, crownHeight * 0.55, 1.1)
     -- Two side rails outside the ACTUAL 12-stud-wide crossing. Arch
     -- interiors have >11 studs head clearance and no solid decoration,
     -- so running/jumping R6/R15 players never hit invisible beams.
     for side = -1, 1, 2 do
-        structure("LoadPylon" .. side, Vector3.new(1.6, crownHeight, 1.8),
-            CFrame.new(0, crownHeight * 0.5, side * 7.6), steel)
+        local pylonOffset = CFrame.new(0, height + crownHeight * 0.5, side * 7.6)
+        local pylon = RouteSignalGeometry.fit(shaft, platform.CFrame * pylonOffset,
+            pylonSize, nil, shaftAlongX)
+        if pylon then
+            pylon:SetAttribute("OriginalPromenadePylonShaft3D", true)
+            pylon:SetAttribute("Original3DAssetId", shaftProfile.assetId)
+        end
+        make(decor, platform, index, "LoadPylon" .. side, pylonSize, pylonOffset,
+            steel, material, nil, pylon)
+        count += 1
         local offset = PlatformIdentityLodRules.promenadeSculptedStayPose(height, crownHeight, side, 1)
         -- The shaft already has its long axis on Y. Keep the diagonal's
         -- local axes so contraction only changes its cross section.
-        local stay = shaft and shaft.MeshId ~= "" and RouteSignalGeometry.fit(
-            shaft, platform.CFrame * offset, staySize, nil, shaft.Size.X > shaft.Size.Z)
+        local stay = RouteSignalGeometry.fit(shaft, platform.CFrame * offset, staySize, nil, shaftAlongX)
         if stay then
             stay:SetAttribute("OriginalPromenadeStay3D", true)
-            stay:SetAttribute("Original3DAssetId", stayProfile.assetId)
+            stay:SetAttribute("Original3DAssetId", shaftProfile.assetId)
         else
             offset = CFrame.new(0, height + crownHeight * 0.66, side * 8.3)
                 * CFrame.Angles(math.rad(side * 16), 0, 0)

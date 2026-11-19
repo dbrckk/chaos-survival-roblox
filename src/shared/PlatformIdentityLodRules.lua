@@ -2,6 +2,9 @@
 -- identity Parts. No physics mutations, asset creation or update loop.
 -- The owner is the REAL server physical deck or original support post,
 -- obtained from the existing renderer's exact source-authored weld.
+local horizonModule = script and script.Parent:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("./HorizonMonumentGeometry")
 local Rules = {}
 local PROMENADE_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}
 local PROMENADE_VARIANTS = {Classic = true, Towers = true, Crossroads = true, Orbital = true, Harbor = true}
@@ -97,7 +100,10 @@ function Rules.promenadePylonIndex(native)
         return nil
     end
     local index, side = native.Name:match("^Promenade(%d+)_LoadPylon(%-?1)$")
-    if not index or not native:IsA("Part") or native.Shape ~= Enum.PartType.Block
+    local block = native:IsA("Part") and native.Shape == Enum.PartType.Block
+    local shaft = native:IsA("MeshPart") and native.MeshId ~= ""
+        and native:GetAttribute("OriginalPromenadePylonShaft3D") == true
+    if not index or not (block or shaft)
         or not native.Anchored or native.CanCollide or native.CanTouch or native.CanQuery
         or native:GetAttribute("PerimeterPlatformIndex") ~= tonumber(index) then
         return nil
@@ -113,8 +119,12 @@ function Rules.matchesPromenadePylon(native, deck)
         or deck:GetAttribute("RouteTier") ~= 4 then return false end
     local arena = deck.Parent.Parent
     if not arena or deck.Parent ~= arena:FindFirstChild("Platforms")
-        or native.Parent ~= arena:FindFirstChild("Decor")
-        or not PROMENADE_VARIANTS[arena:GetAttribute("VariantId")] then return false end
+        or native.Parent ~= arena:FindFirstChild("Decor") then return false end
+    local variant = arena:GetAttribute("VariantId")
+    if not PROMENADE_VARIANTS[variant] or (native:IsA("MeshPart")
+        and native:GetAttribute("Original3DAssetId") ~= HorizonMonumentGeometry.assetId("shaft", variant)) then
+        return false
+    end
     local lane = deck:GetAttribute("PromenadeLane")
     local height = PROMENADE_HEIGHT[deck:GetAttribute("PromenadeStep")]
     if not height or (lane ~= 1 and lane ~= 2) then return false end
