@@ -40,6 +40,14 @@ function JumpRouteCueRules.gap(from, target)
 end
 
 function JumpRouteCueRules.select(from, orderedPlatforms, arenaCenter, variantId, isClear, rejected)
+    -- An authored rescue crossing leads to branch step 2, whose tier is
+    -- lower even though its landing is physically higher. Use the same
+    -- route as the in-world guide, including on Orbital's perimeter.
+    if deckTier(from) == 4 and from:GetAttribute("CrosslinkRoute") ~= nil then
+        if from:GetAttribute("CrosslinkFromPerimeterStep") ~= 6
+            or not hasStableSurface(from) then return nil end
+        return JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId, nil, isClear)
+    end
     -- Orbital's upper ascent uses real helical ramps, not an airborne jump.
     if variantId == "Orbital" or typeof(arenaCenter) ~= "Vector3" then
         return nil

@@ -42,10 +42,11 @@ end
 function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, profiles)
     local step = definition.PerimeterStep
     local branch = definition.BranchStep ~= nil
-    if not branch and (not step or step > 5) then return end
+    local crossing = definition.CrosslinkRoute ~= nil
+    if not branch and not crossing and (not step or step > 5) then return end
 
     local entry = step == 1
-    local source = entry and profiles.cast or profiles.beam
+    local source = (entry or crossing) and profiles.cast or profiles.beam
     if not source.part or source.part.MeshId == "" then return end
 
     -- Lateral steps rise by 3 studs. Keep their plates above the
@@ -54,9 +55,8 @@ function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, pro
     local depth = 0.40
     local size = deck.Size
     local y = size.Y * 0.5 - 1.45 - height * 0.5
-    local color = theme.Surface:Lerp(branch and theme.Secondary or theme.Detail, 0.48)
-    local prefix = branch and "BranchRiser" or "PerimeterRiser"
-    local tag = branch and "OriginalBranchRiser3D" or "OriginalPerimeterRiser3D"
+    local color = theme.Surface:Lerp((branch or crossing) and theme.Secondary or theme.Detail, 0.48)
+    local prefix = if crossing then "CrosslinkRiser" elseif branch then "BranchRiser" else "PerimeterRiser"
 
     local function mount(face, offset, dimensions, alongX)
         local mesh = RouteSignalGeometry.fit(source.part, deck.CFrame * offset, dimensions, nil, alongX)
@@ -66,7 +66,7 @@ function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, pro
         mesh.Material = deck.Material
         mesh.Transparency = 0
         mesh:SetAttribute("Original3DAssetId", source.assetId)
-        mesh:SetAttribute(tag, true)
+        mesh:SetAttribute("Original" .. prefix .. "3D", true)
         mesh:SetAttribute("PerimeterPlatformIndex", index)
         mesh.Parent = decor
     end
@@ -74,7 +74,16 @@ function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, pro
     -- The access portico already has castings on the inward X face.
     -- Center its flank plates between the corner feet, below the deck glow.
     local faceOffset = 0.12
-    if branch then
+    if crossing then
+        -- The crossing aligns with ridge 6 on X and branch 2 on Z.
+        -- Face both physical landings below the warning strips.
+        local towardRidge = definition.offset.Z < 0 and 1 or -1
+        local towardBranch = definition.offset.X < 0 and 1 or -1
+        mount("Ridge", CFrame.new(0, y, towardRidge * (size.Z * 0.5 + faceOffset)),
+            Vector3.new(size.X * 0.74, height, depth), true)
+        mount("Branch", CFrame.new(towardBranch * (size.X * 0.5 + faceOffset), y, 0),
+            Vector3.new(depth, height, size.Z * 0.74), false)
+    elseif branch then
         local facing = definition.offset.Z < 0 and 1 or -1
         mount("Approach", CFrame.new(0, y, facing * (size.Z * 0.5 + faceOffset)),
             Vector3.new(size.X * 0.74, height, depth), true)

@@ -3491,7 +3491,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             (skybridge or harborLanding) and underdeckLattice or nil,
             underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX)
         addPlatformSupports(decor, platform, i, theme, beaconShaft)
-        if definition.PerimeterRoute or definition.BranchRoute then
+        if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)
         end
         -- Real 320-stud arenas need strong visual destinations, not more

@@ -1889,7 +1889,7 @@ assert 'JumpRouteCueRules.takeoffChevron(' in OWNER
 assert 'piece:SetAttribute("SkipRouteFootprint",true)' in OWNER
 assert 'piece:SetAttribute("ParkourTakeoffCue", true)' in OWNER
 assert 'and item:GetAttribute("ParkourTakeoffCue") ~= true' in FINISH
-assert 'profiles and profiles.hatch, side == -1 and left or right, size,' in OWNER
+assert 'profiles and profiles.hatch, pose, size, false, profiles and profiles.assetId' in OWNER
 assert 'if target then left,right,size = takeoffGeometry(platform,target) end' in OWNER
 assert 'frame, size, stroke:GetAttribute("PlatformTrimAxisSwap") == true)' in OWNER
 assert 'joint.C1 = platform.CFrame:ToObjectSpace(pose)' in OWNER
@@ -1903,7 +1903,10 @@ assert 'and (not isClear or isClear(from,target)) then' in CUE_RULES
 assert 'variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in OWNER
 assert 'if checked == 8 then break end' in OWNER
 assert 'LocalJumpRouteEpoch' in SIDE_LOD and 'LocalJumpRouteEpoch' in OWNER
-assert 'variant ~= "Orbital" then warnings, lava = JumpRouteHazards.read(arena) end' in OWNER
+assert 'local warnings, lava = JumpRouteHazards.read(arena)' in OWNER
+assert 'crossingProfile, pose, size, false, 126298311664881' in OWNER
+assert 'targetTier=crossing and 3 or routeTier+1' in OWNER
+assert 'return JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId, nil, isClear)' in CUE_RULES
 CLEARANCE=(ROOT/"src/shared/JumpRouteClearance.lua").read_text(encoding="utf8")
 assert 'cast.IncludeInstances = {arena}' in CLEARANCE
 assert 'cast.RespectCanCollide = true' in CLEARANCE

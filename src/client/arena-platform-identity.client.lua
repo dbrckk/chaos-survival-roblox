@@ -519,7 +519,7 @@ local function takeoffGeometry(platform,target)
     )
 end
 
-local function decorateTakeoff(platform, target, index, theme, quality, profiles)
+local function decorateTakeoff(platform, target, index, theme, quality, profiles, crossingProfile)
     local left,right,size = takeoffGeometry(platform,target)
     if not left then return end
     local strokes = {}
@@ -529,9 +529,15 @@ local function decorateTakeoff(platform, target, index, theme, quality, profiles
     local opacity = quality.Name == "Low" and 0.34 or 0.43
     local color = Color3.fromRGB(185, 236, 239):Lerp(theme.Accent, 0.24)
     for side = -1, 1, 2 do
-        local mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
-            profiles and profiles.hatch, side == -1 and left or right, size,
-            false, profiles and profiles.assetId)
+        local mesh, frame, dimensions
+        local pose = side == -1 and left or right
+        if crossingProfile then
+            mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
+                crossingProfile, pose, size, false, 126298311664881)
+        else
+            mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
+                profiles and profiles.hatch, pose, size, false, profiles and profiles.assetId)
+        end
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
             dimensions,
@@ -593,8 +599,10 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
-    local platformArtProfiles = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+    local allowMeshTrim = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+    local platformArtProfiles = allowMeshTrim
         and PlatformFinishKit.artProfiles(variant, tier.Name ~= "Low") or nil
+    local crossingProfile = allowMeshTrim and ForgedBridge.sweptProfile() or nil
     local index = 0
     local replacements = {}
     local actualSupportParts = {}
@@ -613,8 +621,7 @@ local function rebuild()
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
     local isClear = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
-    local warnings, lava
-    if variant ~= "Orbital" then warnings, lava = JumpRouteHazards.read(arena) end
+    local warnings, lava = JumpRouteHazards.read(arena)
     -- Share deck subscriptions among every cue that uses the same target.
     -- Revisit waiting cues once per geometry/availability change batch.
     local targetUsers,pendingCues = {},{}
@@ -634,7 +641,7 @@ local function rebuild()
         end
         if not cue.strokes and target then
             cue.strokes = decorateTakeoff(platform, target, cue.index, theme, tier,
-                platformArtProfiles)
+                platformArtProfiles, cue.crossing and crossingProfile or nil)
         end
     end
     local function syncRoute(platform)
@@ -1446,12 +1453,17 @@ local function rebuild()
             end
             end
 
-            -- Orbital uses continuous physical Helix ramps instead of
-            -- jumping between these deck tiers; no false route arrows.
-            local routeTier = variant ~= "Orbital" and JumpRouteCueRules.deckTier(platform)
+            -- Orbital's central route uses continuous Helix ramps.
+            -- Its outer rescue crossing still jumps to branch step 2.
+            local crossing = platform:GetAttribute("CrosslinkRoute") ~= nil
+            local exitLanding = platform:GetAttribute("BranchStep") == 2
+            local routeTier = (variant ~= "Orbital" or crossing or exitLanding)
+                and JumpRouteCueRules.deckTier(platform)
             if routeTier then
-                if routeTier < 4 then
-                    routeCueStates[platform] = {index=visualIndex,targetTier=routeTier+1}
+                if crossing or (variant ~= "Orbital" and routeTier < 4) then
+                    routeCueStates[platform] = {
+                        index=visualIndex, targetTier=crossing and 3 or routeTier+1, crossing=crossing,
+                    }
                 end
                 routeDeckConnections[platform] = {
                     platform.Changed:Connect(function(property)

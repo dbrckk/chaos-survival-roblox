@@ -228,6 +228,8 @@ Les cinq arènes équipent 80 paliers latéraux et 20 liaisons de secours de ban
 
 Les 80 paliers latéraux peuvent aussi recevoir une plaque forgée sur leur contremarche d’approche, au-dessus du palier précédent et sous la bande lumineuse. Au cinquième palier périphérique, le chevron latéral se rapproche du bord de départ et vise le premier palier du belvédère. Le chevron de la montée principale garde son axe. Les plaques et les chevrons suivent leur palier pendant le rétrécissement.
 
+Les 20 liaisons de secours peuvent recevoir deux plaques moulées, orientées vers les paliers qu’elles relient. Leur chevron de départ indique le saut vers le belvédère, y compris sur Orbital. Il se recale quand l’arène rétrécit et s’efface si le saut devient impraticable ou dangereux. Une forme simple prend le relais si le maillage est indisponible ou que la charge graphique augmente.
+
 ## P4 — Dessous sculptés sur les paliers de Storm Harbor
 
 Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.

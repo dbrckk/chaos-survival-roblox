@@ -630,7 +630,8 @@ local function update()
                     or "RESUME THE ROUTE  ↑"
             end
         end
-    elseif variant == "Orbital" then
+    elseif variant == "Orbital" and from:GetAttribute("PerimeterStep") ~= 6
+        and from:GetAttribute("CrosslinkRoute") == nil then
         -- This world uses physical ramps instead of tiered jump gaps.
         -- Preserve the SAME one-sign Android guide, not a second HUD.
         target = orbitalRampNext(arena, from, root, base, platforms)
