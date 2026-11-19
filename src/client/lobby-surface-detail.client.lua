@@ -9,6 +9,22 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 
 local player = Players.LocalPlayer
 
+local FALLBACK_PAIRS = {Low = 2, Medium = 3, High = 4}
+-- Fractions of the inset's half extents. Leave its four straight access
+-- routes, the notice panels and the raised center clear.
+local SEAM_LAYOUT = {
+    {x = .56, z = -.82, alongX = true, length = .53},
+    {x = .56, z = .88, alongX = true, length = .53},
+    {x = .89, z = -.51, alongX = false, length = .48},
+    {x = .89, z = .51, alongX = false, length = .48},
+}
+local MAINTENANCE_LAYOUT = {
+    {x = .54, z = -.61, alongX = true, length = 6.4},
+    {x = .54, z = .61, alongX = true, length = 4.8},
+    {x = .80, z = .29, alongX = false, length = 6.4},
+    {x = .80, z = -.57, alongX = false, length = 4.8},
+}
+
 local folder = Instance.new("Folder")
 folder.Name = "LobbySurfaceDetailLocal"
 folder.Parent = workspace
@@ -43,6 +59,39 @@ local function makePart(name, size, cframe, color, material, transparency)
     return part
 end
 
+local function buildVestibuleFallback(inset, tier, pairCount)
+    local top = inset.CFrame * CFrame.new(0, inset.Size.Y * .5, 0)
+    local halfX, halfZ = inset.Size.X * .5, inset.Size.Z * .5
+    local hatchColor = VisualTheme.World.SurfaceRaised:Lerp(VisualTheme.World.Metal, .38)
+
+    for i = 1, pairCount do
+        local seam = SEAM_LAYOUT[i]
+        local hatch = MAINTENANCE_LAYOUT[i]
+        local seamSize = seam.alongX and Vector3.new(halfX * seam.length, .026, .12)
+            or Vector3.new(.12, .026, halfZ * seam.length)
+        local hatchRotation = CFrame.Angles(0, hatch.alongX and 0 or math.pi * .5, 0)
+        for side = -1, 1, 2 do
+            local index = (i - 1) * 2 + (side < 0 and 1 or 2)
+            makePart("LobbyPanelSeam" .. index, seamSize,
+                top * CFrame.new(side * seam.x * halfX, .017, seam.z * halfZ),
+                VisualTheme.World.MetalLight, Enum.Material.Metal, tier == "Low" and .48 or .56)
+
+            local panel = makePart("LobbyMaintenancePanel" .. index,
+                Vector3.new(hatch.length, .034, 2),
+                top * CFrame.new(side * hatch.x * halfX, .022, hatch.z * halfZ) * hatchRotation,
+                hatchColor, Enum.Material.Metal, tier == "Low" and .30 or .16)
+
+            if tier == "High" then
+                makePart("LobbyMaintenanceInset" .. index,
+                    Vector3.new(panel.Size.X * .62, .022, .08),
+                    panel.CFrame * CFrame.new(0, panel.Size.Y * .5 + .012, 0),
+                    side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+                    Enum.Material.Neon, .72)
+            end
+        end
+    end
+end
+
 local function rebuild()
     clear()
 
@@ -57,7 +106,7 @@ local function rebuild()
     local tier = VfxQuality.deviceTier(
         player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
-    -- Only verified real imported UV meshes replace the native line grid.
+    -- A mounted approved tile takes over the fallback seams and hatches.
     -- All gameplay panels, the 74-stud collision Floor, and spawn remain.
     local meshParts, meshTiles = PremiumLobbyGroundMeshKit.install(
         folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure"), centerPlatform
@@ -70,58 +119,10 @@ local function rebuild()
         ~= meshTiles then
         player:SetAttribute("LocalOriginalLobbyGroundTileCount", meshTiles)
     end
-    local top = floor.CFrame * CFrame.new(0, floor.Size.Y * 0.5 + 0.04, 0)
-    local halfX = floor.Size.X * 0.5
-    local halfZ = floor.Size.Z * 0.5
-
-    local seamCount = meshTiles > 0 and 0
-        or (tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8))
-    for i = 1, seamCount do
-        local t = (i / (seamCount + 1)) * 2 - 1
-        local horizontal = i % 2 == 0
-        makePart(
-            "LobbyPanelSeam" .. i,
-            horizontal
-                and Vector3.new(floor.Size.X * 0.80, 0.026, 0.075)
-                or Vector3.new(0.075, 0.026, floor.Size.Z * 0.80),
-            top * CFrame.new(
-                horizontal and 0 or t * halfX * 0.78,
-                0,
-                horizontal and t * halfZ * 0.78 or 0
-            ),
-            VisualTheme.World.Deep,
-            Enum.Material.Metal,
-            tier.Name == "Low" and 0.78 or 0.62
-        )
-    end
-
-    local panelCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
-    for i = 1, panelCount do
-        local angle = ((i - 1) / panelCount) * math.pi * 2 + math.rad(22.5)
-        local radius = 25 + ((i * 3) % 6)
-        local x = math.cos(angle) * radius
-        local z = math.sin(angle) * radius
-        local panel = makePart(
-            "LobbyMaintenancePanel" .. i,
-            Vector3.new(4.8 + (i % 2) * 1.6, 0.034, 2.0),
-            top
-                * CFrame.new(x, 0.012, z)
-                * CFrame.Angles(0, -angle + math.pi * 0.5, 0),
-            VisualTheme.World.SurfaceRaised:Lerp(VisualTheme.World.Metal, 0.38),
-            i % 3 == 0 and Enum.Material.DiamondPlate or Enum.Material.Metal,
-            tier.Name == "Low" and 0.30 or 0.16
-        )
-
-        if tier.Name == "High" then
-            makePart(
-                "LobbyMaintenanceInset" .. i,
-                Vector3.new(panel.Size.X * 0.62, 0.022, 0.08),
-                panel.CFrame * CFrame.new(0, panel.Size.Y * 0.5 + 0.02, 0),
-                i % 2 == 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
-                Enum.Material.Neon,
-                0.72
-            )
-        end
+    local inset = decor and decor:FindFirstChild("LobbyFloorInset")
+    local fallbackPairs = meshTiles > 0 and 0 or FALLBACK_PAIRS[tier.Name]
+    if fallbackPairs > 0 and inset and inset:IsA("BasePart") then
+        buildVestibuleFallback(inset, tier.Name, fallbackPairs)
     end
 
     local runway = decor and decor:FindFirstChild("ArenaRunway")
@@ -204,7 +205,8 @@ local function bindMap(generated)
         local disconnectFloor = MapVisualReadiness.watch(
             generated, "Lobby", "Floor", scheduleRefresh)
         local function onDetailAnchorChange(item)
-            if item.Name ~= "CenterPlatform" and item.Name ~= "ArenaRunway" then return end
+            if item.Name ~= "CenterPlatform" and item.Name ~= "ArenaRunway"
+                and item.Name ~= "LobbyFloorInset" then return end
             local lobby = generated:FindFirstChild("Lobby")
             local decor = lobby and lobby:FindFirstChild("Decor")
             if decor and item.Parent == decor then scheduleRefresh() end

@@ -36,6 +36,10 @@ Deux attributs diagnostiques du joueur sont renseignés depuis le montage réel 
 
 Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estrade. L’allée et ses deux rails partent au pied du rebord et se terminent cinq studs après le portail, à l’intérieur du vestibule. Les chevrons de départ et les repères d’approche suivent l’empreinte de l’allée. Le signal de lancement se déplace de l’estrade vers le portail.
 
+## Finition de secours du vestibule
+
+Lorsque les dalles 3D se retirent, le client pose les joints et les trappes de maintenance sur la face supérieure du revêtement visible. Les quatre paires de positions possibles contournent les zones d’entraînement, les inscriptions et l’allée du portail. La configuration prévoit quatre joints et quatre trappes en Low, six de chaque en Medium et huit de chaque en High, avec les huit petits inserts lumineux en High. Le streaming du revêtement déclenche le recalcul de ces finitions.
+
 ## Acceptation visuelle restante
 
 - Build Rojo et validation moteur des sept suites sur le SHA exact du lot.
