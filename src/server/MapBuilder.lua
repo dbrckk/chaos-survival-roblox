@@ -1219,7 +1219,7 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
     end
 end
 
-local function addVariantLandmarks(decor, config, variant, theme)
+local function addVariantLandmarks(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
     local center = config.ArenaCenter
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
@@ -1232,14 +1232,12 @@ local function addVariantLandmarks(decor, config, variant, theme)
             {offset = Vector3.new(18, 8, -halfZ - 5), size = Vector3.new(5.5, 16, 1.8)},
         }
         for i, def in ipairs(defs) do
-            local fin = decorPart(
-                decor,
-                "ClassicBroadcastFin" .. i,
-                def.size,
-                center + def.offset,
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local fin = fitDecorMesh(
+                sweptProfile, "ClassicBroadcastFin" .. i,
+                CFrame.new(center + def.offset), def.size,
+                theme.Structure, VisualTheme.Materials.Structure
             )
+            fin.Parent = decor
             fin.Transparency = 0.05
 
             local stripSize = def.size.X < def.size.Z
@@ -1263,34 +1261,31 @@ local function addVariantLandmarks(decor, config, variant, theme)
             Vector3.new(halfX + 6, 12, halfZ + 6),
         }
         for i, offset in ipairs(offsets) do
-            local machinery = decorPart(
-                decor,
-                "TowerMachinery" .. i,
-                Vector3.new(5.2, 24, 5.2),
-                center + offset,
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local machinery = fitDecorMesh(
+                beaconShaft, "TowerMachinery" .. i,
+                CFrame.new(center + offset), Vector3.new(5.2, 24, 5.2),
+                theme.Structure, VisualTheme.Materials.Structure
             )
+            machinery.Parent = decor
             machinery.Transparency = 0.04
 
-            local cap = decorPart(
-                decor,
-                "TowerMachineryCap" .. i,
-                Vector3.new(7.4, 1.0, 7.4),
-                machinery.Position + Vector3.new(0, 12.4, 0),
-                theme.Accent,
+            local cap = fitDecorMesh(
+                castProfile, "TowerMachineryCap" .. i,
+                CFrame.new(machinery.Position + Vector3.new(0, 12.4, 0)),
+                Vector3.new(7.4, 1.0, 7.4), theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            cap.Parent = decor
             cap.Transparency = 0.18
 
-            local antenna = decorPart(
-                decor,
-                "TowerAntenna" .. i,
+            local antenna = fitDecorMesh(
+                beaconShaft, "TowerAntenna" .. i,
+                CFrame.new(machinery.Position + Vector3.new(0, 17.2, 0)),
                 Vector3.new(0.55, 9, 0.55),
-                machinery.Position + Vector3.new(0, 17.2, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            antenna.Parent = decor
             antenna.Transparency = 0.16
         end
     elseif variant.Id == "Crossroads" then
@@ -2994,7 +2989,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         signal = {part = sweptProfile, assetId = 126298311664881},
     })
     addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
-    addVariantLandmarks(decor, config, variant, theme)
+    addVariantLandmarks(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
     StructureRetrofit.buildArena(decor, base, variant.Id, theme)
