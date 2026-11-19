@@ -203,20 +203,20 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
                 "Part", Vector3.new(3.7, 3.1, 4.6),
                 CFrame.new(side * 7.0, 2.4, 1.1),
                 Enum.Material.Metal,
-                theme.Structure:Lerp(theme.Detail, 0.36), 0.04)
+                theme.Structure:Lerp(theme.Detail, 0.36), 0.04, profiles.housing)
             local intake = piece(
                 side < 0 and "IntakeTurbineL" or "IntakeTurbineR",
                 "Part", Vector3.new(2.6, 0.8, 2.6),
                 CFrame.new(side * 7.0, 3.4, -1.4)
                     * CFrame.Angles(math.rad(90), 0, 0),
-                Enum.Material.Metal, theme.Detail, 0.08)
-            intake.Shape = Enum.PartType.Cylinder
+                Enum.Material.Metal, theme.Detail, 0.08, profiles.turbine)
+            if intake:IsA("Part") then intake.Shape = Enum.PartType.Cylinder end
             piece(side < 0 and "AngledServiceWingL" or "AngledServiceWingR",
                 "WedgePart", Vector3.new(3.4, 1.7, 5.7),
                 CFrame.new(side * 7.0, 4.9, 1.1)
                     * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
                 Enum.Material.Metal,
-                theme.Structure:Lerp(theme.Secondary, 0.23), 0.06)
+                theme.Structure:Lerp(theme.Secondary, 0.23), 0.06, profiles.wing)
             piece(side < 0 and "PodDataRailL" or "PodDataRailR",
                 "Part", Vector3.new(0.18, 0.22, 3.1),
                 CFrame.new(side * 8.85, 3.4, 0.7),
@@ -226,11 +226,11 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             Vector3.new(2.7, 0.9, 2.7),
             CFrame.new(0, 8.1, -1.4)
                 * CFrame.Angles(math.rad(90), 0, 0),
-            Enum.Material.Metal, theme.Detail, 0.08)
-        generator.Shape = Enum.PartType.Cylinder
+            Enum.Material.Metal, theme.Detail, 0.08, profiles.turbine)
+        if generator:IsA("Part") then generator.Shape = Enum.PartType.Cylinder end
         piece("GeneratorShield", "Part", Vector3.new(4.0, 0.55, 1.4),
             CFrame.new(0, 7.8, -0.4), Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Accent, 0.24), 0.07)
+            theme.Structure:Lerp(theme.Accent, 0.24), 0.07, profiles.wing)
 
         if variant.Id == "Towers" then
             -- Twin crane masts convey vertical scale without placing an
@@ -2940,6 +2940,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         signal = {part = sweptProfile, assetId = 126298311664881},
         lens = {part = orbitalLens, assetId = 104654294187035},
         rail = {part = rimBevel, assetId = 94830155055482},
+        housing = {part = wayfinderBase, assetId = 88962643359267},
+        turbine = {part = rimBevel, assetId = 94830155055482},
+        wing = {part = sweptProfile, assetId = 126298311664881},
     })
     local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     local horizonTemplates = {
