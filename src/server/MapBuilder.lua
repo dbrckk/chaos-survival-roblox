@@ -2466,7 +2466,6 @@ local function buildLobby(root, config)
 
     -- Reuse the approved shaft and swept profiles for the noninteractive
     -- approach ribs. Native fallback remains available if assets are absent.
-    local lobbyShaft = beaconShaftSource("Towers")
     for i = 1, 4 do
         local z = 7 + (i * 4.7)
         local height = 6.5 + (i * 0.45)
@@ -2623,6 +2622,8 @@ local function buildLobby(root, config)
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = surface
 
+    local lobbyShaft = beaconShaftSource("Towers")
+    local lobbyCap = wayfinderBaseSource()
     local frameOffsets = {
         Vector3.new(-34, 7, 0),
         Vector3.new(34, 7, 0),
@@ -2631,24 +2632,23 @@ local function buildLobby(root, config)
     }
 
     for i, offset in ipairs(frameOffsets) do
-        local spine = decorPart(
-            decor,
-            "LobbyFrameSpine" .. i,
+        local spine = fitDecorMesh(
+            lobbyShaft, "LobbyFrameSpine" .. i,
+            CFrame.new(config.LobbyCenter + offset),
             Vector3.new(1.6, 14, 1.6),
-            config.LobbyCenter + offset,
-            VisualTheme.World.Metal,
-            VisualTheme.Materials.Structure
+            VisualTheme.World.Metal, VisualTheme.Materials.Structure
         )
+        spine.Parent = decor
         spine.Transparency = 0.03
 
-        local band = decorPart(
-            decor,
-            "LobbyFrameBand" .. i,
+        local band = fitDecorMesh(
+            lobbyCap, "LobbyFrameBand" .. i,
+            CFrame.new(spine.Position + Vector3.new(0, 5.3, 0)),
             Vector3.new(3.6, 0.34, 3.6),
-            spine.Position + Vector3.new(0, 5.3, 0),
             (i % 2 == 0) and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
             VisualTheme.Materials.Glow
         )
+        band.Parent = decor
         band.Transparency = 0.20
     end
 
