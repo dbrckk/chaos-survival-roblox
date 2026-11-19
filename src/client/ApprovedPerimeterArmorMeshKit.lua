@@ -103,6 +103,15 @@ local function sourceFor(kind)
     return source
 end
 
+function Kit.wayfinderProfile()
+    local model = sourceFor("Cap")
+    local part = model and model:FindFirstChild("WayfinderBase")
+    if part and part:IsA("MeshPart") and part.Archivable and part.MeshId ~= "" then
+        return part
+    end
+    return nil
+end
+
 -- The four perimeter stations remain fixed outside the contracting playable
 -- floor. Verify the builder-signed ORIGINAL arena footprint, not the live
 -- Shrinking Arena size; still reject fake expansion, missing map authority

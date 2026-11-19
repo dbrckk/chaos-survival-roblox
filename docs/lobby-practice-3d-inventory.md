@@ -45,7 +45,7 @@ Le relevé statique du constructeur couvre les pièces directement identifiables
 | --- | ---: | --- |
 | Lames du noyau et segments orbitaux | 3 + 12 | Le profil forgé approuvé remplace chaque pièce en Medium et High quand le maillage est prêt et la pression graphique normale. Chaque emplacement conserve un seul objet animé. |
 | Sphère du noyau | 1 | Sphère native et source lumineuse centrale. |
-| Balises du parcours d’entraînement | 4 | Disques natifs de 8,5 studs avec étiquettes et contrôle de distance. |
+| Balises du parcours d’entraînement | 4 | Plaques moulées approuvées dans le gabarit des disques de 8,5 studs. Les disques prennent le relais tant que le maillage est indisponible ou sous pression graphique. Les étiquettes et la détection à 5,4 studs gardent les mêmes ancrages. |
 | Plateau et dalles physiques | 2 | Colliders natifs avec habillage sculpté conditionnel. |
 
 Ce relevé compte les emplacements définis dans le code. Il reste à mesurer les maillages affichés sur un appareil mobile avant d’établir un taux de remplacement pour le lobby.

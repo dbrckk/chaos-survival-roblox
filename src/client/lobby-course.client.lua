@@ -6,6 +6,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience)
+local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -69,13 +71,21 @@ local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
 end
 
-local function makeCheckpoint(index, offset)
-    local part = Instance.new("Part")
+local function makeCheckpointPart(index, position, source)
+    local part = if source then source:Clone() else Instance.new("Part")
+    if not part then return nil end
     part.Name = "PracticeCheckpoint" .. index
-    part.Shape = Enum.PartType.Cylinder
-    part.Size = Vector3.new(0.18, 8.5, 8.5)
-    part.CFrame = CFrame.new(Config.LobbyCenter + offset)
-        * CFrame.Angles(0, 0, math.rad(90))
+    if source then
+        part:ClearAllChildren()
+        part.TextureID = ""
+        -- The square fits within the original 8.5-stud diameter.
+        part.Size = Vector3.new(6, 0.18, 6)
+        part.CFrame = CFrame.new(position)
+    else
+        part.Shape = Enum.PartType.Cylinder
+        part.Size = Vector3.new(0.18, 8.5, 8.5)
+        part.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90))
+    end
     part.Anchored = true
     part.CanCollide = false
     part.CanTouch = false
@@ -84,6 +94,12 @@ local function makeCheckpoint(index, offset)
     part.Material = Enum.Material.Neon
     part.Color = index == 1 and UITheme.Colors.Cyan or UITheme.Colors.Violet
     part.Transparency = 0.72
+    return part
+end
+
+local function makeCheckpoint(index, offset)
+    local position = Config.LobbyCenter + offset
+    local part = makeCheckpointPart(index, position)
     part.Parent = folder
 
     local billboard = Instance.new("BillboardGui")
@@ -110,6 +126,7 @@ local function makeCheckpoint(index, offset)
 
     checkpointParts[index] = {
         part = part,
+        position = position,
         billboard = billboard,
         text = text,
     }
@@ -117,6 +134,42 @@ end
 
 for index, offset in ipairs(offsets) do
     makeCheckpoint(index, offset)
+end
+
+local refreshCheckpointFinish
+local finishPending = false
+local function scheduleCheckpointFinish()
+    if finishPending then return end
+    finishPending = true
+    task.defer(function()
+        finishPending = false
+        refreshCheckpointFinish()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleCheckpointFinish)
+refreshCheckpointFinish = function()
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if not activePhase and pressure < 1 then return end
+    local source = pressure < 1 and PerimeterArmor.wayfinderProfile() or nil
+    if source and not geometryReady(source) then source = nil end
+    for index, bundle in ipairs(checkpointParts) do
+        local part = bundle.part
+        local currentMeshId = part:IsA("MeshPart") and part.MeshId or nil
+        if currentMeshId == (source and source.MeshId) then continue end
+        local replacement = makeCheckpointPart(index, bundle.position, source)
+        if not replacement then continue end
+        replacement.Color = part.Color
+        replacement.Transparency = part.Transparency
+        replacement.LocalTransparencyModifier = part.LocalTransparencyModifier
+        for key, value in pairs(part:GetAttributes()) do
+            replacement:SetAttribute(key, value)
+        end
+        replacement.Parent = folder
+        bundle.part = replacement
+        bundle.billboard.Adornee = replacement
+        part:Destroy()
+    end
 end
 
 local function resetCourse()
@@ -200,6 +253,7 @@ local function setActive(active)
 
     if active then
         resetCourse()
+        scheduleCheckpointFinish()
     else
         completedToken += 1
         startedAt = nil
@@ -220,6 +274,16 @@ stateEvent.OnClientEvent:Connect(function(state)
         setActive(shouldBeActive)
     end
 end)
+
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleCheckpointFinish)
+local function checkpointSourceChanged(item)
+    if item.Name == "ApprovedPerimeterArmorTemplates" or item.Name == "Cap"
+        or item.Name == "WayfinderBase" then
+        scheduleCheckpointFinish()
+    end
+end
+ReplicatedStorage.DescendantAdded:Connect(checkpointSourceChanged)
+ReplicatedStorage.DescendantRemoving:Connect(checkpointSourceChanged)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
@@ -247,7 +311,7 @@ task.spawn(function()
             continue
         end
 
-        local distance = (root.Position - bundle.part.Position).Magnitude
+        local distance = (root.Position - bundle.position).Magnitude
         if distance <= 5.4 then
             completeCheckpoint()
         elseif startedAt then
