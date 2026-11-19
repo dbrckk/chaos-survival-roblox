@@ -24,11 +24,11 @@ for left, right in native_slots.items():
 # text window (which could accidentally include the next mesh-backed piece).
 # All five declarations terminate with a literal opacity and no profile.
 native_calls = {
-    "LeftButtress": r'theme\\.Structure,\\s*0\\.06\\s*\\)',
-    "CoreHousing": r'theme\\.Detail:Lerp\\(theme\\.Structure,\\s*0\\.35\\),\\s*0\\.06\\s*\\)',
-    "CompressorPodL": r'theme\\.Structure:Lerp\\(theme\\.Detail,\\s*0\\.36\\),\\s*0\\.04\\s*\\)',
-    "IntakeTurbineL": r'Enum\\.Material\\.Metal,\\s*theme\\.Detail,\\s*0\\.08\\s*\\)',
-    "GeneratorRotor": r'Enum\\.Material\\.Metal,\\s*theme\\.Detail,\\s*0\\.08\\s*\\)',
+    "LeftButtress": r'theme\.Structure,\s*0\.06\s*\)',
+    "CoreHousing": r'theme\.Detail:Lerp\(theme\.Structure,\s*0\.35\),\s*0\.06\s*\)',
+    "CompressorPodL": r'theme\.Structure:Lerp\(theme\.Detail,\s*0\.36\),\s*0\.04\s*\)',
+    "IntakeTurbineL": r'Enum\.Material\.Metal,\s*theme\.Detail,\s*0\.08\s*\)',
+    "GeneratorRotor": r'Enum\.Material\.Metal,\s*theme\.Detail,\s*0\.08\s*\)',
 }
 for name, ending in native_calls.items():
     pos = station.index('"' + name + '"')
