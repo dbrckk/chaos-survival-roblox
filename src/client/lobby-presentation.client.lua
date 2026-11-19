@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -31,6 +32,7 @@ local currentDecor = nil
 local currentActivities = nil
 local statusGui = nil
 local socialPads = {}
+local socialFloor = nil
 local trackedParts = {}
 local haloSegments = {}
 local loopPanels = {}
@@ -51,6 +53,7 @@ local function clearLocal()
     presentationToken += 1
     folder:ClearAllChildren()
     socialPads = {}
+    socialFloor = nil
 
     if statusGui and statusGui.Parent then
         statusGui:Destroy()
@@ -108,21 +111,21 @@ local function cacheActivities()
     end)
 end
 
-local function centerPosition()
-    local floor = currentLobby and currentLobby:FindFirstChild("Floor")
-    if floor and floor:IsA("BasePart") then
-        return floor.Position + Vector3.new(0, floor.Size.Y * 0.5 + 0.08, 0)
+local function updateSocialPads(inset)
+    if socialFloor == inset then return end
+    for _, pad in ipairs(socialPads) do
+        pad:Destroy()
     end
-    return Vector3.zero
-end
+    table.clear(socialPads)
+    socialFloor = inset
+    if not inset then return end
 
-local function makeSocialPads()
-    local center = centerPosition()
+    local surface = inset.CFrame * CFrame.new(0, inset.Size.Y * 0.5 + 0.048, 0)
     local offsets = {
-        Vector3.new(-13, 0, -13),
-        Vector3.new(13, 0, -13),
-        Vector3.new(-13, 0, 13),
-        Vector3.new(13, 0, 13),
+        Vector3.new(-16, 0, -16.2),
+        Vector3.new(16, 0, -16.2),
+        Vector3.new(-16, 0, 16.2),
+        Vector3.new(16, 0, 16.2),
     }
 
     local budget = LobbyPresentationRules.decorBudget(quality().Name)
@@ -131,10 +134,8 @@ local function makeSocialPads()
     for i = 1, count do
         local pad = Instance.new("Part")
         pad.Name = "LobbySocialNode" .. i
-        pad.Shape = Enum.PartType.Cylinder
-        pad.Size = Vector3.new(0.055, 5.6, 5.6)
-        pad.CFrame = CFrame.new(center + offsets[i])
-            * CFrame.Angles(0, 0, math.rad(90))
+        pad.Size = Vector3.new(4.2, 0.044, 4.2)
+        pad.CFrame = surface * CFrame.new(offsets[i]) * CFrame.Angles(0, math.pi * 0.25, 0)
         pad.Anchored = true
         pad.CanCollide = false
         pad.CanTouch = false
@@ -145,23 +146,10 @@ local function makeSocialPads()
             and VisualTheme.Accents.Violet
             or VisualTheme.Accents.Cyan
         pad.Transparency = 0.74
+        pad:SetAttribute("LobbySocialMarker", true)
         pad.Parent = folder
+        CollectionService:AddTag(pad, "LobbySculptedCasting")
         table.insert(socialPads, pad)
-
-        local core = Instance.new("Part")
-        core.Name = "LobbySocialCore" .. i
-        core.Shape = Enum.PartType.Cylinder
-        core.Size = Vector3.new(0.045, 2.2, 2.2)
-        core.CFrame = pad.CFrame + Vector3.new(0, 0.035, 0)
-        core.Anchored = true
-        core.CanCollide = false
-        core.CanTouch = false
-        core.CanQuery = false
-        core.CastShadow = false
-        core.Material = Enum.Material.Neon
-        core.Color = pad.Color:Lerp(Color3.new(1, 1, 1), 0.24)
-        core.Transparency = 0.56
-        core.Parent = folder
     end
 end
 
@@ -283,7 +271,6 @@ local function bindLobby()
 
     cacheActivities()
 
-    makeSocialPads()
     makeStatusGui()
 end
 
@@ -523,6 +510,8 @@ local function applyState()
 
     -- Decor and its gate parts may replicate after Lobby.Floor.
     local gateDecor = currentDecor and currentDecor.Parent == currentLobby and currentDecor
+    local inset = gateDecor and gateDecor:FindFirstChild("LobbyFloorInset")
+    updateSocialPads(if inset and inset:IsA("BasePart") then inset else nil)
     local gateTop = gateDecor and gateDecor:FindFirstChild("ArenaGateTop")
     local runway = gateDecor and gateDecor:FindFirstChild("ArenaRunway")
     if gateCue and (gateCue.gateTop ~= gateTop or gateCue.runway ~= runway) then

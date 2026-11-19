@@ -206,12 +206,14 @@ local function refresh()
                     local gatePiece = gate and part.Parent == gate
                     local gateCue = presentation and part.Parent == presentation
                         and part:GetAttribute("ChaosLobbyGateCue") == true
+                    local socialMarker = presentation and part.Parent == presentation
+                        and tag == "LobbySculptedCasting" and part:GetAttribute("LobbySocialMarker") == true
                     local sculptedSurfaceDetail = surfaceDetail and part.Parent == surfaceDetail
                         and tag == "LobbySculptedSwept"
                     if not part:IsA("Part") and not ((gatePiece or gateCue) and part:IsA("WedgePart")) then
                         continue
                     end
-                    local cosmeticCladding = (gatePiece or gateCue or sculptedSurfaceDetail
+                    local cosmeticCladding = (gatePiece or gateCue or socialMarker or sculptedSurfaceDetail
                             or (stage and part.Parent == stage))
                         and not part.CanCollide and not part.CanTouch and not part.CanQuery
                     if part.Anchored
