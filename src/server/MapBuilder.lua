@@ -1012,6 +1012,31 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     end
     deckInset:SetAttribute("PremiumArchitecturalSurface", true)
 
+    -- Four broad forged edge skirts break up the arena's exposed slab
+    -- silhouette. Keep them outside the playable deck and below its top:
+    -- no visual obstruction to hazards, spawn guides or mobile wayfinding.
+    local skirtY = -0.32
+    local edgeSkirts = {
+        {name = "North", pose = CFrame.new(center + Vector3.new(0, skirtY, -baseSize.Z * 0.5 - 0.16)),
+            size = Vector3.new(baseSize.X - 4, 1.25, 0.42)},
+        {name = "South", pose = CFrame.new(center + Vector3.new(0, skirtY, baseSize.Z * 0.5 + 0.16)),
+            size = Vector3.new(baseSize.X - 4, 1.25, 0.42)},
+        {name = "West", pose = CFrame.new(center + Vector3.new(-baseSize.X * 0.5 - 0.16, skirtY, 0)),
+            size = Vector3.new(0.42, 1.25, baseSize.Z - 4)},
+        {name = "East", pose = CFrame.new(center + Vector3.new(baseSize.X * 0.5 + 0.16, skirtY, 0)),
+            size = Vector3.new(0.42, 1.25, baseSize.Z - 4)},
+    }
+    for _, edge in ipairs(edgeSkirts) do
+        local skirt = fitDecorMesh(
+            sweptProfile, "ForgedDeckSkirt" .. edge.name,
+            edge.pose, edge.size, theme.Structure,
+            VisualTheme.Materials.Structure
+        )
+        skirt.Transparency = 0.06
+        skirt:SetAttribute("PremiumArchitecturalSurface", true)
+        skirt.Parent = decor
+    end
+
     local laneLengthX = math.max(18, baseSize.X - 18)
     local laneLengthZ = math.max(18, baseSize.Z - 18)
     local laneY = baseSize.Y * 0.5 + 0.17
