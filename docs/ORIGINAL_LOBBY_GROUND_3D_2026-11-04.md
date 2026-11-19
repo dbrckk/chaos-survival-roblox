@@ -8,7 +8,7 @@ Le lobby est une plateforme physique de 74 × 74 studs avec un panneau central d
 
 Le nouveau PremiumLobbyGroundMeshKit réemploie le Model original approuvé **72507987666671**, déjà importé et chargé côté serveur par PremiumRouteMeshAssets : véritables triangles, UV et tangentes, jusqu'à sept MeshParts par dalle (source de 2 976 triangles). Aucune nouvelle ressource Marketplace, requête HTTP client, génération de Part simulant un mesh ou nouvel AssetId.
 
-Jusqu'à quatre dalles 3D sont réduites à environ 34 studs et disposées en un carré 2×2, avec des rotations par quarts de tour. Leur surface reste sous les tutoriels VOTE / SURVIVE / REPEAT, les marquages et la plateforme centrale ; le floor collidable demeure autoritaire et inchangé. Les anciennes lignes natives du client sont omises uniquement si les dalles réellement authentifiées sont montées.
+Jusqu'à quatre dalles 3D sont réduites à environ 34 studs et disposées en un carré 2×2, avec des rotations par quarts de tour. Leur surface reste sous les tutoriels VOTE / SURVIVE / REPEAT, les marquages et la plateforme centrale ; le floor collidable demeure autoritaire et inchangé. Chaque dalle montée prend le relais des joints et trappes de son secteur.
 
 ## Budget et sécurité
 
@@ -38,7 +38,7 @@ Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estra
 
 ## Finition de secours du vestibule
 
-Lorsque les dalles 3D se retirent, le client pose les joints et les trappes de maintenance sur la face supérieure du revêtement visible. Les quatre paires de positions possibles contournent les zones d’entraînement, les inscriptions et l’allée du portail. La configuration prévoit quatre joints et quatre trappes en Low, six de chaque en Medium et huit de chaque en High, avec les huit petits inserts lumineux en High. Le streaming du revêtement déclenche le recalcul de ces finitions.
+Le client pose les joints et les trappes de maintenance sur la face supérieure du revêtement visible dans les secteurs dépourvus de dalle. Les quatre paires de positions possibles contournent les zones d’entraînement, les inscriptions et l’allée du portail. Sans dalle, la configuration prévoit quatre joints et quatre trappes en Low, six de chaque en Medium et huit de chaque en High, avec les huit petits inserts lumineux en High. Avec les deux dalles avant en Medium, les secteurs du portail gardent deux joints et quatre trappes. En High sous pression 1, les secteurs libres gardent quatre joints et quatre trappes sans inserts lumineux. Le client compte la dalle surélevée de l’estrade à part pour choisir les finitions du vestibule. Le streaming du revêtement et le changement de pression déclenchent leur recalcul.
 
 ## Acceptation visuelle restante
 

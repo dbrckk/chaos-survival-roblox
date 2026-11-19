@@ -59,12 +59,13 @@ local function makePart(name, size, cframe, color, material, transparency)
     return part
 end
 
-local function buildVestibuleFallback(inset, tier, pairCount)
+local function buildVestibuleFallback(inset, tier, vestibuleTiles)
     local top = inset.CFrame * CFrame.new(0, inset.Size.Y * .5, 0)
     local halfX, halfZ = inset.Size.X * .5, inset.Size.Z * .5
     local hatchColor = VisualTheme.World.SurfaceRaised:Lerp(VisualTheme.World.Metal, .38)
+    local showHatchLights = tier == "High" and vestibuleTiles == 0
 
-    for i = 1, pairCount do
+    for i = 1, FALLBACK_PAIRS[tier] do
         local seam = SEAM_LAYOUT[i]
         local hatch = MAINTENANCE_LAYOUT[i]
         local seamSize = seam.alongX and Vector3.new(halfX * seam.length, .026, .12)
@@ -72,21 +73,23 @@ local function buildVestibuleFallback(inset, tier, pairCount)
         local hatchRotation = CFrame.Angles(0, hatch.alongX and 0 or math.pi * .5, 0)
         for side = -1, 1, 2 do
             local index = (i - 1) * 2 + (side < 0 and 1 or 2)
-            makePart("LobbyPanelSeam" .. index, seamSize,
-                top * CFrame.new(side * seam.x * halfX, .017, seam.z * halfZ),
-                VisualTheme.World.MetalLight, Enum.Material.Metal, tier == "Low" and .48 or .56)
-
-            local panel = makePart("LobbyMaintenancePanel" .. index,
-                Vector3.new(hatch.length, .034, 2),
-                top * CFrame.new(side * hatch.x * halfX, .022, hatch.z * halfZ) * hatchRotation,
-                hatchColor, Enum.Material.Metal, tier == "Low" and .30 or .16)
-
-            if tier == "High" then
-                makePart("LobbyMaintenanceInset" .. index,
-                    Vector3.new(panel.Size.X * .62, .022, .08),
-                    panel.CFrame * CFrame.new(0, panel.Size.Y * .5 + .012, 0),
-                    side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
-                    Enum.Material.Neon, .72)
+            if not PremiumLobbyGroundMeshKit.coversVestibuleSector(vestibuleTiles, side, seam.z) then
+                makePart("LobbyPanelSeam" .. index, seamSize,
+                    top * CFrame.new(side * seam.x * halfX, .017, seam.z * halfZ),
+                    VisualTheme.World.MetalLight, Enum.Material.Metal, tier == "Low" and .48 or .56)
+            end
+            if not PremiumLobbyGroundMeshKit.coversVestibuleSector(vestibuleTiles, side, hatch.z) then
+                local panel = makePart("LobbyMaintenancePanel" .. index,
+                    Vector3.new(hatch.length, .034, 2),
+                    top * CFrame.new(side * hatch.x * halfX, .022, hatch.z * halfZ) * hatchRotation,
+                    hatchColor, Enum.Material.Metal, tier == "Low" and .30 or .16)
+                if showHatchLights then
+                    makePart("LobbyMaintenanceInset" .. index,
+                        Vector3.new(panel.Size.X * .62, .022, .08),
+                        panel.CFrame * CFrame.new(0, panel.Size.Y * .5 + .012, 0),
+                        side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+                        Enum.Material.Neon, .72)
+                end
             end
         end
     end
@@ -108,7 +111,7 @@ local function rebuild()
     local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
     -- A mounted approved tile takes over the fallback seams and hatches.
     -- All gameplay panels, the 74-stud collision Floor, and spawn remain.
-    local meshParts, meshTiles = PremiumLobbyGroundMeshKit.install(
+    local meshParts, meshTiles, vestibuleTiles = PremiumLobbyGroundMeshKit.install(
         folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure"), centerPlatform
     )
     if player:GetAttribute("LocalOriginalLobbyGroundMeshPartCount")
@@ -120,9 +123,8 @@ local function rebuild()
         player:SetAttribute("LocalOriginalLobbyGroundTileCount", meshTiles)
     end
     local inset = decor and decor:FindFirstChild("LobbyFloorInset")
-    local fallbackPairs = meshTiles > 0 and 0 or FALLBACK_PAIRS[tier.Name]
-    if fallbackPairs > 0 and inset and inset:IsA("BasePart") then
-        buildVestibuleFallback(inset, tier.Name, fallbackPairs)
+    if inset and inset:IsA("BasePart") then
+        buildVestibuleFallback(inset, tier.Name, vestibuleTiles)
     end
 
     local runway = decor and decor:FindFirstChild("ArenaRunway")

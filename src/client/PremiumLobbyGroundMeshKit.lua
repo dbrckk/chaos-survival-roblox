@@ -47,6 +47,16 @@ function Kit.tileBudget(tier, pressure)
     return 0
 end
 
+-- Only vestibule tiles occupy these slots. The raised deck is optional
+-- and does not hide any ground detail in the four sectors below it.
+function Kit.coversVestibuleSector(installed, side, z)
+    for i = 1, installed do
+        local tile = POSITIONS[i]
+        if tile.X == side and tile.Y * z > 0 then return true end
+    end
+    return false
+end
+
 local function discard(staged)
     for _, model in ipairs(staged) do model:Destroy() end
 end
@@ -90,7 +100,7 @@ local function fitTile(source, scale, span, surface, name, partsPerTile)
     return clone
 end
 
--- Returns actual (MeshParts, tiles). Prepare EVERYTHING before parenting.
+-- Returns actual (MeshParts, all tiles, vestibule tiles).
 -- The 74x74 collidable lobby Floor, instructions and spawns never change.
 function Kit.install(folder, floor, tier, pressure, platform)
     local wanted = Kit.tileBudget(tier, pressure)
@@ -98,14 +108,14 @@ function Kit.install(folder, floor, tier, pressure, platform)
         or not floor or not floor:IsA("BasePart") or not floor.Parent
         or floor.Name ~= "Floor" or not floor.Anchored or not floor.CanCollide
         or floor.Size.X < 72 or floor.Size.X > 76
-        or floor.Size.Z < 72 or floor.Size.Z > 76 then return 0, 0 end
+        or floor.Size.Z < 72 or floor.Size.Z > 76 then return 0, 0, 0 end
     local source, sourceSize, partsPerTile = sourceTemplate()
-    if not source then return 0, 0 end
+    if not source then return 0, 0, 0 end
     -- 34-stud-wide tile islands lie within the lobby's 68-stud inset.
     -- Their top is just above inset but below real tutorial signs/paths.
     local span = math.min(floor.Size.X, floor.Size.Z) * .46
     local scale = math.min(.95, span / sourceSize.X, span / sourceSize.Z)
-    if scale < .58 then return 0, 0 end
+    if scale < .58 then return 0, 0, 0 end
     local staged = {}
     for i = 1, wanted do
         local position = POSITIONS[i]
@@ -118,7 +128,7 @@ function Kit.install(folder, floor, tier, pressure, platform)
             "ApprovedOriginalLobbyFloor3D_" .. tostring(i), partsPerTile)
         if not clone then
             discard(staged)
-            return 0, 0
+            return 0, 0, 0
         end
         staged[#staged + 1] = clone
     end
@@ -140,7 +150,7 @@ function Kit.install(folder, floor, tier, pressure, platform)
         end
     end
     for _, model in ipairs(staged) do model.Parent = folder end
-    return #staged * partsPerTile, #staged
+    return #staged * partsPerTile, #staged, wanted
 end
 
 return Kit
