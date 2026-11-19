@@ -221,6 +221,13 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
                     * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
                 Enum.Material.Metal,
                 theme.Structure:Lerp(theme.Secondary, 0.23), 0.06, profiles.wing)
+            -- Outer cast armor is a separate cosmetic owner: the eight native
+            -- station slots remain available for the complete client LOD kit.
+            piece(side < 0 and "PodArmorL" or "PodArmorR",
+                "Part", Vector3.new(0.34, 2.15, 3.8),
+                CFrame.new(side * 8.96, 2.35, 1.1),
+                Enum.Material.Metal,
+                theme.Detail:Lerp(theme.Structure, 0.42), 0.05, profiles.housing)
             piece(side < 0 and "PodDataRailL" or "PodDataRailR",
                 "Part", Vector3.new(0.18, 0.22, 3.1),
                 CFrame.new(side * 8.85, 3.4, 0.7),
