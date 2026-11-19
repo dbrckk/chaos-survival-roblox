@@ -3499,7 +3499,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- and collapse; pre-existing danger telegraphs remain authoritative.
         if definition.PerimeterRoute then
             SkyRouteMonuments.decorate(
-                decor, platform, i, definition, variant.Id, theme, detailProfiles)
+                decor, platform, i, definition, variant.Id, theme, detailProfiles, platformDefinitions[i + 1])
         end
         -- Six large native-metal arches visibly frame the actual elevated
         -- 200-stud promenades. Every noncolliding part is owned by its

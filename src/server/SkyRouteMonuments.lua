@@ -39,7 +39,7 @@ local function piece(decor, deck, index, role, name, size, offset,
     return part
 end
 
-function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme, profiles)
+function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme, profiles, nextDefinition)
     if not decor or not deck or not deck:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table"
         or type(variant) ~= "string" then return 0 end
@@ -168,27 +168,36 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     -- covering a disappearing-platform telegraph; all warning cosmetics
     -- share the deck index and are faded by Disaster/Collapse.
     if definition.PerimeterStep ~= 8 then
-        local arrowFrame = CFrame.lookAt(
-            deck.Position + Vector3.new(0, top + 0.19, 0),
-            deck.Position + Vector3.new(outward, top + 0.19, 0))
+        local forward = Vector3.new(outward, 0, 0)
+        if nextDefinition and nextDefinition.PerimeterRoute == definition.PerimeterRoute
+            and nextDefinition.PerimeterStep == definition.PerimeterStep + 1 then
+            local delta = (nextDefinition.offset - definition.offset) * Vector3.new(1, 0, 1)
+            if delta.Magnitude > 0.01 then forward = delta.Unit end
+        end
+        local origin = deck.Position + Vector3.new(0, top + 0.19, 0)
+        local arrowFrame = deck.CFrame:ToObjectSpace(CFrame.lookAt(origin, origin + forward))
         for side = -1, 1, 2 do
-            local chevron = add("AscendChevron" .. side,
-                Vector3.new(0.34, 0.065, 2.35),
-                deck.CFrame:ToObjectSpace(arrowFrame)
-                    * CFrame.new(side * 0.62, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 34), 0),
-                accent, Enum.Material.Neon, nil, 0.24, true)
+            local size = Vector3.new(0.34, 0.065, 2.35)
+            local offset = arrowFrame * CFrame.new(side * 0.62, 0, 0)
+                * CFrame.Angles(0, math.rad(side * 34), 0)
+            local mesh = fitProfile("beam", size, offset)
+            if mesh then mesh:SetAttribute("OriginalSkyRouteSignal3D", true) end
+            local chevron = add("AscendChevron" .. side, size, offset,
+                accent, Enum.Material.Neon, nil, 0.24, true, mesh)
             chevron:SetAttribute("SurvivalRouteArrow", true)
         end
     else
         -- The summit is not an arrow pointing off the world into void.
         -- A high-position luminous trophy silhouette marks successful
         -- vertical escape without faking a completed round.
-        local beacon = add("SummitSignal",
-            Vector3.new(1.8, 2.0, 1.8),
-            CFrame.new(0, top + 14.4, 0),
-            accent, Enum.Material.Glass, nil, 0.18, true)
-        beacon.Shape = Enum.PartType.Ball
+        local size = Vector3.new(1.8, 2.0, 1.8)
+        -- Seat the lens above the crosshead, away from its center equipment.
+        local offset = CFrame.new(0, overpassTop + 0.86, definition.offset.Z < 0 and -3.8 or 3.8)
+        local mesh = fitProfile("lens", size, offset)
+        if mesh then mesh:SetAttribute("OriginalSkyRouteSignal3D", true) end
+        local beacon = add("SummitSignal", size, offset,
+            accent, Enum.Material.Glass, nil, 0.18, true, mesh)
+        if beacon:IsA("Part") then beacon.Shape = Enum.PartType.Ball end
     end
 
     -- Variant-specific crowns are separate from the canopy and underdeck
