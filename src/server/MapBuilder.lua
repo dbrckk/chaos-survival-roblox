@@ -159,7 +159,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             return item
         end
 
-        -- Recessed platform marker. The real floor underneath stays the
+        -- These eight station parts are deliberately native: the existing\n        -- client LOD kits require Part geometry to install complete approved\n        -- multi-mesh assemblies (buttresses 2, machinery 3, rotors 3).\n        -- Do not pre-fit a single server MeshPart into those slots.\n        -- Recessed platform marker. The real floor underneath stays the
         -- sole walkable surface; the mark never catches feet or incoming
         -- projectiles and does not leave islands after Shrinking Arena.
         piece("InlaidStationBase", "Part", Vector3.new(12, 0.07, 11),
@@ -169,7 +169,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             piece(side < 0 and "LeftButtress" or "RightButtress",
                 "Part", Vector3.new(1.5, 9, 2),
                 CFrame.new(side * 5.3, 4.5, 0), Enum.Material.Metal,
-                theme.Structure, 0.06, profiles.shaft)
+                theme.Structure, 0.06)
             piece(side < 0 and "LeftAngledCap" or "RightAngledCap",
                 "WedgePart", Vector3.new(2.9, 2.2, 2.4),
                 CFrame.new(side * 5.0, 9.1, 0)
@@ -185,7 +185,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             theme.Structure:Lerp(theme.Detail, 0.22), 0.04, profiles.wing)
         piece("CoreHousing", "Part", Vector3.new(3.2, 3.7, 2.8),
             CFrame.new(0, 4.9, 0.1), Enum.Material.Metal,
-            theme.Detail:Lerp(theme.Structure, 0.35), 0.06, profiles.housing)
+            theme.Detail:Lerp(theme.Structure, 0.35), 0.06)
         local core = piece("CoreLens", "Part", Vector3.new(2.7, 2.7, 2.7),
             CFrame.new(0, 5.1, -1.65), Enum.Material.Glass,
             accent:Lerp(secondary, 0.25), 0.33, profiles.lens)
@@ -203,13 +203,13 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
                 "Part", Vector3.new(3.7, 3.1, 4.6),
                 CFrame.new(side * 7.0, 2.4, 1.1),
                 Enum.Material.Metal,
-                theme.Structure:Lerp(theme.Detail, 0.36), 0.04, profiles.housing)
+                theme.Structure:Lerp(theme.Detail, 0.36), 0.04)
             local intake = piece(
                 side < 0 and "IntakeTurbineL" or "IntakeTurbineR",
                 "Part", Vector3.new(2.6, 0.8, 2.6),
                 CFrame.new(side * 7.0, 3.4, -1.4)
                     * CFrame.Angles(math.rad(90), 0, 0),
-                Enum.Material.Metal, theme.Detail, 0.08, profiles.turbine)
+                Enum.Material.Metal, theme.Detail, 0.08)
             if intake:IsA("Part") then intake.Shape = Enum.PartType.Cylinder end
             piece(side < 0 and "AngledServiceWingL" or "AngledServiceWingR",
                 "WedgePart", Vector3.new(3.4, 1.7, 5.7),
@@ -226,7 +226,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             Vector3.new(2.7, 0.9, 2.7),
             CFrame.new(0, 8.1, -1.4)
                 * CFrame.Angles(math.rad(90), 0, 0),
-            Enum.Material.Metal, theme.Detail, 0.08, profiles.turbine)
+            Enum.Material.Metal, theme.Detail, 0.08)
         if generator:IsA("Part") then generator.Shape = Enum.PartType.Cylinder end
         piece("GeneratorShield", "Part", Vector3.new(4.0, 0.55, 1.4),
             CFrame.new(0, 7.8, -0.4), Enum.Material.Metal,
