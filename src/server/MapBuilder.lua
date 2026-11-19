@@ -2266,14 +2266,13 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Structure
     )
 
-    local centerGlow = part(
-        decor,
-        "CenterGlow",
+    local centerGlow = fitDecorMesh(
+        lobbyCap, "CenterGlow",
+        CFrame.new(config.LobbyCenter + Vector3.new(0, 2.08, 0)),
         Vector3.new(20, 0.22, 20),
-        config.LobbyCenter + Vector3.new(0, 2.08, 0),
-        VisualTheme.Accents.Cyan,
-        VisualTheme.Materials.Glow
+        VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
     )
+    centerGlow.Parent = decor
     centerGlow.CanCollide = false
     centerGlow.Transparency = 0.22
 
@@ -2302,14 +2301,13 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Structure
         )
 
-        local cap = part(
-            decor,
-            "PylonGlow" .. i,
+        local cap = fitDecorMesh(
+            lobbyCap, "PylonGlow" .. i,
+            CFrame.new(pylon.Position + Vector3.new(0, 5.25, 0)),
             Vector3.new(2.8, 0.55, 2.8),
-            pylon.Position + Vector3.new(0, 5.25, 0),
-            VisualTheme.Accents.Violet,
-            VisualTheme.Materials.Glow
+            VisualTheme.Accents.Violet, VisualTheme.Materials.Glow
         )
+        cap.Parent = decor
         cap.CanCollide = false
 
         local light = Instance.new("PointLight")
