@@ -226,6 +226,8 @@ Les 160 chevrons longitudinaux des cinq arènes reprennent le profil forgé de T
 
 Les cinq arènes équipent 80 paliers latéraux et 20 liaisons de secours de bandes biseautées sous le bord supérieur. Les 100 chevrons des paliers et des embranchements reprennent le profil forgé et restent visibles au-dessus du platelage. Aux vingt belvédères, les chevrons tournent vers l’entrée réelle de la Promenade. Les décors restent liés à leur palier pendant le rétrécissement, et les formes simples servent de secours si le modèle approuvé est indisponible.
 
+Les 80 paliers latéraux peuvent aussi recevoir une plaque forgée sur leur contremarche d’approche, au-dessus du palier précédent et sous la bande lumineuse. Au cinquième palier périphérique, le chevron latéral se rapproche du bord de départ et vise le premier palier du belvédère. Le chevron de la montée principale garde son axe. Les plaques et les chevrons suivent leur palier pendant le rétrécissement.
+
 ## P4 — Dessous sculptés sur les paliers de Storm Harbor
 
 Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.

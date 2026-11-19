@@ -3491,6 +3491,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             (skybridge or harborLanding) and underdeckLattice or nil,
             underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX)
         addPlatformSupports(decor, platform, i, theme, beaconShaft)
+        if definition.PerimeterRoute or definition.BranchRoute then
+            SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)
+        end
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
@@ -3498,7 +3501,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- every piece follows its actual owning platform through shrink
         -- and collapse; pre-existing danger telegraphs remain authoritative.
         if definition.PerimeterRoute then
-            SkyRouteMonuments.cladLowerSteps(decor, platform, i, definition, theme, detailProfiles)
             SkyRouteMonuments.decorate(
                 decor, platform, i, definition, variant.Id, theme, detailProfiles, platformDefinitions[i + 1])
         end
@@ -3671,18 +3673,24 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         end
     end
 
-    -- The branching choice also needs to be readable AT THE FORK,
-    -- without guessing where sixteen peripheral platforms lead.
-    for route = 1, 4 do
-        local forkIndex = #variant.Platforms
-            + (route - 1) * #variant.PerimeterPlatforms / 4 + 5
+    -- Put the branch cue on the takeoff side of the fork, facing its
+    -- physical first landing. The separate ridge cue keeps its own axis.
+    local perimeterCount = #variant.PerimeterPlatforms
+    for branchIndex, definition in ipairs(variant.BranchPlatforms or {}) do
+        if definition.BranchStep ~= 1 then continue end
+        local route = definition.BranchRoute
+        local forkIndex = #variant.Platforms + (route - 1) * perimeterCount / 4
+            + definition.BranchParentStep
+        local landingIndex = #variant.Platforms + perimeterCount + branchIndex
         local fork = platforms:FindFirstChild("Platform" .. forkIndex)
-        if fork and fork:IsA("BasePart") then
-            local forwardZ = fork.Position.Z >= config.ArenaCenter.Z
-                and 1 or -1
-            addRouteChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
-                Vector3.new(0, 0, forwardZ), theme.Secondary, FORK_CHEVRON, sweptProfile)
-        end
+        local landing = platforms:FindFirstChild("Platform" .. landingIndex)
+        if not (fork and landing) then continue end
+        local delta = (landing.Position - fork.Position) * Vector3.new(1, 0, 1)
+        if delta.Magnitude < 0.01 then continue end
+        local forward = delta.Unit
+        local offset = forward * (math.min(fork.Size.X, fork.Size.Z) * 0.24)
+        addRouteChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
+            forward, theme.Secondary, FORK_CHEVRON, sweptProfile, offset)
     end
 
     -- Wayfinding is physically anchored to the REAL first/last platforms,
