@@ -26,6 +26,8 @@ La traverse extérieure, les deux jambes inclinées et les deux haubans peuvent 
 
 La traverse centrale peut elle aussi recevoir le profil forgé. Son panneau d’état conserve la face et les dimensions d’origine sur un support transparent et sans collision. Le même contrôleur continue de mettre à jour le texte et les avertissements.
 
+Les deux ailettes, les deux bras du chevron de départ et les deux repères d’approche peuvent afficher le profil forgé approuvé. Ils gardent leurs limites de deux, quatre ou six repères selon la qualité et reprennent les couleurs, rotations et fondus de la phase en cours. Les formes natives restent disponibles au chargement et sous pression graphique. Si le portail ou l’allée est remplacé, les repères sont reconstruits sur les nouveaux ancrages.
+
 ## Conditions de sortie / limites
 
 Après fusion, **ne pas prétendre le résultat public** avant la validation du SHA final par Build Validation, les cinq suites Roblox Open Cloud et la publication contrôlée sur l'univers `10771083668` / lieu `95351659174730`.

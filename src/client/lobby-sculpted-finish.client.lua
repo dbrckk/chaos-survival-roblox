@@ -123,12 +123,14 @@ end
 local function mount(part, source)
     local mesh = cleanClone(source)
     if not mesh then return end
+    local axisOffset = CFrame.new()
     local function applyGeometry()
         local rotate = (source.Size.X > source.Size.Z) ~= (part.Size.X > part.Size.Z)
         -- A small inset keeps flush SurfaceGuis, light strips and seams clear.
         local size = part.Size * 0.99
         mesh.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
-        mesh.CFrame = rotate and part.CFrame * CFrame.Angles(0, math.pi * 0.5, 0) or part.CFrame
+        axisOffset = rotate and CFrame.Angles(0, math.pi * 0.5, 0) or CFrame.new()
+        mesh.CFrame = part.CFrame * axisOffset
     end
     applyGeometry()
     mesh.Name = part.Name .. "Sculpted"
@@ -141,13 +143,10 @@ local function mount(part, source)
     -- inherit an old local mask from a recycled/generated source Part.
     mesh.LocalTransparencyModifier = 0
 
-    local function applyAppearance()
-        mesh.Color = part.Color
-        mesh.Transparency = part.Transparency
-        mesh.Material = part.Material
-        mesh.MaterialVariant = part.MaterialVariant
-    end
-    applyAppearance()
+    mesh.Color = part.Color
+    mesh.Transparency = part.Transparency
+    mesh.Material = part.Material
+    mesh.MaterialVariant = part.MaterialVariant
     mesh.Parent = folder
     mounted[part] = {
         source = source,
@@ -156,8 +155,10 @@ local function mount(part, source)
         appearance = part.Changed:Connect(function(property)
             if property == "Color" or property == "Transparency"
                 or property == "Material" or property == "MaterialVariant" then
-                applyAppearance()
-            elseif property == "CFrame" or property == "Size" then
+                mesh[property] = part[property]
+            elseif property == "CFrame" then
+                mesh.CFrame = part.CFrame * axisOffset
+            elseif property == "Size" then
                 applyGeometry()
             end
         end),
@@ -189,6 +190,7 @@ local function refresh()
         gate = nil
     end
     local activities = lobby and lobby:FindFirstChild("Activities")
+    local presentation = workspace:FindFirstChild("LobbyPresentationLocal")
     local candidates = {}
     if decor
         and player:GetAttribute("RoundParticipant") ~= true
@@ -201,10 +203,12 @@ local function refresh()
                     -- SignTextSurface. Do not mask panels that still
                     -- host a SurfaceGui directly on the backing.
                     local gatePiece = gate and part.Parent == gate
-                    if not part:IsA("Part") and not (gatePiece and part:IsA("WedgePart")) then
+                    local gateCue = presentation and part.Parent == presentation
+                        and part:GetAttribute("ChaosLobbyGateCue") == true
+                    if not part:IsA("Part") and not ((gatePiece or gateCue) and part:IsA("WedgePart")) then
                         continue
                     end
-                    local cosmeticCladding = (gatePiece or (stage and part.Parent == stage))
+                    local cosmeticCladding = (gatePiece or gateCue or (stage and part.Parent == stage))
                         and not part.CanCollide and not part.CanTouch and not part.CanQuery
                     if part.Anchored
                         and not part:FindFirstChildWhichIsA("SurfaceGui")

@@ -522,14 +522,17 @@ local function applyState()
     local duration = reducedMotion and 0.10 or 0.24
 
     -- Decor and its gate parts may replicate after Lobby.Floor.
-    if not gateCue and currentDecor then
-        local gateTop = currentDecor:FindFirstChild("ArenaGateTop")
-        local runway = currentDecor:FindFirstChild("ArenaRunway")
-        if gateTop and runway then
-            gateCue = LobbyGateCueKit.build(
-                folder, gateTop, runway, q.Name, VisualTheme.Accents
-            )
+    local gateDecor = currentDecor and currentDecor.Parent == currentLobby and currentDecor
+    local gateTop = gateDecor and gateDecor:FindFirstChild("ArenaGateTop")
+    local runway = gateDecor and gateDecor:FindFirstChild("ArenaRunway")
+    if gateCue and (gateCue.gateTop ~= gateTop or gateCue.runway ~= runway) then
+        for _, entry in ipairs(gateCue.pieces) do
+            entry.part:Destroy()
         end
+        gateCue = nil
+    end
+    if not gateCue and gateTop and gateTop:IsA("BasePart") and runway and runway:IsA("BasePart") then
+        gateCue = LobbyGateCueKit.build(folder, gateTop, runway, q.Name, VisualTheme.Accents)
     end
     LobbyGateCueKit.apply(gateCue, mode, VisualTheme.Accents, reducedMotion)
 

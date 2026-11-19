@@ -1,5 +1,6 @@
 -- Cinematic gate cues, attached only to the existing lobby gate and runway.
--- All local, non-colliding, unlit; no new frame loop, asset download or render texture.
+-- Native cues double as the animated fallback for the approved forged profile.
+local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 local LobbyGateCueKit = {}
 
@@ -62,11 +63,12 @@ function LobbyGateCueKit.build(parent, gateTop, runway, tier, accents)
         part:SetAttribute("ChaosLobbyGateCue", true)
         part:SetAttribute("GateCueRole", spec.kind)
         part.Parent = parent
+        CollectionService:AddTag(part, "LobbySculptedSwept")
         table.insert(pieces, {
             part = part, rest = spec.frame, kind = spec.kind, side = spec.side,
         })
     end
-    return {pieces = pieces, mode = nil}
+    return {pieces = pieces, mode = nil, gateTop = gateTop, runway = runway}
 end
 
 function LobbyGateCueKit.apply(kit, mode, accents, reduceMotion)
