@@ -2206,7 +2206,14 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     end
 
     local core = RouteSignalGeometry.fit(underdeckSignal, signalPose, signalSize, nil, alongX)
-        or decorPart(nil, coreName, flatSize, flatPose.Position, coreColor, VisualTheme.Materials.Glow)
+    if not core then
+        -- The fallback must occupy the same deck-relative envelope as the
+        -- approved mesh. A world-axis flat Part displaced or rotated incorrectly
+        -- beneath elevated/turned routes when the mesh was unavailable.
+        core = decorPart(nil, coreName, signalSize, signalPose.Position,
+            coreColor, VisualTheme.Materials.Glow)
+        core.CFrame = signalPose
+    end
     core.Name = coreName
     core.Color = coreColor
     core.Material = VisualTheme.Materials.Glow
