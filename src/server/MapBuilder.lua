@@ -2319,6 +2319,27 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Structure
     )
 
+    -- Four cosmetic forged skirts conceal the platform's exposed square
+    -- sides without replacing the authoritative walkable collision Part.
+    -- Client-side approved swept meshes have a native-Part fallback.
+    for side = 1, 4 do
+        local alongX = side <= 2
+        local skirt = detail(
+            "LobbySculptedSwept",
+            "CenterPlatformForgedSkirt" .. side,
+            CFrame.new(config.LobbyCenter + Vector3.new(
+                alongX and 0 or (side == 3 and -12.12 or 12.12),
+                1.45,
+                alongX and (side == 1 and -12.12 or 12.12) or 0
+            )),
+            alongX and Vector3.new(23.6, 0.84, 0.38)
+                or Vector3.new(0.38, 0.84, 23.6),
+            VisualTheme.World.Metal,
+            VisualTheme.Materials.Structure
+        )
+        skirt.Parent = decor
+    end
+
     local centerGlow = detail(
         cast, "CenterGlow",
         CFrame.new(config.LobbyCenter + Vector3.new(0, 2.08, 0)),
