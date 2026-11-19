@@ -93,7 +93,16 @@ local function ready(source)
             if attempt == 1 then task.wait(12) end
         end
         probe:Destroy()
-        fetches[meshId] = "failed"
+        -- Asset delivery may fail transiently on mobile connections. Keep
+        -- the native Part visible and retry once after a cooldown instead
+        -- of permanently disabling all finishes using this mesh ID.
+        fetches[meshId] = "cooldown"
+        task.delay(60, function()
+            if fetches[meshId] == "cooldown" then
+                fetches[meshId] = nil
+                scheduleRefresh()
+            end
+        end)
     end)
     return false
 end
