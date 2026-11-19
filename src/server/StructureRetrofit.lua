@@ -209,16 +209,19 @@ function StructureRetrofit.buildLobby(decor, lobbyCenter, platform)
         model.Parent = group
         local origin = CFrame.new(lobbyCenter + offset)
         for _, side in ipairs({-1, 1}) do
-            add(model, origin, "SideArmor" .. tostring(side),
+            local flank = add(model, origin, "SideArmor" .. tostring(side),
                 CFrame.new(side * 1.32, 0, 0)
                     * CFrame.Angles(0, side * math.rad(11), 0),
                 Vector3.new(0.95, 8.9, 2.8), color,
                 shell, "WedgePart", false)
+            CollectionService:AddTag(flank, "LobbySculptedShaft")
         end
-        add(model, origin, "LowCollar", CFrame.new(0, -4.2, 0),
+        local lowCollar = add(model, origin, "LowCollar", CFrame.new(0, -4.2, 0),
             Vector3.new(4.6, 1.1, 4.6), dark, shell, nil, false)
-        add(model, origin, "UpperCollar", CFrame.new(0, 4.4, 0),
+        local upperCollar = add(model, origin, "UpperCollar", CFrame.new(0, 4.4, 0),
             Vector3.new(4.6, 0.9, 4.6), color, trim, nil, false)
+        CollectionService:AddTag(lowCollar, "LobbySculptedCasting")
+        CollectionService:AddTag(upperCollar, "LobbySculptedCasting")
         count += #model:GetChildren()
     end
     -- The actual arena entrance remains the original physical gate.

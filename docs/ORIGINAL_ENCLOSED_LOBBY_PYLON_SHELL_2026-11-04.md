@@ -32,6 +32,8 @@ La transition est entièrement réversible :
 
 Les modèles sont comptés dans `VisualBudgetRules.LocalFolders` sous `OriginalLobbyPylons3DLocal`. Diagnostic réel : `LocalOriginalLobbyPylon3DCount`, `LocalOriginalLobbyPylonMeshPartCount`, et **`LocalOriginalLobbyPylonFullShellCount`** (ne compte que les véritables coques fermées installées).
 
+Les seize pièces des quatre carénages de secours peuvent utiliser les profils approuvés. Chaque pylône reprend deux flancs facettés et deux collerettes moulées. Une colonne complète prend la priorité uniquement sur les pylônes qu’elle recouvre. Si un élément du carénage est remplacé par le streaming, le client réévalue le montage. Le bloc physique reste visible sans colonne complète, partiellement visible avec la colonne ouverte et entièrement recouvert par la coque fermée.
+
 ## Conditions avant publication
 
 1. Build, lint et sept suites Roblox Cloud au commit final de ce lot.

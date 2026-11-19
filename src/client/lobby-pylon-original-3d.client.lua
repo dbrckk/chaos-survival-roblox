@@ -148,6 +148,9 @@ local function restore()
         for item, alpha in pairs(active.hidden) do
             if item.Parent then item.LocalTransparencyModifier = alpha end
         end
+        for item, alpha in pairs(active.hiddenCladding) do
+            if item.Parent and item.Transparency == 1 then item.Transparency = alpha end
+        end
         active = nil
     end
     folder:ClearAllChildren()
@@ -166,6 +169,7 @@ end
 local function stageColumn(template, sourceSize, partCount,
     target, index, enclosed)
     local clone = template:Clone()
+    if not clone then return nil end
     local frame, bounds
     local stretchX, stretchZ = 1, 1
     local aim = target.native.CFrame
@@ -278,6 +282,10 @@ reconcile = function()
     watch("architecture", architecture, function(name)
         return name:match("^MachinedLobbyPylon%d+$") ~= nil
     end)
+    for i = 1, #PYLON_OFFSETS do
+        local cladding = architecture and architecture:FindFirstChild("MachinedLobbyPylon" .. i)
+        watch("cladding" .. i, cladding, function() return true end)
+    end
     local holder = ReplicatedStorage:FindFirstChild(
         "ApprovedLargeStructureTemplates")
     watch("templates", holder, function(name) return name == "Classic" end)
@@ -313,6 +321,13 @@ reconcile = function()
                 unchanged = false
                 break
             end
+            for _, item in ipairs(targets[i].obsolete) do
+                if active.hiddenCladding[item] == nil then
+                    unchanged = false
+                    break
+                end
+            end
+            if not unchanged then break end
             local actualMeshes = 0
             for _, part in ipairs(active.models[i]:GetDescendants()) do
                 if part:IsA("MeshPart") then actualMeshes += 1 end
@@ -343,12 +358,15 @@ reconcile = function()
     -- may finally be fully hidden client-side. Older open-column fallback
     -- keeps the core 50% visible: never create an invisible player blocker.
     local hidden = {}
+    local hiddenCladding = {}
     for i, model in ipairs(staged) do
         model.Parent = folder
         local target = targets[i]
         for _, item in ipairs(target.obsolete) do
-            hidden[item] = item.LocalTransparencyModifier
-            item.LocalTransparencyModifier = 1
+            -- The sculpted fallback owns LocalTransparencyModifier. Use
+            -- the base alpha so either layer can release independently.
+            hiddenCladding[item] = item.Transparency
+            item.Transparency = 1
         end
         hidden[target.native] = target.native.LocalTransparencyModifier
         target.native.LocalTransparencyModifier = enclosed and 1 or 0.50
@@ -362,7 +380,7 @@ reconcile = function()
     end
     active = {
         source = template, targets = records, models = staged,
-        hidden = hidden, count = count, enclosed = enclosed,
+        hidden = hidden, hiddenCladding = hiddenCladding, count = count, enclosed = enclosed,
     }
     player:SetAttribute("LocalOriginalLobbyPylon3DCount", count)
     player:SetAttribute("LocalOriginalLobbyPylonMeshPartCount",

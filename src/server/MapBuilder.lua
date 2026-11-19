@@ -2471,10 +2471,6 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Structure
         )
 
-        -- Retain the anchored collision column while replacing its plain
-        -- exterior with the approved beacon-shaft mesh on eligible clients.
-        sculpt(pylon, shaft)
-
         local cap = detail(
             cast, "PylonGlow" .. i,
             CFrame.new(pylon.Position + Vector3.new(0, 5.25, 0)),
