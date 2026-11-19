@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -130,30 +131,31 @@ local function rebuild()
     local runway = decor and decor:FindFirstChild("ArenaRunway")
     if runway and runway:IsA("BasePart") then
         local sectionCount = tier.Name == "Low" and 4 or 7
+        -- Seat the relief just clear of the deck and under the moving cue.
+        local detailPlane = runway.CFrame * CFrame.new(0, runway.Size.Y * 0.5 + 0.016, 0)
         for i = 1, sectionCount do
             local t = (i / (sectionCount + 1)) * 2 - 1
+            local sectionFrame = detailPlane * CFrame.new(0, 0, t * runway.Size.Z * 0.44)
             local seam = makePart(
                 "RunwaySection" .. i,
-                Vector3.new(runway.Size.X * 0.78, 0.026, 0.08),
-                runway.CFrame * CFrame.new(
-                    0,
-                    runway.Size.Y * 0.5 + 0.024,
-                    t * runway.Size.Z * 0.44
-                ),
+                Vector3.new(runway.Size.X * 0.78, 0.022, 0.16),
+                sectionFrame,
                 VisualTheme.World.MetalLight,
                 Enum.Material.Metal,
-                tier.Name == "Low" and 0.74 or 0.58
+                tier.Name == "Low" and 0.63 or 0.56
             )
+            CollectionService:AddTag(seam, "LobbySculptedSwept")
 
             if tier.Name ~= "Low" and i % 2 == 1 then
-                makePart(
+                local guide = makePart(
                     "RunwayGuide" .. i,
-                    Vector3.new(1.7, 0.030, 0.18),
-                    seam.CFrame * CFrame.new(0, 0.012, -1.15),
+                    Vector3.new(1.7, 0.022, 0.20),
+                    sectionFrame * CFrame.new(0, 0, -1.15),
                     i % 4 == 1 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
                     Enum.Material.Neon,
                     0.52
                 )
+                CollectionService:AddTag(guide, "LobbySculptedSwept")
             end
         end
     end

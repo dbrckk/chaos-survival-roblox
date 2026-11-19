@@ -191,6 +191,7 @@ local function refresh()
     end
     local activities = lobby and lobby:FindFirstChild("Activities")
     local presentation = workspace:FindFirstChild("LobbyPresentationLocal")
+    local surfaceDetail = workspace:FindFirstChild("LobbySurfaceDetailLocal")
     local candidates = {}
     if decor
         and player:GetAttribute("RoundParticipant") ~= true
@@ -205,10 +206,13 @@ local function refresh()
                     local gatePiece = gate and part.Parent == gate
                     local gateCue = presentation and part.Parent == presentation
                         and part:GetAttribute("ChaosLobbyGateCue") == true
+                    local runwayDetail = surfaceDetail and part.Parent == surfaceDetail
+                        and tag == "LobbySculptedSwept"
                     if not part:IsA("Part") and not ((gatePiece or gateCue) and part:IsA("WedgePart")) then
                         continue
                     end
-                    local cosmeticCladding = (gatePiece or gateCue or (stage and part.Parent == stage))
+                    local cosmeticCladding = (gatePiece or gateCue or runwayDetail
+                            or (stage and part.Parent == stage))
                         and not part.CanCollide and not part.CanTouch and not part.CanQuery
                     if part.Anchored
                         and not part:FindFirstChildWhichIsA("SurfaceGui")

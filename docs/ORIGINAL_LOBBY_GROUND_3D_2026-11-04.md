@@ -38,6 +38,8 @@ Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estra
 
 Chaque rail reçoit deux brides et deux embouts métalliques ajustés à son empreinte. Ils réutilisent le profil forgé approuvé de Tower Run, avec une pièce de secours de mêmes dimensions par emplacement. Les brides passent sous le haut du guide lumineux et les embouts le coiffent aux extrémités. Les huit pièces restent hors du balayage de lancement.
 
+Les bandes transversales et leurs guides lumineux peuvent utiliser le même profil forgé. L’allée conserve quatre bandes en Low et sept bandes accompagnées de quatre guides en Medium et High. Leur relief affleure le tablier sous le balayage de lancement et les repères animés. Le client garde les formes de secours lorsque le maillage manque.
+
 Les quatre arceaux s’appuient sur huit socles biseautés. La première paire repose sur l’estrade et les trois suivantes sur le revêtement du vestibule, au-delà des rails. Les montants s’emboîtent dans les socles et conservent la hauteur de leur traverse lumineuse. Les socles utilisent le profil de fonderie approuvé lorsque le maillage est chargé.
 
 Huit colliers forgés relient les montants aux traverses. Ils reprennent le profil approuvé de Tower Run et laissent dépasser la face supérieure des traverses lumineuses. Chaque collier dispose d’une forme de secours aux mêmes dimensions.
