@@ -162,6 +162,7 @@ local function refresh()
     local decor = lobby and lobby:FindFirstChild("Decor")
     local architecture = decor and decor:FindFirstChild("OriginalLobbyArchitecture")
     local stage = architecture and architecture:FindFirstChild("MachinedLobbyCenterStage")
+    local activities = lobby and lobby:FindFirstChild("Activities")
     local candidates = {}
     if decor
         and player:GetAttribute("RoundParticipant") ~= true
@@ -172,7 +173,9 @@ local function refresh()
                 for _, part in ipairs(CollectionService:GetTagged(tag)) do
                     if part:IsA("Part") and part.Anchored
                         and (part.Parent == decor or (stage and part.Parent == stage
-                            and not part.CanCollide and not part.CanTouch and not part.CanQuery)) then
+                            and not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                            or (activities and part.Parent == activities
+                                and not part.CanCollide and not part.CanTouch and not part.CanQuery)) then
                         candidates[part] = source
                     end
                 end
