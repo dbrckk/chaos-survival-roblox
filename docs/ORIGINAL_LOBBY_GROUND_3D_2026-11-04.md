@@ -28,6 +28,8 @@ La surveillance événementielle reconstruit le sol après arrivée tardive du m
 
 L’estrade reprend le relief biseauté de la même dalle approuvée sur une empreinte de 23,4 × 23,4 studs. Le maillage suit le repère du plateau de collision, dépasse sa surface de 0,024 stud et reste sous ses quatre repères lumineux. Le signal central occupe 7,5 × 7,5 studs afin de laisser les reliefs visibles autour.
 
+En Medium et High, les quatre repères cyan et violets peuvent utiliser le profil forgé approuvé de Tower Run. Ils suivent les diagonales autour du halo, au-dessus de la dalle et à distance du chevron de sortie. Le guide natif de mêmes dimensions sert de secours pendant le chargement du profil ou sous pression graphique.
+
 À pression 0, la dalle centrale utilise la marge sous les plafonds existants de 24 MeshParts en Medium et 48 en High. Avec le modèle à sept pièces, l’ensemble du lobby passe à trois dalles en Medium (21 MeshParts) et cinq en High (35 MeshParts). La dalle centrale se retire dès la pression 1. Le plateau natif sert de secours lorsque le maillage ou le budget manque. Le client recalcule son montage si l’estrade arrive après le sol.
 
 Deux attributs diagnostiques du joueur sont renseignés depuis le montage réel : LocalOriginalLobbyGroundTileCount et LocalOriginalLobbyGroundMeshPartCount. Ces compteurs ne mesurent pas le rendu ni la VRAM.

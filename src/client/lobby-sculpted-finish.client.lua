@@ -206,12 +206,12 @@ local function refresh()
                     local gatePiece = gate and part.Parent == gate
                     local gateCue = presentation and part.Parent == presentation
                         and part:GetAttribute("ChaosLobbyGateCue") == true
-                    local runwayDetail = surfaceDetail and part.Parent == surfaceDetail
+                    local sculptedSurfaceDetail = surfaceDetail and part.Parent == surfaceDetail
                         and tag == "LobbySculptedSwept"
                     if not part:IsA("Part") and not ((gatePiece or gateCue) and part:IsA("WedgePart")) then
                         continue
                     end
-                    local cosmeticCladding = (gatePiece or gateCue or runwayDetail
+                    local cosmeticCladding = (gatePiece or gateCue or sculptedSurfaceDetail
                             or (stage and part.Parent == stage))
                         and not part.CanCollide and not part.CanTouch and not part.CanQuery
                     if part.Anchored

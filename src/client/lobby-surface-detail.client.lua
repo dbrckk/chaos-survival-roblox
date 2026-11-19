@@ -162,12 +162,12 @@ local function rebuild()
 
     if centerPlatform and centerPlatform:IsA("BasePart") and tier.Name ~= "Low" then
         local topCenter = centerPlatform.CFrame
-            * CFrame.new(0, centerPlatform.Size.Y * 0.5 + 0.056, 0)
+            * CFrame.new(0, centerPlatform.Size.Y * 0.5 + 0.048, 0)
         for i = 1, 4 do
             local angle = math.rad(45 + (i - 1) * 90)
-            makePart(
+            local trim = makePart(
                 "CenterPlatformTrim" .. i,
-                Vector3.new(6.2, 0.03, 0.11),
+                Vector3.new(6.2, 0.036, 0.26),
                 topCenter
                     * CFrame.new(
                         math.cos(angle) * 7.0,
@@ -179,6 +179,7 @@ local function rebuild()
                 Enum.Material.Neon,
                 0.58
             )
+            CollectionService:AddTag(trim, "LobbySculptedSwept")
         end
     end
 end
