@@ -131,6 +131,25 @@ local function createPad(folder, center, definition, index)
         CollectionService:AddTag(vane, "LobbySculptedSwept")
     end
 
+    -- End-cap fins close the outer guidance rails with a distinct sculpted
+    -- silhouette. Keep them outside the touch pad and free of collision.
+    for side = -1, 1, 2 do
+        local fin = Instance.new("Part")
+        fin.Name = side < 0 and "PracticeGuideFinNear" or "PracticeGuideFinFar"
+        fin.Size = Vector3.new(2.2, 0.20, 0.46)
+        fin.CFrame = pad.CFrame * CFrame.new(0, 0.10, side * 4.04)
+        fin.Anchored = true
+        fin.CanCollide = false
+        fin.CanTouch = false
+        fin.CanQuery = false
+        fin.CastShadow = false
+        fin.Material = Enum.Material.Metal
+        fin.Color = rimColor
+        fin.Transparency = 0.08
+        fin.Parent = folder
+        CollectionService:AddTag(fin, "LobbySculptedSwept")
+    end
+
     local light = Instance.new("PointLight")
     light.Name = "PracticePadLight"
     light.Color = pad.Color
