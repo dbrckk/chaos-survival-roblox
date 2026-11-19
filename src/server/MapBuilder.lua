@@ -159,7 +159,11 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             return item
         end
 
-        -- These eight station parts are deliberately native: the existing\n        -- client LOD kits require Part geometry to install complete approved\n        -- multi-mesh assemblies (buttresses 2, machinery 3, rotors 3).\n        -- Do not pre-fit a single server MeshPart into those slots.\n        -- Recessed platform marker. The real floor underneath stays the
+        -- Eight station pieces stay native so the existing client LOD kits
+        -- can replace them with complete approved assemblies: two buttresses,
+        -- three machinery housings and three rotor drums. A server MeshPart
+        -- in those slots would block the client replacement.
+        -- Recessed platform marker. The real floor underneath stays the
         -- sole walkable surface; the mark never catches feet or incoming
         -- projectiles and does not leave islands after Shrinking Arena.
         piece("InlaidStationBase", "Part", Vector3.new(12, 0.07, 11),
