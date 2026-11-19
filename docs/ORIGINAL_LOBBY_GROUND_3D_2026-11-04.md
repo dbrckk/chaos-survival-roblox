@@ -24,6 +24,8 @@ Avant tout montage, le client confirme l'ID exact, le dossier vérifié, les att
 
 La surveillance événementielle reconstruit le sol après arrivée tardive du modèle, streaming de Lobby.Floor, changement de carte, pression FPS ou changement de qualité. La disparition anormale d'un MeshPart client déclenche la reconstruction. Le serveur conserve sa géométrie native, ses panneaux de guidage et les fonctions de sécurité.
 
+Le client attend que tous les maillages du modèle approuvé soient chargés avant de monter les dalles du vestibule ou de l’estrade. Pendant l’attente, les joints et trappes de secours restent en place. Le préchargement est commun au portique et aux pylônes, avec une nouvelle tentative après vingt secondes si un maillage échoue.
+
 ## Estrade centrale
 
 L’estrade reprend le relief biseauté de la même dalle approuvée sur une empreinte de 23,4 × 23,4 studs. Le maillage suit le repère du plateau de collision, dépasse sa surface de 0,024 stud et reste sous ses quatre repères lumineux. Le signal central occupe 7,5 × 7,5 studs afin de laisser les reliefs visibles autour.

@@ -22,7 +22,7 @@ local function sourceTemplate()
     local count = 0
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
+            if not item:IsA("MeshPart") or item.MeshId == "" then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then return nil end
     end
@@ -102,7 +102,7 @@ end
 
 -- Returns actual (MeshParts, all tiles, vestibule tiles).
 -- The 74x74 collidable lobby Floor, instructions and spawns never change.
-function Kit.install(folder, floor, tier, pressure, platform)
+function Kit.install(folder, floor, tier, pressure, platform, geometryReady)
     local wanted = Kit.tileBudget(tier, pressure)
     if wanted == 0 or not folder or not folder:IsA("Folder")
         or not floor or not floor:IsA("BasePart") or not floor.Parent
@@ -115,7 +115,7 @@ function Kit.install(folder, floor, tier, pressure, platform)
     -- Their top is just above inset but below real tutorial signs/paths.
     local span = math.min(floor.Size.X, floor.Size.Z) * .46
     local scale = math.min(.95, span / sourceSize.X, span / sourceSize.Z)
-    if scale < .58 then return 0, 0, 0 end
+    if scale < .58 or not geometryReady(source) then return 0, 0, 0 end
     local staged = {}
     for i = 1, wanted do
         local position = POSITIONS[i]

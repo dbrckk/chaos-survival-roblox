@@ -7,6 +7,7 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local PremiumLobbyGroundMeshKit = require(script.Parent.PremiumLobbyGroundMeshKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 
@@ -29,6 +30,19 @@ local MAINTENANCE_LAYOUT = {
 local folder = Instance.new("Folder")
 folder.Name = "LobbySurfaceDetailLocal"
 folder.Parent = workspace
+
+local rebuild
+local refreshPending = false
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleRefresh)
 
 local clearingOwn = false
 local function clear()
@@ -96,7 +110,7 @@ local function buildVestibuleFallback(inset, tier, vestibuleTiles)
     end
 end
 
-local function rebuild()
+rebuild = function()
     clear()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -113,7 +127,8 @@ local function rebuild()
     -- A mounted approved tile takes over the fallback seams and hatches.
     -- All gameplay panels, the 74-stud collision Floor, and spawn remain.
     local meshParts, meshTiles, vestibuleTiles = PremiumLobbyGroundMeshKit.install(
-        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure"), centerPlatform
+        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure"),
+        centerPlatform, geometryReady
     )
     if player:GetAttribute("LocalOriginalLobbyGroundMeshPartCount")
         ~= meshParts then
@@ -187,20 +202,10 @@ end
 -- Existing server asset lane can publish PremiumGroundTile after the
 -- lobby is first shown. One deferred reconstruction replaces native lines
 -- only once actual original MeshParts are ready, not on a fixed timer.
-local refreshPending = false
 local disconnectFloorWatch = nil
 local watchedMap = nil
 local watchedTemplates = nil
 local templateConnections = {}
-
-local function scheduleRefresh()
-    if refreshPending then return end
-    refreshPending = true
-    task.defer(function()
-        refreshPending = false
-        rebuild()
-    end)
-end
 
 local function bindMap(generated)
     if disconnectFloorWatch then disconnectFloorWatch() end
@@ -239,13 +244,16 @@ local function bindTemplates(holder)
     table.clear(templateConnections)
     watchedTemplates = holder
     if holder and holder:IsA("Folder") then
-        local function changed(child)
-            if child.Name == "PremiumGroundTile" then scheduleRefresh() end
+        local function changed(item)
+            local source = item:FindFirstAncestor("PremiumGroundTile")
+            if item.Name == "PremiumGroundTile" or (source and source.Parent == holder) then
+                scheduleRefresh()
+            end
         end
         templateConnections[#templateConnections + 1] =
-            holder.ChildAdded:Connect(changed)
+            holder.DescendantAdded:Connect(changed)
         templateConnections[#templateConnections + 1] =
-            holder.ChildRemoved:Connect(changed)
+            holder.DescendantRemoving:Connect(changed)
         templateConnections[#templateConnections + 1] =
             holder:GetAttributeChangedSignal("OwnerVerified")
                 :Connect(scheduleRefresh)
