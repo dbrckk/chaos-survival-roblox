@@ -2451,14 +2451,14 @@ local function buildLobby(root, config)
     runway.CanCollide = false
 
     for side = -1, 1, 2 do
-        local rail = decorPart(
-            decor,
-            side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
+        local rail = fitDecorMesh(
+            lobbyCap, side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
+            CFrame.new(runwayCenter + Vector3.new(side * 6.4, 0.10, 0)),
             Vector3.new(0.30, 0.12, 29),
-            runwayCenter + Vector3.new(side * 6.4, 0.10, 0),
             side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
             VisualTheme.Materials.Glow
         )
+        rail.Parent = decor
         rail.Transparency = 0.16
         rail.CanCollide = false
         rail.CanTouch = false
@@ -2720,14 +2720,13 @@ local function buildLobby(root, config)
         panel.CanCollide = false
         panel.Transparency = 0.04
 
-        local rail = decorPart(
-            decor,
-            "LobbyIdentityRail" .. i,
+        local rail = fitDecorMesh(
+            lobbyCap, "LobbyIdentityRail" .. i,
+            CFrame.new(panel.Position + Vector3.new(0, -2.0, 0)),
             Vector3.new(12.4, 0.24, 0.60),
-            panel.Position + Vector3.new(0, -2.0, 0),
-            def.color,
-            VisualTheme.Materials.Glow
+            def.color, VisualTheme.Materials.Glow
         )
+        rail.Parent = decor
         rail.CanCollide = false
         rail.CanTouch = false
         rail.CanQuery = false
