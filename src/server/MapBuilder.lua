@@ -2488,14 +2488,15 @@ local function buildLobby(root, config)
         rightRib.Parent = decor
         rightRib.Transparency = 0.04
 
-        local topRib = decorPart(
-            decor,
-            "ArenaApproachRibTop" .. i,
-            Vector3.new(14.9, 0.42, 0.55),
-            config.LobbyCenter + Vector3.new(0, 1.1 + height, z),
+        local topRib = fitDecorMesh(
+            lobbyShaft, "ArenaApproachRibTop" .. i,
+            CFrame.new(config.LobbyCenter + Vector3.new(0, 1.1 + height, z))
+                * CFrame.Angles(0, 0, math.rad(90)),
+            Vector3.new(0.42, 14.9, 0.55),
             i % 2 == 0 and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
             VisualTheme.Materials.Glow
         )
+        topRib.Parent = decor
         topRib.Transparency = 0.24
         topRib.CanCollide = false
         topRib.CanTouch = false
