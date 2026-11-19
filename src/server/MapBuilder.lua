@@ -1243,14 +1243,14 @@ local function addVariantLandmarks(decor, config, variant, theme, castProfile, s
             local stripSize = def.size.X < def.size.Z
                 and Vector3.new(0.22, 10, def.size.Z + 0.08)
                 or Vector3.new(def.size.X + 0.08, 10, 0.22)
-            local strip = decorPart(
-                decor,
-                "ClassicBroadcastGlow" .. i,
+            local strip = fitDecorMesh(
+                sweptProfile, "ClassicBroadcastGlow" .. i,
+                CFrame.new(fin.Position + Vector3.new(0, 0.5, 0)),
                 stripSize,
-                fin.Position + Vector3.new(0, 0.5, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            strip.Parent = decor
             strip.Transparency = 0.24
         end
     elseif variant.Id == "Towers" then
@@ -1351,7 +1351,7 @@ local function addVariantLandmarks(decor, config, variant, theme, castProfile, s
     end
 end
 
-local function addArenaHologram(decor, config, variant, theme)
+local function addArenaHologram(decor, config, variant, theme, sweptProfile)
     local sign = decorPart(
         decor,
         "ArenaIdentityHologram",
@@ -1362,14 +1362,15 @@ local function addArenaHologram(decor, config, variant, theme)
     )
     sign.Transparency = 0.20
 
-    local backGlow = decorPart(
-        decor,
-        "ArenaIdentityGlow",
+    -- The sign stays a native Part so its SurfaceGui remains predictable.
+    -- Only the noninteractive rear glow is eligible for a sculpted mesh.
+    local backGlow = fitDecorMesh(
+        sweptProfile, "ArenaIdentityGlow",
+        CFrame.new(sign.Position + Vector3.new(0, 0, 0.20)),
         Vector3.new(21.2, 7.3, 0.10),
-        sign.Position + Vector3.new(0, 0, 0.20),
-        theme.Accent,
-        VisualTheme.Materials.Glow
+        theme.Accent, VisualTheme.Materials.Glow
     )
+    backGlow.Parent = decor
     backGlow.Transparency = 0.68
 
     local gui = Instance.new("SurfaceGui")
@@ -2994,7 +2995,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- The Harbor floor relief has a closed twelve-facet cast roller.
     if rimBevel and rimBevel.Size.X <= rimBevel.Size.Z then rimBevel = nil end
     addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
-    addArenaHologram(decor, config, variant, theme)
+    addArenaHologram(decor, config, variant, theme, sweptProfile)
 
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
