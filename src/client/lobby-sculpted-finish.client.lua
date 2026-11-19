@@ -193,9 +193,9 @@ local function refresh()
             local source = findSource(profile)
             if source and ready(source) then
                 for _, part in ipairs(CollectionService:GetTagged(tag)) do
-                    -- Masking a Part also hides SurfaceGui text attached to
-                    -- that Part. Preserve voting/instruction panels until a
-                    -- dedicated mesh-safe signage mount exists.
+                    -- The sculpted lobby signs carry text on their own
+                    -- SignTextSurface. Do not mask panels that still
+                    -- host a SurfaceGui directly on the backing.
                     if part:IsA("Part") and part.Anchored
                         and not part:FindFirstChildWhichIsA("SurfaceGui")
                         and (part.Parent == decor or (stage and part.Parent == stage

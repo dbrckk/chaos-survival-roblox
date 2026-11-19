@@ -2336,6 +2336,16 @@ local function buildLobby(root, config)
         return sculpt(finish, profile)
     end
 
+    local function mountSignGui(panel, gui)
+        -- The label uses the original face even if the client masks the
+        -- backing and fits a beveled mesh with a different local axis.
+        local surface = decorPart(nil, "SignTextSurface", panel.Size, panel.Position, panel.Color)
+        surface.CFrame = panel.CFrame
+        surface.Transparency = 1
+        gui.Parent = surface
+        surface.Parent = panel
+    end
+
     local cast = "LobbySculptedCasting"
     local shaft = "LobbySculptedShaft"
     local lobbyLanes = {
@@ -2382,8 +2392,6 @@ local function buildLobby(root, config)
         gui.PixelsPerStud = 34
         gui.LightInfluence = 0
         gui.AlwaysOnTop = false
-        gui.Parent = panel
-
         local text = Instance.new("TextLabel")
         text.Size = UDim2.fromScale(1, 1)
         text.BackgroundTransparency = 1
@@ -2394,6 +2402,7 @@ local function buildLobby(root, config)
         text.TextStrokeTransparency = 0.40
         text.TextScaled = true
         text.Parent = gui
+        mountSignGui(panel, gui)
     end
 
     local centerPlatform = part(
@@ -2685,7 +2694,7 @@ local function buildLobby(root, config)
     surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     surface.PixelsPerStud = 45
     surface.AlwaysOnTop = false
-    surface.Parent = sign
+    mountSignGui(sign, surface)
 
     local brandMark = Instance.new("Frame")
     brandMark.Name = "ChaosWorldBrandSigil"
@@ -2904,8 +2913,6 @@ local function buildLobby(root, config)
         gui.PixelsPerStud = 44
         gui.LightInfluence = 0
         gui.AlwaysOnTop = false
-        gui.Parent = panel
-
         local label = Instance.new("TextLabel")
         label.Size = UDim2.fromScale(1, 1)
         label.BackgroundTransparency = 1
@@ -2916,6 +2923,7 @@ local function buildLobby(root, config)
         label.TextStrokeTransparency = 0.46
         label.TextScaled = true
         label.Parent = gui
+        mountSignGui(panel, gui)
     end
 
     local lobbySpawn = Instance.new("SpawnLocation")
