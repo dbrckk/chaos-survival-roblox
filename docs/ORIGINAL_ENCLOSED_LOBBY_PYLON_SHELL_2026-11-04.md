@@ -17,10 +17,10 @@ Le nouveau module serveur `PremiumLobbyPylonShellAssets.lua` charge uniquement c
 Le composant client `lobby-pylon-original-3d.client.lua` choisit **en priorité la vraie coque intégrale**, centre chaque clone sur son pylône, tourne les panneaux de maintenance vers le centre du lobby et supprime uniquement **l'affichage local** du collider `PylonN` et des quatre anciens carénages `WedgePart/Part`. Le collider serveur **reste inchangé, ancré et actif**, avec ses vraies dimensions. Les lumières `PylonGlowN` et les `PointLight` associés ne sont jamais masquées. Les quatre modèles sont préparés avant montage pour éviter une demi-conversion visible.
 
 La transition est entièrement réversible :
-- Si la nouvelle coque n'a pas encore chargé, le véritable ancien asset 3D peut servir de repli ; son noyau natif reste alors **semi-visible à 50 %** pour ne créer aucun obstacle invisible.
+- Le client attend le succès de chargement de tous les identifiants de géométrie du modèle utilisé. Il déduplique les demandes et retente une fois les maillages en échec après 20 secondes. Pendant l’attente, la colonne ouverte déjà chargée peut rester affichée avec son noyau semi-visible à 50 %. Le carénage de secours reste visible si aucune colonne n’est prête.
 - Si les deux assets sont absents ou rejetés par leurs vérifications, toutes les primitives natives restent présentes.
 - En cas de changement de carte, de tier, de pression FPS, de source, ou de retrait inattendu d'un `MeshPart`, les masques locaux sont annulés puis les éléments reconstructibles remontés.
-- Aucune collision, pathfinding, ombre, nouvelle lumière, nouvelle boucle `RenderStepped` ou requête Roblox asset côté client n'est ajoutée.
+- Le préchargement client utilise uniquement les maillages des deux modèles approuvés et se déclenche lorsque les pylônes sont éligibles au montage. Les collisions, le pathfinding et les lumières restent pilotés par les systèmes existants.
 
 ## Économie Android et validation
 

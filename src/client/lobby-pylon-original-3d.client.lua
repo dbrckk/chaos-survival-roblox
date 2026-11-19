@@ -1,7 +1,8 @@
 -- Four genuine creator-approved 3D columns replace the lobby's faceted
 -- WedgePart corner pylons. Physical 2.2x10 pylons, player movement and
 -- their separately animated PylonGlow/PointLights remain server-owned.
--- No client asset requests, new lights, pathing, or RenderStepped loops.
+-- Preload geometry from authenticated templates before masking the fallback.
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -29,6 +30,8 @@ local listeners = {}
 local scheduled = false
 local restoringOwn = false
 local reconcile
+local pendingMeshes = {}
+local preloadAttempts = {}
 
 local function budget()
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
@@ -65,7 +68,7 @@ local function approvedShell()
     local count = 0
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
+            if not item:IsA("MeshPart") or item.MeshId == "" then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then return nil end
     end
@@ -91,7 +94,7 @@ local function approved()
     local count = 0
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
+            if not item:IsA("MeshPart") or item.MeshId == "" then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then return nil end
     end
@@ -250,6 +253,46 @@ local function schedule()
     end)
 end
 
+local function geometryReady(template)
+    local requested = {}
+    local ready = true
+    for _, part in ipairs(template:GetDescendants()) do
+        if not part:IsA("MeshPart") then continue end
+        local id = part.MeshId
+        if ContentProvider:GetAssetFetchStatus(id) ~= Enum.AssetFetchStatus.Success then
+            ready = false
+            local attempts = preloadAttempts[id] or 0
+            if not pendingMeshes[id] and attempts < 2 then
+                pendingMeshes[id] = true
+                preloadAttempts[id] = attempts + 1
+                requested[#requested + 1] = id
+            end
+        end
+    end
+    if #requested == 0 then return ready end
+
+    task.spawn(function()
+        pcall(ContentProvider.PreloadAsync, ContentProvider, requested)
+        local retry = {}
+        for _, id in ipairs(requested) do
+            local loaded = ContentProvider:GetAssetFetchStatus(id) == Enum.AssetFetchStatus.Success
+            if loaded or preloadAttempts[id] >= 2 then
+                pendingMeshes[id] = nil
+            else
+                retry[#retry + 1] = id
+            end
+        end
+        if #retry > 0 then
+            task.delay(20, function()
+                for _, id in ipairs(retry) do pendingMeshes[id] = nil end
+                schedule()
+            end)
+        end
+        schedule()
+    end)
+    return false
+end
+
 local function watch(key, parent, relevant)
     if watched[key] == parent then return end
     for _, connection in ipairs(listeners[key] or {}) do
@@ -294,17 +337,25 @@ reconcile = function()
     watch("shellTemplates", shellHolder, function(name)
         return name == "LobbyPylonShell"
     end)
+    watch("shellParts", shellHolder and shellHolder:FindFirstChild("LobbyPylonShell"),
+        function() return true end)
+    watch("columnParts", holder and holder:FindFirstChild("Classic"),
+        function() return true end)
 
     local count = budget()
-    local template, partCount, sourceSize = approvedShell()
-    local enclosed = template ~= nil
-    if not template then
-        template, partCount, sourceSize = approved()
-    end
     local targets = count > 0 and validTargets(count) or nil
-    if count == 0 or not template or not targets then
+    if not targets then
         restore()
         return
+    end
+    local template, partCount, sourceSize = approvedShell()
+    local enclosed = template ~= nil and geometryReady(template)
+    if not enclosed then
+        template, partCount, sourceSize = approved()
+        if not template or not geometryReady(template) then
+            restore()
+            return
+        end
     end
 
     -- No repeated cloning merely because the server sends an unrelated
@@ -340,13 +391,13 @@ reconcile = function()
         if unchanged then return end
     end
 
-    restore()
     local staged = {}
     for i = 1, count do
         local model = stageColumn(template, sourceSize, partCount,
             targets[i], i, enclosed)
         if not model then
             for _, other in ipairs(staged) do other:Destroy() end
+            restore()
             return
         end
         staged[#staged + 1] = model
@@ -357,6 +408,7 @@ reconcile = function()
     -- (including four extreme rectangular corners), so its native core
     -- may finally be fully hidden client-side. Older open-column fallback
     -- keeps the core 50% visible: never create an invisible player blocker.
+    restore()
     local hidden = {}
     local hiddenCladding = {}
     for i, model in ipairs(staged) do
