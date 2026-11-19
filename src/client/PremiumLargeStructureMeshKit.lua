@@ -162,6 +162,30 @@ function Kit.validNativeSkyPylon(part,index)
         or part:GetAttribute("PerimeterPlatformIndex")~=id then
         return false
     end
+    if part:IsA("MeshPart") then
+        local size=part.Size
+        local scale=size.X/1.5
+        if part:GetAttribute("OriginalSkySpinePylonShaft3D")~=true or part.MeshId==""
+            or math.abs(size.Y-12.65)>.06 or scale<.445 or scale>1.005
+            or math.abs(size.Z-1.7*scale)>.06 then return false end
+        local arena=part.Parent and part.Parent.Parent
+        if not arena then return part.Parent==nil end
+        local platforms=arena:FindFirstChild("Platforms")
+        local deck=platforms and platforms:FindFirstChild("Platform"..id)
+        local step=deck and deck:GetAttribute("SkySpineStep")
+        local assetId=IDS[arena:GetAttribute("VariantId")]
+        if not deck or not deck:IsA("BasePart") or (step~=2 and step~=5 and step~=6 and step~=9)
+            or deck:GetAttribute("SkySpineInterchange")~=true or deck:GetAttribute("RouteTier")~=4
+            or deck:GetAttribute("ChaosPermanentRoute")~=true or math.abs(deck.Size.X-12*scale)>.12
+            or part.Parent~=arena:FindFirstChild("Decor")
+            or not assetId or part:GetAttribute("Original3DAssetId")~=assetId then
+            return false
+        end
+        local expected=deck.CFrame*CFrame.new(tonumber(side)*8*scale,(deck.Size.Y+12.65)*.5,0)
+        return (part.Position-expected.Position).Magnitude<.16
+            and part.CFrame.LookVector:Dot(expected.LookVector)>.999
+            and part.CFrame.UpVector:Dot(expected.UpVector)>.999
+    end
     -- Tight bounds match SkySpineArchitecture's genuine server original.
     return part.Size.Y>=12.15 and part.Size.Y<=12.25
         and part.Size.X>=1.45 and part.Size.X<=1.55
@@ -501,6 +525,9 @@ function Kit.routeSupportScale(part, deck)
 end
 
 local function supportFitSize(part, deck)
+    if part:IsA("MeshPart") and Kit.validNativeSkyPylon(part) then
+        return Vector3.new(1.5,part.Size.Y,1.7)
+    end
     if part.Name:match("^PlatformSupport%d+_%d+$") and deck
         and (deck:GetAttribute("PromenadeStep") ~= nil
             or deck:GetAttribute("SkySpineInterchange") == true

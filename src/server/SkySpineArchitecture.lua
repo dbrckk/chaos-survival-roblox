@@ -86,19 +86,41 @@ function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, 
         -- Seat the light into the inward face of the pylon. Its raised
         -- face clears the metal so players on the deck can see it.
         local inlayOffset = pylonOffset - pylonSize.X * 0.5 - 0.03
+        local shaftSource = profiles and profiles.shaft
+        local shaft = shaftSource and shaftSource.part
+        if shaft and shaft.MeshId == "" then shaft = nil end
         for side = -1, 1, 2 do
-            add("MonumentalPylon" .. side, pylonSize,
-                CFrame.new(side * pylonOffset, top + 6.1, 0),
-                metal, Enum.Material.Metal)
+            -- Give the sculpted shaft enough height to seat it inside the beam.
+            local shaftSize = Vector3.new(pylonSize.X, 12.65, pylonSize.Z)
+            local pylon = shaft and detail(deck, index, "MonumentalPylon" .. side, shaftSize,
+                CFrame.new(side * pylonOffset, top + shaftSize.Y * .5, 0),
+                metal, Enum.Material.Metal, nil, shaft, nil, shaft.Size.X > shaft.Size.Z)
+            if pylon and pylon:IsA("MeshPart") then
+                pylon:SetAttribute("OriginalSkySpinePylonShaft3D", true)
+                pylon:SetAttribute("Original3DAssetId", shaftSource.assetId)
+                pylon.Parent = decor
+                count += 1
+            else
+                if pylon then pylon:Destroy() end
+                add("MonumentalPylon" .. side, pylonSize,
+                    CFrame.new(side * pylonOffset, top + 6.1, 0), metal, Enum.Material.Metal)
+            end
             add("SignalInlay" .. side,
                 Vector3.new(0.30, 7.5, 0.42),
                 CFrame.new(side * inlayOffset, top + 6.4, 0),
                 accent, Enum.Material.Neon, nil, signalProfile, side).Transparency = 0.24
         end
-        add("InterchangeCrown", Vector3.new(17.2, 1.4, 2.5),
-            CFrame.new(0, top + 13, 0), metal, Enum.Material.Metal)
+        local crown = detail(deck, index, "InterchangeCrown", Vector3.new(17.2, 1.4, 2.5),
+            CFrame.new(0, top + 13, 0), metal, Enum.Material.Metal, nil, forgedProfile)
+        local sculpted = crown:IsA("MeshPart")
+        if sculpted then
+            crown:SetAttribute("OriginalSkySpineCrosshead3D", true)
+            crown:SetAttribute("Original3DAssetId", 126298311664881)
+        end
+        crown.Parent = decor
+        count += 1
         add("OverheadPulse", Vector3.new(13, 0.35, 0.7),
-            CFrame.new(0, top + 12.7, -0.58),
+            CFrame.new(0, top + 12.7, sculpted and -1.27 or -0.58),
             accent, Enum.Material.Neon, nil, signalProfile).Transparency = 0.22
     end
 

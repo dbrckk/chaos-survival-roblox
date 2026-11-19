@@ -605,6 +605,9 @@ local function physicalSafe(native)
         return ownerSafe(owner, activePlatforms)
             and PlatformIdentityLodRules.matchesPromenadePylon(native, owner)
     end
+    if native:IsA("MeshPart") and Kit.isSkySpinePylon(native) then
+        return ownerSafe(owner, activePlatforms) and LargeStructure.validNativeSkyPylon(native)
+    end
     if owner and native.Name:match("^PlatformSupport%d+_%d+$")
         and (owner:GetAttribute("PromenadeStep") ~= nil
             or owner:GetAttribute("SkySpineInterchange") == true
@@ -861,7 +864,8 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     and (deck:GetAttribute("PromenadeStep") ~= nil
                         or deck:GetAttribute("SkySpineInterchange") == true
                         or PlatformIdentityLodRules.isHarborLanding(deck))
-                if isPromenadePylon or routeSupport
+                local spineShaft = part:IsA("MeshPart") and Kit.isSkySpinePylon(part)
+                if isPromenadePylon or spineShaft or routeSupport
                     or (bridge and LargeStructure.matchesSkybridgeSupport(part,bridge)) then
                     local pylons = promenadePylonsByDeck[id] or {}
                     promenadePylonsByDeck[id] = pylons
@@ -872,15 +876,17 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                         watchers[#watchers + 1] =
                             part:GetPropertyChangedSignal(property):Connect(changed)
                     end
-                    local geometryProperty = part:IsA("Part") and "Shape" or (isPromenadePylon and "MeshId")
+                    local geometryProperty = part:IsA("Part") and "Shape"
+                        or ((isPromenadePylon or spineShaft) and "MeshId")
                     if geometryProperty then
                         watchers[#watchers + 1] = part:GetPropertyChangedSignal(geometryProperty):Connect(changed)
                     end
                     local attributes = {"PromenadeVisualOnly", "PerimeterPlatformIndex"}
                     if part:IsA("MeshPart") then
-                        table.insert(attributes, isPromenadePylon and "OriginalPromenadePylonShaft3D"
-                            or "OriginalPlatformSupport3D")
-                        if isPromenadePylon then table.insert(attributes, "Original3DAssetId") end
+                        table.insert(attributes, if isPromenadePylon then "OriginalPromenadePylonShaft3D"
+                            elseif spineShaft then "OriginalSkySpinePylonShaft3D" else "OriginalPlatformSupport3D")
+                        if spineShaft then table.insert(attributes, "SkySpineDecor") end
+                        if isPromenadePylon or spineShaft then table.insert(attributes, "Original3DAssetId") end
                     end
                     for _, attribute in ipairs(attributes) do
                         watchers[#watchers + 1] =

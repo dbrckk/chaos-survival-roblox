@@ -728,9 +728,14 @@ local function skySpineRoofPart(decor,index,top,scale,spec,variant)
         or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
     local profile
     if native:IsA("MeshPart") then
-        profile=variant and HorizonMonumentGeometry.skySpineCommandProfile(spec.name)
+        local marker="OriginalSkySpineCommandFallback3D"
+        if spec.name=="InterchangeCrown" then
+            profile,marker="beam","OriginalSkySpineCrosshead3D"
+        else
+            profile=variant and HorizonMonumentGeometry.skySpineCommandProfile(spec.name)
+        end
         if not profile or native.MeshId==""
-            or native:GetAttribute("OriginalSkySpineCommandFallback3D")~=true
+            or native:GetAttribute(marker)~=true
             or native:GetAttribute("Original3DAssetId")~=HorizonMonumentGeometry.assetId(profile,variant) then
             return nil
         end
@@ -772,10 +777,11 @@ local function collectSpineSignalBeam(arena,deck,decor,scale)
     local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
     local beam=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN)
     if not beam then return nil end
-    local size=beam.Size
+    local size=Vector3.new(SPINE_CROWN.size.X*scale,SPINE_CROWN.size.Y,SPINE_CROWN.size.Z*scale)
     -- Set the trellis behind the native OverheadPulse strip. The bottom
     -- chord meets the pylons without hiding the light on the front face.
-    local frame=beam.CFrame*CFrame.new(0,-.11,size.Z*.224)*CFrame.Angles(0,math.pi*.5,0)
+    local frame=CFrame.new(beam.Position)*top.Rotation
+        *CFrame.new(0,-.11,size.Z*.224)*CFrame.Angles(0,math.pi*.5,0)
     return {category="command",name="SpineSignalBeam",spec=SOURCE.Crosshead,
         owner=deck,key=beam,arena=arena,originals={beam},center=beam.Position,
         orientation=frame,fitSize=Vector3.new(size.Z*.54,size.Y*.985,size.X*.98),
@@ -1409,6 +1415,7 @@ local function mount(data,source)
                 native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"):Connect(changed)
         elseif native:IsA("MeshPart") then
             local meshTag=if native.Name:match("_MonumentalCrosshead$") then "OriginalPromenadeCrosshead3D"
+                elseif native.Name:match("_InterchangeCrown$") then "OriginalSkySpineCrosshead3D"
                 elseif data.category=="stay" then "OriginalPromenadeStay3D"
                 elseif data.name=="SpineUnderframe" then "OriginalSkySpineUnderdeck3D"
                 elseif data.category=="junction" then "OriginalPromenadeUnderdeck3D"

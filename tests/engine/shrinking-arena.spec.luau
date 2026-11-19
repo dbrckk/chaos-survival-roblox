@@ -1918,8 +1918,10 @@ describe("Shrinking Arena mobility integration", function()
                         end
                         local pulse=arena.Decor:FindFirstChild(prefix.."_OverheadPulse")
                         if pulse then
+                            local crown=arena.Decor[prefix.."_InterchangeCrown"]
+                            local pulseZ=crown:GetAttribute("OriginalSkySpineCrosshead3D") and -1.27 or -.58
                             checkRouteSignal(deck,pulse,Vector3.new(13,.35,.7),
-                                Vector3.new(0,deck.Size.Y*.5+12.7,-.58))
+                                Vector3.new(0,deck.Size.Y*.5+12.7,pulseZ))
                             overheads+=1
                             for _,side in ipairs({-1,1}) do
                                 local pylon=arena.Decor[prefix.."_MonumentalPylon"..side]

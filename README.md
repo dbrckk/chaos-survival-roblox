@@ -282,6 +282,8 @@ Les bordures 3D des 130 tabliers des Promenades et de l’Épine céleste dépas
 
 Les quatre portiques de l’Épine céleste dans chaque arène peuvent afficher le treillis approuvé des Promenades. Il se place derrière la bande lumineuse et s’appuie sur les pylônes. La couronne complète garde la priorité. La traverse de détail réutilise les créneaux libres du décor de commandement et suit le rétrécissement de l’arène.
 
+Les 40 montants et 20 traverses de secours peuvent aussi utiliser les fûts facettés de leur arène et le profil forgé de Tower Run. Les fûts rejoignent les traverses et les bandeaux se placent sur la face avant des traverses forgées. Les ensembles complets gardent la priorité. Les formes simples servent de secours si une source manque à la construction.
+
 Les 22 équipements de secours des portiques centraux peuvent afficher des maillages approuvés. Les ailerons, postes de fret et optiques gardent leurs attaches, et l’anneau ajouré d’Orbital dégage le réacteur. Les ensembles complets gardent la priorité. Si une source manque au chargement, la forme simple reprend le même emplacement.
 
 ## P4 — Ensembles de levage des Promenades de Storm Harbor
