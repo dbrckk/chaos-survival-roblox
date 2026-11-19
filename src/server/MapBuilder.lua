@@ -273,6 +273,9 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             piece("SignalCrown", "WedgePart", Vector3.new(2.2, 1.4, 1.8),
                 CFrame.new(0, 16.6, 0.3), Enum.Material.Metal,
                 secondary, 0.10, profiles.wing)
+            piece("CrownSpine", "Part", Vector3.new(0.46, 2.25, 0.72),
+                CFrame.new(0, 17.55, 0.3), Enum.Material.Metal,
+                theme.Detail, 0.08, profiles.shaft)
         elseif variant.Id == "Orbital" then
             -- Cylindrical receiver and two radial braces distinguish the
             -- reactor site from both tower cranes and grid substations.
@@ -283,6 +286,9 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             piece("ReceiverAntenna", "Part", Vector3.new(0.38, 3.4, 0.38),
                 CFrame.new(0, 12.35, 0), Enum.Material.Metal,
                 accent, 0.22, profiles.shaft)
+            piece("ReceiverCrown", "Part", Vector3.new(1.9, 0.42, 1.9),
+                CFrame.new(0, 14.2, 0), Enum.Material.Metal,
+                secondary, 0.10, profiles.housing)
         elseif variant.Id == "Crossroads" then
             piece("ExchangeBeam", "Part", Vector3.new(2.5, 0.75, 8.5),
                 CFrame.new(0, 8.2, 0), Enum.Material.Metal,
@@ -290,6 +296,9 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             piece("SwitchyardMarker", "WedgePart", Vector3.new(1.5, 2, 2),
                 CFrame.new(0, 10.0, 0), Enum.Material.Metal,
                 secondary, 0.12, profiles.wing)
+            piece("SwitchyardCrown", "Part", Vector3.new(0.7, 1.4, 1.5),
+                CFrame.new(0, 11.45, 0), Enum.Material.Metal,
+                accent, 0.10, profiles.shaft)
         else
             piece("RelaySpire", "Part", Vector3.new(0.7, 4.4, 0.7),
                 CFrame.new(0, 11.5, 0), Enum.Material.Metal,
@@ -297,6 +306,9 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             piece("RelayCrown", "WedgePart", Vector3.new(2.4, 1.6, 2),
                 CFrame.new(0, 14.6, 0), Enum.Material.Metal,
                 accent, 0.12, profiles.wing)
+            piece("RelayCrownFin", "Part", Vector3.new(0.5, 1.4, 1.4),
+                CFrame.new(0, 15.75, 0), Enum.Material.Metal,
+                secondary, 0.10, profiles.wing)
         end
     end
 end
