@@ -39,7 +39,7 @@ local function piece(decor, deck, index, role, name, size, offset,
     return part
 end
 
-function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme, crownProfiles)
+function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme, profiles)
     if not decor or not deck or not deck:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table"
         or type(variant) ~= "string" then return 0 end
@@ -71,26 +71,29 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
         return piece(decor, deck, index, stage, name, size, offset,
             color, mat, kind, transparency, navigation, mesh)
     end
+    local function fitProfile(profile, size, offset, turnUpright)
+        local source = profiles and profiles[profile]
+        if not source or not source.part or source.part.MeshId == "" then return nil end
+        -- Turning the source gives its long axis the native part's height.
+        -- RouteSignalGeometry records that axis for horizontal contraction.
+        local mesh = RouteSignalGeometry.fit(source.part, deck.CFrame * offset, size,
+            if turnUpright then 1 else nil, if turnUpright then true else nil)
+        if mesh then mesh:SetAttribute("Original3DAssetId", source.assetId) end
+        return mesh
+    end
     local function crown(profile, name, size, offset, color, mat, kind, transparency, shape)
-        local source = crownProfiles and crownProfiles[profile]
-        local mesh
-        if source and source.part and source.part.MeshId ~= "" then
-            local frame = deck.CFrame * offset
-            if shape == Enum.PartType.Cylinder then
-                -- The annulus is Y-axial, while a Roblox cylinder is X-axial.
-                -- Its diameter along the original local Y keeps its height on shrink.
-                mesh = RouteSignalGeometry.fit(source.part, frame, size, 1, true)
-            else
-                mesh = RouteSignalGeometry.fit(source.part, frame, size)
-            end
-            if mesh then
-                mesh:SetAttribute("OriginalSkyRouteCrown3D", true)
-                mesh:SetAttribute("Original3DAssetId", source.assetId)
-            end
-        end
-        local item = add(name, size, offset,
-            color, mat, kind, transparency, false, mesh)
+        -- The annulus is Y-axial, while the fallback cylinder is X-axial.
+        local mesh = fitProfile(profile, size, offset, shape == Enum.PartType.Cylinder)
+        if mesh then mesh:SetAttribute("OriginalSkyRouteCrown3D", true) end
+        local item = add(name, size, offset, color, mat, kind, transparency, false, mesh)
         if shape and item:IsA("Part") then item.Shape = shape end
+    end
+    local function signal(name, size, offset, transparency, upright)
+        local mesh = fitProfile("signal", size, offset, upright)
+        if mesh then
+            mesh:SetAttribute("OriginalSkyRouteSignal3D", true)
+        end
+        add(name, size, offset, accent, Enum.Material.Neon, nil, transparency, true, mesh)
     end
 
     -- The overhead beam grows from ACCESS to SUMMIT. All load-bearing
@@ -100,6 +103,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     local overpassRise = stage == "SUMMIT" and 14.0
         or (stage == "TRANSFER" and 12.9 or 12.1)
     local overpassHeight = stage == "SUMMIT" and 1.9 or 1.3
+    local overpassBottom = top + overpassRise - overpassHeight * 0.5
     local overpassTop = top + overpassRise + overpassHeight * 0.5
     local pylonHeight = overpassRise - overpassHeight * 0.5 + 0.42
     local powerRibHeight = math.max(6.4, pylonHeight - 4.4)
@@ -122,12 +126,12 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
                 side * (half + 1.55))
                 * CFrame.Angles(0, 0, math.rad(side * 19)),
             roof, material, "WedgePart")
-        add("DirectionalPowerRib" .. side,
-            Vector3.new(0.29, powerRibHeight, 0.28),
-            CFrame.new(outward * 0.76,
-                top + pylonHeight - powerRibHeight * 0.5 - 0.4,
-                side * (half + 1.57)),
-            accent, Enum.Material.Neon, nil, 0.44, true)
+        -- Suspend the inlays from the crosshead inside both sets of pylons.
+        -- The approved arch spreads its feet wider than the native frame.
+        signal("DirectionalPowerRib" .. side,
+            Vector3.new(0.29, powerRibHeight, 0.36),
+            CFrame.new(0, overpassBottom + 0.12 - powerRibHeight * 0.5,
+                side * (half + 0.36)), 0.44, true)
     end
     -- Reinforce the physical route silhouette without adding collision or
     -- dynamic effects. The underside truss makes tall platforms look
@@ -149,11 +153,11 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
             deck.Size.Z + (stage == "SUMMIT" and 9.0 or 6.6)),
         CFrame.new(0, top + overpassRise, 0),
         roof, material)
-    add("RouteStageBeacon",
-        Vector3.new(0.48, 0.58, math.max(3.0, deck.Size.Z * 0.55)),
-        CFrame.new(outward * 1.45,
-            top + overpassRise - overpassHeight * 0.5 - 0.20, 0),
-        accent, Enum.Material.Neon, nil, 0.28, true)
+    -- The top joins the native beam and the lower face stays visible below
+    -- the approved arch's I-beam from either side of the route.
+    signal("RouteStageBeacon",
+        Vector3.new(0.48, 1.08, math.max(3.0, deck.Size.Z * 0.55)),
+        CFrame.new(0, overpassBottom - 0.42, 0), 0.28)
     add("RecessedCentralGirder",
         Vector3.new(math.max(3.0, width - 1.2), 0.7, 1.15),
         CFrame.new(0, -top - 0.72, 0),

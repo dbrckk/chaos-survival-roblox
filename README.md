@@ -200,6 +200,8 @@ Les 100 chevrons au sol et les 160 chevrons de palier reprennent le profil forg�
 
 Les 60 portiques des cinq arènes peuvent accueillir jusqu’à 84 pièces sculptées dans leurs couronnes. La couronne repose à la hauteur du portique à chaque étape. Orbital reçoit un anneau ajouré autour de son réacteur et Storm Harbor une traverse forgée avec sa suspente. Les couronnes suivent leur palier pendant le rétrécissement et la disparition. Chaque pièce garde sa forme de secours si sa source approuvée est indisponible à la construction.
 
+Les mêmes portiques peuvent recevoir 120 inserts verticaux et 60 bandeaux lumineux facettés. Les inserts pendent de la traverse et le bandeau reste lisible sous la poutre, avec le cadre d’origine comme avec l’arche sculptée. Ils gardent la couleur de leur étape, suivent le rétrécissement du palier et s’effacent quand il disparaît. En l’absence du maillage approuvé à la construction, les signaux simples reprennent les mêmes emplacements.
+
 ## P4 — Socles et chevrons sculptés du réseau périphérique
 
 Les 40 panneaux d’orientation des cinq arènes peuvent reposer sur un socle forgé. Les socles affleurent le platelage et gardent les panneaux à leur hauteur d’origine. Un panneau s’efface dès que son palier passe en alerte ou devient impraticable. Les 60 chevrons d’approche reprennent aussi le profil sculpté, avec des formes simples comme secours si les modèles approuvés ne sont pas chargés.

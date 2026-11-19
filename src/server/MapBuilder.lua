@@ -3082,6 +3082,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         lens = {part = orbitalLens, assetId = 104654294187035},
         rotor = {part = perimeterRotor, assetId = rotorAssetId},
         shaft = {part = beaconShaft, assetId = shaftAssetId},
+        signal = {part = rimBevel, assetId = PremiumFloorReliefAssets.approvedId("Harbor")},
     }
     addPerimeterStations(decor, config, variant, theme, {
         plate = detailProfiles.cast,
