@@ -2246,11 +2246,17 @@ local function addPlatformSupports(decor, platform, index, theme, shaft)
             local support = fitDecorMesh(
                 shaft,
                 "PlatformSupport" .. index .. "_" .. supportIndex,
+                -- Supports follow the deck's authored yaw instead of
+                -- drifting off rotated bridge/parkour platforms.
                 CFrame.new(
-                    platform.Position.X + offset.X,
+                    platform.CFrame:PointToWorldSpace(Vector3.new(
+                        offset.X, 0, offset.Z
+                    )).X,
                     deckTop + (supportHeight * 0.5),
-                    platform.Position.Z + offset.Z
-                ),
+                    platform.CFrame:PointToWorldSpace(Vector3.new(
+                        offset.X, 0, offset.Z
+                    )).Z
+                ) * platform.CFrame.Rotation,
                 Vector3.new(supportWidth, supportHeight, supportWidth),
                 supportColor,
                 VisualTheme.Materials.Structure,
