@@ -3492,15 +3492,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             cap.Transparency = 0.08
             cap:SetAttribute("PerimeterPlatformIndex", i)
             cap.Parent = decor
-            local lens = decorPart(
-                decor,
-                "PerimeterExitLens" .. definition.PerimeterRoute,
-                Vector3.new(2.1, 2.1, 0.35),
-                Vector3.new(platformPosition.X, platformPosition.Y,
+            local lens = fitDecorMesh(
+                sweptProfile, "PerimeterExitLens" .. definition.PerimeterRoute,
+                CFrame.new(platformPosition.X, platformPosition.Y,
                     outerZ + frontSign * 0.22),
+                Vector3.new(2.1, 2.1, 0.35),
                 theme.Accent:Lerp(theme.Structure, 0.56),
                 Enum.Material.Glass
             )
+            lens.Parent = decor
             lens.Transparency = 0.34
             lens:SetAttribute("PerimeterPlatformIndex", i)
         end
