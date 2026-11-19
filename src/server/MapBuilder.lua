@@ -3680,13 +3680,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local mast = fitDecorMesh(beaconShaft, "OuterRouteSignal" .. route, CFrame.new(beaconPoint),
             Vector3.new(1.55, 34, 1.55), theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal)
         mast.Transparency = 0.12
-        local lens = decorPart(
-            decor, "OuterRouteSignalLens" .. route,
+        local lens = fitDecorMesh(
+            orbitalLens, "OuterRouteSignalLens" .. route,
+            CFrame.new(beaconPoint + Vector3.new(0, 18.5, 0)),
             Vector3.new(3.8, 3.8, 3.8),
-            beaconPoint + Vector3.new(0, 18.5, 0),
             routeColor, Enum.Material.Glass
         )
-        lens.Shape = Enum.PartType.Ball
+        if lens:IsA("Part") then
+            lens.Shape = Enum.PartType.Ball
+        end
         lens.Transparency = 0.20
         local crown = fitDecorMesh(wayfinderBase, "OuterRouteSignalCrown" .. route,
             CFrame.new(beaconPoint + Vector3.new(0, 15.9, 0)), Vector3.new(5.0, 0.85, 5.0),
