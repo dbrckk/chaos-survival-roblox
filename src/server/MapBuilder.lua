@@ -169,7 +169,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             piece(side < 0 and "LeftButtress" or "RightButtress",
                 "Part", Vector3.new(1.5, 9, 2),
                 CFrame.new(side * 5.3, 4.5, 0), Enum.Material.Metal,
-                theme.Structure, 0.06, profiles.housing)
+                theme.Structure, 0.06, profiles.shaft)
             piece(side < 0 and "LeftAngledCap" or "RightAngledCap",
                 "WedgePart", Vector3.new(2.9, 2.2, 2.4),
                 CFrame.new(side * 5.0, 9.1, 0)
@@ -237,7 +237,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             -- overhead platform where an R15 could become trapped.
             piece("ServiceMast", "Part", Vector3.new(0.75, 6.8, 0.75),
                 CFrame.new(0, 12.6, 0.3), Enum.Material.Metal,
-                theme.Structure, 0.04, profiles.housing)
+                theme.Structure, 0.04, profiles.shaft)
             piece("SignalCrown", "WedgePart", Vector3.new(2.2, 1.4, 1.8),
                 CFrame.new(0, 16.6, 0.3), Enum.Material.Metal,
                 secondary, 0.10, profiles.wing)
@@ -250,7 +250,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
             if dish:IsA("Part") then dish.Shape = Enum.PartType.Cylinder end
             piece("ReceiverAntenna", "Part", Vector3.new(0.38, 3.4, 0.38),
                 CFrame.new(0, 12.35, 0), Enum.Material.Metal,
-                accent, 0.22, profiles.housing)
+                accent, 0.22, profiles.shaft)
         elseif variant.Id == "Crossroads" then
             piece("ExchangeBeam", "Part", Vector3.new(2.5, 0.75, 8.5),
                 CFrame.new(0, 8.2, 0), Enum.Material.Metal,
@@ -261,7 +261,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
         else
             piece("RelaySpire", "Part", Vector3.new(0.7, 4.4, 0.7),
                 CFrame.new(0, 11.5, 0), Enum.Material.Metal,
-                theme.Detail, 0.10, profiles.housing)
+                theme.Detail, 0.10, profiles.shaft)
             piece("RelayCrown", "WedgePart", Vector3.new(2.4, 1.6, 2),
                 CFrame.new(0, 14.6, 0), Enum.Material.Metal,
                 accent, 0.12, profiles.wing)
@@ -2941,7 +2941,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         lens = {part = orbitalLens, assetId = 104654294187035},
         rail = {part = rimBevel, assetId = 94830155055482},
         housing = {part = wayfinderBase, assetId = 88962643359267},
-        turbine = {part = rimBevel, assetId = 94830155055482},
+        shaft = {part = beaconShaft, assetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)},
+        turbine = {part = approvedHorizonRegion(
+            "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
+            HorizonMonumentGeometry.assetId("rotor"), Vector3.new(2.56, .72, 2.56)),
+            assetId = HorizonMonumentGeometry.assetId("rotor")},
         wing = {part = sweptProfile, assetId = 126298311664881},
     })
     local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
