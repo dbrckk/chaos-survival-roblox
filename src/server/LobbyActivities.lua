@@ -58,6 +58,9 @@ local function createPad(folder, center, definition, index)
     pad.Transparency = 0.20
     pad:SetAttribute("LobbyPracticePad", true)
     pad.Parent = folder
+    -- Only the client-side appearance is replaced; this Part retains its
+    -- authoritative Touched connection and its original collision settings.
+    CollectionService:AddTag(pad, "LobbySculptedCasting")
 
     -- Four slightly raised cosmetic cast trims per practice station. The actual
     -- boost trigger remains the original untouched pad; all trims are
