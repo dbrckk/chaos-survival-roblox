@@ -230,6 +230,8 @@ Les 80 paliers latéraux peuvent aussi recevoir une plaque forgée sur leur cont
 
 Les 20 liaisons de secours peuvent recevoir deux plaques moulées, orientées vers les paliers qu’elles relient. Leur chevron de départ indique le saut vers le belvédère, y compris sur Orbital. Il se recale quand l’arène rétrécit et s’efface si le saut devient impraticable ou dangereux. Une forme simple prend le relais si le maillage est indisponible ou que la charge graphique augmente.
 
+Aux 20 transitions entre belvédères et Promenades, le chevron se place dans le recouvrement réel des tabliers. Deux renforts forgés peuvent relier la face du belvédère au dessous du tablier d’entrée, soit jusqu’à 40 pièces. Les renforts suivent le belvédère pendant le rétrécissement. Son panneau s’efface si le palier devient impraticable.
+
 ## P4 — Dessous sculptés sur les paliers de Storm Harbor
 
 Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.

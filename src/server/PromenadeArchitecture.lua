@@ -36,6 +36,47 @@ local function make(decor, platform, index, name, size, offset, color,
     return p
 end
 
+-- The lookout and its end span share a level strip. Put the cue in
+-- that strip and seat two braces where the thin span leaves the solid pier.
+function PromenadeArchitecture.decorateLookoutJoint(decor, lookout, index, span, theme, beam)
+    local localCenter = lookout.CFrame:PointToObjectSpace(span.Position)
+    local lookoutTop = lookout.Size.Y * 0.5
+    local spanTop = localCenter.Y + span.Size.Y * 0.5
+    if math.abs(localCenter.Z) > 0.05 or math.abs(lookoutTop - spanTop) > 0.05
+        or math.abs(lookout.CFrame.RightVector:Dot(span.CFrame.RightVector)) < 0.999 then
+        return nil
+    end
+    local edge = lookout.Size.X * 0.5
+    local near = math.abs(localCenter.X) - span.Size.X * 0.5
+    local far = math.abs(localCenter.X) + span.Size.X * 0.5
+    if near < 0 or edge - near < 2.5 or far - edge < 2.6 then return nil end
+
+    local direction = if localCenter.X < 0 then -1 else 1
+    local depth = math.min(lookout.Size.Z, span.Size.Z)
+    local inset = math.min(2.0, (edge - near) * 0.5)
+    if beam and beam.part and beam.part.MeshId ~= "" then
+        local size = Vector3.new(inset + 2.6, 1.25, 1.40)
+        local x = direction * (edge + (2.6 - inset) * 0.5)
+        local y = spanTop - span.Size.Y - 0.46
+        local color = theme.Detail:Lerp(theme.Structure, 0.38)
+        for side = -1, 1, 2 do
+            local offset = CFrame.new(x, y, side * (depth * 0.5 - 1.35))
+            local mesh = RouteSignalGeometry.fit(beam.part, lookout.CFrame * offset, size, nil, true)
+            if mesh then
+                mesh.Name = "LookoutJointBrace" .. index .. "_" .. side
+                mesh.Color = color
+                mesh.Material = lookout.Material
+                mesh.Transparency = 0
+                mesh:SetAttribute("Original3DAssetId", beam.assetId)
+                mesh:SetAttribute("PerimeterPlatformIndex", index)
+                mesh.Parent = decor
+            end
+        end
+    end
+
+    return lookout.CFrame.RightVector * (direction * (near + edge) * 0.5)
+end
+
 local function variantEquipment(decor, platform, index, variant, theme, top, profiles)
     local metal = theme.Structure:Lerp(theme.Detail, 0.35)
     local accent = theme.Accent:Lerp(theme.Structure, 0.55)

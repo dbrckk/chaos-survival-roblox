@@ -3218,15 +3218,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- north/south lookouts of every arena. Always append AFTER Harbor's
     -- dock spurs: no existing platform ID, hazard owner, or bot target
     -- changes. Exactly 16 collision decks, no floor-level collision wall.
-    local lookoutEntries = {}
+    local lookoutEntries, sideLookouts = {}, {}
     for _, definition in ipairs(variant.PromenadePlatforms or {}) do
         table.insert(platformDefinitions, definition)
-        local leftLookout = (definition.PromenadeLane - 1) * 2 + 1
-        if definition.PromenadeStep == 1 then
-            lookoutEntries[leftLookout] = definition.offset
-        elseif definition.PromenadeStep == 8 then
-            lookoutEntries[leftLookout + 1] = definition.offset
-        end
     end
     -- The new REAL transverse Sky Spine is appended after both historical
     -- promenade lanes; no legacy platform, bridge or AI route ID changes.
@@ -3388,14 +3382,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform.Color = theme.Surface:Lerp(theme.Secondary, 0.38)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
-            local forward = Vector3.new(0, 0, definition.offset.Z >= 0 and 1 or -1)
-            local entry = definition.BranchStep == 4 and lookoutEntries[definition.BranchRoute]
-            if entry then
-                local towardEntry = (entry - definition.offset) * Vector3.new(1, 0, 1)
-                if towardEntry.Magnitude > 0.01 then forward = towardEntry.Unit end
+            if definition.BranchStep == 4 then
+                sideLookouts[definition.BranchRoute] = {part = platform, index = i, offset = definition.offset}
+            else
+                local forward = Vector3.new(0, 0, definition.offset.Z >= 0 and 1 or -1)
+                addRouteChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
+                    platform, i, forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile)
             end
-            addRouteChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
-                platform, i, forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile)
         end
 
         if definition.CrosslinkRoute then
@@ -3522,8 +3515,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 decor, platform, i, definition, variant.Id, theme,
                 underdeckLattice, detailProfiles)
 
-            if definition.PromenadeStep == 4 then
-                promenadeJunctions[definition.PromenadeLane] = platform
+            local step = definition.PromenadeStep
+            local lane = definition.PromenadeLane
+            if step == 4 then
+                promenadeJunctions[lane] = platform
+            elseif step == 1 or step == 8 then
+                lookoutEntries[(lane - 1) * 2 + (step == 1 and 1 or 2)] = platform
             end
             local arrowName = "PromenadeJumpChevron" .. i .. "_"
             local inset = math.min(5.0, platform.Size.X * 0.24)
@@ -3580,6 +3577,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             billboard.MaxDistance = 78
             billboard.AlwaysOnTop = false
             billboard.Parent = platform
+            bindLandingBillboard(billboard, platform)
             local text = Instance.new("TextLabel")
             text.Name = "Lookout"
             text.Size = UDim2.fromScale(1, 1)
@@ -3671,6 +3669,21 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 forward, theme.Secondary, SPINE_TURN_CHEVRON, sweptProfile, forward * (deck.Size.Z * 0.25))
             addSpineExitChevrons(decor, spine, deck, theme.Secondary, sweptProfile)
         end
+    end
+
+    for route, lookout in pairs(sideLookouts) do
+        local deck = lookout.part
+        local entry = lookoutEntries[route]
+        local forward = Vector3.new(0, 0, lookout.offset.Z >= 0 and 1 or -1)
+        local offset
+        if entry then
+            local delta = (entry.Position - deck.Position) * Vector3.new(1, 0, 1)
+            if delta.Magnitude > 0.01 then forward = delta.Unit end
+            offset = PromenadeArchitecture.decorateLookoutJoint(
+                decor, deck, lookout.index, entry, theme, detailProfiles.beam)
+        end
+        addRouteChevron(decor, "BranchStepArrow" .. route .. "_4", deck, lookout.index,
+            forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile, offset)
     end
 
     -- Put the branch cue on the takeoff side of the fork, facing its

@@ -1314,6 +1314,12 @@ describe("Shrinking Arena mobility integration", function()
                     assert(deck:FindFirstChild("SideLookoutLabel"))
                 end
                 local point=deck.Position+Vector3.new(0,deck.Size.Y*.5+.155,0)
+                if across then
+                    local entry = lookoutEntries[route]
+                    local near = math.abs(entry.Position.X - deck.Position.X) - entry.Size.X * .5
+                    local seam = (near + deck.Size.X * .5) * .5
+                    point += forward * seam
+                end
                 local heading=CFrame.lookAt(point,point+forward)
                 local panel=arena.Decor["PlatformPanel"..id]
                 for _,side in ipairs({-1,1}) do
