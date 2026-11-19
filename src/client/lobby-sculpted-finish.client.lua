@@ -104,6 +104,7 @@ local function unmount(part)
     mounted[part] = nil
     entry.appearance:Disconnect()
     entry.removal:Disconnect()
+    entry.ancestry:Disconnect()
     if part.LocalTransparencyModifier == 1 then
         part.LocalTransparencyModifier = entry.originalMask
     end
@@ -151,6 +152,16 @@ local function mount(part, source)
         end),
         removal = mesh:GetPropertyChangedSignal("Parent"):Connect(function()
             if mesh.Parent ~= folder then unmount(part) end
+        end),
+        -- GeneratedMap and Activities can be replaced during map resets.
+        -- Release the local mesh immediately rather than leaving a ghost
+        -- visible until a later tag or player-state refresh.
+        ancestry = part.AncestryChanged:Connect(function()
+            if not part:IsDescendantOf(workspace) then
+                unmount(part)
+            else
+                scheduleRefresh()
+            end
         end),
     }
     part.LocalTransparencyModifier = 1
