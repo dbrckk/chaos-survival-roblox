@@ -59,7 +59,7 @@ local function createPad(folder, center, definition, index)
     pad:SetAttribute("LobbyPracticePad", true)
     pad.Parent = folder
 
-    -- Four recessed cosmetic cast trims per practice station. The actual
+    -- Four slightly raised cosmetic cast trims per practice station. The actual
     -- boost trigger remains the original untouched pad; all trims are
     -- noncolliding, non-touching and eligible for approved client meshes.
     local rimColor = pad.Color:Lerp(Color3.fromRGB(38, 48, 67), 0.70)
@@ -71,7 +71,7 @@ local function createPad(folder, center, definition, index)
             or Vector3.new(0.42, 0.16, 6.65)
         rim.CFrame = pad.CFrame * CFrame.new(
             alongX and 0 or (side == 3 and -3.52 or 3.52),
-            -0.14,
+            0.10,
             alongX and (side == 1 and -3.52 or 3.52) or 0
         )
         rim.Anchored = true
