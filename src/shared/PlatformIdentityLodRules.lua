@@ -21,6 +21,16 @@ function Rules.isHarborLanding(deck)
         or deck:GetAttribute("HarborSkywayLane") ~= nil
 end
 
+function Rules.platformSupportFootY(base, deck)
+    local ground = base.Position.Y + base.Size.Y * 0.5
+    if deck:GetAttribute("PromenadeStep") ~= nil
+        or deck:GetAttribute("SkySpineInterchange") == true then
+        -- Seat the forged shaft in the arena slab so it meets the floor.
+        return ground - 0.08
+    end
+    return ground + 0.15
+end
+
 function Rules.isAuthoredUnderFrameMesh(part)
     return part:IsA("MeshPart")
         and part.Name:match("^PlatformUnderFrame%d+$") ~= nil

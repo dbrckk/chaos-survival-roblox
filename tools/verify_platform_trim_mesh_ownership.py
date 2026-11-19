@@ -268,8 +268,9 @@ assert 'supportSet=distribute(supports,supportLimit,' in large
 assert 'originalSupportVisualWeld' not in large
 assert 'OriginalSupportVisualWeld' in large
 assert 'Kit.supports' in large
-assert 'local deckTop = 1.15' in map_builder
-assert 'local supportHeight = platformBottom - deckTop' in map_builder
+assert 'PlatformIdentityLodRules.platformSupportFootY(base, platform)' in map_builder
+assert 'local supportHeight = platformBottom - footY' in map_builder
+assert large.count('PlatformIdentityLodRules.platformSupportFootY(base,deck)') == 2
 assert '"PlatformSupport" .. index .. "_" .. supportIndex' in map_builder
 definitions = variants.split("ArenaVariants.Definitions = {",1)[1]
 crossroads = definitions.split("    Crossroads = {",1)[1].split(

@@ -244,7 +244,10 @@ function Kit.matchesSkybridgeSupport(part, deck)
     local span = math.max(size.X, size.Z)
     if span < 18.15 or span > 49.09 or math.abs(math.min(size.X,size.Z)-4.5) > .09
         or math.abs(size.Y-1) > .09 then return false end
-    local height = deck.Position.Y - size.Y*.5 - 1.15
+    local base = arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then return false end
+    local footY = PlatformIdentityLodRules.platformSupportFootY(base,deck)
+    local height = deck.Position.Y - size.Y*.5 - footY
     local sign = side == "1" and -1 or 1
     local along = 22.5 * span/49 * sign
     local across = .25 * sign
@@ -484,14 +487,16 @@ function Kit.routeSupportScale(part, deck)
     local id, corner = part.Name:match("^PlatformSupport(%d+)_([1-4])$")
     if not id or not deck or deck.Name ~= "Platform"..id
         or not validNativeSupport(part,tonumber(id)) then return nil end
+    local platforms = deck.Parent
+    local arena = platforms and platforms.Parent
+    local base = arena and arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then return nil end
     local scale
     if deck:GetAttribute("SkySpineInterchange") == true then
         scale = Kit.spineFootprint(deck)
     elseif deck:GetAttribute("PromenadeStep") ~= nil then
         scale = promenadeFootprint(deck)
     elseif PlatformIdentityLodRules.isHarborLanding(deck) then
-        local platforms = deck.Parent
-        local arena = platforms and platforms.Parent
         local map = workspace:FindFirstChild("GeneratedMap")
         local width = PlatformIdentityLodRules.harborLandingWidth(deck)
         local sx,sz = deck.Size.X,deck.Size.Z
@@ -507,12 +512,13 @@ function Kit.routeSupportScale(part, deck)
         scale = sx/width
         if scale < .445 or scale > 1.005 then return nil end
     end
-    if not scale or part.Parent ~= deck.Parent.Parent:FindFirstChild("Decor") then return nil end
+    if not scale or part.Parent ~= arena:FindFirstChild("Decor") then return nil end
     local sx,sz = deck.Size.X,deck.Size.Z
     local insetX = math.max(0,sx*.5-2*scale)
     local insetZ = math.max(0,sz*.5-2*scale)
     local width = math.clamp(math.min(sx,sz)/scale*.10,.72,1.35)*scale
-    local height = deck.Position.Y-deck.Size.Y*.5-1.15
+    local footY = PlatformIdentityLodRules.platformSupportFootY(base,deck)
+    local height = deck.Position.Y-deck.Size.Y*.5-footY
     local x = (corner == "1" or corner == "3") and -insetX or insetX
     local z = (corner == "1" or corner == "4") and -insetZ or insetZ
     local expected = deck.CFrame*CFrame.new(x,-(deck.Size.Y+height)*.5,z)

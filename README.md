@@ -64,6 +64,8 @@ Les noyaux lumineux peuvent reprendre les deux inserts sculptés du châssis app
 
 Les poteaux sous les plateformes peuvent reprendre le profil polygonal de la colonne approuvée de leur arène. Ils gardent leurs points d’appui et se rétractent avec les plateformes. Les habillages locaux peuvent masquer ces poteaux puis les réafficher lors de leur retrait. Des poteaux rectangulaires servent de secours si le maillage est indisponible à la construction.
 
+Sous les Promenades et l’Épine céleste, les fûts descendent jusque dans la dalle de chaque arène. Le serveur et le client utilisent la même référence de hauteur pour les fûts et leurs habillages complets, y compris si l’arène est placée plus haut ou plus bas. Le rétrécissement conserve les deux points d’appui et réduit la section des poteaux avec leur tablier.
+
 ## P4 — Longerons sous les plateformes
 
 Les cadres rectangulaires sous les plateformes peuvent reprendre les longerons du châssis approuvé, à raison d’une pièce par cadre. Les habillages locaux vérifient leur alignement avant de les masquer et les réaffichent à leur retrait. Les cadres pleins servent de secours si le maillage est indisponible à la construction.

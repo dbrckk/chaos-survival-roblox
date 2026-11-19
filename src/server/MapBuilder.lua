@@ -13,6 +13,9 @@ local ArenaPresentation = if arenaPresentationModule
 local horizonGeometryModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
 local HorizonMonumentGeometry = if horizonGeometryModule then require(horizonGeometryModule)
     else require("../shared/HorizonMonumentGeometry")
+local platformIdentityModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if platformIdentityModule then require(platformIdentityModule)
+    else require("../shared/PlatformIdentityLodRules")
 local skyRouteConnectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local SkyRouteConnectionRules = if skyRouteConnectionModule
     then require(skyRouteConnectionModule)
@@ -2246,10 +2249,10 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     core.Parent = decor
 end
 
-local function addPlatformSupports(decor, platform, index, theme, shaft)
-    local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
-    local deckTop = 1.15
-    local supportHeight = platformBottom - deckTop
+local function addPlatformSupports(decor, base, platform, index, theme, shaft)
+    local platformBottom = platform.Position.Y - platform.Size.Y * 0.5
+    local footY = PlatformIdentityLodRules.platformSupportFootY(base, platform)
+    local supportHeight = platformBottom - footY
     if supportHeight >= 3.5 then
         local supportWidth = math.clamp(math.min(platform.Size.X, platform.Size.Z) * 0.10, 0.72, 1.35)
         local supportColor = theme.Structure:Lerp(theme.Detail, 0.14)
@@ -2272,7 +2275,7 @@ local function addPlatformSupports(decor, platform, index, theme, shaft)
             -- vertical but inherits the deck yaw for its sculpted facets.
             local worldOffset = platform.CFrame:PointToWorldSpace(offset)
             local supportPose = CFrame.new(
-                worldOffset.X, deckTop + (supportHeight * 0.5), worldOffset.Z
+                worldOffset.X, footY + supportHeight * 0.5, worldOffset.Z
             ) * platform.CFrame.Rotation
             local support = fitDecorMesh(
                 shaft,
@@ -3508,7 +3511,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
             underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, elevatedTrim)
-        addPlatformSupports(decor, platform, i, theme, beaconShaft)
+        addPlatformSupports(decor, base, platform, i, theme, beaconShaft)
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)
         end
