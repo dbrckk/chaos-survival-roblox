@@ -128,7 +128,9 @@ local function mount(part, source)
     mesh.CanTouch = false
     mesh.CanQuery = false
     mesh.CastShadow = false
-    mesh.LocalTransparencyModifier = part.LocalTransparencyModifier
+    -- The source is hidden only after the replacement is parented. Do not
+    -- inherit an old local mask from a recycled/generated source Part.
+    mesh.LocalTransparencyModifier = 0
 
     local function applyAppearance()
         mesh.Color = part.Color
