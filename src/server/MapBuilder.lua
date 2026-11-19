@@ -2016,7 +2016,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    underdeckSpars, bevelProfile, harborAlongX, entryTrim)
+    underdeckSpars, bevelProfile, harborAlongX, promenadeTrim)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2066,6 +2066,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     -- third finish. All stay part-owned, hazard-neutral and zero-cost in
     -- geometry or additional lights.
     local promenadeLane = tonumber(platform:GetAttribute("PromenadeLane"))
+    local promenadeStep = platform:GetAttribute("PromenadeStep")
     local skySpineStep = tonumber(platform:GetAttribute("SkySpineStep"))
     local perimeterStep = tonumber(platform:GetAttribute("PerimeterStep"))
     if promenadeLane == 1 or promenadeLane == 2 then
@@ -2118,11 +2119,11 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         local yaw = facings[edgeIndex]
         local pose = CFrame.new(where) * CFrame.Angles(0, yaw, 0)
         local bevel
-        if entryTrim and edgeIndex <= 2 then
-            bevel = RouteSignalGeometry.fit(entryTrim.beam, pose, size, nil, true)
+        if promenadeTrim and edgeIndex <= 2 then
+            bevel = RouteSignalGeometry.fit(promenadeTrim.beam, pose, size, nil, true)
             if bevel then
                 bevel:SetAttribute("OriginalPlatformBevel3D", true)
-                bevel:SetAttribute("OriginalPromenadeEntryBevel3D", true)
+                bevel:SetAttribute("OriginalPromenadeForgedBevel3D", true)
                 bevel:SetAttribute("Original3DAssetId", 126298311664881)
             end
         end
@@ -2167,10 +2168,11 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local frameSize = Vector3.new(size.X + 0.5, 0.42, size.Z + 0.5)
     local framePose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.18, 0)
     local underFrame
-    if entryTrim then
-        underFrame = RouteSignalGeometry.fit(entryTrim.lattice, framePose, frameSize, nil, true)
+    -- Portal spans already have a separate truss below this frame.
+    if promenadeTrim and not PromenadeArchitecture.portalHeight(promenadeStep) then
+        underFrame = RouteSignalGeometry.fit(promenadeTrim.lattice, framePose, frameSize, nil, true)
         if underFrame then
-            underFrame:SetAttribute("OriginalPromenadeEntryFrame3D", true)
+            underFrame:SetAttribute("OriginalPromenadeLatticeFrame3D", true)
             underFrame:SetAttribute("Original3DAssetId", 106401955318567)
         end
     end
@@ -3250,7 +3252,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local promenadeJunctions = {}
     local spineEndpoints = {}
     local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
-    local promenadeEntryTrim = {beam = sweptProfile, lattice = underdeckLattice}
+    local promenadeTrimProfiles = {beam = sweptProfile, lattice = underdeckLattice}
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
@@ -3500,11 +3502,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             elseif elevatedRoute or harborLanding or lookoutAccess then 0.96
             else 0.28
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand, edgeOverhang, glowAlongX)
-        local entryTrim = (definition.PromenadeStep == 1 or definition.PromenadeStep == 8)
-            and promenadeEntryTrim or nil
+        local promenadeTrim = definition.PromenadeLane and promenadeTrimProfiles or nil
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, entryTrim)
+            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, promenadeTrim)
         addPlatformSupports(decor, platform, i, theme, beaconShaft)
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)

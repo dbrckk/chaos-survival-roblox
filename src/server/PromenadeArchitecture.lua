@@ -11,6 +11,11 @@ local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
     else require("../shared/HorizonMonumentGeometry")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 local PromenadeArchitecture = {}
+local PORTAL_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}
+
+function PromenadeArchitecture.portalHeight(step)
+    return PORTAL_HEIGHT[step]
+end
 
 local function make(decor, platform, index, name, size, offset, color,
     material, className, mesh)
@@ -160,8 +165,8 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local step = definition.PromenadeStep
     -- Monumental gateway rhythm: three obvious spans per lane, leaving
     -- unimpeded sightlines on the other five physical deck sections.
-    if (lane ~= 1 and lane ~= 2)
-        or (step ~= 2 and step ~= 4 and step ~= 7) then
+    local crownHeight = PromenadeArchitecture.portalHeight(step)
+    if (lane ~= 1 and lane ~= 2) or not crownHeight then
         return 0
     end
 
@@ -173,7 +178,6 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local material = variant == "Harbor" and Enum.Material.CorrodedMetal
         or (variant == "Orbital" and Enum.Material.CeramicTiles
             or Enum.Material.Metal)
-    local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
     local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
     local shaftProfile = profiles and profiles.shaft
     local shaft = shaftProfile and shaftProfile.part
