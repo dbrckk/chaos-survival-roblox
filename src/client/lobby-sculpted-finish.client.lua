@@ -1,7 +1,7 @@
 local CollectionService = game:GetService("CollectionService")
-local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local profiles = {
@@ -33,7 +33,6 @@ folder.Name = "LobbySculptedFinishLocal"
 folder.Parent = workspace
 
 local mounted = {}
-local fetches = {}
 local refreshPending = false
 local scheduleRefresh
 
@@ -64,48 +63,9 @@ local function cleanClone(source)
     return mesh
 end
 
-local function ready(source)
-    local meshId = source.MeshId
-    local state = fetches[meshId]
-    if state ~= nil then
-        return state == "ready"
-    end
-    fetches[meshId] = "loading"
-    task.spawn(function()
-        local probe = cleanClone(source)
-        if not probe then
-            fetches[meshId] = nil
-            return
-        end
-        for attempt = 1, 2 do
-            local loaded = false
-            local ok = pcall(function()
-                ContentProvider:PreloadAsync({probe}, function(_, status)
-                    loaded = status == Enum.AssetFetchStatus.Success
-                end)
-            end)
-            if ok and loaded then
-                probe:Destroy()
-                fetches[meshId] = "ready"
-                scheduleRefresh()
-                return
-            end
-            if attempt == 1 then task.wait(12) end
-        end
-        probe:Destroy()
-        -- Asset delivery may fail transiently on mobile connections. Keep
-        -- the native Part visible and retry once after a cooldown instead
-        -- of permanently disabling all finishes using this mesh ID.
-        fetches[meshId] = "cooldown"
-        task.delay(60, function()
-            if fetches[meshId] == "cooldown" then
-                fetches[meshId] = nil
-                scheduleRefresh()
-            end
-        end)
-    end)
-    return false
-end
+local geometryReady = LobbyMeshPreload.new(function()
+    scheduleRefresh()
+end)
 
 local function unmount(part)
     local entry = mounted[part]
@@ -199,7 +159,8 @@ local function refresh()
         and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) < 1 then
         for tag, profile in pairs(profiles) do
             local source = findSource(profile)
-            if source and ready(source) then
+            if source then
+                local sourceReady
                 for _, part in ipairs(CollectionService:GetTagged(tag)) do
                     -- The sculpted lobby signs carry text on their own
                     -- SignTextSurface. Do not mask panels that still
@@ -231,7 +192,10 @@ local function refresh()
                                 and (not part.CanTouch
                                     or (tag == "LobbySculptedCasting"
                                         and part:GetAttribute("LobbyPracticePad") == true)))) then
-                        candidates[part] = source
+                        if sourceReady == nil then
+                            sourceReady = geometryReady(source)
+                        end
+                        if sourceReady then candidates[part] = source end
                     end
                 end
             end
