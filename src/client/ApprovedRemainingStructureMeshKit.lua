@@ -370,9 +370,19 @@ local function collectArch(arena,deck,decor,scale)
     -- The SOURCE overpass must have reached the current genuine resized
     -- deck; otherwise we are in the server Base-before-Decor replication gap.
     local overpass=originals[5]
+    local span=overpass.Size.Z
+    if overpass:IsA("MeshPart") then
+        if overpass.MeshId=="" or overpass:GetAttribute("OriginalSkyRouteCanopy3D")~=true
+            or overpass:GetAttribute("Original3DAssetId")~=126298311664881 then return nil end
+        -- The imported bridge can store its long axis along mesh-local X.
+        local alongX=overpass.Size.X>overpass.Size.Z
+        local axis=alongX and overpass.CFrame.RightVector or overpass.CFrame.LookVector
+        if math.abs(axis:Dot(deck.CFrame.LookVector))<.999 then return nil end
+        span=alongX and overpass.Size.X or overpass.Size.Z
+    end
     local extra=step==8 and 9 or 6.6
     local expected=(size.Z/scale+extra)*scale
-    if math.abs(overpass.Size.Z-expected)>.36 then return nil end
+    if math.abs(span-expected)>.36 then return nil end
     local rise=step==8 and 14 or (step==4 and 12.9 or 12.1)
     local expectedPos=(deck.CFrame*CFrame.new(0,size.Y*.5+rise,0)).Position
     if (overpass.Position-expectedPos).Magnitude>.45 then return nil end
@@ -382,7 +392,7 @@ local function collectArch(arena,deck,decor,scale)
         -- collidable platform; its source upper crosshead is +1 above
         -- the native overpass offset. The plinth has its own footprint.
         orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0),
-        scaleZ=overpass.Size.Z/17.6,
+        scaleZ=span/17.6,
         stage=step,route=route,index=index,expectedParent=decor}
 end
 

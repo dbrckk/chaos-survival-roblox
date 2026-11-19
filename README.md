@@ -200,13 +200,15 @@ Les 80 branches de chevrons au pied des portiques d’accès et de transfert peu
 
 ## P4 — Contremarches sculptées des accès périphériques
 
-Chaque arène peut afficher 16 plaques issues de maillages approuvés. Le blindage moulé habille les deux flancs du premier palier. Des traverses forgées habillent la face d’approche des paliers 2 et 3, au-dessus du palier précédent. Les plaques suivent le rétrécissement, sous les bandes lumineuses et les surfaces de saut. En l’absence du maillage à la construction, la face d’origine reste visible.
+Chaque arène peut afficher 24 plaques issues de maillages approuvés. Le blindage moulé habille les deux flancs du premier palier. Des traverses forgées habillent la face d’approche des paliers 2 à 5, au-dessus du palier précédent. Les plaques suivent le rétrécissement, sous les bandes lumineuses et les surfaces de saut. En l’absence du maillage à la construction, la face d’origine reste visible.
 
 ## P4 — Couronnes sculptées des portiques périphériques
 
 Les 60 portiques des cinq arènes peuvent accueillir jusqu’à 84 pièces sculptées dans leurs couronnes. La couronne repose à la hauteur du portique à chaque étape. Orbital reçoit un anneau ajouré autour de son réacteur et Storm Harbor une traverse forgée avec sa suspente. Les couronnes suivent leur palier pendant le rétrécissement et la disparition. Chaque pièce garde sa forme de secours si sa source approuvée est indisponible à la construction.
 
 Les mêmes portiques peuvent recevoir 120 inserts verticaux et 60 bandeaux lumineux facettés. Les inserts pendent de la traverse et le bandeau reste lisible sous la poutre, avec le cadre d’origine comme avec l’arche sculptée. Ils gardent la couleur de leur étape, suivent le rétrécissement du palier et s’effacent quand il disparaît. En l’absence du maillage approuvé à la construction, les signaux simples reprennent les mêmes emplacements.
+
+Les 60 portiques peuvent maintenant conserver une silhouette sculptée lorsque l’arche complète est hors du budget d’affichage. Deux fûts polygonaux, deux ailerons moulés et une traverse forgée occupent les cinq emplacements existants. L’arche complète masque ces pièces lorsqu’elle est affichée, quelle que soit l’orientation d’import de la traverse. Si une source manque, la pièce simple correspondante prend le relais.
 
 ## P4 — Socles et chevrons sculptés du réseau périphérique
 

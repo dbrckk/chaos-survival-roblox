@@ -2410,7 +2410,10 @@ for required in (
     'local sourceWidth=step==1 and 12 or (step==4 and 11.6 or 10)',
     'local overpass=originals[5]',
     'orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0)',
-    'scaleZ=overpass.Size.Z/17.6',
+    'scaleZ=span/17.6',
+    'span=alongX and overpass.Size.X or overpass.Size.Z',
+    'math.abs(axis:Dot(deck.CFrame.LookVector))<.999',
+    'overpass:GetAttribute("Original3DAssetId")~=126298311664881',
     '"VerticalBridgePylon-1","VerticalBridgePylon1"',
     '"TaperedFin-1","TaperedFin1","MonumentalOverpass"',
 ):

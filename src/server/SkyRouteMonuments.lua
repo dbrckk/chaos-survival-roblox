@@ -41,7 +41,7 @@ end
 
 function SkyRouteMonuments.cladLowerSteps(decor, deck, index, definition, theme, profiles)
     local step = definition.PerimeterStep
-    if not step or step > 3 then return end
+    if not step or step > 5 then return end
 
     local entry = step == 1
     local source = entry and profiles.cast or profiles.beam
@@ -76,7 +76,7 @@ function SkyRouteMonuments.cladLowerSteps(decor, deck, index, definition, theme,
         mount("NegZ", CFrame.new(0, y, -z), dimensions, true)
         mount("PosZ", CFrame.new(0, y, z), dimensions, true)
     else
-        -- The next two risers show their inward faces above the previous
+        -- The higher risers show their inward faces above the previous
         -- landing. A shallow embed keeps the plates seated during shrink.
         local facing = definition.offset.X < 0 and 1 or -1
         mount("Approach", CFrame.new(facing * (size.X * 0.5 + faceOffset), y, 0),
@@ -126,6 +126,11 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
         if mesh then mesh:SetAttribute("Original3DAssetId", source.assetId) end
         return mesh
     end
+    local function canopy(profile, name, size, offset, color, kind)
+        local mesh = fitProfile(profile, size, offset)
+        if mesh then mesh:SetAttribute("OriginalSkyRouteCanopy3D", true) end
+        add(name, size, offset, color, material, kind, nil, false, mesh)
+    end
     local function crown(profile, name, size, offset, color, mat, kind, transparency, shape)
         -- The annulus is Y-axial, while the fallback cylinder is X-axial.
         local mesh = fitProfile(profile, size, offset, shape == Enum.PartType.Cylinder)
@@ -160,17 +165,17 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
             Vector3.new(2.4, 3.4, 2.8),
             CFrame.new(0, -top - 1.65, side * (half + 1.0)),
             roof, material)
-        add("VerticalBridgePylon" .. side,
+        canopy("shaft", "VerticalBridgePylon" .. side,
             Vector3.new(1.3, pylonHeight, 1.6),
             CFrame.new(0, top + pylonHeight * 0.5,
                 side * (half + 1.55)),
-            metal, material)
-        add("TaperedFin" .. side,
+            metal)
+        canopy("cast", "TaperedFin" .. side,
             Vector3.new(2.2, 4.1, 2.1),
             CFrame.new(0, top + pylonHeight - 1.8,
                 side * (half + 1.55))
                 * CFrame.Angles(0, 0, math.rad(side * 19)),
-            roof, material, "WedgePart")
+            roof, "WedgePart")
         -- Suspend the inlays from the crosshead inside both sets of pylons.
         -- The approved arch spreads its feet wider than the native frame.
         signal("DirectionalPowerRib" .. side,
@@ -193,11 +198,11 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     -- from the arena floor without more text, neon or additional instances.
     local overpassWidth = stage == "SUMMIT" and 4.6
         or (stage == "TRANSFER" and 3.5 or 2.8)
-    add("MonumentalOverpass",
+    canopy("beam", "MonumentalOverpass",
         Vector3.new(overpassWidth, overpassHeight,
             deck.Size.Z + (stage == "SUMMIT" and 9.0 or 6.6)),
         CFrame.new(0, top + overpassRise, 0),
-        roof, material)
+        roof)
     -- The top joins the native beam and the lower face stays visible below
     -- the approved arch's I-beam from either side of the route.
     signal("RouteStageBeacon",
