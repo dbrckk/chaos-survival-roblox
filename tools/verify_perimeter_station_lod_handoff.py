@@ -20,18 +20,21 @@ for left, right in native_slots.items():
     expression = re.escape('"' + left + '"') + r'\s+or\s+' + re.escape('"' + right + '"')
     assert re.search(expression, station), (left, right)
 
-def declaration(name: str) -> str:
-    marker = '"' + name + '"'
-    pos = station.index(marker)
-    return station[pos:station.index("\n        ", pos + len(marker))]
-
-# Match the full piece invocation through the next statement to catch
-# accidental profile arguments added to native handoff slots.
-for name in ("LeftButtress", "CompressorPodL", "IntakeTurbineL", "GeneratorRotor", "CoreHousing"):
+# Verify the final argument of each native slot call, not a fixed-width
+# text window (which could accidentally include the next mesh-backed piece).
+# All five declarations terminate with a literal opacity and no profile.
+native_calls = {
+    "LeftButtress": r'theme\\.Structure,\\s*0\\.06\\s*\\)',
+    "CoreHousing": r'theme\\.Detail:Lerp\\(theme\\.Structure,\\s*0\\.35\\),\\s*0\\.06\\s*\\)',
+    "CompressorPodL": r'theme\\.Structure:Lerp\\(theme\\.Detail,\\s*0\\.36\\),\\s*0\\.04\\s*\\)',
+    "IntakeTurbineL": r'Enum\\.Material\\.Metal,\\s*theme\\.Detail,\\s*0\\.08\\s*\\)',
+    "GeneratorRotor": r'Enum\\.Material\\.Metal,\\s*theme\\.Detail,\\s*0\\.08\\s*\\)',
+}
+for name, ending in native_calls.items():
     pos = station.index('"' + name + '"')
-    tail = station[pos:pos + 440]
-    match = re.search(r'\bprofiles\.[A-Za-z]+', tail.split(')\n', 1)[0])
-    assert match is None, f"{name}: server mesh blocks premium client LOD"
+    assert re.search(ending, station[pos:pos + 450]), (
+        name, "missing native Part ending; premium client LOD may be blocked"
+    )
 
 for kit in ("ApprovedPerimeterButtressMeshKit", "ApprovedPerimeterMachineryMeshKit", "ApprovedPerimeterRotorMeshKit"):
     client = (ROOT / "src/client" / (kit + ".lua")).read_text(encoding="utf-8")
