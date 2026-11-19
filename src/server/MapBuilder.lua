@@ -2351,14 +2351,13 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Glow
     )
 
-    local gateInnerGlow = decorPart(
-        decor,
-        "ArenaGateInnerGlow",
+    local gateInnerGlow = fitDecorMesh(
+        lobbyCap, "ArenaGateInnerGlow",
+        CFrame.new(archCenter + Vector3.new(0, 11.45, -1.62)),
         Vector3.new(17.8, 0.34, 0.48),
-        archCenter + Vector3.new(0, 11.45, -1.62),
-        VisualTheme.Accents.Cyan,
-        VisualTheme.Materials.Glow
+        VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
     )
+    gateInnerGlow.Parent = decor
     gateInnerGlow.Transparency = 0.16
     gateInnerGlow.CanCollide = false
     gateInnerGlow.CanTouch = false
@@ -2366,14 +2365,16 @@ local function buildLobby(root, config)
 
     for side = -1, 1, 2 do
         for index = 1, 2 do
-            local indicator = decorPart(
-                decor,
+            local indicator = fitDecorMesh(
+                lobbyShaft,
                 (side < 0 and "ArenaGateIndicatorL" or "ArenaGateIndicatorR") .. index,
+                CFrame.new(archCenter + Vector3.new(
+                    side * (8.45 + index * 0.52), 5.3 + index * 3.8, -1.60)),
                 Vector3.new(0.34, 3.6, 0.34),
-                archCenter + Vector3.new(side * (8.45 + index * 0.52), 5.3 + index * 3.8, -1.60),
                 index == 1 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
                 VisualTheme.Materials.Glow
             )
+            indicator.Parent = decor
             indicator.Transparency = 0.22
             indicator.CanCollide = false
             indicator.CanTouch = false
@@ -2660,16 +2661,15 @@ local function buildLobby(root, config)
             13.5 + math.sin(angle * 2) * 0.45,
             math.sin(angle) * haloRadius
         )
-        local segment = decorPart(
-            decor,
-            "LobbyHaloSegment" .. i,
+        local segment = fitDecorMesh(
+            lobbyCap, "LobbyHaloSegment" .. i,
+            CFrame.new(position) * CFrame.Angles(0, -angle, 0),
             Vector3.new(4.8, 0.22, 0.48),
-            position,
             (i % 3 == 0) and VisualTheme.Accents.Magenta
                 or ((i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan),
             VisualTheme.Materials.Glow
         )
-        segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+        segment.Parent = decor
         segment.Transparency = 0.24
         segment.CanCollide = false
         segment.CanTouch = false
