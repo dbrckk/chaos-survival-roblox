@@ -198,6 +198,10 @@ Les 100 chevrons au sol et les 160 chevrons de palier reprennent le profil forg�
 
 Les 80 branches de chevrons au pied des portiques d’accès et de transfert peuvent désormais reprendre le profil forgé. Elles pointent vers le palier suivant, y compris lorsque le premier saut d’Orbital est en diagonale. Les 20 portiques de sommet reçoivent une lentille facettée sur la traverse, à côté de l’équipement central. Les formes simples servent de secours lorsque les sources manquent à la construction.
 
+## P4 — Contremarches sculptées des accès périphériques
+
+Chaque arène peut afficher 16 plaques issues de maillages approuvés. Le blindage moulé habille les deux flancs du premier palier. Des traverses forgées habillent la face d’approche des paliers 2 et 3, au-dessus du palier précédent. Les plaques suivent le rétrécissement, sous les bandes lumineuses et les surfaces de saut. En l’absence du maillage à la construction, la face d’origine reste visible.
+
 ## P4 — Couronnes sculptées des portiques périphériques
 
 Les 60 portiques des cinq arènes peuvent accueillir jusqu’à 84 pièces sculptées dans leurs couronnes. La couronne repose à la hauteur du portique à chaque étape. Orbital reçoit un anneau ajouré autour de son réacteur et Storm Harbor une traverse forgée avec sa suspente. Les couronnes suivent leur palier pendant le rétrécissement et la disparition. Chaque pièce garde sa forme de secours si sa source approuvée est indisponible à la construction.

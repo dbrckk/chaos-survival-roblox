@@ -3498,6 +3498,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- every piece follows its actual owning platform through shrink
         -- and collapse; pre-existing danger telegraphs remain authoritative.
         if definition.PerimeterRoute then
+            SkyRouteMonuments.cladLowerSteps(decor, platform, i, definition, theme, detailProfiles)
             SkyRouteMonuments.decorate(
                 decor, platform, i, definition, variant.Id, theme, detailProfiles, platformDefinitions[i + 1])
         end

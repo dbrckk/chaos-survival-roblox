@@ -39,6 +39,51 @@ local function piece(decor, deck, index, role, name, size, offset,
     return part
 end
 
+function SkyRouteMonuments.cladLowerSteps(decor, deck, index, definition, theme, profiles)
+    local step = definition.PerimeterStep
+    if not step or step > 3 then return end
+
+    local entry = step == 1
+    local source = entry and profiles.cast or profiles.beam
+    if not source.part or source.part.MeshId == "" then return end
+
+    local height = entry and 1.20 or 2.00
+    local depth = 0.40
+    local size = deck.Size
+    local y = size.Y * 0.5 - 1.45 - height * 0.5
+    local color = theme.Surface:Lerp(theme.Detail, 0.48)
+
+    local function mount(face, offset, dimensions, alongX)
+        local mesh = RouteSignalGeometry.fit(source.part, deck.CFrame * offset, dimensions, nil, alongX)
+        if not mesh then return end
+        mesh.Name = "PerimeterRiser" .. index .. "_" .. face
+        mesh.Color = color
+        mesh.Material = deck.Material
+        mesh.Transparency = 0
+        mesh:SetAttribute("Original3DAssetId", source.assetId)
+        mesh:SetAttribute("OriginalPerimeterRiser3D", true)
+        mesh:SetAttribute("PerimeterPlatformIndex", index)
+        mesh.Parent = decor
+    end
+
+    -- The access portico already has castings on the inward X face.
+    -- Center its flank plates between the corner feet, below the deck glow.
+    local faceOffset = 0.12
+    if entry then
+        local span = size.X * 0.64
+        local z = size.Z * 0.5 + faceOffset
+        local dimensions = Vector3.new(span, height, depth)
+        mount("NegZ", CFrame.new(0, y, -z), dimensions, true)
+        mount("PosZ", CFrame.new(0, y, z), dimensions, true)
+    else
+        -- The next two risers show their inward faces above the previous
+        -- landing. A shallow embed keeps the plates seated during shrink.
+        local facing = definition.offset.X < 0 and 1 or -1
+        mount("Approach", CFrame.new(facing * (size.X * 0.5 + faceOffset), y, 0),
+            Vector3.new(depth, height, size.Z * 0.74), false)
+    end
+end
+
 function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, theme, profiles, nextDefinition)
     if not decor or not deck or not deck:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table"
