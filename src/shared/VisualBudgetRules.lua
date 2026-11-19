@@ -204,6 +204,7 @@ VisualBudgetRules.LocalFolders = {
     -- Approved owner-imported arena lobby gate: seven inert original
     -- MeshParts on one client-local Model, no lights or extra frame owner.
     "OriginalLobbyGate3DLocal",
+    "LobbySculptedFinishLocal",
     -- Up to four genuine original forged lobby columns; every imported
     -- MeshPart is counted in the SAME Android 440/680/900 visual ledger.
     -- Physical four pylons stay server-authoritative even when masked.

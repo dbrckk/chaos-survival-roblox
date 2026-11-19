@@ -2199,8 +2199,19 @@ local function buildLobby(root, config)
     floorInset.Transparency = 0.04
     floorInset:SetAttribute("PremiumArchitecturalSurface", true)
 
-    local lobbyCap = wayfinderBaseSource()
-    local lobbyShaft = beaconShaftSource("Towers")
+    local function sculpt(part, profile)
+        CollectionService:AddTag(part, profile)
+        return part
+    end
+
+    local function detail(profile, name, pose, size, color, material)
+        local finish = decorPart(nil, name, size, pose.Position, color, material)
+        finish.CFrame = pose
+        return sculpt(finish, profile)
+    end
+
+    local cast = "LobbySculptedCasting"
+    local shaft = "LobbySculptedShaft"
     local lobbyLanes = {
         {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
         {name = "LobbyLaneSouth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, 24)},
@@ -2209,8 +2220,8 @@ local function buildLobby(root, config)
     }
 
     for i, def in ipairs(lobbyLanes) do
-        local lane = fitDecorMesh(
-            lobbyCap, def.name,
+        local lane = detail(
+            cast, def.name,
             CFrame.new(config.LobbyCenter + def.offset), def.size,
             (i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
             VisualTheme.Materials.Glow
@@ -2236,6 +2247,7 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Panel
         )
         panel.Transparency = 0.03
+        sculpt(panel, cast)
 
         local gui = Instance.new("SurfaceGui")
         gui.Name = "LoopPanelGui"
@@ -2267,8 +2279,8 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Structure
     )
 
-    local centerGlow = fitDecorMesh(
-        lobbyCap, "CenterGlow",
+    local centerGlow = detail(
+        cast, "CenterGlow",
         CFrame.new(config.LobbyCenter + Vector3.new(0, 2.08, 0)),
         Vector3.new(20, 0.22, 20),
         VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
@@ -2302,24 +2314,8 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Structure
         )
 
-        -- Preserve the native collision pillar; the sculpted shell is cosmetic.
-        if lobbyShaft then
-            local shell = RouteSignalGeometry.fit(lobbyShaft, pylon.CFrame, pylon.Size)
-            if shell then
-                shell.Name = "PylonSculptedShell" .. i
-                shell.Color = VisualTheme.World.Metal
-                shell.Material = VisualTheme.Materials.Structure
-                shell.CanCollide = false
-                shell.CanTouch = false
-                shell.CanQuery = false
-                shell.CastShadow = false
-                shell.Parent = decor
-                pylon.Transparency = 1
-            end
-        end
-
-        local cap = fitDecorMesh(
-            lobbyCap, "PylonGlow" .. i,
+        local cap = detail(
+            cast, "PylonGlow" .. i,
             CFrame.new(pylon.Position + Vector3.new(0, 5.25, 0)),
             Vector3.new(2.8, 0.55, 2.8),
             VisualTheme.Accents.Violet, VisualTheme.Materials.Glow
@@ -2366,40 +2362,12 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Glow
     )
 
-    -- Keep native colliders visible unless the approved cosmetic mesh actually fits.
-    if lobbyShaft then
-        for _, column in ipairs({leftColumn, rightColumn}) do
-            local shell = RouteSignalGeometry.fit(lobbyShaft, column.CFrame, column.Size)
-            if shell then
-                shell.Name = column.Name .. "SculptedShell"
-                shell.Color = VisualTheme.World.Metal
-                shell.Material = VisualTheme.Materials.Structure
-                shell.CanCollide = false
-                shell.CanTouch = false
-                shell.CanQuery = false
-                shell.CastShadow = false
-                shell.Parent = decor
-                column.Transparency = 1
-            end
-        end
-    end
-    if lobbyCap then
-        local beam = RouteSignalGeometry.fit(lobbyCap, archTop.CFrame, archTop.Size)
-        if beam then
-            beam.Name = "ArenaGateTopSculptedShell"
-            beam.Color = VisualTheme.Accents.Violet
-            beam.Material = VisualTheme.Materials.Glow
-            beam.CanCollide = false
-            beam.CanTouch = false
-            beam.CanQuery = false
-            beam.CastShadow = false
-            beam.Parent = decor
-            archTop.Transparency = 1
-        end
-    end
+    sculpt(leftColumn, shaft)
+    sculpt(rightColumn, shaft)
+    sculpt(archTop, cast)
 
-    local gateInnerGlow = fitDecorMesh(
-        lobbyCap, "ArenaGateInnerGlow",
+    local gateInnerGlow = detail(
+        cast, "ArenaGateInnerGlow",
         CFrame.new(archCenter + Vector3.new(0, 11.45, -1.62)),
         Vector3.new(17.8, 0.34, 0.48),
         VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
@@ -2412,8 +2380,8 @@ local function buildLobby(root, config)
 
     for side = -1, 1, 2 do
         for index = 1, 2 do
-            local indicator = fitDecorMesh(
-                lobbyShaft,
+            local indicator = detail(
+                shaft,
                 (side < 0 and "ArenaGateIndicatorL" or "ArenaGateIndicatorR") .. index,
                 CFrame.new(archCenter + Vector3.new(
                     side * (8.45 + index * 0.52), 5.3 + index * 3.8, -1.60)),
@@ -2496,10 +2464,11 @@ local function buildLobby(root, config)
     )
     runway.Transparency = 0.02
     runway.CanCollide = false
+    sculpt(runway, cast)
 
     for side = -1, 1, 2 do
-        local rail = fitDecorMesh(
-            lobbyCap, side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
+        local rail = detail(
+            cast, side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
             CFrame.new(runwayCenter + Vector3.new(side * 6.4, 0.10, 0)),
             Vector3.new(0.30, 0.12, 29),
             side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
@@ -2512,13 +2481,11 @@ local function buildLobby(root, config)
         rail.CanQuery = false
     end
 
-    -- Reuse the approved shaft and swept profiles for the noninteractive
-    -- approach ribs. Native fallback remains available if assets are absent.
     for i = 1, 4 do
         local z = 7 + (i * 4.7)
         local height = 6.5 + (i * 0.45)
-        local leftRib = fitDecorMesh(
-            lobbyShaft, "ArenaApproachRibL" .. i,
+        local leftRib = detail(
+            shaft, "ArenaApproachRibL" .. i,
             CFrame.new(config.LobbyCenter + Vector3.new(-7.2, 1.1 + height * 0.5, z)),
             Vector3.new(0.55, height, 0.55),
             VisualTheme.World.Metal, VisualTheme.Materials.Structure
@@ -2526,8 +2493,8 @@ local function buildLobby(root, config)
         leftRib.Parent = decor
         leftRib.Transparency = 0.04
 
-        local rightRib = fitDecorMesh(
-            lobbyShaft, "ArenaApproachRibR" .. i,
+        local rightRib = detail(
+            shaft, "ArenaApproachRibR" .. i,
             CFrame.new(config.LobbyCenter + Vector3.new(7.2, 1.1 + height * 0.5, z)),
             Vector3.new(0.55, height, 0.55),
             VisualTheme.World.Metal, VisualTheme.Materials.Structure
@@ -2535,8 +2502,8 @@ local function buildLobby(root, config)
         rightRib.Parent = decor
         rightRib.Transparency = 0.04
 
-        local topRib = fitDecorMesh(
-            lobbyShaft, "ArenaApproachRibTop" .. i,
+        local topRib = detail(
+            shaft, "ArenaApproachRibTop" .. i,
             CFrame.new(config.LobbyCenter + Vector3.new(0, 1.1 + height, z))
                 * CFrame.Angles(0, 0, math.rad(90)),
             Vector3.new(0.42, 14.9, 0.55),
@@ -2559,6 +2526,7 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Structure
     )
     sign.CanCollide = false
+    sculpt(sign, cast)
 
     local surface = Instance.new("SurfaceGui")
     surface.Name = "TitleGui"
@@ -2678,8 +2646,8 @@ local function buildLobby(root, config)
     }
 
     for i, offset in ipairs(frameOffsets) do
-        local spine = fitDecorMesh(
-            lobbyShaft, "LobbyFrameSpine" .. i,
+        local spine = detail(
+            shaft, "LobbyFrameSpine" .. i,
             CFrame.new(config.LobbyCenter + offset),
             Vector3.new(1.6, 14, 1.6),
             VisualTheme.World.Metal, VisualTheme.Materials.Structure
@@ -2687,8 +2655,8 @@ local function buildLobby(root, config)
         spine.Parent = decor
         spine.Transparency = 0.03
 
-        local band = fitDecorMesh(
-            lobbyCap, "LobbyFrameBand" .. i,
+        local band = detail(
+            cast, "LobbyFrameBand" .. i,
             CFrame.new(spine.Position + Vector3.new(0, 5.3, 0)),
             Vector3.new(3.6, 0.34, 3.6),
             (i % 2 == 0) and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
@@ -2706,8 +2674,8 @@ local function buildLobby(root, config)
             13.5 + math.sin(angle * 2) * 0.45,
             math.sin(angle) * haloRadius
         )
-        local segment = fitDecorMesh(
-            lobbyCap, "LobbyHaloSegment" .. i,
+        local segment = detail(
+            cast, "LobbyHaloSegment" .. i,
             CFrame.new(position) * CFrame.Angles(0, -angle, 0),
             Vector3.new(4.8, 0.22, 0.48),
             (i % 3 == 0) and VisualTheme.Accents.Magenta
@@ -2764,9 +2732,10 @@ local function buildLobby(root, config)
         )
         panel.CanCollide = false
         panel.Transparency = 0.04
+        sculpt(panel, cast)
 
-        local rail = fitDecorMesh(
-            lobbyCap, "LobbyIdentityRail" .. i,
+        local rail = detail(
+            cast, "LobbyIdentityRail" .. i,
             CFrame.new(panel.Position + Vector3.new(0, -2.0, 0)),
             Vector3.new(12.4, 0.24, 0.60),
             def.color, VisualTheme.Materials.Glow

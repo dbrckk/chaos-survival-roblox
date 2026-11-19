@@ -1,3 +1,7 @@
+## P4 — Finitions 3D du lobby
+
+Le lobby applique jusqu’à 64 finitions sculptées après le chargement des maillages approuvés. L’allée, les huit panneaux d’accueil, les repères lumineux et le portail gardent leurs dimensions et leurs ancrages. La traverse reprend la couleur et le fondu du départ de manche. Les formes de secours restent visibles au démarrage et reprennent leur place pendant la manche, sous pression graphique ou si le maillage est indisponible.
+
 ## P4 — Silhouettes d’arrière-plan
 
 Les 20 tours principales et les 40 silhouettes lointaines des cinq arènes peuvent utiliser des maillages approuvés dans 244 emplacements existants. Les toitures lointaines reprennent la coque octogonale du modèle complet, surmontée d’un mât facetté. Les sources chargées à la construction déterminent quelles pièces sont sculptées. Les modèles complets utilisent les mêmes repères et gardent leurs limites de proximité.
