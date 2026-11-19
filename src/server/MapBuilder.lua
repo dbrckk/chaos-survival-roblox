@@ -2243,20 +2243,16 @@ local function addPlatformSupports(decor, platform, index, theme, shaft)
         -- Keep the authored axes for client overlays and bridge contraction.
         local shaftAlongX = shaft and shaft.Size.X > shaft.Size.Z
         for supportIndex, offset in ipairs(supportOffsets) do
+            -- Transform once into world space. The cosmetic support is
+            -- vertical but inherits the deck yaw for its sculpted facets.
+            local worldOffset = platform.CFrame:PointToWorldSpace(offset)
+            local supportPose = CFrame.new(
+                worldOffset.X, deckTop + (supportHeight * 0.5), worldOffset.Z
+            ) * platform.CFrame.Rotation
             local support = fitDecorMesh(
                 shaft,
                 "PlatformSupport" .. index .. "_" .. supportIndex,
-                -- Supports follow the deck's authored yaw instead of
-                -- drifting off rotated bridge/parkour platforms.
-                CFrame.new(
-                    platform.CFrame:PointToWorldSpace(Vector3.new(
-                        offset.X, 0, offset.Z
-                    )).X,
-                    deckTop + (supportHeight * 0.5),
-                    platform.CFrame:PointToWorldSpace(Vector3.new(
-                        offset.X, 0, offset.Z
-                    )).Z
-                ) * platform.CFrame.Rotation,
+                supportPose,
                 Vector3.new(supportWidth, supportHeight, supportWidth),
                 supportColor,
                 VisualTheme.Materials.Structure,
