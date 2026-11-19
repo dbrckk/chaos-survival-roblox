@@ -2650,19 +2650,41 @@ local function buildLobby(root, config)
     runway.CanCollide = false
     sculpt(runway, cast)
 
+    local railOffset = runway.Size.X * 0.5 - 0.60
+    local runwayTop = runway.Size.Y * 0.5
+    local runwayHalfLength = runway.Size.Z * 0.5
     for side = -1, 1, 2 do
+        local railSide = side < 0 and "Left" or "Right"
+        local accent = side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet
+        local railFrame = runway.CFrame * CFrame.new(side * railOffset, runwayTop, 0)
         local rail = detail(
-            cast, side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
-            CFrame.new(runwayCenter + Vector3.new(side * 6.4, 0.10, 0)),
-            Vector3.new(0.30, 0.12, runwayLength),
-            side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
-            VisualTheme.Materials.Glow
+            cast, "ArenaRunwayRail" .. railSide,
+            railFrame * CFrame.new(0, 0.05, 0),
+            Vector3.new(0.30, 0.12, runway.Size.Z), accent, VisualTheme.Materials.Glow
         )
         rail.Parent = decor
         rail.Transparency = 0.16
-        rail.CanCollide = false
-        rail.CanTouch = false
-        rail.CanQuery = false
+
+        for endSign = -1, 1, 2 do
+            local endName = endSign < 0 and "Stage" or "Portal"
+            -- Both fittings stay inside the deck edge and outboard of
+            -- the animated sweep. Only the terminal covers the light.
+            local clamp = detail(
+                "LobbySculptedSwept", "ArenaRunwayClamp" .. railSide .. endName,
+                railFrame * CFrame.new(0, 0.031, endSign * runwayHalfLength * 0.46),
+                Vector3.new(0.72, 0.10, 0.58),
+                VisualTheme.World.MetalLight, VisualTheme.Materials.Structure
+            )
+            clamp.Parent = decor
+
+            local cap = detail(
+                "LobbySculptedSwept", "ArenaRunwayEndCap" .. railSide .. endName,
+                railFrame * CFrame.new(0, 0.055, endSign * (runwayHalfLength - 0.54)),
+                Vector3.new(0.88, 0.15, 1.08),
+                VisualTheme.World.MetalLight:Lerp(accent, 0.22), VisualTheme.Materials.Structure
+            )
+            cap.Parent = decor
+        end
     end
 
     for i = 1, 4 do

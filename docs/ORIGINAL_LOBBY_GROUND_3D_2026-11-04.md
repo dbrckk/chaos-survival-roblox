@@ -36,6 +36,8 @@ Deux attributs diagnostiques du joueur sont renseignés depuis le montage réel 
 
 Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estrade. L’allée et ses deux rails partent au pied du rebord et se terminent cinq studs après le portail, à l’intérieur du vestibule. Les chevrons de départ et les repères d’approche suivent l’empreinte de l’allée. Le signal de lancement se déplace de l’estrade vers le portail.
 
+Chaque rail reçoit deux brides et deux embouts métalliques ajustés à son empreinte. Ils réutilisent le profil forgé approuvé de Tower Run, avec une pièce de secours de mêmes dimensions par emplacement. Les brides passent sous le haut du guide lumineux et les embouts le coiffent aux extrémités. Les huit pièces restent hors du balayage de lancement.
+
 ## Finition de secours du vestibule
 
 Le client pose les joints et les trappes de maintenance sur la face supérieure du revêtement visible dans les secteurs dépourvus de dalle. Les quatre paires de positions possibles contournent les zones d’entraînement, les inscriptions et l’allée du portail. Sans dalle, la configuration prévoit quatre joints et quatre trappes en Low, six de chaque en Medium et huit de chaque en High, avec les huit petits inserts lumineux en High. Avec les deux dalles avant en Medium, les secteurs du portail gardent deux joints et quatre trappes. En High sous pression 1, les secteurs libres gardent quatre joints et quatre trappes sans inserts lumineux. Le client compte la dalle surélevée de l’estrade à part pour choisir les finitions du vestibule. Le streaming du revêtement et le changement de pression déclenchent leur recalcul.
