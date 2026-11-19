@@ -971,6 +971,28 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
         end
     end
 
+    -- Sculpted diagonal corner gussets give the exposed underside a
+    -- load-bearing silhouette. They sit below the authoritative floor and
+    -- remain cosmetic, with native noncolliding fallback if meshes are absent.
+    for xSign = -1, 1, 2 do
+        for zSign = -1, 1, 2 do
+            local corner = center + Vector3.new(
+                xSign * (insetX - 2.0), -2.0, zSign * (insetZ - 2.0))
+            local brace = fitDecorMesh(
+                sweptProfile,
+                "UndercarriageCornerGusset" .. (xSign < 0 and "L" or "R")
+                    .. (zSign < 0 and "N" or "S"),
+                CFrame.new(corner) * CFrame.Angles(0, math.rad(xSign * zSign * 45), 0),
+                Vector3.new(7.2, 2.6, 1.3),
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            brace.Transparency = 0.05
+            brace:SetAttribute("PremiumArchitecturalSurface", true)
+            brace.Parent = undercarriage
+        end
+    end
+
     local deckInset = decorPart(
         decor,
         "ArenaDeckInset",
