@@ -109,6 +109,25 @@ local function createPad(folder, center, definition, index)
         CollectionService:AddTag(boss, "LobbySculptedCasting")
     end
 
+    -- Recessed direction vanes guide the eye toward the boost center.
+    -- They sit beside, not over, the touch-enabled pad and are cosmetic.
+    for side = -1, 1, 2 do
+        local vane = Instance.new("Part")
+        vane.Name = side < 0 and "PracticeGuideVaneL" or "PracticeGuideVaneR"
+        vane.Size = Vector3.new(0.34, 0.12, 3.15)
+        vane.CFrame = pad.CFrame * CFrame.new(side * 3.86, 0.08, 0)
+        vane.Anchored = true
+        vane.CanCollide = false
+        vane.CanTouch = false
+        vane.CanQuery = false
+        vane.CastShadow = false
+        vane.Material = Enum.Material.Metal
+        vane.Color = rimColor
+        vane.Transparency = 0.08
+        vane.Parent = folder
+        CollectionService:AddTag(vane, "LobbySculptedSwept")
+    end
+
     local light = Instance.new("PointLight")
     light.Name = "PracticePadLight"
     light.Color = pad.Color
