@@ -1155,15 +1155,16 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
         }
 
         for i, offset in ipairs(corners) do
-            local mast = decorPart(
-                decor,
+            local mast = fitDecorMesh(
+                beaconShaft,
                 "TowerSpine" .. i,
+                CFrame.new(center + offset),
                 Vector3.new(2.6, 20, 2.6),
-                center + offset,
                 theme.Structure,
                 VisualTheme.Materials.Structure
             )
             mast.Transparency = 0.04
+            mast.Parent = decor
 
             for level = 1, 3 do
                 local band = fitDecorMesh(
