@@ -21,6 +21,9 @@ local shared=ReplicatedStorage:FindFirstChild("Shared")
 local connectionModule=shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local Connection=if connectionModule then require(connectionModule)
     else require("../shared/SkyRouteConnectionRules")
+local lodRulesModule=shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules=if lodRulesModule then require(lodRulesModule)
+    else require("../shared/PlatformIdentityLodRules")
 local Kit={}
 local SOURCE={
     Access={id=110243423264048,major=17.6,minor=3.9,height=17.53,centerY=6.855},
@@ -517,13 +520,16 @@ end
 
 local function promenadeUnderdeck(deck,decor,scale,span)
     local index=deck.Name:match("^Platform(%d+)$")
-    local native=promenadeNative(decor,index,"_UnderdeckTruss")
-    if not native or Trim.hasPrimaryStructure(native) then return nil end
-    local expected=deck.CFrame*CFrame.new(0,-.3,0)
-    if (native.Position-expected.Position).Magnitude>.14
-        or (native.Size-Vector3.new(5.6*scale,1.7,span*scale)).Magnitude>.13
-        or expected.UpVector:Dot(native.CFrame.UpVector)<.999
-        or expected.LookVector:Dot(native.CFrame.LookVector)<.999 then return nil end
+    if not index then return nil end
+    local native=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
+    if not visualNative(native,decor) or Trim.hasPrimaryStructure(native)
+        or native:GetAttribute("PromenadeVisualOnly")~=true
+        or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
+    local size,offset=PlatformIdentityLodRules.promenadeUnderdeckGeometry(
+        deck.Size.Y*.5,span,scale,native:IsA("MeshPart"))
+    if not PlatformIdentityLodRules.matchesUnderdeckFallback(native,deck.CFrame*offset,size,.13,.14) then
+        return nil
+    end
     return native
 end
 
@@ -589,11 +595,12 @@ local function collectJunctionTruss(arena,deck,spine,decor,scale,useChassis)
         return promenadeChassis(arena,deck,decor,frame,native,"JunctionUnderframe",spine)
     end
     -- The shoulder remains underneath the real two-stud collision deck,
-    -- with a flange at its underside and visible structural depth below.
+    -- using the deck's axes and the same deep fit for either fallback.
+    local size,offset=PlatformIdentityLodRules.promenadeUnderdeckGeometry(deck.Size.Y*.5,13,scale,false)
     return {category="junction",name="JunctionTruss",key=native,owner=deck,
         otherDeck=spine,arena=arena,originals={native},center=deck.Position,
-        orientation=native.CFrame*CFrame.new(0,-1.02,0),
-        fitSize=Vector3.new(native.Size.X*.97,1.7,native.Size.Z*.98),expectedParent=decor}
+        orientation=deck.CFrame*offset*CFrame.new(0,-1.02,0),
+        fitSize=Vector3.new(size.X*.97,size.Y,size.Z*.98),expectedParent=decor}
 end
 
 local function collectStayPair(arena,deck,decor,scale)
@@ -1342,9 +1349,11 @@ local function mount(data,source)
         elseif native:IsA("MeshPart") and native.Name:match("^PlatformUnderFrame%d+$") then
             entry.connections[#entry.connections+1]=
                 native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"):Connect(changed)
-        elseif native:IsA("MeshPart") and data.name=="SpineUnderframe" then
+        elseif native:IsA("MeshPart") and data.category=="junction" then
+            local meshTag=data.name=="SpineUnderframe" and "OriginalSkySpineUnderdeck3D"
+                or "OriginalPromenadeUnderdeck3D"
             entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
-            for _,attribute in ipairs({"OriginalSkySpineUnderdeck3D","Original3DAssetId"}) do
+            for _,attribute in ipairs({meshTag,"Original3DAssetId"}) do
                 entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(attribute):Connect(changed)
             end
         end

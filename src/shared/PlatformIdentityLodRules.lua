@@ -28,10 +28,15 @@ function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positi
     if not part then return false end
     if part:IsA("MeshPart") and not Rules.isAuthoredUnderFrameMesh(part) then
         local name = part.Name
-        if part:GetAttribute("OriginalSkySpineUnderdeck3D") ~= true
-            or part:GetAttribute("Original3DAssetId") ~= 126298311664881 or part.MeshId == ""
-            or not (name:match("^SkySpine%d+_Undercarriage%-?1$")
-                or name:match("^SkySpine%d+_CrossStiffener$")) then return false end
+        local assetId = part:GetAttribute("Original3DAssetId")
+        local spine = assetId == 126298311664881
+            and part:GetAttribute("OriginalSkySpineUnderdeck3D") == true
+            and (name:match("^SkySpine%d+_Undercarriage%-?1$")
+                or name:match("^SkySpine%d+_CrossStiffener$"))
+        local promenade = assetId == 106401955318567
+            and part:GetAttribute("OriginalPromenadeUnderdeck3D") == true
+            and name:match("^Promenade%d+_UnderdeckTruss$")
+        if part.MeshId == "" or not (spine or promenade) then return false end
         -- The source can import with its long axis on X or Z. The builder
         -- fits it with either the deck's frame or a positive quarter turn.
         if part.CFrame.LookVector:Dot(frame.LookVector) < .999 then
@@ -46,6 +51,14 @@ function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positi
         and (part.Position - frame.Position).Magnitude <= positionTolerance
         and part.CFrame.UpVector:Dot(frame.UpVector) >= .999
         and part.CFrame.LookVector:Dot(frame.LookVector) >= .999
+end
+
+function Rules.promenadeUnderdeckGeometry(top, span, scale, sculpted)
+    if sculpted then
+        -- Seat the upper flange against the walking deck's underside.
+        return Vector3.new(5.6 * scale, .62, span * scale), CFrame.new(0, -top - .29, 0)
+    end
+    return Vector3.new(5.6 * scale, 1.7, span * scale), CFrame.new(0, top - 1.3, 0)
 end
 
 function Rules.isAuthoredPlatformBevel(part)

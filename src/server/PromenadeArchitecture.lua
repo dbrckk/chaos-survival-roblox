@@ -1,15 +1,22 @@
 -- Massive structural arches over ACTUAL collidable promenade decks.
 -- Six original steel/ceramic/cargo gate ensembles per arena, each attached
 -- to its exact platform index for ShrinkingArena size and CFrame updates.
--- Native decoration only: no blocking walls, lights, physics, loops or assets.
+-- Cosmetic arches and approved underdeck relief share the physical deck's index.
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule then require(lodRulesModule)
+    else require("../shared/PlatformIdentityLodRules")
+local RouteSignalGeometry = require("./RouteSignalGeometry")
 local PromenadeArchitecture = {}
 
 local function make(decor, platform, index, name, size, offset, color,
-    material, className)
-    local p = Instance.new(className or "Part")
+    material, className, mesh)
+    local p = mesh or Instance.new(className or "Part")
     p.Name = "Promenade" .. index .. "_" .. name
-    p.Size = size
-    p.CFrame = platform.CFrame * offset
+    if not mesh then
+        p.Size = size
+        p.CFrame = platform.CFrame * offset
+    end
     p.Color = color
     p.Material = material
     p.Transparency = 0.06
@@ -93,7 +100,7 @@ local function variantEquipment(decor, platform, index, variant, theme, top)
 end
 
 function PromenadeArchitecture.decorate(decor, platform, index, definition,
-    variant, theme)
+    variant, theme, trussProfile)
     if not decor or not platform or not platform:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table" then
         return 0
@@ -137,11 +144,20 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     end
     structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, crownSpan),
         CFrame.new(0, crownHeight, 0), alloy)
-    -- The real walkway remains unchanged; larger late-stage underframes
-    -- create a stronger silhouette without extra parts or collisions.
+    -- Keep the original owner slot and give the mesh a visible depth
+    -- below the deck. Native fallback retains its original fit.
     local trussSpan = step == 7 and 15.0 or (step == 4 and 13.0 or 11.0)
-    structure("UnderdeckTruss", Vector3.new(5.6, 1.7, trussSpan),
-        CFrame.new(0, -1.3, 0), steel, Enum.Material.Metal)
+    local trussSize, trussOffset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(height, trussSpan, 1, true)
+    local truss = trussProfile and trussProfile.MeshId ~= ""
+        and RouteSignalGeometry.fit(trussProfile, platform.CFrame * trussOffset, trussSize)
+    if truss then
+        truss:SetAttribute("OriginalPromenadeUnderdeck3D", true)
+        truss:SetAttribute("Original3DAssetId", 106401955318567)
+    else
+        trussSize, trussOffset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(height, trussSpan, 1, false)
+    end
+    make(decor, platform, index, "UnderdeckTruss", trussSize, trussOffset, steel, Enum.Material.Metal, nil, truss)
+    count += 1
     -- The equipment is above the structural crosshead, or outside
     -- the deck edges. Nothing presents a fake playable upper surface.
     count += variantEquipment(decor, platform, index,

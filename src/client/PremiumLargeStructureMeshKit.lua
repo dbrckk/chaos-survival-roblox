@@ -429,9 +429,12 @@ function Kit.cradleNativeParts(decor,deck)
     if not span then return {frame} end
     -- The existing Harbor portal owns the cargo trusses on these steps.
     if decor.Parent:GetAttribute("VariantId") == "Harbor" then return nil end
-    local truss = matchingCradleNative(decor,deck,"Promenade"..id.."_UnderdeckTruss",
-        Vector3.new(5.6*scale,1.7,span*scale),
-        CFrame.new(0,deck.Size.Y*.5-1.3,0),"PromenadeVisualOnly",id)
+    local trussName = "Promenade"..id.."_UnderdeckTruss"
+    local candidate = decor:FindFirstChild(trussName)
+    if not candidate then return nil end
+    local size,offset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(
+        deck.Size.Y*.5,span,scale,candidate:IsA("MeshPart"))
+    local truss = matchingCradleNative(decor,deck,trussName,size,offset,"PromenadeVisualOnly",id)
     if not truss then return nil end
     return {frame,truss}
 end

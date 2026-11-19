@@ -732,8 +732,7 @@ local function collectUnderdeckNative(decor, platform, scale)
     local sx, sz = platform.Size.X, platform.Size.Z
     local top = platform.Size.Y * .5
     local parts = {}
-    local function take(name, tag, size, offset)
-        local part = decor:FindFirstChild(name)
+    local function take(part, tag, size, offset)
         if not PlatformIdentityLodRules.matchesUnderdeckFallback(part, platform.CFrame * offset, size, .14, .16)
             or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
             or part.Transparency >= .95 or part:GetAttribute(tag) ~= true
@@ -744,24 +743,28 @@ local function collectUnderdeckNative(decor, platform, scale)
         parts[#parts + 1] = part
         return true
     end
-    if not take("PlatformUnderFrame" .. id, "PremiumArchitecturalSurface",
+    if not take(decor:FindFirstChild("PlatformUnderFrame" .. id), "PremiumArchitecturalSurface",
         Vector3.new(sx + .5 * scale, .42, sz + .5 * scale), CFrame.new(0, -top - .18, 0)) then
         return nil
     end
     if platform:GetAttribute("SkySpineInterchange") == true then
         for _, side in ipairs({-1, 1}) do
-            if not take("SkySpine" .. id .. "_Undercarriage" .. side, "SkySpineDecor",
+            if not take(decor:FindFirstChild("SkySpine" .. id .. "_Undercarriage" .. side), "SkySpineDecor",
                 Vector3.new(.66 * scale, .6, sz - .8 * scale),
                 CFrame.new(side * 3.9 * scale, -top - .28, 0)) then return nil end
         end
-        if not take("SkySpine" .. id .. "_CrossStiffener", "SkySpineDecor",
+        if not take(decor:FindFirstChild("SkySpine" .. id .. "_CrossStiffener"), "SkySpineDecor",
             Vector3.new(sx + .6 * scale, .48, .64 * scale),
             CFrame.new(0, -top - .42, 0)) then return nil end
     else
         local span = PROMENADE_TRUSS_SPAN[platform:GetAttribute("PromenadeStep")]
-        if span and not take("Promenade" .. id .. "_UnderdeckTruss", "PromenadeVisualOnly",
-            Vector3.new(5.6 * scale, 1.7, span * scale),
-            CFrame.new(0, top - 1.3, 0)) then return nil end
+        if span then
+            local truss = decor:FindFirstChild("Promenade" .. id .. "_UnderdeckTruss")
+            if not truss then return nil end
+            local size, offset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(
+                top, span, scale, truss:IsA("MeshPart"))
+            if not take(truss, "PromenadeVisualOnly", size, offset) then return nil end
+        end
     end
     return parts
 end
@@ -1060,9 +1063,11 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         local geometryChanged = part:IsA("Part") and part:GetPropertyChangedSignal("Shape")
             or part:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D")
         connections[#connections + 1] = geometryChanged:Connect(changed)
-        if part:IsA("MeshPart") and part.Name:match("^SkySpine") then
+        local meshTag = part.Name:match("^SkySpine") and "OriginalSkySpineUnderdeck3D"
+            or part.Name:match("^Promenade") and "OriginalPromenadeUnderdeck3D"
+        if part:IsA("MeshPart") and meshTag then
             connections[#connections + 1] = part:GetPropertyChangedSignal("MeshId"):Connect(changed)
-            connections[#connections + 1] = part:GetAttributeChangedSignal("OriginalSkySpineUnderdeck3D"):Connect(changed)
+            connections[#connections + 1] = part:GetAttributeChangedSignal(meshTag):Connect(changed)
             connections[#connections + 1] = part:GetAttributeChangedSignal("Original3DAssetId"):Connect(changed)
         end
         for _, tag in ipairs({"PremiumArchitecturalSurface", "PromenadeVisualOnly",

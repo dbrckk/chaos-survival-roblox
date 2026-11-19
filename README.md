@@ -308,6 +308,8 @@ Sur les 50 tabliers des cinq arènes, les 100 longerons et 50 traverses de secou
 
 Sur les cinq arènes, 80 socles plats peuvent recevoir le châssis ajouré approuvé d’Orbital. Aux 20 portiques extérieurs et aux 10 jonctions centrales, le même châssis remplace le socle et son treillis. Chaque montage suit la contraction et occupe un créneau du quota des treillis. Aux jonctions centrales, il dépend du raccord physique à l’Épine céleste. Le treillis forgé approuvé sert de repli si le châssis ou le socle d’origine se décharge. Les berceaux complets et l’habillage portuaire ont la priorité.
 
+Les 30 renforts de secours des portiques peuvent aussi reprendre le treillis d’Orbital, ajusté sous le tablier pour rendre ses travées ajourées visibles depuis le sol. Ils suivent la contraction et s’effacent quand un châssis complet prend le relais. Le bloc d’origine reste disponible si la source approuvée manque à la construction.
+
 ## P4 — Platelage nervuré des grandes traversées aériennes
 
 Les 16 tabliers des deux Promenades et les 10 tabliers de l’Épine céleste sont éligibles dans chaque arène. Quand la coque intégrale ne couvre pas la surface, deux sections du relief approuvé de passerelle épousent le panneau d’origine. Elles reprennent sa finition, suivent le rétrécissement et occupent un créneau existant de passerelle. Elles s’arrêtent à l’intérieur du tablier et se retirent ensemble si le panneau se décharge, si une fixation disparaît ou si une alerte se déclenche.

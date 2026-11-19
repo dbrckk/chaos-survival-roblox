@@ -268,9 +268,11 @@ local function bindCradle(arena,deck,folder,pieces)
             watch(native:GetPropertyChangedSignal("Shape"))
         else
             watch(native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"))
-            if native.Name:match("^SkySpine") then
+            local meshTag = native.Name:match("^SkySpine") and "OriginalSkySpineUnderdeck3D"
+                or native.Name:match("^Promenade") and "OriginalPromenadeUnderdeck3D"
+            if meshTag then
                 watch(native:GetPropertyChangedSignal("MeshId"))
-                attributes(native,{"OriginalSkySpineUnderdeck3D","Original3DAssetId"})
+                attributes(native,{meshTag,"Original3DAssetId"})
             end
         end
         attributes(native,{"SkySpineDecor","PromenadeVisualOnly","PerimeterPlatformIndex","PremiumArchitecturalSurface"})
