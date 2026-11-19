@@ -2464,27 +2464,28 @@ local function buildLobby(root, config)
         rail.CanQuery = false
     end
 
+    -- Reuse the approved shaft and swept profiles for the noninteractive
+    -- approach ribs. Native fallback remains available if assets are absent.
+    local lobbyShaft = beaconShaftSource("Towers")
     for i = 1, 4 do
         local z = 7 + (i * 4.7)
         local height = 6.5 + (i * 0.45)
-        local leftRib = decorPart(
-            decor,
-            "ArenaApproachRibL" .. i,
+        local leftRib = fitDecorMesh(
+            lobbyShaft, "ArenaApproachRibL" .. i,
+            CFrame.new(config.LobbyCenter + Vector3.new(-7.2, 1.1 + height * 0.5, z)),
             Vector3.new(0.55, height, 0.55),
-            config.LobbyCenter + Vector3.new(-7.2, 1.1 + height * 0.5, z),
-            VisualTheme.World.Metal,
-            VisualTheme.Materials.Structure
+            VisualTheme.World.Metal, VisualTheme.Materials.Structure
         )
+        leftRib.Parent = decor
         leftRib.Transparency = 0.04
 
-        local rightRib = decorPart(
-            decor,
-            "ArenaApproachRibR" .. i,
+        local rightRib = fitDecorMesh(
+            lobbyShaft, "ArenaApproachRibR" .. i,
+            CFrame.new(config.LobbyCenter + Vector3.new(7.2, 1.1 + height * 0.5, z)),
             Vector3.new(0.55, height, 0.55),
-            config.LobbyCenter + Vector3.new(7.2, 1.1 + height * 0.5, z),
-            VisualTheme.World.Metal,
-            VisualTheme.Materials.Structure
+            VisualTheme.World.Metal, VisualTheme.Materials.Structure
         )
+        rightRib.Parent = decor
         rightRib.Transparency = 0.04
 
         local topRib = decorPart(
