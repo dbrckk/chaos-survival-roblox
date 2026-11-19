@@ -252,6 +252,17 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
                 Enum.Material.Metal,
                 theme.Structure:Lerp(theme.Detail, 0.30), 0.06, profiles.housing)
         end
+        -- Upper service arch: approved swept metal segments visually connect
+        -- the generator shoulders to the tower without adding a walkable ledge.
+        -- The native generator rotor stays untouched for client LOD ownership.
+        for _, side in ipairs({-1, 1}) do
+            piece(side < 0 and "UpperServiceRibL" or "UpperServiceRibR",
+                "Part", Vector3.new(0.52, 2.1, 1.45),
+                CFrame.new(side * 2.35, 9.15, 0.15)
+                    * CFrame.Angles(math.rad(side * 18), 0, 0),
+                Enum.Material.Metal,
+                theme.Detail:Lerp(theme.Structure, 0.38), 0.08, profiles.wing)
+        end
 
         if variant.Id == "Towers" then
             -- Twin crane masts convey vertical scale without placing an
