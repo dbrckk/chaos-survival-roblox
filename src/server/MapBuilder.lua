@@ -2438,7 +2438,7 @@ local function buildLobby(root, config)
     local centerGlow = detail(
         cast, "CenterGlow",
         CFrame.new(config.LobbyCenter + Vector3.new(0, 2.08, 0)),
-        Vector3.new(20, 0.22, 20),
+        Vector3.new(7.5, 0.22, 7.5),
         VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
     )
     centerGlow.Parent = decor

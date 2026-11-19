@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kit = {}
 local SOURCE_ID = 72507987666671
+local MAX_PARTS_PER_TILE = 12
 local POSITIONS = {
     Vector2.new(-1, -1), Vector2.new(1, -1),
     Vector2.new(-1, 1), Vector2.new(1, 1),
@@ -25,7 +26,7 @@ local function sourceTemplate()
             count += 1
         elseif item:IsA("LuaSourceContainer") then return nil end
     end
-    if count < 1 or count > 12 then return nil end
+    if count < 1 or count > MAX_PARTS_PER_TILE then return nil end
     local _, size = model:GetBoundingBox()
     if size.X < 30 or size.X > 65 or size.Z < 30 or size.Z > 65
         or size.Y <= 0 or size.Y > 1.5 then return nil end
@@ -50,9 +51,48 @@ local function discard(staged)
     for _, model in ipairs(staged) do model:Destroy() end
 end
 
+local function fitTile(source, scale, span, surface, name, partsPerTile)
+    local clone = source:Clone()
+    if not clone then return nil end
+    if not pcall(function() clone:ScaleTo(scale) end) then
+        clone:Destroy()
+        return nil
+    end
+    local reference, dimensions = clone:GetBoundingBox()
+    if dimensions.X > span + .1 or dimensions.Z > span + .1
+        or dimensions.Y <= 0 or dimensions.Y > 1.10 then
+        clone:Destroy()
+        return nil
+    end
+    local target = surface * CFrame.new(0, -dimensions.Y * .5, 0)
+    local count = 0
+    for _, part in ipairs(clone:GetDescendants()) do
+        if part:IsA("MeshPart") then
+            part.CFrame = target * reference:ToObjectSpace(part.CFrame)
+            part.Anchored = true
+            part.Massless = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = false
+            part:SetAttribute("OriginalLobbyGround3D", true)
+            part:SetAttribute("Original3DAssetId", SOURCE_ID)
+            count += 1
+        end
+    end
+    if count ~= partsPerTile then
+        clone:Destroy()
+        return nil
+    end
+    clone.Name = name
+    clone:SetAttribute("CosmeticOnly", true)
+    clone:SetAttribute("Original3DAssetId", SOURCE_ID)
+    return clone
+end
+
 -- Returns actual (MeshParts, tiles). Prepare EVERYTHING before parenting.
 -- The 74x74 collidable lobby Floor, instructions and spawns never change.
-function Kit.install(folder, floor, tier, pressure)
+function Kit.install(folder, floor, tier, pressure, platform)
     local wanted = Kit.tileBudget(tier, pressure)
     if wanted == 0 or not folder or not folder:IsA("Folder")
         or not floor or not floor:IsA("BasePart") or not floor.Parent
@@ -68,49 +108,36 @@ function Kit.install(folder, floor, tier, pressure)
     if scale < .58 then return 0, 0 end
     local staged = {}
     for i = 1, wanted do
-        local clone = source:Clone()
-        if not pcall(function() clone:ScaleTo(scale) end) then
-            clone:Destroy()
-            discard(staged)
-            return 0, 0
-        end
-        local reference, dimensions = clone:GetBoundingBox()
-        if dimensions.X > span + .1 or dimensions.Z > span + .1
-            or dimensions.Y <= 0 or dimensions.Y > 1.10 then
-            clone:Destroy()
-            discard(staged)
-            return 0, 0
-        end
         local position = POSITIONS[i]
-        local target = floor.CFrame
+        local surface = floor.CFrame
             * CFrame.new(position.X * span * .5,
-                floor.Size.Y * .5 + .164 - dimensions.Y * .5,
+                floor.Size.Y * .5 + .164,
                 position.Y * span * .5)
             * CFrame.Angles(0, (i - 1) * math.pi * .5, 0)
-        local count = 0
-        for _, part in ipairs(clone:GetDescendants()) do
-            if part:IsA("MeshPart") then
-                part.CFrame = target * reference:ToObjectSpace(part.CFrame)
-                part.Anchored = true
-                part.Massless = true
-                part.CanCollide = false
-                part.CanTouch = false
-                part.CanQuery = false
-                part.CastShadow = false
-                part:SetAttribute("OriginalLobbyGround3D", true)
-                part:SetAttribute("Original3DAssetId", SOURCE_ID)
-                count += 1
-            end
-        end
-        if count ~= partsPerTile then
-            clone:Destroy()
+        local clone = fitTile(source, scale, span, surface,
+            "ApprovedOriginalLobbyFloor3D_" .. tostring(i), partsPerTile)
+        if not clone then
             discard(staged)
             return 0, 0
         end
-        clone.Name = "ApprovedOriginalLobbyFloor3D_" .. tostring(i)
-        clone:SetAttribute("CosmeticOnly", true)
-        clone:SetAttribute("Original3DAssetId", SOURCE_ID)
         staged[#staged + 1] = clone
+    end
+
+    -- Use spare MeshPart capacity only at full quality for the selected
+    -- tier. The raised stage keeps its native deck as the seam/fallback.
+    local decor = floor.Parent:FindFirstChild("Decor")
+    if wanted == Kit.tileBudget(tier, 0)
+        and (wanted + 1) * partsPerTile <= wanted * MAX_PARTS_PER_TILE
+        and decor and platform and platform.Parent == decor and platform:IsA("BasePart")
+        and platform.Name == "CenterPlatform" and platform.Anchored and platform.CanCollide then
+        local stageSpan = math.min(platform.Size.X, platform.Size.Z) - .6
+        if stageSpan >= 22 and stageSpan <= 24 then
+            local stageScale = stageSpan / math.max(sourceSize.X, sourceSize.Z)
+            local stageSurface = platform.CFrame * CFrame.new(0, platform.Size.Y * .5 + .024, 0)
+            local center = fitTile(source, stageScale, stageSpan, stageSurface,
+                "ApprovedOriginalLobbyCenterDeck3D", partsPerTile)
+            if center then staged[#staged + 1] = center end
+        end
     end
     for _, model in ipairs(staged) do model.Parent = folder end
     return #staged * partsPerTile, #staged

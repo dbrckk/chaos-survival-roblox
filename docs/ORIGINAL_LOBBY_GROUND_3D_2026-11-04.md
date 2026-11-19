@@ -18,11 +18,17 @@ Jusqu'à quatre dalles 3D sont réduites à environ 34 studs et disposées en un
 | Medium | 2 | 1 | 0 |
 | High | 4 | 2 | 0 |
 
-Limite supérieure si la source conserve sept parties : 28 MeshParts et environ 11 904 triangles source en High, contenus dans le dossier LobbySurfaceDetailLocal déjà recensé par VisualBudgetRules. Aucun nouveau SpotLight, RenderStepped, collider, toucher, raycast ni boucle de chargement. Pas de nouvelle texture raster 2K sur ce lot.
+Les quatre dalles du vestibule totalisent 28 MeshParts et environ 11 904 triangles source en High avec la source actuelle à sept pièces. Le dossier LobbySurfaceDetailLocal est déjà recensé par VisualBudgetRules. Aucun nouveau SpotLight, RenderStepped, collider, toucher, raycast ni boucle de chargement. Pas de nouvelle texture raster 2K sur ce lot.
 
 Avant tout montage, le client confirme l'ID exact, le dossier vérifié, les attributs CosmeticOnly / OwnerVerified / PremiumGround3D, le type Model, l'absence de scripts, des MeshParts uniquement et la taille attendue. Les quatre clones sont intégralement préparés avant publication dans le dossier : si un seul échoue, le montage est annulé.
 
 La surveillance événementielle reconstruit le sol après arrivée tardive du modèle, streaming de Lobby.Floor, changement de carte, pression FPS ou changement de qualité. La disparition anormale d'un MeshPart client déclenche la reconstruction. Le serveur conserve sa géométrie native, ses panneaux de guidage et les fonctions de sécurité.
+
+## Estrade centrale
+
+L’estrade reprend le relief biseauté de la même dalle approuvée sur une empreinte de 23,4 × 23,4 studs. Le maillage suit le repère du plateau de collision, dépasse sa surface de 0,024 stud et reste sous ses quatre repères lumineux. Le signal central occupe 7,5 × 7,5 studs afin de laisser les reliefs visibles autour.
+
+À pression 0, la dalle centrale utilise la marge sous les plafonds existants de 24 MeshParts en Medium et 48 en High. Avec le modèle à sept pièces, l’ensemble du lobby passe à trois dalles en Medium (21 MeshParts) et cinq en High (35 MeshParts). La dalle centrale se retire dès la pression 1. Le plateau natif sert de secours lorsque le maillage ou le budget manque. Le client recalcule son montage si l’estrade arrive après le sol.
 
 Deux attributs diagnostiques du joueur sont renseignés depuis le montage réel : LocalOriginalLobbyGroundTileCount et LocalOriginalLobbyGroundMeshPartCount. Ces compteurs ne mesurent pas le rendu ni la VRAM.
 

@@ -56,10 +56,11 @@ local function rebuild()
 
     local tier = VfxQuality.deviceTier(
         player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+    local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
     -- Only verified real imported UV meshes replace the native line grid.
     -- All gameplay panels, the 74-stud collision Floor, and spawn remain.
     local meshParts, meshTiles = PremiumLobbyGroundMeshKit.install(
-        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure")
+        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure"), centerPlatform
     )
     if player:GetAttribute("LocalOriginalLobbyGroundMeshPartCount")
         ~= meshParts then
@@ -154,10 +155,9 @@ local function rebuild()
         end
     end
 
-    local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
     if centerPlatform and centerPlatform:IsA("BasePart") and tier.Name ~= "Low" then
         local topCenter = centerPlatform.CFrame
-            * CFrame.new(0, centerPlatform.Size.Y * 0.5 + 0.04, 0)
+            * CFrame.new(0, centerPlatform.Size.Y * 0.5 + 0.056, 0)
         for i = 1, 4 do
             local angle = math.rad(45 + (i - 1) * 90)
             makePart(
@@ -201,8 +201,23 @@ local function bindMap(generated)
     disconnectFloorWatch = nil
     watchedMap = generated
     if generated then
-        disconnectFloorWatch = MapVisualReadiness.watch(
+        local disconnectFloor = MapVisualReadiness.watch(
             generated, "Lobby", "Floor", scheduleRefresh)
+        local function onStageChange(item)
+            if item.Name ~= "CenterPlatform" then return end
+            local lobby = generated:FindFirstChild("Lobby")
+            local decor = lobby and lobby:FindFirstChild("Decor")
+            if decor and item.Parent == decor then scheduleRefresh() end
+        end
+        local added = generated.DescendantAdded:Connect(onStageChange)
+        -- On removal, refresh from the canonical hierarchy after the
+        -- stage (or a streamed ancestor) actually leaves the lobby.
+        local removing = generated.DescendantRemoving:Connect(onStageChange)
+        disconnectFloorWatch = function()
+            disconnectFloor()
+            added:Disconnect()
+            removing:Disconnect()
+        end
     else
         clear()
     end
