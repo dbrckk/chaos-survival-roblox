@@ -2687,30 +2687,40 @@ local function buildLobby(root, config)
         end
     end
 
+    local footSize = Vector3.new(0.76, 0.18, 0.78)
+    local ribOffset = runway.Size.X * 0.5 + 0.35
     for i = 1, 4 do
-        local z = 7 + (i * 4.7)
+        local support = i == 1 and centerPlatform or floorInset
+        local z = i == 1 and (stageFront - footSize.Z * 0.5 - 0.11) or (7 + i * 4.7)
         local height = 6.5 + (i * 0.45)
-        local leftRib = detail(
-            shaft, "ArenaApproachRibL" .. i,
-            CFrame.new(config.LobbyCenter + Vector3.new(-7.2, 1.1 + height * 0.5, z)),
-            Vector3.new(0.55, height, 0.55),
-            VisualTheme.World.Metal, VisualTheme.Materials.Structure
-        )
-        leftRib.Parent = decor
-        leftRib.Transparency = 0.04
-
-        local rightRib = detail(
-            shaft, "ArenaApproachRibR" .. i,
-            CFrame.new(config.LobbyCenter + Vector3.new(7.2, 1.1 + height * 0.5, z)),
-            Vector3.new(0.55, height, 0.55),
-            VisualTheme.World.Metal, VisualTheme.Materials.Structure
-        )
-        rightRib.Parent = decor
-        rightRib.Transparency = 0.04
+        local slabTop = support.Position.Y + support.Size.Y * 0.5
+        local ribStart = slabTop + 0.08
+        local ribEnd = config.LobbyCenter.Y + 1.1 + height
+        for side = -1, 1, 2 do
+            local suffix = (side < 0 and "L" or "R") .. i
+            local x = runway.Position.X + side * ribOffset
+            local worldZ = config.LobbyCenter.Z + z
+            -- The first portal sits on the raised stage. The other three
+            -- land on the inset, with each casting outside the runway.
+            local foot = detail(
+                cast, "ArenaApproachFoot" .. suffix,
+                CFrame.new(x + side * 0.05, slabTop + 0.06, worldZ),
+                footSize, VisualTheme.World.MetalLight, VisualTheme.Materials.Structure
+            )
+            foot.Parent = decor
+            local rib = detail(
+                shaft, "ArenaApproachRib" .. suffix,
+                CFrame.new(x, (ribStart + ribEnd) * 0.5, worldZ),
+                Vector3.new(0.55, ribEnd - ribStart, 0.55),
+                VisualTheme.World.Metal, VisualTheme.Materials.Structure
+            )
+            rib.Transparency = 0.04
+            rib.Parent = decor
+        end
 
         local topRib = detail(
             shaft, "ArenaApproachRibTop" .. i,
-            CFrame.new(config.LobbyCenter + Vector3.new(0, 1.1 + height, z))
+            CFrame.new(runway.Position.X, ribEnd, config.LobbyCenter.Z + z)
                 * CFrame.Angles(0, 0, math.rad(90)),
             Vector3.new(0.42, 14.9, 0.55),
             i % 2 == 0 and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,

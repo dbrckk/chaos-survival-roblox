@@ -38,6 +38,8 @@ Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estra
 
 Chaque rail reçoit deux brides et deux embouts métalliques ajustés à son empreinte. Ils réutilisent le profil forgé approuvé de Tower Run, avec une pièce de secours de mêmes dimensions par emplacement. Les brides passent sous le haut du guide lumineux et les embouts le coiffent aux extrémités. Les huit pièces restent hors du balayage de lancement.
 
+Les quatre arceaux s’appuient sur huit socles biseautés. La première paire repose sur l’estrade et les trois suivantes sur le revêtement du vestibule, au-delà des rails. Les montants s’emboîtent dans les socles et conservent la hauteur de leur traverse lumineuse. Les socles utilisent le profil de fonderie approuvé lorsque le maillage est chargé.
+
 ## Finition de secours du vestibule
 
 Le client pose les joints et les trappes de maintenance sur la face supérieure du revêtement visible dans les secteurs dépourvus de dalle. Les quatre paires de positions possibles contournent les zones d’entraînement, les inscriptions et l’allée du portail. Sans dalle, la configuration prévoit quatre joints et quatre trappes en Low, six de chaque en Medium et huit de chaque en High, avec les huit petits inserts lumineux en High. Avec les deux dalles avant en Medium, les secteurs du portail gardent deux joints et quatre trappes. En High sous pression 1, les secteurs libres gardent quatre joints et quatre trappes sans inserts lumineux. Le client compte la dalle surélevée de l’estrade à part pour choisir les finitions du vestibule. Le streaming du revêtement et le changement de pression déclenchent leur recalcul.
