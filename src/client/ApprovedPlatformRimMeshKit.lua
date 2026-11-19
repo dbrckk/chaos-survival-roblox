@@ -73,16 +73,9 @@ local function nativeParts(decor,deck,original,scale)
         or underside:GetAttribute("PremiumArchitecturalSurface")~=true then
         return nil
     end
-    local function matches(part,size,offset)
-        local frame=deck.CFrame*offset
-        return (part.Size-size).Magnitude < .13
-            and (part.Position-frame.Position).Magnitude < .14
-            and part.CFrame.UpVector:Dot(frame.UpVector) > .999
-            and part.CFrame.LookVector:Dot(frame.LookVector) > .999
-    end
-    if original and not matches(underside,
-        Vector3.new(deck.Size.X+.5*scale,.42,deck.Size.Z+.5*scale),
-        CFrame.new(0,-deck.Size.Y*.5-.18,0)) then return nil end
+    if original and not PlatformIdentityLodRules.matchesUnderdeckFallback(underside,
+        deck.CFrame*CFrame.new(0,-deck.Size.Y*.5-.18,0),
+        Vector3.new(deck.Size.X+.5*scale,.42,deck.Size.Z+.5*scale), .13, .14) then return nil end
     local edges = {}
     for i=1,4 do
         local edge=decor:FindFirstChild("PlatformBevel"..id.."_"..i)
@@ -100,8 +93,12 @@ local function nativeParts(decor,deck,original,scale)
             local yaw = alongX and (i==1 and 0 or math.pi)
                 or (i==3 and math.pi*.5 or -math.pi*.5)
             local span = (alongX and deck.Size.X or deck.Size.Z) + .12*scale
-            if not matches(edge,Vector3.new(span,.30,depth),
-                CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)) then
+            local forged = edge:IsA("MeshPart") and edge.MeshId ~= ""
+                and edge:GetAttribute("OriginalPromenadeEntryBevel3D") == true
+                and edge:GetAttribute("Original3DAssetId") == 126298311664881
+            local frame = deck.CFrame*CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)
+            if not PlatformIdentityLodRules.matchesDeckTrimPose(
+                edge,frame,Vector3.new(span,.30,depth),.13,.14,forged) then
                 return nil
             end
         end

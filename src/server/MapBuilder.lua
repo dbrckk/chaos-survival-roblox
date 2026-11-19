@@ -2016,7 +2016,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    underdeckSpars, bevelProfile, harborAlongX)
+    underdeckSpars, bevelProfile, harborAlongX, entryTrim)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2117,15 +2117,25 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
             platform.Position.X, 0, platform.Position.Z) + spec[2]
         local yaw = facings[edgeIndex]
         local pose = CFrame.new(where) * CFrame.Angles(0, yaw, 0)
-        local bevel = useBridgeBevel and bevelProfile:Clone()
-        if bevel then
+        local bevel
+        if entryTrim and edgeIndex <= 2 then
+            bevel = RouteSignalGeometry.fit(entryTrim.beam, pose, size, nil, true)
+            if bevel then
+                bevel:SetAttribute("OriginalPlatformBevel3D", true)
+                bevel:SetAttribute("OriginalPromenadeEntryBevel3D", true)
+                bevel:SetAttribute("Original3DAssetId", 126298311664881)
+            end
+        end
+        local bridgeBevel = not bevel and useBridgeBevel and bevelProfile:Clone()
+        if bridgeBevel then
+            bevel = bridgeBevel
             -- Keep the footprint of the native wedge. The swept face
             -- extends downwards to show its facets below the deck lip.
             bevel.Size = bevelAlongX and Vector3.new(size.X, .44, size.Z)
                 or Vector3.new(size.Z, .44, size.X)
             bevel.CFrame = CFrame.new(where - Vector3.new(0, .08, 0))
                 * CFrame.Angles(0, yaw + (bevelAlongX and 0 or math.pi * .5), 0)
-        elseif not useBridgeBevel then
+        elseif not bevel and not useBridgeBevel then
             -- Preserve the exact fallback axes and dimensions for the local rim owners.
             bevel = RouteSignalGeometry.fit(bevelProfile, pose, size, nil, true)
             if bevel then bevel:SetAttribute("OriginalPlatformBevel3D", true) end
@@ -2156,8 +2166,17 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local size = platform.Size
     local frameSize = Vector3.new(size.X + 0.5, 0.42, size.Z + 0.5)
     local framePose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.18, 0)
-    local underFrame = lattice and lattice:Clone()
-    if underFrame then
+    local underFrame
+    if entryTrim then
+        underFrame = RouteSignalGeometry.fit(entryTrim.lattice, framePose, frameSize, nil, true)
+        if underFrame then
+            underFrame:SetAttribute("OriginalPromenadeEntryFrame3D", true)
+            underFrame:SetAttribute("Original3DAssetId", 106401955318567)
+        end
+    end
+    local deckLattice = not underFrame and lattice and lattice:Clone()
+    if deckLattice then
+        underFrame = deckLattice
         if harborAlongX == nil then
             local meshAlongX = underFrame.Size.X > underFrame.Size.Z
             local deckAlongX = size.X > size.Z
@@ -2172,7 +2191,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         -- sculpted caisson can claim the same structural fallback.
         underFrame.Size = frameSize
         underFrame.CFrame = framePose
-    else
+    elseif not underFrame then
         -- Preserve the original frame envelope and deck-relative axes so
         -- route chassis and cradles can still claim this exact owner.
         local sparsAlongX = underdeckSpars and underdeckSpars.Size.X > underdeckSpars.Size.Z
@@ -3231,6 +3250,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local promenadeJunctions = {}
     local spineEndpoints = {}
     local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
+    local promenadeEntryTrim = {beam = sweptProfile, lattice = underdeckLattice}
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
@@ -3480,9 +3500,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             elseif elevatedRoute or harborLanding or lookoutAccess then 0.96
             else 0.28
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand, edgeOverhang, glowAlongX)
+        local entryTrim = (definition.PromenadeStep == 1 or definition.PromenadeStep == 8)
+            and promenadeEntryTrim or nil
         addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX)
+            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, entryTrim)
         addPlatformSupports(decor, platform, i, theme, beaconShaft)
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)

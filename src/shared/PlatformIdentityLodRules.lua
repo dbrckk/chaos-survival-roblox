@@ -27,9 +27,29 @@ function Rules.isAuthoredUnderFrameMesh(part)
         and part:GetAttribute("OriginalPlatformUnderFrame3D") == true
 end
 
+function Rules.matchesDeckTrimPose(part, frame, size, sizeTolerance, positionTolerance, quarterTurn)
+    -- Approved profiles may import with their long axis on X or Z.
+    if quarterTurn and part.CFrame.LookVector:Dot(frame.LookVector) < .999 then
+        frame *= CFrame.Angles(0, math.pi * 0.5, 0)
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    return (part.Size - size).Magnitude <= sizeTolerance
+        and (part.Position - frame.Position).Magnitude <= positionTolerance
+        and part.CFrame.UpVector:Dot(frame.UpVector) >= .999
+        and part.CFrame.LookVector:Dot(frame.LookVector) >= .999
+end
+
 function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positionTolerance)
     if not part then return false end
-    if part:IsA("MeshPart") and not Rules.isAuthoredUnderFrameMesh(part) then
+    local quarterTurn = false
+    if Rules.isAuthoredUnderFrameMesh(part) then
+        if part:GetAttribute("OriginalPromenadeEntryFrame3D") == true then
+            if part.MeshId == "" or part:GetAttribute("Original3DAssetId") ~= 106401955318567 then
+                return false
+            end
+            quarterTurn = true
+        end
+    elseif part:IsA("MeshPart") then
         local name = part.Name
         local assetId = part:GetAttribute("Original3DAssetId")
         local spine = assetId == 126298311664881
@@ -40,20 +60,11 @@ function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positi
             and part:GetAttribute("OriginalPromenadeUnderdeck3D") == true
             and name:match("^Promenade%d+_UnderdeckTruss$")
         if part.MeshId == "" or not (spine or promenade) then return false end
-        -- The source can import with its long axis on X or Z. The builder
-        -- fits it with either the deck's frame or a positive quarter turn.
-        if part.CFrame.LookVector:Dot(frame.LookVector) < .999 then
-            frame *= CFrame.Angles(0, math.pi * 0.5, 0)
-            size = Vector3.new(size.Z, size.Y, size.X)
-        end
-    elseif not part:IsA("MeshPart")
-        and (not part:IsA("Part") or part.Shape ~= Enum.PartType.Block) then
+        quarterTurn = true
+    elseif not part:IsA("Part") or part.Shape ~= Enum.PartType.Block then
         return false
     end
-    return (part.Size - size).Magnitude <= sizeTolerance
-        and (part.Position - frame.Position).Magnitude <= positionTolerance
-        and part.CFrame.UpVector:Dot(frame.UpVector) >= .999
-        and part.CFrame.LookVector:Dot(frame.LookVector) >= .999
+    return Rules.matchesDeckTrimPose(part, frame, size, sizeTolerance, positionTolerance, quarterTurn)
 end
 
 function Rules.promenadeUnderdeckGeometry(top, span, scale, sculpted)

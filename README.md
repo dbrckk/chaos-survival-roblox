@@ -232,6 +232,8 @@ Les 20 liaisons de secours peuvent recevoir deux plaques moulées, orientées ve
 
 Aux 20 transitions entre belvédères et Promenades, le chevron se place dans le recouvrement réel des tabliers. Deux renforts forgés peuvent relier la face du belvédère au dessous du tablier d’entrée, soit jusqu’à 40 pièces. Les renforts suivent le belvédère pendant le rétrécissement. Son panneau s’efface si le palier devient impraticable.
 
+Les 20 tabliers d’entrée des Promenades peuvent recevoir deux bordures longitudinales forgées et un sous-cadre à treillis ajouré dans leurs emplacements existants. Ces pièces suivent le rétrécissement et cèdent la place aux habillages complets quand ils sont affichés. Le platelage, ses bandes lumineuses et sa collision gardent leur géométrie.
+
 ## P4 — Dessous sculptés sur les paliers de Storm Harbor
 
 Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.
