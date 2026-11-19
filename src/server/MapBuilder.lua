@@ -2200,6 +2200,7 @@ local function buildLobby(root, config)
     floorInset:SetAttribute("PremiumArchitecturalSurface", true)
 
     local lobbyCap = wayfinderBaseSource()
+    local lobbyShaft = beaconShaftSource("Towers")
     local lobbyLanes = {
         {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
         {name = "LobbyLaneSouth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, 24)},
@@ -2303,17 +2304,18 @@ local function buildLobby(root, config)
 
         -- Preserve the native collision pillar; the sculpted shell is cosmetic.
         if lobbyShaft then
-            local shell = fitDecorMesh(
-                lobbyShaft, "PylonSculptedShell" .. i,
-                pylon.CFrame, pylon.Size,
-                VisualTheme.World.Metal, VisualTheme.Materials.Structure
-            )
-            shell.CanCollide = false
-            shell.CanTouch = false
-            shell.CanQuery = false
-            shell.CastShadow = false
-            shell.Parent = decor
-            pylon.Transparency = 1
+            local shell = RouteSignalGeometry.fit(lobbyShaft, pylon.CFrame, pylon.Size)
+            if shell then
+                shell.Name = "PylonSculptedShell" .. i
+                shell.Color = VisualTheme.World.Metal
+                shell.Material = VisualTheme.Materials.Structure
+                shell.CanCollide = false
+                shell.CanTouch = false
+                shell.CanQuery = false
+                shell.CastShadow = false
+                shell.Parent = decor
+                pylon.Transparency = 1
+            end
         end
 
         local cap = fitDecorMesh(
@@ -2364,21 +2366,35 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Glow
     )
 
-    -- The gate keeps its native collision and SurfaceGui host.
-    -- Mesh shells are added only when the approved asset is available.
+    -- Keep native colliders visible unless the approved cosmetic mesh actually fits.
     if lobbyShaft then
         for _, column in ipairs({leftColumn, rightColumn}) do
-            local shell = fitDecorMesh(
-                lobbyShaft, column.Name .. "SculptedShell",
-                column.CFrame, column.Size,
-                VisualTheme.World.Metal, VisualTheme.Materials.Structure
-            )
-            shell.CanCollide = false
-            shell.CanTouch = false
-            shell.CanQuery = false
-            shell.CastShadow = false
-            shell.Parent = decor
-            column.Transparency = 1
+            local shell = RouteSignalGeometry.fit(lobbyShaft, column.CFrame, column.Size)
+            if shell then
+                shell.Name = column.Name .. "SculptedShell"
+                shell.Color = VisualTheme.World.Metal
+                shell.Material = VisualTheme.Materials.Structure
+                shell.CanCollide = false
+                shell.CanTouch = false
+                shell.CanQuery = false
+                shell.CastShadow = false
+                shell.Parent = decor
+                column.Transparency = 1
+            end
+        end
+    end
+    if lobbyCap then
+        local beam = RouteSignalGeometry.fit(lobbyCap, archTop.CFrame, archTop.Size)
+        if beam then
+            beam.Name = "ArenaGateTopSculptedShell"
+            beam.Color = VisualTheme.Accents.Violet
+            beam.Material = VisualTheme.Materials.Glow
+            beam.CanCollide = false
+            beam.CanTouch = false
+            beam.CanQuery = false
+            beam.CastShadow = false
+            beam.Parent = decor
+            archTop.Transparency = 1
         end
     end
 
@@ -2654,7 +2670,6 @@ local function buildLobby(root, config)
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = surface
 
-    local lobbyShaft = beaconShaftSource("Towers")
     local frameOffsets = {
         Vector3.new(-34, 7, 0),
         Vector3.new(34, 7, 0),
