@@ -2,12 +2,12 @@
 -- WedgePart corner pylons. Physical 2.2x10 pylons, player movement and
 -- their separately animated PylonGlow/PointLights remain server-owned.
 -- Preload geometry from authenticated templates before masking the fallback.
-local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local SOURCE_ID = 91626128452597 -- older genuine open-detail fallback
@@ -30,8 +30,6 @@ local listeners = {}
 local scheduled = false
 local restoringOwn = false
 local reconcile
-local pendingMeshes = {}
-local preloadAttempts = {}
 
 local function budget()
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
@@ -253,45 +251,7 @@ local function schedule()
     end)
 end
 
-local function geometryReady(template)
-    local requested = {}
-    local ready = true
-    for _, part in ipairs(template:GetDescendants()) do
-        if not part:IsA("MeshPart") then continue end
-        local id = part.MeshId
-        if ContentProvider:GetAssetFetchStatus(id) ~= Enum.AssetFetchStatus.Success then
-            ready = false
-            local attempts = preloadAttempts[id] or 0
-            if not pendingMeshes[id] and attempts < 2 then
-                pendingMeshes[id] = true
-                preloadAttempts[id] = attempts + 1
-                requested[#requested + 1] = id
-            end
-        end
-    end
-    if #requested == 0 then return ready end
-
-    task.spawn(function()
-        pcall(ContentProvider.PreloadAsync, ContentProvider, requested)
-        local retry = {}
-        for _, id in ipairs(requested) do
-            local loaded = ContentProvider:GetAssetFetchStatus(id) == Enum.AssetFetchStatus.Success
-            if loaded or preloadAttempts[id] >= 2 then
-                pendingMeshes[id] = nil
-            else
-                retry[#retry + 1] = id
-            end
-        end
-        if #retry > 0 then
-            task.delay(20, function()
-                for _, id in ipairs(retry) do pendingMeshes[id] = nil end
-                schedule()
-            end)
-        end
-        schedule()
-    end)
-    return false
-end
+local geometryReady = LobbyMeshPreload.new(schedule)
 
 local function watch(key, parent, relevant)
     if watched[key] == parent then return end

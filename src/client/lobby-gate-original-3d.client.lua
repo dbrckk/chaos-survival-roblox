@@ -3,6 +3,7 @@
 -- authoritative and unobscured. Entirely event-driven: zero frame loops.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local ASSET_ID = 136009650118642
@@ -14,7 +15,19 @@ local mounted = nil
 local hiddenLegacy = {}
 local watched = {}
 local listeners = {}
+local scheduled = false
 local reconcile
+
+local function schedule()
+    if scheduled then return end
+    scheduled = true
+    task.defer(function()
+        scheduled = false
+        reconcile()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(schedule)
 
 local function restoreLegacy()
     for item, alpha in pairs(hiddenLegacy) do
@@ -85,7 +98,7 @@ local function watch(key, instance, filter)
     if not instance then return end
     for _, event in ipairs({instance.ChildAdded, instance.ChildRemoved}) do
         local connection = event:Connect(function(child)
-            if filter(child) then task.defer(reconcile) end
+            if filter(child) then schedule() end
         end)
         listeners[key][#listeners[key] + 1] = connection
     end
@@ -126,7 +139,7 @@ local function approvedTemplate(templates)
     local count = 0
     for _, item in ipairs(source:GetDescendants()) do
         if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
+            if not item:IsA("MeshPart") or item.MeshId == "" then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then
             return nil
@@ -219,10 +232,12 @@ reconcile = function()
     watch("templates", templates, function(child)
         return child.Name == "OriginalLobbyGate"
     end)
+    watch("sourceParts", templates and templates:FindFirstChild("OriginalLobbyGate"),
+        function(child) return child:IsA("BasePart") end)
 
     local source = approvedTemplate(templates)
     local top = authoritativeTop(decor)
-    if not source or not top then
+    if not source or not top or not geometryReady(source) then
         clear()
         return
     end
@@ -255,19 +270,19 @@ folder.DescendantRemoving:Connect(function(item)
 end)
 
 workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GeneratedMap" then task.defer(reconcile) end
+    if child.Name == "GeneratedMap" then schedule() end
 end)
 workspace.ChildRemoved:Connect(function(child)
-    if child.Name == "GeneratedMap" then task.defer(reconcile) end
+    if child.Name == "GeneratedMap" then schedule() end
 end)
 ReplicatedStorage.ChildAdded:Connect(function(child)
     if child.Name == "PremiumLobbyGateMeshTemplates" then
-        task.defer(reconcile)
+        schedule()
     end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
     if child.Name == "PremiumLobbyGateMeshTemplates" then
-        task.defer(reconcile)
+        schedule()
     end
 end)
 
