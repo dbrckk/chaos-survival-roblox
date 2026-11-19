@@ -2301,6 +2301,21 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Structure
         )
 
+        -- Preserve the native collision pillar; the sculpted shell is cosmetic.
+        if lobbyShaft then
+            local shell = fitDecorMesh(
+                lobbyShaft, "PylonSculptedShell" .. i,
+                pylon.CFrame, pylon.Size,
+                VisualTheme.World.Metal, VisualTheme.Materials.Structure
+            )
+            shell.CanCollide = false
+            shell.CanTouch = false
+            shell.CanQuery = false
+            shell.CastShadow = false
+            shell.Parent = decor
+            pylon.Transparency = 1
+        end
+
         local cap = fitDecorMesh(
             lobbyCap, "PylonGlow" .. i,
             CFrame.new(pylon.Position + Vector3.new(0, 5.25, 0)),
@@ -2348,6 +2363,24 @@ local function buildLobby(root, config)
         VisualTheme.Accents.Violet,
         VisualTheme.Materials.Glow
     )
+
+    -- The gate keeps its native collision and SurfaceGui host.
+    -- Mesh shells are added only when the approved asset is available.
+    if lobbyShaft then
+        for _, column in ipairs({leftColumn, rightColumn}) do
+            local shell = fitDecorMesh(
+                lobbyShaft, column.Name .. "SculptedShell",
+                column.CFrame, column.Size,
+                VisualTheme.World.Metal, VisualTheme.Materials.Structure
+            )
+            shell.CanCollide = false
+            shell.CanTouch = false
+            shell.CanQuery = false
+            shell.CastShadow = false
+            shell.Parent = decor
+            column.Transparency = 1
+        end
+    end
 
     local gateInnerGlow = fitDecorMesh(
         lobbyCap, "ArenaGateInnerGlow",
