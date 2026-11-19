@@ -2525,7 +2525,7 @@ local function buildLobby(root, config)
 
     sculpt(leftColumn, shaft)
     sculpt(rightColumn, shaft)
-    sculpt(archTop, cast)
+    sculpt(archTop, "LobbySculptedSwept")
 
     local gateInnerGlow = detail(
         cast, "ArenaGateInnerGlow",
@@ -2565,7 +2565,7 @@ local function buildLobby(root, config)
     gateGui.PixelsPerStud = 42
     gateGui.LightInfluence = 0
     gateGui.AlwaysOnTop = false
-    gateGui.Parent = archTop
+    mountSignGui(archTop, gateGui)
 
     local gatePanel = Instance.new("Frame")
     gatePanel.Name = "GatePanel"

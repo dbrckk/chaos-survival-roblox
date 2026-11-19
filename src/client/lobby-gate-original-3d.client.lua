@@ -18,7 +18,7 @@ local reconcile
 
 local function restoreLegacy()
     for item, alpha in pairs(hiddenLegacy) do
-        if item.Parent then item.LocalTransparencyModifier = alpha end
+        if item.Parent and item.Transparency == 1 then item.Transparency = alpha end
         hiddenLegacy[item] = nil
     end
 end
@@ -26,7 +26,9 @@ end
 -- The server also builds a five-piece WedgePart/Part gate jacket. Once
 -- a WHOLE creator-approved mesh arch is mounted, drawing that jacket
 -- over the real 3D model recreates the primitive look. Only those five
--- nonphysical cladding Parts can be locally hidden. Never hide the
+-- nonphysical cladding Parts can be locally hidden. Their base transparency
+-- is separate from the sculpted fallback's LocalTransparencyModifier, so
+-- either owner can release its own mask in any order. Never hide the
 -- gate's authoritative collidable Left/Right/Top or its status SurfaceGui.
 local function maskLegacy(decor)
     if not decor or not decor:IsA("Folder") then return end
@@ -54,18 +56,17 @@ local function maskLegacy(decor)
     if #pieces ~= 5 then return end
     for _, part in ipairs(pieces) do
         if hiddenLegacy[part] == nil then
-            hiddenLegacy[part] = part.LocalTransparencyModifier
+            hiddenLegacy[part] = part.Transparency
         end
-        part.LocalTransparencyModifier = 1
+        part.Transparency = 1
     end
 end
 
 local function clear()
     restoreLegacy()
-    if mounted then
-        mounted.model:Destroy()
-        mounted = nil
-    end
+    local previous = mounted
+    mounted = nil
+    if previous then previous.model:Destroy() end
     folder:ClearAllChildren()
     if player:GetAttribute("LocalOriginalLobbyGateMeshCount") ~= 0 then
         player:SetAttribute("LocalOriginalLobbyGateMeshCount", 0)
@@ -145,6 +146,7 @@ end
 
 local function mount(source, top)
     local clone = source:Clone()
+    if not clone then return nil end
     local sourceFrame, bounds = clone:GetBoundingBox()
     -- Real native top: Center=(LobbyCenter + (0,13,+27)).
     -- Source OBJ: floor at Y=0, apex at Y~20, X-width ~26.
@@ -209,6 +211,10 @@ reconcile = function()
     watch("architecture", architecture, function(child)
         return child.Name == "MachinedArenaEntrance"
     end)
+    local legacy = architecture and architecture:FindFirstChild("MachinedArenaEntrance")
+    watch("legacy", legacy, function(child)
+        return child:IsA("BasePart")
+    end)
     local templates = ReplicatedStorage:FindFirstChild("PremiumLobbyGateMeshTemplates")
     watch("templates", templates, function(child)
         return child.Name == "OriginalLobbyGate"
@@ -234,6 +240,19 @@ reconcile = function()
         player:SetAttribute("LocalOriginalLobbyGateMeshCount", mounted.pieces)
     end
 end
+
+folder.DescendantRemoving:Connect(function(item)
+    local entry = mounted
+    if entry and (item == entry.model
+        or (item:IsA("MeshPart") and item:IsDescendantOf(entry.model))) then
+        task.defer(function()
+            if mounted == entry then
+                clear()
+                reconcile()
+            end
+        end)
+    end
+end)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then task.defer(reconcile) end

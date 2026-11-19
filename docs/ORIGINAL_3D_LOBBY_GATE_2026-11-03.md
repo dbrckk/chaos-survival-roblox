@@ -20,6 +20,12 @@
 - La copie locale écoute les arrivées/suppressions du map streaming et de l'asset approuvé : aucun nouveau `RenderStepped`, `Heartbeat`, `while`, `RemoteEvent` ou Tween. La source ne déplace pas le portail natif.
 - Sur Android Low comme High : un seul portique de **sept MeshParts maximum attendu** (vérification de sécurité 1–12), inclus dans le recensement mobile `VisualBudgetRules.LocalFolders`; fallback natif si absent ou refusé. Attribut de diagnostic `LocalOriginalLobbyGateMeshCount`.
 
+## Finitions du portique de secours
+
+La traverse extérieure, les deux jambes inclinées et les deux haubans peuvent reprendre le profil forgé ou le fût approuvé de Tower Run. Le modèle complet prend la priorité sur ces cinq pièces. Si une pièce du modèle local disparaît, le client libère le carénage de secours et réévalue le montage. Lorsque le modèle complet et les profils sont indisponibles, les pièces natives assurent le secours.
+
+La traverse centrale peut elle aussi recevoir le profil forgé. Son panneau d’état conserve la face et les dimensions d’origine sur un support transparent et sans collision. Le même contrôleur continue de mettre à jour le texte et les avertissements.
+
 ## Conditions de sortie / limites
 
 Après fusion, **ne pas prétendre le résultat public** avant la validation du SHA final par Build Validation, les cinq suites Roblox Open Cloud et la publication contrôlée sur l'univers `10771083668` / lieu `95351659174730`.

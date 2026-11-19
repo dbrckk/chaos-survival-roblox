@@ -228,18 +228,21 @@ function StructureRetrofit.buildLobby(decor, lobbyCenter, platform)
     gate.Name = "MachinedArenaEntrance"
     gate.Parent = group
     local center = CFrame.new(lobbyCenter + Vector3.new(0, 10.5, 27))
-    add(gate, center, "OuterGateCrosshead", CFrame.new(0, 2.8, -1.9),
+    local crosshead = add(gate, center, "OuterGateCrosshead", CFrame.new(0, 2.8, -1.9),
         Vector3.new(22.7, 2.1, 0.95), color, shell, nil, false)
+    CollectionService:AddTag(crosshead, "LobbySculptedSwept")
     for _, side in ipairs({-1, 1}) do
-        add(gate, center, "AngledGateSupport" .. tostring(side),
+        local support = add(gate, center, "AngledGateSupport" .. tostring(side),
             CFrame.new(side * 11, -3.5, -1.75)
                 * CFrame.Angles(0, side * math.rad(10), 0),
             Vector3.new(2.0, 12.0, 2.6), color,
             shell, "WedgePart", false)
-        spar(gate, center, "GateStrut" .. tostring(side),
+        CollectionService:AddTag(support, "LobbySculptedShaft")
+        local strut = spar(gate, center, "GateStrut" .. tostring(side),
             Vector3.new(side * 10.5, -4.0, -2.3),
             Vector3.new(side * 6.4, 3.9, -2.3),
             0.52, dark, trim)
+        CollectionService:AddTag(strut, "LobbySculptedSwept")
     end
     count += #gate:GetChildren()
 

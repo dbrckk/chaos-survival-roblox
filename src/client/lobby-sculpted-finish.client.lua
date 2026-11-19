@@ -184,6 +184,10 @@ local function refresh()
     local decor = lobby and lobby:FindFirstChild("Decor")
     local architecture = decor and decor:FindFirstChild("OriginalLobbyArchitecture")
     local stage = architecture and architecture:FindFirstChild("MachinedLobbyCenterStage")
+    local gate = architecture and architecture:FindFirstChild("MachinedArenaEntrance")
+    if (tonumber(player:GetAttribute("LocalOriginalLobbyGateMeshCount")) or 0) > 0 then
+        gate = nil
+    end
     local activities = lobby and lobby:FindFirstChild("Activities")
     local candidates = {}
     if decor
@@ -196,10 +200,15 @@ local function refresh()
                     -- The sculpted lobby signs carry text on their own
                     -- SignTextSurface. Do not mask panels that still
                     -- host a SurfaceGui directly on the backing.
-                    if part:IsA("Part") and part.Anchored
+                    local gatePiece = gate and part.Parent == gate
+                    if not part:IsA("Part") and not (gatePiece and part:IsA("WedgePart")) then
+                        continue
+                    end
+                    local cosmeticCladding = (gatePiece or (stage and part.Parent == stage))
+                        and not part.CanCollide and not part.CanTouch and not part.CanQuery
+                    if part.Anchored
                         and not part:FindFirstChildWhichIsA("SurfaceGui")
-                        and (part.Parent == decor or (stage and part.Parent == stage
-                            and not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                        and (part.Parent == decor or cosmeticCladding
                             or (activities and part.Parent == activities
                                 and not part.CanCollide and not part.CanQuery
                                 and (not part.CanTouch
@@ -247,4 +256,5 @@ ReplicatedStorage.DescendantAdded:Connect(sourceChanged)
 ReplicatedStorage.DescendantRemoving:Connect(sourceChanged)
 player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleRefresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(scheduleRefresh)
+player:GetAttributeChangedSignal("LocalOriginalLobbyGateMeshCount"):Connect(scheduleRefresh)
 scheduleRefresh()

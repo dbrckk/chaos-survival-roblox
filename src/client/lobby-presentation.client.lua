@@ -373,7 +373,8 @@ local function applyGatePresentation(mode, accent, q, duration)
 
     local gate = currentDecor:FindFirstChild("ArenaGateTop")
     if gate and gate:IsA("BasePart") then
-        local gui = gate:FindFirstChild("ArenaGateGui")
+        local textSurface = gate:FindFirstChild("SignTextSurface") or gate
+        local gui = textSurface:FindFirstChild("ArenaGateGui")
         local panel = gui and gui:FindFirstChild("GatePanel")
         local title = panel and panel:FindFirstChild("GateStatus")
         local subtitle = panel and panel:FindFirstChild("GateSubstatus")
