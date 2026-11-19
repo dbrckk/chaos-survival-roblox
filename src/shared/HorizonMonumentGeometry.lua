@@ -119,4 +119,16 @@ function HorizonMonumentGeometry.promenadeRoofProfile(name)
     return promenadeRoofProfiles[name]
 end
 
+local skySpineCommandProfiles = {
+    CommandRadar = "rotor", SurveyBeacon = "lens",
+    CargoOverpass = "beam", HangingTransitCabin = "cast",
+    ["RoutingAileron-1"] = "beam", RoutingAileron1 = "beam",
+    OrbitalPowerOrb = "lens", OrbitRing = "rotor",
+    DryDockHighCrane = "beam", CableLift = "shaft", FreightPod = "cast",
+}
+
+function HorizonMonumentGeometry.skySpineCommandProfile(name)
+    return skySpineCommandProfiles[name]
+end
+
 return HorizonMonumentGeometry

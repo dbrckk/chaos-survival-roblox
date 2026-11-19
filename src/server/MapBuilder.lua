@@ -3507,7 +3507,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- None adds a blocking wall beneath the high walkways.
         if definition.SkySpineStep then
             SkySpineArchitecture.decorate(
-                decor, platform, i, definition, variant.Id, theme, sweptProfile)
+                decor, platform, i, definition, variant.Id, theme, sweptProfile, detailProfiles)
             if definition.SkySpineStep == 1 then
                 spineEndpoints[1] = platform
             elseif definition.SkySpineStep == 10 then

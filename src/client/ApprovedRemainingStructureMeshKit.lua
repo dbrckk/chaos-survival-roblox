@@ -722,19 +722,41 @@ local function collectFittingPair(arena,deck,decor,scale,fittings)
     return pair
 end
 
-local function skySpineRoofPart(decor,index,top,scale,spec)
+local function skySpineRoofPart(decor,index,top,scale,spec,variant)
     local native=decor:FindFirstChild("SkySpine"..index.."_"..spec.name)
     if not visualNative(native,decor) or native:GetAttribute("SkySpineDecor")~=true
         or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
-    if spec.wedge then
+    local profile
+    if native:IsA("MeshPart") then
+        profile=variant and HorizonMonumentGeometry.skySpineCommandProfile(spec.name)
+        if not profile or native.MeshId==""
+            or native:GetAttribute("OriginalSkySpineCommandFallback3D")~=true
+            or native:GetAttribute("Original3DAssetId")~=HorizonMonumentGeometry.assetId(profile,variant) then
+            return nil
+        end
+    elseif spec.wedge then
         if not native:IsA("WedgePart") then return nil end
     elseif not native:IsA("Part") or native.Shape~=(spec.shape or Enum.PartType.Block) then
         return nil
     end
-    local size=spec.size
+    local size=Vector3.new(spec.size.X*scale,spec.size.Y,spec.size.Z*scale)
     local aim=top*CFrame.new((spec.x or 0)*scale,spec.y,(spec.z or 0)*scale)
         *CFrame.Angles(0,0,math.rad(spec.roll or 0))
-    if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.11
+    if profile=="rotor" then
+        -- The source annulus is Y-axial; the primitive cylinder is X-axial.
+        local heightAxis=native:GetAttribute("RouteSignalHeightAxis")
+        if heightAxis~="X" and heightAxis~="Z" then return nil end
+        aim*=CFrame.Angles(0,0,math.pi*.5)
+        size=Vector3.new(size.Y,size.X,size.Z)
+        if heightAxis=="Z" then
+            aim*=CFrame.Angles(0,math.pi*.5,0)
+            size=Vector3.new(size.Z,size.Y,size.X)
+        end
+    elseif profile=="beam" and native.Size.Z>native.Size.X then
+        aim*=CFrame.Angles(0,math.pi*.5,0)
+        size=Vector3.new(size.Z,size.Y,size.X)
+    end
+    if (native.Size-size).Magnitude>.11
         or (native.Position-aim.Position).Magnitude>.15
         or native.CFrame.UpVector:Dot(aim.UpVector)<.999
         or native.CFrame.LookVector:Dot(aim.LookVector)<.999 then return nil end
@@ -778,11 +800,12 @@ local function collectCommandArt(arena,deck,decor,scale,profiles)
     local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
     local crown=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN)
     if not crown then return nil end
+    local variant=arena:GetAttribute("VariantId")
     local group={}
     for i,profile in ipairs(profiles) do
         local natives={}
         for _,spec in ipairs(profile.natives) do
-            local native=skySpineRoofPart(decor,index,top,scale,spec)
+            local native=skySpineRoofPart(decor,index,top,scale,spec,variant)
             if not native then return nil end
             natives[#natives+1]=native
         end
@@ -1390,11 +1413,15 @@ local function mount(data,source)
                 elseif data.name=="SpineUnderframe" then "OriginalSkySpineUnderdeck3D"
                 elseif data.category=="junction" then "OriginalPromenadeUnderdeck3D"
                 elseif data.category=="equipment" or data.category=="fitting" then "OriginalPromenadeEquipment3D"
+                elseif data.category=="command" then "OriginalSkySpineCommandFallback3D"
                 else nil
             if meshTag then
                 entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
                 for _,attribute in ipairs({meshTag,"Original3DAssetId"}) do
                     entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(attribute):Connect(changed)
+                end
+                if data.category=="command" then
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal("RouteSignalHeightAxis"):Connect(changed)
                 end
             end
         end

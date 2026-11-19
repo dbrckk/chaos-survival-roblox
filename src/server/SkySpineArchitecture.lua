@@ -3,12 +3,16 @@
 -- owned exclusively by ArenaVariants/MapBuilder and by ordinary player
 -- collision; none of these pieces can create fake bridges or trap avatars.
 local RouteSignalGeometry = require("./RouteSignalGeometry")
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 
 local SkySpineArchitecture = {}
 
-local function detail(deck, index, name, size, cf, color, material, kind, mesh, inlaySide)
+local function detail(deck, index, name, size, cf, color, material, kind, mesh, inlaySide, alongX)
     local frame = deck.CFrame * cf
-    local item = RouteSignalGeometry.fit(mesh, frame, size, inlaySide)
+    local item = RouteSignalGeometry.fit(mesh, frame, size, inlaySide, alongX)
     if not item then
         item = Instance.new(kind or "Part")
         item.Size = size
@@ -29,7 +33,7 @@ local function detail(deck, index, name, size, cf, color, material, kind, mesh, 
     return item
 end
 
-function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, signalProfile)
+function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, signalProfile, profiles)
     if not decor or not deck or not deck:IsA("BasePart")
         or type(def) ~= "table" or type(theme) ~= "table"
         or not def.SkySpineStep then return 0 end
@@ -101,52 +105,67 @@ function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, 
     -- Five original sky-fortress signatures at the two centre decks,
     -- rather than the same unthemed recolored arch on every map.
     if step == 5 or step == 6 then
+        local function command(name, size, offset, color, material, kind, shape)
+            local profile = HorizonMonumentGeometry.skySpineCommandProfile(name)
+            local source = profiles and profiles[profile]
+            local mesh = source and source.part
+            if mesh and mesh.MeshId == "" then mesh = nil end
+            local cylinder = shape == Enum.PartType.Cylinder
+            local alongX = mesh and (cylinder or profile == "beam" or mesh.Size.X > mesh.Size.Z)
+            local item = detail(deck, index, name, size, offset, color, material,
+                kind, mesh, cylinder and 1 or nil, alongX)
+            if item:IsA("MeshPart") then
+                item:SetAttribute("OriginalSkySpineCommandFallback3D", true)
+                item:SetAttribute("Original3DAssetId", source.assetId)
+            elseif shape and item:IsA("Part") then
+                item.Shape = shape
+            end
+            item.Parent = decor
+            count += 1
+        end
         if variant == "Classic" then
-            local radar = add("CommandRadar",
+            command("CommandRadar",
                 Vector3.new(0.8, 6.8, 6.8),
                 CFrame.new(0, top + 17.0, 0)
                     * CFrame.Angles(0, 0, math.rad(24)),
-                secondary, Enum.Material.Metal)
-            radar.Shape = Enum.PartType.Cylinder
-            add("SurveyBeacon", Vector3.new(1.7, 2.2, 1.7),
+                secondary, Enum.Material.Metal, nil, Enum.PartType.Cylinder)
+            command("SurveyBeacon", Vector3.new(1.7, 2.2, 1.7),
                 CFrame.new(0, top + 18.1, -0.35),
                 accent, Enum.Material.Glass)
         elseif variant == "Towers" then
-            add("CargoOverpass", Vector3.new(14, 2.2, 3.7),
+            command("CargoOverpass", Vector3.new(14, 2.2, 3.7),
                 CFrame.new(0, top + 17.3, 0),
                 secondary, Enum.Material.DiamondPlate)
-            add("HangingTransitCabin", Vector3.new(3.8, 3.8, 3.2),
+            command("HangingTransitCabin", Vector3.new(3.8, 3.8, 3.2),
                 CFrame.new(0, top + 14.0, 0),
                 accent, Enum.Material.Metal)
         elseif variant == "Crossroads" then
             for side = -1, 1, 2 do
-                add("RoutingAileron" .. side,
+                command("RoutingAileron" .. side,
                     Vector3.new(6.8, 2.1, 1.0),
                     CFrame.new(side * 4.1, top + 16.8, 0)
                         * CFrame.Angles(0, 0, math.rad(side * 26)),
                     accent, Enum.Material.Metal, "WedgePart")
             end
         elseif variant == "Orbital" then
-            local reactor = add("OrbitalPowerOrb",
+            command("OrbitalPowerOrb",
                 Vector3.new(5.8, 5.8, 5.8),
                 CFrame.new(0, top + 17.3, 0),
-                accent, Enum.Material.Glass)
-            reactor.Shape = Enum.PartType.Ball
-            local gyroscope = add("OrbitRing",
+                accent, Enum.Material.Glass, nil, Enum.PartType.Ball)
+            command("OrbitRing",
                 Vector3.new(0.55, 8.4, 8.4),
                 CFrame.new(0, top + 17.3, 0)
                     * CFrame.Angles(0, 0, math.pi * 0.5),
-                secondary, Enum.Material.CeramicTiles)
-            gyroscope.Shape = Enum.PartType.Cylinder
+                secondary, Enum.Material.CeramicTiles, nil, Enum.PartType.Cylinder)
         elseif variant == "Harbor" then
-            add("DryDockHighCrane",
+            command("DryDockHighCrane",
                 Vector3.new(16, 1.7, 2.9),
                 CFrame.new(3, top + 17.3, 0),
                 secondary, Enum.Material.CorrodedMetal)
-            add("CableLift", Vector3.new(0.36, 4.6, 0.36),
+            command("CableLift", Vector3.new(0.36, 4.6, 0.36),
                 CFrame.new(9.1, top + 14.2, 0),
                 metal, Enum.Material.Metal)
-            add("FreightPod", Vector3.new(4.1, 3.1, 3.5),
+            command("FreightPod", Vector3.new(4.1, 3.1, 3.5),
                 CFrame.new(9.1, top + 10.4, 0),
                 accent, Enum.Material.WoodPlanks)
         end
