@@ -100,7 +100,7 @@ local function variantEquipment(decor, platform, index, variant, theme, top)
 end
 
 function PromenadeArchitecture.decorate(decor, platform, index, definition,
-    variant, theme, trussProfile, stayProfile)
+    variant, theme, trussProfile, stayProfile, beamProfile)
     if not decor or not platform or not platform:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table" then
         return 0
@@ -154,8 +154,18 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
         make(decor, platform, index, "DiagonalStay" .. side, staySize, offset, alloy, material, nil, stay)
         count += 1
     end
-    structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, crownSpan),
-        CFrame.new(0, crownHeight, 0), alloy)
+    local crossheadSize = Vector3.new(4.0, 1.2, crownSpan)
+    local crossheadOffset = CFrame.new(0, height + crownHeight, 0)
+    local beam = beamProfile and beamProfile.part
+    local crosshead = beam and beam.MeshId ~= "" and RouteSignalGeometry.fit(
+        beam, platform.CFrame * crossheadOffset, crossheadSize)
+    if crosshead then
+        crosshead:SetAttribute("OriginalPromenadeCrosshead3D", true)
+        crosshead:SetAttribute("Original3DAssetId", beamProfile.assetId)
+    end
+    make(decor, platform, index, "MonumentalCrosshead", crossheadSize, crossheadOffset,
+        alloy, material, nil, crosshead)
+    count += 1
     -- Keep the original owner slot and give the mesh a visible depth
     -- below the deck. Native fallback retains its original fit.
     local trussSpan = step == 7 and 15.0 or (step == 4 and 13.0 or 11.0)

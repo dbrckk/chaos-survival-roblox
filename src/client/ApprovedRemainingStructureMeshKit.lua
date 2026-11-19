@@ -465,7 +465,7 @@ local function porticoStep(arena,deck,scale)
     return step
 end
 
-local function promenadeNative(decor,index,suffix,wedge,stayAssetId)
+local function promenadeNative(decor,index,suffix,wedge,meshTag,assetId)
     local native=decor:FindFirstChild("Promenade"..index..suffix)
     if not visualNative(native,decor)
         or native:GetAttribute("PromenadeVisualOnly")~=true
@@ -475,9 +475,9 @@ local function promenadeNative(decor,index,suffix,wedge,stayAssetId)
     if wedge then
         if not native:IsA("WedgePart") then return nil end
     elseif native:IsA("MeshPart") then
-        if not stayAssetId or native.MeshId==""
-            or native:GetAttribute("OriginalPromenadeStay3D")~=true
-            or native:GetAttribute("Original3DAssetId")~=stayAssetId then return nil end
+        if not meshTag or not assetId or native.MeshId==""
+            or native:GetAttribute(meshTag)~=true
+            or native:GetAttribute("Original3DAssetId")~=assetId then return nil end
     elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
         return nil
     end
@@ -489,8 +489,10 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
     if not step then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local suffix=side and "_DiagonalStay"..side or "_MonumentalCrosshead"
-    local stayAssetId=side and HorizonMonumentGeometry.assetId("shaft",arena:GetAttribute("VariantId"))
-    local native=promenadeNative(decor,index,suffix,nil,stayAssetId)
+    local tag=side and "OriginalPromenadeStay3D" or "OriginalPromenadeCrosshead3D"
+    local assetId=if side then HorizonMonumentGeometry.assetId("shaft",arena:GetAttribute("VariantId"))
+        else HorizonMonumentGeometry.assetId("beam")
+    local native=promenadeNative(decor,index,suffix,nil,tag,assetId)
     if not native or Trim.hasPrimaryStructure(native) then return nil end
     local size=native.Size
     local rise=CROSSHEAD_RISE[step]
@@ -524,13 +526,20 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
             fitSize=Vector3.new(size.X*.94,depth,length),expectedParent=decor}
     end
     local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise,0)
+    local orientation=native.CFrame
+    if native:IsA("MeshPart") and size.X>size.Z then
+        -- Imported bridge art can store its span on X. Roof fittings
+        -- and the complete lattice still use the authored deck axes.
+        size=Vector3.new(size.Z,size.Y,size.X)
+        orientation*=CFrame.Angles(0,-math.pi*.5,0)
+    end
     if math.abs(size.X-4*scale)>.10 or math.abs(size.Y-1.2)>.06
         or math.abs(size.Z-span*scale)>.18
         or (expected.Position-native.Position).Magnitude>.16
-        or expected.LookVector:Dot(native.CFrame.LookVector)<.999
-        or expected.UpVector:Dot(native.CFrame.UpVector)<.999 then return nil end
+        or expected.LookVector:Dot(orientation.LookVector)<.999
+        or expected.UpVector:Dot(orientation.UpVector)<.999 then return nil end
     return {category="promenade",name="Crosshead",owner=deck,arena=arena,
-        originals={native},center=native.Position,orientation=native.CFrame,
+        originals={native},center=native.Position,orientation=orientation,
         fitSize=Vector3.new(size.X*.85,size.Y*.975,size.Z*.98),expectedParent=decor}
 end
 
@@ -1365,13 +1374,16 @@ local function mount(data,source)
         elseif native:IsA("MeshPart") and native.Name:match("^PlatformUnderFrame%d+$") then
             entry.connections[#entry.connections+1]=
                 native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"):Connect(changed)
-        elseif native:IsA("MeshPart") and (data.category=="junction" or data.category=="stay") then
-            local meshTag=if data.category=="stay" then "OriginalPromenadeStay3D"
+        elseif native:IsA("MeshPart") then
+            local meshTag=if native.Name:match("_MonumentalCrosshead$") then "OriginalPromenadeCrosshead3D"
+                elseif data.category=="stay" then "OriginalPromenadeStay3D"
                 elseif data.name=="SpineUnderframe" then "OriginalSkySpineUnderdeck3D"
-                else "OriginalPromenadeUnderdeck3D"
-            entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
-            for _,attribute in ipairs({meshTag,"Original3DAssetId"}) do
-                entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(attribute):Connect(changed)
+                elseif data.category=="junction" then "OriginalPromenadeUnderdeck3D" else nil
+            if meshTag then
+                entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
+                for _,attribute in ipairs({meshTag,"Original3DAssetId"}) do
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(attribute):Connect(changed)
+                end
             end
         end
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"

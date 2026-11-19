@@ -290,6 +290,8 @@ Les six portiques peuvent afficher un bras ajouré, un chariot, deux câbles et 
 
 Les six traverses supérieures peuvent recevoir le treillis approuvé des portiques. Le modèle suit la largeur du tablier pendant la contraction et utilise les créneaux existants, dont une traverse proche en qualité Low. Le portique de fret complet prend la priorité. Si le treillis ne peut plus s’afficher, la traverse d’origine reprend le relais.
 
+Les 30 traverses supérieures des cinq arènes peuvent aussi utiliser le profil forgé de Tower Run. Ce profil conserve la portée et les ancrages de la traverse d’origine lorsque le portique complet ou le treillis de proximité se retire. La traverse simple sert de secours si la source approuvée manque à la construction.
+
 ## P4 — Renforts ajourés des Promenades de Storm Harbor
 
 Les 12 diagonales des six portiques peuvent recevoir le treillis approuvé des passerelles. Les deux côtés d’un portique s’affichent ensemble dans les créneaux de renforts Medium et High. Le portique de fret complet prend la priorité. Les diagonales d’origine reprennent le relais si une pièce se décharge, si la pression graphique augmente ou si l’arène se contracte au-delà du dégagement disponible.
