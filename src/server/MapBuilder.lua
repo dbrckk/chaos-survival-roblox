@@ -3517,7 +3517,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme,
-                underdeckLattice, detailProfiles.shaft, detailProfiles.beam)
+                underdeckLattice, detailProfiles)
 
             if definition.PromenadeStep == 4 then
                 promenadeJunctions[definition.PromenadeLane] = platform

@@ -75,18 +75,18 @@ function Art.build(source, beam)
     return clone, pieces
 end
 
-function Art.targets(arm, crate, chain, scale)
-    local trolley = arm.CFrame * CFrame.new(
-        arm.CFrame:PointToObjectSpace(chain.Position).X, -.10, -2*scale)
+function Art.targets(armFrame, armSize, crate, chain, scale)
+    local trolley = armFrame * CFrame.new(
+        armFrame:PointToObjectSpace(chain.Position).X, -.10, -2*scale)
     local trolleySize = Vector3.new(2.6*scale, 1.25, 4.6*scale)
     local bottom = crate.Position + crate.CFrame.UpVector*(crate.Size.Y*.5-.06)
     local top = trolley.Position - trolley.UpVector*(trolleySize.Y*.5-.06)
-    local cableHeight = (top-bottom):Dot(arm.CFrame.UpVector)
+    local cableHeight = (top-bottom):Dot(armFrame.UpVector)
     if cableHeight <= .5 then return nil end
     return {
-        Arm={frame=arm.CFrame, size=arm.Size*.98},
+        Arm={frame=armFrame, size=armSize*.98},
         Trolley={frame=trolley, size=trolleySize},
-        Cable={frame=CFrame.new(bottom+arm.CFrame.UpVector*cableHeight*.5)*arm.CFrame.Rotation,
+        Cable={frame=CFrame.new(bottom+armFrame.UpVector*cableHeight*.5)*armFrame.Rotation,
             size=Vector3.new(1.5*scale,cableHeight,.70*scale)},
         Load={frame=crate.CFrame, size=crate.Size},
     }

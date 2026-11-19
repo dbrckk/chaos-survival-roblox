@@ -107,4 +107,16 @@ function HorizonMonumentGeometry.assetId(profile, variant)
     return if profile == "shaft" then shafts[variant] else assets[profile]
 end
 
+local promenadeRoofProfiles = {
+    SurveyDish = "rotor", SurveyMast = "shaft", SurveyTip = "lens",
+    HoistMachine = "cast", HoistRail = "shaft", HoistBeacon = "cast",
+    SignalConcourse = "beam", ["SwitchFin-1"] = "beam", SwitchFin1 = "beam",
+    GyroCore = "lens", ["ContainmentFin-1"] = "shaft", ContainmentFin1 = "shaft",
+    FreightHoistArm = "beam", SuspendedCrate = "cast", CargoChain = "shaft",
+}
+
+function HorizonMonumentGeometry.promenadeRoofProfile(name)
+    return promenadeRoofProfiles[name]
+end
+
 return HorizonMonumentGeometry

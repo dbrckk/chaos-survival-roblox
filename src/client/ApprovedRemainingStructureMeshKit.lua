@@ -472,12 +472,12 @@ local function promenadeNative(decor,index,suffix,wedge,meshTag,assetId)
         or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then
         return nil
     end
-    if wedge then
-        if not native:IsA("WedgePart") then return nil end
-    elseif native:IsA("MeshPart") then
+    if native:IsA("MeshPart") then
         if not meshTag or not assetId or native.MeshId==""
             or native:GetAttribute(meshTag)~=true
             or native:GetAttribute("Original3DAssetId")~=assetId then return nil end
+    elseif wedge then
+        if not native:IsA("WedgePart") then return nil end
     elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
         return nil
     end
@@ -643,17 +643,24 @@ local function collectStayPair(arena,deck,decor,scale)
     return pair
 end
 
-local function collectRoofNative(decor,index,orientation,scale,spec)
-    local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge)
+local function collectRoofNative(decor,index,orientation,scale,spec,variant)
+    local profile=HorizonMonumentGeometry.promenadeRoofProfile(spec.name)
+    local assetId=HorizonMonumentGeometry.assetId(profile,variant)
+    local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge,"OriginalPromenadeEquipment3D",assetId)
     if not native then return nil end
     local expected=orientation*CFrame.new(spec.x*scale,spec.y,(spec.z or 0)*scale)
         *CFrame.Angles(0,0,math.rad(spec.roll or 0))
     local size=spec.size
-    if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
+    local nativeSize,nativeFrame=native.Size,native.CFrame
+    if native:IsA("MeshPart") and profile=="beam" and nativeSize.Z>nativeSize.X then
+        nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
+        nativeFrame*=CFrame.Angles(0,-math.pi*.5,0)
+    end
+    if (nativeSize-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
         or (native.Position-expected.Position).Magnitude>.15
-        or native.CFrame.UpVector:Dot(expected.UpVector)<.999
-        or native.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
-    return native
+        or nativeFrame.UpVector:Dot(expected.UpVector)<.999
+        or nativeFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+    return native,nativeFrame,nativeSize
 end
 
 local function collectEquipment(arena,deck,decor,scale,equipment)
@@ -663,15 +670,18 @@ local function collectEquipment(arena,deck,decor,scale,equipment)
     if not crosshead then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local natives={}
-    for _,spec in ipairs(equipment.natives) do
-        local native=collectRoofNative(decor,index,crosshead.orientation,scale,spec)
+    local variant=arena:GetAttribute("VariantId")
+    local armFrame,armSize
+    for slot,spec in ipairs(equipment.natives) do
+        local native,frame,size=collectRoofNative(decor,index,crosshead.orientation,scale,spec,variant)
         if not native or (equipment.name=="PromenadeHarbor" and Trim.hasPrimaryStructure(native)) then
             return nil
         end
         natives[#natives+1]=native
+        if slot==1 then armFrame,armSize=frame,size end
     end
     if equipment.name=="PromenadeHarbor" then
-        local targets=HarborHoist.targets(natives[1],natives[2],natives[3],scale)
+        local targets=HarborHoist.targets(armFrame,armSize,natives[2],natives[3],scale)
         if not targets then return nil end
         return {category="equipment",name=equipment.name,spec=equipment.source,
             owner=deck,key=natives[1],arena=arena,originals=natives,anchor=crosshead.originals[1],
@@ -694,7 +704,7 @@ local function collectFittingPair(arena,deck,decor,scale,fittings)
     local index=deck.Name:match("^Platform(%d+)$")
     local pair={}
     for slot,fitting in ipairs(fittings) do
-        local native=collectRoofNative(decor,index,crosshead.orientation,scale,fitting)
+        local native=collectRoofNative(decor,index,crosshead.orientation,scale,fitting,arena:GetAttribute("VariantId"))
         if not native then return nil end
         local size=fitting.fitSize
         local vertical=fitting.vertical
@@ -1378,7 +1388,9 @@ local function mount(data,source)
             local meshTag=if native.Name:match("_MonumentalCrosshead$") then "OriginalPromenadeCrosshead3D"
                 elseif data.category=="stay" then "OriginalPromenadeStay3D"
                 elseif data.name=="SpineUnderframe" then "OriginalSkySpineUnderdeck3D"
-                elseif data.category=="junction" then "OriginalPromenadeUnderdeck3D" else nil
+                elseif data.category=="junction" then "OriginalPromenadeUnderdeck3D"
+                elseif data.category=="equipment" or data.category=="fitting" then "OriginalPromenadeEquipment3D"
+                else nil
             if meshTag then
                 entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
                 for _,attribute in ipairs({meshTag,"Original3DAssetId"}) do

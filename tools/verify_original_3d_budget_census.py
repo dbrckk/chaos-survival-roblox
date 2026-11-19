@@ -2528,8 +2528,8 @@ equipment_collector = P4_CLIENT.split("local function collectRoofNative", 1)[1].
     "local function collectFittingPair", 1)[0]
 for clause in (
     'collectPorticoPart(arena,deck,decor,scale)',
-    'promenadeNative(decor,index,"_"..spec.name,spec.wedge)',
-    'native.CFrame.UpVector:Dot(expected.UpVector)<.999',
+    'promenadeNative(decor,index,"_"..spec.name,spec.wedge,"OriginalPromenadeEquipment3D",assetId)',
+    'nativeFrame.UpVector:Dot(expected.UpVector)<.999',
     'anchor=crosshead.originals[1]',
 ):
     assert clause in equipment_collector,clause
@@ -2560,7 +2560,7 @@ fitting_collector = P4_CLIENT.split("local function collectFittingPair", 1)[1].s
     "local function collectCasing", 1)[0]
 for clause in (
     'collectPorticoPart(arena,deck,decor,scale)',
-    'collectRoofNative(decor,index,crosshead.orientation,scale,fitting)',
+    'collectRoofNative(decor,index,crosshead.orientation,scale,fitting,',
     'anchor=crosshead.originals[1]',
     'orientation=native.CFrame*fitting.axes',
     'pair[1].other=pair[2].key',

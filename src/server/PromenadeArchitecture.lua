@@ -6,6 +6,9 @@ local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
 local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
 local PlatformIdentityLodRules = if lodRulesModule then require(lodRulesModule)
     else require("../shared/PlatformIdentityLodRules")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 local PromenadeArchitecture = {}
 
@@ -33,21 +36,28 @@ local function make(decor, platform, index, name, size, offset, color,
     return p
 end
 
-local function piece(decor, platform, index, name, size, offset, color,
-    material, className)
-    return make(decor, platform, index, name, size, offset,
-        color, material, className)
-end
-
-local function variantEquipment(decor, platform, index, variant, theme, top)
+local function variantEquipment(decor, platform, index, variant, theme, top, profiles)
     local metal = theme.Structure:Lerp(theme.Detail, 0.35)
     local accent = theme.Accent:Lerp(theme.Structure, 0.55)
     local secondary = theme.Secondary:Lerp(theme.Detail, 0.32)
     local equipment = 0
     local function add(name, size, offset, color, material, className)
-        piece(decor, platform, index, name, size,
-            CFrame.new(0, top, 0) * offset,
-            color, material, className)
+        local profile = HorizonMonumentGeometry.promenadeRoofProfile(name)
+        local source = profiles and profiles[profile]
+        local template = source and source.part
+        offset = CFrame.new(0, top, 0) * offset
+        local mesh
+        if template and template.MeshId ~= "" then
+            -- Beams run along the deck X. Retain the original axes of
+            -- housings, lenses and shafts for the local equipment mounts.
+            local alongX = profile == "beam" or template.Size.X > template.Size.Z
+            mesh = RouteSignalGeometry.fit(template, platform.CFrame * offset, size, nil, alongX)
+            if mesh then
+                mesh:SetAttribute("OriginalPromenadeEquipment3D", true)
+                mesh:SetAttribute("Original3DAssetId", source.assetId)
+            end
+        end
+        make(decor, platform, index, name, size, offset, color, material, className, mesh)
         equipment += 1
     end
 
@@ -100,7 +110,7 @@ local function variantEquipment(decor, platform, index, variant, theme, top)
 end
 
 function PromenadeArchitecture.decorate(decor, platform, index, definition,
-    variant, theme, trussProfile, shaftProfile, beamProfile)
+    variant, theme, trussProfile, profiles)
     if not decor or not platform or not platform:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table" then
         return 0
@@ -124,6 +134,7 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
             or Enum.Material.Metal)
     local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
     local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
+    local shaftProfile = profiles and profiles.shaft
     local shaft = shaftProfile and shaftProfile.part
     if shaft and shaft.MeshId == "" then shaft = nil end
     local shaftAlongX = shaft and shaft.Size.X > shaft.Size.Z
@@ -159,6 +170,7 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     end
     local crossheadSize = Vector3.new(4.0, 1.2, crownSpan)
     local crossheadOffset = CFrame.new(0, height + crownHeight, 0)
+    local beamProfile = profiles and profiles.beam
     local beam = beamProfile and beamProfile.part
     local crosshead = beam and beam.MeshId ~= "" and RouteSignalGeometry.fit(
         beam, platform.CFrame * crossheadOffset, crossheadSize)
@@ -186,7 +198,7 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     -- The equipment is above the structural crosshead, or outside
     -- the deck edges. Nothing presents a fake playable upper surface.
     count += variantEquipment(decor, platform, index,
-        variant, theme, height + crownHeight)
+        variant, theme, height + crownHeight, profiles)
     assert(count <= 9, "Monumental promenade arch exceeded part budget")
     return count
 end
