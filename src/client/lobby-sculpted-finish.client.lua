@@ -113,11 +113,14 @@ end
 local function mount(part, source)
     local mesh = cleanClone(source)
     if not mesh then return end
-    local rotate = (source.Size.X > source.Size.Z) ~= (part.Size.X > part.Size.Z)
-    -- A small inset keeps flush SurfaceGuis, light strips and seams clear.
-    local size = part.Size * 0.99
-    mesh.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
-    mesh.CFrame = rotate and part.CFrame * CFrame.Angles(0, math.pi * 0.5, 0) or part.CFrame
+    local function applyGeometry()
+        local rotate = (source.Size.X > source.Size.Z) ~= (part.Size.X > part.Size.Z)
+        -- A small inset keeps flush SurfaceGuis, light strips and seams clear.
+        local size = part.Size * 0.99
+        mesh.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
+        mesh.CFrame = rotate and part.CFrame * CFrame.Angles(0, math.pi * 0.5, 0) or part.CFrame
+    end
+    applyGeometry()
     mesh.Name = part.Name .. "Sculpted"
     mesh.Anchored = true
     mesh.CanCollide = false
@@ -142,6 +145,8 @@ local function mount(part, source)
             if property == "Color" or property == "Transparency"
                 or property == "Material" or property == "MaterialVariant" then
                 applyAppearance()
+            elseif property == "CFrame" or property == "Size" then
+                applyGeometry()
             end
         end),
         removal = mesh:GetPropertyChangedSignal("Parent"):Connect(function()
