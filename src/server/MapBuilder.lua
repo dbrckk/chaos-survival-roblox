@@ -2688,6 +2688,7 @@ local function buildLobby(root, config)
     end
 
     local footSize = Vector3.new(0.76, 0.18, 0.78)
+    local jointSize = Vector3.new(0.98, 0.78, 0.88)
     local ribOffset = runway.Size.X * 0.5 + 0.35
     for i = 1, 4 do
         local support = i == 1 and centerPlatform or floorInset
@@ -2716,6 +2717,14 @@ local function buildLobby(root, config)
             )
             rib.Transparency = 0.04
             rib.Parent = decor
+
+            -- Seat the crossbar in the collar while exposing its upper face.
+            local joint = detail(
+                "LobbySculptedSwept", "ArenaApproachJoint" .. suffix,
+                CFrame.new(x + side * 0.05, ribEnd - 0.23, worldZ),
+                jointSize, VisualTheme.World.MetalLight, VisualTheme.Materials.Structure
+            )
+            joint.Parent = decor
         end
 
         local topRib = detail(
