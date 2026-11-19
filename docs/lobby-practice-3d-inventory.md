@@ -27,9 +27,7 @@ Les finitions utilisent le même préchargement que le portique, les pylônes et
 
 ## Audit complémentaire : `MapBuilder.lua` (statique)
 
-Relevé sur la branche de travail, sans instanciation Roblox. Le fichier compte **3 822 lignes** ; la fonction `buildLobby` occupe **626 lignes** jusqu'à `buildArena`. Dans `buildLobby`, on observe **7 appels textuels à `part(...)`**, **5 à `decorPart(...)`** et **9 à `sculpt(...)`**, y compris les déclarations de fonctions locales. Ces nombres sont des **sites d'appel**, pas des quantités d'objets générés : les boucles et les modules importés rendent impossible une conversion fiable en nombre de primitives sans exécuter le générateur.
-
-Sur la portion `buildArena` et les fonctions suivantes, relevé de **4 appels textuels à `part(...)`**, **2 à `decorPart(...)`** et **14 à `fitDecorMesh(...)`**. Ce comptage ne couvre pas les fonctions auxiliaires précédentes, notamment les fondations, stations périphériques et mégastructures ; les cinq variantes partagent du code mais peuvent générer des objets différents.
+Le relevé statique du constructeur couvre les pièces directement identifiables du lobby. Les boucles du générateur et les contrôleurs clients déterminent le nombre d’objets présents selon la qualité, la pression graphique et la disponibilité des maillages.
 
 ### Contraintes et priorités vérifiées dans le code
 
@@ -40,3 +38,14 @@ Sur la portion `buildArena` et les fonctions suivantes, relevé de **4 appels te
 - Les appels `fitDecorMesh` utilisent déjà des maillages approuvés avec secours en primitives ; ne pas les comptabiliser comme « primitifs restants » sans vérifier le chargement effectif.
 
 **Pourcentage global du jeu : non déterminé.** Il faudrait un inventaire à l'exécution par arène, catégorie et niveau de détail, ainsi qu'une vérification des chargements de maillages, avant de publier une métrique crédible.
+
+## Grandes formes visibles du lobby
+
+| Ensemble | Quantité observée dans le code | État |
+| --- | ---: | --- |
+| Lames du noyau et segments orbitaux | 3 + 12 | Le profil forgé approuvé remplace chaque pièce en Medium et High quand le maillage est prêt et la pression graphique normale. Chaque emplacement conserve un seul objet animé. |
+| Sphère du noyau | 1 | Sphère native et source lumineuse centrale. |
+| Balises du parcours d’entraînement | 4 | Disques natifs de 8,5 studs avec étiquettes et contrôle de distance. |
+| Plateau et dalles physiques | 2 | Colliders natifs avec habillage sculpté conditionnel. |
+
+Ce relevé compte les emplacements définis dans le code. Il reste à mesurer les maillages affichés sur un appareil mobile avant d’établir un taux de remplacement pour le lobby.
