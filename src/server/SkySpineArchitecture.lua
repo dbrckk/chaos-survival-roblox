@@ -6,7 +6,7 @@ local RouteSignalGeometry = require("./RouteSignalGeometry")
 
 local SkySpineArchitecture = {}
 
-local function detail(decor, deck, index, name, size, cf, color, material, kind, mesh, inlaySide)
+local function detail(deck, index, name, size, cf, color, material, kind, mesh, inlaySide)
     local frame = deck.CFrame * cf
     local item = RouteSignalGeometry.fit(mesh, frame, size, inlaySide)
     if not item then
@@ -26,7 +26,6 @@ local function detail(decor, deck, index, name, size, cf, color, material, kind,
     item.CastShadow = false
     item:SetAttribute("PerimeterPlatformIndex", index)
     item:SetAttribute("SkySpineDecor", true)
-    item.Parent = decor
     return item
 end
 
@@ -40,10 +39,20 @@ function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, 
     local secondary = theme.Secondary:Lerp(theme.Structure, 0.32)
     local metal = theme.Structure:Lerp(theme.Detail, 0.38)
     local count = 0
-    local function add(name, size, cf, color, material, kind, mesh, inlaySide)
+    local function add(name, size, cf, color, material, kind, mesh, inlaySide, underdeck3D)
         count += 1
-        return detail(decor, deck, index, name, size,
+        local item = detail(deck, index, name, size,
             cf, color, material, kind, mesh, inlaySide)
+        if underdeck3D and item:IsA("MeshPart") then
+            item:SetAttribute("OriginalSkySpineUnderdeck3D", true)
+            item:SetAttribute("Original3DAssetId", 126298311664881)
+        end
+        item.Parent = decor
+        return item
+    end
+    local forgedProfile = signalProfile and signalProfile.MeshId ~= "" and signalProfile or nil
+    local function underdeck(name, size, cf, color, material)
+        add(name, size, cf, color, material, nil, forgedProfile, nil, true)
     end
 
     -- Actual cross-arena silhouette: repeated, thin surface borders and
@@ -55,12 +64,12 @@ function SkySpineArchitecture.decorate(decor, deck, index, def, variant, theme, 
                 top + 0.12, 0),
             side < 0 and accent or secondary, Enum.Material.Neon, nil, signalProfile)
         rail.Transparency = 0.36
-        add("Undercarriage" .. side,
+        underdeck("Undercarriage" .. side,
             Vector3.new(0.66, 0.6, deck.Size.Z - 0.8),
             CFrame.new(side * 3.9, -top - 0.28, 0),
             metal, Enum.Material.CorrodedMetal)
     end
-    add("CrossStiffener", Vector3.new(deck.Size.X + 0.6, 0.48, 0.64),
+    underdeck("CrossStiffener", Vector3.new(deck.Size.X + 0.6, 0.48, 0.64),
         CFrame.new(0, -top - 0.42, 0),
         secondary, Enum.Material.Metal)
 

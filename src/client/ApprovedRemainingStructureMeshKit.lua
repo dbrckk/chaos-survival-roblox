@@ -1342,6 +1342,11 @@ local function mount(data,source)
         elseif native:IsA("MeshPart") and native.Name:match("^PlatformUnderFrame%d+$") then
             entry.connections[#entry.connections+1]=
                 native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"):Connect(changed)
+        elseif native:IsA("MeshPart") and data.name=="SpineUnderframe" then
+            entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
+            for _,attribute in ipairs({"OriginalSkySpineUnderdeck3D","Original3DAssetId"}) do
+                entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(attribute):Connect(changed)
+            end
         end
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
         if data.name=="SpineUnderframe" then

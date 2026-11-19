@@ -24,6 +24,30 @@ function Rules.isAuthoredUnderFrameMesh(part)
         and part:GetAttribute("OriginalPlatformUnderFrame3D") == true
 end
 
+function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positionTolerance)
+    if not part then return false end
+    if part:IsA("MeshPart") and not Rules.isAuthoredUnderFrameMesh(part) then
+        local name = part.Name
+        if part:GetAttribute("OriginalSkySpineUnderdeck3D") ~= true
+            or part:GetAttribute("Original3DAssetId") ~= 126298311664881 or part.MeshId == ""
+            or not (name:match("^SkySpine%d+_Undercarriage%-?1$")
+                or name:match("^SkySpine%d+_CrossStiffener$")) then return false end
+        -- The source can import with its long axis on X or Z. The builder
+        -- fits it with either the deck's frame or a positive quarter turn.
+        if part.CFrame.LookVector:Dot(frame.LookVector) < .999 then
+            frame *= CFrame.Angles(0, math.pi * 0.5, 0)
+            size = Vector3.new(size.Z, size.Y, size.X)
+        end
+    elseif not part:IsA("MeshPart")
+        and (not part:IsA("Part") or part.Shape ~= Enum.PartType.Block) then
+        return false
+    end
+    return (part.Size - size).Magnitude <= sizeTolerance
+        and (part.Position - frame.Position).Magnitude <= positionTolerance
+        and part.CFrame.UpVector:Dot(frame.UpVector) >= .999
+        and part.CFrame.LookVector:Dot(frame.LookVector) >= .999
+end
+
 function Rules.isAuthoredPlatformBevel(part)
     return part ~= nil and part:GetAttribute("OriginalStructuralBevel") == true
         and (part:IsA("WedgePart") or (part:IsA("MeshPart")

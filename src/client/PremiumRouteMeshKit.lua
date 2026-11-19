@@ -734,16 +734,11 @@ local function collectUnderdeckNative(decor, platform, scale)
     local parts = {}
     local function take(name, tag, size, offset)
         local part = decor:FindFirstChild(name)
-        if not part or not ((part:IsA("Part") and part.Shape == Enum.PartType.Block)
-            or PlatformIdentityLodRules.isAuthoredUnderFrameMesh(part))
+        if not PlatformIdentityLodRules.matchesUnderdeckFallback(part, platform.CFrame * offset, size, .14, .16)
             or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
             or part.Transparency >= .95 or part:GetAttribute(tag) ~= true
             or (tag ~= "PremiumArchitecturalSurface"
-                and part:GetAttribute("PerimeterPlatformIndex") ~= tonumber(id))
-            or (part.Size - size).Magnitude > .14
-            or (part.Position - (platform.CFrame * offset).Position).Magnitude > .16
-            or part.CFrame.UpVector:Dot(platform.CFrame.UpVector) < .999
-            or part.CFrame.LookVector:Dot(platform.CFrame.LookVector) < .999 then
+                and part:GetAttribute("PerimeterPlatformIndex") ~= tonumber(id)) then
             return false
         end
         parts[#parts + 1] = part
@@ -1065,6 +1060,11 @@ local function mount(platform, template, count, bridgeCandidate, underdeckTempla
         local geometryChanged = part:IsA("Part") and part:GetPropertyChangedSignal("Shape")
             or part:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D")
         connections[#connections + 1] = geometryChanged:Connect(changed)
+        if part:IsA("MeshPart") and part.Name:match("^SkySpine") then
+            connections[#connections + 1] = part:GetPropertyChangedSignal("MeshId"):Connect(changed)
+            connections[#connections + 1] = part:GetAttributeChangedSignal("OriginalSkySpineUnderdeck3D"):Connect(changed)
+            connections[#connections + 1] = part:GetAttributeChangedSignal("Original3DAssetId"):Connect(changed)
+        end
         for _, tag in ipairs({"PremiumArchitecturalSurface", "PromenadeVisualOnly",
             "SkySpineDecor", "PerimeterPlatformIndex"}) do
             connections[#connections + 1] = part:GetAttributeChangedSignal(tag):Connect(changed)

@@ -366,15 +366,10 @@ end
 
 local function matchingCradleNative(decor,deck,name,size,offset,tag,index)
     local part = decor:FindFirstChild(name)
-    if not part or not ((part:IsA("Part") and part.Shape == Enum.PartType.Block)
-        or PlatformIdentityLodRules.isAuthoredUnderFrameMesh(part))
+    if not PlatformIdentityLodRules.matchesUnderdeckFallback(part, deck.CFrame * offset, size, .13, .14)
         or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
         or part.Transparency >= .95 or part:GetAttribute(tag) ~= true
-        or (index and part:GetAttribute("PerimeterPlatformIndex") ~= index)
-        or (part.Size-size).Magnitude > .13
-        or (part.Position-(deck.CFrame*offset).Position).Magnitude > .14
-        or part.CFrame.UpVector:Dot(deck.CFrame.UpVector) < .999
-        or part.CFrame.LookVector:Dot(deck.CFrame.LookVector) < .999 then return nil end
+        or (index and part:GetAttribute("PerimeterPlatformIndex") ~= index) then return nil end
     return part
 end
 

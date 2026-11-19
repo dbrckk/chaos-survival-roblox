@@ -302,6 +302,8 @@ Les 12 montants des Promenades de Storm Harbor peuvent désormais recevoir la co
 
 Chacun des dix tabliers de l’Épine céleste peut recevoir un seul châssis ajouré à la place de son socle plat, de ses deux longerons et de sa traverse. Le châssis court approuvé d’Orbital s’ajuste à l’empreinte du tablier et rend 200 pièces éligibles sur les cinq arènes. Il suit la contraction et partage le quota des treillis de jonction. Les quatre pièces réapparaissent ensemble si le châssis se décharge. Un berceau complet a la priorité dès son arrivée.
 
+Sur les 50 tabliers des cinq arènes, les 100 longerons et 50 traverses de secours reprennent le profil forgé de Tower Run dès que le modèle est disponible à la construction. Les pièces suivent le tablier pendant la contraction. Les châssis et les berceaux complets gardent la priorité, et les formes simples restent disponibles au chargement sans le maillage approuvé.
+
 ## P4 — Châssis sculptés sous les tabliers des Promenades
 
 Sur les cinq arènes, 80 socles plats peuvent recevoir le châssis ajouré approuvé d’Orbital. Aux 20 portiques extérieurs et aux 10 jonctions centrales, le même châssis remplace le socle et son treillis. Chaque montage suit la contraction et occupe un créneau du quota des treillis. Aux jonctions centrales, il dépend du raccord physique à l’Épine céleste. Le treillis forgé approuvé sert de repli si le châssis ou le socle d’origine se décharge. Les berceaux complets et l’habillage portuaire ont la priorité.
