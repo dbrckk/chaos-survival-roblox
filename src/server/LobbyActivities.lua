@@ -86,6 +86,29 @@ local function createPad(folder, center, definition, index)
         CollectionService:AddTag(rim, "LobbySculptedCasting")
     end
 
+    -- Small cast corner bosses break up the square silhouette without
+    -- covering the central boost surface or intercepting Touched events.
+    for corner = 1, 4 do
+        local boss = Instance.new("Part")
+        boss.Name = "PracticeCornerBoss" .. tostring(corner)
+        boss.Size = Vector3.new(0.62, 0.18, 0.62)
+        boss.CFrame = pad.CFrame * CFrame.new(
+            corner % 2 == 0 and 3.12 or -3.12,
+            0.11,
+            corner <= 2 and -3.12 or 3.12
+        )
+        boss.Anchored = true
+        boss.CanCollide = false
+        boss.CanTouch = false
+        boss.CanQuery = false
+        boss.CastShadow = false
+        boss.Material = Enum.Material.Metal
+        boss.Color = rimColor:Lerp(pad.Color, 0.18)
+        boss.Transparency = 0.06
+        boss.Parent = folder
+        CollectionService:AddTag(boss, "LobbySculptedCasting")
+    end
+
     local light = Instance.new("PointLight")
     light.Name = "PracticePadLight"
     light.Color = pad.Color
