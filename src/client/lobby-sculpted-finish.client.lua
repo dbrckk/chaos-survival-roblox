@@ -12,6 +12,13 @@ local profiles = {
         region = "WayfinderBase",
         id = 88962643359267,
     },
+    LobbySculptedSwept = {
+        holder = "ApprovedTowersSignatureBridgeTemplates",
+        model = "ForgedBridge",
+        marker = "OriginalTowersSignatureBridge3D",
+        region = "SweptCrossbeam",
+        id = 126298311664881,
+    },
     LobbySculptedShaft = {
         holder = "ApprovedLargeStructureTemplates",
         model = "Towers",
@@ -148,6 +155,8 @@ local function refresh()
     local generated = workspace:FindFirstChild("GeneratedMap")
     local lobby = generated and generated:FindFirstChild("Lobby")
     local decor = lobby and lobby:FindFirstChild("Decor")
+    local architecture = decor and decor:FindFirstChild("OriginalLobbyArchitecture")
+    local stage = architecture and architecture:FindFirstChild("MachinedLobbyCenterStage")
     local candidates = {}
     if decor
         and player:GetAttribute("RoundParticipant") ~= true
@@ -156,7 +165,9 @@ local function refresh()
             local source = findSource(profile)
             if source and ready(source) then
                 for _, part in ipairs(CollectionService:GetTagged(tag)) do
-                    if part.Parent == decor and part:IsA("Part") and part.Anchored then
+                    if part:IsA("Part") and part.Anchored
+                        and (part.Parent == decor or (stage and part.Parent == stage
+                            and not part.CanCollide and not part.CanTouch and not part.CanQuery)) then
                         candidates[part] = source
                     end
                 end

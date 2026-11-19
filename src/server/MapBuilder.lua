@@ -2785,7 +2785,7 @@ local function buildLobby(root, config)
 
     -- Retain the existing collidable lobby entrance and pylons, but hide
     -- their simplistic silhouettes behind authored multi-layer 3D casing.
-    StructureRetrofit.buildLobby(decor, config.LobbyCenter)
+    StructureRetrofit.buildLobby(decor, config.LobbyCenter, centerPlatform)
 
     floor:SetAttribute("VisualVersion", 2)
     centerPlatform:SetAttribute("SafeHub", true)

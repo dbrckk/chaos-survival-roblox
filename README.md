@@ -1,6 +1,8 @@
 ## P4 — Finitions 3D du lobby
 
-Le lobby applique jusqu’à 64 finitions sculptées après le chargement des maillages approuvés. L’allée, les huit panneaux d’accueil, les repères lumineux et le portail gardent leurs dimensions et leurs ancrages. La traverse reprend la couleur et le fondu du départ de manche. Les formes de secours restent visibles au démarrage et reprennent leur place pendant la manche, sous pression graphique ou si le maillage est indisponible.
+Le lobby applique jusqu’à 74 finitions sculptées après le chargement des maillages approuvés. L’allée, les huit panneaux d’accueil, les repères lumineux et le portail gardent leurs dimensions et leurs ancrages. La traverse reprend la couleur et le fondu du départ de manche. Les formes de secours restent visibles au démarrage et reprennent leur place pendant la manche, sous pression graphique ou si le maillage est indisponible.
+
+L’estrade reprend le profil forgé de Tower Run sur ses quatre flancs. Les quatre protections d’angle et les deux seuils lumineux utilisent la fonderie du périmètre. Ces dix habillages restent sous la surface de marche et reprennent les emplacements de l’ancien socle décoratif.
 
 ## P4 — Silhouettes d’arrière-plan
 

@@ -2,6 +2,8 @@
 -- Upgrade existing simple exterior markers and lobby pylons into original
 -- three-dimensional architectural assemblies. All pieces are cosmetic.
 -- No new gameplay colliders, links, fake safe paths, particle loops or assets.
+local CollectionService = game:GetService("CollectionService")
+
 local StructureRetrofit = {}
 
 local PALETTES = {
@@ -186,7 +188,7 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
     return pieces
 end
 
-function StructureRetrofit.buildLobby(decor, lobbyCenter)
+function StructureRetrofit.buildLobby(decor, lobbyCenter, platform)
     if not decor then return 0 end
     local color = Color3.fromRGB(99, 121, 154)
     local dark = Color3.fromRGB(45, 62, 83)
@@ -241,37 +243,44 @@ function StructureRetrofit.buildLobby(decor, lobbyCenter)
     end
     count += #gate:GetChildren()
 
-    -- The 24x24 central stage was still an undecorated rectangular block,
-    -- visible throughout every pre-round lobby. Build original dimensional
-    -- alloy facings BELOW its authoritative walkable top. The existing
-    -- CenterGlow and floor tutorial graphics remain legible and untouched.
+    -- Tie the fascia to the actual walkable stage. The skin stays below
+    -- the deck and above the floor inset, outside the physical step edge.
     local stage = Instance.new("Model")
     stage.Name = "MachinedLobbyCenterStage"
     stage.Parent = group
-    local stageOrigin = CFrame.new(lobbyCenter + Vector3.new(0, 1.45, 0))
-    for _, side in ipairs({-1, 1}) do
-        add(stage, stageOrigin, "FrontStageArmor" .. tostring(side),
-            CFrame.new(0, -0.24, side * 11.90)
-                * CFrame.Angles(0, side == -1 and 0 or math.pi, 0),
-            Vector3.new(18.8, 0.52, 1.2), color,
-            shell, "WedgePart", false)
-        add(stage, stageOrigin, "FlankStageArmor" .. tostring(side),
-            CFrame.new(side * 11.90, -0.24, 0)
-                * CFrame.Angles(0, side * math.pi * 0.5, 0),
-            Vector3.new(18.8, 0.52, 1.2), color,
-            shell, "WedgePart", false)
-        add(stage, stageOrigin, "RecessedStageKeel" .. tostring(side),
-            CFrame.new(side * 5.5, -1.03, 0),
-            Vector3.new(4.5, 0.42, 15.8), dark,
-            trim, nil, false)
+    local stageOrigin = platform.CFrame
+    local halfWidth = platform.Size.X * 0.5
+    local halfDepth = platform.Size.Z * 0.5
+
+    local function stageDetail(profile, name, frame, size, tint, material)
+        local piece = add(stage, stageOrigin, name, frame, size, tint, material, nil, false)
+        CollectionService:AddTag(piece, profile)
     end
+
+    for face = 1, 4 do
+        local facing = CFrame.Angles(0, (face - 1) * math.pi * 0.5, 0)
+        local front = face % 2 == 1
+        local width = front and halfWidth or halfDepth
+        local depth = front and halfDepth or halfWidth
+        stageDetail("LobbySculptedSwept", "StageFascia" .. face,
+            facing * CFrame.new(0, 0.08, depth + 0.10),
+            Vector3.new((width - 1.40) * 2, 0.58, 0.62), color, shell)
+
+        if front then
+            local indicator = face == 1 and Color3.fromRGB(69, 172, 211)
+                or Color3.fromRGB(140, 129, 225)
+            stageDetail("LobbySculptedCasting", "StageThreshold" .. face,
+                facing * CFrame.new(0, 0.15, depth + 0.42),
+                Vector3.new(width * 0.72, 0.15, 0.20), indicator, Enum.Material.Neon)
+        end
+    end
+
     for _, sx in ipairs({-1, 1}) do
         for _, sz in ipairs({-1, 1}) do
-            local start = Vector3.new(sx * 9.9, -0.52, sz * 9.9)
-            local finish = Vector3.new(sx * 6.2, -1.22, sz * 6.1)
-            spar(stage, stageOrigin,
-                "StageCornerDiagonal" .. tostring(sx) .. "_" .. tostring(sz),
-                start, finish, 0.48, color, shell)
+            local corner = CFrame.new(sx * (halfWidth - 0.42), 0.04, sz * (halfDepth - 0.42))
+                * CFrame.Angles(0, sx * sz * math.pi * 0.25, 0)
+            stageDetail("LobbySculptedCasting", "StageCorner" .. sx .. "_" .. sz,
+                corner, Vector3.new(1.70, 0.57, 0.75), dark, trim)
         end
     end
     count += #stage:GetChildren()
