@@ -2199,6 +2199,7 @@ local function buildLobby(root, config)
     floorInset.Transparency = 0.04
     floorInset:SetAttribute("PremiumArchitecturalSurface", true)
 
+    local lobbyCap = wayfinderBaseSource()
     local lobbyLanes = {
         {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
         {name = "LobbyLaneSouth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, 24)},
@@ -2207,14 +2208,13 @@ local function buildLobby(root, config)
     }
 
     for i, def in ipairs(lobbyLanes) do
-        local lane = decorPart(
-            decor,
-            def.name,
-            def.size,
-            config.LobbyCenter + def.offset,
+        local lane = fitDecorMesh(
+            lobbyCap, def.name,
+            CFrame.new(config.LobbyCenter + def.offset), def.size,
             (i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
             VisualTheme.Materials.Glow
         )
+        lane.Parent = decor
         lane.Transparency = 0.38
     end
 
@@ -2624,7 +2624,6 @@ local function buildLobby(root, config)
     subtitle.Parent = surface
 
     local lobbyShaft = beaconShaftSource("Towers")
-    local lobbyCap = wayfinderBaseSource()
     local frameOffsets = {
         Vector3.new(-34, 7, 0),
         Vector3.new(34, 7, 0),
