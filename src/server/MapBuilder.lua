@@ -2005,6 +2005,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
         local fallbackHeight = if atRim then height else -size.Y * 0.5 - 0.13
         glow = decorPart(nil, name, Vector3.new(size.X + 0.28, 0.12, size.Z + 0.28),
             platform.Position + Vector3.new(0, fallbackHeight, 0), color, VisualTheme.Materials.Glow)
+        glow.CFrame = platform.CFrame * CFrame.new(0, fallbackHeight, 0)
     end
     glow.Name = name
     glow.Material = VisualTheme.Materials.Glow
@@ -2020,7 +2021,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local topPanel = fitDecorMesh(
         panelProfile,
         "PlatformPanel" .. index,
-        CFrame.new(platform.Position + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)),
+        platform.CFrame * CFrame.new(0, platform.Size.Y * 0.5 + 0.055, 0),
         Vector3.new(
             math.max(1, platform.Size.X - 0.8),
             0.10,
