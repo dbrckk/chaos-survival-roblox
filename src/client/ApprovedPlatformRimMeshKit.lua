@@ -94,7 +94,7 @@ local function nativeParts(decor,deck,original,scale)
                 or (i==3 and math.pi*.5 or -math.pi*.5)
             local span = (alongX and deck.Size.X or deck.Size.Z) + .12*scale
             local forged = edge:IsA("MeshPart") and edge.MeshId ~= ""
-                and edge:GetAttribute("OriginalPromenadeForgedBevel3D") == true
+                and edge:GetAttribute("OriginalElevatedForgedBevel3D") == true
                 and edge:GetAttribute("Original3DAssetId") == 126298311664881
             local frame = deck.CFrame*CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)
             if not PlatformIdentityLodRules.matchesDeckTrimPose(

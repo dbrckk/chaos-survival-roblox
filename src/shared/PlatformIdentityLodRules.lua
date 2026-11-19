@@ -43,7 +43,7 @@ function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positi
     if not part then return false end
     local quarterTurn = false
     if Rules.isAuthoredUnderFrameMesh(part) then
-        if part:GetAttribute("OriginalPromenadeLatticeFrame3D") == true then
+        if part:GetAttribute("OriginalElevatedLatticeFrame3D") == true then
             if part.MeshId == "" or part:GetAttribute("Original3DAssetId") ~= 106401955318567 then
                 return false
             end

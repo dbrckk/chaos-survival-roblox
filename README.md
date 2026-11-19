@@ -234,6 +234,8 @@ Aux 20 transitions entre belvédères et Promenades, le chevron se place dans le
 
 Les 80 tabliers des Promenades peuvent recevoir deux bordures longitudinales forgées dans leurs emplacements existants. Les 50 tabliers sans portique peuvent aussi recevoir un sous-cadre à treillis ajouré. Les portiques conservent leur treillis dédié. Ces pièces suivent le rétrécissement et cèdent la place aux habillages complets quand ils sont affichés. Les bordures et sous-cadres ordinaires reprennent le relais si une source approuvée est indisponible à la construction.
 
+Les 50 tabliers de l’Épine céleste, dont les 10 tabliers de jonction avec les Promenades, peuvent afficher 100 bordures forgées orientées dans le sens de la traversée et 50 sous-cadres ajourés. Les maillages reprennent les emplacements d’origine. Les bordures et berceaux complets peuvent toujours les masquer lorsqu’ils sont affichés.
+
 ## P4 — Dessous sculptés sur les paliers de Storm Harbor
 
 Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.
