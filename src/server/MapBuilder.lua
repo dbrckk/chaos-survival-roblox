@@ -1124,15 +1124,16 @@ local function addVariantIdentity(decor, config, variant, theme, castProfile, sw
         }
 
         for i, offset in ipairs(markers) do
-            local tower = decorPart(
-                decor,
+            local tower = fitDecorMesh(
+                beaconShaft,
                 "GridMarker" .. i,
+                CFrame.new(center + offset),
                 Vector3.new(2.2, 12, 2.2),
-                center + offset,
                 theme.Structure,
                 VisualTheme.Materials.Structure
             )
             tower.Transparency = 0.06
+            tower.Parent = decor
 
             local crown = fitDecorMesh(
                 castProfile,
