@@ -1994,18 +1994,19 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     -- The grounded riser reaches the arena floor. Place the band below
     -- the sculpted fascia near the landing surface, rather than at its foot.
     local height = if atRim then size.Y * 0.5 - 1.02 else -size.Y * 0.5 - 0.47
-    local glow = RouteSignalGeometry.fit(edgeBand,
-        platform.CFrame * CFrame.new(0, height, 0),
-        Vector3.new(
-            size.X + (alongX and 0.28 or edgeOverhang),
-            0.14,
-            size.Z + (alongX and edgeOverhang or 0.28)
-        ), nil, alongX)
+    local rimSize = Vector3.new(
+        size.X + (alongX and 0.28 or edgeOverhang),
+        0.14,
+        size.Z + (alongX and edgeOverhang or 0.28)
+    )
+    local rimPose = platform.CFrame * CFrame.new(0, height, 0)
+    local glow = RouteSignalGeometry.fit(edgeBand, rimPose, rimSize, nil, alongX)
     if not glow then
-        local fallbackHeight = if atRim then height else -size.Y * 0.5 - 0.13
-        glow = decorPart(nil, name, Vector3.new(size.X + 0.28, 0.12, size.Z + 0.28),
-            platform.Position + Vector3.new(0, fallbackHeight, 0), color, VisualTheme.Materials.Glow)
-        glow.CFrame = platform.CFrame * CFrame.new(0, fallbackHeight, 0)
+        -- Match the approved mesh footprint and position exactly so missing
+        -- assets never cause a shifted or differently sized route cue.
+        glow = decorPart(nil, name, rimSize, rimPose.Position,
+            color, VisualTheme.Materials.Glow)
+        glow.CFrame = rimPose
     end
     glow.Name = name
     glow.Material = VisualTheme.Materials.Glow
