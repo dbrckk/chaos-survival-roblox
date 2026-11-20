@@ -11,9 +11,16 @@ local PerimeterCapGeometry = if capModule then require(capModule)
     else require("../shared/PerimeterCapGeometry")
 
 type Profile = {part: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
-type Profiles = {bevel: Profile?, beam: Profile?, shaft: Profile?, cast: Profile?, ring: Profile?}
+type Profiles = {
+    bevel: Profile?, beam: Profile?, shaft: Profile?, cast: Profile?, ring: Profile?, lens: Profile?,
+}
 
 local HarborScenery = {}
+
+local function available(profile: Profile?): Profile?
+    local source = profile and profile.part
+    return if source and source.Archivable and source.MeshId ~= "" then profile else nil
+end
 
 local function geometry(model, name, size, frame, tone, material, profile: Profile?,
         kind: string?, alongX: boolean?, cylinder: boolean?)
@@ -217,11 +224,12 @@ function HarborScenery.build(decor, base, theme, profiles: Profiles?)
         return nil
     end
 
-    local bevel = profiles and profiles.bevel
-    local truss = profiles and profiles.beam
-    local column = profiles and profiles.shaft
-    local ring = profiles and profiles.ring
-    local cast = profiles and profiles.cast
+    local cast = available(profiles and profiles.cast)
+    local bevel = available(profiles and profiles.bevel) or cast
+    local truss = available(profiles and profiles.beam)
+    local column = available(profiles and profiles.shaft)
+    local lens = available(profiles and profiles.lens)
+    local ring = available(profiles and profiles.ring)
     local rotation, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
     local slope = if rotation and cast then {
         part = cast.part, assetId = cast.assetId, rotation = rotation, swapXZ = swapXZ,
@@ -342,10 +350,10 @@ function HarborScenery.build(decor, base, theme, profiles: Profiles?)
         else
             beam("CableDrum", Vector3.new(7.5, 4.3, 4.3),
                 CFrame.new(0, 10.3, -15), loadTone, Enum.Material.CorrodedMetal,
-                column, nil, true)
+                column or lens, nil, true)
             for side = -1, 1, 2 do
                 beam("DrumArmorPlate" .. side, Vector3.new(0.46, 5.1, 5.1),
-                    CFrame.new(side * 3.9, 10.3, -15), metal, nil, ring, nil, true)
+                    CFrame.new(side * 3.9, 10.3, -15), metal, nil, ring or lens or column, nil, true)
             end
         end
 
@@ -360,7 +368,9 @@ function HarborScenery.build(decor, base, theme, profiles: Profiles?)
         crane.Parent = folder
     end
 
-    buildCargoVessel(folder, base, theme, profiles, slope)
+    buildCargoVessel(folder, base, theme, {
+        bevel = bevel, beam = truss, shaft = column,
+    }, slope)
 
     return folder
 end

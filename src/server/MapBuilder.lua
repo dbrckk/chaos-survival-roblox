@@ -3259,6 +3259,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     end
     local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
     local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
+    local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
+    local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
     addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
@@ -3314,7 +3316,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     if variant.Id == "Harbor" then
         -- Exterior harbor cranes distinguish the new cargo port without
         -- extra colliders, sound loops or cameras tracking scenic models.
-        HarborScenery.build(decor, base, theme, detailProfiles)
+        local fleetProfiles = table.clone(detailProfiles)
+        if floorProfile then
+            fleetProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId("Harbor")}
+        end
+        fleetProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
+        HarborScenery.build(decor, base, theme, fleetProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
@@ -3334,8 +3341,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
     StructureRetrofit.buildArena(decor, base, variant.Id, theme, detailProfiles)
-    local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
-    local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
     local monumentProfiles = table.clone(detailProfiles)
     monumentProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
     if floorProfile then
