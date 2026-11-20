@@ -50,3 +50,21 @@ Le relevé statique du constructeur couvre les pièces directement identifiables
 | Plateau et dalles physiques | 2 | Colliders natifs avec habillage sculpté conditionnel. |
 
 Ce relevé compte les emplacements définis dans le code. Il reste à mesurer les maillages affichés sur un appareil mobile avant d’établir un taux de remplacement pour le lobby.
+
+## Décompte des formes simples restantes
+
+Relevé du 20 novembre 2026. Le tableau compte les pièces produites par chaque constructeur. Les lignes dépendent de phases et de conditions graphiques différentes. Leur somme ne représente donc pas une scène vue par le joueur.
+
+| Ensemble | Low | Medium | High | Condition |
+| --- | ---: | ---: | ---: | --- |
+| Accessoires de Chaos Showtime | 37 | 56 | 86 | Enceintes, console, structure, couronne et égaliseur pendant la phase Showtime. |
+| Tablier, dalles, bordures et pylônes de Showtime | 18 | 25 | 34 | Autour de la piste de 13,8 × 13,8 studs. |
+| Danseurs holographiques de Showtime | 0 | 8 | 20 | Un danseur à huit pièces en Medium, deux à dix pièces en High. |
+| **Total visuel potentiel de Showtime** | **55** | **89** | **140** | Hors ancrages transparents, interfaces et effets. |
+| Bras des chevrons des stations d’entraînement | 8 | 16 | 24 | Quatre stations présentes, à raison de deux bras par chevron. |
+| Orbites et noyau avec tous les maillages prêts | 16 | 0 | 0 | En Low, douze segments, une sphère et trois fragments utilisent les primitives par choix de qualité. |
+| Joints, trappes et inserts de secours du vestibule | 8 | 12 | 24 | Nombre maximal lorsqu’aucune dalle 3D ne couvre le vestibule. |
+
+Le plateau principal et l’estrade, les quatre pylônes et les trois pièces physiques du portail totalisent neuf ancres de gameplay côté serveur. Leur présence dans l’arborescence est indépendante du remplacement de leur apparence.
+
+Le secteur Showtime concentre le plus de formes simples dans les constructeurs examinés. Les premiers remplacements à forte visibilité sont le tablier, les deux enceintes, la console, les trois éléments du portique et le cristal suspendu. Les chevrons d’entraînement constituent le suivant : chaque bras peut garder son empreinte et utiliser le profil forgé existant, sans ajouter de pièce visible.
