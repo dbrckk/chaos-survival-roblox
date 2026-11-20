@@ -91,7 +91,7 @@ Le balayage doré au départ reprend la traverse forgée de Tower Run, ajustée 
 
 Les trois balises d’orientation du lobby peuvent afficher le mât polygonal approuvé de Tower Run. La tige de secours reste visible tant que le maillage charge ou sous pression graphique. Les mâts disparaissent avec les balises pendant la manche et restent masqués en qualité basse. Les panneaux conservent leurs ancrages.
 
-Les anneaux personnels de victoire, de défaite et de médaille peuvent utiliser un seul maillage creux d’Orbital à la place de six ou huit segments. Les couleurs, la durée et les options de réduction des animations suivent le résultat reçu. Les segments existants servent de secours en qualité basse, au chargement et sous pression graphique. Les impulsions de départ et d’impact continuent d’utiliser les segments.
+Les anneaux personnels de victoire, de défaite et de médaille peuvent utiliser un seul maillage creux d’Orbital à la place de six ou huit segments. Les couleurs, la durée et les options de réduction des animations suivent le résultat reçu. Les segments existants servent de secours en qualité basse, au chargement et sous pression graphique.
 
 Les traces circulaires de catastrophe utilisent en qualité moyenne et haute un profil approuvé d’Orbital. Les cratères de météores et les ondes de saut adoptent un anneau creux. Le givre et les brûlures de bombes reprennent le noyau facetté aplati. Chaque trace garde une pièce alignée sur la surface et sa durée d’origine. Le disque simple prend le relais en qualité basse, sous pression graphique ou si le maillage est indisponible.
 
@@ -106,3 +106,5 @@ Pour les impacts proches en qualité moyenne et haute, la tête forgée à douze
 Les onze effets 3D de la phase finale peuvent utiliser des profils approuvés. Les aiguilles de givre et les projectiles de météores sont facettés. Les pointes de lave et les volets d’éclipse reprennent la colonne octogonale. Les sillages, les ondes et les limites reprennent le moulage du périmètre. Chaque effet garde sa trajectoire, son enveloppe et le plafond de pièces affichées simultanément. En qualité basse, sous pression graphique ou au chargement, les formes simples prennent le relais.
 
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
+
+Les impulsions du départ et du sprint final peuvent utiliser le profil du périmètre pour leurs segments fins et espacés. Les impulsions centrées sur le joueur peuvent utiliser un anneau creux d’Orbital. Les repères, les durées et la réduction des animations conservent leurs réglages. Les segments simples servent de secours en qualité basse, sous pression graphique ou au chargement.

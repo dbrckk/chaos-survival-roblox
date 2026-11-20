@@ -17,7 +17,7 @@ function CinematicPulseRingKit.segmentFrame(centerCF, radius, index, count)
 end
 
 function CinematicPulseRingKit.emit(parent, name, centerCF, color, startDiameter,
-        endDiameter, duration, tier, reduceMotion, alpha, ringMesh)
+        endDiameter, duration, tier, reduceMotion, alpha, ringMesh, cloneArc)
     local count = CinematicPulseRingKit.segmentCount(tier)
     local result = {}
     if not parent or typeof(centerCF) ~= "CFrame" or typeof(color) ~= "Color3"
@@ -71,7 +71,7 @@ function CinematicPulseRingKit.emit(parent, name, centerCF, color, startDiameter
     end
 
     for i = 1, count do
-        local piece = Instance.new("Part")
+        local piece = (cloneArc and cloneArc()) or Instance.new("Part")
         piece.Name = name .. "_Arc" .. i
         animate(piece,
             CinematicPulseRingKit.segmentFrame(centerCF, initialRadius, i, count), segmentSize(initialRadius),
