@@ -320,7 +320,7 @@ for required in (
     'local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}',
     'local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}',
     'tag = "PremiumGround3D"',
-    'local function nativeDetailPart(part, parent, class, size)',
+    'local function nativeDetailPart(part, parent, class, size, assetId)',
     'local function releaseDetail(entry, key)',
     'and 0 or (caps[tier] or caps.Low)',
     'clone.Parent = entry.model',

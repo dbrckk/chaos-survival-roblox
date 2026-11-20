@@ -4,6 +4,11 @@
 -- true map provenance and noncolliding source-authored MeshParts.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+
 local Kit = {}
 -- Grounded facade heights put the forged antenna and split fin in contact
 -- with the imported observatory needle and freight hoist forks.
@@ -30,6 +35,9 @@ local OPTIONAL_PARTS = 7
 local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}
 local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}
 local FOUNDATION_SIZE = Vector3.new(19.6, 1.76, 19.6)
+local PLINTH_ASSET = HorizonMonumentGeometry.assetId("bevel")
+local PLINTH_SIZE = Vector3.new(20, 1.4, 20)
+local RIM_SIZE = Vector3.new(17.8, .4, 17.8)
 local CROWN = {
     [1] = {id = 105555650820011, holder = "ApprovedVariantIdentitySpineTemplates",
         name = "Classic", tag = "OriginalVariantIdentitySpine3D",
@@ -40,6 +48,7 @@ local CROWN = {
         name = "BroadcastFin", tag = "OriginalClassicBroadcastFin3D",
         bounds = Vector3.new(5.46, 15.92, 1.76), native = "SignalFin",
         class = "WedgePart", size = Vector3.new(6, 5.5, 3), y = 36,
+        baseAsset = HorizonMonumentGeometry.assetId("cast"),
         fit = Vector3.new(5.8, 5.45, 2.75), offset = Vector3.new(0, -.025, .34)},
 }
 
@@ -246,13 +255,17 @@ local function detailTemplate(spec)
     return source
 end
 
-local function nativeDetailPart(part, parent, class, size)
-    return part and part:IsA(class) and part.Parent == parent
-        and (class ~= "Part" or part.Shape == Enum.PartType.Block)
-        and part.Anchored and not part.CanCollide and not part.CanTouch
-        and not part.CanQuery and part:GetAttribute("SceneryLodHidden") ~= true
-        and part.LocalTransparencyModifier < .95
-        and (part.Size - size).Magnitude < .08
+local function nativeDetailPart(part, parent, class, size, assetId)
+    if not part or part.Parent ~= parent or not part:IsA("BasePart")
+        or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
+        or part:GetAttribute("SceneryLodHidden") == true
+        or part.LocalTransparencyModifier >= .95
+        or (part.Size - size).Magnitude >= .08 then return false end
+    if part:IsA("MeshPart") then
+        return assetId ~= nil and part.MeshId ~= ""
+            and part:GetAttribute("Original3DAssetId") == assetId
+    end
+    return part:IsA(class) and (class ~= "Part" or part.Shape == Enum.PartType.Block)
 end
 
 local function matchesFrame(part, host, offset)
@@ -264,8 +277,8 @@ end
 local function foundationRim(entry)
     local native, plinth = entry.native, entry.plinth
     local rim = native:FindFirstChild("PlinthRim")
-    if nativeDetailPart(plinth, native, "Part", Vector3.new(20, 1.4, 20))
-        and nativeDetailPart(rim, native, "Part", Vector3.new(17.8, .4, 17.8))
+    if nativeDetailPart(plinth, native, "Part", PLINTH_SIZE, PLINTH_ASSET)
+        and nativeDetailPart(rim, native, "Part", RIM_SIZE, PLINTH_ASSET)
         and matchesFrame(rim, plinth, Vector3.new(0, .9, 0)) then return rim end
     return nil
 end
@@ -273,11 +286,27 @@ end
 local function nativeCrown(entry)
     local spec = CROWN[entry.slot]
     if not spec then return nil end
-    local native = entry.native:FindFirstChild(spec.native)
-    if nativeDetailPart(native, entry.native, spec.class, spec.size)
-        and matchesFrame(native, entry.plinth, Vector3.new(0, spec.y - .7, 0)) then
-        return native
+    local part = entry.native:FindFirstChild(spec.native)
+    if not part or not part:IsA("BasePart") then return nil end
+    local plinth = entry.plinth
+    local offset = Vector3.new(0, spec.y - .7, 0)
+    local size = spec.size
+    if spec.baseAsset and part:IsA("MeshPart") then
+        -- The imported fin may carry a quarter-turn to align its slope.
+        local front = part.CFrame.LookVector
+        if math.abs(front:Dot(plinth.CFrame.RightVector)) > .999 then
+            size = Vector3.new(size.Z, size.Y, size.X)
+        elseif math.abs(front:Dot(plinth.CFrame.LookVector)) <= .999 then
+            return nil
+        end
+        if (plinth.CFrame:PointToObjectSpace(part.Position) - offset).Magnitude >= .075
+            or part.CFrame.UpVector:Dot(plinth.CFrame.UpVector) <= .999 then return nil end
+    elseif not matchesFrame(part, plinth, offset) then
+        return nil
     end
+    local assetId = spec.baseAsset
+        or HorizonMonumentGeometry.assetId("shaft", entry.native:GetAttribute("SignatureVariant"))
+    if nativeDetailPart(part, entry.native, spec.class, size, assetId) then return part end
     return nil
 end
 
@@ -324,7 +353,9 @@ local function mountDetail(entry, key, native, source, spec)
         local horizontal = fit.X / math.max(size.X, size.Z)
         scale = Vector3.new(horizontal, fit.Y / size.Y, horizontal)
     else
-        target = native.CFrame * CFrame.new(spec.offset)
+        -- Crown placement uses the authored monument axes even when the
+        -- fitted fin mesh was imported sideways.
+        target = entry.plinth.CFrame * CFrame.new(spec.offset + Vector3.new(0, spec.y - .7, 0))
         if entry.slot == 2 and size.Z > size.X then
             target *= CFrame.Angles(0, math.pi * .5, 0)
             fit = Vector3.new(fit.Z, fit.Y, fit.X)
@@ -387,7 +418,12 @@ local function mountDetail(entry, key, native, source, spec)
             "CanCollide", "CanTouch", "CanQuery", "LocalTransparencyModifier"}) do
             watch(part:GetPropertyChangedSignal(property), checkNative)
         end
-        if part:IsA("Part") then watch(part:GetPropertyChangedSignal("Shape"), checkNative) end
+        if part:IsA("MeshPart") then
+            watch(part:GetPropertyChangedSignal("MeshId"), checkNative)
+            watch(part:GetAttributeChangedSignal("Original3DAssetId"), checkNative)
+        elseif part:IsA("Part") then
+            watch(part:GetPropertyChangedSignal("Shape"), checkNative)
+        end
     end
     maskDetail(detail)
     return detail
@@ -424,13 +460,7 @@ local function eligible(native, corners, variant)
         return nil
     end
     local plinth = native:FindFirstChild("GroundPlinth")
-    if not plinth or not plinth:IsA("Part")
-        or plinth.Parent ~= native or not plinth.Anchored
-        or plinth.CanCollide or plinth.CanTouch or plinth.CanQuery
-        or plinth:GetAttribute("SceneryLodHidden") == true
-        or plinth.LocalTransparencyModifier >= 0.95
-        or plinth.Size.X < 19 or plinth.Size.X > 21
-        or plinth.Size.Z < 19 or plinth.Size.Z > 21 then
+    if not nativeDetailPart(plinth, native, "Part", PLINTH_SIZE, PLINTH_ASSET) then
         return nil
     end
     return slot, plinth
@@ -534,6 +564,12 @@ local function mount(native, corners, base, variant, slot, plinth, source)
         native.AncestryChanged:Connect(reconcile)
     entry.connections[#entry.connections + 1] =
         plinth.AncestryChanged:Connect(reconcile)
+    if plinth:IsA("MeshPart") then
+        entry.connections[#entry.connections + 1] =
+            plinth:GetPropertyChangedSignal("MeshId"):Connect(reconcile)
+        entry.connections[#entry.connections + 1] =
+            plinth:GetAttributeChangedSignal("Original3DAssetId"):Connect(reconcile)
+    end
     -- Revive the original 3D skyline immediately if the optional
     -- approved clone or its creator-owned source loses any MeshPart.
     -- No polling, render loop, new source asset or external request.

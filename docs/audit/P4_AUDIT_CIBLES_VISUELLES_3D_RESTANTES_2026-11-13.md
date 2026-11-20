@@ -30,6 +30,8 @@ Les fondations et les équipements de toit des 16 bâtiments couvrent **180 piè
 
 Les 16 entrées de service peuvent reprendre le moulage approuvé pour leur encadrement répliqué. Jusqu’à 64 détails locaux en qualité moyenne et 96 en qualité haute peuvent aussi reprendre les maillages approuvés, selon les bâtiments à portée et l’habillage de façade actif. Les linteaux, auvents, colonnes, coffrets, treuils, collerettes et conduits occupent les emplacements existants. Les auvents profonds descendent vers l’approche et les collerettes s’alignent sur le conduit. Les détails locaux reprennent leurs formes simples si un profil manque ou si la pression graphique augmente. Le vantail garde son fini, son enseigne et ses ancrages.
 
+Les quatre monuments d’angle peuvent utiliser des maillages approuvés dans **57 emplacements par arène**. L’observatoire conserve 17 pièces, le portique de fret 13, le réacteur 17 et le phare 10. Les socles, les corps et les deux couronnes restent compatibles avec les habillages de proximité. La couronne du portique s’aligne sur les axes du monument même si la pente de l’aileron importé exige un quart de tour. Les silhouettes reprennent leurs formes simples si une source manque à la construction.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

@@ -3171,7 +3171,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
         rotorAssetId, Vector3.new(2.56, .72, 2.56))
     local shaftAssetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)
+    local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     local detailProfiles = {
+        bevel = {part = bevelCasting, assetId = HorizonMonumentGeometry.assetId("bevel")},
         beam = {part = sweptProfile, assetId = 126298311664881},
         underframe = {part = underdeckSpars, assetId = 106401955318567},
         cast = {part = wayfinderBase, assetId = 88962643359267},
@@ -3192,7 +3194,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         turbine = detailProfiles.rotor,
         wing = detailProfiles.beam,
     })
-    local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     local horizonTemplates = {
         bevel = bevelCasting,
         beam = sweptProfile,

@@ -22,7 +22,8 @@ local ArenaDistrictArchitecture = {}
 local GLAZING_PROFILE_ID = 88962643359267
 
 type MeshProfile = {part: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
-type StructureProfiles = {shaft: MeshProfile?, underframe: MeshProfile?, lens: MeshProfile?, ring: MeshProfile?}
+type StructureProfiles = {shaft: MeshProfile?, underframe: MeshProfile?, lens: MeshProfile?,
+    ring: MeshProfile?, bevel: MeshProfile?, beam: MeshProfile?}
 
 -- Four navigable sectors need distinct silhouettes AND distinct color IDs.
 -- Tint existing architecture only: zero added Parts, lights, particle emitters
@@ -54,6 +55,36 @@ local function element(model, origin, name, kind, size, localFrame, color, mater
     piece.Parent = model
     return piece
 end
+
+local function fittedElement(model, origin, name, size, localFrame, color, material, spec: MeshProfile?,
+        alongX: boolean?, fallbackKind: string?, cylinderAxes: boolean?)
+    local profile = spec and spec.part
+    local kind = fallbackKind or "Part"
+    if not profile or not spec or not profile:IsA("MeshPart") or profile.MeshId == "" then
+        return element(model, origin, name, kind, size, localFrame, color, material)
+    end
+    -- Glass and upright volumes retain their authored local axes.
+    -- Roofs use the high edge identified in the approved casting.
+    local frame = origin * localFrame
+    local meshSize = size
+    if cylinderAxes then
+        frame *= CFrame.Angles(0, 0, -math.pi / 2)
+        meshSize = Vector3.new(size.Y, size.X, size.Z)
+    end
+    if spec.rotation then frame *= spec.rotation end
+    if spec.swapXZ then meshSize = Vector3.new(size.Z, size.Y, size.X) end
+    local spanX = if alongX == nil then profile.Size.X > profile.Size.Z else alongX
+    local mesh = RouteSignalGeometry.fit(profile, frame, meshSize, nil, spanX)
+    if not mesh then return element(model, origin, name, kind, size, localFrame, color, material) end
+    mesh.Name = name
+    mesh.Material = material or Enum.Material.Metal
+    mesh.Color = color
+    mesh.DoubleSided = true
+    mesh:SetAttribute("Original3DAssetId", spec.assetId)
+    mesh.Parent = model
+    return mesh
+end
+
 
 local function fixture(folder, base, variantId, theme, side, slot, number, glazingProfile,
         structureProfiles: StructureProfiles?, roofProfile: MeshProfile?)
@@ -104,31 +135,8 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
 
     local function fitted(name, size, localFrame, color, material, spec: MeshProfile?,
             alongX: boolean?, fallbackKind: string?, cylinderAxes: boolean?)
-        local profile = spec and spec.part
-        local kind = fallbackKind or "Part"
-        if not profile or not spec or not profile:IsA("MeshPart") or profile.MeshId == "" then
-            return make(name, kind, size, localFrame, color, material)
-        end
-        -- Glass and upright volumes retain their authored local axes.
-        -- Roofs use the high edge identified in the approved casting.
-        local frame = origin * localFrame
-        local meshSize = size
-        if cylinderAxes then
-            frame *= CFrame.Angles(0, 0, -math.pi / 2)
-            meshSize = Vector3.new(size.Y, size.X, size.Z)
-        end
-        if spec.rotation then frame *= spec.rotation end
-        if spec.swapXZ then meshSize = Vector3.new(size.Z, size.Y, size.X) end
-        local spanX = if alongX == nil then profile.Size.X > profile.Size.Z else alongX
-        local mesh = RouteSignalGeometry.fit(profile, frame, meshSize, nil, spanX)
-        if not mesh then return make(name, kind, size, localFrame, color, material) end
-        mesh.Name = name
-        mesh.Material = material or Enum.Material.Metal
-        mesh.Color = color
-        mesh.DoubleSided = true
-        mesh:SetAttribute("Original3DAssetId", spec.assetId)
-        mesh.Parent = model
-        return mesh
+        return fittedElement(model, origin, name, size, localFrame, color or steel, material,
+            spec, alongX, fallbackKind, cylinderAxes)
     end
 
     local casting = {part = glazingProfile, assetId = GLAZING_PROFILE_ID}
@@ -418,7 +426,8 @@ end
 -- corners, away from every hazard platform, branch and player spawn.
 -- Unlike free-standing ServerScriptService Parts these models are housed
 -- in the existing district folder and inherit PER-MODEL mobile LOD.
-local function cornerFixture(folder, base, variantId, theme, index)
+local function cornerFixture(folder, base, variantId, theme, index,
+        profiles: StructureProfiles?, roof: MeshProfile?)
     local signs = {{-1,-1}, {1,-1}, {-1,1}, {1,1}}
     local sx, sz = signs[index][1], signs[index][2]
     local floorY = base.Position.Y + base.Size.Y * 0.5
@@ -441,25 +450,31 @@ local function cornerFixture(folder, base, variantId, theme, index)
     local dark = theme.Structure:Lerp(Color3.fromRGB(12, 21, 31), 0.43)
     local steel = theme.Detail:Lerp(theme.Structure, 0.25)
     local light = theme.Accent:Lerp(theme.Secondary, (index - 1) / 3)
-    local function make(name, kind, size, frame, color, material)
-        return element(model, origin, name, kind, size, frame,
-            color or steel, material or Enum.Material.Metal)
+    local shaft = profiles and profiles.shaft
+    local bevel = profiles and profiles.bevel
+    local lens = profiles and profiles.lens
+    local ring = profiles and profiles.ring
+    local truss = profiles and profiles.beam
+    local function piece(name, kind, size, frame, color, profile: MeshProfile?,
+            material: Enum.Material?, alongX: boolean?)
+        return fittedElement(model, origin, name, size, frame, color, material,
+            profile, alongX, kind)
     end
     local function sphere(name, radius, location, color)
-        local p = make(name, "Part",
-            Vector3.new(radius, radius, radius),
-            CFrame.new(location), color, Enum.Material.Glass)
-        p.Shape = Enum.PartType.Ball
+        local p = piece(name, "Part", Vector3.new(radius, radius, radius),
+            CFrame.new(location), color, lens, Enum.Material.Glass)
+        if p:IsA("Part") then p.Shape = Enum.PartType.Ball end
         p.Transparency = 0.20
         return p
     end
     local function beam(name, a, b, thickness, color)
         local delta = b - a
-        return make(name, "Part",
-            Vector3.new(thickness, delta.Magnitude, thickness),
-            CFrame.lookAt((a + b) * 0.5, b)
-                * CFrame.Angles(math.pi * 0.5, 0, 0),
-            color)
+        local length = delta.Magnitude
+        -- Two ring chords are vertical. Keep the lookAt basis stable there.
+        local up = if math.abs(delta.Y) > length * .999 then Vector3.zAxis else Vector3.yAxis
+        return piece(name, "Part", Vector3.new(thickness, length, thickness),
+            CFrame.lookAt((a + b) * 0.5, b, up) * CFrame.Angles(math.pi * 0.5, 0, 0),
+            color, shaft)
     end
     local function hoop(prefix, centerY, radius, segments, tone)
         for section = 0, segments - 1 do
@@ -476,14 +491,14 @@ local function cornerFixture(folder, base, variantId, theme, index)
 
     -- Each footprint stays below 28 studs and clear of the real
     -- perimeter route network. Everything is non-solid decorative art.
-    make("GroundPlinth", "Part", Vector3.new(20, 1.4, 20),
-        CFrame.new(0, 0.7, 0), dark, Enum.Material.Slate)
-    make("PlinthRim", "Part", Vector3.new(17.8, 0.4, 17.8),
-        CFrame.new(0, 1.6, 0), steel)
+    piece("GroundPlinth", "Part", Vector3.new(20, 1.4, 20),
+        CFrame.new(0, 0.7, 0), dark, bevel, Enum.Material.Slate)
+    piece("PlinthRim", "Part", Vector3.new(17.8, 0.4, 17.8),
+        CFrame.new(0, 1.6, 0), steel, bevel)
     if index == 1 then
         -- Weather observatory: a working-scale parabolic antenna skyline.
-        make("WeatherMast", "Part", Vector3.new(3.6, 23, 3.6),
-            CFrame.new(0, 13.0, 0), dark)
+        piece("WeatherMast", "Part", Vector3.new(3.6, 23, 3.6),
+            CFrame.new(0, 13.0, 0), dark, shaft)
         for side = -1, 1, 2 do
             beam("StormTripod" .. tostring(side),
                 Vector3.new(side * 7, 1.6, -4),
@@ -491,64 +506,64 @@ local function cornerFixture(folder, base, variantId, theme, index)
         end
         hoop("ObservatoryDish", 29, 7.5, 10, steel)
         sphere("ScannerLens", 4.4, Vector3.new(0, 29, 0), light)
-        make("LightningRod", "Part", Vector3.new(0.55, 7, 0.55),
-            CFrame.new(0, 38, 0), steel)
+        piece("LightningRod", "Part", Vector3.new(0.55, 7, 0.55),
+            CFrame.new(0, 38, 0), steel, shaft)
     elseif index == 2 then
         -- Cargo gantry: two distinct towers and hanging transit modules.
         for side = -1, 1, 2 do
-            make("SuspensionPylon" .. tostring(side), "Part",
+            piece("SuspensionPylon" .. tostring(side), "Part",
                 Vector3.new(3, 26, 4.5),
-                CFrame.new(side * 7, 14.7, 0), dark)
+                CFrame.new(side * 7, 14.7, 0), dark, shaft)
             beam("DiagonalBrace" .. tostring(side),
                 Vector3.new(side * 8, 2, 5),
                 Vector3.new(side * 7, 27, 0), 0.75, steel)
-            make("TransitPod" .. tostring(side), "Part",
+            piece("TransitPod" .. tostring(side), "Part",
                 Vector3.new(5.2, 4.2, 4),
-                CFrame.new(side * 6, 18, -3.0), light)
-            make("PodGlazing" .. tostring(side), "Part",
+                CFrame.new(side * 6, 18, -3.0), light, bevel)
+            piece("PodGlazing" .. tostring(side), "Part",
                 Vector3.new(3.7, 1.4, 0.16),
                 CFrame.new(side * 6, 18.6, -5.10),
-                steel, Enum.Material.Glass)
+                steel, bevel, Enum.Material.Glass)
         end
-        make("SkyGantry", "Part", Vector3.new(24, 2.4, 5),
-            CFrame.new(0, 28, 0), steel)
-        make("ControlCabin", "Part", Vector3.new(7, 4.5, 4.3),
-            CFrame.new(0, 31, 0), dark)
-        make("SignalFin", "WedgePart", Vector3.new(6, 5.5, 3),
-            CFrame.new(0, 36, 0), light)
+        piece("SkyGantry", "Part", Vector3.new(24, 2.4, 5),
+            CFrame.new(0, 28, 0), steel, truss, nil, true)
+        piece("ControlCabin", "Part", Vector3.new(7, 4.5, 4.3),
+            CFrame.new(0, 31, 0), dark, bevel)
+        piece("SignalFin", "WedgePart", Vector3.new(6, 5.5, 3),
+            CFrame.new(0, 36, 0), light, roof)
     elseif index == 3 then
         -- Contained energy core: concentric segmented halo, ceramic fins.
-        make("ArmouredReactor", "Part", Vector3.new(8.4, 28, 8.4),
-            CFrame.new(0, 16, 0), dark)
-        make("CrownCollar", "Part", Vector3.new(11, 2.0, 11),
-            CFrame.new(0, 30, 0), steel)
+        piece("ArmouredReactor", "Part", Vector3.new(8.4, 28, 8.4),
+            CFrame.new(0, 16, 0), dark, shaft)
+        piece("CrownCollar", "Part", Vector3.new(11, 2.0, 11),
+            CFrame.new(0, 30, 0), steel, ring)
         hoop("MagneticRing", 33, 8, 10, light)
         sphere("ContainmentHeart", 5.2, Vector3.new(0, 33, 0), light)
         for side = -1, 1, 2 do
-            make("CoreFin" .. tostring(side), "WedgePart",
+            piece("CoreFin" .. tostring(side), "WedgePart",
                 Vector3.new(4.1, 16, 5),
-                CFrame.new(side * 6.8, 12, 0), steel)
+                CFrame.new(side * 6.8, 12, 0), steel, roof)
         end
     else
         -- Communications lighthouse: narrow mast and three separate
         -- signal blades, so its contour remains recognizable on phones.
-        make("LighthouseShaft", "Part", Vector3.new(4.8, 32, 4.8),
-            CFrame.new(0, 17.7, 0), dark)
-        make("ObservationCab", "Part", Vector3.new(9.8, 4.2, 9.8),
-            CFrame.new(0, 31, 0), steel)
-        local glassBelt = make("GlassBelt", "Part",
+        piece("LighthouseShaft", "Part", Vector3.new(4.8, 32, 4.8),
+            CFrame.new(0, 17.7, 0), dark, shaft)
+        piece("ObservationCab", "Part", Vector3.new(9.8, 4.2, 9.8),
+            CFrame.new(0, 31, 0), steel, bevel)
+        local glassBelt = piece("GlassBelt", "Part",
             Vector3.new(9.95, 1.9, 9.95),
-            CFrame.new(0, 31.3, 0), light, Enum.Material.Glass)
+            CFrame.new(0, 31.3, 0), light, ring, Enum.Material.Glass)
         glassBelt.Transparency = 0.28
-        make("Antenna", "Part", Vector3.new(0.8, 11, 0.8),
-            CFrame.new(0, 39, 0), light)
+        piece("Antenna", "Part", Vector3.new(0.8, 11, 0.8),
+            CFrame.new(0, 39, 0), light, shaft)
         for blade = 0, 2 do
             local angle = blade * 2 * math.pi / 3
-            make("SignalBlade" .. tostring(blade + 1), "WedgePart",
+            piece("SignalBlade" .. tostring(blade + 1), "WedgePart",
                 Vector3.new(3.6, 8.2, 0.75),
                 CFrame.new(math.sin(angle) * 5.3, 27,
                     math.cos(angle) * 5.3)
-                    * CFrame.Angles(0, angle, 0), steel)
+                    * CFrame.Angles(0, angle, 0), steel, roof)
         end
         sphere("NavigationLens", 2.5, Vector3.new(0, 45, 0), light)
     end
@@ -591,7 +606,7 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme, glazingP
     corners:SetAttribute("CosmeticOnly", true)
     corners.Parent = decor
     for cornerIndex = 1, 4 do
-        cornerFixture(corners, base, variantId, theme, cornerIndex)
+        cornerFixture(corners, base, variantId, theme, cornerIndex, structureProfiles, roofProfile)
     end
     corners:SetAttribute("CornerLandmarkCount", 4)
     return folder
