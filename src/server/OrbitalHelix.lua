@@ -9,6 +9,7 @@ local RouteSignalGeometry = if geometryModule
     then require(geometryModule) else require("./RouteSignalGeometry")
 local OrbitalHelix = {}
 local ACCESS_CHASSIS_ASSET_ID = 106401955318567
+local GUIDE_ASSET_ID = 88962643359267
 
 OrbitalHelix.Count = 8
 -- The ninth pre-existing observation access keeps its stable name/ID.
@@ -34,19 +35,19 @@ local function physicalPart(parent, name, size, cf, color, material, solid)
     return p
 end
 
-local function structuralTrim(folder, name, size, frame, color, profile, alongX)
+local function fittedTrim(folder, name, size, frame, color, material, profile, assetId, alongX)
     local part
     if profile and profile:IsA("MeshPart") and profile.MeshId ~= "" then
         part = RouteSignalGeometry.fit(profile, frame, size, nil, alongX)
     end
     if not part then
-        return physicalPart(folder, name, size, frame, color, Enum.Material.Metal, false)
+        return physicalPart(folder, name, size, frame, color, material, false)
     end
     part.Name = name
     part.Color = color
-    part.Material = Enum.Material.Metal
+    part.Material = material
     part.DoubleSided = true
-    part:SetAttribute("Original3DAssetId", ACCESS_CHASSIS_ASSET_ID)
+    part:SetAttribute("Original3DAssetId", assetId)
     part:SetAttribute("OrbitalStructureAxisSwap", (profile.Size.X > profile.Size.Z) ~= alongX)
     part.Parent = folder
     return part
@@ -139,7 +140,7 @@ function OrbitalHelix.accessRoute(variant, center, index, kind)
     }
 end
 
-local function buildAccessRamp(folder, route, index, kind, theme, chassisProfile)
+local function buildAccessRamp(folder, route, index, kind, theme, chassisProfile, guideProfile)
     if not route then return end
     local group = kind .. tostring(index)
     local entrance = kind == "Entry"
@@ -156,40 +157,40 @@ local function buildAccessRamp(folder, route, index, kind, theme, chassisProfile
     ramp:SetAttribute("OrbitalRouteTier", entrance and 1 or 4)
 
     for side = -1, 1, 2 do
-        local sideLine = physicalPart(
+        local sideLine = fittedTrim(
             folder, kind .. "Signal" .. index .. "_" .. tostring(side),
             Vector3.new(0.16, 0.07, route.Size.Z - 0.24),
             route.CFrame * CFrame.new(
                 side * (route.Size.X * 0.5 - 0.22), 0.49, 0
             ),
             side < 0 and theme.Accent or theme.Secondary,
-            Enum.Material.Neon, false
+            Enum.Material.Neon, guideProfile, GUIDE_ASSET_ID, false
         )
         sideLine.Transparency = entrance and 0.28 or 0.18
         sideLine:SetAttribute("OrbitRouteGroup", group)
     end
 
-    local spine = physicalPart(
+    local spine = fittedTrim(
         folder, kind .. "Spine" .. index,
         Vector3.new(0.26, 0.07, route.Size.Z - 0.35),
         route.CFrame * CFrame.new(0, 0.50, 0),
         entrance and theme.Accent or theme.Secondary,
-        Enum.Material.Neon, false
+        Enum.Material.Neon, guideProfile, GUIDE_ASSET_ID, false
     )
     spine.Transparency = 0.5
     spine:SetAttribute("OrbitRouteGroup", group)
 
     -- The chassis spans ramp-local Z even on short access ramps.
-    local chassis = structuralTrim(folder, kind .. "Chassis" .. index,
+    local chassis = fittedTrim(folder, kind .. "Chassis" .. index,
         Vector3.new(route.Size.X - 0.38, 0.22, route.Size.Z - 0.45),
         route.CFrame * CFrame.new(0, -0.58, 0),
-        theme.Structure, chassisProfile, false)
+        theme.Structure, Enum.Material.Metal, chassisProfile, ACCESS_CHASSIS_ASSET_ID, false)
     chassis.Transparency = 0.14
     chassis:SetAttribute("OrbitRouteGroup", group)
 end
 
 
-function OrbitalHelix.build(arena, variant, center, theme, chassisProfile)
+function OrbitalHelix.build(arena, variant, center, theme, chassisProfile, guideProfile)
     if not arena or not variant or variant.Id ~= "Orbital"
         or typeof(center) ~= "Vector3" or not theme then
         return nil
@@ -222,33 +223,33 @@ function OrbitalHelix.build(arena, variant, center, theme, chassisProfile)
             bridge:SetAttribute("HelixStart", route.Start)
             bridge:SetAttribute("HelixFinish", route.Finish)
 
-            local lip = physicalPart(
+            local lip = fittedTrim(
                 folder, "HelixCenterGrain" .. index,
                 Vector3.new(0.45, 0.06, route.Size.Z - 0.50),
                 route.CFrame * CFrame.new(0, 0.51, 0),
-                theme.Detail, Enum.Material.Metal, false
+                theme.Detail, Enum.Material.Metal, guideProfile, GUIDE_ASSET_ID, false
             )
             lip.Transparency = 0.38
             lip:SetAttribute("HelixLane", index)
             lip:SetAttribute("OrbitRouteGroup", group)
 
             for side = -1, 1, 2 do
-                local rail = physicalPart(
+                local rail = fittedTrim(
                     folder, "HelixEdgeSignal" .. index .. "_" .. side,
                     Vector3.new(0.14, 0.055, route.Size.Z - 0.35),
                     route.CFrame * CFrame.new(side * (route.Size.X * 0.5 - 0.21), 0.52, 0),
                     side < 0 and theme.Accent or theme.Secondary,
-                    Enum.Material.Neon, false
+                    Enum.Material.Neon, guideProfile, GUIDE_ASSET_ID, false
                 )
                 rail.Transparency = 0.22
                 rail:SetAttribute("HelixLane", index)
                 rail:SetAttribute("OrbitRouteGroup", group)
 
-                local frame = structuralTrim(
+                local frame = fittedTrim(
                     folder, "HelixUnderframe" .. index .. "_" .. side,
                     Vector3.new(0.34, 0.26, route.Size.Z - 0.70),
                     route.CFrame * CFrame.new(side * (route.Size.X * 0.5 - 0.45), -0.65, 0),
-                    theme.Structure, chassisProfile, false
+                    theme.Structure, Enum.Material.Metal, chassisProfile, ACCESS_CHASSIS_ASSET_ID, false
                 )
                 frame.Transparency = 0.08
                 frame:SetAttribute("HelixLane", index)
@@ -256,11 +257,11 @@ function OrbitalHelix.build(arena, variant, center, theme, chassisProfile)
             end
 
             for braceIndex = -1, 1 do
-                local brace = structuralTrim(
+                local brace = fittedTrim(
                     folder, "HelixSpineBrace" .. index .. "_" .. braceIndex,
                     Vector3.new(route.Size.X + 0.25, 0.23, 0.45),
                     route.CFrame * CFrame.new(0, -0.62, braceIndex * route.Size.Z * 0.28),
-                    theme.Detail, chassisProfile, true
+                    theme.Detail, Enum.Material.Metal, chassisProfile, ACCESS_CHASSIS_ASSET_ID, true
                 )
                 brace.Transparency = 0.22
                 brace:SetAttribute("HelixLane", index)
@@ -275,13 +276,13 @@ function OrbitalHelix.build(arena, variant, center, theme, chassisProfile)
     for index = 1, OrbitalHelix.Count do
         buildAccessRamp(folder,
             OrbitalHelix.accessRoute(variant, center, index, "Entry"),
-            index, "Entry", theme, chassisProfile)
+            index, "Entry", theme, chassisProfile, guideProfile)
         -- The previously certified HelixRamp9 already fills Core2.
         -- Preserve that route and its eight authored trims verbatim.
         if index ~= 2 then
             buildAccessRamp(folder,
                 OrbitalHelix.accessRoute(variant, center, index, "Core"),
-                index, "Core", theme, chassisProfile)
+                index, "Core", theme, chassisProfile, guideProfile)
         end
     end
 

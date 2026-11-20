@@ -3880,7 +3880,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     if variant.Id == "Orbital" then
         -- Fully physical sloped routes between the outer and inner decks.
         -- No scripted platform movement or client-controlled collisions.
-        OrbitalHelix.build(arena, variant, config.ArenaCenter, theme, underdeckSpars)
+        OrbitalHelix.build(arena, variant, config.ArenaCenter, theme, underdeckSpars, wayfinderBase)
     end
 
     -- Navigation is derived from the ACTUAL eight physical platforms per

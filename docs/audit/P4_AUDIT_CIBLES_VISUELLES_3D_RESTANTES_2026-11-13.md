@@ -18,6 +18,8 @@ La revue de la branche de la PR [#920](https://github.com/dbrckk/chaos-survival-
 
 L’attribut `LocalP4VisibleNativeHelixAccessChassis` observe leur nombre parmi les structures natives présentes et non masquées côté client. Il fait partie du total Helix. La bande centrale `HelixCenterGrain` est comptée comme un signal puisque son apparence reflète l’état de charge des voies. La mesure en jeu reste au prochain jalon.
 
+Les 72 bandes de guidage des 24 rampes d’Orbital peuvent reprendre le moulage approuvé du périmètre, à raison d’une pièce par bande. Les 27 bandes des rampes principales et les 45 bandes des accès suivent la longueur de leur rampe. Les huit voies de jeu conservent leur signal ambré à la charge, avec leurs teintes et leur transparence d’origine au retour à l’état normal.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).
