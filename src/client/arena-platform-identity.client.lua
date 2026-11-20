@@ -113,7 +113,7 @@ local function refreshOutpostMotion(platform)
         state.joint,
         TweenInfo.new(duration, Enum.EasingStyle.Sine,
             Enum.EasingDirection.InOut, -1, true),
-        {C0 = goal}
+        {C0 = HarborOutpostKit.instrumentMotionGoal(state.instrument,goal)}
     )
     state.tween = tween
     tween:Play()
@@ -922,6 +922,9 @@ local function rebuild()
     local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
     local column, columnSize
+    local armorProfile = (PlatformFinishKit.armorCount(tier.Name) > 0
+        or (variant == "Towers" and platformArtProfiles ~= nil))
+        and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
     local outpostArt
     if variant == "Harbor" and tier.Name ~= "Low" and platformArtProfiles then
         column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
@@ -935,6 +938,7 @@ local function rebuild()
             shaft = if shaft then {part = shaft, assetId = column:GetAttribute("Original3DAssetId")} else cast,
             roller = {part = platformArtProfiles.detail, assetId = platformArtProfiles.assetId},
             lens = {part = OrbitalNode.coreProfile(), assetId = OrbitalNode.NodeAssetId},
+            instrumentHead = armorProfile,
         }
     end
     local outpostInstruments = {}
@@ -1044,9 +1048,6 @@ local function rebuild()
     local railTargets,braceTargets,keelTargets,cornerTargets = {},{},{},{}
     local girderSource
     local cornerSource = platformArtProfiles and PremiumFloorHardwareMeshKit.harborCornerSource() or nil
-    local armorProfile = (PlatformFinishKit.armorCount(tier.Name) > 0
-        or (variant == "Towers" and platformArtProfiles ~= nil))
-        and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
     local forgedTrimProfile = tier.Name ~= "Low"
         and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
         and ForgedBridge.sweptProfile() or nil

@@ -8,6 +8,7 @@ local PlatformFinishKit = if script and script.Parent
 local HarborOutpostKit = {}
 local WIDTH = 10.5
 local FRAME_MODULES = 3
+local INSTRUMENT_QUARTER_TURN = CFrame.Angles(0, math.pi * 0.5, 0)
 
 -- Roblox may import the truss along either horizontal axis. The sources
 -- are two approved, seven-material packs with axis-aligned material meshes.
@@ -208,6 +209,18 @@ function HarborOutpostKit.applyInstrumentPose(pivotWeld, meshes)
     end
 end
 
+local function instrumentMeshRotation(pivot)
+    return if pivot:GetAttribute("PlatformTrimAxisSwap") == true
+        then INSTRUMENT_QUARTER_TURN else CFrame.identity
+end
+
+-- The fitted roller may turn relative to its socket. Express the same
+-- socket motion in the mesh weld's axes before starting the tween.
+function HarborOutpostKit.instrumentMotionGoal(pivot, goal)
+    local rotation = instrumentMeshRotation(pivot)
+    return rotation:Inverse() * goal * rotation
+end
+
 function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
     local spec = INSTRUMENTS[platform:GetAttribute("HarborSpokeRoute")]
     local pivotWeld = pivot and pivot:FindFirstChild("PlatformIdentityWeld")
@@ -217,7 +230,7 @@ function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
     local source, frame, box, selected = instrumentSource(spec)
     if not source then return nil end
     local scale = platform.Size.X/WIDTH
-    local target = platform.CFrame*pivotWeld.C1
+    local target = platform.CFrame*pivotWeld.C1*instrumentMeshRotation(pivot):Inverse()
     target = CFrame.new(target.Position-Vector3.new(0,spec.drop,0))*target.Rotation
     local size = spec.size*Vector3.new(scale,1,scale)
     local pieces = stage(source,frame,box,target,size,spec.role ~= nil,
@@ -460,19 +473,24 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
         and Vector3.new(1.75, 1.75, 1.75)
         or (route == 2 and Vector3.new(1.30, 1.85, 1.85)
             or Vector3.new(0.85, 2.15, 2.15))
-    -- The fallback head is also the animated weld pivot. Only a roller
-    -- authored along X can use that mount without rotating its axes.
-    local instrumentArt = art and art.lens
-    local roller = art and art.roller and art.roller.part
-    if route ~= 3 and roller and roller.Size.X > roller.Size.Z then
-        instrumentArt = art.roller
+    -- Prefer the roller for cylindrical heads, regardless of its import
+    -- axis. The beacon uses the lens. A forged head covers either slot
+    -- until its dedicated region arrives.
+    local instrumentArt
+    local roller = art and art.roller
+    local lens = art and art.lens
+    local useRoller = route ~= 3 and roller and roller.part
+    if useRoller then
+        instrumentArt = roller
+    else
+        instrumentArt = if lens and lens.part then lens else art and art.instrumentHead
     end
     local instrument = add("Instrument", instrumentSize,
         CFrame.new(0, top + mastHeight - 0.15, rear - 0.15)
             * CFrame.Angles(0, 0, route == 4 and math.rad(20) or 0),
         signature, route == 3 and Enum.Material.Slate
             or Enum.Material.CorrodedMetal,
-        0.10, profile.shape, nil, instrumentArt)
+        0.10, profile.shape, nil, instrumentArt, useRoller and true or nil)
 
     local wingNatives = {}
     if tier == "High" then
