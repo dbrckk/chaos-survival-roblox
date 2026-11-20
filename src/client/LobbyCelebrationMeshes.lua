@@ -1,5 +1,6 @@
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local Kit = {}
@@ -11,6 +12,7 @@ function Kit.readyProfile(role, pressure)
     if (tonumber(pressure) or 0) >= 1 then return nil end
     local profile = if role == "ring" then OrbitalReactor.ringProfile()
         elseif role == "pylon" then PylonShell.bodyProfile()
+        elseif role == "runway" then ForgedBridge.sweptProfile()
         else OrbitalReactor.coreProfile()
     if profile and geometryReady(profile) then return profile end
     return nil

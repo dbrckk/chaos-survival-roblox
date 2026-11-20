@@ -227,6 +227,7 @@ local function bindLobby()
     currentActivities = currentLobby:FindFirstChild("Activities")
 
     if currentDecor then
+        CelebrationMeshes.readyProfile("runway", player:GetAttribute("OptionalVfxPressure"))
         for _, name in ipairs({
             "CenterGlow",
             "ArenaRunwayRailLeft",
@@ -815,11 +816,19 @@ local function runwaySweep(token)
         return
     end
 
-    local sweep = Instance.new("Part")
+    local source = CelebrationMeshes.readyProfile("runway", player:GetAttribute("OptionalVfxPressure"))
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    local sweep = mesh or Instance.new("Part")
+    local width = runway.Size.X * 0.80
+    local height = runway.Size.Y * 0.5 + 0.05
+    local travel = runway.Size.Z * 0.42
+    -- The imported long axis can be X or Z. Fit it across the runway
+    -- and keep its rotation fixed while the sweep moves along the runway.
+    local swap = mesh and source.Size.Z > source.Size.X
+    local rotation = swap and CFrame.Angles(0, math.pi * 0.5, 0) or CFrame.identity
     sweep.Name = "LobbyRunwaySweep"
-    sweep.Size = Vector3.new(runway.Size.X * 0.80, 0.04, 0.55)
-    sweep.CFrame = runway.CFrame
-        * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, -runway.Size.Z * 0.42)
+    sweep.Size = swap and Vector3.new(0.55, 0.04, width) or Vector3.new(width, 0.04, 0.55)
+    sweep.CFrame = runway.CFrame * CFrame.new(0, height, -travel) * rotation
     sweep.Anchored = true
     sweep.CanCollide = false
     sweep.CanTouch = false
@@ -838,8 +847,7 @@ local function runwaySweep(token)
             Enum.EasingDirection.In
         ),
         {
-            CFrame = runway.CFrame
-                * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, runway.Size.Z * 0.42),
+            CFrame = runway.CFrame * CFrame.new(0, height, travel) * rotation,
             Transparency = 1,
         }
     ):Play()
@@ -930,6 +938,9 @@ stateEvent.OnClientEvent:Connect(function(state)
     local nextState = state
     local nextPhase = tostring(nextState.phase or "waiting")
 
+    if nextPhase ~= previousPhase and (nextPhase == "intermission" or nextPhase == "vote") then
+        CelebrationMeshes.readyProfile("runway", player:GetAttribute("OptionalVfxPressure"))
+    end
     if nextPhase ~= previousPhase and (nextPhase == "ready" or nextPhase == "result") then
         local pressure = player:GetAttribute("OptionalVfxPressure")
         CelebrationMeshes.readyProfile("ring", pressure)

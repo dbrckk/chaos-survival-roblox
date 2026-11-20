@@ -87,4 +87,6 @@ Les halos de victoire, les socles des survivants et l’impulsion de retour peuv
 
 Les pylônes de victoire en qualité moyenne et haute reprennent le profil octogonal de la colonne du lobby pour le corps, la vitre et l’insert lumineux. Leur coiffe reprend le profil facetté d’Orbital. Chaque pylône conserve quatre pièces et sa montée en cascade. Les formes simples servent de secours si les maillages sont indisponibles ou si la pression graphique augmente avant l’apparition des pylônes.
 
+Le balayage doré au départ reprend la traverse forgée de Tower Run, ajustée à 80 % de la largeur de la piste. Il suit la même trajectoire au-dessus du revêtement, y compris si le maillage importé présente son axe long sur Z. La barre plate sert de secours au démarrage et sous pression graphique. Chaque balayage garde sa géométrie jusqu’à la fin du fondu.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
