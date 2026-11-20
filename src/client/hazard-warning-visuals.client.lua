@@ -9,6 +9,7 @@ local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarni
 local GroundOutline = require(script.Parent.HazardGroundOutlineKit)
 local BombChargeRules = require(ReplicatedStorage.Shared.BombChargeRules)
 local BombChargeKit = require(script.Parent.BombChargeKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local tracked = {}
@@ -17,6 +18,7 @@ localDecor.Name = "ChaosHazardWarningDecorLocal"
 localDecor.Parent = workspace
 local currentTier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
     UserInputService.TouchEnabled)
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
 local loopStarted = false
 local labelRefreshAt = 0
 local selectedLabels = {}
@@ -34,6 +36,10 @@ local warningNames = {
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     currentTier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"),
         UserInputService.TouchEnabled)
+end)
+
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
 end)
 
 local function warningDeckFrame(part, deck)
@@ -79,6 +85,18 @@ local function syncShockSignature(part, state, diameter, progress, reduced)
     )
     local pieces = state.signature
     if not pieces then return end
+    local meshEligible = not reduced and currentTier.Name ~= "Low" and meshPressure < 1
+    if state.shockMeshEligible ~= meshEligible then
+        state.shockMeshEligible = meshEligible
+        -- Keep a loading fallback for this warning. A new warning can use
+        -- the loaded mesh. Only quality or accessibility changes swap it.
+        local source = meshEligible and CelebrationMeshes.readyProfile("casting", meshPressure) or nil
+        if state.shockSource ~= source then
+            state.shockSource = source
+            destroySignature(state)
+            table.clear(pieces)
+        end
+    end
     if reduced then
         local pose = state.shockStaticPose
         if pose and pose.position == part.Position
@@ -111,7 +129,7 @@ local function syncShockSignature(part, state, diameter, progress, reduced)
             pieces[index] = nil
         end
         if not piece then
-            piece = Instance.new("Part")
+            piece = CelebrationMeshes.cloneProfile(state.shockSource) or Instance.new("Part")
             piece.Name = "JumpShockAngularWarning" .. index
             piece.Anchored = true
             piece.CanCollide = false
