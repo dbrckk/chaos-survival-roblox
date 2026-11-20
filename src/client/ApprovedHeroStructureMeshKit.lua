@@ -2,6 +2,16 @@
 -- sampler. Replicated owner-approved templates are the only mesh sources.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+
+local FALLBACK_ASSETS = {
+    [HorizonMonumentGeometry.assetId("bevel")] = true,
+    [HorizonMonumentGeometry.assetId("beam")] = true,
+    [HorizonMonumentGeometry.assetId("lens")] = true,
+}
 local Kit = {}
 
 -- Model package IDs from assets/source/roblox-asset-registry.json.
@@ -179,6 +189,13 @@ local function verifiedTemplate(variant)
     return model
 end
 
+local function authenticGeometry(part, shaftAsset)
+    if not part:IsA("MeshPart") then return part:IsA("Part") end
+    local assetId = part:GetAttribute("Original3DAssetId")
+    return part.MeshId ~= "" and assetId ~= nil
+        and (FALLBACK_ASSETS[assetId] == true or assetId == shaftAsset)
+end
+
 local function nativeOrigin(arena, base, variant)
     local originalX,originalZ = authenticFootprint(base, arena)
     if not originalX then return nil end
@@ -193,11 +210,12 @@ local function nativeOrigin(arena, base, variant)
         or native:GetAttribute("SignatureVariant") ~= variant then
         return nil
     end
+    local shaftAsset = HorizonMonumentGeometry.assetId("shaft", variant)
     local count = 0
     for _, item in ipairs(native:GetDescendants()) do
         if item:IsA("BasePart") then
             if not item.Anchored or item.CanCollide or item.CanTouch
-                or item.CanQuery then
+                or item.CanQuery or not authenticGeometry(item, shaftAsset) then
                 return nil
             end
             count += 1
@@ -358,6 +376,13 @@ local function ownedParts(native,names)
     return parts
 end
 
+local function watchNativeMesh(part, watch)
+    if part:IsA("MeshPart") then
+        watch(part:GetPropertyChangedSignal("MeshId"))
+        watch(part:GetAttributeChangedSignal("Original3DAssetId"))
+    end
+end
+
 local function maskMain(entry)
     for _,part in ipairs(entry.natives) do maskPart(entry.replaced,part) end
 end
@@ -431,10 +456,12 @@ local function mount(arena,base,decor,native,frame,size,origin,variant,asset)
     watch(base:GetPropertyChangedSignal("CanCollide"))
     watch(base:GetPropertyChangedSignal("Anchored"))
     for _,part in ipairs(bodyParts) do
+        watchNativeMesh(part, watch)
         for _,property in ipairs({"Name","CFrame","Size","CanCollide","CanTouch","CanQuery","Anchored"}) do
             watch(part:GetPropertyChangedSignal(property))
         end
     end
+    watchNativeMesh(foundation, watch)
     for _,name in ipairs({"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery"}) do
         watch(foundation:GetPropertyChangedSignal(name))
     end
@@ -530,10 +557,14 @@ local function syncDetail(entry,key,assets,names)
     detail.connections[#detail.connections+1] = model.AncestryChanged:Connect(function()
         if model.Parent ~= entry.model then revoke() end
     end)
+    local function watch(signal)
+        detail.connections[#detail.connections+1] = signal:Connect(revoke)
+    end
     for _,part in ipairs(parts) do
-        detail.connections[#detail.connections+1] = part.AncestryChanged:Connect(revoke)
+        watch(part.AncestryChanged)
+        watchNativeMesh(part, watch)
         for _,property in ipairs({"Name","CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery"}) do
-            detail.connections[#detail.connections+1] = part:GetPropertyChangedSignal(property):Connect(revoke)
+            watch(part:GetPropertyChangedSignal(property))
         end
         maskPart(detail.replaced,part)
     end

@@ -51,6 +51,9 @@ local function groupFor(part, decor, circuit, owners)
     if owners.corners and part:IsDescendantOf(owners.corners) then
         return "CornerLandmarks"
     end
+    if owners.hero and part:IsDescendantOf(owners.hero) then
+        return "HeroMonuments"
+    end
     if owners.exterior and part:IsDescendantOf(owners.exterior) then
         return "ExteriorRetrofits"
     end
@@ -85,7 +88,7 @@ local KEYS = {
     "SkySpineStructure", "SkySpineSignal",
     "PromenadeStructure", "PromenadeSignal",
     "PlatformPanel", "GroundFinish", "CornerLandmarks",
-    "ExteriorRetrofits", "HarborFleet", "PerimeterStations",
+    "ExteriorRetrofits", "HarborFleet", "PerimeterStations", "HeroMonuments",
     "DistrictTransit", "DistrictTransitStructure", "DistrictTransitSignal",
     "Unclassified", "UnclassifiedLarge",
 }
@@ -111,6 +114,7 @@ function Census.sample(player, arena, quality)
                 district = decor:FindFirstChild("ArenaDistrictArchitecture3D"),
                 corners = decor:FindFirstChild("ArenaCornerLandmarks3D"),
                 exterior = decor:FindFirstChild("OriginalExteriorRetrofits"),
+                hero = decor:FindFirstChild("ArenaHeroArchitecture3D"),
                 harbor = decor:FindFirstChild("StormHarborGantryFleet"),
             }
             -- GetDescendants includes streamed-in SERVER native fallback

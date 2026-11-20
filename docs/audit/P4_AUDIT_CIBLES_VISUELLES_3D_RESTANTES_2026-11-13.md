@@ -44,6 +44,10 @@ Les 20 installations extérieures qui bordent les arènes peuvent utiliser des m
 
 Les **36 dalles par arène**, soit 180 emplacements sur les cinq variantes, peuvent reprendre le biseau continu du caisson de service approuvé. Leur empreinte et leur épaisseur de 0,035 stud restent les mêmes. Leur sommet reste à 0,1705 stud au-dessus du sol physique, sous les marquages de danger. Les dalles gardent leurs teintes, leur finition PBR, leurs ancrages pour les modèles complets de proximité et leur suivi du rétrécissement. Leur forme plate sert de secours si le profil manque à la construction. Les dalles et le fond de sol reçus après un rétrécissement continuent à prendre la teinte de contraste pendant la montée de lave.
 
+### Monuments propres à chaque arène
+
+Les cinq monuments à l’est de l’arène peuvent utiliser des maillages approuvés dans **124 emplacements**. Le lot couvre 25 pièces sur l’observatoire de Classic, 28 sur le portique de Tower Run, 21 sur l’échangeur de Crossroads, 31 sur le réacteur d’Orbital et 19 sur le chantier naval de Storm Harbor. Les dimensions et les budgets de silhouette Low restent les mêmes, soit 10, 8, 6, 10 et 8 pièces. Les corps, socles et équipements complets de proximité gardent leurs ancrages. Chaque forme simple reste disponible si son profil manque à la construction. `LocalP4VisibleNativeHeroMonuments` compte les primitives de ces monuments quand elles sont chargées et visibles côté client.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

@@ -3195,9 +3195,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     }
     addDistantSkyline(decor, config, variant, theme, horizonTemplates)
     addArenaSignatureMegastructure(decor, config, variant, theme, horizonTemplates)
-    -- One distinctive real 3D skyline per arena. No external asset ID is
-    -- required; this is the always-available mobile-friendly model layer.
-    HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
+    -- Each outboard hero has a lightweight silhouette and per-piece fallbacks.
+    HeroArchitecture.build(decor, base, variant.Id, theme, detailProfiles)
     -- Faceted original 3D shells, machined collars, diagonal load spars
     -- and cantilevers on the four EXISTING foundation towers. No physics.
     ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase, sweptProfile)

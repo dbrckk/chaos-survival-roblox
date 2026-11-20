@@ -701,12 +701,15 @@ describe("Chaos Survival engine", function()
                     .Position.X + ArenaVariants.get(id).BaseSize.X * 0.5 + 68
                 expect(facade.Position.X < originX - 2).toBe(true)
             end
-            if id == "Classic" then
-                expect(hero:FindFirstChild("DishHub").Shape)
-                    .toBe(Enum.PartType.Ball)
-            elseif id == "Orbital" then
-                expect(hero:FindFirstChild("HaloLens").Shape)
-                    .toBe(Enum.PartType.Ball)
+            if id == "Classic" or id == "Orbital" then
+                local lens = hero:FindFirstChild(id == "Classic" and "DishHub" or "HaloLens")
+                expect(lens ~= nil).toBe(true)
+                if lens:IsA("MeshPart") then
+                    expect(lens:GetAttribute("Original3DAssetId")).toBe(104654294187035)
+                else
+                    expect(lens:IsA("Part")).toBe(true)
+                    expect(lens.Shape).toBe(Enum.PartType.Ball)
+                end
             elseif id == "Towers" then
                 expect(hero:FindFirstChild("CabinWestObservation1") ~= nil)
                     .toBe(true)
