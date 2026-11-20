@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -36,8 +37,8 @@ local function lavaSurfaceAlpha(tierName, reduced, pulse)
     return base + (reduced and 0 or math.clamp(pulse, 0, 1) * 0.08)
 end
 
-local function localPart(name, size, color, material, className)
-    local p = Instance.new(className or "Part")
+local function localPart(name, size, color, material, className, source)
+    local p = CelebrationMeshes.cloneProfile(source) or Instance.new(className or "Part")
     p.Name = name
     p.Anchored = true
     p.CanCollide = false
@@ -170,17 +171,20 @@ end
 
 local function bindFreeze(warning, snapshot)
     if not warning:IsA("BasePart") or not snapshot then return end
+    local tier = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local meshEligible = tier.Name ~= "Low" and not reduced and pressure < 1
+    local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
     local current = freezeStates[warning]
-    if current and DisasterCosmeticRules.reusableFreeze(current, warning) then
+    if current and current.meshEligible == meshEligible
+        and DisasterCosmeticRules.reusableFreeze(current, warning) then
         -- A delayed or re-replicated authoritative timeline must replace
         -- any old local schedule on quality/accessibility refresh.
         current.startedAt = snapshot.StartedAt
         current.duration = snapshot.Duration
         current.diameter = snapshot.EndSize
         -- Same-piece-count refreshes reuse the glass ring and mist emitter.
-        local tier = quality()
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
         if #current.segments == count then
             local frame = HazardWarningSignatureRules.frame(warning.Position, current.deck)
             local elapsed = workspace:GetServerTimeNow() - current.startedAt
@@ -207,10 +211,8 @@ local function bindFreeze(warning, snapshot)
     end
     if current then clearFreeze(warning) end
 
-    local tier = quality()
-    local reduced = player:GetAttribute("ReduceMotion") == true
     local diameter = snapshot.EndSize
-    local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
+    local source = meshEligible and CelebrationMeshes.readyProfile("fragment", pressure)
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
@@ -223,14 +225,15 @@ local function bindFreeze(warning, snapshot)
     -- and central opaque cylinder. The authoritative freeze warning remains.
     for i = 1, count do
         local design = HazardWarningSignatureRules.recipe(
-            "Freeze", i, count, diameter, 0
+            "Freeze", i, count, diameter, reduced and 0 or snapshot.Progress
         )
         local segment = localPart(
             "FreezeFacetWarning" .. i,
             design.Size,
             design.Secondary and design.SecondaryColor or design.Color,
             design.Material,
-            design.Wedge and "WedgePart" or "Part"
+            design.Wedge and "WedgePart" or "Part",
+            source
         )
         segment.CFrame = frame * CFrame.new(design.Offset) * design.Rotation
         segment.Transparency = reduced and 0.66 or design.Transparency
@@ -287,6 +290,8 @@ local function bindFreeze(warning, snapshot)
         startedAt = snapshot.StartedAt,
         duration = snapshot.Duration,
         mist = mist,
+        meshEligible = meshEligible,
+        segmentMeshId = source and source.MeshId or nil,
         staticPose = nil,
     }
 
@@ -375,7 +380,7 @@ local function rebuildQuality()
     end
 end
 
--- This policy only throttles cosmetic emitters. Rebuilds of Freeze wedges,
+-- This policy only throttles cosmetic emitters. Rebuilds of Freeze segments,
 -- warning markers and the lava surface remain controlled by their owners.
 local function syncParticlePressure()
     local profile = quality()
@@ -431,6 +436,7 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildQuality)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildQuality)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(rebuildQuality)
 
 ensureRenderLoop = function()
     if loopStarted then
