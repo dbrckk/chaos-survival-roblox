@@ -6,6 +6,8 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local LobbyPresentationRules = require(ReplicatedStorage.Shared.LobbyPresentationRules)
+local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -18,6 +20,63 @@ local nodes = {}
 local phase = "waiting"
 local center = Config.LobbyCenter + Vector3.new(0, 6.6, 0)
 local tierName = "Medium"
+local refreshProfile
+local profileRefreshPending = false
+
+local function scheduleProfileRefresh()
+    if profileRefreshPending then return end
+    profileRefreshPending = true
+    task.defer(function()
+        profileRefreshPending = false
+        refreshProfile()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleProfileRefresh)
+
+local function fitFragment(part, source)
+    local currentId = part:IsA("MeshPart") and part.MeshId or nil
+    if currentId == (source and source.MeshId) then return part end
+    local replacement = if source then source:Clone() else Instance.new("Part")
+    if not replacement then return part end
+    if source then
+        replacement:ClearAllChildren()
+        replacement.TextureID = ""
+    end
+    replacement.Name = part.Name
+    replacement.Size = part.Size
+    replacement.CFrame = part.CFrame
+    replacement.Color = part.Color
+    replacement.Material = part.Material
+    replacement.Transparency = part.Transparency
+    replacement.LocalTransparencyModifier = part.LocalTransparencyModifier
+    replacement.Anchored = true
+    replacement.CanCollide = false
+    replacement.CanTouch = false
+    replacement.CanQuery = false
+    replacement.CastShadow = false
+    for name, value in pairs(part:GetAttributes()) do
+        replacement:SetAttribute(name, value)
+    end
+    replacement.Parent = folder
+    part:Destroy()
+    return replacement
+end
+
+refreshProfile = function()
+    if #nodes == 0 then return end
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local source = tierName ~= "Low" and pressure < 1 and OrbitalReactor.coreProfile() or nil
+    if source and not geometryReady(source) then source = nil end
+    for _, entry in ipairs(nodes) do
+        if entry.part.Parent == folder then
+            entry.part = fitFragment(entry.part, source)
+        end
+        if entry.core and entry.core.Parent == folder then
+            entry.core = fitFragment(entry.core, source)
+        end
+    end
+end
 
 local function clear()
     folder:ClearAllChildren()
@@ -40,6 +99,7 @@ local function rebuild()
     tierName = tier.Name
     local count = tier.Name == "Low" and 3 or (tier.Name == "Medium" and 5 or 7)
     local radius = tier.Name == "Low" and 7.4 or 8.2
+    local active = phase ~= "round" and phase ~= "ready"
 
     for i = 1, count do
         local accent = i % 3 == 0
@@ -58,7 +118,7 @@ local function rebuild()
         shard.CastShadow = false
         shard.Material = Enum.Material.Glass
         shard.Color = VisualTheme.World.MetalLight:Lerp(accent, tier.Name == "Low" and 0.32 or 0.48)
-        shard.Transparency = tier.Name == "Low" and 0.42 or 0.24
+        shard.Transparency = active and (tier.Name == "Low" and 0.42 or 0.24) or 1
         shard.Parent = folder
 
         local core = nil
@@ -77,7 +137,7 @@ local function rebuild()
             core.CastShadow = false
             core.Material = Enum.Material.Neon
             core.Color = accent:Lerp(Color3.new(1, 1, 1), 0.18)
-            core.Transparency = tier.Name == "High" and 0.06 or 0.14
+            core.Transparency = active and (tier.Name == "High" and 0.06 or 0.14) or 1
             core.Parent = folder
         end
 
@@ -93,6 +153,7 @@ local function rebuild()
             coreTransparency = tier.Name == "High" and 0.06 or 0.14,
         }
     end
+    refreshProfile()
 end
 
 local function refreshVisibility()
@@ -116,8 +177,18 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     rebuild()
-    refreshVisibility()
 end)
+
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleProfileRefresh)
+local function orbitalSourceChanged(item)
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
+    if item.Name == "ApprovedOrbitalReactorLandmarkTemplates"
+        or (holder and item:IsDescendantOf(holder)) then
+        scheduleProfileRefresh()
+    end
+end
+ReplicatedStorage.DescendantAdded:Connect(orbitalSourceChanged)
+ReplicatedStorage.DescendantRemoving:Connect(orbitalSourceChanged)
 
 workspace.ChildAdded:Connect(function(child)
     if child.Name == "GeneratedMap" then
