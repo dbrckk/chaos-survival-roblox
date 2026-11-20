@@ -81,4 +81,6 @@ Les 3, 5 ou 8 barres de l’égaliseur utilisent le profil forgé lorsque le mai
 
 Les danseurs holographiques peuvent utiliser des profils approuvés sur leurs huit pièces en Medium et leurs vingt pièces en High. Le torse et les renforts reprennent le moulage du périmètre, la tête les facettes d’Orbital, et les membres et visières le profil forgé. La chorégraphie et les détails utilisent les mêmes pivots avec les maillages et leurs formes de secours.
 
+Les trois façades imprimées, les deux lampes du portique et ses cinq accents réservés au High complètent le lot. Le même `SurfaceGui` suit la façade sur sa face orientée vers le public, y compris avec un maillage importé sur l’autre axe. Les 55, 89 et 140 emplacements visuels recensés de Showtime disposent ainsi d’un profil de remplacement, avec les mêmes formes de secours.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.

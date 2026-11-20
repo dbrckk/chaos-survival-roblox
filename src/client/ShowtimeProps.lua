@@ -68,6 +68,11 @@ function ShowtimeProps.fit(part, source, canonicalSize)
     replacement:SetAttribute("ShowtimeProfileSize", size)
     replacement.Parent = part.Parent
     for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("SurfaceGui") and child.Name == "ShowtimePrintedDecal" then
+            -- A quarter-turned import maps the authored back face to
+            -- the mesh's left face, preserving the print plane and its up axis.
+            child.Face = rotate and Enum.NormalId.Left or Enum.NormalId.Back
+        end
         child.Parent = replacement
     end
     part:Destroy()
@@ -163,7 +168,7 @@ local function buildSpeaker(folder, baseCF, index, options)
     local baffle = primitive(folder, "ShowtimeSpeakerBaffle" .. index,
         stackCF * CFrame.new(0, 0, 0.85),
         Vector3.new(1.80, 4.1, 0.10),
-        Color3.fromRGB(7, 13, 23), Enum.Material.SmoothPlastic)
+        Color3.fromRGB(7, 13, 23), Enum.Material.SmoothPlastic, nil, nil, "casting")
     faceLabel(baffle, "CHAOS  /  LIVE", Enum.NormalId.Back, accent)
 
     local lowCone = primitive(folder, "ShowtimeBassCone" .. index,
@@ -193,7 +198,7 @@ local function buildConsole(folder, baseCF, tier)
         dark, Enum.Material.Metal, 0.03)
     local front = primitive(folder, "ShowtimeBoothFront", bodyCF * CFrame.new(0, 0, 0.89),
         Vector3.new(4.95, 1.42, 0.08),
-        Color3.fromRGB(30, 43, 67), Enum.Material.Metal, 0.04)
+        Color3.fromRGB(30, 43, 67), Enum.Material.Metal, 0.04, nil, "casting")
     faceLabel(front, "C  H  A  O  S", Enum.NormalId.Back, UITheme.Colors.Cyan)
 
     primitive(folder, "ShowtimeMixDeck", bodyCF * CFrame.new(0, 1.00, 0),
@@ -229,7 +234,7 @@ local function buildTruss(folder, baseCF, tier)
             Vector3.new(0.24, 8.0, 0.24), metal, Enum.Material.Metal, 0.04)
         primitive(folder, "ShowtimeTrussLight" .. tostring(side),
             baseCF * CFrame.new(side * 8.0, 8.4, -7.1),
-            Vector3.new(0.56, 0.45, 0.56), accent, Enum.Material.Neon, 0.20)
+            Vector3.new(0.56, 0.45, 0.56), accent, Enum.Material.Neon, 0.20, nil, "crystal")
     end
     primitive(folder, "ShowtimeTrussCrossbar", baseCF * CFrame.new(0, 8.20, -7.1),
         Vector3.new(16.3, 0.32, 0.32), metal, Enum.Material.Metal)
@@ -239,7 +244,7 @@ local function buildTruss(folder, baseCF, tier)
                 baseCF * CFrame.new((i - 3) * 2.4, 8.13, -6.85),
                 Vector3.new(0.85, 0.15, 0.15),
                 i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
-                Enum.Material.Neon, 0.12)
+                Enum.Material.Neon, 0.12, nil, "forged")
         end
     end
 end
