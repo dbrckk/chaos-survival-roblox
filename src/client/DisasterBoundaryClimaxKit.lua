@@ -104,7 +104,7 @@ function DisasterBoundaryClimaxKit.recipe(kind, index, count, deckSize, stage)
 end
 
 function DisasterBoundaryClimaxKit.emit(parent, kind, deckFrame, deckSize,
-        stage, primary, secondary, tier, reduced)
+        stage, primary, secondary, tier, reduced, clonePiece)
     local result = {}
     local count = DisasterBoundaryClimaxKit.count(tier, reduced)
     if not parent or not ALLOWED[kind] or typeof(deckFrame) ~= "CFrame"
@@ -122,7 +122,8 @@ function DisasterBoundaryClimaxKit.emit(parent, kind, deckFrame, deckSize,
             kind, i, count, deckSize, stage
         )
         if not spec then break end
-        local piece = Instance.new(spec.Wedge and "WedgePart" or "Part")
+        local piece = (clonePiece and clonePiece())
+            or Instance.new(spec.Wedge and "WedgePart" or "Part")
         piece.Name = (kind == "blast"
             and "BombClimax" or "ShrinkClimax") .. spec.Label .. i
         piece.Size = spec.Size

@@ -103,4 +103,6 @@ Pendant la manche, les impacts de météores peuvent laisser un cratère ouvert 
 
 Pour les impacts proches en qualité moyenne et haute, la tête forgée à douze facettes habille les éclats et le rebord temporaire du cratère. Les arcs de pression des bombes reprennent le moulage du périmètre et les volumes lumineux adoptent le noyau facetté d’Orbital. Le nombre de pièces, les trajectoires et les durées restent les mêmes. Les formes simples s’affichent en qualité basse, à distance, sous pression graphique ou pendant le chargement.
 
+Les onze effets 3D de la phase finale peuvent utiliser des profils approuvés. Les aiguilles de givre et les projectiles de météores sont facettés. Les pointes de lave et les volets d’éclipse reprennent la colonne octogonale. Les sillages, les ondes et les limites reprennent le moulage du périmètre. Chaque effet garde sa trajectoire, son enveloppe et le plafond de pièces affichées simultanément. En qualité basse, sous pression graphique ou au chargement, les formes simples prennent le relais.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
