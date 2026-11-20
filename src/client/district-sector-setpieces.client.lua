@@ -20,6 +20,7 @@ local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local BroadcastFin = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local DistrictFoundation = require(script.Parent.ApprovedDistrictFoundationMeshKit)
 local AmbientMachinery = require(script.Parent.PremiumAmbientMotionMeshKit)
+local LargeStructure = require(script.Parent.PremiumLargeStructureMeshKit)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
@@ -47,6 +48,8 @@ local collarSegments = {}
 local foundations = {}
 local identityPlates = {}
 local cargoModules = {}
+local shafts = {}
+local latches = {}
 local INWARD_WINDING = {
     [roofs] = true,
     [castStructures] = true,
@@ -59,25 +62,28 @@ local INWARD_WINDING = {
     [foundations] = true,
     [identityPlates] = true,
     [cargoModules] = true,
+    [shafts] = true,
 }
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
-local RADAR_ROTATION = CFrame.Angles(0, 0, -math.pi / 2)
+local CYLINDER_MESH_ROTATION = CFrame.Angles(0, 0, -math.pi / 2)
 local HORIZONTAL_SWAP_ROTATION = CFrame.Angles(0, math.pi / 2, 0)
 
-local function trackDetail(group, part, meshSize)
+local function trackDetail(group, part, meshSize, meshRotation)
     group[#group + 1] = {
-        part = part, frame = part.CFrame, size = part.Size, meshSize = meshSize,
+        part = part, frame = part.CFrame, size = part.Size,
+        meshSize = meshSize, meshRotation = meshRotation,
         material = part.Material, class = part.ClassName,
         transparency = part.Transparency,
         shape = if part:IsA("Part") then part.Shape else nil,
     }
 end
 
-local function trackRadar(part)
-    -- A Part cylinder faces along X. The approved ring's hole faces along Y.
+local function trackCylinder(group, part)
+    -- A Part cylinder uses X for its axis. Both the ring and forged shaft
+    -- use Y, so turn the mesh and carry the original cylinder dimensions.
     local size = part.Size
-    trackDetail(radarRings, part, Vector3.new(size.Y, size.X, size.Z))
+    trackDetail(group, part, Vector3.new(size.Y, size.X, size.Z), CYLINDER_MESH_ROTATION)
 end
 
 local function syncDetailGroup(group, changedModels, source, assetId, rotation, swapXZ)
@@ -96,7 +102,8 @@ local function syncDetailGroup(group, changedModels, source, assetId, rotation, 
         replacement.CFrame = detail.frame
         replacement.Size = if source and detail.meshSize then detail.meshSize else detail.size
         if source then
-            if rotation then replacement.CFrame *= rotation end
+            local meshRotation = detail.meshRotation or rotation
+            if meshRotation then replacement.CFrame *= meshRotation end
             if swapXZ then
                 replacement.Size = Vector3.new(detail.size.Z, detail.size.Y, detail.size.X)
             end
@@ -123,7 +130,7 @@ local function syncDetailGroup(group, changedModels, source, assetId, rotation, 
             replacement.DoubleSided = true
         end
         if group == radarRings then
-            replacement:SetAttribute("DistrictPanBasis", if source then rotation else nil)
+            replacement:SetAttribute("DistrictPanBasis", if source then detail.meshRotation else nil)
         end
         replacement.Parent = parent
         -- The signed details keep the original coordinate axes and size.
@@ -158,6 +165,8 @@ local function syncDetails(changedModels)
         syncDetailGroup(foundations)
         syncDetailGroup(identityPlates)
         syncDetailGroup(cargoModules)
+        syncDetailGroup(shafts)
+        syncDetailGroup(latches)
         syncDetailGroup(radarRings, changedModels)
         syncDetailGroup(signalPanels, changedModels)
         syncDetailGroup(containmentCollars, changedModels)
@@ -184,15 +193,20 @@ local function syncDetails(changedModels)
         syncLongDetail(gantryBeams, ForgedBridge.sweptProfile(), ForgedBridge.AssetId)
     end
     syncLongDetail(signalPanels, BroadcastFin.panelProfile(), BroadcastFin.AssetId, changedModels)
-    if #anchorBolts > 0 then
+    if #shafts > 0 then
+        local shaft, shaftId = LargeStructure.forgedShaftProfile()
+        syncDetailGroup(shafts, nil, shaft, shaftId)
+    end
+    if #anchorBolts > 0 or #latches > 0 then
         local bolt = FloorHardware.platformCornerProfile()
         -- The bolt source is authored upright. Point the head toward the
         -- sector's front (-Z) while keeping the original cubic envelope.
         syncDetailGroup(anchorBolts, nil, bolt and bolt.part, bolt and bolt.assetId, ANCHOR_BOLT_ROTATION)
+        syncDetailGroup(latches, nil, bolt and bolt.part, bolt and bolt.assetId)
     end
     local core, ring = OrbitalReactor.coreProfile(), OrbitalReactor.ringProfile()
     syncDetailGroup(opticalCores, nil, core, OrbitalReactor.NodeAssetId)
-    syncDetailGroup(radarRings, changedModels, ring, OrbitalReactor.NodeAssetId, RADAR_ROTATION)
+    syncDetailGroup(radarRings, changedModels, ring, OrbitalReactor.NodeAssetId)
 end
 
 local function clearDetails()
@@ -208,6 +222,8 @@ local function clearDetails()
     table.clear(foundations)
     table.clear(identityPlates)
     table.clear(cargoModules)
+    table.clear(shafts)
+    table.clear(latches)
     folder:ClearAllChildren()
 end
 
@@ -333,9 +349,9 @@ local function beam(parent, name, root, a, b, thick, color, alpha)
     local delta = b - a
     if delta.Magnitude < 0.1 then return end
     local at = (a + b) * 0.5
-    return part(parent, name, Vector3.new(thick, delta.Magnitude, thick),
+    trackDetail(shafts, part(parent, name, Vector3.new(thick, delta.Magnitude, thick),
         root * CFrame.lookAt(at, b) * CFrame.Angles(math.pi * 0.5, 0, 0),
-        color, Enum.Material.Metal, alpha)
+        color, Enum.Material.Metal, alpha))
 end
 
 local function sectorSign(anchor, copy, color)
@@ -426,7 +442,7 @@ local function makeSector(base, theme, index, tier, variant)
         if index == 1 then
             trackDetail(castStructures, make("LowObservatoryMast", Vector3.new(2.5, 16, 2.5),
                 CFrame.new(0, 8.3, 0), dark, Enum.Material.CorrodedMetal))
-            trackRadar(make("LowRadarDish", Vector3.new(0.85, 8.4, 8.4),
+            trackCylinder(radarRings, make("LowRadarDish", Vector3.new(0.85, 8.4, 8.4),
                 CFrame.new(0, 18.2, 0)
                     * CFrame.Angles(0, math.rad(21), math.rad(15)),
                 alloy, Enum.Material.Metal, 0.04, Enum.PartType.Cylinder))
@@ -467,7 +483,7 @@ local function makeSector(base, theme, index, tier, variant)
         -- Observatory: tall angled receiver with a distinct disk antenna.
         trackDetail(castStructures, make("ReceiverMast", Vector3.new(2.1, 17.0, 2.1),
             CFrame.new(0, 9.0, 0), dark))
-        trackRadar(make("RadarDish", Vector3.new(0.62, 8.6, 8.6),
+        trackCylinder(radarRings, make("RadarDish", Vector3.new(0.62, 8.6, 8.6),
             CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(22), math.rad(20)),
             alloy, Enum.Material.Metal, 0.02, Enum.PartType.Cylinder))
         local eye = make("RadarEye", Vector3.new(2.5, 2.5, 2.5),
@@ -479,9 +495,9 @@ local function makeSector(base, theme, index, tier, variant)
                     Vector3.new(side * 6, 0.7, 3),
                     Vector3.new(0, 15.5, 0), 0.75, alloy, 0.04)
             end
-            make("ScannerBalance", Vector3.new(8.2, 0.7, 0.7),
+            trackDetail(gantryBeams, make("ScannerBalance", Vector3.new(8.2, 0.7, 0.7),
                 CFrame.new(0, 17, 1.8) * CFrame.Angles(0, math.rad(30), 0),
-                alloy)
+                alloy))
             -- Etched glass instrument face instead of a full-bright
             -- decorative neon plate above the player's route.
             make("DishBacklight", Vector3.new(3.2, 0.2, 1.1),
@@ -565,8 +581,8 @@ local function makeSector(base, theme, index, tier, variant)
             make("CommsTopBeacon", Vector3.new(1.5, 1.5, 1.5),
                 CFrame.new(0, 22.1, 0), accent, Enum.Material.Glass, 0.18,
                 Enum.PartType.Ball)
-            make("AntennaNeedle", Vector3.new(0.38, 5, 0.38),
-                CFrame.new(0, 25.1, 0), alloy)
+            trackDetail(shafts, make("AntennaNeedle", Vector3.new(0.38, 5, 0.38),
+                CFrame.new(0, 25.1, 0), alloy))
         end
     end
 
@@ -737,7 +753,7 @@ local function makeSector(base, theme, index, tier, variant)
     -- instrument pieces/cables/sheathed pipes rather than extra neon sheets.
     if high then
         if index == 1 then
-            trackRadar(make("RadarDishInnerLip", Vector3.new(0.24, 7.35, 7.35),
+            trackCylinder(radarRings, make("RadarDishInnerLip", Vector3.new(0.24, 7.35, 7.35),
                 CFrame.new(-0.47, 18, 0)
                     * CFrame.Angles(0, math.rad(22), math.rad(20)),
                 brushed, Enum.Material.Metal, 0.06, Enum.PartType.Cylinder))
@@ -757,13 +773,13 @@ local function makeSector(base, theme, index, tier, variant)
                 weathered, Enum.Material.DiamondPlate))
         elseif index == 2 then
             for side = -1, 1, 2 do
-                make("FreightDoorRib" .. side, Vector3.new(0.38, 4.1, 4.55),
+                trackDetail(castStructures, make("FreightDoorRib" .. side, Vector3.new(0.38, 4.1, 4.55),
                     CFrame.new(side * 3.1, 3.6, -2.30),
-                    brushed, Enum.Material.DiamondPlate, 0.04)
-                make("CargoDoorLatch" .. side,
+                    brushed, Enum.Material.DiamondPlate, 0.04))
+                trackDetail(latches, make("CargoDoorLatch" .. side,
                     Vector3.new(1.7, 0.32, 0.48),
                     CFrame.new(side * 3.1, 4.65, -2.64),
-                    accent, Enum.Material.Metal, 0.18)
+                    accent, Enum.Material.Metal, 0.18))
                 beam(model, "CableLoom" .. side, root,
                     Vector3.new(side * 6.8, 14.0, 0),
                     Vector3.new(side * 2.1, 7.7, 0),
@@ -774,19 +790,18 @@ local function makeSector(base, theme, index, tier, variant)
                 dark, Enum.Material.CorrodedMetal))
         elseif index == 3 then
             for side = -1, 1, 2 do
-                local pipe = make("CoolantManifold" .. side,
-                    Vector3.new(0.8, 9.4, 0.8),
-                    CFrame.new(side * 3.6, 5.6, -3.8),
-                    brushed, Enum.Material.Metal, 0.03)
-                pipe.Shape = Enum.PartType.Cylinder
+                trackCylinder(shafts, make("CoolantManifold" .. side,
+                    Vector3.new(9.4, 0.8, 0.8),
+                    CFrame.new(side * 3.6, 5.6, -3.8) * CYLINDER_MESH_ROTATION:Inverse(),
+                    brushed, Enum.Material.Metal, 0.03, Enum.PartType.Cylinder))
                 trackDetail(castStructures, make("InsulatedPipeShield" .. side,
                     Vector3.new(1.45, 2.1, 1.9),
                     CFrame.new(side * 3.6, 10.4, -3.8),
                     weathered, Enum.Material.CorrodedMetal))
-                make("ReactorServicePort" .. side,
+                trackDetail(opticalCores, make("ReactorServicePort" .. side,
                     Vector3.new(2.1, 2.1, 0.4),
                     CFrame.new(side * 2.2, 5.9, -3.67),
-                    accent, Enum.Material.Glass, 0.42)
+                    accent, Enum.Material.Glass, 0.42))
             end
             make("CorePressureCap", Vector3.new(6.2, 1.0, 6.2),
                 CFrame.new(0, 13.8, 0),
@@ -803,9 +818,9 @@ local function makeSector(base, theme, index, tier, variant)
                     accent, Enum.Material.Glass, 0.34,
                     Enum.PartType.Ball))
             end
-            make("SignalWaveguideRib", Vector3.new(7.6, 0.6, 1.5),
+            trackDetail(gantryBeams, make("SignalWaveguideRib", Vector3.new(7.6, 0.6, 1.5),
                 CFrame.new(0, 14.8, -1.7),
-                brushed, Enum.Material.DiamondPlate)
+                brushed, Enum.Material.DiamondPlate))
             trackDetail(castStructures, make("ReceiverJunction", Vector3.new(3.6, 3.2, 3.6),
                 CFrame.new(0, 23.6, 0),
                 weathered, Enum.Material.CorrodedMetal))
@@ -904,6 +919,7 @@ local DETAIL_SOURCES = {
     ApprovedClassicBroadcastFinTemplates = "BroadcastFin",
     ApprovedHarborDockCaissonTemplates = "DockCaisson",
     ApprovedAmbientMotionTemplates = "Harbor",
+    ApprovedLargeStructureTemplates = "Towers",
     ApprovedFloorReliefTemplates = "AnchorBolt",
     ApprovedOrbitalReactorLandmarkTemplates = "Node",
 }

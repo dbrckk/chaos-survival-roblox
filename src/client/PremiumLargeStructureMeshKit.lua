@@ -64,6 +64,16 @@ local function verified(kind)
     return source,size,count
 end
 
+function Kit.forgedShaftProfile()
+    local source = verified("Towers")
+    local shaft = source and source:FindFirstChild("BeaconShaft")
+    if shaft and shaft:IsA("MeshPart") and shaft.Archivable and shaft.MeshId ~= ""
+        and shaft.Anchored and math.abs(shaft.Size.Y - 13.56) < .13 then
+        return shaft, IDS.Towers
+    end
+    return nil
+end
+
 function Kit.harborColumnSource()
     return verified("Harbor")
 end
