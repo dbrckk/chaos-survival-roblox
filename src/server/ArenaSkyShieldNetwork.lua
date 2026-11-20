@@ -5,8 +5,8 @@
 -- No new RemoteEvents, monetization, client hit checks or render loops.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RouteSignalGeometry = require("./RouteSignalGeometry")
-local PremiumLargeStructureAssets = require("./PremiumLargeStructureAssets")
+local RoundEquipmentArt = require("./RoundEquipmentArt")
+local visual = RoundEquipmentArt.create
 -- Published Roblox places use the actual shared ModuleScript. Engine source
 -- specs may load this repo before the published place contains new modules.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -102,59 +102,6 @@ function Shield.damageAfterProtection(damage)
     local n = tonumber(damage)
     if not n or n <= 0 or n ~= n or n == math.huge then return damage end
     return math.max(1, math.floor(n * Shield.DamageMultiplier + 0.5))
-end
-
-local function shieldProfiles(variant)
-    local bridge = RouteSignalGeometry.approvedModel(
-        ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates"),
-        "ForgedBridge", "OriginalTowersSignatureBridge3D", 126298311664881)
-    local perimeter = RouteSignalGeometry.approvedModel(
-        ReplicatedStorage:FindFirstChild("ApprovedPerimeterArmorTemplates"),
-        "Cap", "OriginalPerimeterArmor3D", 88962643359267)
-    local reactor = RouteSignalGeometry.approvedModel(
-        ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates"),
-        "Node", "OriginalOrbitalReactorLandmark3D", 104654294187035)
-    local shaft, shaftId = PremiumLargeStructureAssets.shaftProfile(variant)
-    local beam = bridge and bridge:FindFirstChild("SweptCrossbeam")
-    local casting = perimeter and perimeter:FindFirstChild("WayfinderBase")
-    return {
-        beam = {part = beam and beam:IsA("MeshPart") and beam.Archivable and beam or nil,
-            assetId = 126298311664881},
-        casting = {part = casting and casting:IsA("MeshPart") and casting.Archivable and casting or nil,
-            assetId = 88962643359267},
-        shaft = {part = shaft, assetId = shaftId},
-        core = {part = reactor and RouteSignalGeometry.regionByBounds(reactor, Vector3.new(2.96, 2.9503, 2.96)),
-            assetId = 104654294187035},
-        ring = {part = reactor and RouteSignalGeometry.regionByBounds(reactor, Vector3.new(4.11, 0.39, 4.11)),
-            assetId = 104654294187035},
-    }
-end
-
-local function visual(parent, name, size, frame, color, material, alpha, profile, shape)
-    local meshFrame, meshSize = frame, size
-    if shape == Enum.PartType.Cylinder then
-        -- Cylinder fallback uses X as its axis. The imported ring uses Y.
-        meshFrame = frame * CFrame.Angles(0, 0, -math.pi * 0.5)
-        meshSize = Vector3.new(size.Y, size.X, size.Z)
-    end
-    local p = RouteSignalGeometry.fitStructural(meshFrame, meshSize, false, profile)
-    if not p then
-        p = Instance.new("Part")
-        p.Size = size
-        p.CFrame = frame
-        if shape then p.Shape = shape end
-    end
-    p.Name = name
-    p.Color = color
-    p.Material = material
-    p.Transparency = alpha or 0
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.CastShadow = false
-    p.Parent = parent
-    return p
 end
 
 -- Four large defensive machines can create up to SIX real, temporary
@@ -633,7 +580,7 @@ function Shield.start(ctx)
     local links = {}
     local floorY = base.Position.Y + base.Size.Y * 0.5
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
-    local profiles = shieldProfiles(variant)
+    local profiles = RoundEquipmentArt.profiles(variant)
     local active = true
     local round = {ctx = ctx, folder = folder, stations = stations,
         links = links, groundY = floorY,
