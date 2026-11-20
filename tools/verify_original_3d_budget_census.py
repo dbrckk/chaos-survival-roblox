@@ -1889,7 +1889,8 @@ assert 'JumpRouteCueRules.takeoffChevron(' in OWNER
 assert 'piece:SetAttribute("SkipRouteFootprint",true)' in OWNER
 assert 'piece:SetAttribute("ParkourTakeoffCue", true)' in OWNER
 assert 'and item:GetAttribute("ParkourTakeoffCue") ~= true' in FINISH
-assert 'profiles and profiles.hatch, pose, size, false, profiles and profiles.assetId' in OWNER
+assert 'profiles and profiles.hatch, pose, size, false,' in OWNER
+assert 'profiles and (profiles.hatchAssetId or profiles.assetId)' in OWNER
 assert 'if target then left,right,size = takeoffGeometry(platform,target) end' in OWNER
 assert 'frame, size, stroke:GetAttribute("PlatformTrimAxisSwap") == true)' in OWNER
 assert 'joint.C1 = platform.CFrame:ToObjectSpace(pose)' in OWNER

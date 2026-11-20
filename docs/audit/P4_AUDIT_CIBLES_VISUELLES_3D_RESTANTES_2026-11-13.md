@@ -105,6 +105,8 @@ Huit chevrons marquent les départs des quatre parcours de fret et des quatre qu
 
 Les huit paliers supérieurs peuvent recevoir **16 biseaux forgés** sur les faces transversales aux quatre montées. Leurs **24 poteaux** s’engagent de 0,08 stud dans la dalle, avec quatre appuis sous chaque troisième palier et deux sous chaque avant-poste. Le serveur et les habillages de proximité partagent la même hauteur d’assise. Le moulage fermé et le fût polygonal peuvent prendre le relais si les profils dédiés sont absents. Les biseaux conservent l’empreinte de secours et les pièces suivent le rétrécissement et l’effondrement de leur tablier.
 
+En qualité basse, les incrustations de bois et les chevrons déjà affichés peuvent utiliser la collerette de Harbor ou le moulage fermé de Classic quand le profil principal manque. Le même secours couvre les pièces des avant-postes en qualité moyenne et haute. Les pièces reprennent le profil de Harbor dès son arrivée et gardent leur emplacement, leur nombre et leur suivi du tablier.
+
 ### Virages des parcours de fret de Storm Harbor
 
 Aux vingt virages, les bandes latérales suivent la sortie du palier et les inserts sculptés sous le tablier reprennent l’axe du saut d’arrivée. Les poteaux s’engagent de 0,08 stud dans la dalle et leurs têtes restent sous le tablier. Le moulage et le fût polygonal déjà chargés peuvent prendre le relais si les sources dédiées manquent. Les instruments de guidage, la détection des alertes et le montage des caissons gardent leurs repères physiques. Le scénario de rétrécissement couvre les deux axes sur les 58 paliers des trois familles.

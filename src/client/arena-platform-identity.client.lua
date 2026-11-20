@@ -286,7 +286,7 @@ local function makeFittedPart(name, size, frame, color, material, transparency,
     platform, profiles, region)
     local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(
         profiles and profiles[region], frame, size, size.X >= size.Z,
-        profiles and profiles.assetId)
+        profiles and ((region == "hatch" and profiles.hatchAssetId) or profiles.assetId))
     return makePart(name, dimensions, pose, color, material, transparency, platform, mesh)
 end
 
@@ -537,7 +537,8 @@ local function decorateTakeoff(platform, target, index, theme, quality, profiles
                 crossingProfile, pose, size, false, 126298311664881)
         else
             mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
-                profiles and profiles.hatch, pose, size, false, profiles and profiles.assetId)
+                profiles and profiles.hatch, pose, size, false,
+                profiles and (profiles.hatchAssetId or profiles.assetId))
         end
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
@@ -926,7 +927,8 @@ local function rebuild()
         column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
         local shaft = column and column:FindFirstChild("BeaconShaft")
         if shaft and not shaft:IsA("MeshPart") then shaft = nil end
-        local cast = {part = platformArtProfiles.hatch, assetId = platformArtProfiles.assetId}
+        local cast = {part = platformArtProfiles.hatch,
+            assetId = platformArtProfiles.hatchAssetId or platformArtProfiles.assetId}
         outpostArt = {
             cast = cast,
             beam = if crossingProfile then {part = crossingProfile, assetId = ForgedBridge.AssetId} else cast,
@@ -2002,7 +2004,8 @@ local function relevantPlatformRelief(name)
     local arena = generated and generated:FindFirstChild("Arena")
     if not arena then return false end
     local variant = arena:GetAttribute("VariantId") or "Classic"
-    return name == variant or name == "AnchorBolt" or name == "HarborTie"
+    return name == variant or (variant == "Harbor" and name == "Classic")
+        or name == "AnchorBolt" or name == "HarborTie"
         or name == "CornerGuard"
 end
 

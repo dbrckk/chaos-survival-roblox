@@ -636,9 +636,24 @@ function PlatformFinishKit.artProfiles(variant, includeHandle)
     local handleSource = if includeHandle then approvedFloorRelief("HarborTie", SERVICE_HANDLE_ASSET)
         else nil
     local detail = PLATFORM_DETAIL_REGIONS[variant]
+    local hatch = serviceDetailRegion(source, regions[1])
+    local collar = serviceDetailRegion(source, regions[2])
+    local hatchAssetId = assetId
+    if variant == "Harbor" and not hatch then
+        if collar then
+            hatch = collar
+        else
+            -- The other closed casting fits the same footprint. Keep its
+            -- provenance separate from Harbor's collar and roller.
+            local classic, _, classicId = serviceHatchSource("Classic")
+            hatch = serviceDetailRegion(classic, SERVICE_HATCH_REGIONS.Classic[1])
+            hatchAssetId = hatch and classicId or nil
+        end
+    end
     return {
-        hatch = serviceDetailRegion(source, regions[1]),
-        collar = serviceDetailRegion(source, regions[2]),
+        hatch = hatch,
+        hatchAssetId = hatchAssetId,
+        collar = collar,
         handle = serviceDetailRegion(handleSource, SERVICE_HANDLE_REGION),
         detail = detail and serviceDetailRegion(source, detail) or nil,
         assetId = assetId,
@@ -893,7 +908,7 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     profiles = profiles or {}
     local hatch = detail("ServiceHatch", upper,
         Vector3.new(hatchWidth, 0.18, hatchDepth), color,
-        materials[variant], 0.05, profiles.hatch, profiles.assetId)
+        materials[variant], 0.05, profiles.hatch, profiles.hatchAssetId or profiles.assetId)
     local collar = detail("ServiceCollar", upper + 0.11,
         Vector3.new(math.max(1.0, hatchWidth - 0.70), 0.08,
             math.max(1.0, hatchDepth - 0.70)),
@@ -1241,7 +1256,7 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
             local spar = sparSide and profiles.spar
             mesh, frame, size = PlatformFinishKit.fitTrimProfile(
                 spar or profiles.hatch, frame, size, sparSide == nil,
-                spar and 126298311664881 or profiles.assetId)
+                spar and 126298311664881 or profiles.hatchAssetId or profiles.assetId)
             swapped = mesh and mesh:GetAttribute("PlatformTrimAxisSwap") == true
         end
         local item = add(parent, platform, variant .. "DeckCarapace"
@@ -1368,10 +1383,13 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
                 assetId = profiles.assetId
                 if i == 2 then
                     profile = profiles.detail or profiles.collar
+                    if not profile and variant == "Harbor" then
+                        profile, assetId = profiles.hatch, profiles.hatchAssetId or assetId
+                    end
                 elseif i == 3 and variant == "Towers" then
                     profile = profiles.collar
                 else
-                    profile = profiles.hatch
+                    profile, assetId = profiles.hatch, profiles.hatchAssetId or assetId
                 end
             end
             mesh, localFrame, size = PlatformFinishKit.fitTrimProfile(profile, localFrame, size,
