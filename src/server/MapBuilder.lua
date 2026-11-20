@@ -3527,6 +3527,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
     local closedDeckCasting = floorProfile or bevelCasting
         or (wayfinderBase and wayfinderBase.MeshId ~= "" and wayfinderBase)
+    -- Harbor landings can reuse the same closed castings for both signals
+    -- when the dedicated rim and core profiles have not loaded.
+    local harborSignalCasting = closedDeckCasting or (heroProfiles.caisson and heroProfiles.caisson.part)
     local elevatedTrimProfiles = {
         beam = sweptProfile,
         lattice = underdeckLattice,
@@ -3799,7 +3802,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             or definition.HarborStep == 7 or definition.HarborSkywayLane ~= nil
         local trimCasting = if reactorLanding or orbitalEntry or orbitalHub
             or harborFreightTrim then closedDeckCasting else routeCasting
-        local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
+        local signalFallback = if harborLanding then rimBevel or harborSignalCasting else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
