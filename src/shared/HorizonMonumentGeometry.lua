@@ -98,6 +98,18 @@ local shafts = {
     Harbor = 76194593490199,
 }
 
+local floorCastings = {
+    Classic = assets.bevel,
+    Towers = 74708751016233,
+    Crossroads = 84038993323581,
+    Orbital = 123089585720736,
+    Harbor = 94830155055482,
+}
+
+function HorizonMonumentGeometry.floorCastingAssetId(variant)
+    return floorCastings[variant]
+end
+
 function HorizonMonumentGeometry.profile(ownerName, name)
     local slots = profiles[ownerName]
     return slots and slots[name]

@@ -2416,7 +2416,8 @@ for required in (
     'scaleZ=span/17.6',
     'span=alongX and overpass.Size.X or overpass.Size.Z',
     'math.abs(axis:Dot(deck.CFrame.LookVector))<.999',
-    'overpass:GetAttribute("Original3DAssetId")~=126298311664881',
+    'local assetId=overpass:GetAttribute("Original3DAssetId")',
+    'assetId~=HorizonMonumentGeometry.assetId("beam") and not isArchFloorCasting(arena,assetId)',
     '"VerticalBridgePylon-1","VerticalBridgePylon1"',
     '"TaperedFin-1","TaperedFin1","MonumentalOverpass"',
 ):
@@ -2429,6 +2430,8 @@ for required in (
     'name="ExteriorAbutment-1"', 'name="ExteriorAbutment1"',
     'name="LoadBearingKeel"', 'name="RecessedCentralGirder"',
     'local stage,_,_,index=archDeck(arena,deck,scale)',
+    '(not partSpec.side and assetId==HorizonMonumentGeometry.assetId("beam"))',
+    'or isArchFloorCasting(arena,assetId)',
     'originals={natives[3],natives[4]}',
     'local height=math.min(3.4,size.Y-.38)',
     'or (peer~=entry and not sourceIntact(peer))',
@@ -2437,7 +2440,7 @@ for required in (
     assert required in P4_CLIENT, required
 assert 'ApprovedRemainingStructureMeshKit.nativeCount("archBase")' in SIDE_LOD
 print("PASS P4 arches retain the genuine 3/13.8/28.2-stud collider and"
-      " four native blocks are replaced only by a complete fitted lower assembly")
+      " four native pieces are replaced only by a complete fitted lower assembly")
 print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
 

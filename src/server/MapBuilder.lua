@@ -3238,6 +3238,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     StructureRetrofit.buildArena(decor, base, variant.Id, theme, detailProfiles)
     local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
     local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
+    local monumentProfiles = table.clone(detailProfiles)
+    if floorProfile then
+        monumentProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId(variant.Id)}
+    end
     local routeCasting = variant.Id ~= "Harbor" and (floorProfile or bevelCasting) or nil
     local routeChevronProfile = sweptProfile or routeCasting
     -- Only callers that fit the local span explicitly can accept a
@@ -3597,7 +3601,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             harborSkywayBeam, routeCasting)
         addPlatformSupports(decor, base, platform, i, theme, beaconShaft)
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
-            SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)
+            SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, monumentProfiles)
         end
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
@@ -3607,7 +3611,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- and collapse; pre-existing danger telegraphs remain authoritative.
         if definition.PerimeterRoute then
             SkyRouteMonuments.decorate(
-                decor, platform, i, definition, variant.Id, theme, detailProfiles, platformDefinitions[i + 1])
+                decor, platform, i, definition, variant.Id, theme, monumentProfiles, platformDefinitions[i + 1])
         end
         -- Six large native-metal arches visibly frame the actual elevated
         -- 200-stud promenades. Every noncolliding part is owned by its

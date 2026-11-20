@@ -39,6 +39,38 @@ local function piece(decor, deck, index, role, name, size, offset,
     return part
 end
 
+local fallbackProfiles = {
+    cast = {"bevel"},
+    shaft = {"bevel"},
+    beam = {"bevel"},
+    underframe = {"beam", "bevel"},
+    signal = {"bevel"},
+    rotor = {"ring"},
+}
+
+local function fitSource(source, frame, size, inlaySide, alongX)
+    if not source or not source.part or source.part.MeshId == "" then return nil end
+    local mesh = RouteSignalGeometry.fit(source.part, frame, size, inlaySide, alongX)
+    if mesh then mesh:SetAttribute("Original3DAssetId", source.assetId) end
+    return mesh
+end
+
+local function fitProfile(profiles, profile, frame, size, inlaySide, alongX)
+    if not profiles then return nil end
+    local source = profiles[profile]
+    local mesh = fitSource(source, frame, size, inlaySide, alongX)
+    if mesh then return mesh, source end
+    local fallbacks = fallbackProfiles[profile]
+    if fallbacks then
+        for _, fallback in ipairs(fallbacks) do
+            source = profiles[fallback]
+            mesh = fitSource(source, frame, size, inlaySide, alongX)
+            if mesh then return mesh, source end
+        end
+    end
+    return nil
+end
+
 function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, profiles)
     local step = definition.PerimeterStep
     local branch = definition.BranchStep ~= nil
@@ -46,8 +78,7 @@ function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, pro
     if not branch and not crossing and (not step or step > 5) then return end
 
     local entry = step == 1
-    local source = (entry or crossing) and profiles.cast or profiles.beam
-    if not source.part or source.part.MeshId == "" then return end
+    local profile = (entry or crossing) and "cast" or "beam"
 
     -- Lateral steps rise by 3 studs. Keep their plates above the
     -- preceding landing and below the luminous rim of the current one.
@@ -59,13 +90,12 @@ function SkyRouteMonuments.cladRisers(decor, deck, index, definition, theme, pro
     local prefix = if crossing then "CrosslinkRiser" elseif branch then "BranchRiser" else "PerimeterRiser"
 
     local function mount(face, offset, dimensions, alongX)
-        local mesh = RouteSignalGeometry.fit(source.part, deck.CFrame * offset, dimensions, nil, alongX)
+        local mesh = fitProfile(profiles, profile, deck.CFrame * offset, dimensions, nil, alongX)
         if not mesh then return end
         mesh.Name = prefix .. index .. "_" .. face
         mesh.Color = color
         mesh.Material = deck.Material
         mesh.Transparency = 0
-        mesh:SetAttribute("Original3DAssetId", source.assetId)
         mesh:SetAttribute("Original" .. prefix .. "3D", true)
         mesh:SetAttribute("PerimeterPlatformIndex", index)
         mesh.Parent = decor
@@ -134,39 +164,34 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
         return piece(decor, deck, index, stage, name, size, offset,
             color, mat, kind, transparency, navigation, mesh)
     end
-    local function fitProfile(profile, size, offset, turnUpright)
-        local source = profiles and profiles[profile]
-        if not source or not source.part or source.part.MeshId == "" then return nil end
-        -- Turning the source gives its long axis the native part's height.
-        -- RouteSignalGeometry records that axis for horizontal contraction.
-        local mesh = RouteSignalGeometry.fit(source.part, deck.CFrame * offset, size,
+    local function fitMonument(profile, size, offset, turnUpright)
+        -- The fitted mesh records its vertical axis for horizontal contraction.
+        return fitProfile(profiles, profile, deck.CFrame * offset, size,
             if turnUpright then 1 else nil, if turnUpright then true else nil)
-        if mesh then mesh:SetAttribute("Original3DAssetId", source.assetId) end
-        return mesh
     end
     local function baseTrim(profile, name, size, offset, color, mat)
-        local mesh = fitProfile(profile, size, offset)
+        local mesh, source = fitMonument(profile, size, offset)
         if mesh then
-            local source = profiles[profile].part.Size
+            local sourceSize = source.part.Size
             mesh.DoubleSided = true
-            mesh:SetAttribute("SkyRouteBaseAxisSwap", (source.X > source.Z) ~= (size.X > size.Z))
+            mesh:SetAttribute("SkyRouteBaseAxisSwap", (sourceSize.X > sourceSize.Z) ~= (size.X > size.Z))
         end
         add(name, size, offset, color, mat, nil, nil, false, mesh)
     end
     local function canopy(profile, name, size, offset, color, kind)
-        local mesh = fitProfile(profile, size, offset)
+        local mesh = fitMonument(profile, size, offset)
         if mesh then mesh:SetAttribute("OriginalSkyRouteCanopy3D", true) end
         add(name, size, offset, color, material, kind, nil, false, mesh)
     end
     local function crown(profile, name, size, offset, color, mat, kind, transparency, shape)
         -- The annulus is Y-axial, while the fallback cylinder is X-axial.
-        local mesh = fitProfile(profile, size, offset, shape == Enum.PartType.Cylinder)
+        local mesh = fitMonument(profile, size, offset, shape == Enum.PartType.Cylinder)
         if mesh then mesh:SetAttribute("OriginalSkyRouteCrown3D", true) end
         local item = add(name, size, offset, color, mat, kind, transparency, false, mesh)
         if shape and item:IsA("Part") then item.Shape = shape end
     end
     local function signal(name, size, offset, transparency, upright)
-        local mesh = fitProfile("signal", size, offset, upright)
+        local mesh = fitMonument("signal", size, offset, upright)
         if mesh then
             mesh:SetAttribute("OriginalSkyRouteSignal3D", true)
         end
@@ -257,7 +282,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
             local size = Vector3.new(0.34, 0.065, 2.35)
             local offset = arrowFrame * CFrame.new(side * 0.62, 0, 0)
                 * CFrame.Angles(0, math.rad(side * 34), 0)
-            local mesh = fitProfile("beam", size, offset)
+            local mesh = fitMonument("beam", size, offset)
             if mesh then mesh:SetAttribute("OriginalSkyRouteSignal3D", true) end
             local chevron = add("AscendChevron" .. side, size, offset,
                 accent, Enum.Material.Neon, nil, 0.24, true, mesh)
@@ -270,7 +295,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
         local size = Vector3.new(1.8, 2.0, 1.8)
         -- Seat the lens above the crosshead, away from its center equipment.
         local offset = CFrame.new(0, overpassTop + 0.86, definition.offset.Z < 0 and -3.8 or 3.8)
-        local mesh = fitProfile("lens", size, offset)
+        local mesh = fitMonument("lens", size, offset)
         if mesh then mesh:SetAttribute("OriginalSkyRouteSignal3D", true) end
         local beacon = add("SummitSignal", size, offset,
             accent, Enum.Material.Glass, nil, 0.18, true, mesh)

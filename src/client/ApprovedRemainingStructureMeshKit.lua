@@ -352,6 +352,11 @@ local function archDeck(arena,deck,scale)
     return key,step,route,tonumber(deck.Name:match("%d+"))
 end
 
+local function isArchFloorCasting(arena,assetId)
+    return assetId~=nil and (assetId==HorizonMonumentGeometry.floorCastingAssetId(arena:GetAttribute("VariantId"))
+        or assetId==HorizonMonumentGeometry.floorCastingAssetId("Classic"))
+end
+
 local function collectArch(arena,deck,decor,scale)
     local key,step,route,index=archDeck(arena,deck,scale)
     if not key then return nil end
@@ -372,8 +377,11 @@ local function collectArch(arena,deck,decor,scale)
     local overpass=originals[5]
     local span=overpass.Size.Z
     if overpass:IsA("MeshPart") then
+        local assetId=overpass:GetAttribute("Original3DAssetId")
         if overpass.MeshId=="" or overpass:GetAttribute("OriginalSkyRouteCanopy3D")~=true
-            or overpass:GetAttribute("Original3DAssetId")~=126298311664881 then return nil end
+            or (assetId~=HorizonMonumentGeometry.assetId("beam") and not isArchFloorCasting(arena,assetId)) then
+            return nil
+        end
         -- The imported bridge can store its long axis along mesh-local X.
         local alongX=overpass.Size.X>overpass.Size.Z
         local axis=alongX and overpass.CFrame.RightVector or overpass.CFrame.LookVector
@@ -412,10 +420,13 @@ local function collectArchBase(arena,deck,decor,scale)
             or part:GetAttribute("SkyRouteStage")~=stage:upper() then return nil end
         local partSize,partFrame=part.Size,part.CFrame
         if part:IsA("MeshPart") then
-            local assetId=partSpec.side and SOURCE.ArchAbutment.id or SOURCE.AccessChassis.id
+            local assetId=part:GetAttribute("Original3DAssetId")
+            local dedicatedId=partSpec.side and SOURCE.ArchAbutment.id or SOURCE.AccessChassis.id
+            local approved=assetId==dedicatedId
+                or (not partSpec.side and assetId==HorizonMonumentGeometry.assetId("beam"))
+                or isArchFloorCasting(arena,assetId)
             local swapped=part:GetAttribute("SkyRouteBaseAxisSwap")
-            if part.MeshId=="" or type(swapped)~="boolean"
-                or part:GetAttribute("Original3DAssetId")~=assetId then return nil end
+            if part.MeshId=="" or type(swapped)~="boolean" or not approved then return nil end
             if swapped then
                 partSize=Vector3.new(partSize.Z,partSize.Y,partSize.X)
                 partFrame*=CFrame.Angles(0,-math.pi*.5,0)
@@ -1485,7 +1496,7 @@ local function mount(data,source)
         end
     end
     for _,native in ipairs(data.originals) do
-        if data.category=="casing" or data.category=="archBase" then
+        if data.category=="casing" or data.category=="archBase" or data.category=="arch" then
             watch(native,{"CFrame","Size","Transparency","Anchored",
                 "CanCollide","CanTouch","CanQuery","Name"})
             if native:IsA("Part") then
@@ -1495,6 +1506,12 @@ local function mount(data,source)
                 if native:IsA("MeshPart") then watch(native,{"MeshId"}) end
                 for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex",
                     "Original3DAssetId","SkyRouteBaseAxisSwap"}) do
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
+                end
+            elseif data.category=="arch" then
+                if native:IsA("MeshPart") then watch(native,{"MeshId"}) end
+                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex",
+                    "Original3DAssetId","OriginalSkyRouteCanopy3D"}) do
                     entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
                 end
             end
@@ -1534,7 +1551,10 @@ local function mount(data,source)
         end
         entry.connections[#entry.connections+1]=data.owner:GetPropertyChangedSignal("Name"):Connect(changed)
     end
-    if data.category=="archBase" or data.category=="casing" then
+    if data.category=="arch" or data.category=="archBase" then
+        entry.connections[#entry.connections+1]=data.arena:GetAttributeChangedSignal("VariantId"):Connect(changed)
+    end
+    if data.category=="arch" or data.category=="archBase" or data.category=="casing" then
         local tags=data.category=="casing"
             and {"FrameColumnIndex","OriginalFrameCladding","SourceIsOriginal","CosmeticOnly"}
             or {"PerimeterRoute","PerimeterStep","RouteTier"}
