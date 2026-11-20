@@ -23,6 +23,11 @@ local PALETTES = {
     Harbor = {metal = Enum.Material.CorrodedMetal, secondary = Enum.Material.DiamondPlate},
 }
 
+local function available(profile: Profile?): Profile?
+    local part = profile and profile.part
+    return if part and part.Archivable and part.MeshId ~= "" then profile else nil
+end
+
 local function add(model, origin, name, frame, size, color, material, kind, pbr,
         profile: Profile?, rotation: CFrame?, swapXZ: boolean?, alignSpan: boolean?)
     local source = profile and profile.part
@@ -111,6 +116,13 @@ function StructureRetrofit.buildArena(decor, base, variant, theme, profiles: Pro
     local beam = profiles and profiles.beam
     local shaft = profiles and profiles.shaft
     local cast = profiles and profiles.cast
+    if variant == "Harbor" then
+        -- Closed castings fit both equipment housings and structural spans.
+        cast = available(cast)
+        bevel = available(bevel) or cast
+        beam = available(beam) or bevel
+        shaft = available(shaft) or bevel
+    end
     local slope, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
     if not slope then cast = nil end
     local pieces = 0

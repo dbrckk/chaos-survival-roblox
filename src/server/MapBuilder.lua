@@ -3313,15 +3313,16 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Faceted original 3D shells, machined collars, diagonal load spars
     -- and cantilevers on the four EXISTING foundation towers. No physics.
     ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase, sweptProfile)
+    local exteriorProfiles = detailProfiles
     if variant.Id == "Harbor" then
         -- Exterior harbor cranes distinguish the new cargo port without
         -- extra colliders, sound loops or cameras tracking scenic models.
-        local fleetProfiles = table.clone(detailProfiles)
+        exteriorProfiles = table.clone(detailProfiles)
         if floorProfile then
-            fleetProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId("Harbor")}
+            exteriorProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId("Harbor")}
         end
-        fleetProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
-        HarborScenery.build(decor, base, theme, fleetProfiles)
+        exteriorProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
+        HarborScenery.build(decor, base, theme, exteriorProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
@@ -3340,7 +3341,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     addVariantLandmarks(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
-    StructureRetrofit.buildArena(decor, base, variant.Id, theme, detailProfiles)
+    StructureRetrofit.buildArena(decor, base, variant.Id, theme, exteriorProfiles)
     local monumentProfiles = table.clone(detailProfiles)
     monumentProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
     if floorProfile then

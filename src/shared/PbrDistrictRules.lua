@@ -3,6 +3,8 @@
 -- out-of-bounds architecture. Pure decisions; no graphics or event loops.
 local ArenaPresentation = if script then require(script.Parent.ArenaPresentation)
     else require("./ArenaPresentation")
+local HorizonMonumentGeometry = if script then require(script.Parent.HorizonMonumentGeometry)
+    else require("./HorizonMonumentGeometry")
 local PbrDistrictRules = {}
 
 -- Exact creator-owned original-model asset packages shipped by this game.
@@ -14,7 +16,6 @@ local APPROVED_ORIGINAL_IDS = {
     [137284215564363] = true, [95926792159328] = true,
     [95878714550124] = true, [135985134195364] = true,
 }
-local RETROFIT_BEVEL_ASSET = 102746904688141
 local FOUNDATION_PARTS = {
     FoundationShoulder = true, FoundationInset = true,
     FoundationBallast = true, FoundationGroundPad = true,
@@ -327,8 +328,11 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         elseif owner:GetAttribute("OriginalExteriorRetrofit") == true then
             -- Tagged shell plates use the same material budget with either
             -- the base part or the builder's fitted approved bevel.
+            local harbor = owner:GetAttribute("SignatureVariant") == "Harbor"
+            local assetId = part:GetAttribute("Original3DAssetId")
             local fittedShell = part:IsA("MeshPart") and part.MeshId ~= ""
-                and part:GetAttribute("Original3DAssetId") == RETROFIT_BEVEL_ASSET
+                and (HorizonMonumentGeometry.isFloorCasting(assetId, if harbor then "Harbor" else "Classic")
+                    or (harbor and assetId == HorizonMonumentGeometry.assetId("cast")))
             if (not part:IsA("Part") and not fittedShell)
                 or part:GetAttribute("OriginalRetrofitPbrSurface") ~= true then
                 return false

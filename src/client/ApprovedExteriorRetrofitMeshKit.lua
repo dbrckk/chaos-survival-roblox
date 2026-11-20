@@ -153,6 +153,15 @@ local function anchor(base,variant,index,halfX,halfZ)
     return CFrame.lookAt(p,Vector3.new(base.Position.X,p.Y,base.Position.Z))
 end
 
+local function matchesProfile(assetId, profile, variant)
+    if assetId == nil then return false end
+    if assetId == HorizonMonumentGeometry.assetId(profile, variant) then return true end
+    if variant ~= "Harbor" or profile == "cast" then return false end
+    if profile == "shaft" and HorizonMonumentGeometry.isShaftAsset(assetId) then return true end
+    return HorizonMonumentGeometry.isFloorCasting(assetId, variant)
+        or assetId == HorizonMonumentGeometry.assetId("cast")
+end
+
 local function nativeParts(owner,fleet,variant,index,origin)
     if not owner or not owner:IsA("Model") or owner.Parent ~= fleet
         or owner.Name ~= variant.."Retrofit"..index
@@ -178,8 +187,8 @@ local function nativeParts(owner,fleet,variant,index,origin)
                 or part.LocalTransparencyModifier >= .95 then return false end
             local size = part.Size
             if part:IsA("MeshPart") then
-                local assetId = HorizonMonumentGeometry.assetId(row[6], variant)
-                if not assetId or part.MeshId == "" or part:GetAttribute("Original3DAssetId") ~= assetId then
+                local assetId = part:GetAttribute("Original3DAssetId")
+                if part.MeshId == "" or not matchesProfile(assetId, row[6], variant) then
                     return false
                 end
                 -- Cast and forged sources can use either horizontal import axis.

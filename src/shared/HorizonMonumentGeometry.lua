@@ -114,6 +114,13 @@ function HorizonMonumentGeometry.isFloorCasting(assetId, variant)
     return assetId ~= nil and (assetId == floorCastings[variant] or assetId == floorCastings.Classic)
 end
 
+function HorizonMonumentGeometry.isShaftAsset(assetId)
+    for _, shaftId in pairs(shafts) do
+        if shaftId == assetId then return true end
+    end
+    return false
+end
+
 function HorizonMonumentGeometry.profile(ownerName, name)
     local slots = profiles[ownerName]
     return slots and slots[name]
