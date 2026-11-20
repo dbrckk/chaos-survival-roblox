@@ -64,7 +64,7 @@ local STYLES = {
     },
 }
 
--- Faceted meteor cladding uses only 1/3/5 short-lived local wedges.
+-- Faceted meteor cladding uses only 1/3/5 short-lived local plates.
 -- A dark basalt shell with sparse ember fissures is visually distinct from
 -- Bomb Rain without increasing server replication or client particle count.
 local CORE_COUNTS = {Low = 1, Medium = 3, High = 5}
@@ -85,7 +85,9 @@ function MeteorSignatureRules.corePlate(index, count, diameter)
     local scale = math.clamp(diameter, 2, 12)
     local angle = (index - 1) * math.pi * 2 / count + 0.31
     local isEmber = count >= 3 and index == 3
-    local radius = scale * (isEmber and 0.28 or 0.29)
+    -- Seat the small glowing insert at the sphere's surface. At the
+    -- basalt plates' radius it would sit entirely inside the core.
+    local radius = scale * (isEmber and 0.49 or 0.29)
     local transform = CFrame.new(
         math.cos(angle) * radius,
         scale * (index % 2 == 0 and -0.055 or 0.045),

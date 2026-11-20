@@ -8,6 +8,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local MeteorRules = require(ReplicatedStorage.Shared.MeteorSignatureRules)
 local MeteorCoreSculptKit = require(script.Parent.MeteorCoreSculptKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -65,29 +66,42 @@ local function clearAll()
     end
 end
 
-local function updateStyle(meteor, state, tier, lifetime)
-    if state.tier == tier then return end
-    local style = MeteorRules.trailStyle(tier, false)
-    if not style then return end
-    local span = meteor.Size.X * style.Span
-    state.left.Position = Vector3.new(-span, 0, meteor.Size.Z * 0.20)
-    state.right.Position = Vector3.new(span, 0, meteor.Size.Z * 0.20)
-    state.trail.WidthScale = style.WidthScale
-    state.trail.Transparency = style.Transparency
-    state.trail.LightEmission = style.LightEmission
-    state.trail.Lifetime = lifetime
+local function updateStyle(meteor, state, tier, lifetime, pressure)
+    local meshEligible = tier ~= "Low" and pressure < 1
+    if state.tier == tier and state.meshEligible == meshEligible then return end
+    if state.tier ~= tier then
+        local style = MeteorRules.trailStyle(tier, false)
+        if not style then return end
+        local span = meteor.Size.X * style.Span
+        state.left.Position = Vector3.new(-span, 0, meteor.Size.Z * 0.20)
+        state.right.Position = Vector3.new(span, 0, meteor.Size.Z * 0.20)
+        state.trail.WidthScale = style.WidthScale
+        state.trail.Transparency = style.Transparency
+        state.trail.LightEmission = style.LightEmission
+        state.trail.Lifetime = lifetime
+    end
+    local clonePlate
+    if meshEligible then
+        local basalt = CelebrationMeshes.readyProfile("casting", pressure)
+        local ember = CelebrationMeshes.readyProfile("fragment", pressure)
+        clonePlate = function(material)
+            local source = if material == Enum.Material.Neon then ember else basalt
+            return CelebrationMeshes.cloneProfile(source)
+        end
+    end
     MeteorCoreSculptKit.clear(state.facets)
-    state.facets = MeteorCoreSculptKit.build(meteor, tier, MeteorRules)
+    state.facets = MeteorCoreSculptKit.build(meteor, tier, MeteorRules, clonePlate)
     state.tier = tier
+    state.meshEligible = meshEligible
 end
 
-local function add(meteor, tier, lifetime)
+local function add(meteor, tier, lifetime, pressure)
     if not meteor.Parent then return end
     local existing = trails[meteor]
     if existing then
         -- Quality can change during a half-second fall: update the single
         -- existing Trail in place rather than leaving the old tier's style.
-        updateStyle(meteor, existing, tier, lifetime)
+        updateStyle(meteor, existing, tier, lifetime, pressure)
         return
     end
 
@@ -119,7 +133,7 @@ local function add(meteor, tier, lifetime)
     trail.Parent = meteor
     local state = {trail = trail, left = left, right = right, tier = nil, facets = {}}
     trails[meteor] = state
-    updateStyle(meteor, state, tier, lifetime)
+    updateStyle(meteor, state, tier, lifetime, pressure)
 end
 
 sync = function()
@@ -144,6 +158,7 @@ sync = function()
     local ordered = MeteorRules.orderedCandidates(
         candidates(), viewerPosition
     )
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
     local eligible = {}
     local allocated = 0
     for _, item in ipairs(ordered) do
@@ -153,7 +168,7 @@ sync = function()
         ) then
             allocated += 1
             eligible[item.Part] = true
-            add(item.Part, tier.Name, profile.Lifetime)
+            add(item.Part, tier.Name, profile.Lifetime, pressure)
         else
             -- Ordered candidates are sorted by distance. Once a candidate is
             -- outside range or the cap is reached, none further qualifies.

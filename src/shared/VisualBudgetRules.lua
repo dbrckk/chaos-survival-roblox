@@ -469,7 +469,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                 -- of the SERVER-owned projectile, outside LocalFolders.
                 -- Never count the projectile itself or its server assets.
                 for _, child in ipairs(hazard:GetChildren()) do
-                    if child:IsA("WedgePart")
+                    if (child:IsA("WedgePart") or child:IsA("MeshPart"))
                         and string.match(child.Name, "^LocalMeteorFacet%d+$") then
                         add("AttachedMeteorCosmetics", "Parts")
                     end
