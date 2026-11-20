@@ -346,15 +346,19 @@ local function impactResidue(payload)
     local radius = math.max(2, ImpactSetpieceRules.safeRadius(payload.radius))
     local reduced = player:GetAttribute("ReduceMotion") == true
     local pieceCount = ImpactSurfaceScarKit.partCount(quality.Name, reduced)
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local centerRole = kind == "Meteor" and "ring" or "casting"
+    local centerSource = quality.Name ~= "Low" and CelebrationMeshes.readyProfile(centerRole, pressure)
     local source = pieceCount > 1
-        and CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
+        and CelebrationMeshes.readyProfile("pylon", pressure)
     local fitImpactCrack = if source then function(size, crackFrame)
         return fitCrack(source, size, crackFrame)
     end else nil
     trimBudget(pieceCount)
     local pieces = ImpactSurfaceScarKit.build(
         folder, frame, kind, quality.Name,
-        groundMaterial, groundColor, profile.Color, radius, reduced, fitImpactCrack
+        groundMaterial, groundColor, profile.Color, radius, reduced, fitImpactCrack,
+        CelebrationMeshes.cloneProfile(centerSource)
     )
     local lifetime = DisasterResidue.impactLifetime(quality.Name)
     for _, piece in ipairs(pieces) do

@@ -99,4 +99,6 @@ Les fissures d’impact, les lignes résiduelles et les éclats peuvent reprendr
 
 Les neuf motifs au sol de fin de manche peuvent utiliser des maillages approuvés en qualité moyenne et haute. Les coulées de lave mêlent plaques moulées et rainures, les aiguilles de givre sont facettées et les traces de vent gardent leurs trois obliques biseautées. Chaque motif conserve ses repères au sol et ses deux à quatre pièces selon la qualité. Les formes simples servent de secours en qualité basse, au chargement ou sous pression graphique.
 
+Pendant la manche, les impacts de météores peuvent laisser un cratère ouvert issu de l’anneau d’Orbital. Les bombes utilisent une plaque pleine issue du moulage du périmètre. Les deux marques reprennent la teinte du sol et s’alignent sur sa normale. Le centre occupe une seule pièce dans le budget de l’impact. Les formes simples servent de secours en qualité basse, au chargement et sous pression graphique.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
