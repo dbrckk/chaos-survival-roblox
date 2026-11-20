@@ -2121,10 +2121,16 @@ end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
     frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborRouteBeam, bevelFallback, harborTrimReserve)
+    -- The caisson's sealed cassette provides a continuous landing face.
+    -- The open forged beam is suitable only for the trim below it.
+    local panelReserve = not panelProfile and harborTrimReserve
+        and harborTrimReserve.assetId == HorizonMonumentGeometry.harborCaissonAssetId()
+        and harborTrimReserve
+    local panelSource = panelProfile or (panelReserve and panelReserve.part)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
-    local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
+    local panelAlongX = panelSource and panelSource.Size.X > panelSource.Size.Z
     local topPanel = fitDecorMesh(
-        panelProfile,
+        panelSource,
         "PlatformPanel" .. index,
         platform.CFrame * CFrame.new(0, platform.Size.Y * 0.5 + 0.055, 0),
         Vector3.new(
@@ -2138,6 +2144,9 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     )
     if topPanel:IsA("MeshPart") then
         topPanel:SetAttribute("OriginalPlatformPanel3D", true)
+        if panelReserve then
+            topPanel:SetAttribute("Original3DAssetId", panelReserve.assetId)
+        end
     end
     -- Neutral midtone landings remain visible without light emitters;
     -- progression changes tint, while hazards still own bright warning hues.
