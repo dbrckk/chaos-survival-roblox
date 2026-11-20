@@ -2254,6 +2254,9 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local alongX
     if promenadeLane or skySpineStep or skybridge or harborAlongX ~= nil then
         alongX = if harborAlongX ~= nil then harborAlongX else size.X > size.Z
+        -- The outer bands follow the exit; the inserts below a cargo turn
+        -- follow the perpendicular approach from the previous landing.
+        if PlatformIdentityLodRules.isHarborCargoTurn(platform) then alongX = not alongX end
         local length = (alongX and size.X or size.Z) * 0.62
         -- A narrow Tower Run deck needs more relative width to clear the ribs.
         local width = (alongX and size.Z or size.X) * (skybridge and 0.34 or 0.22)
@@ -3646,7 +3649,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local orbitalHub = definition.OrbitalRescueHub == true
         local harborStep = definition.HarborStep or definition.HarborSpokeStep
         local harborApproach = harborStep ~= nil and harborStep <= 2
-        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub or harborApproach
+        local harborTurn = PlatformIdentityLodRules.isHarborCargoTurn(platform)
+        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub or harborApproach or harborTurn
             then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
@@ -3666,7 +3670,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
             harborSkywayBeam, trimCasting)
-        if elevatedRoute or reactorLanding or harborApproach then
+        if elevatedRoute or reactorLanding or harborApproach or harborTurn then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
         else
             addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)

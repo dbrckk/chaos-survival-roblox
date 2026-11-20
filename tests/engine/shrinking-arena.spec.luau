@@ -1199,17 +1199,23 @@ describe("Shrinking Arena mobility integration", function()
                 local band=arena.Decor["PlatformGlow"..id]
                 local lens=arena.Decor["PlatformCoreGlow"..id]
                 local frame=arena.Decor["PlatformUnderFrame"..id]
-                local alongX=data.alongX
+                local alongX, lensAlongX=data.alongX, data.lensAlongX
                 local sx,sz,halfY=deck.Size.X,deck.Size.Z,deck.Size.Y*.5
                 checkRouteSignal(deck,band,Vector3.new(
                     sx+(alongX and .28 or .96)*scale,.14,sz+(alongX and .96 or .28)*scale),
                     Vector3.new(0,-halfY-.47,0))
                 checkRouteSignal(deck,lens,
-                    Vector3.new(sx*(alongX and .62 or .22),.30,sz*(alongX and .22 or .62)),
+                    Vector3.new(sx*(lensAlongX and .62 or .22),.30,sz*(lensAlongX and .22 or .62)),
                     Vector3.new(0,-halfY-.52,0))
-                for _,piece in ipairs({band,lens}) do
-                    local direction=deck.CFrame:VectorToObjectSpace(piece.CFrame.LookVector)
-                    assert(math.abs(alongX and direction.X or direction.Z)>.999)
+                local bandDirection=deck.CFrame:VectorToObjectSpace(band.CFrame.LookVector)
+                local lensDirection=deck.CFrame:VectorToObjectSpace(lens.CFrame.LookVector)
+                assert(math.abs(alongX and bandDirection.X or bandDirection.Z)>.999)
+                assert(math.abs(lensAlongX and lensDirection.X or lensDirection.Z)>.999)
+                if data.turn then
+                    local post=assert(arena.Decor["PlatformSupport"..id.."_1"])
+                    local foot=arena.Base.Position.Y + arena.Base.Size.Y*.5 - .08
+                    assert(math.abs(post.Position.Y-post.Size.Y*.5-foot)<.02)
+                    assert(math.abs(post.Position.Y+post.Size.Y*.5-(deck.Position.Y-halfY))<.02)
                 end
                 local _,acceptedFrame=Rim.nativeParts(arena.Decor,deck,data.size,scale)
                 assert(acceptedFrame==frame and frame:IsA("MeshPart") and deck.CanCollide)
@@ -1220,8 +1226,16 @@ describe("Shrinking Arena mobility integration", function()
                 local neighbor=lookup[data.key..nextStep]
                 local delta=neighbor.Position-deck.Position
                 -- The four cargo summits turn onto their adjoining skyway.
-                data.alongX=(deck:GetAttribute("HarborStep")==7)
-                    or math.abs(delta.X)>math.abs(delta.Z)
+                local cargoStep=deck:GetAttribute("HarborStep")
+                data.alongX=cargoStep==7 or math.abs(delta.X)>math.abs(delta.Z)
+                data.turn=cargoStep and cargoStep>=2 and cargoStep<=6
+                data.lensAlongX=data.alongX
+                if data.turn then
+                    local prior=lookup[data.key..(data.step-1)]
+                    local arrival=deck.Position-prior.Position
+                    data.lensAlongX=math.abs(arrival.X)>math.abs(arrival.Z)
+                    assert(data.lensAlongX~=data.alongX)
+                end
                 data.size=deck.Size
                 checkLanding(deck,data,1)
             end

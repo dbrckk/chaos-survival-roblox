@@ -101,6 +101,10 @@ Les deux passerelles hautes de Storm Harbor peuvent recevoir **28 bordures forg�
 
 Huit chevrons marquent les départs des quatre parcours de fret et des quatre quais cardinaux. Chaque repère s’aligne sur les deux premiers paliers et peut reprendre le profil biseauté de Harbor ou le profil forgé de Tower Run. Les huit incrustations de quai acceptent aussi le profil forgé en secours. Ces repères suivent le sol pendant le rétrécissement et gardent le seuil des premiers paliers dégagé. Les seize premiers paliers des deux familles peuvent réutiliser un moulage fermé pour leurs bordures, signaux et sous-cadres quand leurs sources dédiées manquent. Les huit deuxièmes paliers peuvent reprendre un fût polygonal approuvé déjà chargé. Les caissons et habillages de proximité conservent leurs poses de référence. Les formes simples restent disponibles.
 
+### Virages des parcours de fret de Storm Harbor
+
+Aux vingt virages, les bandes latérales suivent la sortie du palier et les inserts sculptés sous le tablier reprennent l’axe du saut d’arrivée. Les poteaux s’engagent de 0,08 stud dans la dalle et leurs têtes restent sous le tablier. Le moulage et le fût polygonal déjà chargés peuvent prendre le relais si les sources dédiées manquent. Les instruments de guidage, la détection des alertes et le montage des caissons gardent leurs repères physiques. Le scénario de rétrécissement couvre les deux axes sur les 58 paliers des trois familles.
+
 ### Secours des parcours des autres arènes
 
 Sur Classic, Tower Run, Crossroads et Orbital, les **384 paliers** peuvent réutiliser le moulage fermé de leur arène, ou celui de Classic en secours, quand les profils communs manquent. Les 3 072 emplacements répartis sur ces quatre cartes couvrent quatre bordures, une dalle, un châssis et deux signaux par palier. Les chevrons de parcours peuvent aussi reprendre ce moulage. Les profils dédiés gardent la priorité. La hauteur et la transparence des repères restent celles du générateur existant. À Storm Harbor, les paliers acceptent maintenant le rouleau importé sur X ou sur Z. Les tests locaux ont vérifié l’empreinte, le rétrécissement à 45 % et le retour à l’état normal.
