@@ -5,12 +5,7 @@
 -- cargo route remains safe. Players and R15 bots use the SAME check.
 -- Four anchored, non-colliding bands; no damage, RemoteEvents, physics
 -- constraints, RenderStepped or new per-frame client work.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local shared = ReplicatedStorage:FindFirstChild("Shared")
-local guidanceModule = shared and shared:FindFirstChild("HarborSweepGuidance")
-local HarborSweepGuidance = if guidanceModule then require(guidanceModule)
-    else require("../shared/HarborSweepGuidance")
-local RoundEquipmentArt = require("./RoundEquipmentArt")
+local SweepBorderArt = require("./SweepBorderArt")
 local movementModule = script and script.Parent:FindFirstChild("MovementSafety")
 local MovementSafety = if movementModule
     then require(movementModule) else require("./MovementSafety")
@@ -72,7 +67,7 @@ function HarborCargoSweep.inside(position, band)
     if typeof(position) ~= "Vector3" or not band
         or not band:IsA("BasePart") then return false end
     local localPoint = band.CFrame:PointToObjectSpace(position)
-    local halfX, halfZ = HarborSweepGuidance.halfExtents(band)
+    local halfX, halfZ = SweepBorderArt.halfExtents(band)
     return math.abs(localPoint.X) <= halfX
         and math.abs(localPoint.Z) <= halfZ
         and localPoint.Y >= 1 and localPoint.Y <= 5.1
@@ -152,51 +147,6 @@ function HarborCargoSweep.apply(ctx, band, subject, hitOnce, center)
     return true
 end
 
-local function borderGeometry(band, index)
-    local halfX, halfZ = HarborSweepGuidance.halfExtents(band)
-    local side = index % 2 == 0 and 1 or -1
-    local acrossX = index <= 2
-    local width = 0.25
-    local length = acrossX and halfZ * 2 or (halfX - width) * 2
-    local frame = band.CFrame * CFrame.new(
-        acrossX and side * (halfX - width * 0.5) or 0,
-        band.Size.Y * 0.5 + 0.043,
-        acrossX and 0 or side * (halfZ - width * 0.5))
-    if not acrossX then frame *= CFrame.Angles(0, math.pi * 0.5, 0) end
-    return Vector3.new(width, 0.072, length), frame
-end
-
-local function createBorder(band, profile)
-    local border = Instance.new("Folder")
-    border.Name = "SweepBorder"
-    local parts = {}
-    for index = 1, 4 do
-        local size, frame = borderGeometry(band, index)
-        local part = RoundEquipmentArt.create(border, "SweepEdge" .. index, size, frame,
-            band.Color, Enum.Material.Neon, 1, profile)
-        parts[index] = {part = part, axisSwapped = part.Size.X > part.Size.Z}
-    end
-    border.Parent = band
-
-    -- Let the same boundary follow the owner if the map repositions or
-    -- resizes the lane. Its four cosmetics never become hazard owners.
-    local function refit()
-        for index, item in ipairs(parts) do
-            if item.part.Parent == border then
-                local size, frame = borderGeometry(band, index)
-                if item.axisSwapped then
-                    size = Vector3.new(size.Z, size.Y, size.X)
-                    frame *= CFrame.Angles(0, math.pi * 0.5, 0)
-                end
-                item.part.Size = size
-                item.part.CFrame = frame
-            end
-        end
-    end
-    band:GetPropertyChangedSignal("CFrame"):Connect(refit)
-    band:GetPropertyChangedSignal("Size"):Connect(refit)
-end
-
 local function createBand(folder, base, index, profile)
     local alongX = index == 1 or index == 2
     local offset = index == 1 and -32
@@ -224,7 +174,7 @@ local function createBand(folder, base, index, profile)
     -- that gate the server's phase transitions. No guessed durations.
     p:SetAttribute("HarborSweepWarningSeconds", HarborCargoSweep.WarningSeconds)
     p:SetAttribute("HarborSweepPulseSeconds", HarborCargoSweep.PulseSeconds)
-    createBorder(p, profile)
+    SweepBorderArt.create(p, profile)
     p:AddTag("ChaosHarborSweepLane")
     p.Parent = folder
 
@@ -286,16 +236,7 @@ function HarborCargoSweep.setPhase(band, marker, label, phase, now)
         band:SetAttribute("HarborSweepPulseAt", nil)
         marker.Enabled = false
     end
-    local border = band:FindFirstChild("SweepBorder")
-    if border then
-        local alpha = phase == "Warning" and 0.14 or (phase == "Pulse" and 0.06 or 1)
-        for _, edge in ipairs(border:GetChildren()) do
-            if edge:IsA("BasePart") then
-                edge.Color = band.Color
-                edge.Transparency = alpha
-            end
-        end
-    end
+    SweepBorderArt.paint(band, phase)
     band:SetAttribute("HarborSweepPhase", phase or "Idle")
 end
 
@@ -312,7 +253,7 @@ function HarborCargoSweep.start(ctx, arena)
     folder.Name = "HarborCargoSweep"
     folder.Parent = mechanics
     local lanes = {}
-    local profile = RoundEquipmentArt.profiles("Harbor").edge
+    local profile = SweepBorderArt.profile("Harbor")
     for i = 1, 4 do
         local band, marker, label = createBand(folder, base, i, profile)
         lanes[i] = {band = band, marker = marker, label = label}

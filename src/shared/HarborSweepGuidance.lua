@@ -2,13 +2,9 @@
 -- crane sweeps. No collision, rewards or timing decisions originate here:
 -- only the actual replicated lane phase, dimensions, timestamps and
 -- the player's current position are used for the local warning.
+local SweepLaneBounds = if script then require(script.Parent.SweepLaneBounds)
+    else require("./SweepLaneBounds")
 local HarborSweepGuidance = {}
-
--- The art, local exit guidance and server pulse share this footprint.
-function HarborSweepGuidance.halfExtents(band)
-    local size = band.Size
-    return size.X * 0.5 + 0.3, size.Z * 0.5 + 0.3
-end
 
 local function finite(value)
     return type(value) == "number"
@@ -68,7 +64,7 @@ function HarborSweepGuidance.read(band, playerPosition, arenaCenter, serverNow)
         return nil
     end
 
-    local halfX, halfZ = HarborSweepGuidance.halfExtents(band)
+    local halfX, halfZ = SweepLaneBounds.halfExtents(band)
     local distanceX = math.abs(localPoint.X) - halfX
     local distanceZ = math.abs(localPoint.Z) - halfZ
     local outside = math.max(0, distanceX, distanceZ)
