@@ -129,6 +129,10 @@ Les huit paliers supérieurs peuvent recevoir **16 biseaux forgés** sur les fac
 
 En qualité basse, les incrustations de bois et les chevrons déjà affichés peuvent utiliser la collerette de Harbor ou le moulage fermé de Classic quand le profil principal manque. Le même secours couvre les pièces des avant-postes en qualité moyenne et haute. Les pièces reprennent le profil de Harbor dès son arrivée et gardent leur emplacement, leur nombre et leur suivi du tablier.
 
+### Guidage des bifurcations sur les cinq arènes
+
+Les quatre parcours de chaque arène affichent les deux directions aux paliers 5 et 6, puis le saut qui termine la traversée de secours. Les paires de chevrons indiquent les vrais paliers d'arrivée. Leur visibilité suit la collision, le rétrécissement, l'alerte d'effondrement et les dangers sur le trajet. Une paire incomplète ou dont le palier d'arrivée manque reste masquée. Les chevrons de la branche suivent les mêmes règles jusqu'au raccord avec la Promenade. Le guide garde une seule enseigne et nomme les deux directions lorsqu'elles sont praticables. Sur Orbital, le guide distingue aussi les terrasses et les passerelles extérieures du parcours central à rampes.
+
 ### Sorties des terrasses périphériques de Storm Harbor
 
 Les quatre sorties peuvent conserver **16 pièces sculptées** avec le moulage fermé de Harbor ou de Classic. Les huit renforts privilégient un fût polygonal approuvé. Les couronnes et les lentilles gardent leur profil forgé s’il est chargé. Les quatre couronnes peuvent aussi reprendre la pente du capuchon ou de l’aile périphérique, avec la face haute tournée vers l’extérieur sur les deux côtés de l’arène. Le moulage fermé ou le caisson d’amarrage servent de secours avant le coin simple. Les couronnes restent hors de la surface jouable et suivent le rétrécissement et l’effondrement de leur palier.

@@ -1482,7 +1482,10 @@ local function rebuild()
             local routeTier = (variant ~= "Orbital" or crossing or exitLanding)
                 and JumpRouteCueRules.deckTier(platform)
             if routeTier then
-                if crossing or (variant ~= "Orbital" and routeTier < 4) then
+                -- Adventure routes with authored, live paint already own
+                -- their departure markers, including the rescue crossing.
+                if platform:GetAttribute("PerimeterGuidePainted") ~= true
+                    and (crossing or (variant ~= "Orbital" and routeTier < 4)) then
                     routeCueStates[platform] = {
                         index=visualIndex, targetTier=crossing and 3 or routeTier+1, crossing=crossing,
                     }
@@ -1496,6 +1499,10 @@ local function rebuild()
                         scheduleRebuild()
                     end),
                 }
+                if crossing or platform:GetAttribute("BranchStep") ~= nil then
+                    table.insert(routeDeckConnections[platform],
+                        platform:GetAttributeChangedSignal("PerimeterGuidePainted"):Connect(scheduleRebuild))
+                end
             end
 
             -- Permanent Tower skybridges shorten during Shrinking Arena.

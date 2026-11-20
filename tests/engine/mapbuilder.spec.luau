@@ -1449,6 +1449,41 @@ describe("Chaos Survival engine", function()
                     crossing, all, Config.ArenaCenter, id
                 )).toBe(side2)
 
+                local function expectArrowPair(name, source, target)
+                    for sign = -1, 1, 2 do
+                        local arrow = decor:FindFirstChild(name .. route .. "_" .. sign)
+                        expect(arrow ~= nil and arrow:IsA("BasePart")).toBe(true)
+                        expect(arrow:HasTag("ChaosPerimeterGuide")).toBe(true)
+                        expect(arrow:GetAttribute("PerimeterPlatformIndex"))
+                            .toBe(tonumber(source.Name:match("%d+")))
+                        expect(arrow:GetAttribute("PerimeterGuideTarget"))
+                            .toBe(tonumber(target.Name:match("%d+")))
+                        expect(arrow.CanCollide or arrow.CanTouch or arrow.CanQuery).toBe(false)
+                        local point = source.CFrame:PointToObjectSpace(arrow.Position)
+                        expect(math.abs(point.X) < source.Size.X * 0.5).toBe(true)
+                        expect(math.abs(point.Z) < source.Size.Z * 0.5).toBe(true)
+                    end
+                end
+                local ridge5 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + (route - 1) * 8 + 5))
+                local side1 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + 32 + (route - 1) * 4 + 1))
+                expectArrowPair("RidgeForkArrow", ridge5, ridge6)
+                expectArrowPair("BranchForkArrow", ridge5, side1)
+                expectArrowPair("RidgeCrosslinkArrow", ridge6, ridge7)
+                expectArrowPair("CrosslinkForkArrow", ridge6, crossing)
+                expectArrowPair("CrosslinkExitArrow", crossing, side2)
+                local passed, rejected = JumpRouteCueRules.crosslinkOptions(ridge6, all, function(_, target)
+                    return target ~= crossing
+                end)
+                expect(passed).toBe(ridge7)
+                expect(rejected).toBe(nil)
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id, nil, function(_, target)
+                        return target ~= ridge7
+                    end
+                )).toBe(crossing)
+
                 -- Real collapsing terrain must not be advertised as a
                 -- route; the crossing remains a physically valid bypass.
                 ridge7:SetAttribute("CollapsePhase", "Warning")

@@ -1923,8 +1923,11 @@ assert 'clear = isSafe(destination)' in ROOKIE
 assert 'if destination and isSafe(destination) then' in ROOKIE
 assert 'safeTargets[destination] = safe' in ROOKIE
 assert 'crossing and isClear(from, crossing)' in ROOKIE
-assert 'flank and isClear(from, flank)' in ROOKIE
-assert 'detour and isClear(from, detour)' in ROOKIE
+assert 'local forward, detour = options(from, pieces, isClear)' in ROOKIE
+assert 'currentTarget, currentAlternate, currentAnchor = target, alternate, anchor' in ROOKIE
+assert 'watchTarget(alternate, true)' in ROOKIE
+assert 'and (not isClear or isClear(from, candidate)) then' in CUE_RULES
+assert 'variant == "Orbital" and not outerRoute' in ROOKIE
 assert 'pieces, hit.Position, 42, canApproach' in ROOKIE
 assert 'skyRouteDirection(from), isClear' in ROOKIE
 MASTERY=(CLIENT/"high-ground-route-cue.client.lua").read_text(encoding="utf8")

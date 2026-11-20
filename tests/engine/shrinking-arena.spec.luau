@@ -1306,15 +1306,31 @@ describe("Shrinking Arena mobility integration", function()
         local branches,crosslinks=0,0
         for _,deck in ipairs(decks) do
             local step=deck:GetAttribute("BranchStep")
-            if deck:GetAttribute("PerimeterStep")==5 then
+            local perimeterStep=deck:GetAttribute("PerimeterStep")
+            local crossingRoute=deck:GetAttribute("CrosslinkRoute")
+            local prefixes
+            if perimeterStep==5 then
+                prefixes={"RidgeForkArrow", "BranchForkArrow"}
+            elseif perimeterStep==6 then
+                prefixes={"RidgeCrosslinkArrow", "CrosslinkForkArrow"}
+            elseif crossingRoute then
+                prefixes={"CrosslinkExitArrow"}
+            end
+            if prefixes then
                 local id=assert(deck.Name:match("^Platform(%d+)$"))
                 local panel=arena.Decor["PlatformPanel"..id]
-                local route=deck:GetAttribute("PerimeterRoute")
-                for _,side in ipairs({-1,1}) do
-                    local arm=arena.Decor["BranchForkArrow"..route.."_"..side]
-                    assert(arm:IsA("MeshPart") and arm:GetAttribute("ChaosWayfinding")==true)
-                    assert(arm:GetAttribute("PerimeterPlatformIndex")==tonumber(id))
-                    assert(arm.Position.Y-arm.Size.Y*.5>panel.Position.Y+panel.Size.Y*.5)
+                local route=crossingRoute or deck:GetAttribute("PerimeterRoute")
+                for _,prefix in ipairs(prefixes) do
+                    for _,side in ipairs({-1,1}) do
+                        local arm=arena.Decor[prefix..route.."_"..side]
+                        assert(arm:IsA("MeshPart") and arm:GetAttribute("ChaosWayfinding")==true)
+                        assert(arm:GetAttribute("PerimeterPlatformIndex")==tonumber(id))
+                        assert(arm.Position.Y-arm.Size.Y*.5>panel.Position.Y+panel.Size.Y*.5)
+                        local target=arena.Platforms:FindFirstChild("Platform"..arm:GetAttribute("PerimeterGuideTarget"))
+                        assert(target and target~=deck)
+                        local offset=deck.CFrame:PointToObjectSpace(arm.Position)
+                        assert(math.abs(offset.X)<deck.Size.X*.5 and math.abs(offset.Z)<deck.Size.Z*.5)
+                    end
                 end
             end
             if step or deck:GetAttribute("CrosslinkRoute") then

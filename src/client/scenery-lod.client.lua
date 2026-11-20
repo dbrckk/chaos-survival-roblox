@@ -76,6 +76,7 @@ local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 local RemainingVisualNativeCensus = require(script.Parent.RemainingVisualNativeCensus)
+local PerimeterRoutePaint = require(script.Parent.PerimeterRoutePaint)
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
@@ -869,6 +870,7 @@ task.spawn(function()
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
         local routeSyncStartedAt = os.clock()
+        PerimeterRoutePaint.sync(arena, cameraReady and cameraPoint or nil)
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch,

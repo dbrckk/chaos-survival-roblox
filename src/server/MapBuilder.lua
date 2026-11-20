@@ -1940,11 +1940,12 @@ local SPINE_TURN_CHEVRON = {
     size = Vector3.new(0.35, 0.08, 2.55), spread = 0.62, angle = math.rad(35), alpha = 0.24,
 }
 
-local function addRouteChevron(decor, name, deck, index, forward, color, style, profile, offset)
+local function addRouteChevron(decor, name, deck, index, forward, color, style, profile, offset, targetIndex)
     -- Clear the landing panel and keep the marker tied to the physical deck.
     local point = deck.Position + Vector3.new(0, deck.Size.Y * 0.5 + 0.155, 0)
         + (offset or Vector3.zero)
     local look = CFrame.lookAt(point, point + forward)
+    if targetIndex then deck:SetAttribute("PerimeterGuidePainted", true) end
     for side = -1, 1, 2 do
         local arrowName = name .. "_" .. tostring(side)
         local pose = look * CFrame.new(side * style.spread, 0, 0)
@@ -1953,6 +1954,10 @@ local function addRouteChevron(decor, name, deck, index, forward, color, style, 
         mark.Transparency = style.alpha
         mark:SetAttribute("PerimeterPlatformIndex", index)
         mark:SetAttribute("ChaosWayfinding", true)
+        if targetIndex then
+            mark:SetAttribute("PerimeterGuideTarget", targetIndex)
+            CollectionService:AddTag(mark, "ChaosPerimeterGuide")
+        end
         mark.Parent = decor
     end
 end
@@ -3697,11 +3702,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
             if definition.BranchStep == 4 then
-                sideLookouts[definition.BranchRoute] = {part = platform, index = i, offset = definition.offset}
+                sideLookouts[definition.BranchRoute] = {part = platform, index = i}
             else
                 local forward = Vector3.new(0, 0, definition.offset.Z >= 0 and 1 or -1)
                 addRouteChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
-                    platform, i, forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile)
+                    platform, i, forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, nil, i + 1)
             end
         end
 
@@ -4045,36 +4050,46 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for route, lookout in pairs(sideLookouts) do
         local deck = lookout.part
         local entry = lookoutEntries[route]
-        local forward = Vector3.new(0, 0, lookout.offset.Z >= 0 and 1 or -1)
-        local offset
-        if entry then
+        if JumpRouteCueRules.skyNetworkLink(deck, entry) then
             local delta = (entry.Position - deck.Position) * Vector3.new(1, 0, 1)
-            if delta.Magnitude > 0.01 then forward = delta.Unit end
-            offset = PromenadeArchitecture.decorateLookoutJoint(
+            local offset = PromenadeArchitecture.decorateLookoutJoint(
                 decor, deck, lookout.index, entry, theme, monumentProfiles.beam, monumentProfiles.bevel)
+            local targetIndex = tonumber(entry.Name:match("^Platform(%d+)$"))
+            addRouteChevron(decor, "BranchStepArrow" .. route .. "_4", deck, lookout.index,
+                delta.Unit, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, offset, targetIndex)
         end
-        addRouteChevron(decor, "BranchStepArrow" .. route .. "_4", deck, lookout.index,
-            forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, offset)
     end
 
-    -- Put the branch cue on the takeoff side of the fork, facing its
-    -- physical first landing. The separate ridge cue keeps its own axis.
+    -- Paint both real choices on each fork, and the continuation across
+    -- the short rescue link. The client can mask each pair independently.
     local perimeterCount = #variant.PerimeterPlatforms
-    for branchIndex, definition in ipairs(variant.BranchPlatforms or {}) do
-        if definition.BranchStep ~= 1 then continue end
-        local route = definition.BranchRoute
-        local forkIndex = #variant.Platforms + (route - 1) * perimeterCount / 4
-            + definition.BranchParentStep
-        local landingIndex = #variant.Platforms + perimeterCount + branchIndex
-        local fork = platforms:FindFirstChild("Platform" .. forkIndex)
-        local landing = platforms:FindFirstChild("Platform" .. landingIndex)
-        if not (fork and landing) then continue end
-        local delta = (landing.Position - fork.Position) * Vector3.new(1, 0, 1)
-        if delta.Magnitude < 0.01 then continue end
+    local routeDecks = platforms:GetChildren()
+    local function paintChoice(name, deck, destination, color)
+        if not destination then return end
+        local index = tonumber(deck.Name:match("^Platform(%d+)$"))
+        local targetIndex = tonumber(destination.Name:match("^Platform(%d+)$"))
+        local delta = (destination.Position - deck.Position) * Vector3.new(1, 0, 1)
+        if delta.Magnitude < 0.01 then return end
         local forward = delta.Unit
-        local offset = forward * (math.min(fork.Size.X, fork.Size.Z) * 0.24)
-        addRouteChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
-            forward, theme.Secondary, FORK_CHEVRON, routeChevronProfile, offset)
+        local offset = forward * (math.min(deck.Size.X, deck.Size.Z) * 0.24)
+        addRouteChevron(decor, name, deck, index, forward, color,
+            FORK_CHEVRON, routeChevronProfile, offset, targetIndex)
+    end
+    local ascentColor = Color3.fromRGB(197, 237, 246):Lerp(theme.Accent, 0.20)
+    for route = 1, 4 do
+        local start = #variant.Platforms + (route - 1) * perimeterCount / 4
+        local fork = platforms:FindFirstChild("Platform" .. (start + 5))
+        local ridge = platforms:FindFirstChild("Platform" .. (start + 6))
+        local forward, branch = JumpRouteCueRules.forkOptions(fork, routeDecks)
+        paintChoice("RidgeForkArrow" .. route, fork, forward, ascentColor)
+        paintChoice("BranchForkArrow" .. route, fork, branch, theme.Secondary)
+        local nextRidge, link = JumpRouteCueRules.crosslinkOptions(ridge, routeDecks)
+        paintChoice("RidgeCrosslinkArrow" .. route, ridge, nextRidge, ascentColor)
+        paintChoice("CrosslinkForkArrow" .. route, ridge, link, theme.Secondary)
+        if link then
+            local destination = JumpRouteCueRules.nextPhysical(link, routeDecks, config.ArenaCenter, variant.Id)
+            paintChoice("CrosslinkExitArrow" .. route, link, destination, theme.Secondary)
+        end
     end
 
     -- Wayfinding is physically anchored to the REAL first/last platforms,

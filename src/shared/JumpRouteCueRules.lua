@@ -288,72 +288,51 @@ function JumpRouteCueRules.nearestLavaClimbEntry(
     return selected
 end
 
--- A real tactical fork exists at perimeter step five: continue up the
--- main escape ridge or turn toward the side lookout. Expose BOTH
--- server-authored destinations, but never fabricate a diagonal jump.
--- Returned choices are nil when the physical jump is impossible or
--- its target has lost collision / transparency.
-function JumpRouteCueRules.forkOptions(from, orderedPlatforms)
+-- The perimeter has two authored forks. Validate both choices against
+-- the same geometry and (when provided) the caller's live hazard filter.
+local function perimeterChoices(from, orderedPlatforms, step, isClear)
     if not walkable(from) or type(orderedPlatforms) ~= "table"
-        or from:GetAttribute("PerimeterStep") ~= 5 then
-        return nil, nil
-    end
+        or from:GetAttribute("PerimeterStep") ~= step then return nil, nil end
     local route = from:GetAttribute("PerimeterRoute")
     if type(route) ~= "number" or route % 1 ~= 0
-        or route < 1 or route > 4 then
-        return nil, nil
-    end
+        or route < 1 or route > 4 then return nil, nil end
 
-    local forward, flank = nil, nil
+    local forward, detour
     for _, candidate in ipairs(orderedPlatforms) do
-        if candidate ~= from and candidate:IsA("BasePart")
-            and candidate.Parent == from.Parent then
-            if candidate:GetAttribute("PerimeterRoute") == route
-                and candidate:GetAttribute("PerimeterStep") == 6
-                and JumpRouteCueRules.jumpable(from, candidate) then
-                forward = candidate
-            elseif candidate:GetAttribute("BranchRoute") == route
+        if candidate == from or not candidate:IsA("BasePart")
+            or candidate.Parent ~= from.Parent then continue end
+        local isForward = candidate:GetAttribute("PerimeterRoute") == route
+            and candidate:GetAttribute("PerimeterStep") == step + 1
+        local isDetour = if step == 5
+            then candidate:GetAttribute("BranchRoute") == route
                 and candidate:GetAttribute("BranchStep") == 1
                 and candidate:GetAttribute("BranchParentStep") == 5
-                and JumpRouteCueRules.jumpable(from, candidate) then
-                flank = candidate
-            end
-        end
-    end
-    return forward, flank
-end
-
--- A second, real choice exists at perimeter step SIX. A grounded
--- crossing connects that ridge to the second step of its side branch.
--- During collapse, suggest the connector instead of an impossible jump
--- to the next ridge. These are *real* server-created Part references.
-function JumpRouteCueRules.crosslinkOptions(from, orderedPlatforms)
-    if not walkable(from) or type(orderedPlatforms) ~= "table"
-        or from:GetAttribute("PerimeterStep") ~= 6 then
-        return nil, nil
-    end
-    local route = from:GetAttribute("PerimeterRoute")
-    if type(route) ~= "number" or route % 1 ~= 0
-        or route < 1 or route > 4 then
-        return nil, nil
-    end
-    local forward, detour = nil, nil
-    for _, candidate in ipairs(orderedPlatforms) do
-        if candidate ~= from and candidate:IsA("BasePart")
-            and candidate.Parent == from.Parent then
-            if candidate:GetAttribute("PerimeterRoute") == route
-                and candidate:GetAttribute("PerimeterStep") == 7
-                and JumpRouteCueRules.jumpable(from, candidate) then
-                forward = candidate
-            elseif candidate:GetAttribute("CrosslinkRoute") == route
+            else candidate:GetAttribute("CrosslinkRoute") == route
                 and candidate:GetAttribute("CrosslinkFromPerimeterStep") == 6
                 and candidate:GetAttribute("CrosslinkToBranchStep") == 2
-                and JumpRouteCueRules.jumpable(from, candidate) then
-                detour = candidate
-            end
+        if (isForward or isDetour) and JumpRouteCueRules.jumpable(from, candidate)
+            and (not isClear or isClear(from, candidate)) then
+            if isForward then forward = candidate else detour = candidate end
         end
+        if forward and detour then break end
     end
     return forward, detour
+end
+
+function JumpRouteCueRules.forkOptions(from, orderedPlatforms, isClear)
+    return perimeterChoices(from, orderedPlatforms, 5, isClear)
+end
+
+function JumpRouteCueRules.crosslinkOptions(from, orderedPlatforms, isClear)
+    return perimeterChoices(from, orderedPlatforms, 6, isClear)
+end
+
+function JumpRouteCueRules.isOuterRoute(part)
+    return part:GetAttribute("PerimeterRoute") ~= nil
+        or part:GetAttribute("BranchRoute") ~= nil
+        or part:GetAttribute("CrosslinkRoute") ~= nil
+        or part:GetAttribute("PromenadeLane") ~= nil
+        or part:GetAttribute("SkySpineStep") ~= nil
 end
 
 -- Skill-aware parkour hint: after a veteran stays on the SAME physical
@@ -807,6 +786,7 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
     if crossing ~= nil then
         if type(crossing) ~= "number" or crossing % 1 ~= 0
             or crossing < 1 or crossing > 4
+            or from:GetAttribute("CrosslinkFromPerimeterStep") ~= 6
             or from:GetAttribute("CrosslinkToBranchStep") ~= 2 then
             return nil
         end
@@ -826,19 +806,9 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
         -- The forward route is the default, but only if the physical
         -- landing is still safe. The branch offers a real escape option
         -- when a collapsing or missing main deck blocks the ascent.
-        if route ~= nil and step == 5 then
-            local forward, flank = JumpRouteCueRules.forkOptions(
-                from, orderedPlatforms
-            )
-            if forward and (not isClear or isClear(from,forward)) then return forward end
-            return flank and (not isClear or isClear(from,flank)) and flank or nil
-        end
-        if route ~= nil and step == 6 then
-            local forward, detour = JumpRouteCueRules.crosslinkOptions(
-                from, orderedPlatforms
-            )
-            if forward and (not isClear or isClear(from,forward)) then return forward end
-            return detour and (not isClear or isClear(from,detour)) and detour or nil
+        if route ~= nil and (step == 5 or step == 6) then
+            local forward, detour = perimeterChoices(from, orderedPlatforms, step, isClear)
+            return forward or detour
         end
         local routeId = route or branch
         local index = route ~= nil and step or branchStep

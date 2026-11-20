@@ -80,7 +80,7 @@ end
 
 local marker
 local caption
-local currentTarget
+local currentTarget, currentAlternate, currentAnchor
 local targetConnections = {}
 local currentMap
 local mapPlatforms
@@ -100,7 +100,7 @@ local function hide()
         marker.Enabled = false
         marker.Adornee = nil
     end
-    currentTarget = nil
+    currentTarget, currentAlternate, currentAnchor = nil, nil, nil
 end
 
 JumpRouteHazards.WarningsChanged:Connect(function()
@@ -109,23 +109,27 @@ JumpRouteHazards.WarningsChanged:Connect(function()
     local root = target and character and character:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then return end
     local warnings, lava = JumpRouteHazards.read(mapPlatforms and mapPlatforms.Parent)
-    if not safeGuidedTargetPath(root.Position, target, warnings, lava) then
+    if not safeGuidedTargetPath(root.Position, target, warnings, lava)
+        or (currentAlternate and not safeGuidedTargetPath(root.Position, currentAlternate, warnings, lava)) then
         hide()
     end
 end)
 
 local function watchTarget(target, isLanding)
     local parent = target.Parent
-    targetConnections[1] = target.AncestryChanged:Connect(function()
-        if currentTarget == target and (target.Parent ~= parent
+    local function stillTracked()
+        return currentTarget == target or currentAlternate == target or currentAnchor == target
+    end
+    table.insert(targetConnections, target.AncestryChanged:Connect(function()
+        if stillTracked() and (target.Parent ~= parent
             or not target:IsDescendantOf(workspace)) then
             hide()
         end
-    end)
+    end))
     if not isLanding then return end
 
     local function onSurfaceChanged()
-        if currentTarget == target and not JumpRouteCueRules.safeLandingSurface(target) then
+        if stillTracked() and not JumpRouteCueRules.safeLandingSurface(target) then
             hide()
         end
     end
@@ -302,13 +306,13 @@ end
 -- Generic deck-jump rules deliberately refuse this arena, so the mobile
 -- rookie marker must follow its REAL entry/helix/core ramp transitions.
 local function orbitalRampNext(arena, from, root, base, platforms,
-    lavaEmergency)
+    lavaEmergency, isSafe)
     if arena:GetAttribute("VariantId") ~= "Orbital" then return nil end
     local circuit = arena:FindFirstChild("HelixCircuit")
     if not circuit then return nil end
     local function real(folder, name)
         local part = folder and folder:FindFirstChild(name)
-        return JumpRouteCueRules.safeLandingSurface(part) and part or nil
+        return JumpRouteCueRules.safeLandingSurface(part) and isSafe(part) and part or nil
     end
     local function nearestEntry(maxDistance)
         local closest, distance = nil, maxDistance
@@ -517,7 +521,8 @@ local function update()
         recoverySince = now
     end
 
-    if skywayArrival == from then
+    if skywayArrival == from and from:GetAttribute("CollapsePhase") ~= "Warning"
+        and not lavaClimbActive then
         -- This is a completed, genuine harbor-to-harbor crossing. The
         -- destination's own cargo route has no forced continuation and
         -- should not immediately nag a newcomer to reverse direction.
@@ -536,27 +541,25 @@ local function update()
         return safe
     end
 
-    local isClear, canApproach
-    if routeClearance then
-        if from == base then
-            canApproach = function(deck)
-                return isSafe(deck) and routeClearance(base, deck, hit.Position)
-            end
-        elseif from.Parent == platforms then
-            -- Selection and junction labels may inspect the same deck.
-            local checked = {}
-            isClear = function(source, destination)
-                local clear = checked[destination]
-                if clear == nil then
-                    clear = isSafe(destination)
-                        and routeClearance(source, destination, nil, hit.Position)
-                    checked[destination] = clear
-                end
-                return clear
-            end
+    local function canApproach(deck)
+        if routeClearance then
+            return isSafe(deck) and routeClearance(base, deck, hit.Position)
         end
+        return isSafe(deck)
     end
-    local target = nil
+
+    local checked = {}
+    local function isClear(source, destination)
+        local clear = checked[destination]
+        if clear == nil then
+            clear = isSafe(destination)
+                and (not routeClearance or routeClearance(source, destination, nil, hit.Position))
+            checked[destination] = clear
+        end
+        return clear
+    end
+    local target, alternate
+    local outerRoute = JumpRouteCueRules.isOuterRoute(from)
     local french = player.LocaleId:sub(1, 2) == "fr"
     local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
     local collapseEscape = from.Parent == platforms
@@ -577,13 +580,8 @@ local function update()
         -- Never point to a painted floor arrow or a distant invented
         -- refuge. The target is one actual live server PlatformN or
         -- a genuine Orbital helix ramp with its physical entry.
-        if variant == "Orbital" then
-            target = orbitalRampNext(arena, from, root, base, platforms, true)
-            if not target and from.Parent == platforms then
-                target = JumpRouteCueRules.nextPhysical(
-                    from, pieces, base.Position, variant,
-                    skyRouteDirection(from))
-            end
+        if variant == "Orbital" and not outerRoute then
+            target = orbitalRampNext(arena, from, root, base, platforms, true, isSafe)
         elseif from == base then
             target = JumpRouteCueRules.nearestLavaClimbEntry(
                 pieces, hit.Position, lava, 106, canApproach)
@@ -630,11 +628,10 @@ local function update()
                     or "RESUME THE ROUTE  ↑"
             end
         end
-    elseif variant == "Orbital" and from:GetAttribute("PerimeterStep") ~= 6
-        and from:GetAttribute("CrosslinkRoute") == nil then
+    elseif variant == "Orbital" and not outerRoute then
         -- This world uses physical ramps instead of tiered jump gaps.
         -- Preserve the SAME one-sign Android guide, not a second HUD.
-        target = orbitalRampNext(arena, from, root, base, platforms)
+        target = orbitalRampNext(arena, from, root, base, platforms, false, isSafe)
         if target then
             hint = french and "SUIS LA RAMPE  ↑" or "FOLLOW THE RAMP  ↑"
         end
@@ -645,110 +642,48 @@ local function update()
             pieces, hit.Position, 42, canApproach
         )
     elseif from.Parent == platforms then
-        target = JumpRouteCueRules.nextPhysical(
-            from, pieces, base.Position, variant, skyRouteDirection(from), isClear
-        )
-        if from:GetAttribute("PromenadeLane") ~= nil
-            or from:GetAttribute("SkySpineStep") ~= nil
-            or (from:GetAttribute("BranchRoute") ~= nil
-                and from:GetAttribute("BranchStep") == 4) then
-            local isJunction = from:GetAttribute("PromenadeStep") == 4
+        local perimeterStep = from:GetAttribute("PerimeterStep")
+        if perimeterStep == 5 or perimeterStep == 6 then
+            local options = perimeterStep == 5 and JumpRouteCueRules.forkOptions
+                or JumpRouteCueRules.crosslinkOptions
+            local forward, detour = options(from, pieces, isClear)
+            target = forward or detour
+            if forward and detour then
+                alternate = detour
+                if perimeterStep == 5 then
+                    hint = french and "MONTÉE / BELVÉDÈRE" or "RIDGE / LOOKOUT"
+                else
+                    hint = french and "MONTÉE / PASSERELLE" or "RIDGE / CROSSING"
+                end
+            elseif detour then
+                hint = french and "SUIS LE DÉTOUR  ↑" or "TAKE THE DETOUR  ↑"
+            end
+        else
+            target = JumpRouteCueRules.nextPhysical(
+                from, pieces, base.Position, variant, skyRouteDirection(from), isClear
+            )
+            local skyJunction = from:GetAttribute("PromenadeStep") == 4
                 or from:GetAttribute("SkySpineStep") == 1
                 or from:GetAttribute("SkySpineStep") == 10
-            if isJunction then
+            if skyJunction then
                 local forward, crossing = JumpRouteCueRules.skyNetworkOptions(
                     from, pieces, skyRouteDirection(from))
-                if isClear then
-                    forward = forward and isClear(from, forward) and forward or nil
-                    crossing = crossing and isClear(from, crossing) and crossing or nil
-                end
+                forward = forward and isClear(from, forward) and forward or nil
+                crossing = crossing and isClear(from, crossing) and crossing or nil
                 if forward and crossing then
-                    hint = french and "2 CHEMINS EN HAUTEUR"
-                        or "2 SKY ROUTES"
+                    alternate = crossing
+                    hint = french and "2 CHEMINS EN HAUTEUR" or "2 SKY ROUTES"
                 end
             end
-            if target and JumpRouteCueRules.gap(from, target) <= 0.15
-                and hint == (french and "SAUT SUIVANT  ↑"
-                    or "NEXT JUMP  ↑") then
-                hint = french and "PASSAGE EN HAUTEUR  ↑"
-                    or "SKY CROSSING  ↑"
+            if from:GetAttribute("CrosslinkRoute") ~= nil then
+                hint = french and "VERS LE BELVÉDÈRE  ↑" or "TO LOOKOUT  ↑"
+            elseif target and outerRoute and JumpRouteCueRules.gap(from, target) <= 0.15
+                and not alternate then
+                hint = french and "PASSAGE EN HAUTEUR  ↑" or "SKY CROSSING  ↑"
             end
-        end
-        if from:GetAttribute("PerimeterStep") == 5 then
-            local forward, flank = JumpRouteCueRules.forkOptions(
-                from, pieces
-            )
-            if isClear then
-                forward = forward and isClear(from, forward) and forward or nil
-                flank = flank and isClear(from, flank) and flank or nil
-            end
-            if forward and flank then
-                -- A genuine, server-authored choice. The physical fork
-                -- arrows show the side direction; keep only ONE nearby
-                -- billboard rather than obscuring danger telegraphs.
-                hint = french and "2 ROUTES  •  CHOISIS"
-                    or "2 PATHS  •  CHOOSE"
-            elseif flank and not forward then
-                hint = french and "DÉTOUR SÛR  ↑"
-                    or "SAFE DETOUR  ↑"
-            end
-        end
-        if from:GetAttribute("PerimeterStep") == 6 then
-            local forward, detour = JumpRouteCueRules.crosslinkOptions(
-                from, pieces
-            )
-            if isClear then
-                forward = forward and isClear(from, forward) and forward or nil
-                detour = detour and isClear(from, detour) and detour or nil
-            end
-            if forward and detour then
-                hint = french and "2 ROUTES  •  CHOISIS"
-                    or "2 PATHS  •  CHOOSE"
-            elseif detour and not forward then
-                hint = french and "PASSAGE SÛR  ↑"
-                    or "SAFE CROSSING  ↑"
-            end
-        elseif from:GetAttribute("CrosslinkRoute") ~= nil then
-            hint = french and "VERS LE BELVÉDÈRE  ↑"
-                or "TO LOOKOUT  ↑"
         end
     end
-    -- Harbor has already excluded hazards before choosing a target.
-    -- Other arenas keep their existing post-selection detour rules.
-    if not routeClearance and target and not isSafe(target) then
-        local alternative = nil
-        if (rookie or lavaClimbActive) and from == base then
-            -- Don't simply hide the very first actionable cue when a
-            -- meteor covers the nearest entry; look for another REAL
-            -- first-tier takeoff in range, only during a live warning.
-            if lavaClimbActive then
-                alternative = JumpRouteCueRules.nearestLavaClimbEntry(
-                    pieces, hit.Position, lava, 106, isSafe)
-            else
-                alternative = JumpRouteCueRules.nearestEntry(pieces,hit.Position,42,isSafe)
-            end
-        elseif from.Parent == platforms then
-            if from:GetAttribute("PerimeterStep") == 5 then
-                local forward, flank = JumpRouteCueRules.forkOptions(from, pieces)
-                alternative = target == forward and flank or forward
-            elseif from:GetAttribute("PerimeterStep") == 6 then
-                local forward, crossing = JumpRouteCueRules.crosslinkOptions(from, pieces)
-                alternative = target == forward and crossing or forward
-            elseif from:GetAttribute("PromenadeStep") == 4
-                or from:GetAttribute("SkySpineStep") == 1
-                or from:GetAttribute("SkySpineStep") == 10 then
-                local forward, crossing = JumpRouteCueRules.skyNetworkOptions(
-                    from, pieces, skyRouteDirection(from))
-                alternative = target == forward and crossing or forward
-            end
-        end
-        if alternative and isSafe(alternative) then
-            target = alternative
-            hint = french and "DÉTOUR SÛR  ↑" or "SAFE DETOUR  ↑"
-        else
-            target = nil
-        end
-    end
+    if target and not isSafe(target) then target = nil end
     -- A long orbital ramp's CENTER can be far from its actionable entry.
     -- Only for server-authored ramps, use the real HelixStart takeoff
     -- coordinate rather than suppressing the guide or marking midair.
@@ -802,16 +737,21 @@ local function update()
         caption.TextColor3 = guideColor
     end
     if caption.Text ~= hint then caption.Text = hint end
-    if currentTarget ~= target then
+    local anchor = alternate and from or target
+    if currentTarget ~= target or currentAlternate ~= alternate or currentAnchor ~= anchor then
         hide()
-        currentTarget = target
-        sign.Adornee = target
+        currentTarget, currentAlternate, currentAnchor = target, alternate, anchor
+        sign.Adornee = anchor
         sign.StudsOffsetWorldSpace = typeof(rampStart) == "Vector3"
-            and (rampStart + Vector3.new(0, 3.1, 0) - target.Position)
-            or Vector3.new(0, target.Size.Y * 0.5 + 3.1, 0)
+            and (rampStart + Vector3.new(0, 3.1, 0) - anchor.Position)
+            or Vector3.new(0, anchor.Size.Y * 0.5 + 3.1, 0)
         local targetParent = target.Parent
         watchTarget(target, targetParent == platforms
             or (targetParent ~= nil and targetParent == arena:FindFirstChild("HelixCircuit")))
+        if alternate then
+            watchTarget(alternate, true)
+            watchTarget(anchor, true)
+        end
     end
     sign.Enabled = true
     return true, collapseEscape
