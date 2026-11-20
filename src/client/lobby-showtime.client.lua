@@ -17,6 +17,10 @@ local ShowtimeChoreography = require(script.Parent.ShowtimeChoreography)
 local ShowtimeSignatureKit = require(script.Parent.ShowtimeSignatureKit)
 local ShowtimeHologramDetails = require(script.Parent.ShowtimeHologramDetails)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
+local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -556,6 +560,35 @@ local function makeHoloDancer(index, centerFrame, tierName)
     })
 end
 
+local refreshStageProfiles
+local stageProfilePending = false
+local function scheduleStageProfiles()
+    if stageProfilePending then return end
+    stageProfilePending = true
+    task.defer(function()
+        stageProfilePending = false
+        refreshStageProfiles()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleStageProfiles)
+refreshStageProfiles = function()
+    if not stageBase or not stageBase.Parent or not assetKit then return end
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if not activePhase() and pressure < 1 then return end
+    local profiles = {}
+    if pressure < 1 then
+        local casting = PerimeterArmor.wayfinderProfile()
+        local forged = ForgedBridge.sweptProfile()
+        local crystal = OrbitalReactor.coreProfile()
+        if casting and geometryReady(casting) then profiles.casting = casting end
+        if forged and geometryReady(forged) then profiles.forged = forged end
+        if crystal and geometryReady(crystal) then profiles.crystal = crystal end
+    end
+    stageBase = ShowtimeProps.fit(stageBase, profiles.casting)
+    ShowtimeProps.applyProfiles(assetKit, profiles)
+end
+
 local function buildStage()
     clearStage()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -717,6 +750,7 @@ local function buildStage()
         emitter.Parent = attachment
         particles = emitter
     end
+    scheduleStageProfiles()
 end
 
 local function peopleOnStage()
@@ -868,10 +902,12 @@ end
 
 stateEvent.OnClientEvent:Connect(function(state)
     local previousPhase = phase
+    local previousActive = activePhase()
     phase = tostring(state.phase or "waiting")
     voteOptions = state.voteOptions
     refreshUI()
     updateStage(os.clock())
+    if not previousActive and activePhase() then scheduleStageProfiles() end
 
     if Showtime.shouldCelebrate(
         phase,
@@ -909,8 +945,23 @@ end)
 player.CharacterAdded:Connect(function()
     task.defer(refreshUI)
 end)
-player:GetAttributeChangedSignal("Games"):Connect(refreshUI)
-player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refreshUI)
+local function refreshShowtimeAudience()
+    refreshUI()
+    scheduleStageProfiles()
+end
+player:GetAttributeChangedSignal("Games"):Connect(refreshShowtimeAudience)
+player:GetAttributeChangedSignal("SessionRoundsPlayed"):Connect(refreshShowtimeAudience)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleStageProfiles)
+local function stageTemplateChanged(item)
+    if item.Name == "ApprovedPerimeterArmorTemplates" or item.Name == "WayfinderBase"
+        or item.Name == "ApprovedTowersSignatureBridgeTemplates" or item.Name == "SweptCrossbeam"
+        or item.Name == "ApprovedOrbitalReactorLandmarkTemplates"
+        or item:FindFirstAncestor("ApprovedOrbitalReactorLandmarkTemplates") then
+        scheduleStageProfiles()
+    end
+end
+ReplicatedStorage.DescendantAdded:Connect(stageTemplateChanged)
+ReplicatedStorage.DescendantRemoving:Connect(stageTemplateChanged)
 local function bindStageSource(generated)
     if disconnectStageSource then
         disconnectStageSource()

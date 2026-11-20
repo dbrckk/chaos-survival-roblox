@@ -68,3 +68,5 @@ Relevé du 20 novembre 2026. Le tableau compte les pièces produites par chaque 
 Le plateau principal et l’estrade, les quatre pylônes et les trois pièces physiques du portail totalisent neuf ancres de gameplay côté serveur. Leur présence dans l’arborescence est indépendante du remplacement de leur apparence.
 
 Le secteur Showtime concentre le plus de formes simples dans les constructeurs examinés. Les premiers remplacements à forte visibilité sont le tablier, les deux enceintes, la console, les trois éléments du portique et le cristal suspendu. Les chevrons d’entraînement constituent le suivant : chaque bras peut garder son empreinte et utiliser le profil forgé existant, sans ajouter de pièce visible.
+
+Le lot Showtime rend ces huit emplacements éligibles aux profils approuvés. Le tablier, les enceintes et la console reprennent le moulage du périmètre, le portique le profil forgé de Tower Run et le cristal le cœur facetté d’Orbital. Chaque emplacement garde une seule pièce. Le tablier conserve ses ancrages audio et ses effets. Les formes de secours restent visibles jusqu’au chargement et reviennent sous pression graphique.

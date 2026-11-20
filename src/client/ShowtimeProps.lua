@@ -1,11 +1,70 @@
--- Procedural 3D prop kit for Chaos Showtime.
--- Works with standard Roblox primitives: no uploaded mesh IDs, no collisions and
--- no independent animation loop. The owning Showtime script drives all motion.
+-- 3D prop kit for Chaos Showtime, with native fallbacks for approved profiles.
+-- The owning Showtime script drives all motion.
 -- Shared theme resolves on the first build in the actual client;
 -- cloud engine tests can inject the same palette explicitly.
 local UITheme = nil
 
 local ShowtimeProps = {}
+
+local PROFILE_BY_NAME = {
+    ShowtimeSpeakerHousing1 = "casting",
+    ShowtimeSpeakerHousing2 = "casting",
+    ShowtimeDJBooth = "casting",
+    ["ShowtimeTrussLeg-1"] = "forged",
+    ShowtimeTrussLeg1 = "forged",
+    ShowtimeTrussCrossbar = "forged",
+    ShowtimeCrownCrystal = "crystal",
+}
+
+function ShowtimeProps.fit(part, source)
+    local meshId = part:IsA("MeshPart") and part.MeshId or nil
+    if meshId == (source and source.MeshId) then return part end
+    local replacement = if source then source:Clone() else Instance.new("Part")
+    if not replacement then return part end
+    if source then
+        replacement:ClearAllChildren()
+        replacement.TextureID = ""
+    elseif part.Name == "ShowtimeCrownCrystal" then
+        replacement.Shape = Enum.PartType.Ball
+    end
+
+    local size = part:GetAttribute("ShowtimeProfileSize") or part.Size
+    local rotate = source and size.X ~= size.Z and (source.Size.X > source.Size.Z) ~= (size.X > size.Z)
+    replacement.PivotOffset = rotate and CFrame.Angles(0, -math.pi * 0.5, 0) or CFrame.new()
+    replacement.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
+    replacement:PivotTo(part:GetPivot())
+    replacement.Name = part.Name
+    replacement.Color = part.Color
+    replacement.Material = part.Material
+    replacement.Transparency = part.Transparency
+    replacement.LocalTransparencyModifier = part.LocalTransparencyModifier
+    replacement.Anchored = true
+    replacement.CanCollide = false
+    replacement.CanTouch = false
+    replacement.CanQuery = false
+    replacement.CastShadow = false
+    for key, value in pairs(part:GetAttributes()) do
+        replacement:SetAttribute(key, value)
+    end
+    replacement:SetAttribute("ShowtimeProfileSize", size)
+    replacement.Parent = part.Parent
+    for _, child in ipairs(part:GetChildren()) do
+        child.Parent = replacement
+    end
+    part:Destroy()
+    return replacement
+end
+
+function ShowtimeProps.applyProfiles(asset, profiles)
+    for i, part in ipairs(asset.props) do
+        local role = PROFILE_BY_NAME[part.Name]
+        if role and part.Parent == asset.folder and part:IsA("BasePart") then
+            local replacement = ShowtimeProps.fit(part, profiles[role])
+            asset.props[i] = replacement
+            if asset.crown.crystal == part then asset.crown.crystal = replacement end
+        end
+    end
+end
 
 local function primitive(parent, name, cf, size, color, material, transparency, shape)
     local p = Instance.new("Part")
