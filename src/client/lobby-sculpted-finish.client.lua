@@ -19,6 +19,13 @@ local profiles = {
         region = "SweptCrossbeam",
         id = 126298311664881,
     },
+    LobbySculptedEdgeBand = {
+        holder = "ApprovedTowersSignatureBridgeTemplates",
+        model = "ForgedBridge",
+        marker = "OriginalTowersSignatureBridge3D",
+        region = "SculptedEdgeBand",
+        id = 126298311664881,
+    },
     LobbySculptedShaft = {
         holder = "ApprovedLargeStructureTemplates",
         model = "Towers",
@@ -74,6 +81,7 @@ local function unmount(part)
     entry.appearance:Disconnect()
     entry.removal:Disconnect()
     entry.ancestry:Disconnect()
+    entry.sourceChanged:Disconnect()
     if part.LocalTransparencyModifier == 1 then
         part.LocalTransparencyModifier = entry.originalMask
     end
@@ -110,6 +118,7 @@ local function mount(part, source)
     mesh.Parent = folder
     mounted[part] = {
         source = source,
+        sourceId = source.MeshId,
         mesh = mesh,
         originalMask = part.LocalTransparencyModifier,
         appearance = part.Changed:Connect(function(property)
@@ -121,6 +130,10 @@ local function mount(part, source)
             elseif property == "Size" then
                 applyGeometry()
             end
+        end),
+        sourceChanged = source:GetPropertyChangedSignal("MeshId"):Connect(function()
+            unmount(part)
+            scheduleRefresh()
         end),
         removal = mesh:GetPropertyChangedSignal("Parent"):Connect(function()
             if mesh.Parent ~= folder then unmount(part) end
@@ -206,7 +219,9 @@ local function refresh()
     end
 
     for part, entry in pairs(mounted) do
-        if candidates[part] ~= entry.source then unmount(part) end
+        if candidates[part] ~= entry.source or entry.source.MeshId ~= entry.sourceId then
+            unmount(part)
+        end
     end
     for part, source in pairs(candidates) do
         if not mounted[part] then mount(part, source) end
@@ -222,22 +237,32 @@ scheduleRefresh = function()
     end)
 end
 
-local function sourceChanged(item)
+local function isSourceNode(item)
     for _, profile in pairs(profiles) do
         if item.Name == profile.holder or item.Name == profile.model
             or item.Name == profile.region then
-            scheduleRefresh()
-            return
+            return true
         end
     end
+    return false
 end
 
 for tag in pairs(profiles) do
     CollectionService:GetInstanceAddedSignal(tag):Connect(scheduleRefresh)
     CollectionService:GetInstanceRemovedSignal(tag):Connect(scheduleRefresh)
 end
-ReplicatedStorage.DescendantAdded:Connect(sourceChanged)
-ReplicatedStorage.DescendantRemoving:Connect(sourceChanged)
+ReplicatedStorage.DescendantAdded:Connect(function(item)
+    if isSourceNode(item) then scheduleRefresh() end
+end)
+ReplicatedStorage.DescendantRemoving:Connect(function(item)
+    if not isSourceNode(item) then return end
+    for part, entry in pairs(mounted) do
+        if entry.source == item or entry.source:IsDescendantOf(item) then
+            unmount(part)
+        end
+    end
+    scheduleRefresh()
+end)
 player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleRefresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(scheduleRefresh)
 player:GetAttributeChangedSignal("LocalOriginalLobbyGateMeshCount"):Connect(scheduleRefresh)

@@ -76,6 +76,7 @@ jobs:
             "tests/engine/arena-crisis-surface.spec.luau",
             "tests/engine/district-signal-navigation.spec.luau",
             "tests/engine/arena-presentation.spec.luau",
+            "tests/engine/arena-identity-motion.spec.luau",
             "tests/engine/arena-spatial-audio-rules.spec.luau",
             "tests/engine/arena-variants.spec.luau",
             "tests/engine/audio-config.spec.luau",
@@ -159,13 +160,16 @@ jobs:
             "tests/engine/lobby-activities.spec.luau",
             "tests/engine/lobby-return-formation.spec.luau",
             "tests/engine/mapbuilder.spec.luau",
+            "tests/engine/mapbuilder-perimeter-landmarks.spec.luau",
             "tests/engine/mapbuilder-advanced.spec.luau",
             "tests/engine/parkour-flow.spec.luau",
             "tests/engine/native-premium-fallback.spec.luau",
             "tests/engine/district-sidewall-rollback.spec.luau",
             "tests/engine/district-visual-coverage.spec.luau",
             "tests/engine/platform-rim-original-3d.spec.luau",
+            "tests/engine/harbor-freight-landing-rim.spec.luau",
             "tests/engine/long-cradle-streaming-fallback.spec.luau",
+            "tests/engine/skyline-exterior-retrofit-fallback.spec.luau",
             "tests/engine/sky-network-physical-wayfinding.spec.luau",
             "tests/engine/sky-command-bot-approach.spec.luau",
             "tests/engine/lava-ground-visual-contrast.spec.luau",
@@ -187,6 +191,7 @@ jobs:
             "tests/engine/round-momentum.spec.luau",
             "tests/engine/round-variety.spec.luau",
             "tests/engine/shrinking-arena.spec.luau",
+            "tests/engine/shrinking-arena-sky-spine.spec.luau",
           ]
           backend = "cloud"
           default = false

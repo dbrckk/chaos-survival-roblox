@@ -57,10 +57,18 @@ print("PASS all 8 Approved South owners use one exception-safe shared permit")
 print("PASS no direct South LoadAssetAsync or new per-frame loop")
 
 geometry = (ROOT/"src/shared/HorizonMonumentGeometry.lua").read_text()
-asset_ids = set(re.findall(r"= (\d{9,})\b", geometry))
 models = json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())["models"]
 approved = {model["asset_id"] for model in models if model.get("moderation") == "Approved"}
-assert len(asset_ids) == 12 and asset_ids <= approved, asset_ids-approved
+
+def read_asset_table(name):
+    section = geometry.split(f"local {name} = {{", 1)[1].split("\n}", 1)[0]
+    ids = dict(re.findall(r"(\w+) = (\d{9,})\b", section))
+    assert set(ids.values()) <= approved, set(ids.values()) - approved
+    return ids
+
+assets = read_asset_table("assets")
+shafts = read_asset_table("shafts")
+assert set(shafts) == {"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}
 
 builder = (SERVER/"MapBuilder.lua").read_text()
 piece_builder = builder.split("local function horizonPieceBuilder",1)[1].split("\nend",1)[0]
@@ -96,7 +104,12 @@ def audit_horizon(label, builder_name, boundary, arc, totals):
         assert len(names) == total and names <= profiles.keys(), (name, names-profiles.keys())
         all_targets.update(names)
     assert all_targets == profiles.keys(), all_targets ^ profiles.keys()
-    print(f"PASS {sum(totals)} {label} fallback slots use profiles from 10 approved asset IDs")
+    used_profiles = set(profiles.values())
+    assert used_profiles == {"bevel", "shaft", "roller", "lens", "beam", "cast"}
+    assert used_profiles - {"shaft"} <= assets.keys()
+    used_ids = {assets[profile] for profile in used_profiles - {"shaft"}} | set(shafts.values())
+    assert len(used_ids) == 10
+    print(f"PASS {sum(totals)} {label} fallback slots use profiles from {len(used_ids)} approved asset IDs")
 
 
 audit_horizon("South", "addSouthHorizonMonument", "-- The four corner groups", "ObservationArc",

@@ -62,92 +62,52 @@ local function createPad(folder, center, definition, index)
     -- authoritative Touched connection and its original collision settings.
     CollectionService:AddTag(pad, "LobbySculptedCasting")
 
-    -- Four slightly raised cosmetic cast trims per practice station. The actual
-    -- boost trigger remains the original untouched pad; all trims are
-    -- noncolliding, non-touching and eligible for approved client meshes.
+    -- Trim uses the same heading as the boost. The touch sensor stays in
+    -- its original frame and retains its light, label and hit settings.
+    local heading = Vector3.new(definition.impulse.X, 0, definition.impulse.Z)
+    local frame = CFrame.lookAt(pad.Position, pad.Position + heading)
     local rimColor = pad.Color:Lerp(Color3.fromRGB(38, 48, 67), 0.70)
+    local function trim(name, size, offset, color, material, transparency, tag)
+        local piece = Instance.new("Part")
+        piece.Name = name
+        piece.Size = size
+        piece.CFrame = frame * offset
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.Material = material
+        piece.Color = color
+        piece.Transparency = transparency
+        piece.Parent = folder
+        CollectionService:AddTag(piece, tag)
+    end
+
     for side = 1, 4 do
         local alongX = side <= 2
-        local rim = Instance.new("Part")
-        rim.Name = "PracticeCastRim" .. tostring(side)
-        rim.Size = alongX and Vector3.new(7.45, 0.16, 0.42)
-            or Vector3.new(0.42, 0.16, 6.65)
-        rim.CFrame = pad.CFrame * CFrame.new(
-            alongX and 0 or (side == 3 and -3.52 or 3.52),
-            0.10,
-            alongX and (side == 1 and -3.52 or 3.52) or 0
-        )
-        rim.Anchored = true
-        rim.CanCollide = false
-        rim.CanTouch = false
-        rim.CanQuery = false
-        rim.CastShadow = false
-        rim.Material = Enum.Material.Metal
-        rim.Color = rimColor
-        rim.Transparency = 0.06
-        rim.Parent = folder
-        CollectionService:AddTag(rim, "LobbySculptedCasting")
+        trim("PracticeCastRim" .. side,
+            alongX and Vector3.new(7.45, 0.16, 0.42) or Vector3.new(0.42, 0.16, 6.65),
+            CFrame.new(alongX and 0 or (side == 3 and -3.52 or 3.52), 0.10,
+                alongX and (side == 1 and -3.52 or 3.52) or 0),
+            rimColor, Enum.Material.Metal, 0.06, "LobbySculptedSwept")
     end
 
-    -- Small cast corner bosses break up the square silhouette without
-    -- covering the central boost surface or intercepting Touched events.
+    local bossColor = rimColor:Lerp(pad.Color, 0.18)
     for corner = 1, 4 do
-        local boss = Instance.new("Part")
-        boss.Name = "PracticeCornerBoss" .. tostring(corner)
-        boss.Size = Vector3.new(0.62, 0.18, 0.62)
-        boss.CFrame = pad.CFrame * CFrame.new(
-            corner % 2 == 0 and 3.12 or -3.12,
-            0.11,
-            corner <= 2 and -3.12 or 3.12
-        )
-        boss.Anchored = true
-        boss.CanCollide = false
-        boss.CanTouch = false
-        boss.CanQuery = false
-        boss.CastShadow = false
-        boss.Material = Enum.Material.Metal
-        boss.Color = rimColor:Lerp(pad.Color, 0.18)
-        boss.Transparency = 0.06
-        boss.Parent = folder
-        CollectionService:AddTag(boss, "LobbySculptedCasting")
+        trim("PracticeCornerBoss" .. corner, Vector3.new(0.62, 0.18, 0.62),
+            CFrame.new(corner % 2 == 0 and 3.12 or -3.12, 0.11, corner <= 2 and -3.12 or 3.12),
+            bossColor, Enum.Material.Metal, 0.06, "LobbySculptedCasting")
     end
 
-    -- Recessed direction vanes guide the eye toward the boost center.
-    -- They sit beside, not over, the touch-enabled pad and are cosmetic.
+    local guideColor = rimColor:Lerp(pad.Color, 0.46)
     for side = -1, 1, 2 do
-        local vane = Instance.new("Part")
-        vane.Name = side < 0 and "PracticeGuideVaneL" or "PracticeGuideVaneR"
-        vane.Size = Vector3.new(0.34, 0.12, 3.15)
-        vane.CFrame = pad.CFrame * CFrame.new(side * 3.86, 0.08, 0)
-        vane.Anchored = true
-        vane.CanCollide = false
-        vane.CanTouch = false
-        vane.CanQuery = false
-        vane.CastShadow = false
-        vane.Material = Enum.Material.Metal
-        vane.Color = rimColor
-        vane.Transparency = 0.08
-        vane.Parent = folder
-        CollectionService:AddTag(vane, "LobbySculptedSwept")
-    end
-
-    -- End-cap fins close the outer guidance rails with a distinct sculpted
-    -- silhouette. Keep them outside the touch pad and free of collision.
-    for side = -1, 1, 2 do
-        local fin = Instance.new("Part")
-        fin.Name = side < 0 and "PracticeGuideFinNear" or "PracticeGuideFinFar"
-        fin.Size = Vector3.new(2.2, 0.20, 0.46)
-        fin.CFrame = pad.CFrame * CFrame.new(0, 0.10, side * 4.04)
-        fin.Anchored = true
-        fin.CanCollide = false
-        fin.CanTouch = false
-        fin.CanQuery = false
-        fin.CastShadow = false
-        fin.Material = Enum.Material.Metal
-        fin.Color = rimColor
-        fin.Transparency = 0.08
-        fin.Parent = folder
-        CollectionService:AddTag(fin, "LobbySculptedSwept")
+        trim(side < 0 and "PracticeGuideVaneL" or "PracticeGuideVaneR", Vector3.new(0.34, 0.12, 3.15),
+            CFrame.new(side * 3.86, 0.08, 0), guideColor,
+            Enum.Material.SmoothPlastic, 0.08, "LobbySculptedEdgeBand")
+        trim(side < 0 and "PracticeGuideFinNear" or "PracticeGuideFinFar", Vector3.new(2.2, 0.20, 0.46),
+            CFrame.new(0, 0.10, side * 4.04), bossColor,
+            Enum.Material.Metal, 0.08, "LobbySculptedCasting")
     end
 
     local light = Instance.new("PointLight")
