@@ -1958,8 +1958,10 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalGatewayMeshCount") ~= gatewayCount then
             player:SetAttribute("LocalOriginalGatewayMeshCount", gatewayCount)
         end
+        local districtPressure = player:GetAttribute("OptionalVfxPressure")
         local localFacadeParts = 0
         if district and district:IsA("Folder") then
+            local facadeSources = DistrictFacadeDetailKit.sources(profile.Name, districtPressure)
             for _, structure in ipairs(district:GetChildren()) do
                 if structure:IsA("Model")
                     and structure:GetAttribute("CosmeticOnly") == true
@@ -1979,7 +1981,7 @@ task.spawn(function()
                         profile, origin, cameraPoint)
                     localFacadeParts += DistrictFacadeDetailKit.sync(
                         structure, profile.Name, visible,
-                        (cameraPoint - origin).Magnitude, isTouch, cameraReady)
+                        (cameraPoint - origin).Magnitude, isTouch, cameraReady, facadeSources)
                 end
             end
         end
@@ -1990,7 +1992,6 @@ task.spawn(function()
         -- Facades and six-MeshPart sidewalls use the SAME touch/pressure
         -- snapshot, so a mobile GPU fallback releases both authentic
         -- surfaces and reveals original native geometry in one LOD tick.
-        local districtPressure = player:GetAttribute("OptionalVfxPressure")
         PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, cameraLook, isTouch, districtPressure,
             if profile.Name == "Low" and cameraReady

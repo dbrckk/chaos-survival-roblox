@@ -181,19 +181,13 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
     -- grounded architectural front, not only a floating rooftop signature.
     -- Front = negative local Z on all four rotated sectors. The pieces
     -- are cosmetic: they do not alter stairs, parkour, sweeps or collision.
-    -- Two large door masses remain on Low; six smaller hardware details
-    -- are progressively revealed by the existing client scenery LOD.
+    -- The server keeps the two volumes readable at every quality level.
+    -- The client recovers the origin from the door leaf; only its recessed
+    -- surround changes shape here. Optional hardware stays client-side.
     local finish = DistrictFacadeStyles[variantId] or DistrictFacadeStyles.Classic
-    -- The recessed doorway and its armored leaf are the only TWO server-
-    -- replicated facade Parts. Keep their exact transforms, names, materials
-    -- and PBR eligibility. Extra lintel/canopy/hydraulics/profile hardware
-    -- are noninteractive and are now built locally near the player's
-    -- camera on Medium/High, not replicated 16 x 6 times to every Android.
-    -- The client recovers origin from ServiceEntryDoor.CFrame; only a small
-    -- variant string and version marker cross the network.
-    local recess = make("ServiceEntryRecess",
-        "Part", Vector3.new(5.8, 5.2, 0.48),
-        CFrame.new(0, 4.0, -4.02), dark, finish.recess)
+    local recess = fitted("ServiceEntryRecess",
+        Vector3.new(5.8, 5.2, 0.48),
+        CFrame.new(0, 4.0, -4.02), dark, finish.recess, casting)
     local door = make("ServiceEntryDoor",
         "Part", Vector3.new(4.65, 4.68, 0.18),
         CFrame.new(-0.35, 4.0, -4.36), steel, finish.door)

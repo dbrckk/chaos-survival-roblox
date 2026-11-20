@@ -28,6 +28,8 @@ Les 16 bâtiments peuvent aussi afficher **80 pièces de structure sculptées pa
 
 Les fondations et les équipements de toit des 16 bâtiments couvrent **180 pièces supplémentaires sur Classic, Tower Run et Storm Harbor, et 196 sur Crossroads et Orbital**. Le lot couvre 32 pièces de fondation, 68 pièces réparties entre les quatre silhouettes de toiture, ainsi que 80 ou 96 équipements propres à l’arène. Chaque maillage remplace une pièce à son emplacement. Les formes simples reprennent le relais si une source manque. Les kits de proximité reconnaissent les maillages approuvés et les formes de secours. Les portes de service gardent leur rôle d’ancrage.
 
+Les 16 entrées de service peuvent reprendre le moulage approuvé pour leur encadrement répliqué. Jusqu’à 64 détails locaux en qualité moyenne et 96 en qualité haute peuvent aussi reprendre les maillages approuvés, selon les bâtiments à portée et l’habillage de façade actif. Les linteaux, auvents, colonnes, coffrets, treuils, collerettes et conduits occupent les emplacements existants. Les auvents profonds descendent vers l’approche et les collerettes s’alignent sur le conduit. Les détails locaux reprennent leurs formes simples si un profil manque ou si la pression graphique augmente. Le vantail garde son fini, son enseigne et ses ancrages.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

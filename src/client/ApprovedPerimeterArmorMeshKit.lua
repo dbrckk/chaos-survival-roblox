@@ -119,8 +119,8 @@ function Kit.wayfinderProfile()
     return capCasting(sourceFor("Cap"))
 end
 
-function Kit.slopedCapProfile()
-    local casting = Kit.wayfinderProfile()
+function Kit.slopedCapProfile(casting)
+    casting = casting or Kit.wayfinderProfile()
     local rotation, swapped = PerimeterCapGeometry.slope(casting)
     if rotation then return casting, rotation, swapped, IDS.Cap end
     return nil
