@@ -968,6 +968,10 @@ for marker in (
     'or key=="District" or key=="PlatformSupport"',
     'or key=="SkySpine" or key=="Promenade"',
     '"HarborFleet", "PerimeterStations"',
+    'harborLandingIndices(arena)',
+    'harborNearGroup(part, key, harborIndices, decor)',
+    'for _, key in ipairs(harborNearKeys) do',
+    '"HarborLandingStructure", "HarborLandingSignals", "HarborTerraceExits"',
     'set(player, "AllScanned", scanned)',
 ):
     assert marker in census, "P4 runtime census guard missing: " + marker

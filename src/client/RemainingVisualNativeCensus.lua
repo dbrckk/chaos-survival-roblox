@@ -120,6 +120,52 @@ local localRouteOwners = {
     Towers = {folder = "TowerSkyrailLocal", key = "Skyrail", prefix = "^Skyrail", exclude = "SkyrailImpulseFacet"},
 }
 
+local harborNearKeys = {
+    "HarborLandingStructure", "HarborLandingSignals", "HarborTerraceExits", "HarborLandingSupports",
+    "HarborGroundMaintenance", "HarborGroundWayfinding", "HarborCoast", "HarborOffshoreStation",
+}
+local harborStructureSlots = {
+    PlatformBevel = true, PlatformSupport = true, PlatformUnderFrame = true, PlatformPanel = true,
+}
+local harborLocalArt = {
+    {folder = "ArenaMidgroundMassLocal", key = "HarborCoast", prefix = "^Harbor"},
+    {folder = "ArenaEdgeProfileLocal", key = "HarborCoast", prefix = "^Harbor"},
+    {folder = "ArenaHeroSceneryLocal", key = "HarborOffshoreStation", prefix = "^HarborHero"},
+}
+
+local function harborLandingIndices(arena)
+    local indices = {}
+    local platforms = arena:FindFirstChild("Platforms")
+    if not platforms or not platforms:IsA("Folder") then return indices end
+    for _, deck in ipairs(platforms:GetChildren()) do
+        if deck:IsA("BasePart") and (deck:GetAttribute("HarborRoute") ~= nil
+            or deck:GetAttribute("HarborSpokeRoute") ~= nil
+            or deck:GetAttribute("HarborSkywayLane") ~= nil) then
+            local index = deck.Name:match("^Platform(%d+)$")
+            if index then indices[index] = true end
+        end
+    end
+    return indices
+end
+
+local function harborNearGroup(part, key, indices, decor)
+    local name = part.Name
+    if key == "PlatformSignals" or harborStructureSlots[key] then
+        local index = name:match("^Platform%a+(%d+)")
+        if index and indices[index] then
+            return key == "PlatformSignals" and "HarborLandingSignals" or "HarborLandingStructure"
+        end
+    elseif part.Parent == decor then
+        if name:match("^PerimeterExitRib%d+_%-?1$") or name:match("^PerimeterExitCrown%d+$")
+            or name:match("^PerimeterExitLens%d+$") then return "HarborTerraceExits" end
+        if name:match("^FloorMaintenancePanel%d+$") then return "HarborGroundMaintenance" end
+        if name:match("^HarborAccessChevron%d+_%d+_%-?1$") or name:match("^HarborQuayInlay%d+$") then
+            return "HarborGroundWayfinding"
+        end
+    end
+    return nil
+end
+
 local function nearEnough(part, cameraPoint)
     if (1 - part.Transparency) * (1 - part.LocalTransparencyModifier) <= 0.05 then return false end
     local point = part.CFrame:PointToObjectSpace(cameraPoint)
@@ -143,6 +189,8 @@ function Census.sample(player, arena, quality, cameraPoint)
         local circuit = arena:FindFirstChild("HelixCircuit")
         if decor and decor:IsA("Folder") then
             nearReady = typeof(cameraPoint) == "Vector3"
+            local variant = arena:GetAttribute("VariantId")
+            local harborIndices = nearReady and variant == "Harbor" and harborLandingIndices(arena) or nil
             local owners = {
                 casing = decor:FindFirstChild("OriginalPremiumColumnCladding"),
                 district = decor:FindFirstChild("ArenaDistrictArchitecture3D"),
@@ -159,6 +207,15 @@ function Census.sample(player, arena, quality, cameraPoint)
                     if visible(part) then
                         scanned += 1
                         local key = rootGroup or groupFor(part, decor, circuit, owners)
+                        if harborIndices and root == decor then
+                            local group = harborNearGroup(part, key, harborIndices, decor)
+                            if group and nearEnough(part, cameraPoint) then
+                                nearCounts[group] = (nearCounts[group] or 0) + 1
+                                if key == "PlatformSupport" then
+                                    nearCounts.HarborLandingSupports = (nearCounts.HarborLandingSupports or 0) + 1
+                                end
+                            end
+                        end
                         if key then
                             counts[key] += 1
                             if nearReady and nativeRouteSet[key] and nearEnough(part, cameraPoint) then
@@ -223,7 +280,20 @@ function Census.sample(player, arena, quality, cameraPoint)
             if relays and relays:IsA("Folder") and relays:GetAttribute("ServerAuthoritative") == true then
                 scan(relays, "TeamDashRelays")
             end
-            local variant = arena:GetAttribute("VariantId")
+            if harborIndices then
+                for _, owner in ipairs(harborLocalArt) do
+                    local folder = workspace:FindFirstChild(owner.folder)
+                    if folder and folder:IsA("Folder") then
+                        for _, part in ipairs(folder:GetChildren()) do
+                            local name = part.Name
+                            if name:match(owner.prefix) and visible(part)
+                                and nearEnough(part, cameraPoint) then
+                                nearCounts[owner.key] = (nearCounts[owner.key] or 0) + 1
+                            end
+                        end
+                    end
+                end
+            end
             local routeOwner = nearReady and localRouteOwners[variant]
             local localArt = routeOwner and workspace:FindFirstChild(routeOwner.folder)
             if localArt and localArt:IsA("Folder") then
@@ -243,6 +313,9 @@ function Census.sample(player, arena, quality, cameraPoint)
     end
     for _,key in ipairs(KEYS) do set(player, key, counts[key]) end
     for _, key in ipairs(nativeRouteGroups) do
+        set(player, "Near" .. key, nearCounts[key] or 0)
+    end
+    for _, key in ipairs(harborNearKeys) do
         set(player, "Near" .. key, nearCounts[key] or 0)
     end
     local nearLocal = 0

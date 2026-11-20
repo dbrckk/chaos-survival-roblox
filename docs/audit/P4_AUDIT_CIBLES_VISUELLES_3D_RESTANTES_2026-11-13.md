@@ -206,6 +206,28 @@ des budgets MeshParts. Les chiffres historiques du CSV ne doivent pas
 Aucune capture, mesure FPS, création d'asset ou publication n'est
 revendiquée par cette instrumentation seule.
 
+## Recensement Low de Storm Harbor au 20 novembre 2026
+
+Les définitions de parcours et les générateurs de la PR #920 donnent les volumes suivants. Un emplacement peut contenir un maillage ou une forme simple, selon les sources réellement chargées. Le relevé moteur historique du 13 novembre reste disponible plus bas.
+
+| Groupe | Emplacements du générateur | Manque identifié dans le code |
+|---|---:|---|
+| Paliers de fret, quais cardinaux et traversées hautes | 58 paliers. 232 biseaux, 58 panneaux, 58 sous-cadres et 140 poteaux | Les biseaux, panneaux et sous-cadres ont un moulage de réserve. Les **140 poteaux** (72 fret, 40 quais, 28 traversées) restent tributaires d’un fût approuvé. |
+| Signaux de ces paliers | 116 | Les profils fermés peuvent remplacer les deux signaux par palier. Les signaux restent utiles à la navigation. |
+| Accès au sol et sorties périphériques | 28 pièces au sol et 16 pièces de sortie | Un moulage fermé peut couvrir les deux groupes. Les couronnes conservent leur forme inclinée si les profils de secours manquent. |
+| Station de signalisation au large | 8 pièces en Low | Sept pièces peuvent reprendre le moulage fermé. La lentille garde sa sphère lorsque son maillage manque. |
+| Cargo principal et littoral | 14 pièces du cargo en Low. 16 pièces sur les barges et les défenses en Low | Le moulage fermé en couvre 12 sur le cargo et jusqu’à 16 sur le littoral. La proue garde ses deux pentes si le profil dédié manque. |
+
+**Priorité.** Traiter d’abord les poteaux des quais et des traversées qui bordent les sauts. Le caisson Low n’habille qu’un palier à proximité lorsque la pression graphique le permet. Les poteaux ne font pas partie de ce caisson. Les formes de la proue et de la lentille passent après les pièces proches des zones jouables.
+
+Le relevé client existant publie huit compteurs supplémentaires sous `LocalP4VisibleNativeNear*` :
+
+- `HarborLandingStructure` et `HarborLandingSignals` pour les trois familles de paliers Harbor, identifiées par leurs attributs serveur. `HarborLandingSupports` isole les poteaux au sein du total structurel.
+- `HarborTerraceExits`, `HarborGroundMaintenance` et `HarborGroundWayfinding` pour les sorties, les panneaux de maintenance et les repères au sol.
+- `HarborCoast` et `HarborOffshoreStation` pour les pièces ancrées nommées Harbor dans les dossiers clients du littoral et de la station.
+
+Le compteur retient les primitives décoratives chargées, proches à 36 studs de leur volume et suffisamment opaques après masquage. Les nouvelles valeurs reviennent à zéro hors de Harbor ou quand la caméra n’est pas prête. Ces sous-totaux préservent les dénominateurs historiques. Ils excluent les pièces des plateformes elles-mêmes, les décorations locales soudées, les maillages et le sol physique. Le nombre effectivement rendu à l’écran doit encore être mesuré en partie avec le Low et la pression graphique relevés.
+
 ## Conclusion
 
 Il n'existe **aucun nombre exact démontré de modèles « non remplacés actuellement à l'écran »** : le serveur conserve les primitives de repli ; les copies MeshPart réelles sont activées localement selon la caméra, le streaming, la carte, la qualité et la pression GPU. Il est incorrect de dire que les 13 846 natives initiales restent toutes visuellement primitives.
