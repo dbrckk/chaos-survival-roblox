@@ -97,6 +97,8 @@ function D.start(ctx)
                     or name:match("^CrossroadLaneFill%d+$")
                     or name == "CrossroadHubMark"
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
+                    or name:match("^HarborAccessChevron%d+_%d+_%-?%d+$")
+                    or name:match("^HarborQuayInlay%d+$")
                     or name:match("^OrbitalAccessChevron%d+_%-?%d+$")
                     or name:match("^OrbitalSpoke%d+$")
                     or name == "OrbitalCoreMark"

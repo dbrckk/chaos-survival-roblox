@@ -1732,7 +1732,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             local size = lane.alongX and Vector3.new(52, thickness, 0.45)
                 or Vector3.new(0.45, thickness, 52)
             local line = fitDecorMesh(
-                floorProfile, "HarborQuayInlay" .. index,
+                floorProfile or sweptProfile, "HarborQuayInlay" .. index,
                 CFrame.new(center + Vector3.new(lane.x, quayY, lane.z)),
                 size,
                 index % 2 == 0 and theme.Accent or theme.Secondary,
@@ -1740,6 +1740,29 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             )
             line.Transparency = 0.38
             line.Parent = decor
+        end
+
+        local entryStyle = {size = Vector3.new(0.16, 0.055, 1.35),
+            spread = 0.38, angle = math.rad(35)}
+        local entryY = ArenaPresentation.deckArtOffset(base, entryStyle.size.Y) + 0.02
+        for family, decks in ipairs({variant.Platforms, variant.SpokePlatforms or {}}) do
+            for index, first in ipairs(decks) do
+                local step = first.HarborStep or first.HarborSpokeStep
+                local second = decks[index + 1]
+                if step ~= 1 or not second then continue end
+                local route = first.HarborRoute or first.HarborSpokeRoute
+                if (second.HarborRoute or second.HarborSpokeRoute) ~= route
+                    or (second.HarborStep or second.HarborSpokeStep) ~= 2 then continue end
+                local delta = second.offset - first.offset
+                local forward = Vector3.new(delta.X, 0, delta.Z).Unit
+                local halfSpan = (math.abs(forward.X) * first.size.X + math.abs(forward.Z) * first.size.Z) * 0.5
+                -- Fit on the ground before the first real deck, facing the next landing.
+                local position = center + Vector3.new(first.offset.X, entryY, first.offset.Z)
+                    - forward * (halfSpan + 2.7)
+                local facing = CFrame.lookAt(position, position + forward, Vector3.yAxis)
+                addFloorChevron(decor, "HarborAccessChevron" .. family .. "_" .. route, facing,
+                    floorProfile or sweptProfile, entryStyle, theme.Accent, 0.47, true)
+            end
         end
     elseif variant.Id == "Orbital" then
         local hubDiameter = 14
@@ -3621,8 +3644,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- with the arena's own closed casting or Harbor's load roller.
         local reactorLanding = definition.OrbitalReactorLanding == true
         local orbitalHub = definition.OrbitalRescueHub == true
-        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub then closedDeckCasting else routeCasting
-        local signalFallback = if harborLanding then rimBevel else trimCasting
+        local harborStep = definition.HarborStep or definition.HarborSpokeStep
+        local harborApproach = harborStep ~= nil and harborStep <= 2
+        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub or harborApproach
+            then closedDeckCasting else routeCasting
+        local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
@@ -3640,7 +3666,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
             harborSkywayBeam, trimCasting)
-        if elevatedRoute or reactorLanding then
+        if elevatedRoute or reactorLanding or harborApproach then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
         else
             addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)
