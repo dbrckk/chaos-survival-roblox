@@ -4,6 +4,12 @@
 -- the player's current position are used for the local warning.
 local HarborSweepGuidance = {}
 
+-- The art, local exit guidance and server pulse share this footprint.
+function HarborSweepGuidance.halfExtents(band)
+    local size = band.Size
+    return size.X * 0.5 + 0.3, size.Z * 0.5 + 0.3
+end
+
 local function finite(value)
     return type(value) == "number"
         and value == value
@@ -62,7 +68,7 @@ function HarborSweepGuidance.read(band, playerPosition, arenaCenter, serverNow)
         return nil
     end
 
-    local halfX, halfZ = band.Size.X * 0.5, band.Size.Z * 0.5
+    local halfX, halfZ = HarborSweepGuidance.halfExtents(band)
     local distanceX = math.abs(localPoint.X) - halfX
     local distanceZ = math.abs(localPoint.Z) - halfZ
     local outside = math.max(0, distanceX, distanceZ)
