@@ -13,7 +13,14 @@ local PROFILE_BY_NAME = {
     ["ShowtimeTrussLeg-1"] = "forged",
     ShowtimeTrussLeg1 = "forged",
     ShowtimeTrussCrossbar = "forged",
+    ["ShowtimeAcousticWing-1"] = "forged",
+    ShowtimeAcousticWing1 = "forged",
+    ["ShowtimeAcousticWingEdge-1"] = "forged",
+    ShowtimeAcousticWingEdge1 = "forged",
     ShowtimeCrownCrystal = "crystal",
+    ShowtimeCrownHeart = "crystal",
+    ShowtimeCrownAnchor1 = "crystal",
+    ShowtimeCrownAnchor2 = "crystal",
 }
 
 function ShowtimeProps.fit(part, source)
@@ -24,7 +31,7 @@ function ShowtimeProps.fit(part, source)
     if source then
         replacement:ClearAllChildren()
         replacement.TextureID = ""
-    elseif part.Name == "ShowtimeCrownCrystal" then
+    elseif part.Name == "ShowtimeCrownCrystal" or part.Name == "ShowtimeCrownHeart" then
         replacement.Shape = Enum.PartType.Ball
     end
 
@@ -56,12 +63,20 @@ function ShowtimeProps.fit(part, source)
 end
 
 function ShowtimeProps.applyProfiles(asset, profiles)
+    local crown = asset.crown
+    local ringByPart = {}
+    for _, ring in ipairs(crown.orbit) do ringByPart[ring.part] = ring end
     for i, part in ipairs(asset.props) do
+        if part.Parent ~= asset.folder or not part:IsA("BasePart") then continue end
+        local ring = ringByPart[part]
         local role = PROFILE_BY_NAME[part.Name]
-        if role and part.Parent == asset.folder and part:IsA("BasePart") then
+        if ring or part.Name:match("^ShowtimeWaveguideRib%d+$") then role = "forged" end
+        if role then
             local replacement = ShowtimeProps.fit(part, profiles[role])
             asset.props[i] = replacement
-            if asset.crown.crystal == part then asset.crown.crystal = replacement end
+            if crown.crystal == part then crown.crystal = replacement end
+            if crown.heart == part then crown.heart = replacement end
+            if ring then ring.part = replacement end
         end
     end
 end
@@ -240,9 +255,8 @@ local function buildWaveguide(folder, baseCF, tier)
     end
 end
 
--- A faceted prismatic crown suspended over the DJ desk. Segmented rings
--- make a distinct 3D hero silhouette without any mesh upload or external IDs.
--- Segments are created once and only their CFrames are updated in a calm phase.
+-- A prismatic crown suspended over the DJ desk. Its segments keep a
+-- shared animation pivot when switching between native and forged geometry.
 local function buildPrismaticCrown(folder, baseCF, tier)
     local center = baseCF * CFrame.new(0, 6.8, -3.7)
     local ringCount = tier == "High" and 14 or (tier == "Medium" and 10 or 6)
@@ -385,7 +399,7 @@ function ShowtimeProps.update(asset, now, enabled, reduceMotion, audience)
                 0,
                 layerSpin
             )
-            ring.part.CFrame = crown.center * ringAttitude * ring.localCF
+            ring.part:PivotTo(crown.center * ringAttitude * ring.localCF)
         end
         -- A restrained highlight makes group emotes feel responsive without
         -- any extra particle emitters, dynamic lights or surface scans.
