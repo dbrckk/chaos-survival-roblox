@@ -19,6 +19,7 @@ local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local BroadcastFin = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local DistrictFoundation = require(script.Parent.ApprovedDistrictFoundationMeshKit)
+local AmbientMachinery = require(script.Parent.PremiumAmbientMotionMeshKit)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
@@ -45,6 +46,7 @@ local containmentCollars = {}
 local collarSegments = {}
 local foundations = {}
 local identityPlates = {}
+local cargoModules = {}
 local INWARD_WINDING = {
     [roofs] = true,
     [castStructures] = true,
@@ -56,6 +58,7 @@ local INWARD_WINDING = {
     [collarSegments] = true,
     [foundations] = true,
     [identityPlates] = true,
+    [cargoModules] = true,
 }
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
@@ -123,14 +126,12 @@ local function syncDetailGroup(group, changedModels, source, assetId, rotation, 
             replacement:SetAttribute("DistrictPanBasis", if source then rotation else nil)
         end
         replacement.Parent = parent
-        if group == identityPlates then
-            -- The replacement keeps the original coordinate axes and size.
-            -- Move the real GUI instances so layout and LOD state survive.
-            for _, sign in ipairs(previous:GetChildren()) do
-                if sign:IsA("SurfaceGui") or sign:IsA("BillboardGui") then
-                    if sign.Adornee == previous then sign.Adornee = replacement end
-                    sign.Parent = replacement
-                end
+        -- The signed details keep the original coordinate axes and size.
+        -- Move each GUI so its layout and LOD state survive the swap.
+        for _, sign in ipairs(previous:GetChildren()) do
+            if sign:IsA("SurfaceGui") or sign:IsA("BillboardGui") then
+                if sign.Adornee == previous then sign.Adornee = replacement end
+                sign.Parent = replacement
             end
         end
         detail.part = replacement
@@ -156,6 +157,7 @@ local function syncDetails(changedModels)
         syncDetailGroup(opticalCores)
         syncDetailGroup(foundations)
         syncDetailGroup(identityPlates)
+        syncDetailGroup(cargoModules)
         syncDetailGroup(radarRings, changedModels)
         syncDetailGroup(signalPanels, changedModels)
         syncDetailGroup(containmentCollars, changedModels)
@@ -172,6 +174,10 @@ local function syncDetails(changedModels)
     local casting = PylonShell.bodyProfile()
     syncDetailGroup(castStructures, nil, casting, PylonShell.AssetId)
     syncDetailGroup(identityPlates, nil, casting, PylonShell.AssetId)
+    -- The closed cargo shell has chamfered corners on both horizontal
+    -- axes. Keep the destination axes so its existing front stencil fits.
+    local cargoShell, cargoId = AmbientMachinery.cargoShellProfile()
+    syncDetailGroup(cargoModules, nil, cargoShell, cargoId)
     syncDetailGroup(foundations, nil, DistrictFoundation.plinthProfile(), DistrictFoundation.AssetId)
     syncDetailGroup(containmentCollars, changedModels, casting, PylonShell.AssetId)
     if #gantryBeams > 0 then
@@ -201,6 +207,7 @@ local function clearDetails()
     table.clear(collarSegments)
     table.clear(foundations)
     table.clear(identityPlates)
+    table.clear(cargoModules)
     folder:ClearAllChildren()
 end
 
@@ -427,7 +434,7 @@ local function makeSector(base, theme, index, tier, variant)
                 CFrame.new(0, 18.2, -0.45), accent,
                 Enum.Material.Glass, 0.23, Enum.PartType.Ball))
         elseif index == 2 then
-            trackDetail(castStructures, make("LowCargoStack", Vector3.new(9.4, 7.0, 6.0),
+            trackDetail(cargoModules, make("LowCargoStack", Vector3.new(9.4, 7.0, 6.0),
                 CFrame.new(0, 4.0, 0), dark, Enum.Material.CorrodedMetal))
             trackDetail(gantryBeams, make("LowOverheadGantry", Vector3.new(15.8, 1.8, 3.4),
                 CFrame.new(0, 13.2, 0), alloy, Enum.Material.DiamondPlate))
@@ -486,9 +493,9 @@ local function makeSector(base, theme, index, tier, variant)
     elseif index == 2 then
         -- Cargo depot: stacked freight pods, crane frame and suspended load.
         for side = -1, 1, 2 do
-            make("CargoPod" .. side, Vector3.new(5.6, 5.4, 4.5),
+            trackDetail(cargoModules, make("CargoPod" .. side, Vector3.new(5.6, 5.4, 4.5),
                 CFrame.new(side * 3.1, 3.25, 0), dark,
-                Enum.Material.CorrodedMetal, 0.06)
+                Enum.Material.CorrodedMetal, 0.06))
             -- Cargo identification is painted steel, never a huge
             -- glowing route surface. Keep its existing subtle flicker
             -- tween and unique four-sector wayfinding hue.
@@ -505,16 +512,16 @@ local function makeSector(base, theme, index, tier, variant)
             end
             trackDetail(castStructures, make("CargoHanger", Vector3.new(0.55, 6.4, 0.55),
                 CFrame.new(0, 11.1, 0), alloy))
-            make("RaisedSupplyPod", Vector3.new(4.8, 3.0, 3.4),
-                CFrame.new(0, 7.4, 0), theme.Detail)
+            trackDetail(cargoModules, make("RaisedSupplyPod", Vector3.new(4.8, 3.0, 3.4),
+                CFrame.new(0, 7.4, 0), theme.Detail))
             make("CraneCap", Vector3.new(4.5, 0.6, 5),
                 CFrame.new(0, 16, 0), paintedAlloy,
                 Enum.Material.DiamondPlate, 0.12)
         end
     elseif index == 3 then
         -- Power station: visual containment volume with axial fins.
-        make("ReactorCoreHousing", Vector3.new(7, 12.5, 7),
-            CFrame.new(0, 6.95, 0), dark)
+        trackDetail(castStructures, make("ReactorCoreHousing", Vector3.new(7, 12.5, 7),
+            CFrame.new(0, 6.95, 0), dark))
         trackDetail(containmentCollars, make("ContainmentGlass", Vector3.new(7.25, 2.5, 7.25),
             CFrame.new(0, 8.6, 0), accent,
             Enum.Material.Glass, 0.26))
@@ -545,8 +552,8 @@ local function makeSector(base, theme, index, tier, variant)
         trackDetail(signalPanels, make("CommsSignalFin", Vector3.new(9.3, 7.4, 1.4),
             CFrame.new(0, 17.4, 0) * CFrame.Angles(0, math.rad(17), 0),
             alloy))
-        make("ControlCabin", Vector3.new(5.2, 3.8, 5.2),
-            CFrame.new(0, 12.1, 0), dark)
+        trackDetail(castStructures, make("ControlCabin", Vector3.new(5.2, 3.8, 5.2),
+            CFrame.new(0, 12.1, 0), dark))
         trackDetail(castStructures, make("ScannerWindow", Vector3.new(5.35, 1.6, 5.35),
             CFrame.new(0, 12.5, 0), accent, Enum.Material.Glass, 0.32))
         if high then
@@ -745,9 +752,9 @@ local function makeSector(base, theme, index, tier, variant)
                     Vector3.new(side * 3.4, 19.0, -0.3),
                     0.47, brushed, 0.09)
             end
-            make("TelemetryCasing", Vector3.new(4.2, 2.2, 3.1),
+            trackDetail(castStructures, make("TelemetryCasing", Vector3.new(4.2, 2.2, 3.1),
                 CFrame.new(0, 5.0, 2.2),
-                weathered, Enum.Material.DiamondPlate)
+                weathered, Enum.Material.DiamondPlate))
         elseif index == 2 then
             for side = -1, 1, 2 do
                 make("FreightDoorRib" .. side, Vector3.new(0.38, 4.1, 4.55),
@@ -762,9 +769,9 @@ local function makeSector(base, theme, index, tier, variant)
                     Vector3.new(side * 2.1, 7.7, 0),
                     0.25, weathered, 0.02)
             end
-            make("HoistCounterweight", Vector3.new(1.7, 2.6, 2.0),
+            trackDetail(castStructures, make("HoistCounterweight", Vector3.new(1.7, 2.6, 2.0),
                 CFrame.new(0, 10.2, 0),
-                dark, Enum.Material.CorrodedMetal)
+                dark, Enum.Material.CorrodedMetal))
         elseif index == 3 then
             for side = -1, 1, 2 do
                 local pipe = make("CoolantManifold" .. side,
@@ -772,10 +779,10 @@ local function makeSector(base, theme, index, tier, variant)
                     CFrame.new(side * 3.6, 5.6, -3.8),
                     brushed, Enum.Material.Metal, 0.03)
                 pipe.Shape = Enum.PartType.Cylinder
-                make("InsulatedPipeShield" .. side,
+                trackDetail(castStructures, make("InsulatedPipeShield" .. side,
                     Vector3.new(1.45, 2.1, 1.9),
                     CFrame.new(side * 3.6, 10.4, -3.8),
-                    weathered, Enum.Material.CorrodedMetal)
+                    weathered, Enum.Material.CorrodedMetal))
                 make("ReactorServicePort" .. side,
                     Vector3.new(2.1, 2.1, 0.4),
                     CFrame.new(side * 2.2, 5.9, -3.67),
@@ -799,9 +806,9 @@ local function makeSector(base, theme, index, tier, variant)
             make("SignalWaveguideRib", Vector3.new(7.6, 0.6, 1.5),
                 CFrame.new(0, 14.8, -1.7),
                 brushed, Enum.Material.DiamondPlate)
-            make("ReceiverJunction", Vector3.new(3.6, 3.2, 3.6),
+            trackDetail(castStructures, make("ReceiverJunction", Vector3.new(3.6, 3.2, 3.6),
                 CFrame.new(0, 23.6, 0),
-                weathered, Enum.Material.CorrodedMetal)
+                weathered, Enum.Material.CorrodedMetal))
         end
 
         local extraFace = index == 2 and model:FindFirstChild("CargoPod-1")
@@ -896,6 +903,7 @@ local DETAIL_SOURCES = {
     ApprovedTowersSignatureBridgeTemplates = "ForgedBridge",
     ApprovedClassicBroadcastFinTemplates = "BroadcastFin",
     ApprovedHarborDockCaissonTemplates = "DockCaisson",
+    ApprovedAmbientMotionTemplates = "Harbor",
     ApprovedFloorReliefTemplates = "AnchorBolt",
     ApprovedOrbitalReactorLandmarkTemplates = "Node",
 }

@@ -45,6 +45,26 @@ local function genuineSource(variant)
     return source, spec
 end
 
+function Kit.cargoShellProfile()
+    local source, spec = genuineSource("Harbor")
+    if not source then return nil end
+    -- Only the ARMOR region contains the complete single cargo shell.
+    local shell
+    for _, part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") then continue end
+        local size = part.Size
+        if math.abs(math.max(size.X, size.Z) - 5.0) < .10
+            and math.abs(size.Y - 2.20) < .10
+            and math.abs(math.min(size.X, size.Z) - 3.60) < .10 then
+            if shell or not part.Archivable or part.MeshId == "" or not part.Anchored
+                or part.CanCollide or part.CanTouch or part.CanQuery
+                or part.Transparency >= 1 then return nil end
+            shell = part
+        end
+    end
+    return shell, spec.id
+end
+
 local function mount(folder, item, variant, index, source, spec)
     local native = item.part
     if not native or native.Parent ~= folder or not native:IsA("Part")
