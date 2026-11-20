@@ -128,3 +128,5 @@ La lave montante peut afficher une croûte à pans inclinés issue du moulage du
 Les météores en chute peuvent porter des plaques de basalte moulées et un insert incandescent à douze facettes. L’insert se trouve à la surface du projectile. Les plaques suivent la rotation via leurs attaches existantes. Le nombre de pièces et la règle de proximité restent les mêmes. Les plaques simples servent de secours en qualité basse, au chargement ou sous pression graphique.
 
 Le givre du personnage local utilise des plaques à douze facettes soudées au torse R6 ou R15. Si le torse arrive après l’état de gel, les plaques s’attachent dès sa réplication. Les formes simples servent de secours au chargement, en qualité basse, sous pression graphique et en mode animations réduites. Le dégel retire les plaques avec le reste de l’effet.
+
+Le Phase Dash peut afficher un anneau cyan moulé près du joueur et un anneau violet à douze facettes en qualité haute. Les anneaux restent creux et suivent la direction du dash. Les segments simples servent de secours à distance, en qualité basse, en mode animations réduites, sous pression graphique et au chargement.

@@ -14,6 +14,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local PhaseDashRules = require(ReplicatedStorage.Shared.PhaseDashRules)
 local ObserverRegistry = require(script.Parent.PhaseDashObserverRegistry)
 local DashVisualRules = require(script.Parent.PhaseDashVisualRules)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -132,14 +133,13 @@ charge.Parent = timerRail
 UITheme.addCorner(charge, UITheme.Corners.Pill)
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    ).Name
 end
 
--- An actual hollow ring of short bevel-like facets, never a solid
--- neon cylinder. Each facet is noncolliding, and Tween/Debris own its
--- complete lifetime. Budget: High 10 facets/ring, Medium 7, Low 5.
-local function cosmeticRing(position, color, growth, age, forward, secondary, reducedMotion, distant)
-    local tier = quality()
+-- Each short facet keeps the ring hollow. Tween/Debris own its lifetime.
+local function cosmeticRing(position, color, growth, age, forward, tier, secondary, reducedMotion, distant)
     local count = DashVisualRules.count(tier, reducedMotion, distant)
     local fromRadius = 1.45
     local toRadius = growth * 0.5
@@ -149,6 +149,10 @@ local function cosmeticRing(position, color, growth, age, forward, secondary, re
         or Vector3.new(0, 0, -1)
     local side = Vector3.new(-heading.Z, 0, heading.X)
     if count == 0 then return end
+    local source = not reducedMotion and not distant and tier ~= "Low"
+        and CelebrationMeshes.readyProfile(
+            secondary and "fragment" or "casting", player:GetAttribute("OptionalVfxPressure")
+        )
     -- Reuse immutable tween timing and chord step for all facets in one ring.
     local timing = TweenInfo.new(age, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
     local chordStep = 2 * math.sin(math.pi / count)
@@ -163,7 +167,7 @@ local function cosmeticRing(position, color, growth, age, forward, secondary, re
         local endRadius = toRadius * design.EndScale
         local rotation = CFrame.Angles(design.Pitch, 0, design.Bank)
         local chord = fromRadius * chordStep * design.ChordScale
-        local facet = Instance.new("Part")
+        local facet = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
         facet.Name = "PhaseDashRingFacet"
         facet.Size = Vector3.new(design.Thickness, design.Height, chord)
         facet.CFrame = CFrame.lookAt(position + radial * startRadius,
@@ -257,11 +261,11 @@ local function playDashEffect(character)
     )
     cosmeticRing(position, Color3.fromRGB(85, 233, 235),
         reduced and 4.4 or 9.5, reduced and 0.16 or 0.42,
-        heading, false, reduced, distant)
+        heading, tier, false, reduced, distant)
     if not reduced and not distant and tier == "High" then
         cosmeticRing(position + Vector3.new(0, 0.08, 0),
             Color3.fromRGB(178, 101, 253), 6.7, 0.34,
-            heading, true, reduced, distant)
+            heading, tier, true, reduced, distant)
     end
     if not reduced and tier ~= "Low" and not distant then
         dashTrail(root, tier == "High")
