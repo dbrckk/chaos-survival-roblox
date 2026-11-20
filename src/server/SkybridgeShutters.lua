@@ -6,6 +6,7 @@
 -- existing Skybridge Pressure mechanic; never stacks with that outage.
 local TweenService = game:GetService("TweenService")
 local CollectionService = game:GetService("CollectionService")
+local RoundEquipmentArt = require("./RoundEquipmentArt")
 local pressureModule = script and script.Parent:FindFirstChild("SkybridgePressure")
 local SkybridgePressure = if pressureModule
     then require(pressureModule) else require("./SkybridgePressure")
@@ -31,39 +32,29 @@ function SkybridgeShutters.canComplete(ctx, now)
         + SkybridgeShutters.RaisedSeconds + 2 <= deadline
 end
 
-local function makeWarningChevrons(stripe, alongX, width)
+local function makeWarningChevrons(stripe, alongX, width, profile)
     local forward = alongX and Vector3.xAxis or Vector3.zAxis
     local lateral = alongX and Vector3.zAxis or Vector3.xAxis
     local chevrons = {}
     -- The opposite tips point back toward the two approaches. The
     -- crossbar remains the exact location of the rising obstruction.
+    -- Each arm sits completely above the highest approved tread.
+    local lift = Vector3.new(0, 0.045, 0)
     for approach = -1, 1, 2 do
-        local lift = Vector3.new(0, 0.025, 0)
         local tip = forward * (approach * 2.25) + lift
         for side = -1, 1, 2 do
             local tail = forward * (approach * 0.90) + lateral * (side * width * 0.30) + lift
-            local arm = Instance.new("Part")
-            arm.Name = "ShutterWarningChevron"
-            arm.Size = Vector3.new(0.24, 0.04, (tip - tail).Magnitude)
-            arm.CFrame = stripe.CFrame * CFrame.lookAt((tip + tail) * 0.5, tip)
-            arm.Anchored = true
-            arm.CanCollide = false
-            arm.CanTouch = false
-            arm.CanQuery = false
-            arm.CastShadow = false
-            arm.Material = Enum.Material.Neon
-            arm.Color = stripe.Color
-            arm.Transparency = 1
-            arm.TopSurface = Enum.SurfaceType.Smooth
-            arm.BottomSurface = Enum.SurfaceType.Smooth
-            arm.Parent = stripe
-            chevrons[#chevrons + 1] = arm
+            local pose = stripe.CFrame * CFrame.lookAt((tip + tail) * 0.5, tip)
+            chevrons[#chevrons + 1] = RoundEquipmentArt.create(
+                stripe, "ShutterWarningChevron",
+                Vector3.new(0.26, 0.05, (tip - tail).Magnitude), pose,
+                stripe.Color, Enum.Material.Neon, 1, profile)
         end
     end
     return chevrons
 end
 
-function SkybridgeShutters.gateFor(bridge, folder)
+function SkybridgeShutters.gateFor(bridge, folder, profile)
     if typeof(bridge) ~= "Instance" or not bridge:IsA("BasePart")
         or bridge:GetAttribute("ChaosSkybridge") ~= true
         or not bridge.CanCollide or not folder then
@@ -118,7 +109,8 @@ function SkybridgeShutters.gateFor(bridge, folder)
     stripe.Material = Enum.Material.Metal
     stripe.Color = Color3.fromRGB(242, 183, 74)
     stripe.Transparency = 1
-    local chevrons = makeWarningChevrons(stripe, alongX, width)
+    local chevrons = makeWarningChevrons(stripe, alongX, width,
+        profile or RoundEquipmentArt.profiles("Towers").beam)
     stripe.Parent = folder
 
     local rails = {}
@@ -266,8 +258,9 @@ function SkybridgeShutters.start(ctx, arena)
     folder.Name = "SkybridgeShutters"
     folder.Parent = mechanics
     local states = {}
+    local profile = RoundEquipmentArt.profiles("Towers").beam
     for _, bridge in ipairs(bridges) do
-        local state = SkybridgeShutters.gateFor(bridge, folder)
+        local state = SkybridgeShutters.gateFor(bridge, folder, profile)
         if not state then
             folder:Destroy()
             return false

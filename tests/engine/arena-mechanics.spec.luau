@@ -495,13 +495,18 @@ describe("Arena mechanics", function()
                 expect(arm.CanCollide or arm.CanTouch or arm.CanQuery).toBe(false)
                 expect(arm.Transparency).toBe(1)
                 local pose = state.stripe.CFrame:ToObjectSpace(arm.CFrame)
-                local tip = pose.Position + pose.LookVector * arm.Size.Z * 0.5
-                local tail = pose.Position - pose.LookVector * arm.Size.Z * 0.5
+                local alongLocalX = arm.Size.X > arm.Size.Z
+                local armForward = alongLocalX and pose.RightVector or pose.LookVector
+                local halfLength = math.max(arm.Size.X, arm.Size.Z) * 0.5
+                local halfWidth = math.min(arm.Size.X, arm.Size.Z) * 0.5
+                local tip = pose.Position + armForward * halfLength
+                local tail = pose.Position - armForward * halfLength
+                expect(pose.Position.Y - arm.Size.Y * 0.5 > 0).toBe(true)
                 expect(math.abs(tip:Dot(across)) < 0.01).toBe(true)
                 expect(math.abs(math.abs(tip:Dot(direction)) - 2.25) < 0.01).toBe(true)
                 expect(tip:Dot(direction) * tail:Dot(direction) > 0).toBe(true)
                 expect(math.abs(tail:Dot(direction)) > state.stripe.Size:Dot(direction) * 0.5).toBe(true)
-                expect(math.abs(tail:Dot(across)) + arm.Size.X * 0.5 < width * 0.5).toBe(true)
+                expect(math.abs(tail:Dot(across)) + halfWidth < width * 0.5).toBe(true)
                 if tip:Dot(direction) > 0 then positiveTips += 1 end
             end
             expect(positiveTips).toBe(2)
