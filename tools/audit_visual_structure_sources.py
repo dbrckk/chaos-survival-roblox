@@ -934,7 +934,7 @@ assert '.RenderStepped:Connect(' not in remaining
 assert '.Heartbeat:Connect(' not in remaining
 for marker in (
     'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,',
-    'RemainingVisualNativeCensus.sample(player, arena, profile.Name)',
+    'RemainingVisualNativeCensus.sample(player, arena, profile.Name, cameraReady and cameraPoint or nil)',
     'LocalP4RemainingStructuralNativePiecesReplaced',
 ):
     assert marker in SCENERY, "P4 telemetry missing: " + marker

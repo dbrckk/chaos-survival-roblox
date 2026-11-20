@@ -4,6 +4,19 @@
 
 > **Mesure désormais instrumentée :** `src/client/RemainingVisualNativeCensus.lua` observe toutes les **16 passes LOD** les véritables `Part/WedgePart/CornerWedgePart/TrussPart` natives non physiques encore présentes et non masquées localement, dans la carte active. Le recensement inclut façades, casings, arches, Helix, supports, bordures, sous-cadres, panneaux, finitions de sol, stations périphériques, monuments, skyline Harbor et passerelles. Les attributs `LocalP4VisibleNativeAscensionStructure`, `...AscensionSignal`, `...HelixStructure` et `...HelixSignal` séparent **les vrais volumes primitifs des signaux de navigation**. `LocalP4VisibleNativeAllScanned` donne le nombre de primitives natives visibles dans les deux dossiers parcourus, sans prétendre qu'elles méritent toutes un remplacement. Les comptes sont des **instantanés des objets streamés et non masqués**, ni des pixels rendus ni un FPS. Les vrais colliders sont exclus. Les arènes absentes sont signalées par `LocalP4NativeCensusReady=false`, et non traitées comme un zéro validé.
 
+## Priorités autour des parcours jouables
+
+Revue des générateurs de la PR #920 à partir de `aa70b187`. Les nombres ci-dessous décrivent les emplacements cosmétiques persistants produits lorsque la mécanique est présente. Leur présence à l’écran dépend du streaming, du réglage graphique et de la partie.
+
+| Priorité | Famille | Pièces et état du code |
+| --- | --- | --- |
+| 1 | Quatre stations de Classic Grid | **20 / 68 / 100 pièces simples** en Low, Medium et High. Chaque station a un socle et un anneau segmenté. Medium ajoute montants et filaments, High ajoute les couronnes. Les guides entre stations et l’effet de passage sont hors de ce total. |
+| 2 | Quatre portiques Flux de Crossroads | **32 pièces simples en Low**. Les **40 / 52 emplacements** en Medium / High peuvent recevoir des profils approuvés à la construction. Priorité aux socles des montants, aux traverses et au maintien des chevrons de retour. |
+| 3 | Appuis des routes d’ascension, de l’Épine céleste et des Promenades | Les pièces de secours peuvent encore être visibles près d’un tablier si sa source est absente à la construction ou lorsque le modèle local sort du budget. Relever les sous-cadres, appuis et panneaux près des départs et des embranchements avant de refaire une famille entière. |
+| 4 | Repères et portiques du Skyrail | **Huit repères** Low déjà éligibles au moulage. Vérifier la couverture réelle du profil près des volets, après streaming et avec pression graphique. |
+
+Le relevé client ajoute un rayon de **36 studs** autour de la caméra, calculé jusqu’à la boîte orientée de chaque pièce. Les attributs `LocalP4VisibleNativeNearRouteNativeTotal` et `LocalP4VisibleNativeNearRouteLocalTotal` suivent respectivement les familles serveur retenues et les trois ensembles décoratifs locaux nommés ci-dessus. Les attributs `LocalP4VisibleNativeNearGridStations`, `...NearFluxGates`, `...NearSkyrail` et les compteurs par famille serveur détaillent le total. Un relevé exploitable a `LocalP4NativeNearRouteReady=true`. Les pièces masquées, les colliders, les capteurs et les effets ponctuels des ensembles locaux sont exclus. Les compteurs décrivent la proximité géométrique et la transparence, sans mesurer l’occlusion ou les pixels rendus. Les compteurs historiques conservent leur périmètre.
+
 ## Revue du 20 novembre 2026
 
 La revue de la branche de la PR [#920](https://github.com/dbrckk/chaos-survival-roblox/pull/920), à partir de `565d843`, combine le recensement des générateurs, le registre des modèles et le suivi des propriétaires de chaque famille. Le registre contient 112 modèles approuvés et l’audit recense 509 fichiers Luau. Le fichier CSV du 13 novembre reste le relevé historique. Il ne permet pas de déduire le nombre de primitives visibles un jour donné.

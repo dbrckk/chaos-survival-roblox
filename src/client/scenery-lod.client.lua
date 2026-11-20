@@ -2311,7 +2311,7 @@ task.spawn(function()
             -- Actual streamed-in native fallback still visible AFTER all
             -- approved MeshPart owners and local LOD masks have reconciled.
             -- This is a snapshot, not an FPS, occlusion or global map count.
-            RemainingVisualNativeCensus.sample(player, arena, profile.Name)
+            RemainingVisualNativeCensus.sample(player, arena, profile.Name, cameraReady and cameraPoint or nil)
             -- Client-only diagnostic counters. The existing performance
             -- pulse can correlate these with frame pacing; these are NOT
             -- sent to the server, nor exposed as a player-facing HUD.

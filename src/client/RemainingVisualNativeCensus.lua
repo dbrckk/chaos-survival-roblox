@@ -102,16 +102,47 @@ local function set(player, key, value)
     end
 end
 
-function Census.sample(player, arena, quality)
+local nearRadiusSquared = 36 * 36
+local nativeRouteGroups = {
+    "Ascension", "Helix", "PlatformBevel", "PlatformSupport", "PlatformUnderFrame",
+    "PlatformPanel", "PlatformSignals", "Promenade", "SkySpine", "SkySwitchyard", "DistrictTransit",
+}
+local nativeRouteSet = {}
+for _, key in ipairs(nativeRouteGroups) do nativeRouteSet[key] = true end
+
+local localRouteOwners = {
+    Classic = {folder = "GridCircuitLocal", key = "GridStations", prefix = "^GridStation"},
+    Crossroads = {folder = "FluxRelayLocal", key = "FluxGates", parts = {
+        FluxFrameLeft = true, FluxFrameRight = true, FluxBridgeCap = true,
+        FluxVerticalSignal = true, FluxChevron = true, FluxCrest = true,
+        FluxArmorFin = true, FluxCrownPrism = true,
+    }},
+    Towers = {folder = "TowerSkyrailLocal", key = "Skyrail", prefix = "^Skyrail", exclude = "SkyrailImpulseFacet"},
+}
+
+local function nearEnough(part, cameraPoint)
+    if (1 - part.Transparency) * (1 - part.LocalTransparencyModifier) <= 0.05 then return false end
+    local point = part.CFrame:PointToObjectSpace(cameraPoint)
+    local half = part.Size * 0.5
+    local dx = math.max(0, math.abs(point.X) - half.X)
+    local dy = math.max(0, math.abs(point.Y) - half.Y)
+    local dz = math.max(0, math.abs(point.Z) - half.Z)
+    return dx * dx + dy * dy + dz * dz <= nearRadiusSquared
+end
+
+function Census.sample(player, arena, quality, cameraPoint)
     local counts = {}
     for _,key in ipairs(KEYS) do counts[key] = 0 end
     local scanned, decorScanned = 0, 0
+    local nearCounts, nearNative = {}, 0
+    local nearReady = false
     local streamed = false
     if arena and arena.Name == "Arena"
         and arena.Parent == workspace:FindFirstChild("GeneratedMap") then
         local decor = arena:FindFirstChild("Decor")
         local circuit = arena:FindFirstChild("HelixCircuit")
         if decor and decor:IsA("Folder") then
+            nearReady = typeof(cameraPoint) == "Vector3"
             local owners = {
                 casing = decor:FindFirstChild("OriginalPremiumColumnCladding"),
                 district = decor:FindFirstChild("ArenaDistrictArchitecture3D"),
@@ -130,6 +161,10 @@ function Census.sample(player, arena, quality)
                         local key = rootGroup or groupFor(part, decor, circuit, owners)
                         if key then
                             counts[key] += 1
+                            if nearReady and nativeRouteSet[key] and nearEnough(part, cameraPoint) then
+                                nearCounts[key] = (nearCounts[key] or 0) + 1
+                                nearNative += 1
+                            end
                             if key=="Ascension" or key=="Helix"
                                 or key=="District" or key=="PlatformSupport"
                                 or key=="SkySpine" or key=="Promenade" or key=="DistrictTransit"
@@ -188,10 +223,39 @@ function Census.sample(player, arena, quality)
             if relays and relays:IsA("Folder") and relays:GetAttribute("ServerAuthoritative") == true then
                 scan(relays, "TeamDashRelays")
             end
+            local variant = arena:GetAttribute("VariantId")
+            local routeOwner = nearReady and localRouteOwners[variant]
+            local localArt = routeOwner and workspace:FindFirstChild(routeOwner.folder)
+            if localArt and localArt:IsA("Folder") then
+                local count = 0
+                for _, part in ipairs(localArt:GetChildren()) do
+                    local name = part.Name
+                    local isFitting = if routeOwner.parts then routeOwner.parts[name]
+                        else name ~= routeOwner.exclude and name:match(routeOwner.prefix)
+                    if isFitting and visible(part) and nearEnough(part, cameraPoint) then
+                        count += 1
+                    end
+                end
+                nearCounts[routeOwner.key] = count
+            end
             streamed = true
         end
     end
     for _,key in ipairs(KEYS) do set(player, key, counts[key]) end
+    for _, key in ipairs(nativeRouteGroups) do
+        set(player, "Near" .. key, nearCounts[key] or 0)
+    end
+    local nearLocal = 0
+    for _, owner in pairs(localRouteOwners) do
+        local count = nearCounts[owner.key] or 0
+        set(player, "Near" .. owner.key, count)
+        nearLocal += count
+    end
+    set(player, "NearRouteNativeTotal", nearNative)
+    set(player, "NearRouteLocalTotal", nearLocal)
+    if player:GetAttribute("LocalP4NativeNearRouteReady") ~= nearReady then
+        player:SetAttribute("LocalP4NativeNearRouteReady", nearReady)
+    end
     -- Preserve the original Decor + Helix baseline alongside the expanded total.
     set(player, "AllDecor", decorScanned)
     set(player, "AllScanned", scanned)
