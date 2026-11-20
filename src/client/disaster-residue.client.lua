@@ -9,6 +9,7 @@ local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local AftermathSurfaceKit = require(script.Parent.AftermathSurfaceKit)
 local ImpactSurfaceScarKit = require(script.Parent.ImpactSurfaceScarKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -104,8 +105,8 @@ local function flatCFrame(position, normal, yaw)
         * CFrame.Angles(0, math.rad(yaw or 0), 0)
 end
 
-local function makePart(name, size, cframe, color, material, transparency)
-    local part = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, instance)
+    local part = instance or Instance.new("Part")
     part.Name = name
     part.Size = size
     part.CFrame = cframe
@@ -154,21 +155,32 @@ local function fadeLater(part, lifetime, settlement)
     Debris:AddItem(part, lifetime + 0.05)
 end
 
-local function makeDisc(name, position, diameter, profile, transparency, lifetime)
+local function discProfile(kind, quality)
+    if quality.Name == "Low" then return nil end
+    -- Open outlines read as craters and shockwaves. Ice and scorch
+    -- keep a filled footprint with a faceted edge.
+    local role = (kind == "crater" or kind == "shock") and "ring" or "core"
+    return CelebrationMeshes.readyProfile(role, player:GetAttribute("OptionalVfxPressure"))
+end
+
+local function makeDisc(name, position, diameter, profile, transparency, lifetime, source)
     local surface, normal = surfaceAt(position)
     if not surface then
         return
     end
 
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    local frame = flatCFrame(surface, normal, 0)
     local disc = makePart(
         name,
-        Vector3.new(0.035, diameter, diameter),
-        flatCFrame(surface, normal, 0) * CFrame.Angles(0, 0, math.rad(90)),
+        if mesh then Vector3.new(diameter, 0.035, diameter) else Vector3.new(0.035, diameter, diameter),
+        if mesh then frame else frame * CFrame.Angles(0, 0, math.pi * 0.5),
         profile.Color,
         profile.Material,
-        transparency
+        transparency,
+        mesh
     )
-    disc.Shape = Enum.PartType.Cylinder
+    if not mesh then disc.Shape = Enum.PartType.Cylinder end
     fadeLater(disc, lifetime)
 end
 
@@ -348,7 +360,8 @@ local function warningResidue(instance)
             id == "Freeze" and 11 or 8,
             profile,
             quality.Name == "Low" and 0.80 or 0.68,
-            quality.Name == "Low" and 1.4 or 2.4
+            quality.Name == "Low" and 1.4 or 2.4,
+            discProfile(profile.Kind, quality)
         )
 
         if quality.Name == "High" then
@@ -377,6 +390,10 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local lifetime = quality.Name == "Low" and 2.2 or 3.8
+    local hasMotif = AftermathSurfaceKit.names(id) ~= nil
+    local isTrace = profile.Kind == "fracture" or profile.Kind == "scrape"
+        or profile.Kind == "streak" or profile.Kind == "edge"
+    local source = not hasMotif and not isTrace and discProfile(profile.Kind, quality)
 
     for i = 1, perDisaster do
         if remainingParts(partLimit) == 0 then return end
@@ -387,7 +404,7 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
         local position = base.CFrame:PointToWorldSpace(
             Vector3.new(x, base.Size.Y * 0.5 + 0.08, z))
 
-        if AftermathSurfaceKit.names(id) ~= nil then
+        if hasMotif then
             -- One motif is a coherent 2/3/4-piece silhouette. Do not
             -- construct and immediately evict its pieces above the cap.
             if remainingParts(partLimit) < AftermathSurfaceKit.count(quality.Name) then
@@ -411,11 +428,7 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
                     fadeLater(piece, lifetime, settling)
                 end
             end
-        elseif profile.Kind == "fracture"
-            or profile.Kind == "scrape"
-            or profile.Kind == "streak"
-            or profile.Kind == "edge"
-        then
+        elseif isTrace then
             local yaw = (seed * 47) % 180
             local surface, normal = surfaceAt(position)
             if surface then
@@ -439,7 +452,8 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
                 diameter,
                 profile,
                 quality.Name == "Low" and 0.78 or 0.64,
-                lifetime
+                lifetime,
+                source
             )
 
             if quality.Name == "High"

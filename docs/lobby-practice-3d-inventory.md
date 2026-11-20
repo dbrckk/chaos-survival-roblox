@@ -93,4 +93,6 @@ Les trois balises d’orientation du lobby peuvent afficher le mât polygonal ap
 
 Les anneaux personnels de victoire, de défaite et de médaille peuvent utiliser un seul maillage creux d’Orbital à la place de six ou huit segments. Les couleurs, la durée et les options de réduction des animations suivent le résultat reçu. Les segments existants servent de secours en qualité basse, au chargement et sous pression graphique. Les impulsions de départ et d’impact continuent d’utiliser les segments.
 
+Les traces circulaires de catastrophe utilisent en qualité moyenne et haute un profil approuvé d’Orbital. Les cratères de météores et les ondes de saut adoptent un anneau creux. Le givre et les brûlures de bombes reprennent le noyau facetté aplati. Chaque trace garde une pièce alignée sur la surface et sa durée d’origine. Le disque simple prend le relais en qualité basse, sous pression graphique ou si le maillage est indisponible.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
