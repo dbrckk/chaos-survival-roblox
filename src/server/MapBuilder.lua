@@ -1578,7 +1578,7 @@ local FLOOR_RELIEF_BASE_REGIONS = {
     Harbor = Vector3.new(7.55, 0.12, 2.74),
 }
 
-local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
+local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile, harborReserve)
     local center = base.Position
 
     if variant.Id == "Classic" then
@@ -1748,6 +1748,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
         -- Two tiers of flush quay markings break up the large industrial
         -- ground without adding false cover, fake water or collider parts.
         -- Blue/seafoam is deliberate; the hazard palette owns amber/red.
+        local quayProfile = floorProfile or sweptProfile or harborReserve
         local lanes = {
             {x = -89, z = -23, alongX = false},
             {x = -89, z = 23, alongX = false},
@@ -1764,7 +1765,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             local size = lane.alongX and Vector3.new(52, thickness, 0.45)
                 or Vector3.new(0.45, thickness, 52)
             local line = fitDecorMesh(
-                floorProfile or sweptProfile, "HarborQuayInlay" .. index,
+                quayProfile, "HarborQuayInlay" .. index,
                 CFrame.new(center + Vector3.new(lane.x, quayY, lane.z)),
                 size,
                 index % 2 == 0 and theme.Accent or theme.Secondary,
@@ -1793,7 +1794,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
                     - forward * (halfSpan + 2.7)
                 local facing = CFrame.lookAt(position, position + forward, Vector3.yAxis)
                 addFloorChevron(decor, "HarborAccessChevron" .. family .. "_" .. route, facing,
-                    floorProfile or sweptProfile, entryStyle, theme.Accent, 0.47, true)
+                    quayProfile, entryStyle, theme.Accent, 0.47, true)
             end
         end
     elseif variant.Id == "Orbital" then
@@ -1879,7 +1880,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
         local pose = CFrame.new(center + offset)
             * CFrame.Angles(0, math.rad((i % 2 == 0 and -1 or 1) * panelRotation), 0)
         local maintenance = fitDecorMesh(
-            floorProfile,
+            floorProfile or harborReserve,
             "FloorMaintenancePanel" .. i,
             pose,
             panelSize,
@@ -3389,11 +3390,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         monumentProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId(variant.Id)}
     end
     local routeCasting = variant.Id ~= "Harbor" and (floorProfile or bevelCasting) or nil
-    local routeChevronProfile = sweptProfile or routeCasting
+    local harborReserve = harborCasting and harborCasting.part
+    local routeChevronProfile = sweptProfile or routeCasting or harborReserve
+    local markerShaft = if harborCasting then routeShaft or harborReserve else beaconShaft
+    local markerCap = wayfinderBase or harborReserve
     -- Only callers that fit the local span explicitly can accept a
     -- roller imported along either horizontal axis.
     local canonicalRim = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil
-    addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
+    addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile, harborReserve)
     addArenaHologram(decor, config, variant, theme, sweptProfile)
 
     local halfX = variant.BaseSize.X * 0.5
@@ -3411,7 +3415,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         {name = "EdgeWest", size = edgeSizeZ, offset = Vector3.new(-halfX + 0.4, edgeY, 0)},
         {name = "EdgeEast", size = edgeSizeZ, offset = Vector3.new(halfX - 0.4, edgeY, 0)},
     }) do
-        local border = fitDecorMesh(sweptProfile, edge.name, base.CFrame * CFrame.new(edge.offset),
+        local border = fitDecorMesh(sweptProfile or harborReserve, edge.name, base.CFrame * CFrame.new(edge.offset),
             edge.size, edgeColor, Enum.Material.Neon)
         border.Transparency = 0
         border.Parent = decor
@@ -3419,7 +3423,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
 
     -- The client uses the center of this part for the orbit and particles.
     local beacon = fitDecorMesh(
-        beaconShaft,
+        markerShaft,
         "CenterBeacon",
         base.CFrame * CFrame.new(0, 7, 0),
         Vector3.new(1.4, 14, 1.4),
@@ -4153,7 +4157,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             math.clamp(lookout.offset.Z + signZ * 9, -halfZ + 3, halfZ - 3)
         )
         local terminalIndex = #variant.Platforms + startIndex + perRoute
-        local mast = fitDecorMesh(beaconShaft, "OuterRouteSignal" .. route, CFrame.new(beaconPoint),
+        local mast = fitDecorMesh(markerShaft, "OuterRouteSignal" .. route, CFrame.new(beaconPoint),
             Vector3.new(1.55, 34, 1.55), theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal)
         mast.Transparency = 0.12
         local lens = fitDecorMesh(
@@ -4166,7 +4170,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             lens.Shape = Enum.PartType.Ball
         end
         lens.Transparency = 0.20
-        local crown = fitDecorMesh(wayfinderBase, "OuterRouteSignalCrown" .. route,
+        local crown = fitDecorMesh(markerCap, "OuterRouteSignalCrown" .. route,
             CFrame.new(beaconPoint + Vector3.new(0, 15.9, 0)), Vector3.new(5.0, 0.85, 5.0),
             theme.Detail, Enum.Material.Metal)
         for _, piece in ipairs({mast, lens, crown}) do
@@ -4188,7 +4192,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     for i, offset in ipairs(beaconOffsets) do
         local frame = base.CFrame * CFrame.new(offset)
         local pillar = fitDecorMesh(
-            beaconShaft,
+            markerShaft,
             "EdgeBeacon" .. i,
             frame,
             pillarSize,
@@ -4199,7 +4203,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
 
         local color = i % 2 == 0 and theme.Secondary or theme.Accent
         local cap = fitDecorMesh(
-            wayfinderBase,
+            markerCap,
             "EdgeBeaconGlow" .. i,
             frame * CFrame.new(0, pillarSize.Y * 0.5 + 0.05, 0),
             Vector3.new(1.35, 0.36, 1.35),

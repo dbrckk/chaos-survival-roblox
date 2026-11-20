@@ -909,13 +909,23 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     local hatch = detail("ServiceHatch", upper,
         Vector3.new(hatchWidth, 0.18, hatchDepth), color,
         materials[variant], 0.05, profiles.hatch, profiles.hatchAssetId or profiles.assetId)
+    local collarProfile, collarId = profiles.collar, profiles.assetId
+    local handleProfile, handleId = profiles.handle, SERVICE_HANDLE_ASSET
+    if variant == "Harbor" then
+        if not collarProfile then
+            collarProfile, collarId = profiles.hatch, profiles.hatchAssetId or profiles.assetId
+        end
+        if not handleProfile then
+            handleProfile, handleId = profiles.detail, profiles.assetId
+        end
+    end
     local collar = detail("ServiceCollar", upper + 0.11,
         Vector3.new(math.max(1.0, hatchWidth - 0.70), 0.08,
             math.max(1.0, hatchDepth - 0.70)),
-        accent, Enum.Material.Metal, 0.11, profiles.collar, profiles.assetId)
+        accent, Enum.Material.Metal, 0.11, collarProfile, collarId)
     local handle = detail("ServiceHandle", upper + 0.18,
         Vector3.new(math.min(1.7, hatchWidth * 0.36), 0.10, 0.25),
-        theme.Structure, Enum.Material.DiamondPlate, 0.02, profiles.handle, SERVICE_HANDLE_ASSET)
+        theme.Structure, Enum.Material.DiamondPlate, 0.02, handleProfile, handleId)
     return {hatch, collar, handle}
 end
 
