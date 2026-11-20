@@ -586,6 +586,12 @@ refreshStageProfiles = function()
         if crystal and geometryReady(crystal) then profiles.crystal = crystal end
     end
     stageBase = ShowtimeProps.fit(stageBase, profiles.casting)
+    for _, entry in ipairs(tiles) do
+        entry.part = ShowtimeProps.fit(entry.part, profiles.casting)
+    end
+    for _, entry in ipairs(fixedPieces) do
+        entry.part = ShowtimeProps.fit(entry.part, profiles[entry.meshProfile])
+    end
     ShowtimeProps.applyProfiles(assetKit, profiles)
 end
 
@@ -639,7 +645,7 @@ local function buildStage()
                 or Vector3.new(13.1, 0.22, 0.18),
             cf, i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Violet,
             Enum.Material.Neon, 0.21)
-        table.insert(fixedPieces, {part = edge, transparency = 0.21})
+        table.insert(fixedPieces, {part = edge, transparency = 0.21, meshProfile = "forged"})
     end
 
     for i = 1, 4 do
@@ -649,7 +655,7 @@ local function buildStage()
             baseCF * CFrame.new(sx * 6.3, 1.15, sz * 6.3),
             i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
             Enum.Material.Glass, 0.18)
-        table.insert(fixedPieces, {part = crystal, transparency = 0.18})
+        table.insert(fixedPieces, {part = crystal, transparency = 0.18, meshProfile = "crystal"})
         if #lights < profile.Lights then
             local light = Instance.new("PointLight")
             light.Name = "ShowtimePulseLight"

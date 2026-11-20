@@ -73,4 +73,6 @@ Le lot Showtime rend ces huit emplacements éligibles aux profils approuvés. Le
 
 Les arcs acoustiques et la couronne de Showtime ajoutent 13, 21 ou 43 emplacements éligibles selon la qualité. Les nervures, les ailes, leurs liserés et les segments tournants utilisent le profil forgé de Tower Run. Le cœur et les attaches de la couronne reprennent le profil d’Orbital. Les segments gardent leur pivot tangent et le sens de rotation des deux anneaux quelle que soit l’orientation d’import.
 
+La piste peut afficher des profils approuvés sur ses 9, 16 ou 25 dalles, ses quatre bordures et ses quatre pylônes. Les dalles reprennent le profil moulé sans modifier les joints du quadrillage ni les décalages de pulsation. Les bordures utilisent le profil forgé dans les deux axes. Les pylônes reprennent les facettes d’Orbital et conservent les lumières existantes. Chaque emplacement garde une pièce de secours aux mêmes dimensions.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
