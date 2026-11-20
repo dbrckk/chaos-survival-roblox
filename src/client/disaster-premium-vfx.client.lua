@@ -29,9 +29,7 @@ local function quality()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 end
 
--- CrackedLava is a native Roblox surface with actual fissure relief;
--- keep its color/transparency consistent through quality switches.
--- No custom texture, extra mesh, emitter, or additional render pass.
+-- Keep the fissured material and its pulse consistent across both surfaces.
 local function lavaSurfaceAlpha(tierName, reduced, pulse)
     local base = tierName == "Low" and 0.23 or 0.13
     return base + (reduced and 0 or math.clamp(pulse, 0, 1) * 0.08)
@@ -52,10 +50,27 @@ local function localPart(name, size, color, material, className, source)
     return p
 end
 
+local function lavaSurfacePose(lava)
+    return lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0),
+        Vector3.new(math.max(1, lava.Size.X - 1.2), 0.12, math.max(1, lava.Size.Z - 1.2))
+end
+
+local function makeLavaSurface(lava, tier, reduced, source, color)
+    local frame, size = lavaSurfacePose(lava)
+    local surface = localPart(
+        "LavaSurfaceLocal", size, color or Color3.fromRGB(235, 104, 40),
+        Enum.Material.CrackedLava, nil, source
+    )
+    surface.CFrame = frame
+    surface.Transparency = lavaSurfaceAlpha(tier.Name, reduced, 0.5)
+    return surface
+end
+
 local function clearLava()
     if not lavaState then
         return
     end
+    lavaState.surface:Destroy()
     for _, instance in ipairs(lavaState.instances) do
         if instance then instance:Destroy() end
     end
@@ -66,9 +81,17 @@ local function bindLava(lava)
     if not lava:IsA("BasePart") then return end
     local tier = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local meshEligible = tier.Name ~= "Low" and not reduced and pressure < 1
     if DisasterCosmeticRules.reusableLava(lavaState, lava) then
-        -- Reconfigure existing GPU instances instead of recreating them
-        -- when accessibility or tier changes during an active hazard.
+        -- Swap only the surface. The live embers and light keep their hosts.
+        if lavaState.meshEligible ~= meshEligible then
+            local previous = lavaState.surface
+            local source = meshEligible and CelebrationMeshes.readyProfile("casting", pressure)
+            lavaState.surface = makeLavaSurface(lava, tier, reduced, source, previous.Color)
+            lavaState.meshEligible = meshEligible
+            previous:Destroy()
+        end
         local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced, activeDisasterCount)
         if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
         lavaState.light.Range = 20 + 8 * tier.Scale
@@ -80,17 +103,8 @@ local function bindLava(lava)
     clearLava()
     local instances = {}
 
-    local surface = localPart(
-        "LavaSurfaceLocal",
-        Vector3.new(math.max(1, lava.Size.X - 1.2), 0.12, math.max(1, lava.Size.Z - 1.2)),
-        Color3.fromRGB(235, 104, 40),
-        Enum.Material.CrackedLava
-    )
-    -- Place the overlay immediately: the dormant renderer may be sleeping
-    -- when a new lava part replicates, and must never show a piece at (0,0,0).
-    surface.CFrame = lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
-    surface.Transparency = lavaSurfaceAlpha(tier.Name, reduced, 0.5)
-    table.insert(instances, surface)
+    local source = meshEligible and CelebrationMeshes.readyProfile("casting", pressure)
+    local surface = makeLavaSurface(lava, tier, reduced, source)
 
     local attachment = Instance.new("Attachment")
     attachment.Name = "LavaHeatLocal"
@@ -137,6 +151,7 @@ local function bindLava(lava)
     lavaState = {
         lava = lava,
         surface = surface,
+        meshEligible = meshEligible,
         attachment = attachment,
         embers = embers,
         light = light,
@@ -473,13 +488,7 @@ ensureRenderLoop = function()
         if surface and surface.Parent then
             local pulse = reduceMotion and 0.5
                 or (math.sin(clock * 2.8) + 1) * 0.5
-            local nextSize = Vector3.new(
-                math.max(1, lava.Size.X - 1.2),
-                0.12,
-                math.max(1, lava.Size.Z - 1.2)
-            )
-            local nextFrame = lava.CFrame
-                * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
+            local nextFrame, nextSize = lavaSurfacePose(lava)
             -- The server can raise lava during ReduceMotion. Retain
             -- positional tracking but skip identical GPU property writes.
             if surface.Size ~= nextSize then surface.Size = nextSize end
