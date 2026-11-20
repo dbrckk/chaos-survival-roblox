@@ -1162,11 +1162,13 @@ describe("Shrinking Arena mobility integration", function()
         local storage=game:GetService("ReplicatedStorage")
         local oldMap=workspace:FindFirstChild("GeneratedMap")
         local oldChassis=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        local oldRelief=storage:FindFirstChild("ApprovedFloorReliefTemplates")
         local signals=forgedSignalFixture(true)
         local oldSignals=storage:FindFirstChild(signals.Name)
         if oldMap then oldMap.Parent=nil end
         if oldChassis then oldChassis.Parent=nil end
         if oldSignals then oldSignals.Parent=nil end
+        if oldRelief then oldRelief.Parent=nil end
         local chassis=shortChassisFixture(storage)
         signals.Parent=storage
         local generated
@@ -1263,6 +1265,7 @@ describe("Shrinking Arena mobility integration", function()
         if oldMap then oldMap.Parent=workspace end
         if oldChassis then oldChassis.Parent=storage end
         if oldSignals then oldSignals.Parent=storage end
+        if oldRelief then oldRelief.Parent=storage end
         if not ok then error(why) end
     end)
 

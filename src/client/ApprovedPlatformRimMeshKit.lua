@@ -77,6 +77,7 @@ local function nativeParts(decor,deck,original,scale)
         deck.CFrame*CFrame.new(0,-deck.Size.Y*.5-.18,0),
         Vector3.new(deck.Size.X+.5*scale,.42,deck.Size.Z+.5*scale), .13, .14) then return nil end
     local edges = {}
+    local harborLanding = PlatformIdentityLodRules.harborLandingWidth(deck) ~= nil
     for i=1,4 do
         local edge=decor:FindFirstChild("PlatformBevel"..id.."_"..i)
         if not PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)
@@ -93,12 +94,14 @@ local function nativeParts(decor,deck,original,scale)
             local yaw = alongX and (i==1 and 0 or math.pi)
                 or (i==3 and math.pi*.5 or -math.pi*.5)
             local span = (alongX and deck.Size.X or deck.Size.Z) + .12*scale
-            local forged = edge:IsA("MeshPart") and edge.MeshId ~= ""
-                and edge:GetAttribute("OriginalElevatedForgedBevel3D") == true
-                and edge:GetAttribute("Original3DAssetId") == 126298311664881
+            local assetId = edge:GetAttribute("Original3DAssetId")
+            local quarterTurn = edge:IsA("MeshPart") and edge.MeshId ~= ""
+                and ((assetId == 126298311664881
+                        and edge:GetAttribute("OriginalElevatedForgedBevel3D") == true)
+                    or (harborLanding and assetId == 94830155055482))
             local frame = deck.CFrame*CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)
             if not PlatformIdentityLodRules.matchesDeckTrimPose(
-                edge,frame,Vector3.new(span,.30,depth),.13,.14,forged) then
+                edge,frame,Vector3.new(span,.30,depth),.13,.14,quarterTurn) then
                 return nil
             end
         end

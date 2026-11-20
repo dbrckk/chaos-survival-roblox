@@ -56,6 +56,8 @@ Les barges du littoral et les défenses de quai peuvent reprendre **16, 39 ou 72
 
 Les quatre avant-postes jouables de Storm Harbor peuvent afficher **20 pièces sculptées en qualité moyenne ou 36 en haute**. Les quilles, montants, traverses, jambes de force et ailettes conservent leurs soudures à la vraie plateforme. Les instruments gardent leur pivot d’animation et leurs modèles complets de proximité. Les pièces suivent le rétrécissement, s’atténuent pendant l’alerte et disparaissent à l’effondrement. Si un profil manque ou si la pression graphique augmente, les formes simples reprennent le relais. Les seuils de montage des assemblages de proximité restent inchangés.
 
+Les deux passerelles hautes de Storm Harbor peuvent recevoir **28 bordures forgées** sur leurs 14 paliers. Les **58 paliers des trois familles de parcours** peuvent aussi conserver leurs deux signaux et leur châssis sculptés quand les pièces communes manquent à la construction, pour 174 emplacements de secours. Les deux signaux utilisent le rouleau moulé de Harbor. Le châssis utilise son profil de tôle fermé. Les coins et châssis restent admissibles à l’habillage de proximité après rotation de l’import et rétrécissement du palier. Les formes simples restent disponibles selon les sources chargées. Les pièces visibles suivent l’alerte, l’effondrement et la remise en service de leur palier.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

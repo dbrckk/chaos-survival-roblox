@@ -2005,7 +2005,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    underdeckSpars, bevelProfile, harborAlongX, elevatedTrim)
+    underdeckSpars, bevelProfile, harborAlongX, elevatedTrim, harborSkywayBeam)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2099,6 +2099,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     }
     local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
     local useBridgeBevel = bevelProfile and bevelProfile.Name == "SweptCrossbeam"
+    local skywayBeam = harborSkywayBeam and harborSkywayBeam.MeshId ~= "" and harborSkywayBeam
     local bevelAlongX = bevelProfile and bevelProfile.Size.X > bevelProfile.Size.Z
     for edgeIndex, spec in ipairs(edgeSpecs) do
         local size = spec[1]
@@ -2110,8 +2111,10 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         local bevel
         -- Long edges are X-aligned on a Promenade and Z-aligned on the Spine.
         local longEdge = if skySpineStep then edgeIndex > 2 else edgeIndex <= 2
-        if elevatedTrim and longEdge then
-            bevel = RouteSignalGeometry.fit(elevatedTrim.beam, pose, size, nil, true)
+        local longProfile = (elevatedTrim and longEdge and elevatedTrim.beam)
+            or (edgeIndex <= 2 and skywayBeam)
+        if longProfile then
+            bevel = RouteSignalGeometry.fit(longProfile, pose, size, nil, true)
             if bevel then
                 bevel:SetAttribute("OriginalPlatformBevel3D", true)
                 bevel:SetAttribute("OriginalElevatedForgedBevel3D", true)
@@ -2130,7 +2133,12 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         elseif not bevel and not useBridgeBevel then
             -- Preserve the exact fallback axes and dimensions for the local rim owners.
             bevel = RouteSignalGeometry.fit(bevelProfile, pose, size, nil, true)
-            if bevel then bevel:SetAttribute("OriginalPlatformBevel3D", true) end
+            if bevel then
+                bevel:SetAttribute("OriginalPlatformBevel3D", true)
+                if harborAlongX ~= nil then
+                    bevel:SetAttribute("Original3DAssetId", 94830155055482)
+                end
+            end
         end
         if not bevel then
             local wedge = Instance.new("WedgePart")
@@ -2187,9 +2195,10 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     elseif not underFrame then
         -- Preserve the original frame envelope and deck-relative axes so
         -- route chassis and cradles can still claim this exact owner.
-        local sparsAlongX = underdeckSpars and underdeckSpars.Size.X > underdeckSpars.Size.Z
-        underFrame = fitDecorMesh(underdeckSpars, frameName, framePose, frameSize,
-            frameColor, VisualTheme.Materials.Structure, sparsAlongX)
+        local frameProfile = underdeckSpars or (harborAlongX ~= nil and panelProfile or nil)
+        local frameAlongX = frameProfile and frameProfile.Size.X > frameProfile.Size.Z
+        underFrame = fitDecorMesh(frameProfile, frameName, framePose, frameSize,
+            frameColor, VisualTheme.Materials.Structure, frameAlongX)
     end
     underFrame.Name = frameName
     underFrame.Color = frameColor
@@ -3565,11 +3574,17 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             elseif definition.PerimeterStep then 1.20
             elseif elevatedRoute or harborLanding or lookoutAccess then 0.96
             else 0.28
-        addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand, edgeOverhang, glowAlongX)
+        -- Harbor's local cast roller provides the same route cue while
+        -- the shared edge band or chassis is still loading.
+        local harborRoller = harborLanding and rimBevel or nil
+        addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or harborRoller,
+            edgeOverhang, glowAlongX)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
-        addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal,
+        local harborSkywayBeam = definition.HarborSkywayLane and sweptProfile or nil
+        addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal or harborRoller,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, elevatedTrim)
+            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, elevatedTrim,
+            harborSkywayBeam)
         addPlatformSupports(decor, base, platform, i, theme, beaconShaft)
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)
