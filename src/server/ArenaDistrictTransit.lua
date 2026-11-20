@@ -8,6 +8,38 @@ local SpawnSafety = if script
     then require(script.Parent.SpawnSafety)
     else require("./SpawnSafety")
 
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+local PerimeterArmor = require("./PremiumPerimeterArmorAssets")
+local LargeStructures = require("./PremiumLargeStructureAssets")
+local Reactor = require("./PremiumOrbitalReactorLandmarkAssets")
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local capModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capModule then require(capModule)
+    else require("../shared/PerimeterCapGeometry")
+
+type Artwork = {source: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
+type Profiles = {cast: Artwork, shaft: Artwork, lens: Artwork, ring: Artwork, slope: Artwork}
+
+local function profilesFor(variant: string): Profiles
+    local cast = PerimeterArmor.wayfinderProfile()
+    local shaft, shaftId = LargeStructures.shaftProfile(variant)
+    local lens, ring
+    if variant == "Classic" or variant == "Orbital" then
+        lens = Reactor.nodeProfile(Vector3.new(2.96, 2.9503, 2.96))
+        ring = Reactor.nodeProfile(Vector3.new(4.11, .39, 4.11))
+    end
+    local rotation, swapXZ
+    if variant == "Crossroads" then rotation, swapXZ = PerimeterCapGeometry.slope(cast) end
+    return {
+        cast = {source = cast, assetId = 88962643359267},
+        shaft = {source = shaft, assetId = shaftId},
+        lens = {source = lens, assetId = 104654294187035},
+        ring = {source = ring, assetId = 104654294187035},
+        slope = {source = rotation and cast or nil, assetId = 88962643359267,
+            rotation = rotation, swapXZ = swapXZ},
+    }
+end
+
 local ArenaDistrictTransit = {}
 
 ArenaDistrictTransit.ReuseSeconds = 6
@@ -87,11 +119,33 @@ function ArenaDistrictTransit.arrival(arena, base, route, outer, humanoid, root)
     return nil
 end
 
-local function part(parent, name, size, cf, color, material)
-    local p = Instance.new("Part")
+local function part(parent, name, size, cf, color, material, art: Artwork?, shape: Enum.PartType?)
+    local source = art and art.source
+    local mesh
+    if source and art then
+        local meshSize, meshFrame = size, cf
+        if shape == Enum.PartType.Cylinder then
+            -- Mesh discs lie in X/Z. Roblox cylinders have local X as the axis.
+            meshSize = Vector3.new(size.Y, size.X, size.Z)
+            meshFrame *= CFrame.Angles(0, 0, -math.pi / 2)
+        end
+        if art.rotation then meshFrame *= art.rotation end
+        if art.swapXZ then meshSize = Vector3.new(meshSize.Z, meshSize.Y, meshSize.X) end
+        mesh = RouteSignalGeometry.fit(source, meshFrame, meshSize, nil, source.Size.X > source.Size.Z)
+    end
+    local p: BasePart
+    if mesh then
+        p = mesh
+        p.Transparency = 0
+        p:SetAttribute("Original3DAssetId", art and art.assetId)
+    else
+        local native = Instance.new("Part")
+        native.Size = size
+        native.CFrame = cf
+        if shape then native.Shape = shape end
+        p = native
+    end
     p.Name = name
-    p.Size = size
-    p.CFrame = cf
     p.Color = color
     p.Material = material or Enum.Material.Metal
     p.Anchored = true
@@ -103,7 +157,7 @@ local function part(parent, name, size, cf, color, material)
     return p
 end
 
-local function station(folder, base, route, outer, variantId)
+local function station(folder, base, route, outer, variantId, profiles: Profiles)
     local offset = ArenaDistrictTransit.stationOffset(
         route, outer, math.min(base.Size.X, base.Size.Z),
         variantId
@@ -127,61 +181,58 @@ local function station(folder, base, route, outer, variantId)
     part(model, "ArrivalFloorIndicator",
         Vector3.new(7.4, 0.12, 5.4),
         frame * CFrame.new(0, 0.075, 0),
-        Color3.fromRGB(34, 52, 67), Enum.Material.Metal)
+        Color3.fromRGB(34, 52, 67), Enum.Material.Metal, profiles.cast)
     for side = -1, 1, 2 do
         part(model, "GantryPost" .. side,
             Vector3.new(0.85, 7.8, 1.15),
             frame * CFrame.new(side * 3.15, 4.0, 0),
-            Color3.fromRGB(67, 92, 114))
+            Color3.fromRGB(67, 92, 114), nil, profiles.shaft)
         part(model, "SignalStripe" .. side,
             Vector3.new(0.16, 5.0, 0.19),
             frame * CFrame.new(side * 3.15, 4.0, -0.68),
-            color, Enum.Material.Neon).Transparency = 0.26
+            color, Enum.Material.Neon, profiles.cast).Transparency = 0.26
     end
     local header = part(model, "TransitHeader",
         Vector3.new(7.5, 1.05, 2.4),
         frame * CFrame.new(0, 8.15, 0),
-        Color3.fromRGB(31, 49, 66))
+        Color3.fromRGB(31, 49, 66), nil, profiles.cast)
     part(model, "TransitSignal",
         Vector3.new(5.6, 0.5, 0.22),
         frame * CFrame.new(0, 8.25, -1.26),
-        color, Enum.Material.Neon).Transparency = 0.2
+        color, Enum.Material.Neon, profiles.cast).Transparency = 0.2
 
-    -- Distinct silhouettes for the four arenas; these stay decorative.
+    -- Each variant keeps a distinct silhouette above the transit header.
     -- Only 2-4 extra low-poly parts per station, no active lights/VFX.
     if variantId == "Classic" then
-        local dish = part(model, "MeteorDish",
+        part(model, "MeteorDish",
             Vector3.new(0.65, 4.2, 4.2),
             frame * CFrame.new(0, 10.2, 0)
                 * CFrame.Angles(0, 0, math.rad(30)),
-            Color3.fromRGB(87, 121, 146))
-        dish.Shape = Enum.PartType.Cylinder
-        local lens = part(model, "ScannerEye",
+            Color3.fromRGB(87, 121, 146), nil, profiles.ring, Enum.PartType.Cylinder)
+        part(model, "ScannerEye",
             Vector3.new(1.35, 1.35, 1.35),
             frame * CFrame.new(0, 10.3, -0.52),
-            color, Enum.Material.Glass)
-        lens.Shape = Enum.PartType.Ball
+            color, Enum.Material.Glass, profiles.lens, Enum.PartType.Ball)
     elseif variantId == "Towers" then
         part(model, "TransitCanopy",
             Vector3.new(10, 0.8, 3.7),
             frame * CFrame.new(0, 10.3, 0),
-            Color3.fromRGB(88, 108, 123))
+            Color3.fromRGB(88, 108, 123), nil, profiles.cast)
         part(model, "SuspendedCabin",
             Vector3.new(3.6, 2.4, 2.5),
             frame * CFrame.new(0, 12, 0),
-            Color3.fromRGB(34, 58, 80))
+            Color3.fromRGB(34, 58, 80), nil, profiles.cast)
         part(model, "CabinGlazing",
             Vector3.new(2.6, 0.76, 0.15),
             frame * CFrame.new(0, 12.1, -1.35),
-            color, Enum.Material.Glass).Transparency = 0.24
+            color, Enum.Material.Glass, profiles.cast).Transparency = 0.24
     elseif variantId == "Crossroads" then
         for side = -1, 1, 2 do
-            local arrow = part(model, "SwitchyardSignal" .. side,
+            part(model, "SwitchyardSignal" .. side,
                 Vector3.new(3.7, 2.4, 1.4),
                 frame * CFrame.new(side * 2.3, 10.8, 0)
                     * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
-                color, Enum.Material.Metal)
-            arrow.Shape = Enum.PartType.Block
+                color, Enum.Material.Metal, profiles.slope)
         end
     elseif variantId == "Harbor" then
         -- Compact port-hoist silhouette rather than generic archway.
@@ -189,25 +240,23 @@ local function station(folder, base, route, outer, variantId)
         -- sole server-authoritative free transport interaction.
         part(model, "HarborSignalHoist", Vector3.new(7.5, 1.2, 2.2),
             frame * CFrame.new(0, 10.4, 0),
-            Color3.fromRGB(88, 142, 156))
+            Color3.fromRGB(88, 142, 156), nil, profiles.cast)
         part(model, "HarborTrolley", Vector3.new(2.3, 2.5, 2.2),
             frame * CFrame.new(1.8, 11.4, 0),
-            color, Enum.Material.Metal)
+            color, Enum.Material.Metal, profiles.cast)
         part(model, "HarborCable", Vector3.new(0.25, 2.5, 0.25),
             frame * CFrame.new(1.8, 8.9, -0.2),
-            Color3.fromRGB(105, 156, 165))
+            Color3.fromRGB(105, 156, 165), nil, profiles.shaft)
     elseif variantId == "Orbital" then
-        local hub = part(model, "OrbitReceiver",
+        part(model, "OrbitReceiver",
             Vector3.new(3.1, 3.1, 3.1),
             frame * CFrame.new(0, 10.5, 0),
-            color, Enum.Material.Glass)
-        hub.Shape = Enum.PartType.Ball
-        local collar = part(model, "OrbitCollar",
+            color, Enum.Material.Glass, profiles.lens, Enum.PartType.Ball)
+        part(model, "OrbitCollar",
             Vector3.new(0.65, 5.2, 5.2),
             frame * CFrame.new(0, 10.5, 0)
                 * CFrame.Angles(0, 0, math.pi * 0.5),
-            Color3.fromRGB(97, 127, 155))
-        collar.Shape = Enum.PartType.Cylinder
+            Color3.fromRGB(97, 127, 155), nil, profiles.ring, Enum.PartType.Cylinder)
     end
 
     local prompt = Instance.new("ProximityPrompt")
@@ -274,9 +323,10 @@ function ArenaDistrictTransit.start(ctx)
     local cooldowns = {}
     local built = 0
     local variantId = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local profiles = profilesFor(variantId)
     for route = 1, 4 do
-        local hub = station(folder, base, route, false, variantId)
-        local outer = station(folder, base, route, true, variantId)
+        local hub = station(folder, base, route, false, variantId, profiles)
+        local outer = station(folder, base, route, true, variantId, profiles)
         if hub and outer then
             built += 2
             for _, entry in ipairs({hub, outer}) do

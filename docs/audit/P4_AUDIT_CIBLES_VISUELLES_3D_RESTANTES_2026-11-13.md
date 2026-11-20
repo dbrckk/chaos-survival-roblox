@@ -32,6 +32,12 @@ Les 16 entrées de service peuvent reprendre le moulage approuvé pour leur enca
 
 Les quatre monuments d’angle peuvent utiliser des maillages approuvés dans **57 emplacements par arène**. L’observatoire conserve 17 pièces, le portique de fret 13, le réacteur 17 et le phare 10. Les socles, les corps et les deux couronnes restent compatibles avec les habillages de proximité. La couronne du portique s’aligne sur les axes du monument même si la pente de l’aileron importé exige un quart de tour. Les silhouettes reprennent leurs formes simples si une source manque à la construction.
 
+### Géométrie au contact des parcours
+
+La revue de la branche à partir de `df33653` a retrouvé huit stations de transit actives pendant les manches éligibles. Elles sont placées au sol entre le centre et les districts. Le recensement précédent ignorait leur dossier temporaire, créé directement sous l’arène. Chaque station peut utiliser des maillages approuvés pour le seuil, les montants, la traverse, les signaux et son équipement propre à l’arène. Cela représente **72 emplacements sur Classic, Crossroads et Orbital, et 80 sur Tower Run et Storm Harbor**. La traverse conserve la position du bouton de voyage et de l’enseigne. Chaque pièce retrouve sa forme simple si son profil manque au début de la manche.
+
+Le recensement client inclut désormais le transit quand le serveur le crée. Les attributs `LocalP4VisibleNativeDistrictTransitStructure` et `LocalP4VisibleNativeDistrictTransitSignal` donnent ses deux sous-totaux. `LocalP4VisibleNativeUnclassifiedLarge` relève les primitives de 12 studs ou plus sans famille identifiée pour orienter la prochaine inspection. `AllDecor` conserve son périmètre historique Décor + Helix. `AllScanned` couvre aussi le transit. Ces mesures dépendent du streaming et des masques client.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

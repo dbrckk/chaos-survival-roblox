@@ -86,6 +86,8 @@ local KEYS = {
     "PromenadeStructure", "PromenadeSignal",
     "PlatformPanel", "GroundFinish", "CornerLandmarks",
     "ExteriorRetrofits", "HarborFleet", "PerimeterStations",
+    "DistrictTransit", "DistrictTransitStructure", "DistrictTransitSignal",
+    "Unclassified", "UnclassifiedLarge",
 }
 local function set(player, key, value)
     local attr = "LocalP4VisibleNative" .. key
@@ -97,7 +99,7 @@ end
 function Census.sample(player, arena, quality)
     local counts = {}
     for _,key in ipairs(KEYS) do counts[key] = 0 end
-    local scanned = 0
+    local scanned, decorScanned = 0, 0
     local streamed = false
     if arena and arena.Name == "Arena"
         and arena.Parent == workspace:FindFirstChild("GeneratedMap") then
@@ -114,16 +116,16 @@ function Census.sample(player, arena, quality)
             -- GetDescendants includes streamed-in SERVER native fallback
             -- only. Client replacement folders live under Workspace and
             -- are intentionally excluded from this diagnostic.
-            local function scan(root)
+            local function scan(root, rootGroup)
                 for _,part in ipairs(root:GetDescendants()) do
                     if visible(part) then
                         scanned += 1
-                        local key = groupFor(part, decor, circuit, owners)
+                        local key = rootGroup or groupFor(part, decor, circuit, owners)
                         if key then
                             counts[key] += 1
                             if key=="Ascension" or key=="Helix"
                                 or key=="District" or key=="PlatformSupport"
-                                or key=="SkySpine" or key=="Promenade" then
+                                or key=="SkySpine" or key=="Promenade" or key=="DistrictTransit" then
                                 local lower=string.lower(part.Name)
                                 local signal = part.Material==Enum.Material.Neon
                                     or part:GetAttribute("ChaosWayfinding")==true
@@ -132,6 +134,11 @@ function Census.sample(player, arena, quality)
                                     or lower:find("beacon",1,true)~=nil
                                     or lower:find("guide",1,true)~=nil
                                     or lower:find("glow",1,true)~=nil
+                                if key == "DistrictTransit" then
+                                    -- The Harbor hoist supports the terminal; it is not a route cue.
+                                    signal = part.Material == Enum.Material.Neon
+                                        or lower:match("^switchyardsignal%-?1$") ~= nil
+                                end
                                 local suffix=signal and "Signal" or "Structure"
                                 counts[key..suffix] += 1
                                 if key == "Helix" and (lower:match("^entrychassis%d+$")
@@ -139,18 +146,28 @@ function Census.sample(player, arena, quality)
                                     counts.HelixAccessChassis += 1
                                 end
                             end
+                        else
+                            counts.Unclassified += 1
+                            if math.max(part.Size.X, part.Size.Y, part.Size.Z) >= 12 then
+                                counts.UnclassifiedLarge += 1
+                            end
                         end
                     end
                 end
             end
             scan(decor)
             if circuit and circuit:IsA("Folder") then scan(circuit) end
+            decorScanned = scanned
+            local transit = arena:FindFirstChild("DistrictTransit")
+            if transit and transit:IsA("Folder") and transit:GetAttribute("ServerAuthoritative") == true then
+                scan(transit, "DistrictTransit")
+            end
             streamed = true
         end
     end
     for _,key in ipairs(KEYS) do set(player, key, counts[key]) end
-    -- Backward compatible name; this count includes the Orbital circuit.
-    set(player, "AllDecor", scanned)
+    -- Preserve the original Decor + Helix baseline alongside the expanded total.
+    set(player, "AllDecor", decorScanned)
     set(player, "AllScanned", scanned)
     if player:GetAttribute("LocalP4NativeCensusReady") ~= streamed then
         player:SetAttribute("LocalP4NativeCensusReady", streamed)

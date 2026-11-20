@@ -52,6 +52,24 @@ function Kit.approvedId(name)
     return APPROVED[name]
 end
 
+function Kit.shaftProfile(variant)
+    local id = APPROVED[variant]
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates")
+    if not id or not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild(variant)
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalLargeStructure3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= id then return nil end
+    local shaft = model:FindFirstChild("BeaconShaft")
+    if shaft and shaft:IsA("MeshPart") and shaft.Archivable and shaft.MeshId ~= "" then
+        return shaft, id
+    end
+    return nil
+end
+
 local function geometryAllowed(model,name)
     local n = 0
     for _, v in ipairs(model:GetDescendants()) do

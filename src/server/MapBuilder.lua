@@ -1881,20 +1881,6 @@ local function wayfinderBaseSource()
     return approvedMeshRegion(model, "WayfinderBase")
 end
 
-local function beaconShaftSource(variant)
-    local id = PremiumLargeStructureAssets.approvedId(variant)
-    local holder = ReplicatedStorage:FindFirstChild("ApprovedLargeStructureTemplates")
-    if not id or not holder or not holder:IsA("Folder")
-        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
-    local model = holder:FindFirstChild(variant)
-    if not model or not model:IsA("Model")
-        or model:GetAttribute("OwnerVerified") ~= true
-        or model:GetAttribute("CosmeticOnly") ~= true
-        or model:GetAttribute("OriginalLargeStructure3D") ~= true
-        or model:GetAttribute("Original3DAssetId") ~= id then return nil end
-    return approvedMeshRegion(model, "BeaconShaft")
-end
-
 local BRANCH_CHEVRON = {
     size = Vector3.new(0.25, 0.065, 2.0), spread = 0.48, angle = math.rad(34), alpha = 0.44,
 }
@@ -3158,7 +3144,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     local underdeckSpars = approvedMeshRegion(chassis, "UnderdeckSpars")
     local wayfinderBase = wayfinderBaseSource()
-    local beaconShaft = beaconShaftSource(variant.Id)
+    local beaconShaft = PremiumLargeStructureAssets.shaftProfile(variant.Id)
     local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
     addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     -- Original modular top deck: 6 x 6 textured industrial panels,
