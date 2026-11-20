@@ -1,6 +1,8 @@
 local Workspace = game:GetService("Workspace")
 
 local ArenaAtmosphereStyle = require("./ArenaAtmosphereStyle")
+local ReactorAssets = require("./PremiumOrbitalReactorLandmarkAssets")
+local RouteSignalGeometry = require("./RouteSignalGeometry")
 
 local function makePart(parent, name, size, cframe, color, material)
     local object = Instance.new("Part")
@@ -96,31 +98,33 @@ local function addTowers(folder, center, theme, variantId)
 end
 
 local function addOrbitalCore(folder, center, theme)
-    local core = makePart(
-        folder,
-        "OrbitalCore",
-        Vector3.new(4.5, 4.5, 4.5),
-        CFrame.new(center + Vector3.new(0, 22, 0)),
-        theme.accent,
-        Enum.Material.Neon
-    )
-    core.Shape = Enum.PartType.Ball
-    core.Transparency = 0.18
+    local profile = ReactorAssets.nodeProfile(Vector3.new(2.96, 2.9503, 2.96))
+    local function lens(name, diameter, position, color, transparency)
+        local size = Vector3.new(diameter, diameter, diameter)
+        local frame = CFrame.new(position)
+        local part = RouteSignalGeometry.fit(profile, frame, size)
+        if part then
+            part.Name = name
+            part.Color = color
+            part.Material = Enum.Material.Neon
+            part:SetAttribute("Original3DAssetId", 104654294187035)
+        else
+            part = makePart(nil, name, size, frame, color, Enum.Material.Neon)
+            part.Shape = Enum.PartType.Ball
+        end
+        part.Transparency = transparency
+        part.Parent = folder
+        return part
+    end
+
+    local core = lens("OrbitalCore", 4.5, center + Vector3.new(0, 22, 0), theme.accent, 0.18)
     addLight(core, theme.accent, 1.35, 26)
 
     for index = 0, 7 do
         local angle = math.rad(index * 45)
         local position = center + Vector3.new(math.cos(angle) * 24, 22, math.sin(angle) * 24)
-        local node = makePart(
-            folder,
-            "OrbitalNode" .. tostring(index + 1),
-            Vector3.new(1.3, 1.3, 1.3),
-            CFrame.new(position),
-            index % 2 == 0 and theme.accent or theme.secondary,
-            Enum.Material.Neon
-        )
-        node.Shape = Enum.PartType.Ball
-        node.Transparency = 0.12
+        lens("OrbitalNode" .. tostring(index + 1), 1.3, position,
+            index % 2 == 0 and theme.accent or theme.secondary, 0.12)
     end
 end
 

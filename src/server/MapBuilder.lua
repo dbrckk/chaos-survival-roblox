@@ -3327,12 +3327,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local promenadeJunctions = {}
     local spineEndpoints = {}
     local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
+    local closedDeckCasting = floorProfile or bevelCasting
+        or (wayfinderBase and wayfinderBase.MeshId ~= "" and wayfinderBase)
     local elevatedTrimProfiles = {
         beam = sweptProfile,
         lattice = underdeckLattice,
         -- The portal truss has its own owner under this shallow frame.
-        frameFallback = floorProfile or bevelCasting
-            or (wayfinderBase and wayfinderBase.MeshId ~= "" and wayfinderBase),
+        frameFallback = closedDeckCasting,
     }
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
@@ -3584,20 +3585,25 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             else 0.28
         -- While common trim loads, keep the existing deck silhouettes
         -- with the arena's own closed casting or Harbor's load roller.
-        local signalFallback = if harborLanding then rimBevel else routeCasting
+        local reactorLanding = definition.OrbitalReactorLanding == true
+        local trimCasting = if reactorLanding then closedDeckCasting else routeCasting
+        local signalFallback = if harborLanding then rimBevel else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
         local harborSkywayBeam = definition.HarborSkywayLane and sweptProfile or nil
         local bevelSource = (skybridge and sweptProfile)
             or (harborLanding and rimBevel) or canonicalRim
-        addPlatformFinish(decor, platform, i, theme, floorProfile or routeCasting,
+        -- Use the open lattice in the existing shallow frame envelope
+        -- so the landed platform still matches the native trim owners.
+        local frameProfile = (reactorLanding and underdeckLattice)
+            or underdeckSpars or (not elevatedRoute and trimCasting) or nil
+        addPlatformFinish(decor, platform, i, theme, floorProfile or trimCasting,
             underdeckSignal or signalFallback,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars or (not elevatedRoute and routeCasting) or nil,
-            bevelSource, harborAlongX, elevatedTrim,
-            harborSkywayBeam, routeCasting)
-        if elevatedRoute then
+            frameProfile, bevelSource, harborAlongX, elevatedTrim,
+            harborSkywayBeam, trimCasting)
+        if elevatedRoute or reactorLanding then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
         else
             addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)
