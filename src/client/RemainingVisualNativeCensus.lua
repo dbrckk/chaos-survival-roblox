@@ -113,7 +113,7 @@ for _, key in ipairs(nativeRouteGroups) do nativeRouteSet[key] = true end
 local localRouteOwners = {
     Classic = {folder = "GridCircuitLocal", key = "GridStations", prefix = "^GridStation"},
     Crossroads = {folder = "FluxRelayLocal", key = "FluxGates", parts = {
-        FluxFrameLeft = true, FluxFrameRight = true, FluxBridgeCap = true,
+        FluxFrameLeft = true, FluxFrameRight = true, FluxBridgeCap = true, FluxFooting = true,
         FluxVerticalSignal = true, FluxChevron = true, FluxCrest = true,
         FluxArmorFin = true, FluxCrownPrism = true,
     }},
