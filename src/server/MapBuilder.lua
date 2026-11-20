@@ -2005,7 +2005,7 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    underdeckSpars, bevelProfile, harborAlongX, elevatedTrim, harborSkywayBeam)
+    frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborSkywayBeam, bevelFallback)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2132,10 +2132,14 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
                 * CFrame.Angles(0, yaw + (bevelAlongX and 0 or math.pi * .5), 0)
         elseif not bevel and not useBridgeBevel then
             -- Preserve the exact fallback axes and dimensions for the local rim owners.
-            bevel = RouteSignalGeometry.fit(bevelProfile, pose, size, nil, true)
+            local source = bevelProfile or bevelFallback
+            -- A closed floor casting follows the existing wedge axes so
+            -- the full rim owner can still authenticate either shape.
+            local alongX = bevelProfile ~= nil or (source and source.Size.X > source.Size.Z)
+            bevel = RouteSignalGeometry.fit(source, pose, size, nil, alongX)
             if bevel then
                 bevel:SetAttribute("OriginalPlatformBevel3D", true)
-                if harborAlongX ~= nil then
+                if harborAlongX ~= nil and bevelProfile then
                     bevel:SetAttribute("Original3DAssetId", 94830155055482)
                 end
             end
@@ -2195,7 +2199,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     elseif not underFrame then
         -- Preserve the original frame envelope and deck-relative axes so
         -- route chassis and cradles can still claim this exact owner.
-        local frameProfile = underdeckSpars or (harborAlongX ~= nil and panelProfile or nil)
+        local frameProfile = frameFallback or (harborAlongX ~= nil and panelProfile or nil)
         local frameAlongX = frameProfile and frameProfile.Size.X > frameProfile.Size.Z
         underFrame = fitDecorMesh(frameProfile, frameName, framePose, frameSize,
             frameColor, VisualTheme.Materials.Structure, frameAlongX)
@@ -3234,8 +3238,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     StructureRetrofit.buildArena(decor, base, variant.Id, theme, detailProfiles)
     local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
     local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
-    -- The Harbor floor relief has a closed twelve-facet cast roller.
-    if rimBevel and rimBevel.Size.X <= rimBevel.Size.Z then rimBevel = nil end
+    local routeCasting = variant.Id ~= "Harbor" and (floorProfile or bevelCasting) or nil
+    local routeChevronProfile = sweptProfile or routeCasting
+    -- Only callers that fit the local span explicitly can accept a
+    -- roller imported along either horizontal axis.
+    local canonicalRim = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil
     addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile)
     addArenaHologram(decor, config, variant, theme, sweptProfile)
 
@@ -3482,7 +3489,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             else
                 local forward = Vector3.new(0, 0, definition.offset.Z >= 0 and 1 or -1)
                 addRouteChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
-                    platform, i, forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile)
+                    platform, i, forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile)
             end
         end
 
@@ -3574,17 +3581,20 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             elseif definition.PerimeterStep then 1.20
             elseif elevatedRoute or harborLanding or lookoutAccess then 0.96
             else 0.28
-        -- Harbor's local cast roller provides the same route cue while
-        -- the shared edge band or chassis is still loading.
-        local harborRoller = harborLanding and rimBevel or nil
-        addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or harborRoller,
+        -- While common trim loads, keep the existing deck silhouettes
+        -- with the arena's own closed casting or Harbor's load roller.
+        local signalFallback = if harborLanding then rimBevel else routeCasting
+        addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
         local harborSkywayBeam = definition.HarborSkywayLane and sweptProfile or nil
-        addPlatformFinish(decor, platform, i, theme, floorProfile, underdeckSignal or harborRoller,
+        local bevelSource = (skybridge and sweptProfile)
+            or (harborLanding and rimBevel) or canonicalRim
+        addPlatformFinish(decor, platform, i, theme, floorProfile or routeCasting,
+            underdeckSignal or signalFallback,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars, (skybridge and sweptProfile) or rimBevel, harborAlongX, elevatedTrim,
-            harborSkywayBeam)
+            underdeckSpars or routeCasting, bevelSource, harborAlongX, elevatedTrim,
+            harborSkywayBeam, routeCasting)
         addPlatformSupports(decor, base, platform, i, theme, beaconShaft)
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, detailProfiles)
@@ -3629,7 +3639,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             for direction = -1, 1, 2 do
                 local forward = platform.CFrame.RightVector * direction
                 addRouteChevron(decor, arrowName .. direction, platform, i,
-                    forward, promenadeTone, PROMENADE_CHEVRON, sweptProfile, forward * inset)
+                    forward, promenadeTone, PROMENADE_CHEVRON, routeChevronProfile, forward * inset)
             end
         end
 
@@ -3768,8 +3778,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local side = (spine.Position - deck.Position):Dot(along) >= 0 and 1 or -1
             local forward = along * side
             addRouteChevron(decor, "PromenadeJumpChevron" .. index .. "_Spine", deck, index,
-                forward, theme.Secondary, SPINE_TURN_CHEVRON, sweptProfile, forward * (deck.Size.Z * 0.25))
-            addSpineExitChevrons(decor, spine, deck, theme.Secondary, sweptProfile)
+                forward, theme.Secondary, SPINE_TURN_CHEVRON, routeChevronProfile, forward * (deck.Size.Z * 0.25))
+            addSpineExitChevrons(decor, spine, deck, theme.Secondary, routeChevronProfile)
         end
     end
 
@@ -3785,7 +3795,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 decor, deck, lookout.index, entry, theme, detailProfiles.beam)
         end
         addRouteChevron(decor, "BranchStepArrow" .. route .. "_4", deck, lookout.index,
-            forward, theme.Secondary, BRANCH_CHEVRON, sweptProfile, offset)
+            forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, offset)
     end
 
     -- Put the branch cue on the takeoff side of the fork, facing its
@@ -3805,7 +3815,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local forward = delta.Unit
         local offset = forward * (math.min(fork.Size.X, fork.Size.Z) * 0.24)
         addRouteChevron(decor, "BranchForkArrow" .. route, fork, forkIndex,
-            forward, theme.Secondary, FORK_CHEVRON, sweptProfile, offset)
+            forward, theme.Secondary, FORK_CHEVRON, routeChevronProfile, offset)
     end
 
     -- Wayfinding is physically anchored to the REAL first/last platforms,
@@ -3936,7 +3946,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local forward = delta.Unit
             local name = "OuterStepChevron" .. route .. "_" .. step
             addRouteChevron(decor, name, deck, platformIndex, forward, routeColor,
-                PERIMETER_STEP_CHEVRON, sweptProfile, forward * 2.4)
+                PERIMETER_STEP_CHEVRON, routeChevronProfile, forward * 2.4)
         end
 
         -- Three-part destination beacon on open FLOOR beside (never on)

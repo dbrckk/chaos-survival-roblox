@@ -58,6 +58,10 @@ Les quatre avant-postes jouables de Storm Harbor peuvent afficher **20 pièces s
 
 Les deux passerelles hautes de Storm Harbor peuvent recevoir **28 bordures forgées** sur leurs 14 paliers. Les **58 paliers des trois familles de parcours** peuvent aussi conserver leurs deux signaux et leur châssis sculptés quand les pièces communes manquent à la construction, pour 174 emplacements de secours. Les deux signaux utilisent le rouleau moulé de Harbor. Le châssis utilise son profil de tôle fermé. Les coins et châssis restent admissibles à l’habillage de proximité après rotation de l’import et rétrécissement du palier. Les formes simples restent disponibles selon les sources chargées. Les pièces visibles suivent l’alerte, l’effondrement et la remise en service de leur palier.
 
+### Secours des parcours des autres arènes
+
+Sur Classic, Tower Run, Crossroads et Orbital, les **384 paliers** peuvent réutiliser le moulage fermé de leur arène, ou celui de Classic en secours, quand les profils communs manquent. Les 3 072 emplacements répartis sur ces quatre cartes couvrent quatre bordures, une dalle, un châssis et deux signaux par palier. Les chevrons de parcours peuvent aussi reprendre ce moulage. Les profils dédiés gardent la priorité. La hauteur et la transparence des repères restent celles du générateur existant. À Storm Harbor, les paliers acceptent maintenant le rouleau importé sur X ou sur Z. Les tests locaux ont vérifié l’empreinte, le rétrécissement à 45 % et le retour à l’état normal.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).
