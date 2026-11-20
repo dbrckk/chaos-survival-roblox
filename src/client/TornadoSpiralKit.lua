@@ -12,9 +12,10 @@ function TornadoSpiralKit.clear(state)
     state.lastOrigin = nil
     state.tier = nil
     state.reduced = nil
+    state.meshFactory = nil
 end
 
-function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, rules, simultaneous)
+function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, rules, simultaneous, meshFactory)
     if type(state) ~= "table" then return end
     local valid = typeof(source) == "Instance" and source:IsA("BasePart")
         and source:IsDescendantOf(workspace)
@@ -27,6 +28,7 @@ function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, ru
     end
 
     local needsRebuild = state.source ~= source or #state.parts ~= count
+        or state.meshFactory ~= meshFactory
     if not needsRebuild then
         for _, part in ipairs(state.parts) do
             if not part or part.Parent ~= parent then
@@ -40,9 +42,10 @@ function TornadoSpiralKit.sync(state, source, parent, tier, reduced, elapsed, ru
     if needsRebuild then
         TornadoSpiralKit.clear(state)
         state.source = source
-        state.parts = {}
+        state.meshFactory = meshFactory
+        local clonePiece = meshFactory and meshFactory()
         for index = 1, count do
-            local part = Instance.new("Part")
+            local part = (clonePiece and clonePiece()) or Instance.new("Part")
             part.Name = "LocalTornadoSpiral" .. index
             part.Anchored = true
             part.CanCollide = false

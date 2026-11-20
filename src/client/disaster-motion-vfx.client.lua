@@ -7,6 +7,7 @@ local SceneRules = require(ReplicatedStorage.Shared.DisasterMotionSceneRules)
 local TornadoSpiralRules = require(ReplicatedStorage.Shared.TornadoSpiralRules)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local TornadoSpiralKit = require(script.Parent.TornadoSpiralKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -30,6 +31,10 @@ local blackoutPoseSize = nil
 local blackoutLastTier = nil
 local blackoutLastReduced = nil
 local tornadoSpiral = {parts = {}}
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+end)
 local clock = 0
 local currentPhase = "waiting"
 local lastRoundNumber = nil
@@ -295,14 +300,22 @@ end
 
 -- Reuse the existing adaptive decorative clock for the tornado's outer
 -- flow ribbons. The authoritative wind force and danger zone are untouched.
+local function spiralMeshFactory()
+    local source = CelebrationMeshes.readyProfile("casting", meshPressure)
+    if not source then return nil end
+    return function() return CelebrationMeshes.cloneProfile(source) end
+end
+
 local function refreshTornado(tier)
     local active = currentPhase == "round" and has("Tornado")
     local model = active and workspace:FindFirstChild("RoundTornado")
     local lower = model and model:FindFirstChild("LowerFunnel")
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local meshFactory = not reduced and tier.Name ~= "Low" and meshPressure < 1
+        and spiralMeshFactory or nil
     TornadoSpiralKit.sync(
-        tornadoSpiral, lower, worldEffects, tier.Name,
-        player:GetAttribute("ReduceMotion") == true,
-        clock, TornadoSpiralRules, activeDisasterCount
+        tornadoSpiral, lower, worldEffects, tier.Name, reduced,
+        clock, TornadoSpiralRules, activeDisasterCount, meshFactory
     )
 end
 
