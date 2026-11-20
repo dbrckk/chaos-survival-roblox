@@ -6,6 +6,10 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 
+local HarborCoastalGeometry = require(script.Parent.HarborCoastalGeometry)
+local PremiumLargeStructureMeshKit = require(script.Parent.PremiumLargeStructureMeshKit)
+local OrbitalNode = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+
 local player = Players.LocalPlayer
 
 local folder = Instance.new("Folder")
@@ -16,11 +20,13 @@ local function clear()
     folder:ClearAllChildren()
 end
 
-local function makePart(name, size, cframe, color, material, transparency, castShadow)
-    local part = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, castShadow, mesh)
+    local part = mesh or Instance.new("Part")
     part.Name = name
-    part.Size = size
-    part.CFrame = cframe
+    if not mesh then
+        part.Size = size
+        part.CFrame = cframe
+    end
     part.Anchored = true
     part.CanCollide = false
     part.CanTouch = false
@@ -1062,7 +1068,7 @@ end
 -- pylons. Build an ORIGINAL cargo-port signal station using the existing
 -- noncolliding, tiered local scenery owner. All decorations remain outside
 -- the real survival floor and never suggest a traversable shortcut.
-local function buildHarbor(base, theme, tier)
+local function buildHarbor(base, theme, tier, profiles)
     -- Client tier changes can rebuild the hero while Shrinking Arena is
     -- active. Harbor's offshore signal station must keep its original
     -- berth, not slide inward with the shrinking playable floor.
@@ -1078,81 +1084,104 @@ local function buildHarbor(base, theme, tier)
     local seaGlass = theme.Accent:Lerp(Color3.fromRGB(206, 229, 216), 0.24)
     local castShadow = tier.Name == "High"
 
-    makePart("HarborHeroPierFoundation", Vector3.new(23, 2.0, 8.8),
+    local function fitting(name, size, pose, color, material, alpha, shadow, profile, alongX)
+        return makePart(name, size, pose, color, material, alpha, shadow,
+            HarborCoastalGeometry.fit(profile, size, pose, alongX))
+    end
+
+    fitting("HarborHeroPierFoundation", Vector3.new(23, 2.0, 8.8),
         frame * CFrame.new(0, 1.4, 0), dark,
-        Enum.Material.Concrete, 0.08, castShadow)
+        Enum.Material.Concrete, 0.08, castShadow, profiles.plate)
     for side = -1, 1, 2 do
-        makePart(side < 0 and "HarborHeroPortLeg" or "HarborHeroStarboardLeg",
+        fitting(side < 0 and "HarborHeroPortLeg" or "HarborHeroStarboardLeg",
             Vector3.new(2.2, 19, 2.4),
             frame * CFrame.new(side * 7.8, 11.5, 0),
-            steel, Enum.Material.CorrodedMetal, 0.04, castShadow)
+            steel, Enum.Material.CorrodedMetal, 0.04, castShadow, profiles.shaft)
     end
-    makePart("HarborHeroGantryCrosshead", Vector3.new(19.5, 1.8, 3.0),
+    fitting("HarborHeroGantryCrosshead", Vector3.new(19.5, 1.8, 3.0),
         frame * CFrame.new(0, 21.5, 0), alloy,
-        Enum.Material.DiamondPlate, 0.06, castShadow)
-    makePart("HarborHeroSignalCabin", Vector3.new(9.5, 5.7, 6.5),
+        Enum.Material.DiamondPlate, 0.06, castShadow, profiles.beam)
+    fitting("HarborHeroSignalCabin", Vector3.new(9.5, 5.7, 6.5),
         frame * CFrame.new(0, 25.2, 0), steel,
-        Enum.Material.Metal, 0.05, castShadow)
-    makePart("HarborHeroRadarMast", Vector3.new(0.9, 9.5, 0.9),
+        Enum.Material.Metal, 0.05, castShadow, profiles.plate)
+    fitting("HarborHeroRadarMast", Vector3.new(0.9, 9.5, 0.9),
         frame * CFrame.new(0, 32.9, 0), alloy,
-        Enum.Material.Metal, 0.05, castShadow)
+        Enum.Material.Metal, 0.05, castShadow, profiles.shaft)
 
     -- Animated by the existing arena-hero-motion owner (no second loop).
-    makePart("HarborHeroRadarArm", Vector3.new(11.5, 0.48, 0.6),
+    fitting("HarborHeroRadarArm", Vector3.new(11.5, 0.48, 0.6),
         frame * CFrame.new(0, 37.7, 0), alloy,
-        Enum.Material.Metal, 0.08, false)
-    local lens = makePart("HarborHeroStormLens", Vector3.new(2.6, 2.6, 2.6),
+        Enum.Material.Metal, 0.08, false, profiles.beam)
+    local lens = fitting("HarborHeroStormLens", Vector3.new(2.6, 2.6, 2.6),
         frame * CFrame.new(0, 39.8, 0),
         seaGlass, Enum.Material.Glass,
-        tier.Name == "Low" and 0.42 or 0.24, false)
-    lens.Shape = Enum.PartType.Ball
+        tier.Name == "Low" and 0.42 or 0.24, false, profiles.lens)
+    if lens:IsA("Part") then lens.Shape = Enum.PartType.Ball end
 
     if tier.Name == "Low" then return end
 
     -- Cargo gear is sculptural and cosmetic: the cables/weights never
     -- move a collider, generate a falling crate or alter hazard damage.
-    makePart("HarborHeroCabinRoof", Vector3.new(11.0, 0.7, 8.2),
+    fitting("HarborHeroCabinRoof", Vector3.new(11.0, 0.7, 8.2),
         frame * CFrame.new(0, 28.35, 0),
-        dark, Enum.Material.CorrodedMetal, 0.06, castShadow)
-    makePart("HarborHeroHoistPost", Vector3.new(2.0, 20.5, 2.1),
+        dark, Enum.Material.CorrodedMetal, 0.06, castShadow, profiles.plate)
+    fitting("HarborHeroHoistPost", Vector3.new(2.0, 20.5, 2.1),
         frame * CFrame.new(15.2, 11.8, 0), steel,
-        Enum.Material.Metal, 0.05, castShadow)
-    makePart("HarborHeroHoistBoom", Vector3.new(18.8, 1.25, 1.55),
+        Enum.Material.Metal, 0.05, castShadow, profiles.shaft)
+    fitting("HarborHeroHoistBoom", Vector3.new(18.8, 1.25, 1.55),
         frame * CFrame.new(15.2, 22.2, 0), alloy,
-        Enum.Material.Metal, 0.07, castShadow)
-    makePart("HarborHeroHoistCable", Vector3.new(0.30, 11, 0.30),
+        Enum.Material.Metal, 0.07, castShadow, profiles.beam, true)
+    fitting("HarborHeroHoistCable", Vector3.new(0.30, 11, 0.30),
         frame * CFrame.new(22.5, 16.0, 0), dark,
-        Enum.Material.Metal, 0.08, false)
-    makePart("HarborHeroHoistWeight", Vector3.new(3.6, 2.3, 3.5),
+        Enum.Material.Metal, 0.08, false, profiles.shaft)
+    fitting("HarborHeroHoistWeight", Vector3.new(3.6, 2.3, 3.5),
         frame * CFrame.new(22.5, 9.7, 0), steel,
-        Enum.Material.CorrodedMetal, 0.06, castShadow)
+        Enum.Material.CorrodedMetal, 0.06, castShadow, profiles.plate)
     for side = -1, 1, 2 do
-        makeWedge(side < 0 and "HarborHeroPortKnee" or "HarborHeroStarboardKnee",
-            Vector3.new(4.5, 8, 1.1),
-            frame * CFrame.new(side * 7.3, 17.0, 0)
-                * CFrame.Angles(0, 0, math.rad(side * 22)),
-            alloy, Enum.Material.DiamondPlate, 0.12, false)
+        local name = side < 0 and "HarborHeroPortKnee" or "HarborHeroStarboardKnee"
+        local size = Vector3.new(4.5, 8, 1.1)
+        local pose = frame * CFrame.new(side * 7.3, 17.0, 0)
+            * CFrame.Angles(0, 0, math.rad(side * 22))
+        local mesh = HarborCoastalGeometry.fit(profiles.knee, size, pose)
+        if mesh then
+            makePart(name, size, pose, alloy, Enum.Material.DiamondPlate, 0.12, false, mesh)
+        else
+            makeWedge(name, size, pose, alloy, Enum.Material.DiamondPlate, 0.12, false)
+        end
     end
 
     if tier.Name ~= "High" then return end
 
     -- High-only maritime mechanical depth; native metal, no fake lights.
     for side = -1, 1, 2 do
-        makePart(side < 0 and "HarborHeroSignalRailPort" or "HarborHeroSignalRailStarboard",
+        fitting(side < 0 and "HarborHeroSignalRailPort" or "HarborHeroSignalRailStarboard",
             Vector3.new(0.28, 4.5, 0.28),
             frame * CFrame.new(side * 4.5, 29.4, -2.3),
-            alloy, Enum.Material.Metal, 0.13, false)
-        makePart(side < 0 and "HarborHeroHoistTrussPort" or "HarborHeroHoistTrussStarboard",
+            alloy, Enum.Material.Metal, 0.13, false, profiles.shaft)
+        fitting(side < 0 and "HarborHeroHoistTrussPort" or "HarborHeroHoistTrussStarboard",
             -- Align the steel truss with the REAL horizontal X boom,
             -- not across the sideways dock axis.
             Vector3.new(14.2, 2.2, 0.52),
             frame * CFrame.new(15.2, 23.2, side * 0.9)
                 * CFrame.Angles(0, 0, math.rad(side * 9)),
-            dark, Enum.Material.Metal, 0.15, false)
+            dark, Enum.Material.Metal, 0.15, false, profiles.beam, true)
     end
-    makePart("HarborHeroCabinPanorama", Vector3.new(7.6, 2.1, 0.18),
+    fitting("HarborHeroCabinPanorama", Vector3.new(7.6, 2.1, 0.18),
         frame * CFrame.new(0, 26.0, -3.33), seaGlass,
-        Enum.Material.Glass, 0.33, false)
+        Enum.Material.Glass, 0.33, false, profiles.plate)
+end
+
+local function harborSignalProfiles()
+    local profiles = HarborCoastalGeometry.sources()
+    if not profiles.beam.source then profiles.beam = profiles.plate end
+    local column = PremiumLargeStructureMeshKit.harborColumnSource()
+    local shaft = column and column:FindFirstChild("BeaconShaft")
+    profiles.shaft = if shaft and shaft:IsA("MeshPart") and shaft.Archivable
+        and shaft.MeshId ~= "" and math.abs(shaft.Size.Y - 13.56) < .13
+        then {source=shaft,id=column:GetAttribute("Original3DAssetId")} else profiles.plate
+    profiles.lens = {source=OrbitalNode.coreProfile(),id=OrbitalNode.NodeAssetId}
+    profiles.knee = profiles.bow.rotation and profiles.bow or nil
+    return profiles
 end
 
 local function rebuild()
@@ -1176,7 +1205,7 @@ local function rebuild()
     elseif variant == "Orbital" then
         buildOrbital(base, theme, tier)
     elseif variant == "Harbor" then
-        buildHarbor(base, theme, tier)
+        buildHarbor(base, theme, tier, harborSignalProfiles())
     else
         buildClassic(base, theme, tier)
     end
@@ -1224,6 +1253,14 @@ workspace.ChildRemoved:Connect(function(child)
         bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
     end
 end)
+
+HarborCoastalGeometry.watch(function()
+    local arena = watchedMap and watchedMap:FindFirstChild("Arena")
+    if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRebuild() end
+end, {
+    ApprovedLargeStructureTemplates = "Harbor",
+    ApprovedOrbitalReactorLandmarkTemplates = "Node",
+})
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))
 

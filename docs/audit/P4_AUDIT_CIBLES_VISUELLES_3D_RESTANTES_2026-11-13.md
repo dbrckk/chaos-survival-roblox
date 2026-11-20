@@ -91,6 +91,8 @@ Les cinq monuments à l’est de l’arène peuvent utiliser des maillages appro
 
 Le chantier naval de Storm Harbor peut conserver ses **19 pièces sculptées**, dont les **8 de la silhouette Low**, avec le seul moulage fermé de Harbor, de Classic ou du périmètre. Le socle et la coque privilégient le caisson d’amarrage approuvé lorsqu’il est chargé. Les pylônes et les câbles peuvent reprendre un fût approuvé d’une autre arène. Le corps et le socle complets de proximité reconnaissent ces pièces sur leurs ancrages d’origine.
 
+La station de signalisation au large peut désormais reprendre des profils approuvés sur ses **8, 15 ou 20 pièces** selon la qualité Low, Medium ou High. Le radar, le câble et le contrepoids gardent les mêmes repères d’animation. La lentille reste visible avec le modèle complet de proximité. Les moulages de repli couvrent les pièces droites. La lentille arrondie et les deux jambes de force gardent leur forme simple quand leur profil manque.
+
 ### Crêtes et silhouettes industrielles de Storm Harbor
 
 Les **12 crêtes** orientent désormais leur moulage d’après le repère qui marque le haut de la pente. Les quatre orientations d’import occupent la même empreinte et la crête garde son relief simple quand ce repère manque. Les quatre silhouettes industrielles peuvent aussi conserver **24 pièces sculptées** grâce au moulage fermé de Harbor ou de Classic. Le fût approuvé d’une autre arène peut habiller les renforts et les antennes. Les modèles complets continuent à utiliser les ancrages d’origine pendant le rétrécissement.

@@ -47,12 +47,13 @@ function Geometry.fit(profile, size, frame, alongX)
 end
 
 -- Both callers coalesce matching streamed template events into one rebuild.
-function Geometry.watch(onChanged)
+function Geometry.watch(onChanged, additionalModels)
     local function changed(item)
         local model = if item:IsA("MeshPart") then item.Parent else item
         local holder = model and model.Parent
         if not holder or holder.Parent ~= ReplicatedStorage or not model:IsA("Model") then return end
         if SOURCE_MODELS[holder.Name] == model.Name
+            or (additionalModels and additionalModels[holder.Name] == model.Name)
             or (holder.Name == "ApprovedFloorReliefTemplates"
                 and (model.Name == "Harbor" or model.Name == "Classic")) then
             onChanged()

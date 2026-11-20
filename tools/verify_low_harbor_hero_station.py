@@ -64,15 +64,17 @@ assert 'e.base.Size.X<318' not in KIT
 assert 'e.base.Size.Z<318' not in KIT
 # The native source itself must remain on the original offshore berth
 # across a Low->High quality rebuild while the round floor is shrinking.
-harbor_scenery=SCENERY[SCENERY.index("local function buildHarbor(base, theme, tier)"):SCENERY.index("local function rebuild()")]
+harbor_scenery=SCENERY[SCENERY.index("local function buildHarbor(base, theme, tier, profiles)"):SCENERY.index("local function rebuild()")]
 assert 'base:GetAttribute("OriginalSizeZ")' in harbor_scenery
 assert 'sourceZ>=318' in harbor_scenery
 assert 'base.Size.Z<=sourceZ+.2' in harbor_scenery
 assert 'local hz=span*.5' in harbor_scenery
 assert 'local frame = localFrame(base, 0, 0, hz + 18, 180)' in harbor_scenery
 assert 'if tier.Name == "Low" then return end' in harbor_scenery
-assert 'makePart("HarborHeroRadarArm"' in harbor_scenery
-assert 'makePart("HarborHeroHoistCable"' in harbor_scenery
+assert 'fitting("HarborHeroRadarArm"' in harbor_scenery
+assert 'fitting("HarborHeroHoistCable"' in harbor_scenery
+assert 'HarborCoastalGeometry.fit(profile, size, pose, alongX)' in harbor_scenery
+assert 'HarborCoastalGeometry.watch(function()' in SCENERY
 
 assert 'clone.Parent=localFolder' in KIT
 assert KIT.index('clone.Parent=localFolder') < KIT.index('if visibility(e) then syncMotion(e) end')
