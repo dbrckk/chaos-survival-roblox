@@ -107,6 +107,8 @@ Les 60 portiques réutilisent le moulage fermé de leur arène, puis celui de Cl
 
 Sur les cinq arènes, 430 emplacements peuvent réutiliser le moulage fermé de leur arène ou celui de Classic. Le total comprend 180 pièces des portiques de promenade, 210 pièces de la Sky Spine et 40 renforts aux jonctions avec les belvédères. Les maillages dédiés restent prioritaires. Les châssis de proximité vérifient les sources autorisées, leur emprise après rétrécissement et la continuité du croisement entre les deux tabliers. Les renforts des belvédères ne sont générés que lorsque les tabliers existants se chevauchent.
 
+Les 26 tabliers suspendus par arène (16 de Promenade et 10 de l’Épine céleste) peuvent conserver un sous-cadre sculpté quand le châssis d’accès ne fournit ni treillis ni longerons. Le cadre reprend alors le moulage de l’arène, celui de Classic ou le socle approuvé du périmètre. Il garde son empreinte peu profonde sous les entrées et les jonctions, avec le treillis séparé des portiques. Les poteaux des tabliers et les montants des portiques d’ascension peuvent utiliser le fût polygonal d’une autre arène déjà chargée si leur fût dédié manque. Le registre et les vérifications du modèle importé déterminent quelles sources sont admissibles. Les formes simples restent disponibles quand aucun modèle approuvé n’est prêt à la construction. La mesure de cette couverture en jeu reste à effectuer.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

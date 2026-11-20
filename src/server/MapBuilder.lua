@@ -2177,7 +2177,8 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     elseif not underFrame then
         -- Preserve the original frame envelope and deck-relative axes so
         -- route chassis and cradles can still claim this exact owner.
-        local frameProfile = frameFallback or (harborAlongX ~= nil and panelProfile or nil)
+        local frameProfile = frameFallback or (elevatedTrim and elevatedTrim.frameFallback)
+            or (harborAlongX ~= nil and panelProfile or nil)
         local frameAlongX = frameProfile and frameProfile.Size.X > frameProfile.Size.Z
         underFrame = fitDecorMesh(frameProfile, frameName, framePose, frameSize,
             frameColor, VisualTheme.Materials.Structure, frameAlongX)
@@ -2226,7 +2227,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     core.Parent = decor
 end
 
-local function addPlatformSupports(decor, base, platform, index, theme, shaft)
+local function addPlatformSupports(decor, base, platform, index, theme, shaft, assetId)
     local platformBottom = platform.Position.Y - platform.Size.Y * 0.5
     local footY = PlatformIdentityLodRules.platformSupportFootY(base, platform)
     local supportHeight = platformBottom - footY
@@ -2266,6 +2267,7 @@ local function addPlatformSupports(decor, base, platform, index, theme, shaft)
             support.Transparency = 0.14
             if support:IsA("MeshPart") then
                 support:SetAttribute("OriginalPlatformSupport3D", true)
+                support:SetAttribute("Original3DAssetId", assetId)
             end
             support.Parent = decor
         end
@@ -3135,7 +3137,18 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
     local underdeckSpars = approvedMeshRegion(chassis, "UnderdeckSpars")
     local wayfinderBase = wayfinderBaseSource()
-    local beaconShaft = PremiumLargeStructureAssets.shaftProfile(variant.Id)
+    local beaconShaft, shaftAssetId = PremiumLargeStructureAssets.shaftProfile(variant.Id)
+    -- A loaded polygonal shaft from another approved column can fill the
+    -- same elevated-route support envelope while the arena's shaft loads.
+    local routeShaft, routeShaftAssetId = beaconShaft, shaftAssetId
+    if not routeShaft then
+        for _, sourceVariant in ipairs(arenaVariants.Order or {}) do
+            if sourceVariant ~= variant.Id then
+                routeShaft, routeShaftAssetId = PremiumLargeStructureAssets.shaftProfile(sourceVariant)
+                if routeShaft then break end
+            end
+        end
+    end
     local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
     local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
@@ -3149,7 +3162,6 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local perimeterRotor = approvedHorizonRegion(
         "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
         rotorAssetId, Vector3.new(2.56, .72, 2.56))
-    local shaftAssetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)
     local detailProfiles = {
         bevel = {part = bevelCasting, assetId = HorizonMonumentGeometry.assetId("bevel")},
         beam = {part = sweptProfile, assetId = 126298311664881},
@@ -3217,6 +3229,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
     local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
     local monumentProfiles = table.clone(detailProfiles)
+    monumentProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
     if floorProfile then
         monumentProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId(variant.Id)}
     end
@@ -3314,7 +3327,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local promenadeJunctions = {}
     local spineEndpoints = {}
     local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
-    local elevatedTrimProfiles = {beam = sweptProfile, lattice = underdeckLattice}
+    local elevatedTrimProfiles = {
+        beam = sweptProfile,
+        lattice = underdeckLattice,
+        -- The portal truss has its own owner under this shallow frame.
+        frameFallback = floorProfile or bevelCasting
+            or (wayfinderBase and wayfinderBase.MeshId ~= "" and wayfinderBase),
+    }
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
@@ -3575,9 +3594,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         addPlatformFinish(decor, platform, i, theme, floorProfile or routeCasting,
             underdeckSignal or signalFallback,
             (skybridge or harborLanding) and underdeckLattice or nil,
-            underdeckSpars or routeCasting, bevelSource, harborAlongX, elevatedTrim,
+            underdeckSpars or (not elevatedRoute and routeCasting) or nil,
+            bevelSource, harborAlongX, elevatedTrim,
             harborSkywayBeam, routeCasting)
-        addPlatformSupports(decor, base, platform, i, theme, beaconShaft)
+        if elevatedRoute then
+            addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
+        else
+            addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)
+        end
         if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
             SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, monumentProfiles)
         end
