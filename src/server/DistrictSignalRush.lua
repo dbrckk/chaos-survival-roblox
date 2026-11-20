@@ -5,6 +5,8 @@
 -- gamepad ProximityPrompt), not a client-supplied position or remote request.
 -- Each player can win at most one modest signal reward per round.
 local Players = game:GetService("Players")
+local PerimeterArmorAssets = require("./PremiumPerimeterArmorAssets")
+local OrbitalReactorAssets = require("./PremiumOrbitalReactorLandmarkAssets")
 
 local DistrictSignalRush = {}
 
@@ -39,8 +41,15 @@ function DistrictSignalRush.allowed(ctx, base)
             and ctx.ActiveDisasters.ShrinkingArena == true)
 end
 
-local function part(model, name, size, cf, color, material)
-    local p = Instance.new("Part")
+local function part(model, name, size, cf, color, material, source: MeshPart?)
+    local mesh = source and source:Clone()
+    local p = mesh or Instance.new("Part")
+    if mesh then
+        mesh:ClearAllChildren()
+        mesh.TextureID = ""
+        mesh.MaterialVariant = ""
+        mesh.Transparency = 0
+    end
     p.Name = name
     p.Size = size
     p.CFrame = cf
@@ -55,7 +64,7 @@ local function part(model, name, size, cf, color, material)
     return p
 end
 
-local function construct(folder, base, route, variantId)
+local function construct(folder, base, route, variantId, casting, node, ring)
     local signs = ROUTE_SIGNS[route]
     local color = ROUTE_COLORS[route]
     local groundY = base.Position.Y + base.Size.Y * 0.5
@@ -79,26 +88,26 @@ local function construct(folder, base, route, variantId)
     local dark = Color3.fromRGB(24, 40, 59)
     local alloy = Color3.fromRGB(91, 117, 139)
     part(model, "Foundation", Vector3.new(7.4, 0.42, 7.4),
-        frame * CFrame.new(0, 0.21, 0), dark)
+        frame * CFrame.new(0, 0.21, 0), dark, nil, casting)
     part(model, "Housing", Vector3.new(4.4, 3.2, 4.4),
-        frame * CFrame.new(0, 1.9, 0), alloy)
+        frame * CFrame.new(0, 1.9, 0), alloy, nil, casting)
     for side = -1, 1, 2 do
         part(model, "AntennaLeg" .. tostring(side),
             Vector3.new(0.65, 8.8, 0.65),
-            frame * CFrame.new(side * 2.35, 5.6, 0), dark)
+            frame * CFrame.new(side * 2.35, 5.6, 0), dark, nil, casting)
         part(model, "SignalFin" .. tostring(side),
             Vector3.new(2.8, 0.40, 1.3),
-            frame * CFrame.new(side * 2.15, 9.45, 0), alloy)
+            frame * CFrame.new(side * 2.15, 9.45, 0), alloy, nil, casting)
     end
     local emitter = part(model, "PulseCore",
         Vector3.new(2.8, 2.8, 2.8),
         frame * CFrame.new(0, 8.9, 0),
-        color, Enum.Material.Neon)
-    emitter.Shape = Enum.PartType.Ball
+        color, Enum.Material.Neon, node)
+    if emitter:IsA("Part") then emitter.Shape = Enum.PartType.Ball end
     emitter.Transparency = 0.68
     local pole = part(model, "BeaconSpine",
         Vector3.new(0.65, 6.8, 0.65),
-        frame * CFrame.new(0, 5.6, 0), dark)
+        frame * CFrame.new(0, 5.6, 0), dark, nil, casting)
 
     -- Four arena families use different original silhouettes, not
     -- recolored copies. Geometry stays entirely decorative and below
@@ -108,25 +117,30 @@ local function construct(folder, base, route, variantId)
             Vector3.new(0.7, 5.6, 5.6),
             frame * CFrame.new(0, 13, 0)
                 * CFrame.Angles(0, 0, math.rad(25)),
-            alloy)
-        dish.Shape = Enum.PartType.Cylinder
+            alloy, nil, ring)
+        if dish:IsA("MeshPart") then
+            dish.Size = Vector3.new(5.6, 0.7, 5.6)
+            dish.CFrame *= CFrame.Angles(0, 0, math.pi * 0.5)
+        elseif dish:IsA("Part") then
+            dish.Shape = Enum.PartType.Cylinder
+        end
         local eye = part(model, "StormEye",
             Vector3.new(1.7, 1.7, 1.7),
             frame * CFrame.new(0, 13.2, -0.60),
-            color, Enum.Material.Glass)
-        eye.Shape = Enum.PartType.Ball
+            color, Enum.Material.Glass, node)
+        if eye:IsA("Part") then eye.Shape = Enum.PartType.Ball end
         eye.Transparency = 0.20
     elseif variantId == "Towers" then
         part(model, "SuspensionGantry",
             Vector3.new(10.2, 1.15, 3.1),
-            frame * CFrame.new(0, 12.2, 0), alloy)
+            frame * CFrame.new(0, 12.2, 0), alloy, nil, casting)
         part(model, "TransitSignalCab",
             Vector3.new(4.6, 2.8, 3.0),
-            frame * CFrame.new(0, 14.3, 0), dark)
+            frame * CFrame.new(0, 14.3, 0), dark, nil, casting)
         local pane = part(model, "CabinWindow",
             Vector3.new(3.8, 1.2, 0.19),
             frame * CFrame.new(0, 14.4, -1.6),
-            color, Enum.Material.Glass)
+            color, Enum.Material.Glass, casting)
         pane.Transparency = 0.27
     elseif variantId == "Crossroads" then
         for side = -1, 1, 2 do
@@ -134,12 +148,12 @@ local function construct(folder, base, route, variantId)
                 Vector3.new(3.0, 5.8, 1.1),
                 frame * CFrame.new(side * 3.25, 12.7, 0)
                     * CFrame.Angles(0, math.rad(18 * side), 0),
-                alloy)
+                alloy, nil, casting)
         end
         part(model, "RoutingHeader",
             Vector3.new(9.5, 0.85, 1.6),
             frame * CFrame.new(0, 16.0, 0),
-            color)
+            color, nil, casting)
     elseif variantId == "Orbital" then
         local radius, segments = 4.3, 8
         for index = 1, segments do
@@ -154,7 +168,7 @@ local function construct(folder, base, route, variantId)
                 Vector3.new(0.55, length, 0.55),
                 frame * CFrame.lookAt((first + second) * 0.5, second)
                     * CFrame.Angles(math.pi * 0.5, 0, 0),
-                alloy)
+                alloy, nil, casting)
         end
     end
 
@@ -178,7 +192,7 @@ local function construct(folder, base, route, variantId)
                 Vector3.new(0.25, 0.07, 2.15),
                 facing * CFrame.new(side * 0.48, 0, 0)
                     * CFrame.Angles(0, math.rad(side * 34), 0),
-                color, Enum.Material.Neon)
+                color, Enum.Material.Neon, casting)
             cue.Transparency = 0.94
             arrows[#arrows + 1] = cue
         end
@@ -271,8 +285,12 @@ function DistrictSignalRush.start(ctx)
 
     local nodes = {}
     local variantId = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local casting = PerimeterArmorAssets.wayfinderProfile()
+    local node = OrbitalReactorAssets.nodeProfile(Vector3.new(2.96, 2.9503, 2.96))
+    local ring = variantId == "Classic"
+        and OrbitalReactorAssets.nodeProfile(Vector3.new(4.11, 0.39, 4.11)) or nil
     for route = 1, 4 do
-        nodes[route] = construct(folder, base, route, variantId)
+        nodes[route] = construct(folder, base, route, variantId, casting, node, ring)
     end
 
     local claimedPlayers = {}
