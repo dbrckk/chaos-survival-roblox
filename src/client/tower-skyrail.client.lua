@@ -27,6 +27,8 @@ local bridges = {}
 local canopy = {}
 local signalConnections = {}
 local activeSurges = {}
+local activeBurst = {}
+local burstBridge = nil
 local draw
 
 local colors = {
@@ -114,34 +116,34 @@ local function buildCanopy(bridge, tier, reduced, profiles)
                 alongX and Vector3.new(0.74, 0.10, 0.40) or Vector3.new(0.40, 0.10, 0.74),
                 bridge, routeTransform(alongX, 0, bridge.Size.Y * 0.5 + 0.09,
                     side * (math.min(bridge.Size.X, bridge.Size.Z) * 0.5 - 0.3)),
-                colors.Cyan, Enum.Material.Metal, 0.32, profiles.casting)
+                colors.Cyan, Enum.Material.Metal, 0.32, profiles.casting or profiles.swept)
         end
     else
-        -- Two cantilever supports never project into the 4.5-stud central
-        -- walkway. Crossbeam hangs high above the avatars' jump envelope.
+        -- Seat each pillar into the outside edge of the solid deck.
+        -- Its upper end still overlaps the transverse header.
         local deck = bridge.Size.Y * 0.5
-        local sideways = math.min(bridge.Size.X, bridge.Size.Z) * 0.5 + 0.35
-        local pillarSize = alongX and Vector3.new(0.58, 4.65, 0.72) or Vector3.new(0.72, 4.65, 0.58)
+        local sideways = math.min(bridge.Size.X, bridge.Size.Z) * 0.5 + 0.27
+        local pillarSize = alongX and Vector3.new(0.58, 4.95, 0.72) or Vector3.new(0.72, 4.95, 0.58)
         local fiberSize = alongX and Vector3.new(0.14, 3.65, 0.13) or Vector3.new(0.13, 3.65, 0.14)
         for side = -1, 1, 2 do
             createPart(parts, "SkyrailPillar" .. n,
                 pillarSize,
-                bridge, routeTransform(alongX, 0, deck + 2.45, side * sideways),
-                colors.Armor, Enum.Material.DiamondPlate, 0.04, profiles.shaft)
+                bridge, routeTransform(alongX, 0, deck + 2.30, side * sideways),
+                colors.Armor, Enum.Material.DiamondPlate, 0.04, profiles.shaft or profiles.casting)
 
             createPart(parts, "SkyrailInsetFiber" .. n,
                 fiberSize,
                 bridge, routeTransform(alongX, 0, deck + 2.52,
-                    side * (sideways - 0.38)),
+                    side * (sideways - 0.42)),
                 side < 0 and colors.Cyan or colors.Gold,
-                Enum.Material.Neon, 0.20, profiles.shaft)
+                Enum.Material.Neon, 0.20, profiles.shaft or profiles.casting)
 
             if tier == "High" then
                 createPart(parts, "SkyrailCounterweight" .. n,
                     Vector3.new(1.10, 0.28, 1.03),
                     bridge, routeTransform(alongX, 0, deck + 4.45,
                         side * sideways),
-                    colors.Spine, Enum.Material.Metal, 0.12, profiles.casting)
+                    colors.Spine, Enum.Material.Metal, 0.12, profiles.casting or profiles.swept)
             end
         end
 
@@ -165,7 +167,7 @@ local function buildCanopy(bridge, tier, reduced, profiles)
                     bridge, routeTransform(alongX, side * 0.45,
                         deck + 5.18, side * 1.2),
                     side < 0 and colors.Cyan or colors.Gold,
-                    Enum.Material.Neon, 0.24, profiles.casting)
+                    Enum.Material.Neon, 0.24, profiles.casting or profiles.swept)
             end
         end
 
@@ -190,10 +192,24 @@ local function buildCanopy(bridge, tier, reduced, profiles)
         Width = math.min(bridge.Size.X, bridge.Size.Z), Height = bridge.Size.Y}
 end
 
+local function clearBurst()
+    for _, item in ipairs(activeBurst) do
+        if item.Parent then item:Destroy() end
+    end
+    table.clear(activeBurst)
+    burstBridge = nil
+end
+
+local function bridgeIsCurrent(bridge)
+    return currentPlatforms ~= nil and bridge.Parent == currentPlatforms
+        and currentPlatforms:IsDescendantOf(workspace)
+end
+
 -- One-shot courier flare. It uses existing bridge transforms, with
 -- a bounded local part count and no per-frame server replication.
 local function surgeBurst(bridge, tier, reduced)
-    if reduced or tier == "Low" or not bridge or not bridge.Parent then return end
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if reduced or tier == "Low" or pressure >= 1 or not bridgeIsCurrent(bridge) then return end
     local shutter = bridge:GetAttribute("BridgeShutterPhase")
     if not bridge.CanCollide or (shutter ~= nil and shutter ~= "Idle")
         or bridge:GetAttribute("CollapsePhase") ~= nil then
@@ -211,7 +227,9 @@ local function surgeBurst(bridge, tier, reduced)
     local pieces = tier == "High" and (rank == 3 and 10 or 8)
         or (rank == 3 and 6 or 4)
     local top = bridge.Size.Y * 0.5 + 0.13
-    local source = CelebrationMeshes.readyProfile("fragment", player:GetAttribute("OptionalVfxPressure"))
+    clearBurst()
+    burstBridge = bridge
+    local source = CelebrationMeshes.readyProfile("fragment", pressure)
     for index = 1, pieces do
         local side = (index % 2 == 0) and 1 or -1
         local offset = (index - (pieces + 1) * 0.5) / pieces
@@ -241,6 +259,7 @@ local function surgeBurst(bridge, tier, reduced)
                 Size = Vector3.new(0.10, 0.055, 1.35),
                 Transparency = 1}
         ):Play()
+        table.insert(activeBurst, p)
         Debris:AddItem(p, 0.48)
     end
 
@@ -268,6 +287,7 @@ local function surgeBurst(bridge, tier, reduced)
         local rounded = Instance.new("UICorner")
         rounded.CornerRadius = UDim.new(0, 7)
         rounded.Parent = label
+        table.insert(activeBurst, display)
         Debris:AddItem(display, 1.1)
     end
 end
@@ -275,9 +295,11 @@ end
 local function readProfiles(tier, reduced, pressure, hasBridges)
     if not hasBridges or pressure >= 1 then return {} end
     local profiles = {casting = CelebrationMeshes.readyProfile("casting", pressure)}
+    if tier ~= "Low" or not profiles.casting then
+        profiles.swept = CelebrationMeshes.readyProfile("runway", pressure)
+    end
     if tier ~= "Low" then
         profiles.shaft = CelebrationMeshes.readyProfile("pylon", pressure)
-        profiles.swept = CelebrationMeshes.readyProfile("runway", pressure)
         if not reduced then profiles.fragment = CelebrationMeshes.readyProfile("fragment", pressure) end
     end
     -- A same-name replacement or a newly preloaded file can become ready
@@ -305,6 +327,7 @@ local function rebuild(platforms, tier, reduced, ordered, profiles)
     end
     table.clear(signalConnections)
     table.clear(activeSurges)
+    clearBurst()
     art:ClearAllChildren()
     table.clear(canopy)
     currentPlatforms = platforms
@@ -317,13 +340,14 @@ local function rebuild(platforms, tier, reduced, ordered, profiles)
         local function syncHazard()
             if draw then draw(os.clock()) end
         end
+        table.insert(signalConnections, bridge.AncestryChanged:Connect(syncHazard))
         table.insert(signalConnections, bridge:GetAttributeChangedSignal("CollapsePhase"):Connect(syncHazard))
         table.insert(signalConnections, bridge:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(syncHazard))
         table.insert(signalConnections, bridge:GetPropertyChangedSignal("CanCollide"):Connect(syncHazard))
         table.insert(signalConnections, bridge:GetAttributeChangedSignal(
             "SkyrailUsedAt"
         ):Connect(function()
-            if bridge.Parent == currentPlatforms and bridge.CanCollide
+            if bridgeIsCurrent(bridge) and bridge.CanCollide
                 and bridge:GetAttribute("CollapsePhase") == nil
                 and (bridge:GetAttribute("BridgeShutterPhase") or "Idle") == "Idle" then
                 activeSurges[bridge] = os.clock() + 0.8
@@ -342,76 +366,75 @@ draw = function(timestamp)
         and player:GetAttribute("RoundEliminated") ~= true
     for _, structure in ipairs(canopy) do
         local bridge = structure.Bridge
-        if bridge.Parent then
-            local phase = bridge:GetAttribute("CollapsePhase")
-            local gone = phase == "Gone" or not bridge.CanCollide
-            local shutter = bridge:GetAttribute("BridgeShutterPhase")
-            local warning = phase == "Warning"
-                or (shutter ~= nil and shutter ~= "Idle")
-            local safeAce = aceReady and not warning and not gone
-                and phase == nil
-            if gone or warning then
-                activeSurges[bridge] = nil
-            end
-            local surging = not warning and not gone
-                and (activeSurges[bridge] or 0) > timestamp
-            for _, item in ipairs(structure.Parts) do
-                if item.Part.Parent and not item.Runner then
-                    item.Part.CFrame = bridge.CFrame * item.LocalCf
-                    local alpha = item.BaseTransparency
-                    if gone then
-                        alpha = 1
-                    elseif warning then
-                        -- Client canopy must never conceal the amber
-                        -- authoritative bridge warning or suggest safety.
-                        alpha = math.max(alpha, 0.78)
-                    elseif item.Part.Name:find("SkyrailInsetFiber")
-                        or item.Part.Name:find("SkyrailCrownBeam") then
-                        alpha = surging and 0.03 or 0.23
-                    end
-                    -- These existing real-bridge fittings are personal
-                    -- navigational signals. Never recolor warning bridges,
-                    -- never hide the original server danger palette.
-                    local name = item.Part.Name
-                    local accent = name:find("SkyrailCrownBeam")
-                        or name:find("SkyrailInsetFiber")
-                        or name:find("SkyrailGroundMarker")
-                        or name:find("SkyrailSignalWing")
-                    if accent then
-                        local desired = safeAce and colors.Gold
-                            or (name:find("SkyrailGroundMarker")
+        local phase = bridge:GetAttribute("CollapsePhase")
+        local gone = not bridgeIsCurrent(bridge) or phase == "Gone" or not bridge.CanCollide
+        local shutter = bridge:GetAttribute("BridgeShutterPhase")
+        local warning = phase == "Warning"
+            or (shutter ~= nil and shutter ~= "Idle")
+        local safeAce = aceReady and not warning and not gone
+            and phase == nil
+        if gone or warning then
+            activeSurges[bridge] = nil
+            if bridge == burstBridge then clearBurst() end
+        end
+        local surging = not warning and not gone
+            and (activeSurges[bridge] or 0) > timestamp
+        for _, item in ipairs(structure.Parts) do
+            if item.Part.Parent and not item.Runner then
+                item.Part.CFrame = bridge.CFrame * item.LocalCf
+                local alpha = item.BaseTransparency
+                if gone then
+                    alpha = 1
+                elseif warning then
+                    -- Client canopy must never conceal the amber
+                    -- authoritative bridge warning or suggest safety.
+                    alpha = math.max(alpha, 0.78)
+                elseif item.Part.Name:find("SkyrailInsetFiber")
+                    or item.Part.Name:find("SkyrailCrownBeam") then
+                    alpha = surging and 0.03 or 0.23
+                end
+                -- These existing real-bridge fittings are personal
+                -- navigational signals. Never recolor warning bridges,
+                -- never hide the original server danger palette.
+                local name = item.Part.Name
+                local accent = name:find("SkyrailCrownBeam")
+                    or name:find("SkyrailInsetFiber")
+                    or name:find("SkyrailGroundMarker")
+                    or name:find("SkyrailSignalWing")
+                if accent then
+                    local desired = safeAce and colors.Gold
+                        or (name:find("SkyrailGroundMarker")
+                            and colors.Cyan
+                            or (name:find("SkyrailCrownBeam")
                                 and colors.Cyan
-                                or (name:find("SkyrailCrownBeam")
-                                    and colors.Cyan
-                                    or item.BaseColor))
-                        if item.Part.Color ~= desired then
-                            item.Part.Color = desired
-                        end
+                                or item.BaseColor))
+                    if item.Part.Color ~= desired then
+                        item.Part.Color = desired
                     end
-                    item.Part.Transparency = alpha
                 end
+                item.Part.Transparency = alpha
             end
+        end
 
-            -- Match the server's run direction. On a Z-oriented bridge
-            -- the forward LookVector points toward negative local Z.
-            local travelSign = bridge:GetAttribute("SkyrailRunDirection") == -1 and -1 or 1
-            local localDirection = structure.AlongX and travelSign or -travelSign
-            for _, runner in ipairs(structure.Runners) do
-                if not runner.Part.Parent then continue end
-                local progress = (timestamp * 0.27 + runner.Offset) % 1
-                local span = math.max(2, math.max(bridge.Size.X, bridge.Size.Z) - 5)
-                local distance = (progress - 0.5) * span * 0.77 * localDirection
-                local cf = routeTransform(structure.AlongX, distance,
-                    bridge.Size.Y * 0.5 + 5.50, 0)
-                runner.Part.CFrame = bridge.CFrame * cf * runner.Rotation
-                runner.Part.Transparency = (gone or warning) and 1
-                    or (safeAce and 0.13
-                        or (0.34 + 0.28 * math.abs(2 * progress - 1)))
-                local runnerColor = safeAce and colors.Gold
-                    or (runner.Offset == 0 and colors.Cyan or colors.Gold)
-                if runner.Part.Color ~= runnerColor then
-                    runner.Part.Color = runnerColor
-                end
+        -- Match the server's run direction. On a Z-oriented bridge
+        -- the forward LookVector points toward negative local Z.
+        local travelSign = bridge:GetAttribute("SkyrailRunDirection") == -1 and -1 or 1
+        local localDirection = structure.AlongX and travelSign or -travelSign
+        for _, runner in ipairs(structure.Runners) do
+            if not runner.Part.Parent then continue end
+            local progress = (timestamp * 0.27 + runner.Offset) % 1
+            local span = math.max(2, math.max(bridge.Size.X, bridge.Size.Z) - 5)
+            local distance = (progress - 0.5) * span * 0.77 * localDirection
+            local cf = routeTransform(structure.AlongX, distance,
+                bridge.Size.Y * 0.5 + 5.50, 0)
+            runner.Part.CFrame = bridge.CFrame * cf * runner.Rotation
+            runner.Part.Transparency = (gone or warning) and 1
+                or (safeAce and 0.13
+                    or (0.34 + 0.28 * math.abs(2 * progress - 1)))
+            local runnerColor = safeAce and colors.Gold
+                or (runner.Offset == 0 and colors.Cyan or colors.Gold)
+            if runner.Part.Color ~= runnerColor then
+                runner.Part.Color = runnerColor
             end
         end
     end
@@ -426,6 +449,7 @@ task.spawn(function()
         local reduced = player:GetAttribute("ReduceMotion") == true
         local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
         local meshEligible = pressure < 1
+        if not meshEligible and burstBridge then clearBurst() end
         local ordered = readBridges(platforms)
         local changed = platforms ~= currentPlatforms or tier ~= currentTier
             or reduced ~= currentReduced or #ordered ~= #bridges
