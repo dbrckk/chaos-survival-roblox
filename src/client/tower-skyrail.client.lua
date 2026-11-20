@@ -6,8 +6,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local player = Players.LocalPlayer
 
 local art = Instance.new("Folder")
@@ -17,6 +19,7 @@ art.Parent = workspace
 local currentPlatforms = nil
 local currentTier = nil
 local currentReduced = nil
+local currentMeshEligible = nil
 local bridges = {}
 local canopy = {}
 local signalConnections = {}
@@ -56,8 +59,15 @@ local function readBridges(platforms)
     return result
 end
 
-local function createPart(parts, name, size, bridge, localCf, color, material, opacity)
-    local p = Instance.new("Part")
+local function createPart(parts, name, size, bridge, localCf, color, material, opacity, source)
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    local p = mesh or Instance.new("Part")
+    if mesh and source.Size.Y < math.max(source.Size.X, source.Size.Z)
+        and math.abs(source.Size.X - source.Size.Z) > 0.01
+        and (source.Size.X > source.Size.Z) ~= (size.X > size.Z) then
+        size = Vector3.new(size.Z, size.Y, size.X)
+        localCf *= CFrame.Angles(0, math.pi * 0.5, 0)
+    end
     p.Name = name
     p.Size = size
     p.CFrame = bridge.CFrame * localCf
@@ -89,7 +99,7 @@ local function routeTransform(alongX, longitudinal, up, lateral)
     )
 end
 
-local function buildCanopy(bridge, tier, reduced)
+local function buildCanopy(bridge, tier, reduced, shaft, casting, fragment)
     local alongX = bridge.Size.X > bridge.Size.Z
     local parts = {}
     local animate = {}
@@ -112,21 +122,21 @@ local function buildCanopy(bridge, tier, reduced)
             createPart(parts, "SkyrailPillar" .. n,
                 Vector3.new(0.58, 4.5, 0.72),
                 bridge, routeTransform(alongX, 0, deck + 2.45, side * sideways),
-                colors.Armor, Enum.Material.DiamondPlate, 0.04)
+                colors.Armor, Enum.Material.DiamondPlate, 0.04, shaft)
 
             createPart(parts, "SkyrailInsetFiber" .. n,
                 Vector3.new(0.14, 3.65, 0.13),
                 bridge, routeTransform(alongX, 0, deck + 2.52,
                     side * (sideways - 0.22)),
                 side < 0 and colors.Cyan or colors.Gold,
-                Enum.Material.Neon, 0.20)
+                Enum.Material.Neon, 0.20, shaft)
 
             if tier == "High" then
                 createPart(parts, "SkyrailCounterweight" .. n,
                     Vector3.new(1.10, 0.28, 1.03),
                     bridge, routeTransform(alongX, 0, deck + 4.45,
                         side * sideways),
-                    colors.Spine, Enum.Material.Metal, 0.12)
+                    colors.Spine, Enum.Material.Metal, 0.12, casting)
             end
         end
 
@@ -134,12 +144,12 @@ local function buildCanopy(bridge, tier, reduced)
             alongX and Vector3.new(0.88, 0.62, sideways * 2 + 0.6)
                 or Vector3.new(sideways * 2 + 0.6, 0.62, 0.88),
             bridge, routeTransform(alongX, 0, deck + 4.89, 0),
-            colors.Armor, Enum.Material.Metal, 0.04)
+            colors.Armor, Enum.Material.Metal, 0.04, casting)
         createPart(parts, "SkyrailCrownBeam" .. n,
             alongX and Vector3.new(0.28, 0.15, sideways * 1.5)
                 or Vector3.new(sideways * 1.5, 0.15, 0.28),
             bridge, routeTransform(alongX, 0, deck + 5.26, 0),
-            colors.Cyan, Enum.Material.Neon, 0.23)
+            colors.Cyan, Enum.Material.Neon, 0.23, casting)
 
         if tier == "High" then
             -- Two asymmetric upper wing fins echo an aerospace rail signal.
@@ -150,7 +160,7 @@ local function buildCanopy(bridge, tier, reduced)
                     bridge, routeTransform(alongX, side * 0.45,
                         deck + 5.18, side * 1.2),
                     side < 0 and colors.Cyan or colors.Gold,
-                    Enum.Material.Neon, 0.24)
+                    Enum.Material.Neon, 0.24, casting)
             end
         end
 
@@ -160,7 +170,7 @@ local function buildCanopy(bridge, tier, reduced)
                     Vector3.new(0.65, 0.10, 0.35),
                     bridge, routeTransform(alongX, 0, deck + 5.50, 0),
                     index == 1 and colors.Cyan or colors.Gold,
-                    Enum.Material.Neon, 0.25)
+                    Enum.Material.Neon, 0.25, fragment)
                 table.insert(animate, {
                     Part = runner,
                     Offset = (index - 1) * 0.5,
@@ -192,6 +202,7 @@ local function surgeBurst(bridge, tier, reduced)
     local pieces = tier == "High" and (rank == 3 and 10 or 8)
         or (rank == 3 and 6 or 4)
     local top = bridge.Size.Y * 0.5 + 0.13
+    local source = CelebrationMeshes.readyProfile("fragment", player:GetAttribute("OptionalVfxPressure"))
     for index = 1, pieces do
         local side = (index % 2 == 0) and 1 or -1
         local offset = (index - (pieces + 1) * 0.5) / pieces
@@ -200,7 +211,7 @@ local function surgeBurst(bridge, tier, reduced)
             top,
             alongX and side * 1.4 or offset * 3
         )
-        local p = Instance.new("Part")
+        local p = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
         p.Name = "SkyrailImpulseFacet"
         p.Size = Vector3.new(0.19, 0.09, 0.65)
         p.CFrame = CFrame.lookAt(start.Position, start.Position + direction)
@@ -252,7 +263,23 @@ local function surgeBurst(bridge, tier, reduced)
     end
 end
 
-local function rebuild(platforms, tier, reduced, ordered)
+local function rebuildCanopies(tier, reduced, pressure)
+    for _, structure in ipairs(canopy) do
+        for _, item in ipairs(structure.Parts) do item.Part:Destroy() end
+    end
+    table.clear(canopy)
+    local shaft, casting, fragment
+    if tier ~= "Low" and #bridges > 0 then
+        shaft = CelebrationMeshes.readyProfile("pylon", pressure)
+        casting = CelebrationMeshes.readyProfile("casting", pressure)
+        if not reduced then fragment = CelebrationMeshes.readyProfile("fragment", pressure) end
+    end
+    for _, bridge in ipairs(bridges) do
+        table.insert(canopy, buildCanopy(bridge, tier, reduced, shaft, casting, fragment))
+    end
+end
+
+local function rebuild(platforms, tier, reduced, ordered, pressure)
     for _, connection in ipairs(signalConnections) do
         connection:Disconnect()
     end
@@ -264,8 +291,8 @@ local function rebuild(platforms, tier, reduced, ordered)
     currentTier = tier
     currentReduced = reduced
     bridges = ordered
+    rebuildCanopies(tier, reduced, pressure)
     for _, bridge in ipairs(bridges) do
-        table.insert(canopy, buildCanopy(bridge, tier, reduced))
         -- Sync disappearance immediately, even at Low (0.65s draw cadence).
         -- Reuse the existing draw path, with no extra render loop.
         table.insert(signalConnections, bridge:GetAttributeChangedSignal(
@@ -349,10 +376,14 @@ draw = function(timestamp)
                 end
             end
 
+            -- Match the server's run direction. On a Z-oriented bridge
+            -- the forward LookVector points toward negative local Z.
+            local travelSign = bridge:GetAttribute("SkyrailRunDirection") == -1 and -1 or 1
+            local localDirection = structure.AlongX and travelSign or -travelSign
             for _, runner in ipairs(structure.Runners) do
                 local progress = (timestamp * 0.27 + runner.Offset) % 1
                 local span = math.max(2, math.max(bridge.Size.X, bridge.Size.Z) - 5)
-                local distance = (progress - 0.5) * span * 0.77
+                local distance = (progress - 0.5) * span * 0.77 * localDirection
                 local cf = routeTransform(structure.AlongX, distance,
                     bridge.Size.Y * 0.5 + 5.50, 0)
                 runner.Part.CFrame = bridge.CFrame * cf
@@ -372,8 +403,12 @@ end
 task.spawn(function()
     while art.Parent do
         local platforms = findPlatforms()
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local tier = VfxQuality.deviceTier(
+            player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+        ).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
+        local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+        local meshEligible = tier ~= "Low" and pressure < 1
         local ordered = readBridges(platforms)
         local changed = platforms ~= currentPlatforms or tier ~= currentTier
             or reduced ~= currentReduced or #ordered ~= #bridges
@@ -385,7 +420,12 @@ task.spawn(function()
                 end
             end
         end
-        if changed then rebuild(platforms, tier, reduced, ordered) end
+        if changed then
+            rebuild(platforms, tier, reduced, ordered, pressure)
+        elseif meshEligible ~= currentMeshEligible then
+            rebuildCanopies(tier, reduced, pressure)
+        end
+        currentMeshEligible = meshEligible
         if #canopy > 0 then
             draw(os.clock())
             task.wait(reduced and 0.35
