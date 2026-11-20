@@ -143,7 +143,12 @@ local function bindSource(model, profile)
 end
 
 local function visibleCosmetic(part)
-    return part and (part:IsA("Part") or part:IsA("WedgePart")) and part.Anchored
+    if not part then return false end
+    local native = part:IsA("Part") or part:IsA("WedgePart")
+    local glazing = part:IsA("MeshPart") and part.Name == "TransitGlazing"
+        and part.MeshId ~= "" and part:GetAttribute("Original3DAssetId") == 88962643359267
+        and (part.Size - V(3.5, 1.1, .18)).Magnitude < .06
+    return (native or glazing) and part.Anchored
         and not part.CanCollide and not part.CanTouch and not part.CanQuery
         and part:GetAttribute("SceneryLodHidden") ~= true
         and part.LocalTransparencyModifier < .95
@@ -261,6 +266,10 @@ local function mount(item, district, variant, profile, source)
     for _, native in ipairs(item.natives) do
         watch(entry.connections, native.AncestryChanged, drop)
         watch(entry.connections, native:GetAttributeChangedSignal("SceneryLodHidden"), drop)
+        if native:IsA("MeshPart") then
+            watch(entry.connections, native:GetPropertyChangedSignal("MeshId"), drop)
+            watch(entry.connections, native:GetAttributeChangedSignal("Original3DAssetId"), drop)
+        end
         for _, property in ipairs(NATIVE_PROPERTIES) do
             watch(entry.connections, native:GetPropertyChangedSignal(property), drop)
         end

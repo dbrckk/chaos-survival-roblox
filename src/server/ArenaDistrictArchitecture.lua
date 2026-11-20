@@ -14,7 +14,9 @@ local DistrictFacadeStyles = if stylesModule
     then require(stylesModule)
     else require("../shared/DistrictFacadeStyles")
 
+local RouteSignalGeometry = require("./RouteSignalGeometry")
 local ArenaDistrictArchitecture = {}
+local GLAZING_PROFILE_ID = 88962643359267
 
 -- Four navigable sectors need distinct silhouettes AND distinct color IDs.
 -- Tint existing architecture only: zero added Parts, lights, particle emitters
@@ -47,7 +49,7 @@ local function element(model, origin, name, kind, size, localFrame, color, mater
     return piece
 end
 
-local function fixture(folder, base, variantId, theme, side, slot, number)
+local function fixture(folder, base, variantId, theme, side, slot, number, glazingProfile)
     -- Four skyline profiles per side, alternating silhouettes.
     -- Keep the entire structure inside the 320-stud playable floor.
     local tangent = (slot - 2.5) * 72
@@ -93,6 +95,28 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
             color or steel, material)
     end
 
+    local function glazing(name, size, localFrame, color, alpha)
+        local pane
+        if glazingProfile and glazingProfile:IsA("MeshPart") and glazingProfile.MeshId ~= "" then
+            -- Retain the pane's local axes. The front signage is drawn on
+            -- its original rectangular plane and the glass gaps are shallow.
+            local alongX = glazingProfile.Size.X > glazingProfile.Size.Z
+            pane = RouteSignalGeometry.fit(glazingProfile, origin * localFrame, size, nil, alongX)
+        end
+        if pane then
+            pane.Name = name
+            pane.Material = Enum.Material.Glass
+            pane.Color = color
+            pane.DoubleSided = true
+            pane:SetAttribute("Original3DAssetId", GLAZING_PROFILE_ID)
+        else
+            pane = make(name, "Part", size, localFrame, color, Enum.Material.Glass)
+        end
+        pane.Transparency = alpha
+        pane.Parent = model
+        return pane
+    end
+
     -- Full 3D massing: recessed disc, four sculpted supports and an elevated
     -- roof. Narrow x/z footprint leaves generous escape and hazard lanes.
     local plinth = make("BasaltFoundation", "Part",
@@ -114,18 +138,13 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
             Vector3.new(4.3, 2.1, 6.0),
             CFrame.new(direction * 3.0, 13.3, -0.8)
                 * CFrame.Angles(0, direction < 0 and math.pi or 0, 0), alloy)
-        local vane = make("DataVane" .. suffix, "Part",
-            Vector3.new(0.16, 4.7, 2.9),
-            CFrame.new(direction * 5.25, 8.8, 1.5), accent,
-            Enum.Material.Glass)
-        vane.Transparency = 0.24
+        glazing("DataVane" .. suffix, Vector3.new(0.16, 4.7, 2.9),
+            CFrame.new(direction * 5.25, 8.8, 1.5), accent, 0.24)
     end
     make("ServiceCore", "Part", Vector3.new(6.8, 7.3, 6.8),
         CFrame.new(0, 8.4, 0), dark)
-    local window = make("RecessedSignal", "Part",
-        Vector3.new(4.5, 2.8, 0.17), CFrame.new(0, 9.2, -3.5),
-        accent, Enum.Material.Glass)
-    window.Transparency = 0.32
+    local window = glazing("RecessedSignal", Vector3.new(4.5, 2.8, 0.17),
+        CFrame.new(0, 9.2, -3.5), accent, 0.32)
 
     -- Player-facing service entrances give every district building a real
     -- grounded architectural front, not only a floating rooftop signature.
@@ -212,12 +231,9 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
             Vector3.new(0.85, 4.8, 4.6),
             CFrame.new(direction * 3.68, 7.6, 0.48),
             steel:Lerp(dark, 0.21), Enum.Material.CorrodedMetal)
-        local recess = make("SideGlass" .. tostring(direction), "Part",
-            Vector3.new(0.18, 2.2, 3.6),
+        glazing("SideGlass" .. tostring(direction), Vector3.new(0.18, 2.2, 3.6),
             CFrame.new(direction * 4.13, 8.3, 0.48),
-            accent:Lerp(Color3.fromRGB(170, 220, 235), 0.15),
-            Enum.Material.Glass)
-        recess.Transparency = 0.36
+            accent:Lerp(Color3.fromRGB(170, 220, 235), 0.15), 0.36)
         make("TopRail" .. tostring(direction), "Part",
             Vector3.new(0.34, 0.38, 8),
             CFrame.new(direction * 5.4, 14.3, 0.2),
@@ -246,9 +262,8 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
             CFrame.new(0, 18.1, 0), alloy)
         make("CabShell", "Part", Vector3.new(5.6, 3, 4),
             CFrame.new(0, 15.9, 0), dark)
-        local glass = make("CabGlass", "Part", Vector3.new(4.8, 1.45, 0.16),
-            CFrame.new(0, 16.2, -2.1), accent, Enum.Material.Glass)
-        glass.Transparency = 0.22
+        glazing("CabGlass", Vector3.new(4.8, 1.45, 0.16),
+            CFrame.new(0, 16.2, -2.1), accent, 0.22)
         for _, direction in ipairs({-1, 1}) do
             make("GantryBlade" .. tostring(direction), "WedgePart",
                 Vector3.new(3, 2.8, 2.6),
@@ -293,8 +308,8 @@ local function fixture(folder, base, variantId, theme, side, slot, number)
             CFrame.new(0, 18.5, 0), alloy)
         make("TransitCab", "Part", Vector3.new(4.5, 3.1, 3.5),
             CFrame.new(0, 16.4, -1), steel)
-        make("TransitGlazing", "Part", Vector3.new(3.5, 1.1, 0.18),
-            CFrame.new(0, 16.6, -2.83), accent, Enum.Material.Glass)
+        glazing("TransitGlazing", Vector3.new(3.5, 1.1, 0.18),
+            CFrame.new(0, 16.6, -2.83), accent, 0)
         make("TransferRailHousing", "Part", Vector3.new(13.0, 0.8, 2.4),
             CFrame.new(0, 20.1, -2.0), alloy)
         for _, direction in ipairs({-1, 1}) do
@@ -527,7 +542,7 @@ local function cornerFixture(folder, base, variantId, theme, index)
     model.Parent = folder
 end
 
-function ArenaDistrictArchitecture.build(decor, base, variantId, theme)
+function ArenaDistrictArchitecture.build(decor, base, variantId, theme, glazingProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart")
         or type(variantId) ~= "string" or type(theme) ~= "table" then
         return nil
@@ -541,7 +556,7 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme)
     for _, side in ipairs({"North", "East", "South", "West"}) do
         for slot = 1, 4 do
             count += 1
-            fixture(folder, base, variantId, theme, side, slot, count)
+            fixture(folder, base, variantId, theme, side, slot, count, glazingProfile)
         end
     end
     folder:SetAttribute("District3DCount", count)

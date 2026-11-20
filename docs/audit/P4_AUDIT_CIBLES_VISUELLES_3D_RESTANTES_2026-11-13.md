@@ -20,6 +20,8 @@ L’attribut `LocalP4VisibleNativeHelixAccessChassis` observe leur nombre parmi 
 
 Les 72 bandes de guidage des 24 rampes d’Orbital peuvent reprendre le moulage approuvé du périmètre, à raison d’une pièce par bande. Les 27 bandes des rampes principales et les 45 bandes des accès suivent la longueur de leur rampe. Les huit voies de jeu conservent leur signal ambré à la charge, avec leurs teintes et leur transparence d’origine au retour à l’état normal.
 
+Les 16 façades par arène peuvent reprendre le moulage du périmètre pour les vitrages et les ailettes de signal, soit 84 pièces sur Classic, Crossroads, Orbital et Storm Harbor, et 100 sur Tower Run. Les quatre enseignes conservent leur fenêtre, leur face et leur orientation. Le vitrage de la cabine reste compatible avec le masque de façade à proximité, comme celui du transfert sur Tower Run l’est avec le masque des équipements de toit.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

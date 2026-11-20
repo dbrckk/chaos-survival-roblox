@@ -3218,7 +3218,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
-    ArenaDistrictArchitecture.build(decor, base, variant.Id, theme)
+    ArenaDistrictArchitecture.build(decor, base, variant.Id, theme, wayfinderBase)
     addSouthHorizonMonument(decor, config, variant, theme, horizonTemplates)
     local exteriorCasting = {part = wayfinderBase, assetId = 88962643359267}
     addExteriorCornerRidges(decor, config, variant, theme, exteriorCasting)
