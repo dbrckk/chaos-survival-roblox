@@ -1,56 +1,45 @@
--- P4: CREATOR-APPROVED 3D MOBILE MOBILITY PAD HOUSINGS.
--- Real BasePart pads remain SERVER-owned and touchable. Only use the
--- already imported / authenticated original CornerGuard sculpture:
--- AssetService-approved original 102215174919938. Never create MeshIds.
--- Model stays a cosmetic clone with no collision, queries or scripting.
--- Tier/pressure lifecycle is driven by arena-pad-ambient's existing
--- event watchers; there is NO new render loop or workspace scanner.
+-- Local sculpture around the real touch sensor. The top face remains
+-- unobstructed so the native glow, direction cues and status label stay visible.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local Kit = {}
-local APPROVED = 102215174919938
+local APPROVED = 126298311664881
+local SOURCE_FOLDER = "ApprovedTowersSignatureBridgeTemplates"
+local SOURCE_MODEL = "ForgedBridge"
+local SOURCE_REGION = "SweptCrossbeam"
+local MODEL_MARKER = "OriginalTowersSignatureBridge3D"
+
 local holder = Instance.new("Folder")
 holder.Name = "OriginalMobilityPadHardwareLocal"
 holder:SetAttribute("CosmeticOnly", true)
 holder.Parent = workspace
 
 local mounted = {}
+local geometryReady
+
+local function sourceNodes()
+    local folder = ReplicatedStorage:FindFirstChild(SOURCE_FOLDER)
+    local model = folder and folder:FindFirstChild(SOURCE_MODEL)
+    return folder, model, model and model:FindFirstChild(SOURCE_REGION)
+end
 
 local function genuineSource()
-    local parent = ReplicatedStorage:FindFirstChild(
-        "ApprovedFloorReliefTemplates")
-    if not parent or not parent:IsA("Folder")
-        or parent.Parent ~= ReplicatedStorage
-        or parent:GetAttribute("OwnerVerified") ~= true then
+    local folder, model, source = sourceNodes()
+    if not folder or not folder:IsA("Folder") or folder:GetAttribute("OwnerVerified") ~= true
+        or not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute(MODEL_MARKER) ~= true
+        or model:GetAttribute("Original3DAssetId") ~= APPROVED
+        or not source or not source:IsA("MeshPart") or not source.Archivable
+        or source.MeshId == "" or source.CanCollide or source.CanTouch or source.CanQuery then
         return nil
     end
-    local source = parent:FindFirstChild("CornerGuard")
-    if not source or source.Parent ~= parent or not source:IsA("Model")
-        or source:GetAttribute("OwnerVerified") ~= true
-        or source:GetAttribute("CosmeticOnly") ~= true
-        or source:GetAttribute("OriginalFloorRelief3D") ~= true
-        or source:GetAttribute("Original3DAssetId") ~= APPROVED
-    then return nil end
-
-    local count = 0
-    for _, object in ipairs(source:GetDescendants()) do
-        if object:IsA("BasePart") then
-            if not object:IsA("MeshPart") or object.CanCollide
-                or object.CanTouch or object.CanQuery then
-                return nil
-            end
-            count += 1
-        elseif object:IsA("LuaSourceContainer") then
-            return nil
-        end
-    end
-    if count < 1 or count > 12 then return nil end
-    local _, size = source:GetBoundingBox()
-    if size.X < 4.7 or size.X > 5.6
-        or size.Z < 4.7 or size.Z > 5.6
-        or size.Y < 0.24 or size.Y > 0.56 then
-        return nil
-    end
+    local size = source.Size
+    if math.abs(math.max(size.X, size.Z) - 40.64) >= 0.30
+        or math.abs(math.min(size.X, size.Z) - 5.96) >= 0.20
+        or math.abs(size.Y - 3.1108) >= 0.18 then return nil end
     return source
 end
 
@@ -70,7 +59,8 @@ local function genuinePad(pad)
     local map = arena and arena.Parent
     return arena and arena.Name == "Arena"
         and map and map.Name == "GeneratedMap"
-        and map.Parent == workspace
+        and workspace:FindFirstChild("GeneratedMap") == map
+        and map:FindFirstChild("Arena") == arena
         and arena:GetAttribute("VariantId") ~= nil
 end
 
@@ -78,85 +68,133 @@ local function removePad(pad)
     local entry = mounted[pad]
     if not entry then return end
     mounted[pad] = nil
-    if entry.connection then entry.connection:Disconnect() end
-    if entry.meshConnection then entry.meshConnection:Disconnect() end
-    if entry.model.Parent then entry.model:Destroy() end
+    for _, connection in ipairs(entry.connections) do connection:Disconnect() end
+    entry.model:Destroy()
 end
 
-local function removeAll()
-    local keys = {}
-    for pad in pairs(mounted) do keys[#keys+1] = pad end
-    for _, pad in ipairs(keys) do removePad(pad) end
+local function repaint(pad, entry, color)
+    local metal = color:Lerp(Color3.fromRGB(30, 39, 53), 0.65)
+    local cap = color:Lerp(Color3.fromRGB(45, 56, 70), 0.46)
+    for index, piece in ipairs(entry.pieces) do
+        piece.Color = index <= 2 and cap or metal
+        piece.Transparency = pad.Transparency
+    end
 end
 
-local function mount(pad, source)
-    if not genuinePad(pad) or not source or mounted[pad] then return false end
-    local copy = source:Clone()
-    local frame, bounds = copy:GetBoundingBox()
-    -- Floor sculpture is 5.2×5.2 studs: keep it inside the actual
-    -- 6.5-stud physical square. Don't extend above .44 studs, where it
-    -- would visually suggest a jump obstacle where none exists.
-    local scale = math.min(1.08,
-        pad.Size.X * 0.88 / math.max(bounds.X, 0.01),
-        pad.Size.Z * 0.88 / math.max(bounds.Z, 0.01),
-        0.44 / math.max(bounds.Y, 0.01))
-    if scale < 0.68 or not pcall(function() copy:ScaleTo(scale) end) then
-        copy:Destroy()
-        return false
+local function layout(pad, entry)
+    local size = pad.Size
+    local frame = pad.CFrame
+    local width = 0.38
+    local protrusion = 0.07
+    -- Leave the complete top face clear even as the sensor moves. End
+    -- caps overhang the side rails slightly and hide the corner joints.
+    local top = size.Y * 0.5 - 0.02
+    local height = 0.24
+    local centerY = top - height * 0.5
+    local offset = size * 0.5 + Vector3.new(protrusion, 0, protrusion)
+    local longAxisX = entry.longAxisX
+    for index, piece in ipairs(entry.pieces) do
+        local endCap = index <= 2
+        local side = index % 2 == 0 and 1 or -1
+        local length = endCap and (offset.X * 2 + width) or (offset.Z * 2 - width)
+        local pose = frame * CFrame.new(endCap and 0 or side * offset.X,
+            centerY, endCap and side * offset.Z or 0)
+        local rotate = longAxisX ~= endCap
+        piece.CFrame = rotate and pose * CFrame.Angles(0, math.pi * 0.5, 0) or pose
+        piece.Size = longAxisX and Vector3.new(length, height, width)
+            or Vector3.new(width, height, length)
     end
-    frame, bounds = copy:GetBoundingBox()
-    if bounds.X > pad.Size.X * 0.89
-        or bounds.Z > pad.Size.Z * 0.89
-        or bounds.Y > 0.45 then
-        copy:Destroy()
-        return false
-    end
+end
 
-    -- Genuine 3D sits flush on the pad surface, which still supplies its
-    -- authentic arena color, glow and physical touch. Keep all original
-    -- materials and mesh silhouettes; never stretch/rebuild vertices.
-    local target = pad.CFrame * CFrame.new(
-        0, pad.Size.Y * 0.5 + bounds.Y * 0.5 - 0.055, 0)
-    local pieces = 0
-    for _, part in ipairs(copy:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if not part:IsA("MeshPart") then
-                copy:Destroy()
-                return false
-            end
-            part.CFrame = target * frame:ToObjectSpace(part.CFrame)
-            part.Anchored = true
-            part.Massless = true
-            part.CanCollide = false
-            part.CanTouch = false
-            part.CanQuery = false
-            part.CastShadow = false
-            part:SetAttribute("CosmeticOnly", true)
-            part:SetAttribute("Original3DAssetId", APPROVED)
-            part:SetAttribute("OriginalMobilityPadHousing3D", true)
-            pieces += 1
+local function mount(pad, source, color)
+    local model = Instance.new("Model")
+    model.Name = "AuthenticMobilityPad3D_" .. tostring(pad:GetAttribute("ArenaMobilityPadIndex"))
+    model:SetAttribute("CosmeticOnly", true)
+    local entry = {model = model, source = source, meshId = source.MeshId,
+        longAxisX = source.Size.X > source.Size.Z, pieces = {}, connections = {}}
+    for index = 1, 4 do
+        local piece = source:Clone()
+        if not piece then
+            model:Destroy()
+            return
         end
+        piece:ClearAllChildren()
+        piece.Name = (index <= 2 and "ForgedEndCap" or "ForgedSideRail") .. index
+        piece.TextureID = ""
+        piece.MaterialVariant = ""
+        piece.Material = Enum.Material.Metal
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.LocalTransparencyModifier = 0
+        piece:SetAttribute("CosmeticOnly", true)
+        piece:SetAttribute("Original3DAssetId", APPROVED)
+        piece:SetAttribute("OriginalMobilityPadHousing3D", true)
+        piece.Parent = model
+        entry.pieces[index] = piece
     end
-    if pieces < 1 or pieces > 12
-        or not genuinePad(pad) or not source.Parent then
-        copy:Destroy()
-        return false
+    layout(pad, entry)
+    repaint(pad, entry, color)
+    local function follow()
+        if genuinePad(pad) then layout(pad, entry) else removePad(pad) end
     end
-    copy.Name = "AuthenticMobilityPad3D_"
-        .. tostring(pad:GetAttribute("ArenaMobilityPadIndex"))
-    copy:SetAttribute("CosmeticOnly", true)
-    copy.Parent = holder
-    local entry = {model = copy, source = source, connection = nil}
+    entry.connections = {
+        pad:GetPropertyChangedSignal("CFrame"):Connect(follow),
+        pad:GetPropertyChangedSignal("Size"):Connect(follow),
+        pad:GetPropertyChangedSignal("Transparency"):Connect(function()
+            for _, piece in ipairs(entry.pieces) do piece.Transparency = pad.Transparency end
+        end),
+        pad.AncestryChanged:Connect(function()
+            if not genuinePad(pad) then removePad(pad) end
+        end),
+        model.DescendantRemoving:Connect(function(piece)
+            if piece:IsA("MeshPart") then removePad(pad) end
+        end),
+    }
     mounted[pad] = entry
-    entry.connection = pad.AncestryChanged:Connect(function()
-        if not genuinePad(pad) then removePad(pad) end
-    end)
-    -- A streamed/externally removed piece cannot leave a half-finished
-    -- metal shell hiding the gameplay marker; discard the broken clone.
-    entry.meshConnection = copy.DescendantRemoving:Connect(function(part)
-        if part:IsA("MeshPart") then removePad(pad) end
-    end)
-    return true
+    model.Parent = holder
+end
+
+function Kit.watchSource(onChanged)
+    geometryReady = LobbyMeshPreload.new(onChanged)
+    local connections = {}
+    local pending = false
+    local function bind()
+        for _, connection in ipairs(connections) do connection:Disconnect() end
+        table.clear(connections)
+        local folder, model, source = sourceNodes()
+        if folder then
+            connections[#connections + 1] = folder:GetAttributeChangedSignal("OwnerVerified"):Connect(onChanged)
+        end
+        if model then
+            for _, attr in ipairs({"OwnerVerified", "CosmeticOnly", MODEL_MARKER, "Original3DAssetId"}) do
+                connections[#connections + 1] = model:GetAttributeChangedSignal(attr):Connect(onChanged)
+            end
+        end
+        if source and source:IsA("MeshPart") then
+            for _, property in ipairs({"MeshId", "Size", "Archivable", "CanCollide", "CanTouch", "CanQuery"}) do
+                connections[#connections + 1] = source:GetPropertyChangedSignal(property):Connect(onChanged)
+            end
+        end
+        onChanged()
+    end
+    local function onSourceTreeChanged(item)
+        local folder, model = sourceNodes()
+        local relevant = (item.Name == SOURCE_FOLDER and item.Parent == ReplicatedStorage)
+            or (folder and item.Name == SOURCE_MODEL and item.Parent == folder)
+            or (model and item.Name == SOURCE_REGION and item.Parent == model)
+        if not relevant or pending then return end
+        pending = true
+        task.defer(function()
+            pending = false
+            bind()
+        end)
+    end
+    ReplicatedStorage.DescendantAdded:Connect(onSourceTreeChanged)
+    ReplicatedStorage.DescendantRemoving:Connect(onSourceTreeChanged)
+    bind()
 end
 
 function Kit.sync(pads, tier, rawPressure, touch)
@@ -170,7 +208,9 @@ function Kit.sync(pads, tier, rawPressure, touch)
     elseif pressure == 2 then
         quota = 0
     end
-    if not source then quota = 0 end
+    if quota > 0 and (not source or not geometryReady or not geometryReady(source)) then
+        quota = 0
+    end
 
     local camera = workspace.CurrentCamera
     local origin = camera and camera.CFrame.Position
@@ -196,20 +236,24 @@ function Kit.sync(pads, tier, rawPressure, touch)
     for i = 1, math.min(quota, #candidates) do
         desired[candidates[i].pad] = true
     end
+    local sourceAlongX = source and source.Size.X > source.Size.Z
     local obsolete = {}
     for pad, entry in pairs(mounted) do
         if not desired[pad] or entry.source ~= source
             or entry.model.Parent ~= holder
+            or entry.meshId ~= source.MeshId
+            or entry.longAxisX ~= sourceAlongX
             or not genuinePad(pad) then
             obsolete[#obsolete+1] = pad
         end
     end
     for _, pad in ipairs(obsolete) do removePad(pad) end
 
-    if source then
-        for i = 1, math.min(quota, #candidates) do
-            mount(candidates[i].pad, source)
-        end
+    for i = 1, math.min(quota, #candidates) do
+        local pad = candidates[i].pad
+        local color = pads[pad].hardwareColor or pad.Color
+        local entry = mounted[pad]
+        if entry then repaint(pad, entry, color) else mount(pad, source, color) end
     end
     local count = 0
     for _ in pairs(mounted) do count += 1 end
@@ -217,7 +261,7 @@ function Kit.sync(pads, tier, rawPressure, touch)
 end
 
 function Kit.clear()
-    removeAll()
+    for pad in pairs(mounted) do removePad(pad) end
 end
 
 return Kit
