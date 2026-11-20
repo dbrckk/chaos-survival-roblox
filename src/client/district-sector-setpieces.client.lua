@@ -1,8 +1,8 @@
 -- Authored native 3D silhouettes at the FOUR playable districts.
 -- Unlike off-map skyline art these sit inside the 320-stud floor, close
 -- enough to orient real players along the outer stair and branch routes.
--- Client-only, noncolliding, no runtime physics, sound, external assets,
--- RenderStepped, Heartbeat, lights or high-frequency update tasks.
+-- Client-only, noncolliding, using approved sculpted roof profiles.
+-- No runtime physics, lights or high-frequency update tasks.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -14,6 +14,9 @@ local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local DistrictMaterialFinishKit = require(script.Parent.DistrictMaterialFinishKit)
 local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
+local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -25,6 +28,67 @@ local watchedMap = nil
 local disconnectReady = nil
 local rebuildQueued = false
 local liveTracks = {}
+local roofs = {}
+local roofGeometryReady
+
+local function syncRoofs()
+    if #roofs == 0 then return end
+    local source, orientation, swapped, assetId
+    if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) < 1 then
+        source, orientation, swapped, assetId = PerimeterArmor.slopedCapProfile()
+        if source and not roofGeometryReady(source) then source = nil end
+    end
+
+    for _, roof in ipairs(roofs) do
+        local previous = roof.part
+        local parent = previous.Parent
+        if not parent then continue end
+        local wasMesh = previous:IsA("MeshPart")
+        if (source and wasMesh and previous.MeshId == source.MeshId)
+            or (not source and not wasMesh) then continue end
+        local replacement = CelebrationMeshes.cloneProfile(source)
+        if source and not replacement then continue end
+        replacement = replacement or Instance.new("WedgePart")
+        replacement.Name = previous.Name
+        replacement.CFrame = roof.frame
+        replacement.Size = roof.size
+        if source then
+            replacement.CFrame *= orientation
+            if swapped then
+                replacement.Size = Vector3.new(roof.size.Z, roof.size.Y, roof.size.X)
+            end
+        end
+        replacement.Color = previous.Color
+        replacement.Material = roof.material
+        replacement.Transparency = previous.Transparency
+        replacement.LocalTransparencyModifier = previous.LocalTransparencyModifier
+        replacement.Anchored = true
+        replacement.CanCollide = false
+        replacement.CanTouch = false
+        replacement.CanQuery = false
+        replacement.CastShadow = false
+        for name, value in pairs(previous:GetAttributes()) do
+            replacement:SetAttribute(name, value)
+        end
+        replacement:SetAttribute("Original3DAssetId", if source then assetId else nil)
+        replacement.Parent = parent
+        roof.part = replacement
+        previous:Destroy()
+    end
+end
+
+local roofSyncQueued = false
+
+local function scheduleRoofSync()
+    if roofSyncQueued then return end
+    roofSyncQueued = true
+    task.defer(function()
+        roofSyncQueued = false
+        syncRoofs()
+    end)
+end
+
+roofGeometryReady = LobbyMeshPreload.new(scheduleRoofSync)
 
 local function currentTier()
     local requested = player:GetAttribute("VfxQualityTier")
@@ -463,12 +527,8 @@ local function makeSector(base, theme, index, tier, variant)
         end
     end
 
-    -- Each map needs a recognizable roof/shoulder profile, not four
-    -- repeated rectangular towers with different colors. These are
-    -- real triangular native wedges, never fake walkable platforms.
-    -- Place two per sector (8 per arena) only on Medium/High; Android
-    -- Low still has exactly the original five silhouette Parts.
-    -- Local, collisionless, streaming/LOD managed by this same model.
+    -- Two cosmetic roof pieces per sector on Medium/High. The opposing
+    -- native wedges stay visible until the matching approved casting loads.
     local profile = ROOF_PROFILES[variant]
     if profile then
         for side = -1, 1, 2 do
@@ -497,6 +557,10 @@ local function makeSector(base, theme, index, tier, variant)
                 wedge:SetAttribute("PreserveNativeMaterial", true)
             end
             wedge.Parent = model
+            roofs[#roofs + 1] = {
+                part = wedge, frame = wedge.CFrame, size = wedge.Size,
+                material = profile.material,
+            }
             infrastructure += 1
         end
     end
@@ -632,6 +696,7 @@ end
 
 local function rebuild()
     stopKinetics()
+    table.clear(roofs)
     folder:ClearAllChildren()
     local tier = currentTier()
     -- Low-end phones now receive a recognizable five-Part variant instead
@@ -647,6 +712,7 @@ local function rebuild()
     for index = 1, 4 do
         makeSector(base, theme, index, tier, variant)
     end
+    syncRoofs()
     syncKinetics()
 end
 
@@ -671,6 +737,7 @@ local function bindMap(generated)
         )
     else
         stopKinetics()
+        table.clear(roofs)
         folder:ClearAllChildren()
     end
 end
@@ -688,5 +755,19 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(syncKinetics)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleRoofSync)
+
+local function capSourceChanged(item)
+    local parent = item.Parent
+    if item.Name == "ApprovedPerimeterArmorTemplates"
+        or (item.Name == "Cap" and parent and parent.Name == "ApprovedPerimeterArmorTemplates")
+        or (item:IsA("MeshPart") and parent and parent.Name == "Cap"
+            and parent.Parent and parent.Parent.Name == "ApprovedPerimeterArmorTemplates") then
+        scheduleRoofSync()
+    end
+end
+
+ReplicatedStorage.DescendantAdded:Connect(capSourceChanged)
+ReplicatedStorage.DescendantRemoving:Connect(capSourceChanged)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
 scheduleRebuild()

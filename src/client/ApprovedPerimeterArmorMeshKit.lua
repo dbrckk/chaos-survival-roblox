@@ -103,13 +103,45 @@ local function sourceFor(kind)
     return source
 end
 
-function Kit.wayfinderProfile()
-    local model = sourceFor("Cap")
+local function capCasting(model)
     local part = model and model:FindFirstChild("WayfinderBase")
     if part and part:IsA("MeshPart") and part.Archivable and part.MeshId ~= "" then
         return part
     end
     return nil
+end
+
+function Kit.wayfinderProfile()
+    return capCasting(sourceFor("Cap"))
+end
+
+function Kit.slopedCapProfile()
+    local model = sourceFor("Cap")
+    local casting = capCasting(model)
+    if not casting or casting.CFrame.UpVector.Y < .999 then return nil end
+    -- The single SIGNAL region sits toward the high end of the casting.
+    -- Its position identifies the high edge even if import swaps or flips X/Z.
+    local highEnd
+    for _, part in ipairs(model:GetChildren()) do
+        if not part:IsA("MeshPart") then continue end
+        local size = part.Size
+        if math.abs(size.Y - .04066) < .025
+            and math.abs(math.max(size.X, size.Z) - .9372) < .055
+            and math.abs(math.min(size.X, size.Z) - .1638) < .055 then
+            if highEnd then return nil end
+            highEnd = casting.CFrame:PointToObjectSpace(part.Position)
+        end
+    end
+    if not highEnd then return nil end
+    local sideways = math.abs(highEnd.X) > math.abs(highEnd.Z)
+    local forward = if sideways then highEnd.X else highEnd.Z
+    local lateral = if sideways then highEnd.Z else highEnd.X
+    if math.abs(math.abs(forward) - .4212) > .10 or math.abs(lateral) > .08 then
+        return nil
+    end
+    local yaw = if sideways then -math.sign(forward) * math.pi / 2
+        elseif forward < 0 then math.pi else 0
+    return casting, CFrame.Angles(0, yaw, 0), sideways, IDS.Cap
 end
 
 -- The four perimeter stations remain fixed outside the contracting playable

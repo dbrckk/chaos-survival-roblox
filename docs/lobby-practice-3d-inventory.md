@@ -146,3 +146,7 @@ Les éclats de Chaos peuvent afficher un noyau facetté d’Orbital à la place 
 Les stations de signal peuvent afficher des arcs et des montants octogonaux, une traverse moulée et une lentille facettée. La luminosité suit les états actif, suivant et réclamé. Les caches réutilisent le moulage approuvé pour leurs huit pièces, y compris le couvercle qui porte l’invite d’interaction. Les caches et leurs invites restent attachés à leur plateforme. Les formes simples sont utilisées si le modèle manque lors de la création.
 
 Les stations de signal serveur peuvent aussi reprendre le noyau facetté d’Orbital et le moulage du périmètre pour le boîtier, les panneaux et les flèches au sol. La parabole de Classic peut utiliser l’anneau creux d’Orbital. Les positions du noyau, de l’invite et du texte restent les mêmes. Chaque pièce simple sert de secours quand le maillage correspondant manque à la création de la station.
+
+## P4 — Toitures des monuments de secteur
+
+Les coiffes météo de Classic, les capots de levage de Tower Run, les auvents de Crossroads, les ailettes d’Orbital et les capots portuaires de Storm Harbor peuvent reprendre le moulage incliné approuvé du périmètre. Chaque paire conserve ses deux pentes opposées, son gabarit et son matériau. La mise à jour remplace uniquement les huit pièces de toiture de l’arène, en qualité moyenne ou haute. Les formes simples reprennent leur place au chargement ou sous pression graphique.
