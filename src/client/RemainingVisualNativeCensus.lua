@@ -77,7 +77,7 @@ local KEYS = {
     -- Additional P4 breakdowns are independent counters, NOT extra Parts.
     -- Prevent neon/wayfinding cues from inflating a "needs 3D" backlog.
     "AscensionStructure", "AscensionSignal",
-    "HelixStructure", "HelixSignal",
+    "HelixStructure", "HelixSignal", "HelixAccessChassis",
     -- Separate real architectural backlog from navigational Neon so the
     -- next mesh batch targets visible blockout rather than route guidance.
     "DistrictStructure", "DistrictSignal",
@@ -127,12 +127,17 @@ function Census.sample(player, arena, quality)
                                 local lower=string.lower(part.Name)
                                 local signal = part.Material==Enum.Material.Neon
                                     or part:GetAttribute("ChaosWayfinding")==true
+                                    or (key == "Helix" and lower:match("^helixcentergrain%d+$") ~= nil)
                                     or lower:find("signal",1,true)~=nil
                                     or lower:find("beacon",1,true)~=nil
                                     or lower:find("guide",1,true)~=nil
                                     or lower:find("glow",1,true)~=nil
                                 local suffix=signal and "Signal" or "Structure"
                                 counts[key..suffix] += 1
+                                if key == "Helix" and (lower:match("^entrychassis%d+$")
+                                    or lower:match("^corechassis%d+$")) then
+                                    counts.HelixAccessChassis += 1
+                                end
                             end
                         end
                     end

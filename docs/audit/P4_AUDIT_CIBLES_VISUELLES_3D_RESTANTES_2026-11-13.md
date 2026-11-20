@@ -4,6 +4,20 @@
 
 > **Mesure désormais instrumentée :** `src/client/RemainingVisualNativeCensus.lua` observe toutes les **16 passes LOD** les véritables `Part/WedgePart/CornerWedgePart/TrussPart` natives non physiques encore présentes et non masquées localement, dans la carte active. Le recensement inclut façades, casings, arches, Helix, supports, bordures, sous-cadres, panneaux, finitions de sol, stations périphériques, monuments, skyline Harbor et passerelles. Les attributs `LocalP4VisibleNativeAscensionStructure`, `...AscensionSignal`, `...HelixStructure` et `...HelixSignal` séparent **les vrais volumes primitifs des signaux de navigation**. `LocalP4VisibleNativeAllScanned` donne le nombre de primitives natives visibles dans les deux dossiers parcourus, sans prétendre qu'elles méritent toutes un remplacement. Les comptes sont des **instantanés des objets streamés et non masqués**, ni des pixels rendus ni un FPS. Les vrais colliders sont exclus. Les arènes absentes sont signalées par `LocalP4NativeCensusReady=false`, et non traitées comme un zéro validé.
 
+## Revue du 20 novembre 2026
+
+La revue de la branche de la PR [#920](https://github.com/dbrckk/chaos-survival-roblox/pull/920), à partir de `565d843`, combine le recensement des générateurs, le registre des modèles et le suivi des propriétaires de chaque famille. Le registre contient 112 modèles approuvés et l’audit recense 509 fichiers Luau. Le fichier CSV du 13 novembre reste le relevé historique. Il ne permet pas de déduire le nombre de primitives visibles un jour donné.
+
+| Famille | État retrouvé dans le code |
+| --- | --- |
+| Monuments de secteur proches des parcours | Les quatre monuments locaux peuvent afficher 20, 56 ou 106 maillages par arène selon la qualité et les sources chargées. Les bâtiments de façade du serveur ont leurs propriétaires et budgets propres. |
+| Bordures, supports, sous-cadres et panneaux des decks | `MapBuilder.lua` peut déjà monter des profils approuvés dans ces familles. Plusieurs propriétaires client masquent ou remplacent des cohortes à portée de caméra. Le compteur historique de primitives ne mesure pas leur apparence une fois chargés. |
+| Arches d’ascension | Les pylônes, ailettes et traverses utilisent une source à la construction quand elle est disponible. Le kit local `ApprovedRemainingStructureMeshKit.lua` traite aussi les deux culées, la quille et le longeron sur les arches sélectionnées. |
+| Colonnes périphériques | `ArchitecturalCladding.lua` prévoit les profilés moulés à la construction. Le kit local de structures restantes prend aussi en charge les colonnes admissibles. |
+| Rampes d’Orbital | Les rampes principales `HelixRamp1…9` ont un propriétaire pour les cadres et entretoises ciblés. Le générateur crée séparément **jusqu’à 15 châssis visuels** sous les rampes compactes, huit `EntryChassis` et sept `CoreChassis`. Ils utilisent toujours des pièces simples et suivent déjà le rétrécissement via `OrbitRouteGroup`. |
+
+Le prochain lot cible ces châssis compacts avec un profil approuvé et un ajustement selon les axes réels de chaque rampe. Le nouvel attribut `LocalP4VisibleNativeHelixAccessChassis` observe leur nombre parmi les structures natives présentes et non masquées côté client. Il fait partie du total Helix. La bande centrale `HelixCenterGrain` est comptée comme un signal puisque son apparence reflète l’état de charge des voies. La mesure en jeu reste au prochain jalon.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).
