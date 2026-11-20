@@ -108,3 +108,5 @@ Les onze effets 3D de la phase finale peuvent utiliser des profils approuvés. L
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
 
 Les impulsions du départ et du sprint final peuvent utiliser le profil du périmètre pour leurs segments fins et espacés. Les impulsions centrées sur le joueur peuvent utiliser un anneau creux d’Orbital. Les repères, les durées et la réduction des animations conservent leurs réglages. Les segments simples servent de secours en qualité basse, sous pression graphique ou au chargement.
+
+Les ondes de choc des impacts proches peuvent afficher des segments facettés pour les météores et des segments moulés pour les bombes. Les deux conservent leur centre dégagé, leur expansion et le plafond d’ondes simultanées. Le rendu simple reste disponible à distance, en qualité basse, en mode animations réduites, au chargement ou sous pression graphique.

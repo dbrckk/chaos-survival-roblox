@@ -253,12 +253,18 @@ local function renderBurst(payload)
         profile.Name, reduced, viewerDistance, activeBursts, kind
     )
     if pulseRecipe then
+        local cloneArc
+        if cloneGeometry then
+            local role = kind == "Meteor" and "fragment" or "pressure"
+            cloneArc = function() return cloneGeometry(role) end
+        end
         CinematicPulseRingKit.emit(
             setpieceFolder, pulseRecipe.Name,
             CFrame.new(position + Vector3.new(0, 0.16, 0)),
             color, math.max(1, targetDiameter * 0.15),
             targetDiameter * pulseRecipe.Scale,
-            pulseRecipe.Duration, profile.Name, reduced, pulseRecipe.Alpha
+            pulseRecipe.Duration, profile.Name, reduced, pulseRecipe.Alpha,
+            nil, cloneArc
         )
     end
 
