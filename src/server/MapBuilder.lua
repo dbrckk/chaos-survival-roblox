@@ -2181,6 +2181,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
     local useBridgeBevel = bevelProfile and bevelProfile.Name == "SweptCrossbeam"
     local skywayBeam = harborSkywayBeam and harborSkywayBeam.MeshId ~= "" and harborSkywayBeam
+    local skywayInterior = PlatformIdentityLodRules.isHarborSkywayInterior(platform)
     local bevelAlongX = bevelProfile and bevelProfile.Size.X > bevelProfile.Size.Z
     for edgeIndex, spec in ipairs(edgeSpecs) do
         local size = spec[1]
@@ -2193,7 +2194,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         -- Long edges are X-aligned on a Promenade and Z-aligned on the Spine.
         local longEdge = if skySpineStep then edgeIndex > 2 else edgeIndex <= 2
         local longProfile = (elevatedTrim and longEdge and elevatedTrim.beam)
-            or (edgeIndex <= 2 and skywayBeam)
+            or ((edgeIndex <= 2 or skywayInterior) and skywayBeam)
         if longProfile then
             bevel = fitForgedPlatformBevel(longProfile, pose, size)
         end
@@ -3699,10 +3700,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local harborStep = definition.HarborStep or definition.HarborSpokeStep
         local harborApproach = harborStep ~= nil and harborStep <= 2
         local harborTurn = PlatformIdentityLodRules.isHarborCargoTurn(platform)
-        local harborJunction = definition.HarborStep == 7
-            or definition.HarborSkywayStep == 1 or definition.HarborSkywayStep == 7
+        local harborFreightTrim = harborApproach or harborTurn
+            or definition.HarborStep == 7 or definition.HarborSkywayLane ~= nil
         local trimCasting = if reactorLanding or orbitalEntry or orbitalHub
-            or harborApproach or harborTurn or harborJunction then closedDeckCasting else routeCasting
+            or harborFreightTrim then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
@@ -3721,7 +3722,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
             harborSkywayBeam, trimCasting)
-        if elevatedRoute or reactorLanding or harborApproach or harborTurn or harborJunction then
+        if elevatedRoute or reactorLanding or harborFreightTrim then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
         else
             addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)

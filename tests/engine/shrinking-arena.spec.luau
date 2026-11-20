@@ -1211,7 +1211,8 @@ describe("Shrinking Arena mobility integration", function()
                 local lensDirection=deck.CFrame:VectorToObjectSpace(lens.CFrame.LookVector)
                 assert(math.abs(alongX and bandDirection.X or bandDirection.Z)>.999)
                 assert(math.abs(lensAlongX and lensDirection.X or lensDirection.Z)>.999)
-                if data.turn then
+                local skywayStep=deck:GetAttribute("HarborSkywayStep")
+                if data.turn or (skywayStep and skywayStep>=2 and skywayStep<=6) then
                     local post=assert(arena.Decor["PlatformSupport"..id.."_1"])
                     local foot=arena.Base.Position.Y + arena.Base.Size.Y*.5 - .08
                     assert(math.abs(post.Position.Y-post.Size.Y*.5-foot)<.02)
