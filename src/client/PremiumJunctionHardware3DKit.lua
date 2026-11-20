@@ -89,11 +89,11 @@ local function mount(pad, yard, owner, source)
         clone:Destroy()
         return
     end
-    -- The live golden chevrons are at local Y=-2.04; this genuine forged
-    -- low-profile housing is tucked against the actual floor below them.
+    -- The live chevrons are at local Y=-1.81. Seat this cast housing below
+    -- their lower face so the mounted kit cannot hide the route cue.
     -- It never extends or replaces the invisible server touch volume.
     local target = pad.CFrame
-        * CFrame.new(0, -1.88 - bounds.Y * 0.5, 0)
+        * CFrame.new(0, -1.90 - bounds.Y * 0.5, 0)
     local count = 0
     for _, part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then

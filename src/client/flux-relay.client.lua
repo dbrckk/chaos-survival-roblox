@@ -471,12 +471,11 @@ local function renderHUD(serverTime)
     return nextParity
 end
 
--- The real JunctionSwitchyard already owns its four golden chevrons
--- and server-managed BillboardGuis. Repaint those SAME objects locally,
--- only while the authoritative server has an active pair and this player
--- has an earned one-use master cut. No fake new destination, 3D geometry,
--- extra render loop, RemoteEvent or server-wide cosmetic side effect.
-local function renderJunctions()
+local junctionDirections = {A = 1, AOuter = 1, B = -1, BOuter = -1}
+
+-- Repaint the server-owned arrows and signs using the actual charged
+-- pair, personal mastery and the direction of the latest accepted cut.
+local function renderJunctions(serverTime, reduced)
     local arena = source and source:FindFirstChild("Arena")
     local mechanics = arena and arena:FindFirstChild("Mechanics")
     local yard = mechanics and mechanics:FindFirstChild("JunctionSwitchyard")
@@ -509,19 +508,21 @@ local function renderJunctions()
                 label.TextColor3 = desired
             end
         end
-        -- These two pieces belong to the REAL active switch. Preserve
-        -- the standard off-pair violet and on-pair amber. A player with
-        -- charge sees a brighter master-white pair only where usable.
+        -- A short direction cue confirms the cut without changing which
+        -- lane is charged or introducing a separate animation loop.
         local tint = personal and Color3.fromRGB(255, 245, 172)
             or (active and Color3.fromRGB(255, 203, 99)
                 or Color3.fromRGB(122, 104, 174))
-        for side = 1, 2 do
-            local suffix = side == 1 and "A" or "B"
-            local chevron = yard:FindFirstChild(
-                "JunctionChevron" .. index .. suffix)
-            if chevron and chevron:IsA("BasePart")
-                and chevron.Color ~= tint then
-                chevron.Color = tint
+        local triggered = active and not reduced and pad:GetAttribute("JunctionTriggeredAt")
+        local latest = if type(triggered) == "number"
+            and serverTime >= triggered and serverTime - triggered < 0.42
+            then pad:GetAttribute("JunctionTravelSign") else nil
+        for suffix, travelSign in pairs(junctionDirections) do
+            local chevron = yard:FindFirstChild("JunctionChevron" .. index .. suffix)
+            local usedDirection = latest == travelSign
+            local desired = usedDirection and Color3.fromRGB(255, 252, 214) or tint
+            if chevron and chevron:IsA("BasePart") and chevron.Color ~= desired then
+                chevron.Color = desired
             end
         end
     end
@@ -529,9 +530,9 @@ end
 
 local function render(now)
     local serverTime = workspace:GetServerTimeNow()
-    renderJunctions()
-    local nextParity = renderHUD(serverTime)
     local reduced = player:GetAttribute("ReduceMotion") == true
+    renderJunctions(serverTime, reduced)
+    local nextParity = renderHUD(serverTime)
     for trigger, entry in pairs(gates) do
         if not trigger.Parent then
             -- Source rebinding owns the lifetime of all visual components.
