@@ -3346,18 +3346,24 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     }
     addDistantSkyline(decor, config, variant, theme, horizonTemplates)
     addArenaSignatureMegastructure(decor, config, variant, theme, horizonTemplates)
-    -- Each outboard hero has a lightweight silhouette and per-piece fallbacks.
-    HeroArchitecture.build(decor, base, variant.Id, theme, detailProfiles)
-    -- Faceted original 3D shells, machined collars, diagonal load spars
-    -- and cantilevers on the four EXISTING foundation towers. No physics.
-    ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase, sweptProfile)
     local exteriorProfiles = detailProfiles
     if variant.Id == "Harbor" then
-        -- Exterior harbor cranes distinguish the new cargo port without
-        -- extra colliders, sound loops or cameras tracking scenic models.
         exteriorProfiles = table.clone(detailProfiles)
         exteriorProfiles.bevel = harborCasting
         exteriorProfiles.shaft = routeShaftProfile
+    end
+    local heroProfiles = exteriorProfiles
+    if variant.Id == "Harbor" then
+        heroProfiles = table.clone(exteriorProfiles)
+        local caissonId = 101457508594609
+        heroProfiles.caisson = {part = approvedHorizonRegion(
+            "ApprovedHarborDockCaissonTemplates", "DockCaisson", "OriginalHarborDockCaisson3D",
+            caissonId, Vector3.new(12.82, 2.69, 12.82)), assetId = caissonId}
+    end
+    -- The outboard hero keeps its lightweight silhouette and per-piece fallbacks.
+    HeroArchitecture.build(decor, base, variant.Id, theme, heroProfiles)
+    ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase, sweptProfile)
+    if variant.Id == "Harbor" then
         HarborScenery.build(decor, base, theme, exteriorProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are

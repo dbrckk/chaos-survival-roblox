@@ -189,11 +189,18 @@ local function verifiedTemplate(variant)
     return model
 end
 
-local function authenticGeometry(part, shaftAsset)
+local function authenticGeometry(part, shaftAsset, variant)
     if not part:IsA("MeshPart") then return part:IsA("Part") end
     local assetId = part:GetAttribute("Original3DAssetId")
-    return part.MeshId ~= "" and assetId ~= nil
-        and (FALLBACK_ASSETS[assetId] == true or assetId == shaftAsset)
+    if part.MeshId == "" or assetId == nil then return false end
+    if FALLBACK_ASSETS[assetId] == true or assetId == shaftAsset then return true end
+    if variant ~= "Harbor" then return false end
+    local name = part.Name
+    if assetId == FOOT.id then return name == FOOT_NAME.Harbor or name == "CargoHull" end
+    local shaft = name == "SignalTower" or name == "HangingCable"
+        or name:match("^GantryPylon%-?1$") or name:match("^DiagonalDockBrace%-?1$")
+    return HorizonMonumentGeometry.matchesHarborStructuralFallback(assetId, shaft and "shaft" or "bevel")
+        or assetId == HorizonMonumentGeometry.assetId("cast")
 end
 
 local function nativeOrigin(arena, base, variant)
@@ -215,7 +222,7 @@ local function nativeOrigin(arena, base, variant)
     for _, item in ipairs(native:GetDescendants()) do
         if item:IsA("BasePart") then
             if not item.Anchored or item.CanCollide or item.CanTouch
-                or item.CanQuery or not authenticGeometry(item, shaftAsset) then
+                or item.CanQuery or not authenticGeometry(item, shaftAsset, variant) then
                 return nil
             end
             count += 1

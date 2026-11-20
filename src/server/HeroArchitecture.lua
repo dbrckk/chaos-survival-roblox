@@ -4,10 +4,18 @@
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
 type Profile = {part: MeshPart?, assetId: number?}
-type Profiles = {bevel: Profile?, shaft: Profile?, beam: Profile?, lens: Profile?}
+type Profiles = {
+    bevel: Profile?, shaft: Profile?, beam: Profile?, lens: Profile?, cast: Profile?, caisson: Profile?,
+}
 
 local HeroArchitecture = {}
 local TWO_PI = math.pi * 2
+
+local function available(profile: Profile?): Profile?
+    local part = profile and profile.part
+    return if part and part.Archivable and part.MeshId ~= "" then profile else nil
+end
+
 local function add(model, origin, name, size, cf, color, profile: Profile?,
         alongX: boolean?, shape: Enum.PartType?)
     local source = profile and profile.part
@@ -97,6 +105,13 @@ function HeroArchitecture.build(decor, base, variantId, theme, profiles: Profile
     local shaft = profiles and profiles.shaft
     local truss = profiles and profiles.beam
     local lens = profiles and profiles.lens
+    local caisson
+    if variantId == "Harbor" then
+        bevel = available(bevel) or available(profiles and profiles.cast)
+        shaft = available(shaft) or bevel
+        truss = available(truss) or bevel
+        caisson = available(profiles and profiles.caisson) or bevel
+    end
     local function piece(name, size, position, color, artwork: Profile?, alongX: boolean?)
         return add(model, origin, name, size, CFrame.new(position), color or dark,
             artwork, alongX)
@@ -283,10 +298,10 @@ function HeroArchitecture.build(decor, base, variantId, theme, profiles: Profile
         -- Drydock flagship with a real hull silhouette, wheelhouse,
         -- two suspended container lifts and a raised shipyard gantry.
         -- All inert skyline, far outside traversable/telegraph space.
-        panel("HarborDrydockFoundation", Vector3.new(27, 1.8, 17),
-            Vector3.new(0, 0.9, 0), shadow)
-        panel("CargoHull", Vector3.new(23, 6.2, 11),
-            Vector3.new(0, 5.0, 0), dark)
+        piece("HarborDrydockFoundation", Vector3.new(27, 1.8, 17),
+            Vector3.new(0, 0.9, 0), shadow, caisson)
+        piece("CargoHull", Vector3.new(23, 6.2, 11),
+            Vector3.new(0, 5.0, 0), dark, caisson)
         crossbeam("PortFreeboard", Vector3.new(22, 2.0, 1),
             Vector3.new(0, 8.4, -5.1), metal)
         crossbeam("StarboardFreeboard", Vector3.new(22, 2.0, 1),
