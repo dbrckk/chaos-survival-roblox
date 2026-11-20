@@ -110,6 +110,10 @@ function HorizonMonumentGeometry.floorCastingAssetId(variant)
     return floorCastings[variant]
 end
 
+function HorizonMonumentGeometry.isFloorCasting(assetId, variant)
+    return assetId ~= nil and (assetId == floorCastings[variant] or assetId == floorCastings.Classic)
+end
+
 function HorizonMonumentGeometry.profile(ownerName, name)
     local slots = profiles[ownerName]
     return slots and slots[name]

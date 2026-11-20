@@ -353,8 +353,7 @@ local function archDeck(arena,deck,scale)
 end
 
 local function isArchFloorCasting(arena,assetId)
-    return assetId~=nil and (assetId==HorizonMonumentGeometry.floorCastingAssetId(arena:GetAttribute("VariantId"))
-        or assetId==HorizonMonumentGeometry.floorCastingAssetId("Classic"))
+    return HorizonMonumentGeometry.isFloorCasting(assetId,arena:GetAttribute("VariantId"))
 end
 
 local function collectArch(arena,deck,decor,scale)
@@ -498,7 +497,7 @@ local function porticoStep(arena,deck,scale)
     return step
 end
 
-local function promenadeNative(decor,index,suffix,wedge,meshTag,assetId)
+local function promenadeNative(decor,index,suffix,wedge,meshTag,assetId,castingVariant)
     local native=decor:FindFirstChild("Promenade"..index..suffix)
     if not visualNative(native,decor)
         or native:GetAttribute("PromenadeVisualOnly")~=true
@@ -506,9 +505,11 @@ local function promenadeNative(decor,index,suffix,wedge,meshTag,assetId)
         return nil
     end
     if native:IsA("MeshPart") then
+        local nativeId=native:GetAttribute("Original3DAssetId")
         if not meshTag or not assetId or native.MeshId==""
             or native:GetAttribute(meshTag)~=true
-            or native:GetAttribute("Original3DAssetId")~=assetId then return nil end
+            or (nativeId~=assetId and (not castingVariant
+                or not HorizonMonumentGeometry.isFloorCasting(nativeId,castingVariant))) then return nil end
     elseif wedge then
         if not native:IsA("WedgePart") then return nil end
     elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
@@ -523,9 +524,9 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
     local index=deck.Name:match("^Platform(%d+)$")
     local suffix=side and "_DiagonalStay"..side or "_MonumentalCrosshead"
     local tag=side and "OriginalPromenadeStay3D" or "OriginalPromenadeCrosshead3D"
-    local assetId=if side then HorizonMonumentGeometry.assetId("shaft",arena:GetAttribute("VariantId"))
-        else HorizonMonumentGeometry.assetId("beam")
-    local native=promenadeNative(decor,index,suffix,nil,tag,assetId)
+    local variant=arena:GetAttribute("VariantId")
+    local assetId=HorizonMonumentGeometry.assetId(side and "shaft" or "beam",variant)
+    local native=promenadeNative(decor,index,suffix,nil,tag,assetId,variant)
     if not native or Trim.hasPrimaryStructure(native) then return nil end
     local size=native.Size
     local rise=CROSSHEAD_RISE[step]
@@ -762,14 +763,17 @@ local function skySpineRoofPart(decor,index,top,scale,spec,variant)
     local profile
     if native:IsA("MeshPart") then
         local marker="OriginalSkySpineCommandFallback3D"
-        if spec.name=="InterchangeCrown" then
+        local crown=spec.name=="InterchangeCrown"
+        if crown then
             profile,marker="beam","OriginalSkySpineCrosshead3D"
         else
             profile=variant and HorizonMonumentGeometry.skySpineCommandProfile(spec.name)
         end
+        local assetId=native:GetAttribute("Original3DAssetId")
         if not profile or native.MeshId==""
             or native:GetAttribute(marker)~=true
-            or native:GetAttribute("Original3DAssetId")~=HorizonMonumentGeometry.assetId(profile,variant) then
+            or (assetId~=HorizonMonumentGeometry.assetId(profile,variant)
+                and not (crown and HorizonMonumentGeometry.isFloorCasting(assetId,variant))) then
             return nil
         end
     elseif spec.wedge then
@@ -808,7 +812,7 @@ local function collectSpineSignalBeam(arena,deck,decor,scale)
         or deck:GetAttribute("LocalSkySpineCrownVisible")==true then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
-    local beam=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN)
+    local beam=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN,arena:GetAttribute("VariantId"))
     if not beam then return nil end
     local size=Vector3.new(SPINE_CROWN.size.X*scale,SPINE_CROWN.size.Y,SPINE_CROWN.size.Z*scale)
     -- Set the trellis behind the native OverheadPulse strip. The bottom
@@ -837,7 +841,7 @@ local function collectCommandArt(arena,deck,decor,scale,profiles)
         or (shutter and shutter~="Idle") then return nil end
 
     local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
-    local crown=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN)
+    local crown=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN,arena:GetAttribute("VariantId"))
     if not crown then return nil end
     local variant=arena:GetAttribute("VariantId")
     local group={}
@@ -1423,6 +1427,7 @@ local function mount(data,source)
             data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
     end
     if isPortico(data.category) then
+        entry.connections[#entry.connections+1]=data.arena:GetAttributeChangedSignal("VariantId"):Connect(changed)
         local routeAttributes=(data.category=="command" or data.name=="SpineUnderframe")
             and {"SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier","LocalSkySpineCrownVisible"}
             or {"PromenadeLane","PromenadeStep","ChaosPermanentRoute","RouteTier"}

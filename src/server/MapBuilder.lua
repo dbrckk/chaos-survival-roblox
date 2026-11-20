@@ -3619,7 +3619,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- None adds a blocking wall beneath the high walkways.
         if definition.SkySpineStep then
             SkySpineArchitecture.decorate(
-                decor, platform, i, definition, variant.Id, theme, sweptProfile, detailProfiles)
+                decor, platform, i, definition, variant.Id, theme, sweptProfile, monumentProfiles)
             if definition.SkySpineStep == 1 then
                 spineEndpoints[1] = platform
             elseif definition.SkySpineStep == 10 then
@@ -3629,7 +3629,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
                 decor, platform, i, definition, variant.Id, theme,
-                underdeckLattice, detailProfiles)
+                underdeckLattice, monumentProfiles)
 
             local step = definition.PromenadeStep
             local lane = definition.PromenadeLane
@@ -3796,7 +3796,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local delta = (entry.Position - deck.Position) * Vector3.new(1, 0, 1)
             if delta.Magnitude > 0.01 then forward = delta.Unit end
             offset = PromenadeArchitecture.decorateLookoutJoint(
-                decor, deck, lookout.index, entry, theme, detailProfiles.beam)
+                decor, deck, lookout.index, entry, theme, monumentProfiles.beam, monumentProfiles.bevel)
         end
         addRouteChevron(decor, "BranchStepArrow" .. route .. "_4", deck, lookout.index,
             forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, offset)

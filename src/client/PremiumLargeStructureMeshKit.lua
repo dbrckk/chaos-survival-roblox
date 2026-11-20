@@ -11,6 +11,10 @@ local PlatformIdentityLodRules = if script and script.Parent
     else require("../shared/PlatformIdentityLodRules")
 
 local Kit = {}
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 local IDS = {
     Classic = 91626128452597,
     Towers = 107521411452905,
@@ -183,12 +187,14 @@ function Kit.validNativeSkyPylon(part,index)
         local platforms=arena:FindFirstChild("Platforms")
         local deck=platforms and platforms:FindFirstChild("Platform"..id)
         local step=deck and deck:GetAttribute("SkySpineStep")
-        local assetId=IDS[arena:GetAttribute("VariantId")]
+        local variant=arena:GetAttribute("VariantId")
+        local assetId=part:GetAttribute("Original3DAssetId")
+        local shaftId=IDS[variant]
         if not deck or not deck:IsA("BasePart") or (step~=2 and step~=5 and step~=6 and step~=9)
             or deck:GetAttribute("SkySpineInterchange")~=true or deck:GetAttribute("RouteTier")~=4
             or deck:GetAttribute("ChaosPermanentRoute")~=true or math.abs(deck.Size.X-12*scale)>.12
             or part.Parent~=arena:FindFirstChild("Decor")
-            or not assetId or part:GetAttribute("Original3DAssetId")~=assetId then
+            or not shaftId or (assetId~=shaftId and not HorizonMonumentGeometry.isFloorCasting(assetId,variant)) then
             return false
         end
         local expected=deck.CFrame*CFrame.new(tonumber(side)*8*scale,(deck.Size.Y+12.65)*.5,0)

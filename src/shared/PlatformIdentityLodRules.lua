@@ -62,11 +62,14 @@ function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positi
     elseif part:IsA("MeshPart") then
         local name = part.Name
         local assetId = part:GetAttribute("Original3DAssetId")
-        local spine = assetId == 126298311664881
+        local arena = part.Parent and part.Parent.Parent
+        local casting = arena and HorizonMonumentGeometry.isFloorCasting(assetId, arena:GetAttribute("VariantId"))
+        local structuralProfile = assetId == 126298311664881 or assetId == 106401955318567 or casting
+        local spine = structuralProfile
             and part:GetAttribute("OriginalSkySpineUnderdeck3D") == true
             and (name:match("^SkySpine%d+_Undercarriage%-?1$")
                 or name:match("^SkySpine%d+_CrossStiffener$"))
-        local promenade = assetId == 106401955318567
+        local promenade = structuralProfile
             and part:GetAttribute("OriginalPromenadeUnderdeck3D") == true
             and name:match("^Promenade%d+_UnderdeckTruss$")
         if part.MeshId == "" or not (spine or promenade) then return false end
@@ -142,9 +145,11 @@ function Rules.matchesPromenadePylon(native, deck)
     if not arena or deck.Parent ~= arena:FindFirstChild("Platforms")
         or native.Parent ~= arena:FindFirstChild("Decor") then return false end
     local variant = arena:GetAttribute("VariantId")
-    if not PROMENADE_VARIANTS[variant] or (native:IsA("MeshPart")
-        and native:GetAttribute("Original3DAssetId") ~= HorizonMonumentGeometry.assetId("shaft", variant)) then
-        return false
+    if not PROMENADE_VARIANTS[variant] then return false end
+    if native:IsA("MeshPart") then
+        local assetId = native:GetAttribute("Original3DAssetId")
+        if assetId ~= HorizonMonumentGeometry.assetId("shaft", variant)
+            and not HorizonMonumentGeometry.isFloorCasting(assetId, variant) then return false end
     end
     local lane = deck:GetAttribute("PromenadeLane")
     local height = PROMENADE_HEIGHT[deck:GetAttribute("PromenadeStep")]

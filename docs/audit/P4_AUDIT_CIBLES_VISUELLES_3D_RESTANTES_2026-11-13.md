@@ -66,6 +66,10 @@ Sur Classic, Tower Run, Crossroads et Orbital, les **384 paliers** peuvent réut
 
 Les 60 portiques réutilisent le moulage fermé de leur arène, puis celui de Classic si nécessaire, quand une source dédiée manque. Avec le seul moulage fermé disponible, 860 des 904 pièces de portique peuvent rester sculptées. Les 240 emplacements de contremarche du périmètre, des branches et des traversées peuvent aussi reprendre ce moulage. Le rotor d’Orbital peut reprendre l’anneau du réacteur. Les lentilles gardent leur sphère de secours. Les pièces restent non physiques et suivent leur palier pendant le rétrécissement et la chute.
 
+### Supports des promenades et de la Sky Spine
+
+Sur les cinq arènes, 430 emplacements peuvent réutiliser le moulage fermé de leur arène ou celui de Classic. Le total comprend 180 pièces des portiques de promenade, 210 pièces de la Sky Spine et 40 renforts aux jonctions avec les belvédères. Les maillages dédiés restent prioritaires. Les châssis de proximité vérifient les sources autorisées, leur emprise après rétrécissement et la continuité du croisement entre les deux tabliers. Les renforts des belvédères ne sont générés que lorsque les tabliers existants se chevauchent.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

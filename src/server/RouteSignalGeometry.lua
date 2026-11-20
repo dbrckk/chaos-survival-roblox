@@ -28,4 +28,21 @@ function RouteSignalGeometry.fit(template, frame, size, inlaySide, alongX)
     return mesh
 end
 
+function RouteSignalGeometry.fitStructural(frame, size, keepAxes, ...)
+    for index = 1, select("#", ...) do
+        local source = select(index, ...)
+        local template = source and source.part
+        if template and template.MeshId ~= "" then
+            local alongX
+            if keepAxes then alongX = template.Size.X > template.Size.Z end
+            local mesh = RouteSignalGeometry.fit(template, frame, size, nil, alongX)
+            if mesh then
+                mesh:SetAttribute("Original3DAssetId", source.assetId)
+                return mesh
+            end
+        end
+    end
+    return nil
+end
+
 return RouteSignalGeometry

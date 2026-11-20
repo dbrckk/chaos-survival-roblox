@@ -43,7 +43,7 @@ end
 
 -- The lookout and its end span share a level strip. Put the cue in
 -- that strip and seat two braces where the thin span leaves the solid pier.
-function PromenadeArchitecture.decorateLookoutJoint(decor, lookout, index, span, theme, beam)
+function PromenadeArchitecture.decorateLookoutJoint(decor, lookout, index, span, theme, beam, casting)
     local localCenter = lookout.CFrame:PointToObjectSpace(span.Position)
     local lookoutTop = lookout.Size.Y * 0.5
     local spanTop = localCenter.Y + span.Size.Y * 0.5
@@ -59,23 +59,20 @@ function PromenadeArchitecture.decorateLookoutJoint(decor, lookout, index, span,
     local direction = if localCenter.X < 0 then -1 else 1
     local depth = math.min(lookout.Size.Z, span.Size.Z)
     local inset = math.min(2.0, (edge - near) * 0.5)
-    if beam and beam.part and beam.part.MeshId ~= "" then
-        local size = Vector3.new(inset + 2.6, 1.25, 1.40)
-        local x = direction * (edge + (2.6 - inset) * 0.5)
-        local y = spanTop - span.Size.Y - 0.46
-        local color = theme.Detail:Lerp(theme.Structure, 0.38)
-        for side = -1, 1, 2 do
-            local offset = CFrame.new(x, y, side * (depth * 0.5 - 1.35))
-            local mesh = RouteSignalGeometry.fit(beam.part, lookout.CFrame * offset, size, nil, true)
-            if mesh then
-                mesh.Name = "LookoutJointBrace" .. index .. "_" .. side
-                mesh.Color = color
-                mesh.Material = lookout.Material
-                mesh.Transparency = 0
-                mesh:SetAttribute("Original3DAssetId", beam.assetId)
-                mesh:SetAttribute("PerimeterPlatformIndex", index)
-                mesh.Parent = decor
-            end
+    local size = Vector3.new(inset + 2.6, 1.25, 1.40)
+    local x = direction * (edge + (2.6 - inset) * 0.5)
+    local y = spanTop - span.Size.Y - 0.46
+    local color = theme.Detail:Lerp(theme.Structure, 0.38)
+    for side = -1, 1, 2 do
+        local offset = CFrame.new(x, y, side * (depth * 0.5 - 1.35))
+        local mesh = RouteSignalGeometry.fitStructural(lookout.CFrame * offset, size, false, beam, casting)
+        if mesh then
+            mesh.Name = "LookoutJointBrace" .. index .. "_" .. side
+            mesh.Color = color
+            mesh.Material = lookout.Material
+            mesh.Transparency = 0
+            mesh:SetAttribute("PerimeterPlatformIndex", index)
+            mesh.Parent = decor
         end
     end
 
@@ -180,9 +177,7 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
             or Enum.Material.Metal)
     local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
     local shaftProfile = profiles and profiles.shaft
-    local shaft = shaftProfile and shaftProfile.part
-    if shaft and shaft.MeshId == "" then shaft = nil end
-    local shaftAlongX = shaft and shaft.Size.X > shaft.Size.Z
+    local casting = profiles and profiles.bevel
     local pylonSize = Vector3.new(1.6, crownHeight, 1.8)
     local staySize = Vector3.new(0.65, crownHeight * 0.55, 1.1)
     -- Two side rails outside the ACTUAL 12-stud-wide crossing. Arch
@@ -190,11 +185,10 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     -- so running/jumping R6/R15 players never hit invisible beams.
     for side = -1, 1, 2 do
         local pylonOffset = CFrame.new(0, height + crownHeight * 0.5, side * 7.6)
-        local pylon = RouteSignalGeometry.fit(shaft, platform.CFrame * pylonOffset,
-            pylonSize, nil, shaftAlongX)
+        local pylon = RouteSignalGeometry.fitStructural(platform.CFrame * pylonOffset,
+            pylonSize, true, shaftProfile, casting)
         if pylon then
             pylon:SetAttribute("OriginalPromenadePylonShaft3D", true)
-            pylon:SetAttribute("Original3DAssetId", shaftProfile.assetId)
         end
         make(decor, platform, index, "LoadPylon" .. side, pylonSize, pylonOffset,
             steel, material, nil, pylon)
@@ -202,10 +196,10 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
         local offset = PlatformIdentityLodRules.promenadeSculptedStayPose(height, crownHeight, side, 1)
         -- The shaft already has its long axis on Y. Keep the diagonal's
         -- local axes so contraction only changes its cross section.
-        local stay = RouteSignalGeometry.fit(shaft, platform.CFrame * offset, staySize, nil, shaftAlongX)
+        local stay = RouteSignalGeometry.fitStructural(platform.CFrame * offset,
+            staySize, true, shaftProfile, casting)
         if stay then
             stay:SetAttribute("OriginalPromenadeStay3D", true)
-            stay:SetAttribute("Original3DAssetId", shaftProfile.assetId)
         else
             offset = CFrame.new(0, height + crownHeight * 0.66, side * 8.3)
                 * CFrame.Angles(math.rad(side * 16), 0, 0)
@@ -216,12 +210,10 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local crossheadSize = Vector3.new(4.0, 1.2, crownSpan)
     local crossheadOffset = CFrame.new(0, height + crownHeight, 0)
     local beamProfile = profiles and profiles.beam
-    local beam = beamProfile and beamProfile.part
-    local crosshead = beam and beam.MeshId ~= "" and RouteSignalGeometry.fit(
-        beam, platform.CFrame * crossheadOffset, crossheadSize)
+    local crosshead = RouteSignalGeometry.fitStructural(platform.CFrame * crossheadOffset,
+        crossheadSize, false, beamProfile, casting)
     if crosshead then
         crosshead:SetAttribute("OriginalPromenadeCrosshead3D", true)
-        crosshead:SetAttribute("Original3DAssetId", beamProfile.assetId)
     end
     make(decor, platform, index, "MonumentalCrosshead", crossheadSize, crossheadOffset,
         alloy, material, nil, crosshead)
@@ -230,11 +222,11 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     -- below the deck. Native fallback retains its original fit.
     local trussSpan = step == 7 and 15.0 or (step == 4 and 13.0 or 11.0)
     local trussSize, trussOffset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(height, trussSpan, 1, true)
-    local truss = trussProfile and trussProfile.MeshId ~= ""
-        and RouteSignalGeometry.fit(trussProfile, platform.CFrame * trussOffset, trussSize)
+    local lattice = {part = trussProfile, assetId = 106401955318567}
+    local truss = RouteSignalGeometry.fitStructural(platform.CFrame * trussOffset,
+        trussSize, false, lattice, beamProfile, casting)
     if truss then
         truss:SetAttribute("OriginalPromenadeUnderdeck3D", true)
-        truss:SetAttribute("Original3DAssetId", 106401955318567)
     else
         trussSize, trussOffset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(height, trussSpan, 1, false)
     end
