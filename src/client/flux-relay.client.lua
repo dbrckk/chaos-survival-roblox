@@ -14,6 +14,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local FluxRelayRules = require(ReplicatedStorage.Shared.FluxRelayRules)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local PremiumJunctionHardware3DKit = require(
     script.Parent.PremiumJunctionHardware3DKit)
 
@@ -38,6 +39,7 @@ local source = nil
 local sourceToken = 0
 local activeRound = false
 local lastHudKey = ""
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
 
 -- Reuse the existing local render cadence, without any extra polling.
 local hud = Instance.new("ScreenGui")
@@ -142,11 +144,11 @@ stateEvent.OnClientEvent:Connect(function(data)
 end)
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), touchDevice).Name
 end
 
-local function newPart(name, size, cf, tint, material, transparency)
-    local p = Instance.new("Part")
+local function newPart(name, size, cf, tint, material, transparency, meshSource)
+    local p = CelebrationMeshes.cloneProfile(meshSource) or Instance.new("Part")
     p.Name = name
     p.Size = size
     p.CFrame = cf
@@ -221,6 +223,9 @@ local function makeGate(trigger)
     local basis = CFrame.lookAt(trigger.Position, trigger.Position + forward)
     local tier = quality()
     local detail = tier == "High" and 2 or (tier == "Medium" and 1 or 0)
+    local shaft = detail > 0 and CelebrationMeshes.readyProfile("pylon", meshPressure)
+    local casting = detail > 0 and CelebrationMeshes.readyProfile("casting", meshPressure)
+    local prismSource = detail == 2 and CelebrationMeshes.readyProfile("fragment", meshPressure)
     local statusPieces = {}
     -- Capture only parts of this gate, not earlier gates or one-shot VFX.
     local existingParts = {}
@@ -229,35 +234,35 @@ local function makeGate(trigger)
     end
 
     -- Three-piece engineered arch, not a single neon box.
-    local left = newPart("FluxFrameLeft", Vector3.new(0.76, 6.1, 0.80),
-        basis * CFrame.new(-4, -0.1, 0), style.Frame, Enum.Material.DiamondPlate, 0)
-    local right = newPart("FluxFrameRight", Vector3.new(0.76, 6.1, 0.80),
-        basis * CFrame.new(4, -0.1, 0), style.Frame, Enum.Material.DiamondPlate, 0)
-    local header = newPart("FluxBridgeCap", Vector3.new(8.6, 0.66, 1.05),
-        basis * CFrame.new(0, 2.95, 0), style.Frame, Enum.Material.Metal, 0)
+    newPart("FluxFrameLeft", Vector3.new(0.76, 6.1, 0.80),
+        basis * CFrame.new(-4, -0.1, 0), style.Frame, Enum.Material.DiamondPlate, 0, shaft)
+    newPart("FluxFrameRight", Vector3.new(0.76, 6.1, 0.80),
+        basis * CFrame.new(4, -0.1, 0), style.Frame, Enum.Material.DiamondPlate, 0, shaft)
+    newPart("FluxBridgeCap", Vector3.new(8.6, 0.66, 1.05),
+        basis * CFrame.new(0, 2.95, 0), style.Frame, Enum.Material.Metal, 0, casting)
 
     for side = -1, 1, 2 do
         local inner = newPart("FluxVerticalSignal", Vector3.new(0.16, 4.9, 0.19),
             basis * CFrame.new(side * 3.54, -0.17, -0.30),
-            style.Idle, Enum.Material.Neon, 0.48)
+            style.Idle, Enum.Material.Neon, 0.48, shaft)
         table.insert(statusPieces, inner)
 
         -- The near-ground chevrons point inward toward the safe central hub.
         local chevron = newPart("FluxChevron", Vector3.new(1.10, 0.09, 0.22),
             basis * CFrame.new(side * 1.52, -2.53, -1.24)
                 * CFrame.Angles(0, math.rad(side * 30), 0),
-            style.Idle, Enum.Material.Neon, 0.38)
+            style.Idle, Enum.Material.Neon, 0.38, casting)
         table.insert(statusPieces, chevron)
     end
     local crest = newPart("FluxCrest", Vector3.new(4.3, 0.15, 0.22),
-        basis * CFrame.new(0, 2.5, -0.5), style.Idle, Enum.Material.Neon, 0.4)
+        basis * CFrame.new(0, 2.5, -0.5), style.Idle, Enum.Material.Neon, 0.4, casting)
     table.insert(statusPieces, crest)
 
     if detail >= 1 then
         for side = -1, 1, 2 do
             newPart("FluxArmorFin", Vector3.new(0.95, 0.45, 1.24),
                 basis * CFrame.new(side * 4, 1.9, 0),
-                style.Edge, Enum.Material.Metal, 0.08)
+                style.Edge, Enum.Material.Metal, 0.08, casting)
         end
     end
     if detail == 2 then
@@ -266,7 +271,7 @@ local function makeGate(trigger)
             local prism = newPart("FluxCrownPrism", Vector3.new(0.72, 0.32, 0.50),
                 basis * CFrame.new(offset, 3.4, 0)
                     * CFrame.Angles(0, 0, math.rad(segment * 26)),
-                style.Edge, Enum.Material.Glass, 0.08)
+                style.Edge, Enum.Material.Glass, 0.08, prismSource)
             prism.Reflectance = 0.12
         end
     end
@@ -323,9 +328,10 @@ local function makeGate(trigger)
         )
         local center = trigger.Position + Vector3.new(0, -2.75, 0)
         local color = rank == 3 and style.Signal or style.Charged
+        local burstSource = CelebrationMeshes.readyProfile("fragment", meshPressure)
         local flash = newPart("FluxCompletionGlyph",
             Vector3.new(2.5, 0.1, 0.18),
-            CFrame.new(center), color, Enum.Material.Neon, 0.08)
+            CFrame.new(center), color, Enum.Material.Neon, 0.08, burstSource)
         TweenService:Create(flash, TweenInfo.new(0.4), {
             Size = Vector3.new(rank == 3 and 8.4 or 6.8, 0.1, 0.12),
             Transparency = 1,
@@ -342,7 +348,7 @@ local function makeGate(trigger)
                 local finish = start + radial * 3.2 + Vector3.new(0, 1.4, 0)
                 local facet = newPart("FluxWeaveFacet",
                     Vector3.new(0.18, 0.11, 0.75),
-                    CFrame.lookAt(start, finish), color, Enum.Material.Neon, 0.14)
+                    CFrame.lookAt(start, finish), color, Enum.Material.Neon, 0.14, burstSource)
                 TweenService:Create(facet, TweenInfo.new(0.42), {
                     CFrame = CFrame.lookAt(finish, finish + radial),
                     Transparency = 1,
@@ -625,6 +631,13 @@ workspace.ChildRemoved:Connect(function(obj)
 end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     bind(workspace:FindFirstChild("GeneratedMap"))
+end)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    local wasEligible = meshPressure < 1
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if wasEligible ~= (meshPressure < 1) and next(gates) and quality() ~= "Low" then
+        bind(workspace:FindFirstChild("GeneratedMap"))
+    end
 end)
 bind(workspace:FindFirstChild("GeneratedMap"))
 
