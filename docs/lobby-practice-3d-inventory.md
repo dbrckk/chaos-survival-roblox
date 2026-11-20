@@ -132,3 +132,5 @@ Le givre du personnage local utilise des plaques à douze facettes soudées au t
 Le Phase Dash peut afficher un anneau cyan moulé près du joueur et un anneau violet à douze facettes en qualité haute. Les anneaux restent creux et suivent la direction du dash. Les segments simples servent de secours à distance, en qualité basse, en mode animations réduites, sous pression graphique et au chargement.
 
 La prévisualisation d’atterrissage peut afficher des repères moulés sur la surface prédite. Les crochets et le X rouge suivent les mêmes points de contact et conservent leurs dimensions. Quatre pièces réutilisables suffisent dans les deux cas. Les formes simples prennent le relais en qualité basse, en mode animations réduites, au chargement ou sous pression graphique.
+
+Les repères des nouveaux joueurs peuvent afficher un anneau creux d’Orbital, une balise octogonale et une coiffe facettée. Le choix des destinations et les aides à l’écran suivent les mêmes règles. Quand la pression graphique change, seules les pièces 3D sont remplacées et l’animation d’apparition ne redémarre pas.
