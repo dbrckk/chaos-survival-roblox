@@ -21,6 +21,7 @@ local BroadcastFin = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local DistrictFoundation = require(script.Parent.ApprovedDistrictFoundationMeshKit)
 local AmbientMachinery = require(script.Parent.PremiumAmbientMotionMeshKit)
 local LargeStructure = require(script.Parent.PremiumLargeStructureMeshKit)
+local CrossroadsGantry = require(script.Parent.ApprovedCrossroadsOpenGantryMeshKit)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
@@ -50,6 +51,7 @@ local identityPlates = {}
 local cargoModules = {}
 local shafts = {}
 local latches = {}
+local transitChannels = {}
 local INWARD_WINDING = {
     [roofs] = true,
     [castStructures] = true,
@@ -63,6 +65,7 @@ local INWARD_WINDING = {
     [identityPlates] = true,
     [cargoModules] = true,
     [shafts] = true,
+    [transitChannels] = true,
 }
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
@@ -167,6 +170,7 @@ local function syncDetails(changedModels)
         syncDetailGroup(cargoModules)
         syncDetailGroup(shafts)
         syncDetailGroup(latches)
+        syncDetailGroup(transitChannels)
         syncDetailGroup(radarRings, changedModels)
         syncDetailGroup(signalPanels, changedModels)
         syncDetailGroup(containmentCollars, changedModels)
@@ -191,6 +195,10 @@ local function syncDetails(changedModels)
     syncDetailGroup(containmentCollars, changedModels, casting, PylonShell.AssetId)
     if #gantryBeams > 0 then
         syncLongDetail(gantryBeams, ForgedBridge.sweptProfile(), ForgedBridge.AssetId)
+    end
+    if #transitChannels > 0 then
+        local channel, channelId = CrossroadsGantry.channelProfile()
+        syncLongDetail(transitChannels, channel, channelId)
     end
     syncLongDetail(signalPanels, BroadcastFin.panelProfile(), BroadcastFin.AssetId, changedModels)
     if #shafts > 0 then
@@ -224,6 +232,7 @@ local function clearDetails()
     table.clear(cargoModules)
     table.clear(shafts)
     table.clear(latches)
+    table.clear(transitChannels)
     folder:ClearAllChildren()
 end
 
@@ -607,82 +616,84 @@ local function makeSector(base, theme, index, tier, variant)
     if variant == "Classic" then
         -- Paired receiver foundations and an elevated scanner head are
         -- readable behind the path even with the neon pass disabled.
-        structure("SurveySupport", Vector3.new(2.6, 10.2, 3.2),
+        trackDetail(castStructures, structure("SurveySupport", Vector3.new(2.6, 10.2, 3.2),
             Vector3.new(mirrored * 6.2, 5.5, 3.0),
-            weathered, Enum.Material.CorrodedMetal)
-        structure("SurveyMast", Vector3.new(1.05, 11.8, 1.05),
+            weathered, Enum.Material.CorrodedMetal))
+        trackDetail(shafts, structure("SurveyMast", Vector3.new(1.05, 11.8, 1.05),
             Vector3.new(mirrored * 6.2, 15.3, 3.0),
             brushed, Enum.Material.Metal,
-            CFrame.Angles(0, 0, math.rad(mirrored * 6)))
+            CFrame.Angles(0, 0, math.rad(mirrored * 6))))
         if high then
             local receiver = structure("SurveyHead",
                 Vector3.new(3.0, 3.0, 3.0),
                 Vector3.new(mirrored * 6.2, 21.5, 3.0),
                 alloy, Enum.Material.Metal)
             receiver.Shape = Enum.PartType.Ball
+            trackDetail(opticalCores, receiver)
         end
     elseif variant == "Towers" then
         -- Structural lift guides establish a vertical visual rhythm
         -- without pretending to be accessible ladders or rails.
         for side = -1, 1, 2 do
-            structure("LiftGuide" .. tostring(side),
+            trackDetail(shafts, structure("LiftGuide" .. tostring(side),
                 Vector3.new(1.1, 16.5, 1.8),
                 Vector3.new(side * 5.8, 8.8, 2.6),
                 side < 0 and weathered or brushed,
-                Enum.Material.DiamondPlate)
+                Enum.Material.DiamondPlate))
         end
         if high then
-            structure("LiftMachineCrosshead", Vector3.new(14.2, 1.5, 3.0),
+            trackDetail(gantryBeams, structure("LiftMachineCrosshead", Vector3.new(14.2, 1.5, 3.0),
                 Vector3.new(0, 17.45, 2.6),
-                alloy, Enum.Material.Metal)
+                alloy, Enum.Material.Metal))
         end
     elseif variant == "Crossroads" then
         -- Two physically separate transit masses offset the repeated
         -- roofs, in weathered stone and matte steel, not glowing arrows.
-        structure("SwitchConcourse",
+        trackDetail(transitChannels, structure("SwitchConcourse",
             Vector3.new(15.8, 1.2, 4.0),
             Vector3.new(0, 12.2, 3.4),
-            alloy, Enum.Material.CorrodedMetal)
+            alloy, Enum.Material.CorrodedMetal))
         local pier = structure("TransitSwitchPier",
             Vector3.new(3.1, 10.8, 3.2),
             Vector3.new(mirrored * 5.8, 6.3, 3.4),
             weathered, Enum.Material.Concrete)
         pier:SetAttribute("PreserveNativeMaterial", true)
+        trackDetail(castStructures, pier)
         if high then
-            structure("TransitCrossbeam", Vector3.new(8.1, 1.4, 2.8),
+            trackDetail(transitChannels, structure("TransitCrossbeam", Vector3.new(8.1, 1.4, 2.8),
                 Vector3.new(-mirrored * 2.6, 15.1, 3.4),
                 brushed, Enum.Material.Metal,
-                CFrame.Angles(0, math.rad(mirrored * 12), 0))
+                CFrame.Angles(0, math.rad(mirrored * 12), 0)))
         end
     elseif variant == "Orbital" then
         -- An opposed pair of ceramic containment fins, deliberately
         -- opaque and structural instead of full-bright neon billboards.
         for side = -1, 1, 2 do
-            structure("ContainmentWing" .. tostring(side),
+            trackDetail(castStructures, structure("ContainmentWing" .. tostring(side),
                 Vector3.new(1.8, 13.5, 4.6),
                 Vector3.new(side * 6.6, 8.0, 2.2),
                 theme.Detail:Lerp(theme.Structure, 0.38),
                 Enum.Material.CeramicTiles,
-                CFrame.Angles(0, side * math.rad(17), 0))
+                CFrame.Angles(0, side * math.rad(17), 0)))
         end
         if high then
-            structure("ContainmentCrossbrace", Vector3.new(13.6, 0.85, 2.2),
+            trackDetail(gantryBeams, structure("ContainmentCrossbrace", Vector3.new(13.6, 0.85, 2.2),
                 Vector3.new(0, 15.0, 2.2),
-                brushed, Enum.Material.Metal)
+                brushed, Enum.Material.Metal))
         end
     elseif variant == "Harbor" then
         -- Real pier-head crane supports give every dockside sector a
         -- cargo-terminal mass, with no artificial jumpable bridge.
         for side = -1, 1, 2 do
-            structure("DocksideLeg" .. tostring(side),
+            trackDetail(castStructures, structure("DocksideLeg" .. tostring(side),
                 Vector3.new(2.1, 12.6, 3.4),
                 Vector3.new(side * 6.2, 6.7, 2.8),
-                weathered, Enum.Material.CorrodedMetal)
+                weathered, Enum.Material.CorrodedMetal))
         end
         if high then
-            structure("DocksideHoistCrosshead", Vector3.new(15.0, 1.6, 3.4),
+            trackDetail(gantryBeams, structure("DocksideHoistCrosshead", Vector3.new(15.0, 1.6, 3.4),
                 Vector3.new(0, 13.75, 2.8),
-                brushed, Enum.Material.DiamondPlate)
+                brushed, Enum.Material.DiamondPlate))
         end
     end
 
@@ -916,6 +927,7 @@ local DETAIL_SOURCES = {
     ApprovedPerimeterArmorTemplates = "Cap",
     ApprovedLobbyPylonShellTemplates = "LobbyPylonShell",
     ApprovedTowersSignatureBridgeTemplates = "ForgedBridge",
+    ApprovedCrossroadsGantryTemplates = "Gantry",
     ApprovedClassicBroadcastFinTemplates = "BroadcastFin",
     ApprovedHarborDockCaissonTemplates = "DockCaisson",
     ApprovedAmbientMotionTemplates = "Harbor",

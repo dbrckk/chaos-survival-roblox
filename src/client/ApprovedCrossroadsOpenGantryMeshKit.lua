@@ -88,6 +88,28 @@ local function sourceFor()
     return source,holder
 end
 
+function Kit.channelProfile()
+    local source = sourceFor()
+    if not source then return nil end
+    -- The ARMOR region is the continuous forged upper channel. The lower
+    -- keel shares its bounds, so pick the channel above the signal lane.
+    local center = source:GetBoundingBox()
+    local channel
+    for _, part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") then continue end
+        local size = part.Size
+        if math.abs(math.max(size.X, size.Z) - 27.24) < .15
+            and math.abs(size.Y - .62) < .10
+            and math.abs(math.min(size.X, size.Z) - 2.72) < .10
+            and center:PointToObjectSpace(part.Position).Y > .8 then
+            if channel or not part.Archivable or part.MeshId == "" or not part.Anchored
+                or part.Transparency >= 1 then return nil end
+            channel = part
+        end
+    end
+    return channel, ASSET_ID
+end
+
 local function genuine(arena,index)
     local generated=workspace:FindFirstChild("GeneratedMap")
     local base=arena and arena:FindFirstChild("Base")
