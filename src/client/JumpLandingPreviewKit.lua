@@ -5,9 +5,11 @@
 -- and the actual width/phase of a Tower shutter. Never draw a false
 -- cyan "safe" marker on a floor lane currently receiving a warning.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Rules = require(ReplicatedStorage.Shared.JumpLandingPreviewRules)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local JumpLandingPreviewKit = {}
 
@@ -17,20 +19,32 @@ function JumpLandingPreviewKit.new(player)
     folder.Parent = workspace
 
     local pieces = {}
-    for index = 1, 4 do
-        local part = Instance.new("Part")
-        part.Name = "LandingContactBracket" .. index
-        part.Size = Vector3.new(0.11, 0.045, 0.66)
-        part.Material = Enum.Material.Neon
-        part.Color = Color3.fromRGB(128, 224, 255)
-        part.Transparency = 1
-        part.Anchored = true
-        part.CanCollide = false
-        part.CanTouch = false
-        part.CanQuery = false
-        part.CastShadow = false
-        part.Parent = folder
-        pieces[index] = part
+    local meshEligible
+    local activeSource
+    local function syncGeometry(tier, reduced, firstContact)
+        local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+        local eligible = not reduced and tier ~= "Low" and pressure < 1
+        if meshEligible == eligible and not (eligible and firstContact and not activeSource) then
+            return
+        end
+        meshEligible = eligible
+        local source = eligible and CelebrationMeshes.readyProfile("casting", pressure) or nil
+        if #pieces > 0 and activeSource == source then return end
+        activeSource = source
+        for _, part in ipairs(pieces) do part:Destroy() end
+        for index = 1, 4 do
+            local part = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
+            part.Name = "LandingContactBracket" .. index
+            part.Material = Enum.Material.Neon
+            part.Transparency = 1
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = false
+            part.Parent = folder
+            pieces[index] = part
+        end
     end
 
     local nextSampleAt = 0
@@ -238,6 +252,7 @@ function JumpLandingPreviewKit.new(player)
             return
         end
 
+        local firstContact = not showing
         targetPart = hit.Instance
         showing = true
         local caution = margin < 1.75
@@ -252,8 +267,11 @@ function JumpLandingPreviewKit.new(player)
         local color = warning and Color3.fromRGB(255, 80, 90)
             or (caution and Color3.fromRGB(246, 159, 195)
                 or Color3.fromRGB(135, 222, 252))
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local tier = VfxQuality.deviceTier(
+            player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+        ).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
+        syncGeometry(tier, reduced, firstContact)
         -- A danger X needs all four EXISTING segments on Android Low,
         -- otherwise two fragments could resemble a safe landing bracket.
         local count = warning and 4 or (tier == "Low" and 2 or 4)
@@ -267,13 +285,21 @@ function JumpLandingPreviewKit.new(player)
         -- collision surface; lift only the thin outline to avoid z-fighting.
         local center = hit.Position + up * 0.22
         local basis = CFrame.lookAt(center, center + forward.Unit, up)
+        local swapAxes = activeSource and activeSource.Size.X > activeSource.Size.Z
+        local turn = swapAxes and CFrame.Angles(0, math.pi * 0.5, 0)
         for index, part in ipairs(pieces) do
             if index <= count then
                 local angle = (index - 1) * math.pi * 0.5 + math.pi * 0.25
-                part.CFrame = basis * CFrame.Angles(0, angle, 0)
+                local frame = basis * CFrame.Angles(0, angle, 0)
                     * CFrame.new(0, 0, warning and -0.43 or -0.77)
-                part.Size = warning and Vector3.new(0.18, 0.045, 0.93)
+                local size = warning and Vector3.new(0.18, 0.045, 0.93)
                     or Vector3.new(0.11, 0.045, 0.66)
+                if turn and part:IsA("MeshPart") then
+                    frame *= turn
+                    size = Vector3.new(size.Z, size.Y, size.X)
+                end
+                part.CFrame = frame
+                part.Size = size
                 part.Color = color
                 -- Only outlines: never tint or cover an underlying hazard.
                 part.Transparency = warning

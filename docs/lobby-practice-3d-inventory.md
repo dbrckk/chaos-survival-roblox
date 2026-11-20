@@ -130,3 +130,5 @@ Les météores en chute peuvent porter des plaques de basalte moulées et un ins
 Le givre du personnage local utilise des plaques à douze facettes soudées au torse R6 ou R15. Si le torse arrive après l’état de gel, les plaques s’attachent dès sa réplication. Les formes simples servent de secours au chargement, en qualité basse, sous pression graphique et en mode animations réduites. Le dégel retire les plaques avec le reste de l’effet.
 
 Le Phase Dash peut afficher un anneau cyan moulé près du joueur et un anneau violet à douze facettes en qualité haute. Les anneaux restent creux et suivent la direction du dash. Les segments simples servent de secours à distance, en qualité basse, en mode animations réduites, sous pression graphique et au chargement.
+
+La prévisualisation d’atterrissage peut afficher des repères moulés sur la surface prédite. Les crochets et le X rouge suivent les mêmes points de contact et conservent leurs dimensions. Quatre pièces réutilisables suffisent dans les deux cas. Les formes simples prennent le relais en qualité basse, en mode animations réduites, au chargement ou sous pression graphique.
