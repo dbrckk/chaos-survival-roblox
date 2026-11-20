@@ -7,13 +7,29 @@ local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Assets = {}
+local CAP_ID = 88962643359267
 local SOURCES = {
     {name = "Wing", id = 138096293972093,
         width = 3.277, height = 1.64, depth = 5.62},
-    {name = "Cap", id = 88962643359267,
+    {name = "Cap", id = CAP_ID,
         width = 2.7699, height = 2.14, depth = 2.34},
 }
 local started = false
+
+function Assets.wayfinderProfile()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedPerimeterArmorTemplates")
+    if not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild("Cap")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalPerimeterArmor3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= CAP_ID then return nil end
+    local mesh = model:FindFirstChild("WayfinderBase")
+    return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh.MeshId ~= ""
+        and mesh or nil
+end
 
 local function validGeometry(model, profile)
     local count = 0

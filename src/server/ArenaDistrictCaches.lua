@@ -2,8 +2,9 @@
 -- harder lookout chests per arena. Server-owned, single use per cache.
 -- Each human can claim at most ONE chest of each tier in a round.
 -- Uses Roblox ProximityPrompt (keyboard, gamepad, touch) with no remotes,
--- physics blockers, per-frame scripts or external assets.
+-- physics blockers or per-frame scripts.
 local Players = game:GetService("Players")
+local PerimeterArmorAssets = require("./PremiumPerimeterArmorAssets")
 
 local ArenaDistrictCaches = {}
 
@@ -11,11 +12,23 @@ ArenaDistrictCaches.EasyReward = 2
 ArenaDistrictCaches.EliteReward = 5
 ArenaDistrictCaches.PromptReach = 8
 
-local function makeVisual(model, platform, name, size, offset, color, material)
-    local item = Instance.new("Part")
+local function makeVisual(model, platform, name, size, offset, color, material, source)
+    local mesh = source and source:Clone()
+    local item = mesh or Instance.new("Part")
+    local frame = platform.CFrame * CFrame.new(offset)
+    if mesh then
+        mesh:ClearAllChildren()
+        mesh.TextureID = ""
+        mesh.MaterialVariant = ""
+        mesh.Transparency = 0
+        if (source.Size.X > source.Size.Z) ~= (size.X > size.Z) then
+            size = Vector3.new(size.Z, size.Y, size.X)
+            frame *= CFrame.Angles(0, math.pi * 0.5, 0)
+        end
+    end
     item.Name = name
     item.Size = size
-    item.CFrame = platform.CFrame * CFrame.new(offset)
+    item.CFrame = frame
     item.Anchored = false
     item.CanCollide = false
     item.CanTouch = false
@@ -37,7 +50,7 @@ local function makeVisual(model, platform, name, size, offset, color, material)
     return item
 end
 
-local function createCache(ctx, platform, index, tier, personalClaims)
+local function createCache(ctx, platform, index, tier, personalClaims, casting)
     local elite = tier == "Elite"
     local reward = elite and ArenaDistrictCaches.EliteReward
         or ArenaDistrictCaches.EasyReward
@@ -59,27 +72,27 @@ local function createCache(ctx, platform, index, tier, personalClaims)
         or Color3.fromRGB(99, 220, 245)
     makeVisual(model, platform, "CacheFoot",
         Vector3.new(5.5, 0.45, 4.4),
-        Vector3.new(0, top + 0.23, 0), shadow)
-    local body = makeVisual(model, platform, "SupplyCase",
+        Vector3.new(0, top + 0.23, 0), shadow, nil, casting)
+    makeVisual(model, platform, "SupplyCase",
         Vector3.new(4.2, 2.2, 3.2),
-        Vector3.new(0, top + 1.45, 0), alloy)
+        Vector3.new(0, top + 1.45, 0), alloy, nil, casting)
     for side = -1, 1, 2 do
         makeVisual(model, platform, "ReinforcedEdge" .. side,
             Vector3.new(0.44, 2.65, 3.5),
             Vector3.new(side * 2.07, top + 1.47, 0),
-            shadow)
+            shadow, nil, casting)
         makeVisual(model, platform, "SignalRail" .. side,
             Vector3.new(3.9, 0.22, 0.34),
             Vector3.new(0, top + 2.55, side * 1.56),
-            gold, Enum.Material.Neon).Transparency = 0.16
+            gold, Enum.Material.Neon, casting).Transparency = 0.16
     end
     local lid = makeVisual(model, platform, "CacheLid",
         Vector3.new(4.6, 0.55, 3.65),
-        Vector3.new(0, top + 2.78, 0), shadow)
+        Vector3.new(0, top + 2.78, 0), shadow, nil, casting)
     makeVisual(model, platform, "SignalPrism",
         Vector3.new(1.4, 2.0, 1.4),
         Vector3.new(0, top + 4.1, 0),
-        gold, Enum.Material.Glass).Transparency = 0.18
+        gold, Enum.Material.Glass, casting).Transparency = 0.18
 
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "OpenDistrictCache"
@@ -214,12 +227,13 @@ function ArenaDistrictCaches.start(ctx)
     end
 
     local personalClaims = {}
+    local casting = PerimeterArmorAssets.wayfinderProfile()
     local built = 0
     for route = 1, 4 do
         for _, tier in ipairs({"Easy", "Elite"}) do
             local support = stations[tier][route]
             if support then
-                createCache(ctx, support, route, tier, personalClaims)
+                createCache(ctx, support, route, tier, personalClaims, casting)
                 built += 1
             end
         end
