@@ -52,6 +52,8 @@ Les cinq monuments à l’est de l’arène peuvent utiliser des maillages appro
 
 La flotte extérieure peut utiliser des maillages approuvés dans **207 emplacements**, dont 122 sur les quatre grues et 85 sur le cargo. Les chariots, câbles, palonniers et charges conservent leur mouvement avec les maillages de secours. Le radar du cargo conserve son balayage sur la silhouette de secours. Les ancrages du portique et du pont du navire conservent leurs axes pour les modèles complets. La silhouette Low du cargo affiche toujours 14 pièces. Les formes simples reprennent le relais lorsqu’un profil manque.
 
+Les barges du littoral et les défenses de quai peuvent reprendre **16, 39 ou 72 pièces sculptées** selon la qualité Low, Medium ou High. Ce total couvre respectivement 8, 27 ou 56 pièces de barges et 8, 12 ou 16 pièces de quai. Les quatre postes d’amarrage utilisent l’empreinte d’origine du terrain et restent à leur place lors d’une reconstruction côté client pendant le rétrécissement. Les habillages de quai suivent le bord du terrain. Les modèles complets des barges gardent priorité à portée. Les profils déjà approuvés peuvent se charger pendant la manche. Chaque pièce garde sa forme simple si sa source manque.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

@@ -18,6 +18,7 @@ local Kit={}
 -- EXACT Model ID returned by Roblox import with Approved moderation.
 -- Verify against the server template holder and the Model itself.
 local APPROVED_ID=132891280963772
+local HULL_FALLBACK_ID=101457508594609
 local folder=Instance.new("Folder")
 folder.Name="OriginalHarborMidgroundBargesLocal"
 folder:SetAttribute("CosmeticOnly",true)
@@ -85,6 +86,13 @@ local function authentic(hull,arena,midground,base)
     local index=tonumber(hull.Name:match("^HarborFreightBargeHull([1-4])$"))
     if not index or hull:GetAttribute("OriginalHarborMidgroundBargeIndex")
         ~=index then return false end
+    if hull:IsA("MeshPart") then
+        if hull.MeshId == "" or hull:GetAttribute("Original3DAssetId") ~= HULL_FALLBACK_ID then
+            return false
+        end
+    elseif not hull:IsA("Part") then
+        return false
+    end
     if (hull.Size-Vector3.new(28,3.5,13.2)).Magnitude>.2 then return false end
     return true,index
 end
@@ -98,7 +106,8 @@ local function alive(e)
         or not authentic(e.hull,e.arena,e.midground,e.base)
         or e.hull:GetAttribute("OriginalHarborMidgroundBargeIndex")~=e.index
         or not e.hull.Anchored or e.hull.CanCollide
-        or (e.hull.Size-e.size).Magnitude>.15 then return false end
+        or (e.hull.Size-e.size).Magnitude>.15
+        or e.hull.CFrame ~= e.frame then return false end
     local n=0
     for _,piece in ipairs(e.pieces) do
         if not piece or not piece:IsDescendantOf(e.model) then return false end
@@ -186,7 +195,7 @@ local function mount(arena,base,midground,hull,index,approved,id)
     end
     if nativeCount<4 then clone:Destroy();return nil end
     local entry={arena=arena,base=base,midground=midground,hull=hull,
-        index=index,size=hull.Size,source=approved,
+        index=index,size=hull.Size,frame=hull.CFrame,source=approved,
         sourceHolder=approved.Parent,model=clone,
         native=native,pieces=pieces,connections={},disposing=false}
     clone.Name="ApprovedOriginal3DHarborBarge"..index
@@ -200,6 +209,14 @@ local function mount(arena,base,midground,hull,index,approved,id)
         hull.AncestryChanged:Connect(changed)
     entry.connections[#entry.connections+1]=
         hull:GetPropertyChangedSignal("Size"):Connect(changed)
+    entry.connections[#entry.connections+1]=
+        hull:GetPropertyChangedSignal("CFrame"):Connect(changed)
+    if hull:IsA("MeshPart") then
+        entry.connections[#entry.connections+1]=
+            hull:GetPropertyChangedSignal("MeshId"):Connect(changed)
+        entry.connections[#entry.connections+1]=
+            hull:GetAttributeChangedSignal("Original3DAssetId"):Connect(changed)
+    end
     entry.connections[#entry.connections+1]=
         base:GetPropertyChangedSignal("Size"):Connect(changed)
     entry.connections[#entry.connections+1]=
