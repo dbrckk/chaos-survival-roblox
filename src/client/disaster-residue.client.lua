@@ -187,9 +187,37 @@ end
 local function fitCrack(source, size, frame)
     local mesh = CelebrationMeshes.cloneProfile(source)
     if not mesh then return nil, size, frame end
-    -- Lay the vertical chamfered shaft along the crack's local Z axis.
+    -- Lay the vertical chamfered shaft along the wider ground axis.
+    if size.X > size.Z then
+        return mesh, Vector3.new(size.Y, size.X, size.Z),
+            frame * CFrame.Angles(0, 0, math.pi * 0.5)
+    end
     return mesh, Vector3.new(size.X, size.Z, size.Y),
         frame * CFrame.Angles(math.pi * 0.5, 0, 0)
+end
+
+local function motifFitter(id, quality)
+    if quality.Name == "Low" then return nil end
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local cut = CelebrationMeshes.readyProfile("pylon", pressure)
+    local fragment = CelebrationMeshes.readyProfile("fragment", pressure)
+    local casting = CelebrationMeshes.readyProfile("casting", pressure)
+    if not cut and not fragment and not casting then return nil end
+
+    return function(shape, size, frame)
+        if shape == "Ball" or (shape == "Wedge" and id == "Freeze") then
+            return CelebrationMeshes.cloneProfile(fragment), size, frame
+        end
+        if shape == "Wedge" or (size.X <= size.Z * 2 and size.Z <= size.X * 2) then
+            local mesh = CelebrationMeshes.cloneProfile(casting)
+            if mesh and (casting.Size.X > casting.Size.Z) ~= (size.X > size.Z) then
+                return mesh, Vector3.new(size.Z, size.Y, size.X),
+                    frame * CFrame.Angles(0, math.pi * 0.5, 0)
+            end
+            return mesh, size, frame
+        end
+        return fitCrack(cut, size, frame)
+    end
 end
 
 local function makeCracks(name, position, radius, profile, count, lifetime)
@@ -409,6 +437,7 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
     local halfZ = base.Size.Z * 0.5
     local lifetime = quality.Name == "Low" and 2.2 or 3.8
     local hasMotif = AftermathSurfaceKit.names(id) ~= nil
+    local fitMotif = hasMotif and motifFitter(id, quality) or nil
     local isTrace = profile.Kind == "fracture" or profile.Kind == "scrape"
         or profile.Kind == "streak" or profile.Kind == "edge"
     local source = not hasMotif and not isTrace and discProfile(profile.Kind, quality)
@@ -436,7 +465,7 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
                     folder, id, quality.Name, frame, profile,
                     0.88 + (i % 3) * 0.09,
                     tostring(index) .. "_" .. tostring(i),
-                    VisualTheme.arena(variant))
+                    VisualTheme.arena(variant), fitMotif)
                 for _, piece in ipairs(pieces) do
                     piece:SetAttribute("ResidueCreatedAt", os.clock())
                     local settling = DisasterResidue.settlement(

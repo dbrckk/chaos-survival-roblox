@@ -97,4 +97,6 @@ Les traces circulaires de catastrophe utilisent en qualité moyenne et haute un 
 
 Les fissures d’impact, les lignes résiduelles et les éclats peuvent reprendre deux maillages approuvés. Le profil octogonal du lobby suit l’axe des fissures. La tête forgée à douze facettes fournit le relief des éclats. Chaque élément garde une pièce, son emprise au sol et son fondu. Les formes simples servent de secours au chargement et sous pression graphique.
 
+Les neuf motifs au sol de fin de manche peuvent utiliser des maillages approuvés en qualité moyenne et haute. Les coulées de lave mêlent plaques moulées et rainures, les aiguilles de givre sont facettées et les traces de vent gardent leurs trois obliques biseautées. Chaque motif conserve ses repères au sol et ses deux à quatre pièces selon la qualité. Les formes simples servent de secours en qualité basse, au chargement ou sous pression graphique.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
