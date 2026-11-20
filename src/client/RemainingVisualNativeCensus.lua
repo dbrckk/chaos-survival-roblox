@@ -90,6 +90,7 @@ local KEYS = {
     "PlatformPanel", "GroundFinish", "CornerLandmarks",
     "ExteriorRetrofits", "HarborFleet", "PerimeterStations", "HeroMonuments",
     "DistrictTransit", "DistrictTransitStructure", "DistrictTransitSignal",
+    "SkyShields", "SkyShieldsStructure", "SkyShieldsSignal",
     "Unclassified", "UnclassifiedLarge",
 }
 local function set(player, key, value)
@@ -129,7 +130,8 @@ function Census.sample(player, arena, quality)
                             counts[key] += 1
                             if key=="Ascension" or key=="Helix"
                                 or key=="District" or key=="PlatformSupport"
-                                or key=="SkySpine" or key=="Promenade" or key=="DistrictTransit" then
+                                or key=="SkySpine" or key=="Promenade" or key=="DistrictTransit"
+                                or key=="SkyShields" then
                                 local lower=string.lower(part.Name)
                                 local signal = part.Material==Enum.Material.Neon
                                     or part:GetAttribute("ChaosWayfinding")==true
@@ -142,6 +144,10 @@ function Census.sample(player, arena, quality)
                                     -- The Harbor hoist supports the terminal; it is not a route cue.
                                     signal = part.Material == Enum.Material.Neon
                                         or lower:match("^switchyardsignal%-?1$") ~= nil
+                                elseif key == "SkyShields" then
+                                    signal = part.Material == Enum.Material.Neon
+                                        or part.Name == "ActiveProtectiveField"
+                                        or part.Name == "ActiveFieldCrown"
                                 end
                                 local suffix=signal and "Signal" or "Structure"
                                 counts[key..suffix] += 1
@@ -165,6 +171,10 @@ function Census.sample(player, arena, quality)
             local transit = arena:FindFirstChild("DistrictTransit")
             if transit and transit:IsA("Folder") and transit:GetAttribute("ServerAuthoritative") == true then
                 scan(transit, "DistrictTransit")
+            end
+            local shields = arena:FindFirstChild("EmergencySkyShields")
+            if shields and shields:IsA("Folder") and shields:GetAttribute("ServerAuthoritative") == true then
+                scan(shields, "SkyShields")
             end
             streamed = true
         end

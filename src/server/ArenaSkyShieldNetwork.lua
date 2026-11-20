@@ -5,6 +5,8 @@
 -- No new RemoteEvents, monetization, client hit checks or render loops.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+local PremiumLargeStructureAssets = require("./PremiumLargeStructureAssets")
 -- Published Roblox places use the actual shared ModuleScript. Engine source
 -- specs may load this repo before the published place contains new modules.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -102,11 +104,47 @@ function Shield.damageAfterProtection(damage)
     return math.max(1, math.floor(n * Shield.DamageMultiplier + 0.5))
 end
 
-local function visual(parent, name, size, frame, color, material, alpha)
-    local p = Instance.new("Part")
+local function shieldProfiles(variant)
+    local bridge = RouteSignalGeometry.approvedModel(
+        ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates"),
+        "ForgedBridge", "OriginalTowersSignatureBridge3D", 126298311664881)
+    local perimeter = RouteSignalGeometry.approvedModel(
+        ReplicatedStorage:FindFirstChild("ApprovedPerimeterArmorTemplates"),
+        "Cap", "OriginalPerimeterArmor3D", 88962643359267)
+    local reactor = RouteSignalGeometry.approvedModel(
+        ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates"),
+        "Node", "OriginalOrbitalReactorLandmark3D", 104654294187035)
+    local shaft, shaftId = PremiumLargeStructureAssets.shaftProfile(variant)
+    local beam = bridge and bridge:FindFirstChild("SweptCrossbeam")
+    local casting = perimeter and perimeter:FindFirstChild("WayfinderBase")
+    return {
+        beam = {part = beam and beam:IsA("MeshPart") and beam.Archivable and beam or nil,
+            assetId = 126298311664881},
+        casting = {part = casting and casting:IsA("MeshPart") and casting.Archivable and casting or nil,
+            assetId = 88962643359267},
+        shaft = {part = shaft, assetId = shaftId},
+        core = {part = reactor and RouteSignalGeometry.regionByBounds(reactor, Vector3.new(2.96, 2.9503, 2.96)),
+            assetId = 104654294187035},
+        ring = {part = reactor and RouteSignalGeometry.regionByBounds(reactor, Vector3.new(4.11, 0.39, 4.11)),
+            assetId = 104654294187035},
+    }
+end
+
+local function visual(parent, name, size, frame, color, material, alpha, profile, shape)
+    local meshFrame, meshSize = frame, size
+    if shape == Enum.PartType.Cylinder then
+        -- Cylinder fallback uses X as its axis. The imported ring uses Y.
+        meshFrame = frame * CFrame.Angles(0, 0, -math.pi * 0.5)
+        meshSize = Vector3.new(size.Y, size.X, size.Z)
+    end
+    local p = RouteSignalGeometry.fitStructural(meshFrame, meshSize, false, profile)
+    if not p then
+        p = Instance.new("Part")
+        p.Size = size
+        p.CFrame = frame
+        if shape then p.Shape = shape end
+    end
     p.Name = name
-    p.Size = size
-    p.CFrame = frame
     p.Color = color
     p.Material = material
     p.Transparency = alpha or 0
@@ -122,7 +160,7 @@ end
 -- Four large defensive machines can create up to SIX real, temporary
 -- corridors as teammates coordinate. These are world-scaled volumetric
 -- links, not fullscreen HUD tricks. All sections are anchored and inert.
-local function makeLink(folder, from, to, variant)
+local function makeLink(folder, from, to, variant, profiles)
     local delta = to.center - from.center
     local flat = Vector3.new(delta.X, 0, delta.Z)
     local span = flat.Magnitude
@@ -145,19 +183,19 @@ local function makeLink(folder, from, to, variant)
             model, "ProtectiveGroundRail" .. side,
             Vector3.new(0.38, 0.24, span),
             frame * CFrame.new(side * Shield.LinkHalfWidth, 0, 0),
-            theme.Accent, Enum.Material.Neon, 1)
+            theme.Accent, Enum.Material.Neon, 1, profiles.beam)
         sections[#sections + 1] = visual(
             model, "ProtectiveUpperRail" .. side,
             Vector3.new(0.22, 0.22, span),
             frame * CFrame.new(side * Shield.LinkHalfWidth, 11, 0),
-            theme.Secondary, Enum.Material.Neon, 1)
+            theme.Secondary, Enum.Material.Neon, 1, profiles.beam)
     end
     for quarter = 1, 3 do
         sections[#sections + 1] = visual(
             model, "CrossingBeacon" .. quarter,
             Vector3.new(Shield.LinkHalfWidth * 2, 0.14, 0.36),
             frame * CFrame.new(0, 0, (quarter - 2) * span * 0.25),
-            theme.Detail, Enum.Material.Neon, 1)
+            theme.Detail, Enum.Material.Neon, 1, profiles.beam)
     end
     -- One world-space label at the actual midpoint. Tiny on Android,
     -- distance culled, never blocks native hazard warnings or touch.
@@ -192,7 +230,7 @@ local function makeLink(folder, from, to, variant)
         live = false, deadline = 0, generation = 0, absorbed = 0}
 end
 
-local function build(folder, ground, index, variant)
+local function build(folder, ground, index, variant, profiles)
     local theme = VisualTheme.arena(variant)
     local model = Instance.new("Model")
     model.Name = "EmergencySkyShield" .. index
@@ -208,56 +246,53 @@ local function build(folder, ground, index, variant)
     local base = CFrame.new(ground)
     local structure = theme.Structure:Lerp(theme.Detail, 0.35)
     visual(model, "Foundation", Vector3.new(8, 0.28, 8),
-        base * CFrame.new(0, 0.14, 0), structure, Enum.Material.DiamondPlate)
+        base * CFrame.new(0, 0.14, 0), structure, Enum.Material.DiamondPlate, nil, profiles.casting)
     for side = -1, 1, 2 do
         visual(model, "LoadPier" .. side, Vector3.new(1.5, 9.3, 2.1),
             base * CFrame.new(side * 4.0, 4.75, 0),
-            structure, Enum.Material.Metal)
+            structure, Enum.Material.Metal, nil, profiles.shaft)
         visual(model, "EnergyBus" .. side, Vector3.new(0.5, 6, 0.7),
             base * CFrame.new(side * 4.25, 5.0, -1.2),
-            theme.Secondary, Enum.Material.Neon, 0.30)
+            theme.Secondary, Enum.Material.Neon, 0.30, profiles.shaft)
     end
     local core = visual(model, "ShieldGeneratorCore",
         Vector3.new(3.7, 3.7, 3.7), base * CFrame.new(0, 4.3, 0),
-        theme.Accent, Enum.Material.Glass, 0.18)
-    core.Shape = Enum.PartType.Ball
+        theme.Accent, Enum.Material.Glass, 0.18, profiles.core, Enum.PartType.Ball)
     visual(model, "OverheadCrossbeam", Vector3.new(8.5, 1.1, 2.0),
-        base * CFrame.new(0, 9.9, 0), structure, Enum.Material.Metal)
+        base * CFrame.new(0, 9.9, 0), structure, Enum.Material.Metal, nil, profiles.beam)
     visual(model, "SkylineAntenna", Vector3.new(0.42, 5.0, 0.42),
         base * CFrame.new(0, 12.85, 0),
-        theme.Detail, Enum.Material.Metal)
+        theme.Detail, Enum.Material.Metal, nil, profiles.shaft)
 
     -- Each universe gets recognizably different equipment on the same
     -- original, physical player interaction point.
     if variant == "Classic" then
-        local dish = visual(model, "RadarDish", Vector3.new(0.5, 5.8, 5.8),
+        visual(model, "RadarDish", Vector3.new(0.5, 5.8, 5.8),
             base * CFrame.new(0, 15.3, 0) * CFrame.Angles(0, 0, 0.25),
-            theme.Secondary, Enum.Material.Metal, 0.12)
-        dish.Shape = Enum.PartType.Cylinder
+            theme.Secondary, Enum.Material.Metal, 0.12, profiles.ring, Enum.PartType.Cylinder)
     elseif variant == "Towers" then
         visual(model, "FreightShuttle", Vector3.new(5.8, 2.5, 3.5),
             base * CFrame.new(0, 15.4, 0), theme.Secondary,
-            Enum.Material.CorrodedMetal)
+            Enum.Material.CorrodedMetal, nil, profiles.casting)
     elseif variant == "Crossroads" then
         for side = -1, 1, 2 do
             visual(model, "SwitchFin" .. side, Vector3.new(3.5, 2.2, 0.75),
                 base * CFrame.new(side * 2.7, 15.2, 0)
                     * CFrame.Angles(0, 0, math.rad(side * 25)),
-                theme.Secondary, Enum.Material.Metal)
+                theme.Secondary, Enum.Material.Metal, nil, profiles.beam)
         end
     elseif variant == "Orbital" then
-        local halo = visual(model, "ContainmentHalo", Vector3.new(0.5, 7.5, 7.5),
+        visual(model, "ContainmentHalo", Vector3.new(0.5, 7.5, 7.5),
             base * CFrame.new(0, 15.7, 0)
                 * CFrame.Angles(0, 0, math.pi * 0.5),
-            theme.Secondary, Enum.Material.CeramicTiles, 0.2)
-        halo.Shape = Enum.PartType.Cylinder
+            theme.Secondary, Enum.Material.CeramicTiles, 0.2, profiles.ring, Enum.PartType.Cylinder)
     elseif variant == "Harbor" then
         visual(model, "FreightCrane", Vector3.new(8.3, 0.9, 2.1),
             base * CFrame.new(1.2, 15.3, 0),
-            theme.Secondary, Enum.Material.CorrodedMetal)
+            theme.Secondary, Enum.Material.CorrodedMetal, nil, profiles.beam)
         visual(model, "SuspendedLoad", Vector3.new(2.2, 2.4, 2.4),
             base * CFrame.new(4.0, 12.6, 0),
-            theme.Detail, Enum.Material.WoodPlanks)
+            theme.Detail, Enum.Material.WoodPlanks, nil, profiles.casting)
     end
 
     -- The translucent protective volume is genuinely large, but doesn't
@@ -269,16 +304,14 @@ local function build(folder, ground, index, variant)
         base * CFrame.new(0, Shield.Height * 0.5 - 1, 0)
             * CFrame.Angles(0, 0, math.pi * 0.5),
         theme.Accent:Lerp(Color3.fromRGB(210, 242, 255), 0.28),
-        Enum.Material.Glass, 1)
-    dome.Shape = Enum.PartType.Cylinder
+        Enum.Material.Glass, 1, nil, Enum.PartType.Cylinder)
     local ring = visual(model, "ActiveFieldCrown",
         -- A compact overhead crown rather than an opaque floor disk:
         -- warning circles must remain legible through the shield.
         Vector3.new(0.20, 8, 8),
         base * CFrame.new(0, 10.25, 0)
             * CFrame.Angles(0, 0, math.pi * 0.5),
-        theme.Secondary, Enum.Material.Glass, 1)
-    ring.Shape = Enum.PartType.Cylinder
+        theme.Secondary, Enum.Material.Glass, 1, nil, Enum.PartType.Cylinder)
     -- Eight thin perimeter edges instead of a floor-covering warning disc.
     -- Shield effects never obscure real meteor impact circles.
     local boundary = {}
@@ -293,7 +326,7 @@ local function build(folder, ground, index, variant)
             Vector3.new(0.34, 0.32, 17.5),
             CFrame.lookAt(point, point + tangent),
             theme.Accent:Lerp(theme.Secondary, 0.28),
-            Enum.Material.Neon, 1
+            Enum.Material.Neon, 1, profiles.beam
         )
     end
     local prompt = Instance.new("ProximityPrompt")
@@ -600,6 +633,7 @@ function Shield.start(ctx)
     local links = {}
     local floorY = base.Position.Y + base.Size.Y * 0.5
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local profiles = shieldProfiles(variant)
     local active = true
     local round = {ctx = ctx, folder = folder, stations = stations,
         links = links, groundY = floorY,
@@ -630,7 +664,7 @@ function Shield.start(ctx)
         local localPoint = base.CFrame * CFrame.new(
             offset.X, base.Size.Y * 0.5, offset.Z)
         local position = Vector3.new(localPoint.X, floorY, localPoint.Z)
-        local entry = build(folder, position, i, variant)
+        local entry = build(folder, position, i, variant, profiles)
         stations[#stations + 1] = entry
         local function withinFloor()
             local localP = base.CFrame:PointToObjectSpace(entry.center)
@@ -710,7 +744,7 @@ function Shield.start(ctx)
                 local key = tostring(i) .. "_" .. tostring(j)
                 local link = links[key]
                 if shouldLink and not link then
-                    link = makeLink(folder, from, to, variant)
+                    link = makeLink(folder, from, to, variant, profiles)
                     links[key] = link
                 end
                 if link then

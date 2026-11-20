@@ -45,4 +45,31 @@ function RouteSignalGeometry.fitStructural(frame, size, keepAxes, ...)
     return nil
 end
 
+-- Imported models are split by material and can swap horizontal axes.
+-- Match the unique region by its long, vertical and short dimensions.
+function RouteSignalGeometry.regionByBounds(model, regionSize)
+    local region
+    for _, piece in ipairs(model:GetChildren()) do
+        if not piece:IsA("MeshPart") then continue end
+        local size = piece.Size
+        local bounds = Vector3.new(math.max(size.X, size.Z), size.Y, math.min(size.X, size.Z))
+        if (bounds - regionSize).Magnitude < 0.075 then
+            if region or not piece.Archivable or piece.MeshId == "" then return nil end
+            region = piece
+        end
+    end
+    return region
+end
+
+function RouteSignalGeometry.approvedModel(holder, name, tag, assetId)
+    if not holder or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild(name)
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute(tag) ~= true
+        or model:GetAttribute("Original3DAssetId") ~= assetId then return nil end
+    return model
+end
+
 return RouteSignalGeometry
