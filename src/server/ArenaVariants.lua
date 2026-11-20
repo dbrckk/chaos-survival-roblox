@@ -183,6 +183,7 @@ ArenaVariants.Definitions = {
                     offset = Vector3.new(math.cos(angle) * 31, 4, math.sin(angle) * 31),
                     size = Vector3.new(13, 2, 13),
                     RouteTier = 1,
+                    OrbitalEntryLanding = true,
                 })
             end
             for i = 0, 7 do

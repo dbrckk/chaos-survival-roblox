@@ -2198,7 +2198,9 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     local coreAlpha = routeTier and (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
     local skybridge = platform:GetAttribute("ChaosSkybridge") == true
     local flatSize = Vector3.new(math.max(0.8, size.X * 0.32), 0.12, math.max(0.8, size.Z * 0.32))
-    local flatPose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.42, 0)
+    -- Keep the entry ring clear of the frame and the flat rim fallback.
+    local signalDrop = platform:GetAttribute("OrbitalEntryLanding") and 0.62 or 0.42
+    local flatPose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - signalDrop, 0)
     local signalSize, signalPose = flatSize, flatPose
     local alongX
     if promenadeLane or skySpineStep or skybridge or harborAlongX ~= nil then
@@ -3577,7 +3579,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local harborAlongX = harborLandingAlongX(definition)
         local harborLanding = harborAlongX ~= nil
         local lookoutAccess = definition.BranchRoute or definition.CrosslinkRoute
-        local glowAlongX = if lookoutAccess then definition.BranchStep == 4 else harborAlongX
+        local orbitalEntry = definition.OrbitalEntryLanding == true
+        local glowAlongX = if orbitalEntry then math.abs(definition.offset.X) > math.abs(definition.offset.Z) + 0.01
+            elseif lookoutAccess then definition.BranchStep == 4
+            else harborAlongX
+        if orbitalEntry then
+            platform:SetAttribute("OrbitalEntryLanding", true)
+        end
         -- Both stripes must clear the exposed sides of the grounded riser.
         local edgeOverhang = if skybridge then 0.42
             elseif definition.PerimeterStep then 1.20
@@ -3586,7 +3594,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- While common trim loads, keep the existing deck silhouettes
         -- with the arena's own closed casting or Harbor's load roller.
         local reactorLanding = definition.OrbitalReactorLanding == true
-        local trimCasting = if reactorLanding then closedDeckCasting else routeCasting
+        local trimCasting = if reactorLanding or orbitalEntry then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX)
@@ -3597,9 +3605,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- Use the open lattice in the existing shallow frame envelope
         -- so the landed platform still matches the native trim owners.
         local frameProfile = (reactorLanding and underdeckLattice)
-            or underdeckSpars or (not elevatedRoute and trimCasting) or nil
+            or underdeckSpars or (orbitalEntry and underdeckLattice)
+            or (not elevatedRoute and trimCasting) or nil
+        local coreProfile = (orbitalEntry and detailProfiles.ring.part) or underdeckSignal or signalFallback
         addPlatformFinish(decor, platform, i, theme, floorProfile or trimCasting,
-            underdeckSignal or signalFallback,
+            coreProfile,
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
             harborSkywayBeam, trimCasting)
