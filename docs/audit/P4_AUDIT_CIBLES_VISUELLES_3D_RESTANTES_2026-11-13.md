@@ -105,6 +105,10 @@ Sur Classic, Tower Run, Crossroads et Orbital, les **384 paliers** peuvent réut
 
 Les 60 portiques réutilisent le moulage fermé de leur arène, puis celui de Classic si nécessaire, quand une source dédiée manque. Avec le seul moulage fermé disponible, 860 des 904 pièces de portique peuvent rester sculptées. Les 240 emplacements de contremarche du périmètre, des branches et des traversées peuvent aussi reprendre ce moulage. Le rotor d’Orbital peut reprendre l’anneau du réacteur. Les lentilles gardent leur sphère de secours. Les pièces restent non physiques et suivent leur palier pendant le rétrécissement et la chute.
 
+### Balises et supports du premier anneau d’Orbital
+
+Les douze segments lumineux reprennent le profil forgé de Tower Run. Ils sont tangents à l’anneau et rapprochés du sol. Les quatre pylônes atmosphériques peuvent reprendre le fût polygonal d’Orbital et leurs quatre balises, le noyau facetté du réacteur. Les positions des pylônes et les lumières des balises sont conservées. L’habillage complet de proximité accepte les fûts sculptés et les blocs d’origine, puis restitue le fût masqué quand il se retire. Les sources peuvent manquer indépendamment et les pièces simples restent disponibles.
+
 ### Accès au sol d’Orbital
 
 Huit chevrons au sol pointent vers les huit rampes physiques d’entrée, avec deux ailes par repère. Le relief approuvé d’Orbital garde la priorité sur le profil forgé de Tower Run. Les formes simples reprennent la même pose si les deux sources manquent. Les chevrons se contractent avec les rampes en laissant leur seuil dégagé. Les huit rayons du centre et le médaillon suivent aussi le sol. Le disque de secours conserve sa hauteur et reste circulaire pendant le rétrécissement.

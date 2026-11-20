@@ -168,13 +168,17 @@ local function originalAt(arena, kind, index)
     else
         return nil
     end
+    local orbitalPillar = variant == "Orbital" and kind == "AtmospherePillar"
     local native = folder:FindFirstChild(kind .. tostring(index))
-    if not native or not native:IsA("Part")
+    local sculpted = orbitalPillar and native and native:IsA("MeshPart")
+        and native.MeshId ~= "" and native:GetAttribute("Original3DAssetId") == IDS.Orbital
+        and native.CFrame.UpVector.Y >= .999
+    if not native
+        or not (sculpted or native:IsA("Part")
+            and native.Shape == (harbor and Enum.PartType.Cylinder or Enum.PartType.Block))
         or native.Parent ~= folder
         or not native.Anchored or native.CanCollide
         or native.CanTouch or native.CanQuery
-        or native.Shape ~= (harbor and Enum.PartType.Cylinder
-            or Enum.PartType.Block)
         or (native.Size - size).Magnitude > .08
         or (native.Position - position).Magnitude > .12
         or native.Transparency ~= 1
@@ -182,11 +186,16 @@ local function originalAt(arena, kind, index)
                 (kind == "AtmospherePillar" and .08 or .04)) > .035 then
         return nil
     end
-    -- Colored signal caps and bands remain native and must be present.
+    -- The complete column never masks the independently fitted signal cap.
     local marker = folder:FindFirstChild(
         (kind == "AtmospherePillar" and "AtmosphereBeacon"
             or "SilhouetteCap") .. tostring(index))
-    if not marker or not marker:IsA("Part")
+    local sculptedCap = orbitalPillar and marker and marker:IsA("MeshPart")
+        and marker.MeshId ~= "" and marker:GetAttribute("Original3DAssetId") == 104654294187035
+        and marker.CFrame.UpVector.Y >= .999
+        and (marker.Size - Vector3.new(2.1, .45, 2.1)).Magnitude <= .08
+        and (marker.Position - (position + Vector3.new(0, height * .5, 0))).Magnitude <= .12
+    if not marker or not (sculptedCap or marker:IsA("Part"))
         or marker.Parent ~= folder or not marker.Anchored
         or marker.CanCollide or marker.CanTouch or marker.CanQuery then
         return nil
@@ -201,7 +210,7 @@ local function originalAt(arena, kind, index)
                 or band.CanQuery then return nil end
         end
     end
-    return native, folder, height, size
+    return native, folder, height, marker
 end
 
 local function valid(entry)
@@ -211,10 +220,10 @@ local function valid(entry)
         or entry.holder.Parent ~= ReplicatedStorage
         or entry.source:GetAttribute("Original3DAssetId") ~= entry.id
         or #entry.pieces ~= 7 then return false end
-    local native, folder, height = originalAt(
+    local native, folder, height, marker = originalAt(
         entry.arena, entry.kind, entry.index)
     if native ~= entry.native or folder ~= entry.folder
-        or height ~= entry.height then return false end
+        or height ~= entry.height or marker ~= entry.marker then return false end
     for _, part in ipairs(entry.pieces) do
         if not part:IsDescendantOf(entry.model)
             or part.CanCollide or part.CanTouch or part.CanQuery then
@@ -247,7 +256,7 @@ local function candidateFit(sourceSize, kind, variant, height)
 end
 
 local function mount(arena, item, source, holder, id, sourceSize)
-    local native, folder, height = originalAt(
+    local native, folder, height, marker = originalAt(
         arena, item.kind, item.index)
     if not native or native ~= item.native then return end
     local scale, maxWidth = candidateFit(
@@ -296,7 +305,7 @@ local function mount(arena, item, source, holder, id, sourceSize)
     clone.Parent = bucket
     local entry = {
         arena = arena, kind = item.kind, index = item.index,
-        native = native, folder = folder, height = height,
+        native = native, folder = folder, height = height, marker = marker,
         model = clone, source = source, holder = holder, id = id,
         pieces = pieces, original = native.Transparency,
         connections = {},
@@ -310,14 +319,25 @@ local function mount(arena, item, source, holder, id, sourceSize)
             remove(native)
         end
     end
-    for _, object in ipairs({native, folder, arena, source, clone}) do
+    for _, object in ipairs({native, marker, folder, arena, source, clone}) do
         entry.connections[#entry.connections + 1] =
             object.AncestryChanged:Connect(check)
     end
-    entry.connections[#entry.connections + 1] =
-        native:GetPropertyChangedSignal("Size"):Connect(check)
-    entry.connections[#entry.connections + 1] =
-        native:GetPropertyChangedSignal("CFrame"):Connect(check)
+    for _, object in ipairs({native, marker}) do
+        for _, property in ipairs({"Size", "CFrame", "Anchored", "CanCollide", "CanTouch", "CanQuery"}) do
+            entry.connections[#entry.connections + 1] =
+                object:GetPropertyChangedSignal(property):Connect(check)
+        end
+        if object:IsA("MeshPart") then
+            entry.connections[#entry.connections + 1] =
+                object:GetAttributeChangedSignal("Original3DAssetId"):Connect(check)
+            entry.connections[#entry.connections + 1] =
+                object:GetPropertyChangedSignal("MeshId"):Connect(check)
+        else
+            entry.connections[#entry.connections + 1] =
+                object:GetPropertyChangedSignal("Shape"):Connect(check)
+        end
+    end
     local base = arena:FindFirstChild("Base")
     if base then
         for _, signal in ipairs({

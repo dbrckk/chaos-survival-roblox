@@ -52,6 +52,19 @@ local function markBridgeRegions(model)
     if edgeBand then edgeBand.Name="SculptedEdgeBand" end
 end
 
+function Assets.approvedSource()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates")
+    if not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild("ForgedBridge")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalTowersSignatureBridge3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= ID then return nil end
+    return model
+end
+
 function Assets.start()
     if started then return end
     started=true

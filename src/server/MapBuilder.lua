@@ -34,6 +34,7 @@ local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 local PremiumLargeStructureAssets = require("./PremiumLargeStructureAssets")
+local ForgedBridgeAssets = require("./PremiumTowersSignatureBridgeAssets")
 local PremiumFloorReliefAssets = require("./PremiumFloorReliefAssets")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
@@ -1835,18 +1836,6 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
     end
 end
 
-local function towersForgedBridgeSource()
-    local holder = ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates")
-    if not holder or holder:GetAttribute("OwnerVerified") ~= true then return nil end
-    local model = holder:FindFirstChild("ForgedBridge")
-    if not model or not model:IsA("Model")
-        or model:GetAttribute("OwnerVerified") ~= true
-        or model:GetAttribute("CosmeticOnly") ~= true
-        or model:GetAttribute("OriginalTowersSignatureBridge3D") ~= true
-        or model:GetAttribute("Original3DAssetId") ~= 126298311664881 then return nil end
-    return model
-end
-
 local function accessChassisSource()
     local templates = ReplicatedStorage:FindFirstChild("ApprovedRemainingStructureTemplates")
     if not templates or templates:GetAttribute("OwnerVerified") ~= true then return nil end
@@ -3100,7 +3089,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     entryGuides.Name = "EntryGuides"
     entryGuides.Parent = arena
 
-    local forgedBridge = towersForgedBridgeSource()
+    local forgedBridge = ForgedBridgeAssets.approvedSource()
     local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
     local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
     local spawnGlowSize = Vector3.new(5.2, 0.12, 5.2)

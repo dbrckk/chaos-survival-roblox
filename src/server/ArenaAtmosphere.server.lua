@@ -2,13 +2,22 @@ local Workspace = game:GetService("Workspace")
 
 local ArenaAtmosphereStyle = require("./ArenaAtmosphereStyle")
 local ReactorAssets = require("./PremiumOrbitalReactorLandmarkAssets")
+local ForgedBridgeAssets = require("./PremiumTowersSignatureBridgeAssets")
+local LargeStructureAssets = require("./PremiumLargeStructureAssets")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
-local function makePart(parent, name, size, cframe, color, material)
-    local object = Instance.new("Part")
+local function makePart(parent, name, size, cframe, color, material, profile, assetId)
+    local mesh = RouteSignalGeometry.fit(profile, cframe, size)
+    local object = mesh or Instance.new("Part")
     object.Name = name
-    object.Size = size
-    object.CFrame = cframe
+    if mesh then
+        mesh:SetAttribute("Original3DAssetId", assetId)
+    else
+        object.Size = size
+        object.CFrame = cframe
+        object.TopSurface = Enum.SurfaceType.Smooth
+        object.BottomSurface = Enum.SurfaceType.Smooth
+    end
     object.Anchored = true
     object.CanCollide = false
     object.CanTouch = false
@@ -16,8 +25,6 @@ local function makePart(parent, name, size, cframe, color, material)
     object.CastShadow = false
     object.Color = color
     object.Material = material or Enum.Material.Metal
-    object.TopSurface = Enum.SurfaceType.Smooth
-    object.BottomSurface = Enum.SurfaceType.Smooth
     object.Parent = parent
     return object
 end
@@ -31,22 +38,30 @@ local function addLight(parent, color, brightness, range)
     light.Parent = parent
 end
 
-local function addRing(folder, center, theme)
+local function addRing(folder, center, theme, variantId, floorTop)
+    local orbital = variantId == "Orbital"
+    local bridge = orbital and ForgedBridgeAssets.approvedSource()
+    local profile = bridge and bridge:FindFirstChild("SweptCrossbeam")
+    if profile and (not profile:IsA("MeshPart") or profile.MeshId == "") then profile = nil end
+    -- Orbital pulses sit at floor level and run tangent to the ring.
+    local height = orbital and floorTop + 0.21 or 1.65
+    local size = Vector3.new(7.4, orbital and 0.055 or 0.22, 0.42)
     for index = 0, 11 do
         local angle = math.rad(index * 30)
         local position = center + Vector3.new(
             math.cos(angle) * theme.ringRadius,
-            1.65,
+            height,
             math.sin(angle) * theme.ringRadius
         )
-        local tangent = CFrame.lookAt(position, center) * CFrame.Angles(0, math.rad(90), 0)
+        local tangent = if orbital then CFrame.lookAt(position, center + Vector3.new(0, height, 0))
+            else CFrame.lookAt(position, center) * CFrame.Angles(0, math.rad(90), 0)
         local segment = makePart(
             folder,
             "PerimeterPulse" .. tostring(index + 1),
-            Vector3.new(7.4, 0.22, 0.42),
+            size,
             tangent,
             index % 2 == 0 and theme.accent or theme.secondary,
-            Enum.Material.Neon
+            Enum.Material.Neon, profile, 126298311664881
         )
         segment.Transparency = 0.12
     end
@@ -61,6 +76,11 @@ local function addTowers(folder, center, theme, variantId)
     }
 
     local harbor = variantId == "Harbor"
+    local shaft, shaftId, beacon
+    if variantId == "Orbital" then
+        shaft, shaftId = LargeStructureAssets.shaftProfile(variantId)
+        beacon = ReactorAssets.nodeProfile(Vector3.new(2.96, 2.9503, 2.96))
+    end
     local verticalCylinder = CFrame.Angles(0, 0, math.pi * 0.5)
     for index, offset in ipairs(offsets) do
         local height = theme.pillarHeight + ((index % 2) * 3)
@@ -76,7 +96,8 @@ local function addTowers(folder, center, theme, variantId)
                 or Vector3.new(1.25, height, 1.25),
             harbor and pillarOrigin * verticalCylinder or pillarOrigin,
             harbor and theme.structure or Color3.fromRGB(42, 48, 62),
-            harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal
+            harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal,
+            shaft, shaftId
         )
         if harbor then pillar.Shape = Enum.PartType.Cylinder end
         pillar.Transparency = 0.08
@@ -90,7 +111,7 @@ local function addTowers(folder, center, theme, variantId)
                 or Vector3.new(2.1, 0.45, 2.1),
             harbor and capOrigin * verticalCylinder or capOrigin,
             index % 2 == 0 and theme.accent or theme.secondary,
-            Enum.Material.Neon
+            Enum.Material.Neon, beacon, 104654294187035
         )
         if harbor then cap.Shape = Enum.PartType.Cylinder end
         addLight(cap, cap.Color, 0.65, 12)
@@ -102,16 +123,8 @@ local function addOrbitalCore(folder, center, theme)
     local function lens(name, diameter, position, color, transparency)
         local size = Vector3.new(diameter, diameter, diameter)
         local frame = CFrame.new(position)
-        local part = RouteSignalGeometry.fit(profile, frame, size)
-        if part then
-            part.Name = name
-            part.Color = color
-            part.Material = Enum.Material.Neon
-            part:SetAttribute("Original3DAssetId", 104654294187035)
-        else
-            part = makePart(nil, name, size, frame, color, Enum.Material.Neon)
-            part.Shape = Enum.PartType.Ball
-        end
+        local part = makePart(nil, name, size, frame, color, Enum.Material.Neon, profile, 104654294187035)
+        if part:IsA("Part") then part.Shape = Enum.PartType.Ball end
         part.Transparency = transparency
         part.Parent = folder
         return part
@@ -245,7 +258,7 @@ local function enhanceArena(arena)
     folder.Parent = arena
 
     local center = base.Position
-    addRing(folder, center, theme)
+    addRing(folder, center, theme, variantId, base.Size.Y * 0.5)
     addTowers(folder, center, theme, variantId)
     addDistantSilhouette(folder, center, theme, variantId, base)
 

@@ -52,7 +52,8 @@ assert 'addDistantSilhouette(folder, center, theme, variantId, base)' in SRC
 assert SRC.count('Instance.new("Part")') == 1
 assert SRC.count('Instance.new("PointLight")') == 1
 assert SRC.count('addLight(') == 3  # helper definition + tower + Orbital core
-assert SRC.count('addRing(folder, center, theme)') == 2
+assert 'local function addRing(folder, center, theme, variantId, floorTop)' in SRC
+assert 'addRing(folder, center, theme, variantId, base.Size.Y * 0.5)' in SRC
 assert SRC.count('addDistantSilhouette(') == 2
 assert SRC.count('for index = 0, 11 do') == 1
 assert SRC.count('for index, offset in ipairs(locations) do') == 1
