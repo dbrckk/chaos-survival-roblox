@@ -406,19 +406,31 @@ local function collectArchBase(arena,deck,decor,scale)
     local natives={}
     for slot,partSpec in ipairs(ARCH_BASE_NATIVE) do
         local part=decor:FindFirstChild("SkyRouteMonument"..index.."_"..partSpec.name)
-        if not visualNative(part,decor) or not part:IsA("Part")
-            or part.Shape~=Enum.PartType.Block
+        if not visualNative(part,decor)
             or part:GetAttribute("SkyRouteMonument")~=true
             or part:GetAttribute("PerimeterPlatformIndex")~=index
             or part:GetAttribute("SkyRouteStage")~=stage:upper() then return nil end
+        local partSize,partFrame=part.Size,part.CFrame
+        if part:IsA("MeshPart") then
+            local assetId=partSpec.side and SOURCE.ArchAbutment.id or SOURCE.AccessChassis.id
+            local swapped=part:GetAttribute("SkyRouteBaseAxisSwap")
+            if part.MeshId=="" or type(swapped)~="boolean"
+                or part:GetAttribute("Original3DAssetId")~=assetId then return nil end
+            if swapped then
+                partSize=Vector3.new(partSize.Z,partSize.Y,partSize.X)
+                partFrame*=CFrame.Angles(0,-math.pi*.5,0)
+            end
+        elseif not part:IsA("Part") or part.Shape~=Enum.PartType.Block then
+            return nil
+        end
         local src=partSpec.size
         local width=partSpec.trim and size.X-partSpec.trim*scale or src.X*scale
         local z=partSpec.side and partSpec.side*(halfZ+scale) or 0
         local expected=deck.CFrame*CFrame.new(0,bottom+partSpec.y,z)
-        if (part.Size-Vector3.new(width,src.Y,src.Z*scale)).Magnitude>.14
-            or (part.Position-expected.Position).Magnitude>.16
-            or part.CFrame.UpVector:Dot(expected.UpVector)<.999
-            or part.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+        if (partSize-Vector3.new(width,src.Y,src.Z*scale)).Magnitude>.14
+            or (partFrame.Position-expected.Position).Magnitude>.16
+            or partFrame.UpVector:Dot(expected.UpVector)<.999
+            or partFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
         natives[slot]=part
     end
     -- The original blocks are under the floor plane. Put the castings
@@ -1480,7 +1492,9 @@ local function mount(data,source)
                 entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("Shape"):Connect(changed)
             end
             if data.category=="archBase" then
-                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex"}) do
+                if native:IsA("MeshPart") then watch(native,{"MeshId"}) end
+                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex",
+                    "Original3DAssetId","SkyRouteBaseAxisSwap"}) do
                     entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
                 end
             end

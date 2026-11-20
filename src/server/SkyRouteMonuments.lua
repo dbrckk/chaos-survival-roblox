@@ -144,6 +144,15 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
         if mesh then mesh:SetAttribute("Original3DAssetId", source.assetId) end
         return mesh
     end
+    local function baseTrim(profile, name, size, offset, color, mat)
+        local mesh = fitProfile(profile, size, offset)
+        if mesh then
+            local source = profiles[profile].part.Size
+            mesh.DoubleSided = true
+            mesh:SetAttribute("SkyRouteBaseAxisSwap", (source.X > source.Z) ~= (size.X > size.Z))
+        end
+        add(name, size, offset, color, mat, nil, nil, false, mesh)
+    end
     local function canopy(profile, name, size, offset, color, kind)
         local mesh = fitProfile(profile, size, offset)
         if mesh then mesh:SetAttribute("OriginalSkyRouteCanopy3D", true) end
@@ -179,7 +188,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     -- Genuine architectural depth, not another neon-outline cube. Deep
     -- external paired abutments and bottom trusses read from ground level.
     for side = -1, 1, 2 do
-        add("ExteriorAbutment" .. side,
+        baseTrim("cast", "ExteriorAbutment" .. side,
             Vector3.new(2.4, 3.4, 2.8),
             CFrame.new(0, -top - 1.65, side * (half + 1.0)),
             roof, material)
@@ -204,7 +213,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     -- Reinforce the physical route silhouette without adding collision or
     -- dynamic effects. The underside truss makes tall platforms look
     -- engineered rather than like thin floating slabs.
-    add("LoadBearingKeel",
+    baseTrim("underframe", "LoadBearingKeel",
         Vector3.new(math.max(3, width - 1), 1.25, 0.9),
         CFrame.new(0, -top - 1.45, 0),
         metal, material)
@@ -226,7 +235,7 @@ function SkyRouteMonuments.decorate(decor, deck, index, definition, variant, the
     signal("RouteStageBeacon",
         Vector3.new(0.48, 1.08, math.max(3.0, deck.Size.Z * 0.55)),
         CFrame.new(0, overpassBottom - 0.42, 0), 0.28)
-    add("RecessedCentralGirder",
+    baseTrim("underframe", "RecessedCentralGirder",
         Vector3.new(math.max(3.0, width - 1.2), 0.7, 1.15),
         CFrame.new(0, -top - 0.72, 0),
         metal, Enum.Material.Metal)

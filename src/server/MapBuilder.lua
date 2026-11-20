@@ -3173,6 +3173,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local shaftAssetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)
     local detailProfiles = {
         beam = {part = sweptProfile, assetId = 126298311664881},
+        underframe = {part = underdeckSpars, assetId = 106401955318567},
         cast = {part = wayfinderBase, assetId = 88962643359267},
         lens = {part = orbitalLens, assetId = 104654294187035},
         rotor = {part = perimeterRotor, assetId = rotorAssetId},
