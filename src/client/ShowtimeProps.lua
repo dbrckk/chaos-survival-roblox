@@ -6,6 +6,9 @@ local UITheme = nil
 
 local ShowtimeProps = {}
 local CYLINDER_OFFSET = CFrame.Angles(0, 0, -math.pi * 0.5)
+local EQUALIZER_WIDTH = 0.26
+local EQUALIZER_DEPTH = 0.18
+local EQUALIZER_BASE = 2.8
 
 local PROFILE_BY_NAME = {
     ShowtimeSpeakerHousing1 = "casting",
@@ -24,7 +27,7 @@ local PROFILE_BY_NAME = {
     ShowtimeCrownAnchor2 = "crystal",
 }
 
-function ShowtimeProps.fit(part, source)
+function ShowtimeProps.fit(part, source, canonicalSize)
     local meshId = part:IsA("MeshPart") and part.MeshId or nil
     if meshId == (source and source.MeshId) then return part end
     local replacement = if source then source:Clone() else Instance.new("Part")
@@ -39,7 +42,7 @@ function ShowtimeProps.fit(part, source)
         replacement.Shape = Enum.PartType.Cylinder
     end
 
-    local size = part:GetAttribute("ShowtimeProfileSize") or part.Size
+    local size = canonicalSize or part:GetAttribute("ShowtimeProfileSize") or part.Size
     local rotate = source and size.X ~= size.Z and (source.Size.X > source.Size.Z) ~= (size.X > size.Z)
     if cylinderFallback then
         replacement.PivotOffset = CYLINDER_OFFSET
@@ -75,17 +78,22 @@ function ShowtimeProps.applyProfiles(asset, profiles)
     local crown = asset.crown
     local ringByPart = {}
     for _, ring in ipairs(crown.orbit) do ringByPart[ring.part] = ring end
+    local barByPart = {}
+    for _, bar in ipairs(asset.equalizer) do barByPart[bar.part] = bar end
     for i, part in ipairs(asset.props) do
         if part.Parent ~= asset.folder or not part:IsA("BasePart") then continue end
         local ring = ringByPart[part]
+        local bar = barByPart[part]
         local role = PROFILE_BY_NAME[part.Name] or part:GetAttribute("ShowtimeMeshProfile")
-        if ring or part.Name:match("^ShowtimeWaveguideRib%d+$") then role = "forged" end
+        if ring or bar or part.Name:match("^ShowtimeWaveguideRib%d+$") then role = "forged" end
         if role then
-            local replacement = ShowtimeProps.fit(part, profiles[role])
+            local size = bar and Vector3.new(EQUALIZER_WIDTH, part.Size.Y, EQUALIZER_DEPTH) or nil
+            local replacement = ShowtimeProps.fit(part, profiles[role], size)
             asset.props[i] = replacement
             if crown.crystal == part then crown.crystal = replacement end
             if crown.heart == part then crown.heart = replacement end
             if ring then ring.part = replacement end
+            if bar then bar.part = replacement end
         end
     end
 end
@@ -352,8 +360,8 @@ function ShowtimeProps.build(parent, baseCF, tier, themeOverride)
         local x = (i - (count + 1) / 2) * (tier == "High" and 0.48 or 0.62)
         local height = 0.42
         local part = primitive(holder, "ShowtimeEqualizer" .. i,
-            baseCF * CFrame.new(x, 3.03, -5.40),
-            Vector3.new(0.26, height, 0.18),
+            baseCF * CFrame.new(x, EQUALIZER_BASE + height * 0.5, -5.40),
+            Vector3.new(EQUALIZER_WIDTH, height, EQUALIZER_DEPTH),
             i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
             Enum.Material.Neon, 0.22)
         table.insert(equalizer, {part = part, x = x, offset = i * 0.77})
@@ -393,10 +401,11 @@ function ShowtimeProps.update(asset, now, enabled, reduceMotion, audience)
         local height = reduceMotion and 0.38 or
             (0.35 + 1.10 * (0.5 + 0.5 * math.sin(now * 3.3 + bar.offset)))
                 * (0.85 + math.min(4, audience or 0) * 0.08)
-        bar.part.Size = Vector3.new(0.26, height, 0.18)
-        bar.part.CFrame = asset.baseCF * CFrame.new(
-            bar.x, 2.8 + height * 0.5, -5.40
-        )
+        local size = bar.part.Size
+        bar.part.Size = Vector3.new(size.X, height, size.Z)
+        bar.part:PivotTo(asset.baseCF * CFrame.new(
+            bar.x, EQUALIZER_BASE + height * 0.5, -5.40
+        ))
     end
 
     local crown = asset.crown

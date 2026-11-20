@@ -77,4 +77,6 @@ La piste peut afficher des profils approuvés sur ses 9, 16 ou 25 dalles, ses qu
 
 Les enceintes et le pupitre ajoutent neuf emplacements sculptés en Low et dix-huit en Medium et High. Les cônes, caches et disques utilisent les facettes d’Orbital, le plateau utilise le moulage du périmètre et les garnitures et curseurs le profil forgé. Le secours cylindrique suit le même plan que le maillage, face au public pour les enceintes et à plat sur le pupitre.
 
+Les 3, 5 ou 8 barres de l’égaliseur utilisent le profil forgé lorsque le maillage est prêt. La base des barres reste à la même hauteur pendant les variations et la réduction des animations conserve la hauteur fixe d’origine. Le passage au maillage ou au secours conserve la hauteur courante et le pivot de chaque barre.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
