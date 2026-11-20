@@ -92,6 +92,7 @@ local KEYS = {
     "DistrictTransit", "DistrictTransitStructure", "DistrictTransitSignal",
     "SkyShields", "SkyShieldsStructure", "SkyShieldsSignal",
     "SkySwitchyard", "SkySwitchyardStructure", "SkySwitchyardSignal",
+    "TeamDashRelays",
     "Unclassified", "UnclassifiedLarge",
 }
 local function set(player, key, value)
@@ -182,6 +183,10 @@ function Census.sample(player, arena, quality)
             local switchyard = arena:FindFirstChild("SkySpineSwitchyard")
             if switchyard and switchyard:IsA("Folder") and switchyard:GetAttribute("ServerAuthoritative") == true then
                 scan(switchyard, "SkySwitchyard")
+            end
+            local relays = arena:FindFirstChild("TeamDashRelays")
+            if relays and relays:IsA("Folder") and relays:GetAttribute("ServerAuthoritative") == true then
+                scan(relays, "TeamDashRelays")
             end
             streamed = true
         end
