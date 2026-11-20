@@ -23,6 +23,7 @@ local function originalFootprint(base, arena)
 end
 
 local ASSET_ID = 123049626693705
+Kit.AssetId = ASSET_ID
 local SIZE = Vector3.new(5.46,15.92,1.76)
 -- One real 7-MeshPart original at camera range in healthy Low.
 -- At the first GPU-pressure level, floor(1 * .5) restores its native.
@@ -99,6 +100,25 @@ local function sourceFor()
         or math.abs(size.Y-SIZE.Y)>.32
         or math.abs(thin-SIZE.Z)>.32 then return nil end
     return source,holder
+end
+
+function Kit.panelProfile()
+    local source = sourceFor()
+    if not source then return nil end
+    -- The ARMOR region holds the two swept cheeks in one MeshPart.
+    local panel
+    for _, part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") then continue end
+        local size = part.Size
+        if math.abs(math.max(size.X, size.Z) - 4.5496) < .10
+            and math.abs(size.Y - 14.82) < .10
+            and math.abs(math.min(size.X, size.Z) - 1.72) < .08 then
+            if panel or not part.Archivable or part.MeshId == ""
+                or not part.Anchored or part.Transparency >= 1 then return nil end
+            panel = part
+        end
+    end
+    return panel
 end
 
 local function genuine(arena,index)

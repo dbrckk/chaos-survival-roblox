@@ -17,6 +17,7 @@ local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
 local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local BroadcastFin = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
@@ -32,29 +33,35 @@ local watchedMap = nil
 local disconnectReady = nil
 local rebuildQueued = false
 local liveTracks = {}
-local radarTracks = {}
 local roofs = {}
 local castStructures = {}
 local gantryBeams = {}
 local anchorBolts = {}
 local radarRings = {}
 local opticalCores = {}
+local signalPanels = {}
+local containmentCollars = {}
+local collarSegments = {}
 local INWARD_WINDING = {
     [roofs] = true,
     [castStructures] = true,
     [gantryBeams] = true,
     [radarRings] = true,
     [opticalCores] = true,
+    [signalPanels] = true,
+    [containmentCollars] = true,
+    [collarSegments] = true,
 }
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
 local RADAR_ROTATION = CFrame.Angles(0, 0, -math.pi / 2)
-local GANTRY_SWAP_ROTATION = CFrame.Angles(0, math.pi / 2, 0)
+local HORIZONTAL_SWAP_ROTATION = CFrame.Angles(0, math.pi / 2, 0)
 
 local function trackDetail(group, part, meshSize)
     group[#group + 1] = {
         part = part, frame = part.CFrame, size = part.Size, meshSize = meshSize,
         material = part.Material, class = part.ClassName,
+        transparency = part.Transparency,
         shape = if part:IsA("Part") then part.Shape else nil,
     }
 end
@@ -65,9 +72,8 @@ local function trackRadar(part)
     trackDetail(radarRings, part, Vector3.new(size.Y, size.X, size.Z))
 end
 
-local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
+local function syncDetailGroup(group, changedModels, source, assetId, rotation, swapXZ)
     if source and not detailGeometryReady(source) then source = nil end
-    local replaced = false
     for _, detail in ipairs(group) do
         local previous = detail.part
         local parent = previous.Parent
@@ -91,7 +97,7 @@ local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
         end
         replacement.Color = previous.Color
         replacement.Material = detail.material
-        replacement.Transparency = previous.Transparency
+        replacement.Transparency = detail.transparency
         replacement.Reflectance = previous.Reflectance
         replacement.LocalTransparencyModifier = previous.LocalTransparencyModifier
         replacement.Anchored = true
@@ -114,44 +120,54 @@ local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
         replacement.Parent = parent
         detail.part = replacement
         previous:Destroy()
-        replaced = true
+        if changedModels then changedModels[parent] = true end
     end
-    return replaced
 end
 
-local function syncDetails()
-    if #radarRings == 0 then return false end
+local function syncLongDetail(group, source, assetId, changedModels)
+    -- The detail spans local X. The approved import may put that span on Z.
+    local swapped = source and source.Size.Z > source.Size.X
+    syncDetailGroup(group, changedModels, source, assetId,
+        if swapped then HORIZONTAL_SWAP_ROTATION else nil, swapped)
+end
+
+local function syncDetails(changedModels)
+    if #radarRings == 0 then return end
     if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1 then
         syncDetailGroup(roofs)
         syncDetailGroup(castStructures)
         syncDetailGroup(gantryBeams)
         syncDetailGroup(anchorBolts)
         syncDetailGroup(opticalCores)
-        return syncDetailGroup(radarRings)
+        syncDetailGroup(radarRings, changedModels)
+        syncDetailGroup(signalPanels, changedModels)
+        syncDetailGroup(containmentCollars, changedModels)
+        syncDetailGroup(collarSegments, changedModels)
+        return
     end
-    if #roofs > 0 then
+    if #roofs + #collarSegments > 0 then
         local roof, orientation, swapped, roofId = PerimeterArmor.slopedCapProfile()
-        syncDetailGroup(roofs, roof, roofId, orientation, swapped)
+        syncDetailGroup(roofs, nil, roof, roofId, orientation, swapped)
+        if #collarSegments > 0 then
+            syncDetailGroup(collarSegments, changedModels, roof, roofId, orientation, swapped)
+        end
     end
-    if #castStructures > 0 then
-        syncDetailGroup(castStructures, PylonShell.bodyProfile(), PylonShell.AssetId)
-    end
+    local casting = PylonShell.bodyProfile()
+    syncDetailGroup(castStructures, nil, casting, PylonShell.AssetId)
+    syncDetailGroup(containmentCollars, changedModels, casting, PylonShell.AssetId)
     if #gantryBeams > 0 then
-        local beamProfile = ForgedBridge.sweptProfile()
-        -- The gantries span local X, while the import may put its span on Z.
-        local swapped = beamProfile and beamProfile.Size.Z > beamProfile.Size.X
-        syncDetailGroup(gantryBeams, beamProfile, ForgedBridge.AssetId,
-            if swapped then GANTRY_SWAP_ROTATION else nil, swapped)
+        syncLongDetail(gantryBeams, ForgedBridge.sweptProfile(), ForgedBridge.AssetId)
     end
+    syncLongDetail(signalPanels, BroadcastFin.panelProfile(), BroadcastFin.AssetId, changedModels)
     if #anchorBolts > 0 then
         local bolt = FloorHardware.platformCornerProfile()
         -- The bolt source is authored upright. Point the head toward the
         -- sector's front (-Z) while keeping the original cubic envelope.
-        syncDetailGroup(anchorBolts, bolt and bolt.part, bolt and bolt.assetId, ANCHOR_BOLT_ROTATION)
+        syncDetailGroup(anchorBolts, nil, bolt and bolt.part, bolt and bolt.assetId, ANCHOR_BOLT_ROTATION)
     end
     local core, ring = OrbitalReactor.coreProfile(), OrbitalReactor.ringProfile()
-    syncDetailGroup(opticalCores, core, OrbitalReactor.NodeAssetId)
-    return syncDetailGroup(radarRings, ring, OrbitalReactor.NodeAssetId, RADAR_ROTATION)
+    syncDetailGroup(opticalCores, nil, core, OrbitalReactor.NodeAssetId)
+    syncDetailGroup(radarRings, changedModels, ring, OrbitalReactor.NodeAssetId, RADAR_ROTATION)
 end
 
 local function clearDetails()
@@ -161,6 +177,9 @@ local function clearDetails()
     table.clear(anchorBolts)
     table.clear(radarRings)
     table.clear(opticalCores)
+    table.clear(signalPanels)
+    table.clear(containmentCollars)
+    table.clear(collarSegments)
     folder:ClearAllChildren()
 end
 
@@ -170,14 +189,11 @@ local function currentTier()
         and requested or VfxQuality.initialTier(UserInputService.TouchEnabled)
 end
 
-local function syncRadarKinetics()
-    DistrictKineticKit.stop(radarTracks)
-    local first = radarRings[1]
-    local model = first and first.part.Parent
-    if model then
-        radarTracks = DistrictKineticKit.start(model, 1, currentTier(),
-            player:GetAttribute("ReduceMotion") == true)
-    end
+local function startKinetics(model, tier)
+    if model.Parent ~= folder then return end
+    local tracks = DistrictKineticKit.start(model, model:GetAttribute("DistrictSector"), tier,
+        player:GetAttribute("ReduceMotion") == true)
+    liveTracks[model] = if #tracks > 0 then tracks else nil
 end
 
 local detailSyncQueued = false
@@ -187,34 +203,32 @@ local function scheduleDetailSync()
     detailSyncQueued = true
     task.defer(function()
         detailSyncQueued = false
-        if syncDetails() then syncRadarKinetics() end
+        local changedModels = {}
+        syncDetails(changedModels)
+        local tier = currentTier()
+        for model in pairs(changedModels) do
+            DistrictKineticKit.stop(liveTracks[model])
+            startKinetics(model, tier)
+        end
     end)
 end
 
 detailGeometryReady = LobbyMeshPreload.new(scheduleDetailSync)
 
 local function stopKinetics()
-    DistrictKineticKit.stop(liveTracks)
-    DistrictKineticKit.stop(radarTracks)
+    for _, tracks in pairs(liveTracks) do
+        DistrictKineticKit.stop(tracks)
+    end
+    table.clear(liveTracks)
 end
 
 -- Reconfigure only existing cosmetic tweens when reduced motion changes.
--- No geometry rebuild, remote traffic or frame-by-frame Lua animations.
 local function syncKinetics()
     stopKinetics()
     local tier = currentTier()
-    if tier == "Low" or player:GetAttribute("ReduceMotion") == true then
-        return
-    end
-    syncRadarKinetics()
+    if tier == "Low" or player:GetAttribute("ReduceMotion") == true then return end
     for _, model in ipairs(folder:GetChildren()) do
-        if model:IsA("Model") then
-            local sector = model:GetAttribute("DistrictSector")
-            if sector == 1 then continue end
-            for _, entry in ipairs(DistrictKineticKit.start(model, sector, tier, false)) do
-                liveTracks[#liveTracks + 1] = entry
-            end
-        end
+        if model:IsA("Model") then startKinetics(model, tier) end
     end
 end
 
@@ -400,17 +414,17 @@ local function makeSector(base, theme, index, tier, variant)
         elseif index == 3 then
             trackDetail(castStructures, make("LowReactorTower", Vector3.new(8.6, 16.0, 8.6),
                 CFrame.new(0, 8.4, 0), dark, Enum.Material.Metal))
-            make("LowEnergyCollar", Vector3.new(10.0, 2.2, 10.0),
-                CFrame.new(0, 11.5, 0), accent, Enum.Material.Glass, 0.40)
+            trackDetail(containmentCollars, make("LowEnergyCollar", Vector3.new(10.0, 2.2, 10.0),
+                CFrame.new(0, 11.5, 0), accent, Enum.Material.Glass, 0.40))
             trackDetail(opticalCores, make("LowCoreSignal", Vector3.new(3.3, 3.3, 3.3),
                 CFrame.new(0, 18, 0), accent,
                 Enum.Material.Glass, 0.22, Enum.PartType.Ball))
         else
             trackDetail(castStructures, make("LowCommunicationsMast", Vector3.new(3.2, 25, 3.2),
                 CFrame.new(0, 13.0, 0), dark, Enum.Material.Metal))
-            make("LowSignalArray", Vector3.new(10, 7.2, 1.1),
+            trackDetail(signalPanels, make("LowSignalArray", Vector3.new(10, 7.2, 1.1),
                 CFrame.new(0, 20.2, 0) * CFrame.Angles(0, math.rad(22), 0),
-                alloy, Enum.Material.DiamondPlate)
+                alloy, Enum.Material.DiamondPlate))
             trackDetail(opticalCores, make("LowBeacon", Vector3.new(2.6, 2.6, 2.6),
                 CFrame.new(0, 28.1, 0), accent,
                 Enum.Material.Glass, 0.2, Enum.PartType.Ball))
@@ -479,9 +493,9 @@ local function makeSector(base, theme, index, tier, variant)
         -- Power station: visual containment volume with axial fins.
         make("ReactorCoreHousing", Vector3.new(7, 12.5, 7),
             CFrame.new(0, 6.95, 0), dark)
-        make("ContainmentGlass", Vector3.new(7.25, 2.5, 7.25),
+        trackDetail(containmentCollars, make("ContainmentGlass", Vector3.new(7.25, 2.5, 7.25),
             CFrame.new(0, 8.6, 0), accent,
-            Enum.Material.Glass, 0.26)
+            Enum.Material.Glass, 0.26))
         for side = -1, 1, 2 do
             make("ReactorFin" .. side, Vector3.new(2.3, 10, 4.5),
                 CFrame.new(side * 5.4, 5.8, 0),
@@ -490,7 +504,7 @@ local function makeSector(base, theme, index, tier, variant)
         if high then
             for segment = 1, 8 do
                 local angle = (segment - 1) * (math.pi * 2 / 8)
-                make("MagneticCollar" .. segment, Vector3.new(3.8, 0.54, 0.74),
+                trackDetail(collarSegments, make("MagneticCollar" .. segment, Vector3.new(3.8, 0.54, 0.74),
                     CFrame.new(math.cos(angle) * 5.0, 14.0,
                         math.sin(angle) * 5.0)
                         * CFrame.Angles(0, -angle, 0),
@@ -499,20 +513,20 @@ local function makeSector(base, theme, index, tier, variant)
                     -- opaque/neon slabs. Preserve existing High-tier
                     -- animated collar ownership with no glass overdraw.
                     Enum.Material.Metal,
-                    segment % 2 == 0 and 0.08 or 0.06)
+                    segment % 2 == 0 and 0.08 or 0.06))
             end
         end
     else
         -- Comms relay: tall scanner fin, side receivers and glass collar.
         trackDetail(castStructures, make("CommsMast", Vector3.new(2.3, 21, 2.3),
             CFrame.new(0, 11.2, 0), dark))
-        make("CommsSignalFin", Vector3.new(9.3, 7.4, 1.4),
+        trackDetail(signalPanels, make("CommsSignalFin", Vector3.new(9.3, 7.4, 1.4),
             CFrame.new(0, 17.4, 0) * CFrame.Angles(0, math.rad(17), 0),
-            alloy)
+            alloy))
         make("ControlCabin", Vector3.new(5.2, 3.8, 5.2),
             CFrame.new(0, 12.1, 0), dark)
-        make("ScannerWindow", Vector3.new(5.35, 1.6, 5.35),
-            CFrame.new(0, 12.5, 0), accent, Enum.Material.Glass, 0.32)
+        trackDetail(castStructures, make("ScannerWindow", Vector3.new(5.35, 1.6, 5.35),
+            CFrame.new(0, 12.5, 0), accent, Enum.Material.Glass, 0.32))
         if high then
             for side = -1, 1, 2 do
                 beam(model, "TransmitterSupport" .. side, root,
@@ -858,6 +872,7 @@ local DETAIL_SOURCES = {
     ApprovedPerimeterArmorTemplates = "Cap",
     ApprovedLobbyPylonShellTemplates = "LobbyPylonShell",
     ApprovedTowersSignatureBridgeTemplates = "ForgedBridge",
+    ApprovedClassicBroadcastFinTemplates = "BroadcastFin",
     ApprovedFloorReliefTemplates = "AnchorBolt",
     ApprovedOrbitalReactorLandmarkTemplates = "Node",
 }
