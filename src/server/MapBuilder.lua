@@ -3176,6 +3176,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         underframe = {part = underdeckSpars, assetId = 106401955318567},
         cast = {part = wayfinderBase, assetId = 88962643359267},
         lens = {part = orbitalLens, assetId = 104654294187035},
+        ring = {part = orbitalReactorNodeRegion(Vector3.new(4.11, 0.39, 4.11)),
+            assetId = 104654294187035},
         rotor = {part = perimeterRotor, assetId = rotorAssetId},
         shaft = {part = beaconShaft, assetId = shaftAssetId},
         signal = {part = rimBevel, assetId = PremiumFloorReliefAssets.approvedId("Harbor")},

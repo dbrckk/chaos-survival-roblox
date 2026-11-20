@@ -26,6 +26,8 @@ Chaque arène peut afficher 32 supports blindés façonnés avec le profil polyg
 
 Les 16 bâtiments peuvent aussi afficher **80 pièces de structure sculptées par arène**. Le lot couvre les 32 pans de toiture, les 32 caissons latéraux et les 16 noyaux de service. Les pans reprennent le sens de leur pente, quelle que soit l’orientation horizontale de l’asset importé. Les caissons et noyaux gardent leur empreinte et restent admissibles à l’habillage des parois de proximité.
 
+Les fondations et les équipements de toit des 16 bâtiments couvrent **180 pièces supplémentaires sur Classic, Tower Run et Storm Harbor, et 196 sur Crossroads et Orbital**. Le lot couvre 32 pièces de fondation, 68 pièces réparties entre les quatre silhouettes de toiture, ainsi que 80 ou 96 équipements propres à l’arène. Chaque maillage remplace une pièce à son emplacement. Les formes simples reprennent le relais si une source manque. Les kits de proximité reconnaissent les maillages approuvés et les formes de secours. Les portes de service gardent leur rôle d’ancrage.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

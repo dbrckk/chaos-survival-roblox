@@ -22,7 +22,7 @@ local ArenaDistrictArchitecture = {}
 local GLAZING_PROFILE_ID = 88962643359267
 
 type MeshProfile = {part: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
-type StructureProfiles = {shaft: MeshProfile?, underframe: MeshProfile?}
+type StructureProfiles = {shaft: MeshProfile?, underframe: MeshProfile?, lens: MeshProfile?, ring: MeshProfile?}
 
 -- Four navigable sectors need distinct silhouettes AND distinct color IDs.
 -- Tint existing architecture only: zero added Parts, lights, particle emitters
@@ -103,7 +103,7 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
     end
 
     local function fitted(name, size, localFrame, color, material, spec: MeshProfile?,
-            alongX: boolean?, fallbackKind: string?)
+            alongX: boolean?, fallbackKind: string?, cylinderAxes: boolean?)
         local profile = spec and spec.part
         local kind = fallbackKind or "Part"
         if not profile or not spec or not profile:IsA("MeshPart") or profile.MeshId == "" then
@@ -113,13 +113,17 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
         -- Roofs use the high edge identified in the approved casting.
         local frame = origin * localFrame
         local meshSize = size
+        if cylinderAxes then
+            frame *= CFrame.Angles(0, 0, -math.pi / 2)
+            meshSize = Vector3.new(size.Y, size.X, size.Z)
+        end
         if spec.rotation then frame *= spec.rotation end
         if spec.swapXZ then meshSize = Vector3.new(size.Z, size.Y, size.X) end
         local spanX = if alongX == nil then profile.Size.X > profile.Size.Z else alongX
         local mesh = RouteSignalGeometry.fit(profile, frame, meshSize, nil, spanX)
         if not mesh then return make(name, kind, size, localFrame, color, material) end
         mesh.Name = name
-        mesh.Material = material
+        mesh.Material = material or Enum.Material.Metal
         mesh.Color = color
         mesh.DoubleSided = true
         mesh:SetAttribute("Original3DAssetId", spec.assetId)
@@ -136,18 +140,26 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
 
     local shaft = structureProfiles and structureProfiles.shaft
     local rail = structureProfiles and structureProfiles.underframe
+    local lens = structureProfiles and structureProfiles.lens
+    local ring = structureProfiles and structureProfiles.ring
+    local function cylinder(name, size, localFrame, color, material, profile: MeshProfile?)
+        local part = fitted(name, size, localFrame, color, material, profile, nil, nil, true)
+        if part:IsA("Part") then part.Shape = Enum.PartType.Cylinder end
+        return part
+    end
+    local function globe(name, size, localFrame, color, material)
+        local globePart = fitted(name, size, localFrame, color, material, lens)
+        if globePart:IsA("Part") then globePart.Shape = Enum.PartType.Ball end
+        return globePart
+    end
     -- Full 3D massing: recessed disc, four sculpted supports and an elevated
     -- roof. Narrow x/z footprint leaves generous escape and hazard lanes.
-    local plinth = make("BasaltFoundation", "Part",
-        Vector3.new(0.7, 15.5, 15.5),
+    cylinder("BasaltFoundation", Vector3.new(0.7, 15.5, 15.5),
         CFrame.new(0, 0.35, 0) * CFrame.Angles(0, 0, math.pi / 2),
-        dark, Enum.Material.Slate)
-    plinth.Shape = Enum.PartType.Cylinder
-    local rim = make("FoundationRim", "Part",
-        Vector3.new(0.22, 13.8, 13.8),
+        dark, Enum.Material.Slate, shaft)
+    cylinder("FoundationRim", Vector3.new(0.22, 13.8, 13.8),
         CFrame.new(0, 0.77, 0) * CFrame.Angles(0, 0, math.pi / 2),
-        alloy, Enum.Material.Metal)
-    rim.Shape = Enum.PartType.Cylinder
+        alloy, Enum.Material.Metal, ring)
     for _, direction in ipairs({-1, 1}) do
         local suffix = direction < 0 and "L" or "R"
         fitted("ArmoredSupport" .. suffix, Vector3.new(1.4, 12.6, 2.3),
@@ -263,55 +275,53 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
     -- collision and no changes to the service-door silhouette budget.
     if slot == 1 then
         for _, direction in ipairs({-1, 1}) do
-            make("ObservatoryFin" .. tostring(direction), "WedgePart",
+            fitted("ObservatoryFin" .. tostring(direction),
                 Vector3.new(3.8, 7.8, 1.8),
                 CFrame.new(direction * 3, 19.2, 0.2)
                     * CFrame.Angles(0, direction * math.rad(18), 0),
-                steel)
+                steel, Enum.Material.Metal, roofProfile, nil, "WedgePart")
         end
-        local ball = make("OrbitalSurveyLens", "Part",
+        local ball = globe("OrbitalSurveyLens",
             Vector3.new(4.4, 4.4, 4.4),
             CFrame.new(0, 24.6, -0.3), accent, Enum.Material.Glass)
-        ball.Shape = Enum.PartType.Ball
         ball.Transparency = 0.18
     elseif slot == 2 then
-        make("CrossGantry", "Part", Vector3.new(17.2, 1.45, 2.6),
-            CFrame.new(0, 18.1, 0), alloy)
-        make("CabShell", "Part", Vector3.new(5.6, 3, 4),
-            CFrame.new(0, 15.9, 0), dark)
+        fitted("CrossGantry", Vector3.new(17.2, 1.45, 2.6),
+            CFrame.new(0, 18.1, 0), alloy, Enum.Material.Metal, rail, true)
+        fitted("CabShell", Vector3.new(5.6, 3, 4),
+            CFrame.new(0, 15.9, 0), dark, Enum.Material.Metal, casting)
         glazing("CabGlass", Vector3.new(4.8, 1.45, 0.16),
             CFrame.new(0, 16.2, -2.1), accent, 0.22)
         for _, direction in ipairs({-1, 1}) do
-            make("GantryBlade" .. tostring(direction), "WedgePart",
+            fitted("GantryBlade" .. tostring(direction),
                 Vector3.new(3, 2.8, 2.6),
-                CFrame.new(direction * 6.8, 19.4, 0), steel)
+                CFrame.new(direction * 6.8, 19.4, 0), steel, Enum.Material.Metal, roofProfile, nil, "WedgePart")
         end
     elseif slot == 3 then
         for duct = -1, 1 do
-            local tube = make("VentTurbine" .. tostring(duct), "Part",
+            cylinder("VentTurbine" .. tostring(duct),
                 Vector3.new(6.4, 3.4, 3.4),
                 CFrame.new(duct * 3.4, 18.4 + math.abs(duct), 0.1),
-                duct == 0 and accent or alloy, Enum.Material.Metal)
-            tube.Shape = Enum.PartType.Cylinder
-            make("VentArmour" .. tostring(duct), "WedgePart",
+                duct == 0 and accent or alloy, Enum.Material.Metal, ring)
+            fitted("VentArmour" .. tostring(duct),
                 Vector3.new(3.0, 3.1, 3.6),
                 CFrame.new(duct * 3.4, 21.2 + math.abs(duct), 0),
-                steel)
+                steel, Enum.Material.Metal, roofProfile, nil, "WedgePart")
         end
     else
-        make("AerialMast", "Part", Vector3.new(0.85, 16.5, 0.85),
-            CFrame.new(0, 23, 0), steel)
+        fitted("AerialMast", Vector3.new(0.85, 16.5, 0.85),
+            CFrame.new(0, 23, 0), steel, Enum.Material.Metal, shaft)
         for _, direction in ipairs({-1, 1}) do
-            make("CrossAerial" .. tostring(direction), "Part",
+            fitted("CrossAerial" .. tostring(direction),
                 Vector3.new(11.2, 0.52, 0.65),
                 CFrame.new(0, 22.1 + direction * 3.1, 0)
                     * CFrame.Angles(0, direction * math.rad(42), 0),
-                alloy)
+                alloy, Enum.Material.Metal, rail, true)
         end
-        local prism = make("SignalCrystal", "WedgePart",
+        local prism = fitted("SignalCrystal",
             Vector3.new(4.1, 5.8, 4.1),
             CFrame.new(0, 32.1, 0) * CFrame.Angles(0, math.rad(45), 0),
-            accent, Enum.Material.Glass)
+            accent, Enum.Material.Glass, roofProfile, nil, "WedgePart")
         prism.Transparency = 0.23
     end
 
@@ -321,93 +331,89 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
     -- Keep each signature compact to protect the survival routes and HUD.
     if variantId == "Towers" then
         -- Elevated cargo transfer, not a generic industrial antenna.
-        make("GantryArch", "Part", Vector3.new(12.5, 1.15, 1.9),
-            CFrame.new(0, 18.5, 0), alloy)
-        make("TransitCab", "Part", Vector3.new(4.5, 3.1, 3.5),
-            CFrame.new(0, 16.4, -1), steel)
+        fitted("GantryArch", Vector3.new(12.5, 1.15, 1.9),
+            CFrame.new(0, 18.5, 0), alloy, Enum.Material.Metal, rail, true)
+        fitted("TransitCab", Vector3.new(4.5, 3.1, 3.5),
+            CFrame.new(0, 16.4, -1), steel, Enum.Material.Metal, casting)
         glazing("TransitGlazing", Vector3.new(3.5, 1.1, 0.18),
             CFrame.new(0, 16.6, -2.83), accent, 0)
-        make("TransferRailHousing", "Part", Vector3.new(13.0, 0.8, 2.4),
-            CFrame.new(0, 20.1, -2.0), alloy)
+        fitted("TransferRailHousing", Vector3.new(13.0, 0.8, 2.4),
+            CFrame.new(0, 20.1, -2.0), alloy, Enum.Material.Metal, rail, true)
         for _, direction in ipairs({-1, 1}) do
-            make("HoistDriveHousing" .. tostring(direction), "Part",
+            fitted("HoistDriveHousing" .. tostring(direction),
                 Vector3.new(2.6, 2.5, 2.8),
                 CFrame.new(direction * 5.25, 18.6, -2.0),
-                dark, Enum.Material.CorrodedMetal)
+                dark, Enum.Material.CorrodedMetal, casting)
         end
     elseif variantId == "Orbital" then
         -- Ceramic shroud around the actual raised, ring-shaped antenna.
-        local ring = make("HaloReceiver", "Part", Vector3.new(0.7, 9, 9),
+        cylinder("HaloReceiver", Vector3.new(0.7, 9, 9),
             CFrame.new(0, 19, 0) * CFrame.Angles(0, 0, math.pi / 2),
-            alloy)
-        ring.Shape = Enum.PartType.Cylinder
-        local heart = make("ReactorSphere", "Part", Vector3.new(4.2, 4.2, 4.2),
-            CFrame.new(0, 19.8, 0), accent)
-        heart.Shape = Enum.PartType.Ball
-        make("ReactorCap", "WedgePart", Vector3.new(5.4, 2, 4),
-            CFrame.new(0, 23.0, 0), dark)
+            alloy, Enum.Material.Metal, ring)
+        globe("ReactorSphere", Vector3.new(4.2, 4.2, 4.2),
+            CFrame.new(0, 19.8, 0), accent, Enum.Material.Metal)
+        fitted("ReactorCap", Vector3.new(5.4, 2, 4),
+            CFrame.new(0, 23.0, 0), dark, Enum.Material.Metal, roofProfile, nil, "WedgePart")
         for _, direction in ipairs({-1, 1}) do
-            make("ContainmentShield" .. tostring(direction), "WedgePart",
+            fitted("ContainmentShield" .. tostring(direction),
                 Vector3.new(3.2, 8.4, 4.2),
                 CFrame.new(direction * 6.6, 19.0, 0)
                     * CFrame.Angles(0, direction * math.rad(22), 0),
-                steel, Enum.Material.CeramicTiles)
+                steel, Enum.Material.CeramicTiles, roofProfile, nil, "WedgePart")
         end
-        make("ReactorCollectorHousing", "Part",
+        fitted("ReactorCollectorHousing",
             Vector3.new(7.2, 0.8, 5.2),
-            CFrame.new(0, 24.4, 0), alloy)
+            CFrame.new(0, 24.4, 0), alloy, Enum.Material.Metal, rail, true)
     elseif variantId == "Crossroads" then
         -- Paired switching arms and a front-facing physical route selector.
-        make("SwitchArm", "Part", Vector3.new(13, 1.2, 2),
-            CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(18), 0), alloy)
+        fitted("SwitchArm", Vector3.new(13, 1.2, 2),
+            CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(18), 0), alloy, Enum.Material.Metal, rail, true)
         for _, direction in ipairs({-1, 1}) do
-            make("SwitchPod" .. tostring(direction), "WedgePart",
+            fitted("SwitchPod" .. tostring(direction),
                 Vector3.new(3.1, 2.3, 3.8),
                 CFrame.new(direction * 5, 19.5, 0)
                     * CFrame.Angles(0, direction < 0 and math.pi or 0, 0),
-                accent)
-            make("RouteRelayHousing" .. tostring(direction), "WedgePart",
+                accent, Enum.Material.Metal, roofProfile, nil, "WedgePart")
+            fitted("RouteRelayHousing" .. tostring(direction),
                 Vector3.new(3.0, 3.5, 3.1),
                 CFrame.new(direction * 5.6, 22.5, -2.7)
                     * CFrame.Angles(0, direction * math.rad(27), 0),
-                alloy)
+                alloy, Enum.Material.Metal, roofProfile, nil, "WedgePart")
         end
-        make("SwitchboardPanel", "Part",
+        fitted("SwitchboardPanel",
             Vector3.new(8.2, 2.7, 0.6),
-            CFrame.new(0, 21.5, -4.1), dark)
+            CFrame.new(0, 21.5, -4.1), dark, Enum.Material.Metal, casting)
     elseif variantId == "Harbor" then
         -- Storm Harbor is no longer reusing Classic's observatory.
         -- Small, distinct dockside hoists match its larger outer cranes.
-        make("HarborHoistTower", "Part", Vector3.new(2.8, 12.2, 2.8),
-            CFrame.new(0, 20.5, 0), steel)
-        make("HarborLoadCrossarm", "Part", Vector3.new(12.5, 1.2, 2.0),
-            CFrame.new(0, 26.5, 0), alloy)
-        make("HarborHoistCabin", "Part", Vector3.new(4.5, 2.4, 3.3),
-            CFrame.new(3.1, 23.5, -0.5), dark)
-        make("HarborCargoCable", "Part", Vector3.new(0.3, 4.8, 0.3),
-            CFrame.new(-4.4, 23.6, -1.5), dark)
-        make("HarborCargoHousing", "Part", Vector3.new(4.8, 2.9, 3.7),
+        fitted("HarborHoistTower", Vector3.new(2.8, 12.2, 2.8),
+            CFrame.new(0, 20.5, 0), steel, Enum.Material.Metal, shaft)
+        fitted("HarborLoadCrossarm", Vector3.new(12.5, 1.2, 2.0),
+            CFrame.new(0, 26.5, 0), alloy, Enum.Material.Metal, rail, true)
+        fitted("HarborHoistCabin", Vector3.new(4.5, 2.4, 3.3),
+            CFrame.new(3.1, 23.5, -0.5), dark, Enum.Material.Metal, casting)
+        fitted("HarborCargoCable", Vector3.new(0.3, 4.8, 0.3),
+            CFrame.new(-4.4, 23.6, -1.5), dark, Enum.Material.Metal, shaft)
+        fitted("HarborCargoHousing", Vector3.new(4.8, 2.9, 3.7),
             CFrame.new(-4.4, 19.6, -1.5),
-            steel, Enum.Material.CorrodedMetal)
+            steel, Enum.Material.CorrodedMetal, casting)
     else
         -- A compact physical storm-observation dish and its receiver
         -- above the existing roof profile, visible across the grid.
-        make("ObservatoryColumn", "Part", Vector3.new(2.6, 8, 2.6),
-            CFrame.new(0, 18.7, 0), alloy)
-        local lens = make("StormSensor", "Part", Vector3.new(5, 5, 5),
+        fitted("ObservatoryColumn", Vector3.new(2.6, 8, 2.6),
+            CFrame.new(0, 18.7, 0), alloy, Enum.Material.Metal, shaft)
+        local sensor = globe("StormSensor", Vector3.new(5, 5, 5),
             CFrame.new(0, 23.9, 0), accent, Enum.Material.Glass)
-        lens.Shape = Enum.PartType.Ball
-        lens.Transparency = 0.18
-        make("LightningTip", "Part", Vector3.new(0.45, 4.2, 0.45),
-            CFrame.new(0, 28.3, 0), steel)
-        local dish = make("WeatherRadarShell", "Part",
+        sensor.Transparency = 0.18
+        fitted("LightningTip", Vector3.new(0.45, 4.2, 0.45),
+            CFrame.new(0, 28.3, 0), steel, Enum.Material.Metal, shaft)
+        cylinder("WeatherRadarShell",
             Vector3.new(0.65, 5.3, 5.3),
             CFrame.new(2.6, 24.8, -2.3)
                 * CFrame.Angles(0, math.rad(-28), math.rad(18)),
-            alloy, Enum.Material.Metal)
-        dish.Shape = Enum.PartType.Cylinder
-        make("RadarFeedHousing", "Part", Vector3.new(1.2, 1.2, 1.2),
-            CFrame.new(1.8, 25.1, -4.2), dark)
+            alloy, Enum.Material.Metal, ring)
+        fitted("RadarFeedHousing", Vector3.new(1.2, 1.2, 1.2),
+            CFrame.new(1.8, 25.1, -4.2), dark, Enum.Material.Metal, casting)
     end
 
     model.Parent = folder
