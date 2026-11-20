@@ -924,6 +924,23 @@ local function availableOrbitalRamp(arena,ramp,circuit)
         and phase~="Warning" and phase~="Gone" and (not shutter or shutter=="Idle")
 end
 
+local function orbitalStructureFootprint(native)
+    local nativeSize,nativeFrame=native.Size,native.CFrame
+    if native:IsA("MeshPart") then
+        local swapped=native:GetAttribute("OrbitalStructureAxisSwap")
+        if swapped==nil then swapped=native:GetAttribute("OrbitalAccessChassisAxisSwap") end
+        if native.MeshId=="" or native:GetAttribute("Original3DAssetId")~=SOURCE.AccessChassis.id
+            or type(swapped)~="boolean" then return nil end
+        if swapped then
+            nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
+            nativeFrame*=CFrame.Angles(0,-math.pi*.5,0)
+        end
+    elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
+        return nil
+    end
+    return nativeSize,nativeFrame
+end
+
 local function collectHelix(arena,ramp,circuit)
     if not availableOrbitalRamp(arena,ramp,circuit) then return nil end
     local index=ramp:GetAttribute("HelixLane")
@@ -942,11 +959,12 @@ local function collectHelix(arena,ramp,circuit)
     local lateralScale=size.X/fullWidth
     local function take(name,specSize,position)
         local part=circuit:FindFirstChild(name)
-        if not visualNative(part,circuit) or not part:IsA("Part")
-            or part.Shape~=Enum.PartType.Block or part:GetAttribute("HelixLane")~=index
+        if not visualNative(part,circuit) or part:GetAttribute("HelixLane")~=index
             or part:GetAttribute("OrbitRouteGroup")~=group then return false end
-        local relative=ramp.CFrame:ToObjectSpace(part.CFrame)
-        if (part.Size-specSize).Magnitude>.09 or (relative.Position-position).Magnitude>.09
+        local size,frame=orbitalStructureFootprint(part)
+        if not size then return false end
+        local relative=ramp.CFrame:ToObjectSpace(frame)
+        if (size-specSize).Magnitude>.09 or (relative.Position-position).Magnitude>.09
             or relative.LookVector:Dot(-Vector3.zAxis)<.998
             or relative.UpVector:Dot(Vector3.yAxis)<.998 then return false end
         originals[#originals+1]=part
@@ -995,18 +1013,8 @@ local function collectAccessChassis(arena,ramp,circuit)
     if not visualNative(native,circuit) or native:GetAttribute("OrbitRouteGroup")~=group then
         return nil
     end
-    local nativeSize,nativeFrame=native.Size,native.CFrame
-    if native:IsA("MeshPart") then
-        local swapped=native:GetAttribute("OrbitalAccessChassisAxisSwap")
-        if native.MeshId=="" or native:GetAttribute("Original3DAssetId")~=SOURCE.AccessChassis.id
-            or type(swapped)~="boolean" then return nil end
-        if swapped then
-            nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
-            nativeFrame*=CFrame.Angles(0,-math.pi*.5,0)
-        end
-    elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
-        return nil
-    end
+    local nativeSize,nativeFrame=orbitalStructureFootprint(native)
+    if not nativeSize then return nil end
     local expected=Vector3.new(size.X*(1-.38/fullWidth),.22,size.Z-.45)
     local relative=ramp.CFrame:ToObjectSpace(nativeFrame)
     if (nativeSize-expected).Magnitude>.08
@@ -1484,7 +1492,8 @@ local function mount(data,source)
             else
                 watch(native,{"Shape"})
             end
-            for _,tag in ipairs({"OrbitRouteGroup","HelixLane","Original3DAssetId","OrbitalAccessChassisAxisSwap"}) do
+            for _,tag in ipairs({"OrbitRouteGroup","HelixLane","Original3DAssetId",
+                "OrbitalStructureAxisSwap","OrbitalAccessChassisAxisSwap"}) do
                 entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
             end
         elseif isPortico(data.category) then

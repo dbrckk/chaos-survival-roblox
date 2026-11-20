@@ -34,6 +34,24 @@ local function physicalPart(parent, name, size, cf, color, material, solid)
     return p
 end
 
+local function structuralTrim(folder, name, size, frame, color, profile, alongX)
+    local part
+    if profile and profile:IsA("MeshPart") and profile.MeshId ~= "" then
+        part = RouteSignalGeometry.fit(profile, frame, size, nil, alongX)
+    end
+    if not part then
+        return physicalPart(folder, name, size, frame, color, Enum.Material.Metal, false)
+    end
+    part.Name = name
+    part.Color = color
+    part.Material = Enum.Material.Metal
+    part.DoubleSided = true
+    part:SetAttribute("Original3DAssetId", ACCESS_CHASSIS_ASSET_ID)
+    part:SetAttribute("OrbitalStructureAxisSwap", (profile.Size.X > profile.Size.Z) ~= alongX)
+    part.Parent = folder
+    return part
+end
+
 function OrbitalHelix.route(variant, center, index)
     if not variant or variant.Id ~= "Orbital"
         or type(index) ~= "number"
@@ -161,27 +179,13 @@ local function buildAccessRamp(folder, route, index, kind, theme, chassisProfile
     spine.Transparency = 0.5
     spine:SetAttribute("OrbitRouteGroup", group)
 
-    local name = kind .. "Chassis" .. index
-    local size = Vector3.new(route.Size.X - 0.38, 0.22, route.Size.Z - 0.45)
-    local frame = route.CFrame * CFrame.new(0, -0.58, 0)
-    local chassis
-    if chassisProfile and chassisProfile:IsA("MeshPart") and chassisProfile.MeshId ~= "" then
-        -- Force ramp-local Z as the span even when a route is unusually short.
-        chassis = RouteSignalGeometry.fit(chassisProfile, frame, size, nil, false)
-    end
-    if chassis then
-        chassis.Name = name
-        chassis.Color = theme.Structure
-        chassis.Material = Enum.Material.Metal
-        chassis.DoubleSided = true
-        chassis:SetAttribute("Original3DAssetId", ACCESS_CHASSIS_ASSET_ID)
-        chassis:SetAttribute("OrbitalAccessChassisAxisSwap", chassisProfile.Size.X > chassisProfile.Size.Z)
-    else
-        chassis = physicalPart(folder, name, size, frame, theme.Structure, Enum.Material.Metal, false)
-    end
+    -- The chassis spans ramp-local Z even on short access ramps.
+    local chassis = structuralTrim(folder, kind .. "Chassis" .. index,
+        Vector3.new(route.Size.X - 0.38, 0.22, route.Size.Z - 0.45),
+        route.CFrame * CFrame.new(0, -0.58, 0),
+        theme.Structure, chassisProfile, false)
     chassis.Transparency = 0.14
     chassis:SetAttribute("OrbitRouteGroup", group)
-    chassis.Parent = folder
 end
 
 
@@ -240,11 +244,11 @@ function OrbitalHelix.build(arena, variant, center, theme, chassisProfile)
                 rail:SetAttribute("HelixLane", index)
                 rail:SetAttribute("OrbitRouteGroup", group)
 
-                local frame = physicalPart(
+                local frame = structuralTrim(
                     folder, "HelixUnderframe" .. index .. "_" .. side,
                     Vector3.new(0.34, 0.26, route.Size.Z - 0.70),
                     route.CFrame * CFrame.new(side * (route.Size.X * 0.5 - 0.45), -0.65, 0),
-                    theme.Structure, Enum.Material.Metal, false
+                    theme.Structure, chassisProfile, false
                 )
                 frame.Transparency = 0.08
                 frame:SetAttribute("HelixLane", index)
@@ -252,11 +256,11 @@ function OrbitalHelix.build(arena, variant, center, theme, chassisProfile)
             end
 
             for braceIndex = -1, 1 do
-                local brace = physicalPart(
+                local brace = structuralTrim(
                     folder, "HelixSpineBrace" .. index .. "_" .. braceIndex,
                     Vector3.new(route.Size.X + 0.25, 0.23, 0.45),
                     route.CFrame * CFrame.new(0, -0.62, braceIndex * route.Size.Z * 0.28),
-                    theme.Detail, Enum.Material.Metal, false
+                    theme.Detail, chassisProfile, true
                 )
                 brace.Transparency = 0.22
                 brace:SetAttribute("HelixLane", index)
@@ -317,11 +321,15 @@ function OrbitalHelix.capture(circuit)
                     if piece:IsA("BasePart") and piece ~= ramp
                         and piece:GetAttribute("OrbitRouteGroup") == group
                     then
+                        local swapXZ = piece:GetAttribute("OrbitalStructureAxisSwap")
+                        if swapXZ == nil then
+                            swapXZ = piece:GetAttribute("OrbitalAccessChassisAxisSwap")
+                        end
                         table.insert(entry.decorations, {
                             part = piece,
                             originalCFrame = piece.CFrame,
                             originalSize = piece.Size,
-                            swapXZ = piece:GetAttribute("OrbitalAccessChassisAxisSwap") == true,
+                            swapXZ = swapXZ == true,
                             localCFrame = ramp.CFrame:ToObjectSpace(piece.CFrame),
                         })
                     end
