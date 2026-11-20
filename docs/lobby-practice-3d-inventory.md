@@ -44,7 +44,7 @@ Le relevé statique du constructeur couvre les pièces directement identifiables
 | Ensemble | Quantité observée dans le code | État |
 | --- | ---: | --- |
 | Lames du noyau et segments orbitaux | 3 + 12 | Le profil forgé approuvé remplace chaque pièce en Medium et High quand le maillage est prêt et la pression graphique normale. Chaque emplacement conserve un seul objet animé. |
-| Sphère du noyau | 1 | Sphère native et source lumineuse centrale. |
+| Sphère du noyau | 1 | Maillage sphérique facetté du réacteur Orbital approuvé, ajusté au volume de 3,6 studs en Medium et High. La sphère native prend le relais sous pression graphique ou pendant le chargement. Le même point lumineux suit les deux formes. |
 | Balises du parcours d’entraînement | 4 | Plaques moulées approuvées dans le gabarit des disques de 8,5 studs. Les disques prennent le relais tant que le maillage est indisponible ou sous pression graphique. Les étiquettes et la détection à 5,4 studs gardent les mêmes ancrages. |
 | Plateau et dalles physiques | 2 | Colliders natifs avec habillage sculpté conditionnel. |
 

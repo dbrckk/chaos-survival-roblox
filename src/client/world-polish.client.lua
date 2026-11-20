@@ -8,6 +8,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Config = require(ReplicatedStorage.Shared.Config)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
@@ -139,6 +140,8 @@ local function fitLobbyPiece(part, profile)
     if profile then
         replacement:ClearAllChildren()
         replacement.TextureID = ""
+    elseif part:GetAttribute("CorePartIndex") == 0 then
+        replacement.Shape = Enum.PartType.Ball
     end
     local rotate = profile and (profile.Size.X > profile.Size.Z) ~= (size.X > size.Z)
     replacement.PivotOffset = rotate and CFrame.Angles(0, -math.pi * 0.5, 0) or CFrame.new()
@@ -148,6 +151,7 @@ local function fitLobbyPiece(part, profile)
     replacement.Color = part.Color
     replacement.Material = part.Material
     replacement.Transparency = part.Transparency
+    replacement.LocalTransparencyModifier = part.LocalTransparencyModifier
     replacement.Anchored = true
     replacement.CanCollide = false
     replacement.CanTouch = false
@@ -157,6 +161,10 @@ local function fitLobbyPiece(part, profile)
         replacement:SetAttribute(name, value)
     end
     replacement:SetAttribute("LobbyProfileSize", size)
+    local light = part:FindFirstChild("LobbyChaosCoreLight")
+    if light and light:IsA("PointLight") then
+        light.Parent = replacement
+    end
     replacement.Parent = localFolder
     part:Destroy()
     return replacement
@@ -165,14 +173,18 @@ end
 refreshLobbySculpture = function()
     if #lobbySegments == 0 then return end
     local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
-    local source = quality().Name ~= "Low" and pressure < 1 and ForgedBridge.sweptProfile() or nil
+    local eligible = quality().Name ~= "Low" and pressure < 1
+    local source = eligible and ForgedBridge.sweptProfile() or nil
+    local core = eligible and OrbitalReactor.coreProfile() or nil
     if source and not geometryReady(source) then source = nil end
+    if core and not geometryReady(core) then core = nil end
     for _, collection in ipairs({lobbyCoreParts, lobbySegments}) do
         for i, part in ipairs(collection) do
-            if part:GetAttribute("CorePartIndex") ~= 0 and part.Parent == localFolder then
+            if part.Parent == localFolder then
+                local profile = if part:GetAttribute("CorePartIndex") == 0 then core else source
                 local meshId = part:IsA("MeshPart") and part.MeshId or nil
-                if meshId ~= (source and source.MeshId) then
-                    collection[i] = fitLobbyPiece(part, source)
+                if meshId ~= (profile and profile.MeshId) then
+                    collection[i] = fitLobbyPiece(part, profile)
                 end
             end
         end
@@ -585,8 +597,11 @@ end)
 
 player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleLobbySculpture)
 local function lobbyProfileChanged(item)
+    local reactorHolder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
     if item.Name == "ApprovedTowersSignatureBridgeTemplates"
-        or item.Name == "ForgedBridge" or item.Name == "SweptCrossbeam" then
+        or item.Name == "ForgedBridge" or item.Name == "SweptCrossbeam"
+        or item.Name == "ApprovedOrbitalReactorLandmarkTemplates"
+        or (reactorHolder and item:IsDescendantOf(reactorHolder)) then
         scheduleLobbySculpture()
     end
 end

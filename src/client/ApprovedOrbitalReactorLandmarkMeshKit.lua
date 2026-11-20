@@ -106,6 +106,20 @@ local function bothApproved()
     return node,strut,holder
 end
 
+function Kit.coreProfile()
+    local node = approved("Node", NODE_ID, NODE_BOUNDS)
+    if not node then return nil end
+    local core
+    local expected = Vector3.new(2.96, 2.9503, 2.96)
+    for _, part in ipairs(node:GetChildren()) do
+        if part:IsA("MeshPart") and (part.Size - expected).Magnitude < 0.075 then
+            if core or not part.Archivable or part.MeshId == "" then return nil end
+            core = part
+        end
+    end
+    return core
+end
+
 local function authenticPart(native,name,size,where,kind,alpha,animated)
     if not native or not native:IsA("Part") or native.Name~=name
         or not native.Anchored or native.CanCollide
