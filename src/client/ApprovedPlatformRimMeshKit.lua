@@ -95,10 +95,13 @@ local function nativeParts(decor,deck,original,scale)
                 or (i==3 and math.pi*.5 or -math.pi*.5)
             local span = (alongX and deck.Size.X or deck.Size.Z) + .12*scale
             local assetId = edge:GetAttribute("Original3DAssetId")
+            local reserve = edge:GetAttribute("OriginalHarborLandingTrimReserve3D") == true
+            if reserve and not (harborLanding
+                and PlatformIdentityLodRules.isHarborLandingTrimReserve(edge)) then return nil end
             local quarterTurn = edge:IsA("MeshPart") and edge.MeshId ~= ""
                 and ((assetId == 126298311664881
                         and edge:GetAttribute("OriginalElevatedForgedBevel3D") == true)
-                    or (harborLanding and assetId == 94830155055482))
+                    or (harborLanding and assetId == 94830155055482) or reserve)
             local frame = deck.CFrame*CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)
             if not PlatformIdentityLodRules.matchesDeckTrimPose(
                 edge,frame,Vector3.new(span,.30,depth),.13,.14,quarterTurn) then

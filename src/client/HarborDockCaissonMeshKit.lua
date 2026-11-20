@@ -373,6 +373,7 @@ local function mount(deck, arena, base, source, expected)
         watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
         if native:IsA("MeshPart") then
             watch(native:GetAttributeChangedSignal("Original3DAssetId"))
+            watch(native:GetAttributeChangedSignal("OriginalHarborLandingTrimReserve3D"))
             watch(native:GetPropertyChangedSignal("MeshId"))
         end
     end

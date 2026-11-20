@@ -70,10 +70,19 @@ function Rules.matchesDeckTrimPose(part, frame, size, sizeTolerance, positionTol
         and part.CFrame.LookVector:Dot(frame.LookVector) >= .999
 end
 
+function Rules.isHarborLandingTrimReserve(part)
+    if not part:IsA("MeshPart") or part.MeshId == "" then return false end
+    local assetId = part:GetAttribute("Original3DAssetId")
+    return assetId == HorizonMonumentGeometry.harborCaissonAssetId()
+        or assetId == HorizonMonumentGeometry.assetId("beam")
+end
+
 function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positionTolerance)
     if not part then return false end
     local quarterTurn = false
     if Rules.isAuthoredUnderFrameMesh(part) then
+        if part:GetAttribute("OriginalHarborLandingTrimReserve3D") == true
+            and not Rules.isHarborLandingTrimReserve(part) then return false end
         if part:GetAttribute("OriginalElevatedLatticeFrame3D") == true then
             if part.MeshId == "" or part:GetAttribute("Original3DAssetId") ~= 106401955318567 then
                 return false

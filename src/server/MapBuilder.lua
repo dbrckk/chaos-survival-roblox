@@ -2114,8 +2114,13 @@ local function fitHarborJunctions(decor, platforms, profile)
     end
 end
 
+local function markHarborReserve(mesh, profile)
+    mesh:SetAttribute("OriginalHarborLandingTrimReserve3D", true)
+    mesh:SetAttribute("Original3DAssetId", profile.assetId)
+end
+
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborRouteBeam, bevelFallback)
+    frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborRouteBeam, bevelFallback, harborTrimReserve)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2253,6 +2258,13 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
                     bevel:SetAttribute("Original3DAssetId", 94830155055482)
                 end
             end
+            if not bevel and harborTrimReserve then
+                bevel = RouteSignalGeometry.fit(harborTrimReserve.part, pose, size, nil, true)
+                if bevel then
+                    bevel:SetAttribute("OriginalPlatformBevel3D", true)
+                    markHarborReserve(bevel, harborTrimReserve)
+                end
+            end
         end
         if not bevel then
             local wedge = Instance.new("WedgePart")
@@ -2311,9 +2323,12 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         -- route chassis and cradles can still claim this exact owner.
         local frameProfile = frameFallback or (elevatedTrim and elevatedTrim.frameFallback)
             or (harborAlongX ~= nil and panelProfile or nil)
+        local reserve = not frameProfile and harborTrimReserve
+        if reserve then frameProfile = reserve.part end
         local frameAlongX = frameProfile and frameProfile.Size.X > frameProfile.Size.Z
         underFrame = fitDecorMesh(frameProfile, frameName, framePose, frameSize,
             frameColor, VisualTheme.Materials.Structure, frameAlongX)
+        if reserve and underFrame:IsA("MeshPart") then markHarborReserve(underFrame, reserve) end
     end
     underFrame.Name = frameName
     underFrame.Color = frameColor
@@ -3359,7 +3374,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         exteriorProfiles.shaft = routeShaftProfile
     end
     local heroProfiles = exteriorProfiles
-    local harborPileCasting
+    local harborPileCasting, harborTrimReserve
     if variant.Id == "Harbor" then
         heroProfiles = table.clone(exteriorProfiles)
         local caissonId = HorizonMonumentGeometry.harborCaissonAssetId()
@@ -3368,6 +3383,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             caissonId, Vector3.new(12.82, 2.69, 12.82))
         heroProfiles.caisson = {part = caisson, assetId = caissonId}
         harborPileCasting = if caisson then heroProfiles.caisson else harborCasting
+        harborTrimReserve = if caisson then heroProfiles.caisson else detailProfiles.beam
     end
     -- The outboard hero keeps its lightweight silhouette and per-piece fallbacks.
     HeroArchitecture.build(decor, base, variant.Id, theme, heroProfiles)
@@ -3791,7 +3807,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             coreProfile,
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
-            harborRouteBeam, trimCasting)
+            harborRouteBeam, trimCasting, harborLanding and harborTrimReserve or nil)
         if elevatedRoute or reactorLanding or harborFreightTrim then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId,
                 harborFreightTrim and harborPileCasting or nil)
