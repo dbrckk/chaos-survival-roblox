@@ -91,7 +91,7 @@ Les cinq monuments à l’est de l’arène peuvent utiliser des maillages appro
 
 Le chantier naval de Storm Harbor peut conserver ses **19 pièces sculptées**, dont les **8 de la silhouette Low**, avec le seul moulage fermé de Harbor, de Classic ou du périmètre. Le socle et la coque privilégient le caisson d’amarrage approuvé lorsqu’il est chargé. Les pylônes et les câbles peuvent reprendre un fût approuvé d’une autre arène. Le corps et le socle complets de proximité reconnaissent ces pièces sur leurs ancrages d’origine.
 
-La station de signalisation au large peut désormais reprendre des profils approuvés sur ses **8, 15 ou 20 pièces** selon la qualité Low, Medium ou High. Le radar, le câble et le contrepoids gardent les mêmes repères d’animation. La lentille reste visible avec le modèle complet de proximité. Les moulages de repli couvrent les pièces droites. La lentille arrondie et les deux jambes de force gardent leur forme simple quand leur profil manque.
+La station de signalisation au large peut désormais reprendre des profils approuvés sur ses **8, 15 ou 20 pièces** selon la qualité Low, Medium ou High. Le radar, le câble et le contrepoids gardent les mêmes repères d’animation. La lentille reste visible avec le modèle complet de proximité. Si le noyau d’Orbital est indisponible, la lentille réutilise la tête forgée à douze facettes. Les deux jambes de force peuvent reprendre le moulage fermé ou le profil forgé de Tower Run, dressés dans le plan du portique. Ces pièces occupent les emplacements existants. En l’absence de maillages compatibles, la sphère et les coins simples reprennent le relais.
 
 ### Crêtes et silhouettes industrielles de Storm Harbor
 
@@ -215,7 +215,7 @@ Les définitions de parcours et les générateurs de la PR #920 donnent les volu
 | Paliers de fret, quais cardinaux et traversées hautes | 58 paliers. 232 biseaux, 58 panneaux, 58 sous-cadres et 140 poteaux | Les panneaux peuvent reprendre le caisson fermé de Harbor. Les biseaux et sous-cadres peuvent aussi reprendre le profil forgé. Les **140 poteaux** (72 fret, 40 quais, 28 traversées) disposent de moulages de réserve. |
 | Signaux de ces paliers | 116 | Les 58 bandes et les 58 noyaux peuvent reprendre le moulage fermé du revêtement, du périmètre ou du caisson d’amarrage dès la construction. Les profils dédiés restent prioritaires. |
 | Accès au sol et sorties périphériques | 28 pièces au sol et 16 pièces de sortie | Un moulage fermé peut couvrir les deux groupes. Les couronnes conservent leur forme inclinée si les profils de secours manquent. |
-| Station de signalisation au large | 8 pièces en Low | Sept pièces peuvent reprendre le moulage fermé. La lentille garde sa sphère lorsque son maillage manque. |
+| Station de signalisation au large | 8 pièces en Low | Sept pièces peuvent reprendre le moulage fermé. La lentille privilégie le noyau d’Orbital, puis la tête forgée à douze facettes, avec la sphère comme dernier secours. |
 | Cargo principal et littoral | 14 pièces du cargo en Low. 16 pièces sur les barges et les défenses en Low | Le moulage fermé en couvre 12 sur le cargo et jusqu’à 16 sur le littoral. La proue garde ses deux pentes si le profil dédié manque. |
 
 **Biseaux et sous-cadres.** Sur les 58 paliers, les **232 biseaux et 58 sous-cadres** peuvent également utiliser le caisson d’amarrage ou le profil forgé lorsque leurs moulages habituels manquent. Les profils déjà présents sur les bords des sauts gardent la priorité. Les pièces de réserve gardent le gabarit d’origine et restent admissibles au masquage par le caisson complet.

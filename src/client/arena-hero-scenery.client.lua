@@ -9,6 +9,7 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local HarborCoastalGeometry = require(script.Parent.HarborCoastalGeometry)
 local PremiumLargeStructureMeshKit = require(script.Parent.PremiumLargeStructureMeshKit)
 local OrbitalNode = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 
 local player = Players.LocalPlayer
 
@@ -1143,6 +1144,14 @@ local function buildHarbor(base, theme, tier, profiles)
         local pose = frame * CFrame.new(side * 7.3, 17.0, 0)
             * CFrame.Angles(0, 0, math.rad(side * 22))
         local mesh = HarborCoastalGeometry.fit(profiles.knee, size, pose)
+        if not mesh then
+            -- Stand the horizontal casting on edge so its thickness stays
+            -- across the brace and its long face reaches the crosshead.
+            local uprightPose = pose * CFrame.Angles(math.pi * .5, 0, 0)
+            local castingSize = Vector3.new(size.X, size.Z, size.Y)
+            mesh = HarborCoastalGeometry.fit(profiles.plate, castingSize, uprightPose, false)
+                or HarborCoastalGeometry.fit(profiles.beam, castingSize, uprightPose, false)
+        end
         if mesh then
             makePart(name, size, pose, alloy, Enum.Material.DiamondPlate, 0.12, false, mesh)
         else
@@ -1179,7 +1188,13 @@ local function harborSignalProfiles()
     profiles.shaft = if shaft and shaft:IsA("MeshPart") and shaft.Archivable
         and shaft.MeshId ~= "" and math.abs(shaft.Size.Y - 13.56) < .13
         then {source=shaft,id=column:GetAttribute("Original3DAssetId")} else profiles.plate
-    profiles.lens = {source=OrbitalNode.coreProfile(),id=OrbitalNode.NodeAssetId}
+    local core = OrbitalNode.coreProfile()
+    if core then
+        profiles.lens = {source = core, id = OrbitalNode.NodeAssetId}
+    else
+        local head = FloorHardware.platformCornerProfile()
+        if head then profiles.lens = {source = head.part, id = head.assetId} end
+    end
     profiles.knee = profiles.bow.rotation and profiles.bow or nil
     return profiles
 end
@@ -1259,6 +1274,7 @@ HarborCoastalGeometry.watch(function()
     if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRebuild() end
 end, {
     ApprovedLargeStructureTemplates = "Harbor",
+    ApprovedFloorReliefTemplates = "AnchorBolt",
     ApprovedOrbitalReactorLandmarkTemplates = "Node",
 })
 
