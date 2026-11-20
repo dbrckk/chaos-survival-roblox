@@ -2,8 +2,10 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local FrozenArmorKit = require(script.Parent.FrozenArmorKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 
@@ -25,13 +27,39 @@ tint.Parent = Lighting
 
 local activeHighlight = nil
 local humanoidConnection = nil
+local torsoConnection = nil
 local characterToken = 0
 local tintTween = nil
 local activeArmor = {}
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
 
 local function clearArmor()
     FrozenArmorKit.clear(activeArmor)
     activeArmor = {}
+end
+
+local function buildArmor(character)
+    local tier = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local source = not reduced and tier.Name ~= "Low"
+        and CelebrationMeshes.readyProfile("fragment", meshPressure)
+    local cloneShard = if source then function()
+        return CelebrationMeshes.cloneProfile(source)
+    end else nil
+    activeArmor = FrozenArmorKit.build(character, tier.Name, reduced, cloneShard)
+end
+
+local function disconnectCharacter()
+    if humanoidConnection then
+        humanoidConnection:Disconnect()
+        humanoidConnection = nil
+    end
+    if torsoConnection then
+        torsoConnection:Disconnect()
+        torsoConnection = nil
+    end
 end
 
 local function clearHighlight()
@@ -58,10 +86,7 @@ local function applyFrozenVisual(character, frozen)
         activeHighlight = highlight
         -- Never allocate crystal pieces outside a frozen local avatar.
         -- R6 and R15 use the same torso-relative non-colliding recipe.
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-        activeArmor = FrozenArmorKit.build(
-            character, tier.Name, player:GetAttribute("ReduceMotion") == true
-        )
+        buildArmor(character)
     end
 
     if tintTween then
@@ -91,10 +116,7 @@ local function bindCharacter(character)
     characterToken += 1
     local token = characterToken
 
-    if humanoidConnection then
-        humanoidConnection:Disconnect()
-        humanoidConnection = nil
-    end
+    disconnectCharacter()
 
     clearHighlight()
     applyFrozenVisual(nil, false)
@@ -113,6 +135,14 @@ local function bindCharacter(character)
     end
 
     humanoidConnection = humanoid:GetAttributeChangedSignal("ChaosFrozen"):Connect(refresh)
+    torsoConnection = character.ChildAdded:Connect(function(child)
+        if token == characterToken and child:IsA("BasePart")
+            and (child.Name == "UpperTorso" or child.Name == "Torso")
+            and humanoid:GetAttribute("ChaosFrozen") == true then
+            clearArmor()
+            buildArmor(character)
+        end
+    end)
     refresh()
 end
 
@@ -123,24 +153,23 @@ local function refreshArmorQuality()
         -- Retain the current tint/highlight and rebuild only the tiered
         -- crystal geometry, rather than restarting the freeze feedback tween.
         clearArmor()
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-        activeArmor = FrozenArmorKit.build(
-            character, tier.Name, player:GetAttribute("ReduceMotion") == true
-        )
+        buildArmor(character)
     end
 end
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshArmorQuality)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshArmorQuality)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    local previous = meshPressure
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if (previous < 1) ~= (meshPressure < 1) then refreshArmorQuality() end
+end)
 
 player.CharacterAdded:Connect(bindCharacter)
 player.CharacterRemoving:Connect(function(character)
     if character == player.Character then
         characterToken += 1
-        if humanoidConnection then
-            humanoidConnection:Disconnect()
-            humanoidConnection = nil
-        end
+        disconnectCharacter()
         clearHighlight()
         applyFrozenVisual(nil, false)
     end

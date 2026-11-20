@@ -370,7 +370,7 @@ local function collectCharacterPolish(model, metrics, record)
                 -- a root Workspace VFX folder. Count every local crystal so
                 -- auto-quality telemetry cannot silently underreport parts.
                 if (part.Name == "UpperTorso" or part.Name == "Torso")
-                    and effect:IsA("WedgePart")
+                    and (effect:IsA("WedgePart") or effect:IsA("MeshPart"))
                     and string.match(effect.Name, "^LocalFreezeArmorFacet%d+$") then
                     metrics.Parts += 1
                     if record then record("CharacterPolishLocal", "Parts") end
