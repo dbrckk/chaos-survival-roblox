@@ -37,12 +37,12 @@ end
 -- Flat decals and panel insets are decoration, not collision geometry.
 -- Scale their footprint with the base so they never show a ghost floor
 -- beyond the shrinking walkable surface.
-function D.scaledFloorTransform(originalSize, localPosition, scale)
+function D.scaledFloorTransform(originalSize, localPosition, scale, heightOnX)
     local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
     local size = typeof(originalSize) == "Vector3" and originalSize or Vector3.one
     return Vector3.new(
-        math.max(0.05, size.X * safeScale),
-        size.Y,
+        heightOnX and size.X or math.max(0.05, size.X * safeScale),
+        heightOnX and math.max(0.05, size.Y * safeScale) or size.Y,
         math.max(0.05, size.Z * safeScale)
     ), D.scaledLocalPosition(localPosition, safeScale)
 end
@@ -97,6 +97,9 @@ function D.start(ctx)
                     or name:match("^CrossroadLaneFill%d+$")
                     or name == "CrossroadHubMark"
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
+                    or name:match("^OrbitalAccessChevron%d+_%-?%d+$")
+                    or name:match("^OrbitalSpoke%d+$")
+                    or name == "OrbitalCoreMark"
                     or name:match("^FloorMaintenancePanel%d+$")
                     or name:match("^EdgeBeacon%d+$")
                     or name:match("^EdgeBeaconGlow%d+$")
@@ -113,6 +116,9 @@ function D.start(ctx)
                     floorDetails[#floorDetails+1] = {
                         part = item,
                         size = item.Size,
+                        -- The horizontal fallback cylinder has its thickness on local X.
+                        heightOnX = name == "OrbitalCoreMark" and item:IsA("Part")
+                            and item.Shape == Enum.PartType.Cylinder,
                         cframe = item.CFrame,
                         localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
                         localPosition = originalCFrame:PointToObjectSpace(item.Position),
@@ -354,7 +360,7 @@ function D.start(ctx)
                 local floorArt = state.part
                 if floorArt.Parent then
                     local size, position = D.scaledFloorTransform(
-                        state.size, state.localPosition, scale
+                        state.size, state.localPosition, scale, state.heightOnX
                     )
                     local rotationOnly = state.localCFrame - state.localCFrame.Position
                     floorArt.Size = size

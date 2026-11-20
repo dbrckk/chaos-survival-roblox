@@ -1523,7 +1523,7 @@ local function towersFloorProfiles()
         meshRegionByBounds(machinery, Vector3.new(5.30, 24, 5.28))
 end
 
-local function addFloorChevron(decor, name, facing, profile, style, color, alpha)
+local function addFloorChevron(decor, name, facing, profile, style, color, alpha, wayfinding)
     for side = -1, 1, 2 do
         -- Separate the wing surfaces where they meet at the tip.
         local pose = facing * CFrame.new(side * style.spread, side * 0.003, 0)
@@ -1531,6 +1531,7 @@ local function addFloorChevron(decor, name, facing, profile, style, color, alpha
         local mark = fitDecorMesh(profile, name .. "_" .. tostring(side), pose,
             style.size, color, VisualTheme.Materials.Glow)
         mark.Transparency = alpha
+        if wayfinding then mark:SetAttribute("ChaosWayfinding", true) end
         mark.Parent = decor
     end
 end
@@ -1756,7 +1757,7 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
                 math.sin(angle) * spokeCenter
             )
             local spoke = fitDecorMesh(
-                sweptProfile,
+                sweptProfile or floorProfile,
                 "OrbitalSpoke" .. tostring(i + 1),
                 CFrame.new(position) * CFrame.Angles(0, -angle, 0),
                 spokeSize,
@@ -1765,6 +1766,24 @@ local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile
             )
             spoke.Transparency = 0.52
             spoke.Parent = decor
+        end
+
+        local accessStyle = {size = Vector3.new(0.16, 0.055, 1.35),
+            spread = 0.38, angle = math.rad(35)}
+        local accessY = ArenaPresentation.deckArtOffset(base, accessStyle.size.Y) + 0.02
+        for index = 1, OrbitalHelix.Count do
+            local route = OrbitalHelix.accessRoute(variant, center, index, "Entry")
+            if route then
+                local start = Vector3.new(route.Start.X, center.Y + accessY, route.Start.Z)
+                local forward = Vector3.new(route.Finish.X - route.Start.X, 0,
+                    route.Finish.Z - route.Start.Z).Unit
+                -- Leave enough gap for the foot of the inclined collider
+                -- to clear the two wings even at minimum arena size.
+                local position = start - forward * 2.5
+                local facing = CFrame.lookAt(position, position + forward, Vector3.yAxis)
+                addFloorChevron(decor, "OrbitalAccessChevron" .. index, facing, floorProfile or sweptProfile,
+                    accessStyle, index % 2 == 1 and theme.Accent or theme.Secondary, 0.47, true)
+            end
         end
 
         local markSize = Vector3.new(hubDiameter, 0.10, hubDiameter)
