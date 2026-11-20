@@ -130,6 +130,12 @@ function HorizonMonumentGeometry.assetId(profile, variant)
     return if profile == "shaft" then shafts[variant] else assets[profile]
 end
 
+function HorizonMonumentGeometry.matchesHarborStructuralFallback(assetId, profile)
+    if profile == "shaft" and HorizonMonumentGeometry.isShaftAsset(assetId) then return true end
+    return (profile == "bevel" or profile == "shaft" or profile == "beam")
+        and HorizonMonumentGeometry.isFloorCasting(assetId, "Harbor")
+end
+
 local promenadeRoofProfiles = {
     SurveyDish = "rotor", SurveyMast = "shaft", SurveyTip = "lens",
     HoistMachine = "cast", HoistRail = "shaft", HoistBeacon = "cast",

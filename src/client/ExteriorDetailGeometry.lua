@@ -33,7 +33,14 @@ end
 function ExteriorDetailGeometry.monumentFootprint(part, owner, fallbackClass, fallbackShape)
     if not part then return nil end
     local profile = HorizonMonumentGeometry.profile(owner.Name, part.Name)
-    local assetId = HorizonMonumentGeometry.assetId(profile, owner:GetAttribute("SignatureVariant"))
+    local variant = owner:GetAttribute("SignatureVariant")
+    local assetId = HorizonMonumentGeometry.assetId(profile, variant)
+    if variant == "Harbor" and fallbackClass == "Part" and not fallbackShape then
+        local nativeId = part:GetAttribute("Original3DAssetId")
+        if HorizonMonumentGeometry.matchesHarborStructuralFallback(nativeId, profile) then
+            assetId = nativeId
+        end
+    end
     return ExteriorDetailGeometry.footprint(part, owner, assetId, fallbackClass, fallbackShape)
 end
 

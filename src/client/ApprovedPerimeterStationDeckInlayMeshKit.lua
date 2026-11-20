@@ -2,6 +2,11 @@
 -- industrial ground asset, NOT a new Roblox primitive or gameplay collider.
 -- The six neon/glass safety/navigation parts remain server-authoritative.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+
 local Kit = {}
 
 -- Perimeter station geometry stays fixed outside the playable floor.
@@ -77,15 +82,17 @@ local function realArena(arena)
     return base,decor
 end
 
-local function stationDetailSize(item, station, assetId)
+local function stationDetailSize(item, station, assetId, harbor)
     if not item or not item:IsA("BasePart") or item.Parent ~= station
         or not item.Anchored or item.CanCollide or item.CanTouch or item.CanQuery then
         return nil
     end
     if item:IsA("Part") then return item.Size end
+    local nativeId = item:GetAttribute("Original3DAssetId")
     if not item:IsA("MeshPart") or item.MeshId == ""
         or item:GetAttribute("OriginalPerimeterStationDetail3D") ~= true
-        or item:GetAttribute("Original3DAssetId") ~= assetId then return nil end
+        or (nativeId ~= assetId and not (harbor
+            and HorizonMonumentGeometry.isFloorCasting(nativeId, "Harbor"))) then return nil end
     local size = item.Size
     if item:GetAttribute("StationDetailAxisSwap") == true then
         size = Vector3.new(size.Z, size.Y, size.X)
@@ -100,8 +107,9 @@ local function stationNative(decor,index)
         or station:GetAttribute("StationIndex") ~= index then return nil end
     local base = station:FindFirstChild("InlaidStationBase")
     local marker = station:FindFirstChild("WayfindingInset")
-    local baseSize = stationDetailSize(base, station, 88962643359267)
-    local markerSize = stationDetailSize(marker, station, 126298311664881)
+    local harbor = decor.Parent and decor.Parent:GetAttribute("VariantId") == "Harbor"
+    local baseSize = stationDetailSize(base, station, 88962643359267, harbor)
+    local markerSize = stationDetailSize(marker, station, 126298311664881, harbor)
     if not baseSize or (baseSize - Vector3.new(12,.07,11)).Magnitude > .08
         or not markerSize or (markerSize - Vector3.new(3.1,.16,1.6)).Magnitude > .08
         or marker.Material ~= Enum.Material.Neon then

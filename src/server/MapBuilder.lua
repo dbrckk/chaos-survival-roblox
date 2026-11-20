@@ -194,7 +194,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
         end
         piece("CrossBrace", "Part", Vector3.new(9.1, 0.65, 1.25),
             CFrame.new(0, 9.0, -0.2), Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Detail, 0.22), 0.04, profiles.wing)
+            theme.Structure:Lerp(theme.Detail, 0.22), 0.04, profiles.brace)
         piece("CoreHousing", "Part", Vector3.new(3.2, 3.7, 2.8),
             CFrame.new(0, 4.9, 0.1), Enum.Material.Metal,
             theme.Detail:Lerp(theme.Structure, 0.35), 0.06)
@@ -249,7 +249,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
         if generator:IsA("Part") then generator.Shape = Enum.PartType.Cylinder end
         piece("GeneratorShield", "Part", Vector3.new(4.0, 0.55, 1.4),
             CFrame.new(0, 7.8, -0.4), Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Accent, 0.24), 0.07, profiles.wing)
+            theme.Structure:Lerp(theme.Accent, 0.24), 0.07, profiles.brace)
         -- Raised cast shoulders frame the generator without replacing the
         -- native rotor slot owned by the client LOD assembly. Both trims
         -- are noninteractive and use the already approved station mesh.
@@ -316,7 +316,7 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
                 accent, 0.12, profiles.wing)
             piece("RelayCrownFin", "Part", Vector3.new(0.5, 1.4, 1.4),
                 CFrame.new(0, 15.75, 0), Enum.Material.Metal,
-                secondary, 0.10, profiles.wing)
+                secondary, 0.10, profiles.brace)
         end
     end
 end
@@ -351,6 +351,13 @@ local function horizonPieceBuilder(model, origin, hull, variant, templates)
         local assetId = HorizonMonumentGeometry.assetId(profile, variant)
         local source = template and template.MeshId ~= "" and assetId
             and {part = template, assetId = assetId} or nil
+        if not source and variant == "Harbor" and kind == "Part" and not shape then
+            if profile == "shaft" and templates.harborShaft and templates.harborShaft.part then
+                source = templates.harborShaft
+            elseif profile == "bevel" or profile == "shaft" or profile == "beam" then
+                source = templates.harborCasting
+            end
+        end
         -- Keep casting slopes in Z and the fitted radar drums on their short X axis.
         local item = exteriorPart(name, origin * offset, size, material or Enum.Material.Metal,
             color or hull, source, true, kind)
@@ -3284,15 +3291,23 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         shaft = {part = beaconShaft, assetId = shaftAssetId},
         signal = {part = rimBevel, assetId = PremiumFloorReliefAssets.approvedId("Harbor")},
     }
+    local harborCasting = variant.Id == "Harbor" and {
+        part = floorProfile or bevelCasting,
+        assetId = PremiumFloorReliefAssets.approvedId(if floorProfile then "Harbor" else "Classic"),
+    } or nil
+    local routeShaftProfile = {part = routeShaft, assetId = routeShaftAssetId}
+    local stationPlate = if detailProfiles.cast.part then detailProfiles.cast else harborCasting
+    local stationSignal = if detailProfiles.beam.part then detailProfiles.beam else harborCasting
     addPerimeterStations(decor, config, variant, theme, {
-        plate = detailProfiles.cast,
-        signal = detailProfiles.beam,
+        plate = stationPlate,
+        signal = stationSignal,
         lens = detailProfiles.lens,
-        rail = {part = rimBevel, assetId = 94830155055482},
-        housing = detailProfiles.cast,
-        shaft = detailProfiles.shaft,
+        rail = if rimBevel then detailProfiles.signal else harborCasting,
+        housing = stationPlate,
+        shaft = if harborCasting then (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft,
         turbine = detailProfiles.rotor,
         wing = detailProfiles.beam,
+        brace = stationSignal,
     })
     local horizonTemplates = {
         bevel = bevelCasting,
@@ -3301,6 +3316,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         lens = orbitalLens,
         roller = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil,
         shaft = beaconShaft,
+        harborShaft = routeShaftProfile,
+        harborCasting = harborCasting,
         rotor = if variant.Id == "Orbital" then perimeterRotor else nil,
         depthHull = approvedHorizonRegion(
             "ApprovedSkylineDepthSculptTemplates", "Roof", "OriginalSkylineDepthSculpt3D",
@@ -3318,10 +3335,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- Exterior harbor cranes distinguish the new cargo port without
         -- extra colliders, sound loops or cameras tracking scenic models.
         exteriorProfiles = table.clone(detailProfiles)
-        if floorProfile then
-            exteriorProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId("Harbor")}
-        end
-        exteriorProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
+        exteriorProfiles.bevel = harborCasting
+        exteriorProfiles.shaft = routeShaftProfile
         HarborScenery.build(decor, base, theme, exteriorProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
@@ -3343,7 +3358,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
     StructureRetrofit.buildArena(decor, base, variant.Id, theme, exteriorProfiles)
     local monumentProfiles = table.clone(detailProfiles)
-    monumentProfiles.shaft = {part = routeShaft, assetId = routeShaftAssetId}
+    monumentProfiles.shaft = routeShaftProfile
     if floorProfile then
         monumentProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId(variant.Id)}
     end

@@ -1601,8 +1601,9 @@ assert 'ApprovedPerimeterStationDeckInlayMeshKit.sync(arena, cameraPoint,' in LO
 assert 'LocalApprovedStationDeckInlay3DCount' in LOD
 assert 'LocalPerimeterPrimitiveBasesReplaced' in LOD
 assert 'InlaidStationBase' in MAP and 'WayfindingInset' in INLAY
-assert 'local baseSize = stationDetailSize(base, station, 88962643359267)' in INLAY
-assert 'local markerSize = stationDetailSize(marker, station, 126298311664881)' in INLAY
+assert 'local baseSize = stationDetailSize(base, station, 88962643359267, harbor)' in INLAY
+assert 'local markerSize = stationDetailSize(marker, station, 126298311664881, harbor)' in INLAY
+assert 'HorizonMonumentGeometry.isFloorCasting(nativeId, "Harbor")' in INLAY
 assert 'item:SetAttribute("OriginalPerimeterStationDetail3D", true)' in MAP
 assert 'stationFrame *= CFrame.Angles(0, -math.pi * .5, 0)' in INLAY
 for label in ('LeftLightNotch','RightLightNotch','CoreLens',
