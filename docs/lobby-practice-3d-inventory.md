@@ -79,4 +79,6 @@ Les enceintes et le pupitre ajoutent neuf emplacements sculptés en Low et dix-h
 
 Les 3, 5 ou 8 barres de l’égaliseur utilisent le profil forgé lorsque le maillage est prêt. La base des barres reste à la même hauteur pendant les variations et la réduction des animations conserve la hauteur fixe d’origine. Le passage au maillage ou au secours conserve la hauteur courante et le pivot de chaque barre.
 
+Les danseurs holographiques peuvent utiliser des profils approuvés sur leurs huit pièces en Medium et leurs vingt pièces en High. Le torse et les renforts reprennent le moulage du périmètre, la tête les facettes d’Orbital, et les membres et visières le profil forgé. La chorégraphie et les détails utilisent les mêmes pivots avec les maillages et leurs formes de secours.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.

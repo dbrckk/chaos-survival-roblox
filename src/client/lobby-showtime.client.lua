@@ -561,6 +561,14 @@ local function makeHoloDancer(index, centerFrame, tierName)
 end
 
 local refreshStageProfiles
+local dancerPartProfiles = {
+    {"body", "casting"},
+    {"head", "crystal"},
+    {"left", "forged"},
+    {"right", "forged"},
+    {"footL", "forged"},
+    {"footR", "forged"},
+}
 local stageProfilePending = false
 local function scheduleStageProfiles()
     if stageProfilePending then return end
@@ -591,6 +599,17 @@ refreshStageProfiles = function()
     end
     for _, entry in ipairs(fixedPieces) do
         entry.part = ShowtimeProps.fit(entry.part, profiles[entry.meshProfile])
+    end
+    for _, dancer in ipairs(dancers) do
+        for i, binding in ipairs(dancerPartProfiles) do
+            local key, role = binding[1], binding[2]
+            local part = ShowtimeProps.fit(dancer[key], profiles[role])
+            dancer[key] = part
+            dancer.parts[i] = part
+        end
+        for i, part in ipairs(dancer.details) do
+            dancer.details[i] = ShowtimeProps.fit(part, profiles[part:GetAttribute("ShowtimeMeshProfile")])
+        end
     end
     ShowtimeProps.applyProfiles(assetKit, profiles)
 end
@@ -850,8 +869,8 @@ local function updateStage(now)
             dancer.poseReady = false
             dancer.lastPoseAt = nil
             ShowtimeHologramDetails.pose(
-                dancer.details, dancer.body.CFrame, dancer.head.CFrame,
-                dancer.left.CFrame, dancer.right.CFrame, false
+                dancer.details, dancer.body:GetPivot(), dancer.head:GetPivot(),
+                dancer.left:GetPivot(), dancer.right:GetPivot(), false
             )
         end
         return
@@ -881,7 +900,7 @@ local function updateStage(now)
             * CFrame.Angles(-footStep * 0.18, 0, 0)
         -- Holograms formerly snapped straight from robot/shuffle/orbit to
         -- the next three-second pose. Crossfade their existing six parts
-        -- instead: no new assets, motors, tweens or per-frame task owners.
+        -- instead, using the same pivots for native and sculpted parts.
         -- A newly visible figure starts at its real pose without sliding
         -- in from an unrelated, previously hidden frame.
         local delta = dancer.lastPoseAt and now - dancer.lastPoseAt or 0
@@ -889,16 +908,16 @@ local function updateStage(now)
             or 1 - math.exp(-16 * math.clamp(delta, 0, 0.12))
         dancer.lastPoseAt = now
         dancer.poseReady = true
-        dancer.body.CFrame = dancer.body.CFrame:Lerp(bodyCF, smoothing)
-        dancer.head.CFrame = dancer.head.CFrame:Lerp(headCF, smoothing)
-        dancer.left.CFrame = dancer.left.CFrame:Lerp(leftCF, smoothing)
-        dancer.right.CFrame = dancer.right.CFrame:Lerp(rightCF, smoothing)
-        dancer.footL.CFrame = dancer.footL.CFrame:Lerp(footLCF, smoothing)
-        dancer.footR.CFrame = dancer.footR.CFrame:Lerp(footRCF, smoothing)
+        dancer.body:PivotTo(dancer.body:GetPivot():Lerp(bodyCF, smoothing))
+        dancer.head:PivotTo(dancer.head:GetPivot():Lerp(headCF, smoothing))
+        dancer.left:PivotTo(dancer.left:GetPivot():Lerp(leftCF, smoothing))
+        dancer.right:PivotTo(dancer.right:GetPivot():Lerp(rightCF, smoothing))
+        dancer.footL:PivotTo(dancer.footL:GetPivot():Lerp(footLCF, smoothing))
+        dancer.footR:PivotTo(dancer.footR:GetPivot():Lerp(footRCF, smoothing))
 
         ShowtimeHologramDetails.pose(
-            dancer.details, dancer.body.CFrame, dancer.head.CFrame,
-            dancer.left.CFrame, dancer.right.CFrame, true
+            dancer.details, dancer.body:GetPivot(), dancer.head:GetPivot(),
+            dancer.left:GetPivot(), dancer.right:GetPivot(), true
         )
         for _, part in ipairs(dancer.parts) do
             part.Transparency = 0.28
