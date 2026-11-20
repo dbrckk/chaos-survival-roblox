@@ -54,6 +54,8 @@ La flotte extérieure peut utiliser des maillages approuvés dans **207 emplacem
 
 Les barges du littoral et les défenses de quai peuvent reprendre **16, 39 ou 72 pièces sculptées** selon la qualité Low, Medium ou High. Ce total couvre respectivement 8, 27 ou 56 pièces de barges et 8, 12 ou 16 pièces de quai. Les quatre postes d’amarrage utilisent l’empreinte d’origine du terrain et restent à leur place lors d’une reconstruction côté client pendant le rétrécissement. Les habillages de quai suivent le bord du terrain. Les modèles complets des barges gardent priorité à portée. Les profils déjà approuvés peuvent se charger pendant la manche. Chaque pièce garde sa forme simple si sa source manque.
 
+Les quatre avant-postes jouables de Storm Harbor peuvent afficher **20 pièces sculptées en qualité moyenne ou 36 en haute**. Les quilles, montants, traverses, jambes de force et ailettes conservent leurs soudures à la vraie plateforme. Les instruments gardent leur pivot d’animation et leurs modèles complets de proximité. Les pièces suivent le rétrécissement, s’atténuent pendant l’alerte et disparaissent à l’effondrement. Si un profil manque ou si la pression graphique augmente, les formes simples reprennent le relais. Les seuils de montage des assemblages de proximité restent inchangés.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

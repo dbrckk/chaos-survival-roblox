@@ -22,6 +22,7 @@ local PremiumPlatformSideMeshKit = require(
     script.Parent.PremiumPlatformSideMeshKit)
 local PremiumFloorHardwareMeshKit = require(script.Parent.PremiumFloorHardwareMeshKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
+local OrbitalNode = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 
 local player = Players.LocalPlayer
 local roundEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -919,6 +920,21 @@ local function rebuild()
     local mountedRouteCradles = 0
     local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
+    local column, columnSize
+    local outpostArt
+    if variant == "Harbor" and tier.Name ~= "Low" and platformArtProfiles then
+        column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
+        local shaft = column and column:FindFirstChild("BeaconShaft")
+        if shaft and not shaft:IsA("MeshPart") then shaft = nil end
+        local cast = {part = platformArtProfiles.hatch, assetId = platformArtProfiles.assetId}
+        outpostArt = {
+            cast = cast,
+            beam = if crossingProfile then {part = crossingProfile, assetId = ForgedBridge.AssetId} else cast,
+            shaft = if shaft then {part = shaft, assetId = column:GetAttribute("Original3DAssetId")} else cast,
+            roller = {part = platformArtProfiles.detail, assetId = platformArtProfiles.assetId},
+            lens = {part = OrbitalNode.coreProfile(), assetId = OrbitalNode.NodeAssetId},
+        }
+    end
     local outpostInstruments = {}
     local outpostSculptures = {}
     local outpostFinishNatives = {}
@@ -931,19 +947,19 @@ local function rebuild()
         local truss,trussSize
         if #candidates > 0 then
             truss,trussSize = PremiumPlatformSideMeshKit.bridgeTrussSource()
-            local column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
             if column and truss then
                 local sources = {column=column,columnSize=columnSize,truss=truss,trussSize=trussSize}
                 for _,candidate in ipairs(candidates) do
                     if forgedOutposts >= limit or supportBudget < HarborOutpostKit.frameModules then break end
                     local platform = candidate.deck
-                    local _, instrument, disconnect, finishing = HarborOutpostKit.build(
+                    local _, instrument, disconnect, finishing, fitted = HarborOutpostKit.build(
                         makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name,sources,
                         function()
                             forgedOutposts -= 1
                             player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
                             scheduleRebuild()
-                        end)
+                        end, outpostArt)
+                    originalLargeCount += fitted or 0
                     outpostInstruments[platform] = instrument
                     outpostFinishNatives[platform] = finishing
                     if disconnect then
@@ -960,8 +976,10 @@ local function rebuild()
             local platform = candidate.deck
             local pivot = outpostInstruments[platform]
             if not pivot then
-                local _, fallback, _disconnect, finishing = HarborOutpostKit.build(
-                    makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name)
+                local _, fallback, _disconnect, finishing, fitted = HarborOutpostKit.build(
+                    makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name,
+                    nil,nil,outpostArt)
+                originalLargeCount += fitted or 0
                 pivot = fallback
                 outpostInstruments[platform] = pivot
                 outpostFinishNatives[platform] = finishing
@@ -1412,9 +1430,10 @@ local function rebuild()
                 -- No new scene loop, world physics or touch occlusion.
                 local instrument = outpostInstruments[platform]
                 if not instrument then
-                    local _, fallback = HarborOutpostKit.build(
-                        makePart, platform, visualIndex, theme, tier.Name
+                    local _, fallback, _disconnect, _finishing, fitted = HarborOutpostKit.build(
+                        makePart, platform, visualIndex, theme, tier.Name, nil, nil, outpostArt
                     )
+                    originalLargeCount += fitted or 0
                     instrument = fallback
                 end
                 if instrument then
