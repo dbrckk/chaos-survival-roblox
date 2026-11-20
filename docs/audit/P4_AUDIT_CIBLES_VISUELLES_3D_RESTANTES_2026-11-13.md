@@ -105,6 +105,10 @@ Huit chevrons marquent les départs des quatre parcours de fret et des quatre qu
 
 Aux vingt virages, les bandes latérales suivent la sortie du palier et les inserts sculptés sous le tablier reprennent l’axe du saut d’arrivée. Les poteaux s’engagent de 0,08 stud dans la dalle et leurs têtes restent sous le tablier. Le moulage et le fût polygonal déjà chargés peuvent prendre le relais si les sources dédiées manquent. Les instruments de guidage, la détection des alertes et le montage des caissons gardent leurs repères physiques. Le scénario de rétrécissement couvre les deux axes sur les 58 paliers des trois familles.
 
+### Raccords des sommets de fret aux traversées hautes
+
+Sur les quatre raccords de Storm Harbor, les huit biseaux qui se font face peuvent reprendre le profil forgé de Tower Run. Le montage utilise la même sélection de palier que le guidage des sauts, puis vérifie que les rives se font face. Les biseaux gardent leur empreinte afin que le vide reste lisible, y compris pendant le rétrécissement. Chaque rive suit son propre tablier et s’efface avec lui. Les huit tabliers peuvent aussi réutiliser un moulage et un fût polygonal approuvés en secours, en conservant les repères des caissons de proximité.
+
 ### Secours des parcours des autres arènes
 
 Sur Classic, Tower Run, Crossroads et Orbital, les **384 paliers** peuvent réutiliser le moulage fermé de leur arène, ou celui de Classic en secours, quand les profils communs manquent. Les 3 072 emplacements répartis sur ces quatre cartes couvrent quatre bordures, une dalle, un châssis et deux signaux par palier. Les chevrons de parcours peuvent aussi reprendre ce moulage. Les profils dédiés gardent la priorité. La hauteur et la transparence des repères restent celles du générateur existant. À Storm Harbor, les paliers acceptent maintenant le rouleau importé sur X ou sur Z. Les tests locaux ont vérifié l’empreinte, le rétrécissement à 45 % et le retour à l’état normal.

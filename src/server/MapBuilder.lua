@@ -16,6 +16,10 @@ local HorizonMonumentGeometry = if horizonGeometryModule then require(horizonGeo
 local platformIdentityModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
 local PlatformIdentityLodRules = if platformIdentityModule then require(platformIdentityModule)
     else require("../shared/PlatformIdentityLodRules")
+local jumpRouteModule = shared and shared:FindFirstChild("JumpRouteCueRules")
+local JumpRouteCueRules = if jumpRouteModule
+    then require(jumpRouteModule)
+    else require("../shared/JumpRouteCueRules")
 local skyRouteConnectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local SkyRouteConnectionRules = if skyRouteConnectionModule
     then require(skyRouteConnectionModule)
@@ -2031,6 +2035,56 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     glow.Parent = decor
 end
 
+local function fitForgedPlatformBevel(profile, pose, size)
+    local bevel = RouteSignalGeometry.fit(profile, pose, size, nil, true)
+    if bevel then
+        bevel:SetAttribute("OriginalPlatformBevel3D", true)
+        bevel:SetAttribute("OriginalElevatedForgedBevel3D", true)
+        bevel:SetAttribute("Original3DAssetId", 126298311664881)
+    end
+    return bevel
+end
+
+local function fitHarborJunctions(decor, platforms, profile)
+    if not profile or profile.MeshId == "" then return end
+    local decks = platforms:GetChildren()
+    local function replaceFacingBevel(deck, side)
+        local index = deck.Name:match("^Platform(%d+)$")
+        local native = index and decor:FindFirstChild("PlatformBevel" .. index .. "_" .. (side > 0 and 4 or 3))
+        if not PlatformIdentityLodRules.isAuthoredPlatformBevel(native) then return end
+
+        -- Unwind any import-axis swap on the original Harbor roller.
+        local yaw = side > 0 and -math.pi * 0.5 or math.pi * 0.5
+        local pose = CFrame.new(native.Position) * deck.CFrame.Rotation * CFrame.Angles(0, yaw, 0)
+        local size = native.Size
+        if math.abs(native.CFrame.RightVector:Dot(pose.RightVector)) < 0.5 then
+            size = Vector3.new(size.Z, size.Y, size.X)
+        end
+        local bevel = fitForgedPlatformBevel(profile, pose, size)
+        if not bevel then return end
+        bevel.Name = native.Name
+        bevel.Color = native.Color
+        bevel.Material = native.Material
+        bevel.Transparency = native.Transparency
+        bevel:SetAttribute("OriginalStructuralBevel", true)
+        native:Destroy()
+        bevel.Parent = decor
+    end
+
+    for _, summit in ipairs(decks) do
+        if summit:GetAttribute("HarborStep") ~= 7 then continue end
+        local crossing = JumpRouteCueRules.nextSkyway(summit, decks)
+        if crossing then
+            local delta = crossing.Position - summit.Position
+            if math.abs(delta.X) > 0 and math.abs(delta.Z) < 0.12 then
+                local side = math.sign(delta.X)
+                replaceFacingBevel(summit, side)
+                replaceFacingBevel(crossing, -side)
+            end
+        end
+    end
+end
+
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
     frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborSkywayBeam, bevelFallback)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
@@ -2141,12 +2195,7 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         local longProfile = (elevatedTrim and longEdge and elevatedTrim.beam)
             or (edgeIndex <= 2 and skywayBeam)
         if longProfile then
-            bevel = RouteSignalGeometry.fit(longProfile, pose, size, nil, true)
-            if bevel then
-                bevel:SetAttribute("OriginalPlatformBevel3D", true)
-                bevel:SetAttribute("OriginalElevatedForgedBevel3D", true)
-                bevel:SetAttribute("Original3DAssetId", 126298311664881)
-            end
+            bevel = fitForgedPlatformBevel(longProfile, pose, size)
         end
         local bridgeBevel = not bevel and useBridgeBevel and bevelProfile:Clone()
         if bridgeBevel then
@@ -3650,8 +3699,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local harborStep = definition.HarborStep or definition.HarborSpokeStep
         local harborApproach = harborStep ~= nil and harborStep <= 2
         local harborTurn = PlatformIdentityLodRules.isHarborCargoTurn(platform)
-        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub or harborApproach or harborTurn
-            then closedDeckCasting else routeCasting
+        local harborJunction = definition.HarborStep == 7
+            or definition.HarborSkywayStep == 1 or definition.HarborSkywayStep == 7
+        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub
+            or harborApproach or harborTurn or harborJunction then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
@@ -3670,7 +3721,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
             harborSkywayBeam, trimCasting)
-        if elevatedRoute or reactorLanding or harborApproach or harborTurn then
+        if elevatedRoute or reactorLanding or harborApproach or harborTurn or harborJunction then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
         else
             addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)
@@ -3845,6 +3896,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             lens.Transparency = 0.34
             lens:SetAttribute("PerimeterPlatformIndex", i)
         end
+    end
+
+    if variant.Id == "Harbor" then
+        fitHarborJunctions(decor, platforms, sweptProfile)
     end
 
     -- Place the transverse chevron only where the real bridge overlaps
