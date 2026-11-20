@@ -158,6 +158,9 @@ end
 -- source-scale requirement. Never admit shorter posts: they remain
 -- bare native until a proven approved source fits.
 local MIN_NATIVE_SUPPORT_HEIGHT = 4.75
+-- Grounding the ten interior skyway landings seats each pile .08 studs
+-- into the slab, for a 20.08-stud authored envelope.
+local MAX_HARBOR_PILE_HEIGHT = 20.1
 
 -- The REAL map authors two 12.2-stud nonphysical silhouette pylons
 -- on Sky Spine steps 2,5,6,9. Reuse the already moderated 7-MeshPart
@@ -523,6 +526,11 @@ function Kit.routeSupportScale(part, deck)
             or not width or tonumber(deck:GetAttribute("RouteTier")) == nil
             or math.abs(deck.Size.Y-2) > .08 or math.abs(sx-sz) > .08
             or (tonumber(corner) > 2 and width < 11) then return nil end
+        if part:IsA("MeshPart") then
+            local casting = HorizonMonumentGeometry.isHarborPileCasting(part:GetAttribute("Original3DAssetId"))
+            local tagged = part:GetAttribute("OriginalHarborPileCasting3D") == true
+            if casting ~= tagged or (casting and part.MeshId == "") then return nil end
+        end
         -- The native socket and deck may stream after the floor has shrunk.
         -- Fit against their authored footprint and shared local geometry.
         scale = sx/width
@@ -565,7 +573,7 @@ end
 -- crossings. Fit height independently from width so low piles keep their
 -- collars and high piles do not need two stacked seven-part modules.
 local function harborPileFit(nativeSize, sourceBounds)
-    if not nativeSize or nativeSize.Y < 4.75 or nativeSize.Y > 20
+    if not nativeSize or nativeSize.Y < 4.75 or nativeSize.Y > MAX_HARBOR_PILE_HEIGHT
         or nativeSize.X < .94 or nativeSize.X > 1.22 then return nil end
     local scale = nativeSize.Y/sourceBounds.Y
     local width = nativeSize.X*1.30
@@ -1014,7 +1022,7 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             for k=1,segments do
                 local delta=(k-(segments+1)*.5)*height
                 local stage=prepare(source,scale,function(scaled)
-                    if scaled.Y <= 0 or scaled.Y > (harborPile and 20 or 17.8) then return nil end
+                    if scaled.Y <= 0 or scaled.Y > (harborPile and MAX_HARBOR_PILE_HEIGHT or 17.8) then return nil end
                     return support.CFrame*CFrame.new(0,delta,0)
                 end,support,variant,true)
                 if not stage then ok=false; break end

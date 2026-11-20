@@ -212,13 +212,13 @@ Les définitions de parcours et les générateurs de la PR #920 donnent les volu
 
 | Groupe | Emplacements du générateur | Manque identifié dans le code |
 |---|---:|---|
-| Paliers de fret, quais cardinaux et traversées hautes | 58 paliers. 232 biseaux, 58 panneaux, 58 sous-cadres et 140 poteaux | Les biseaux, panneaux et sous-cadres ont un moulage de réserve. Les **140 poteaux** (72 fret, 40 quais, 28 traversées) restent tributaires d’un fût approuvé. |
+| Paliers de fret, quais cardinaux et traversées hautes | 58 paliers. 232 biseaux, 58 panneaux, 58 sous-cadres et 140 poteaux | Les biseaux, panneaux et sous-cadres ont un moulage de réserve. Les **140 poteaux** (72 fret, 40 quais, 28 traversées) peuvent aussi reprendre un moulage approuvé. |
 | Signaux de ces paliers | 116 | Les profils fermés peuvent remplacer les deux signaux par palier. Les signaux restent utiles à la navigation. |
 | Accès au sol et sorties périphériques | 28 pièces au sol et 16 pièces de sortie | Un moulage fermé peut couvrir les deux groupes. Les couronnes conservent leur forme inclinée si les profils de secours manquent. |
 | Station de signalisation au large | 8 pièces en Low | Sept pièces peuvent reprendre le moulage fermé. La lentille garde sa sphère lorsque son maillage manque. |
 | Cargo principal et littoral | 14 pièces du cargo en Low. 16 pièces sur les barges et les défenses en Low | Le moulage fermé en couvre 12 sur le cargo et jusqu’à 16 sur le littoral. La proue garde ses deux pentes si le profil dédié manque. |
 
-**Priorité.** Traiter d’abord les poteaux des quais et des traversées qui bordent les sauts. Le caisson Low n’habille qu’un palier à proximité lorsque la pression graphique le permet. Les poteaux ne font pas partie de ce caisson. Les formes de la proue et de la lentille passent après les pièces proches des zones jouables.
+**Poteaux.** Les **140 emplacements** peuvent maintenant reprendre le caisson d’amarrage ou le moulage fermé de Harbor ou de Classic quand le fût polygonal manque. Les poteaux gardent leur empreinte et leur assise pendant le rétrécissement. La limite de montage de proximité couvre les 20 poteaux de 20,08 studs des traversées intérieures, avec les quotas existants. Le relevé Low permettra de mesurer le reliquat lorsque les sources de réserve sont absentes. Les formes de la proue et de la lentille sont moins prioritaires que les pièces proches des zones jouables.
 
 Le relevé client existant publie huit compteurs supplémentaires sous `LocalP4VisibleNativeNear*` :
 

@@ -876,8 +876,9 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                         watchers[#watchers + 1] =
                             part:GetPropertyChangedSignal(property):Connect(changed)
                     end
+                    local harborPile = routeSupport and PlatformIdentityLodRules.isHarborLanding(deck)
                     local geometryProperty = part:IsA("Part") and "Shape"
-                        or ((isPromenadePylon or spineShaft) and "MeshId")
+                        or ((isPromenadePylon or spineShaft or harborPile) and "MeshId")
                     if geometryProperty then
                         watchers[#watchers + 1] = part:GetPropertyChangedSignal(geometryProperty):Connect(changed)
                     end
@@ -886,7 +887,10 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                         table.insert(attributes, if isPromenadePylon then "OriginalPromenadePylonShaft3D"
                             elseif spineShaft then "OriginalSkySpinePylonShaft3D" else "OriginalPlatformSupport3D")
                         if spineShaft then table.insert(attributes, "SkySpineDecor") end
-                        if isPromenadePylon or spineShaft then table.insert(attributes, "Original3DAssetId") end
+                        if isPromenadePylon or spineShaft or harborPile then
+                            table.insert(attributes, "Original3DAssetId")
+                        end
+                        if harborPile then table.insert(attributes, "OriginalHarborPileCasting3D") end
                     end
                     for _, attribute in ipairs(attributes) do
                         watchers[#watchers + 1] =

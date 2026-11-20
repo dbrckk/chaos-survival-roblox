@@ -2364,7 +2364,11 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     core.Parent = decor
 end
 
-local function addPlatformSupports(decor, base, platform, index, theme, shaft, assetId)
+local function addPlatformSupports(decor, base, platform, index, theme, shaft, assetId, harborCasting)
+    local fittedCasting = not shaft and harborCasting and harborCasting.part
+    if fittedCasting then
+        shaft, assetId = fittedCasting, harborCasting.assetId
+    end
     local platformBottom = platform.Position.Y - platform.Size.Y * 0.5
     local footY = PlatformIdentityLodRules.platformSupportFootY(base, platform)
     local supportHeight = platformBottom - footY
@@ -2404,6 +2408,7 @@ local function addPlatformSupports(decor, base, platform, index, theme, shaft, a
             support.Transparency = 0.14
             if support:IsA("MeshPart") then
                 support:SetAttribute("OriginalPlatformSupport3D", true)
+                if fittedCasting then support:SetAttribute("OriginalHarborPileCasting3D", true) end
                 support:SetAttribute("Original3DAssetId", assetId)
             end
             support.Parent = decor
@@ -3354,12 +3359,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         exteriorProfiles.shaft = routeShaftProfile
     end
     local heroProfiles = exteriorProfiles
+    local harborPileCasting
     if variant.Id == "Harbor" then
         heroProfiles = table.clone(exteriorProfiles)
-        local caissonId = 101457508594609
-        heroProfiles.caisson = {part = approvedHorizonRegion(
+        local caissonId = HorizonMonumentGeometry.harborCaissonAssetId()
+        local caisson = approvedHorizonRegion(
             "ApprovedHarborDockCaissonTemplates", "DockCaisson", "OriginalHarborDockCaisson3D",
-            caissonId, Vector3.new(12.82, 2.69, 12.82)), assetId = caissonId}
+            caissonId, Vector3.new(12.82, 2.69, 12.82))
+        heroProfiles.caisson = {part = caisson, assetId = caissonId}
+        harborPileCasting = if caisson then heroProfiles.caisson else harborCasting
     end
     -- The outboard hero keeps its lightweight silhouette and per-piece fallbacks.
     HeroArchitecture.build(decor, base, variant.Id, theme, heroProfiles)
@@ -3785,7 +3793,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
             harborRouteBeam, trimCasting)
         if elevatedRoute or reactorLanding or harborFreightTrim then
-            addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
+            addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId,
+                harborFreightTrim and harborPileCasting or nil)
         else
             addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)
         end
