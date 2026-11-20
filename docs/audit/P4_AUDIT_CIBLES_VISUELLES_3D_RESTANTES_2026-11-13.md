@@ -24,6 +24,8 @@ Les 16 façades par arène peuvent reprendre le moulage du périmètre pour les 
 
 Chaque arène peut afficher 32 supports blindés façonnés avec le profil polygonal de sa variante et 32 rails de toiture avec les longerons approuvés. Le kit de parois latérales vérifie l’asset et le gabarit des supports avant de prendre le relais. Chaque famille possède son propre secours à la construction.
 
+Les 16 bâtiments peuvent aussi afficher **80 pièces de structure sculptées par arène**. Le lot couvre les 32 pans de toiture, les 32 caissons latéraux et les 16 noyaux de service. Les pans reprennent le sens de leur pente, quelle que soit l’orientation horizontale de l’asset importé. Les caissons et noyaux gardent leur empreinte et restent admissibles à l’habillage des parois de proximité.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

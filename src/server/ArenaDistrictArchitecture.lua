@@ -15,10 +15,13 @@ local DistrictFacadeStyles = if stylesModule
     else require("../shared/DistrictFacadeStyles")
 
 local RouteSignalGeometry = require("./RouteSignalGeometry")
+local capGeometryModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capGeometryModule then require(capGeometryModule)
+    else require("../shared/PerimeterCapGeometry")
 local ArenaDistrictArchitecture = {}
 local GLAZING_PROFILE_ID = 88962643359267
 
-type MeshProfile = {part: MeshPart?, assetId: number?}
+type MeshProfile = {part: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
 type StructureProfiles = {shaft: MeshProfile?, underframe: MeshProfile?}
 
 -- Four navigable sectors need distinct silhouettes AND distinct color IDs.
@@ -52,7 +55,8 @@ local function element(model, origin, name, kind, size, localFrame, color, mater
     return piece
 end
 
-local function fixture(folder, base, variantId, theme, side, slot, number, glazingProfile, structureProfiles: StructureProfiles?)
+local function fixture(folder, base, variantId, theme, side, slot, number, glazingProfile,
+        structureProfiles: StructureProfiles?, roofProfile: MeshProfile?)
     -- Four skyline profiles per side, alternating silhouettes.
     -- Keep the entire structure inside the 320-stud playable floor.
     local tangent = (slot - 2.5) * 72
@@ -98,27 +102,34 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
             color or steel, material)
     end
 
-    local function fitted(name, size, localFrame, color, material, profile: MeshPart?, assetId: number?, alongX: boolean?)
-        if not profile or not profile:IsA("MeshPart") or profile.MeshId == "" then
-            return make(name, "Part", size, localFrame, color, material)
+    local function fitted(name, size, localFrame, color, material, spec: MeshProfile?,
+            alongX: boolean?, fallbackKind: string?)
+        local profile = spec and spec.part
+        local kind = fallbackKind or "Part"
+        if not profile or not spec or not profile:IsA("MeshPart") or profile.MeshId == "" then
+            return make(name, kind, size, localFrame, color, material)
         end
-        -- Glass and vertical supports retain their authored local axes.
-        -- The roof rails instead put the longest source axis along local Z.
+        -- Glass and upright volumes retain their authored local axes.
+        -- Roofs use the high edge identified in the approved casting.
+        local frame = origin * localFrame
+        local meshSize = size
+        if spec.rotation then frame *= spec.rotation end
+        if spec.swapXZ then meshSize = Vector3.new(size.Z, size.Y, size.X) end
         local spanX = if alongX == nil then profile.Size.X > profile.Size.Z else alongX
-        local mesh = RouteSignalGeometry.fit(profile, origin * localFrame, size, nil, spanX)
-        if not mesh then return make(name, "Part", size, localFrame, color, material) end
+        local mesh = RouteSignalGeometry.fit(profile, frame, meshSize, nil, spanX)
+        if not mesh then return make(name, kind, size, localFrame, color, material) end
         mesh.Name = name
         mesh.Material = material
         mesh.Color = color
         mesh.DoubleSided = true
-        mesh:SetAttribute("Original3DAssetId", assetId)
+        mesh:SetAttribute("Original3DAssetId", spec.assetId)
         mesh.Parent = model
         return mesh
     end
 
+    local casting = {part = glazingProfile, assetId = GLAZING_PROFILE_ID}
     local function glazing(name, size, localFrame, color, alpha)
-        local pane = fitted(name, size, localFrame, color, Enum.Material.Glass,
-            glazingProfile, GLAZING_PROFILE_ID)
+        local pane = fitted(name, size, localFrame, color, Enum.Material.Glass, casting)
         pane.Transparency = alpha
         return pane
     end
@@ -141,16 +152,16 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
         local suffix = direction < 0 and "L" or "R"
         fitted("ArmoredSupport" .. suffix, Vector3.new(1.4, 12.6, 2.3),
             CFrame.new(direction * 4.4, 7.1, 1.8), steel, Enum.Material.Metal,
-            shaft and shaft.part, shaft and shaft.assetId)
-        make("AngledRoof" .. suffix, "WedgePart",
-            Vector3.new(4.3, 2.1, 6.0),
+            shaft)
+        fitted("AngledRoof" .. suffix, Vector3.new(4.3, 2.1, 6.0),
             CFrame.new(direction * 3.0, 13.3, -0.8)
-                * CFrame.Angles(0, direction < 0 and math.pi or 0, 0), alloy)
+                * CFrame.Angles(0, direction < 0 and math.pi or 0, 0),
+            alloy, Enum.Material.Metal, roofProfile, nil, "WedgePart")
         glazing("DataVane" .. suffix, Vector3.new(0.16, 4.7, 2.9),
             CFrame.new(direction * 5.25, 8.8, 1.5), accent, 0.24)
     end
-    make("ServiceCore", "Part", Vector3.new(6.8, 7.3, 6.8),
-        CFrame.new(0, 8.4, 0), dark)
+    fitted("ServiceCore", Vector3.new(6.8, 7.3, 6.8),
+        CFrame.new(0, 8.4, 0), dark, Enum.Material.Metal, shaft)
     local window = glazing("RecessedSignal", Vector3.new(4.5, 2.8, 0.17),
         CFrame.new(0, 9.2, -3.5), accent, 0.32)
 
@@ -235,16 +246,15 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
     -- Recessed metal/glass panels and roof rails give each structure
     -- meaningful depth without collisions, shadows or extra lights.
     for _, direction in ipairs({-1, 1}) do
-        make("SideCassette" .. tostring(direction), "Part",
-            Vector3.new(0.85, 4.8, 4.6),
+        fitted("SideCassette" .. tostring(direction), Vector3.new(0.85, 4.8, 4.6),
             CFrame.new(direction * 3.68, 7.6, 0.48),
-            steel:Lerp(dark, 0.21), Enum.Material.CorrodedMetal)
+            steel:Lerp(dark, 0.21), Enum.Material.CorrodedMetal, casting)
         glazing("SideGlass" .. tostring(direction), Vector3.new(0.18, 2.2, 3.6),
             CFrame.new(direction * 4.13, 8.3, 0.48),
             accent:Lerp(Color3.fromRGB(170, 220, 235), 0.15), 0.36)
         fitted("TopRail" .. tostring(direction), Vector3.new(0.34, 0.38, 8),
             CFrame.new(direction * 5.4, 14.3, 0.2), alloy, Enum.Material.Metal,
-            rail and rail.part, rail and rail.assetId, false)
+            rail, false)
     end
 
     -- Four recognizable macro profiles: taller radar fins, wider freight
@@ -560,11 +570,16 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme, glazingP
     folder:SetAttribute("CosmeticOnly", true)
     folder.Parent = decor
 
+    local rotation, swapXZ = PerimeterCapGeometry.slope(glazingProfile)
+    local roofProfile = if rotation then {
+        part = glazingProfile, assetId = GLAZING_PROFILE_ID,
+        rotation = rotation, swapXZ = swapXZ,
+    } else nil
     local count = 0
     for _, side in ipairs({"North", "East", "South", "West"}) do
         for slot = 1, 4 do
             count += 1
-            fixture(folder, base, variantId, theme, side, slot, count, glazingProfile, structureProfiles)
+            fixture(folder, base, variantId, theme, side, slot, count, glazingProfile, structureProfiles, roofProfile)
         end
     end
     folder:SetAttribute("District3DCount", count)

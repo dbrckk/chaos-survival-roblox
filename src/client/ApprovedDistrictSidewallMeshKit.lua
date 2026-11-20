@@ -32,15 +32,15 @@ local SOURCE_FOLDER = "ApprovedDistrictSidewallShellTemplates"
 local RESIDENT_MARKER = "LocalApprovedDistrictSidewallMounted"
 local REQUIRED = {
     {name = "ServiceCore", size = Vector3.new(6.8, 7.3, 6.8),
-        offset = CFrame.new(0, 8.4, 0)},
+        offset = CFrame.new(0, 8.4, 0), shaft = true},
     {name = "ArmoredSupportL", size = Vector3.new(1.4, 12.6, 2.3),
         offset = CFrame.new(-4.4, 7.1, 1.8), shaft = true},
     {name = "ArmoredSupportR", size = Vector3.new(1.4, 12.6, 2.3),
         offset = CFrame.new(4.4, 7.1, 1.8), shaft = true},
     {name = "SideCassette-1", size = Vector3.new(.85, 4.8, 4.6),
-        offset = CFrame.new(-3.68, 7.6, .48)},
+        offset = CFrame.new(-3.68, 7.6, .48), assetId = 88962643359267},
     {name = "SideCassette1", size = Vector3.new(.85, 4.8, 4.6),
-        offset = CFrame.new(3.68, 7.6, .48)},
+        offset = CFrame.new(3.68, 7.6, .48), assetId = 88962643359267},
 }
 
 local bucket = Instance.new("Folder")
@@ -131,8 +131,9 @@ local function eligible(building, district, requiresFacade)
     for _, spec in ipairs(REQUIRED) do
         local part = building:FindFirstChild(spec.name)
         local target = origin * spec.offset
-        local validMesh = part and spec.shaft and shaftId ~= nil and part:IsA("MeshPart")
-            and part.MeshId ~= "" and part:GetAttribute("Original3DAssetId") == shaftId
+        local assetId = if spec.shaft then shaftId else spec.assetId
+        local validMesh = part and assetId ~= nil and part:IsA("MeshPart")
+            and part.MeshId ~= "" and part:GetAttribute("Original3DAssetId") == assetId
         if not part or (not part:IsA("Part") and not validMesh) or part.Parent ~= building
             or not part.Anchored or part.CanCollide or part.CanTouch
             or part.CanQuery or (part.Size - spec.size).Magnitude > .08

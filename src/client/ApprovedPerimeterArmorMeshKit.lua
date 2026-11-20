@@ -2,6 +2,10 @@
 -- stations. Four native WedgeParts are hidden only after all four genuine
 -- Models are assembled. Driven by existing scenery-lod; no extra timer.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local geometryModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if geometryModule then require(geometryModule)
+    else require("../shared/PerimeterCapGeometry")
 local Kit = {}
 
 local IDS = {Cap = 88962643359267, Wing = 138096293972093}
@@ -116,32 +120,10 @@ function Kit.wayfinderProfile()
 end
 
 function Kit.slopedCapProfile()
-    local model = sourceFor("Cap")
-    local casting = capCasting(model)
-    if not casting or casting.CFrame.UpVector.Y < .999 then return nil end
-    -- The single SIGNAL region sits toward the high end of the casting.
-    -- Its position identifies the high edge even if import swaps or flips X/Z.
-    local highEnd
-    for _, part in ipairs(model:GetChildren()) do
-        if not part:IsA("MeshPart") then continue end
-        local size = part.Size
-        if math.abs(size.Y - .04066) < .025
-            and math.abs(math.max(size.X, size.Z) - .9372) < .055
-            and math.abs(math.min(size.X, size.Z) - .1638) < .055 then
-            if highEnd then return nil end
-            highEnd = casting.CFrame:PointToObjectSpace(part.Position)
-        end
-    end
-    if not highEnd then return nil end
-    local sideways = math.abs(highEnd.X) > math.abs(highEnd.Z)
-    local forward = if sideways then highEnd.X else highEnd.Z
-    local lateral = if sideways then highEnd.Z else highEnd.X
-    if math.abs(math.abs(forward) - .4212) > .10 or math.abs(lateral) > .08 then
-        return nil
-    end
-    local yaw = if sideways then -math.sign(forward) * math.pi / 2
-        elseif forward < 0 then math.pi else 0
-    return casting, CFrame.Angles(0, yaw, 0), sideways, IDS.Cap
+    local casting = Kit.wayfinderProfile()
+    local rotation, swapped = PerimeterCapGeometry.slope(casting)
+    if rotation then return casting, rotation, swapped, IDS.Cap end
+    return nil
 end
 
 -- The four perimeter stations remain fixed outside the contracting playable
