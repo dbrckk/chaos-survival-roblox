@@ -4,6 +4,15 @@
 -- No new gameplay colliders, links, fake safe paths, particle loops or assets.
 local CollectionService = game:GetService("CollectionService")
 
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local capModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capModule then require(capModule)
+    else require("../shared/PerimeterCapGeometry")
+
+type Profile = {part: MeshPart?, assetId: number?}
+type Profiles = {bevel: Profile?, beam: Profile?, cast: Profile?, shaft: Profile?}
+
 local StructureRetrofit = {}
 
 local PALETTES = {
@@ -14,11 +23,27 @@ local PALETTES = {
     Harbor = {metal = Enum.Material.CorrodedMetal, secondary = Enum.Material.DiamondPlate},
 }
 
-local function add(model, origin, name, frame, size, color, material, kind, pbr)
-    local item = Instance.new(kind or "Part")
+local function add(model, origin, name, frame, size, color, material, kind, pbr,
+        profile: Profile?, rotation: CFrame?, swapXZ: boolean?, alignSpan: boolean?)
+    local source = profile and profile.part
+    local target = origin * frame
+    local mesh
+    if source and source.MeshId ~= "" then
+        local meshFrame = if rotation then target * rotation else target
+        local extents = if swapXZ then Vector3.new(size.Z, size.Y, size.X) else size
+        local alongX = if alignSpan then extents.X > extents.Z else source.Size.X > source.Size.Z
+        mesh = RouteSignalGeometry.fit(source, meshFrame, extents, nil, alongX)
+    end
+    local item = mesh or Instance.new(kind or "Part")
+    if mesh then
+        mesh:SetAttribute("Original3DAssetId", profile and profile.assetId)
+    else
+        item.Size = size
+        item.CFrame = target
+        item.TopSurface = Enum.SurfaceType.Smooth
+        item.BottomSurface = Enum.SurfaceType.Smooth
+    end
     item.Name = name
-    item.Size = size
-    item.CFrame = origin * frame
     item.Color = color
     item.Material = material
     item.Transparency = 0.045
@@ -27,19 +52,17 @@ local function add(model, origin, name, frame, size, color, material, kind, pbr)
     item.CanTouch = false
     item.CanQuery = false
     item.CastShadow = false
-    item.TopSurface = Enum.SurfaceType.Smooth
-    item.BottomSurface = Enum.SurfaceType.Smooth
     if pbr then item:SetAttribute("OriginalRetrofitPbrSurface", true) end
     item.Parent = model
     return item
 end
 
-local function spar(model, origin, name, startPoint, endPoint, size, color, material)
+local function spar(model, origin, name, startPoint, endPoint, size, color, material, profile: Profile?)
     local delta = endPoint - startPoint
     return add(model, origin, name,
         CFrame.lookAt((startPoint + endPoint) * 0.5, endPoint),
         Vector3.new(size, size, delta.Magnitude),
-        color, material, nil, false)
+        color, material, nil, false, profile, nil, nil, true)
 end
 
 local function exteriorAnchors(decor, base, variant)
@@ -76,7 +99,7 @@ local function exteriorAnchors(decor, base, variant)
     return result
 end
 
-function StructureRetrofit.buildArena(decor, base, variant, theme)
+function StructureRetrofit.buildArena(decor, base, variant, theme, profiles: Profiles?)
     local palette = PALETTES[variant]
     if not palette or not base or not base:IsA("BasePart") then return 0 end
     local anchors = exteriorAnchors(decor, base, variant)
@@ -84,6 +107,12 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
     local fleet = Instance.new("Folder")
     fleet.Name = "OriginalExteriorRetrofits"
     fleet.Parent = decor
+    local bevel = profiles and profiles.bevel
+    local beam = profiles and profiles.beam
+    local shaft = profiles and profiles.shaft
+    local cast = profiles and profiles.cast
+    local slope, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
+    if not slope then cast = nil end
     local pieces = 0
     for i, center in ipairs(anchors) do
         local model = Instance.new("Model")
@@ -106,41 +135,41 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
         -- Preserve the existing bare source marker as its non-colliding
         -- interior while giving the silhouette real multi-layer volume.
         add(model, origin, "OuterFrontArmor", CFrame.new(0, 0, -2.05),
-            Vector3.new(5.0, 11.8, 0.68), body, palette.metal, nil, true)
+            Vector3.new(5.0, 11.8, 0.68), body, palette.metal, nil, true, bevel)
         add(model, origin, "RearMaintenanceShell", CFrame.new(0, 0.2, 1.92),
             Vector3.new(4.6, 10.8, 0.78), hardware,
-            palette.secondary, nil, true)
+            palette.secondary, nil, true, bevel)
         add(model, origin, "RecessedEquipmentBox", CFrame.new(0, -0.6, -2.49),
             Vector3.new(2.3, 5.2, 0.43), inset,
-            palette.secondary, nil, false)
+            palette.secondary, nil, false, bevel)
         for _, side in ipairs({-1, 1}) do
             add(model, origin, "FacetedSideWing" .. tostring(side),
                 CFrame.new(side * 2.35, -0.35, 0)
                     * CFrame.Angles(0, side * math.rad(12), 0),
                 Vector3.new(1.6, 10.8, 3.1), body,
-                palette.metal, "WedgePart", false)
+                palette.metal, "WedgePart", false, cast, slope, swapXZ)
             spar(model, origin, "DiagonalExteriorStiffener" .. tostring(side),
                 Vector3.new(side * 3.2, -5.8, -1.6),
                 Vector3.new(side * 1.2, 6.2, -1.7), 0.46,
-                hardware, palette.secondary)
+                hardware, palette.secondary, beam)
             add(model, origin, "CrownButtress" .. tostring(side),
                 CFrame.new(side * 2.45, 6.5, -0.3),
                 Vector3.new(0.95, 2.2, 3.8), hardware,
-                palette.secondary, nil, false)
+                palette.secondary, nil, false, bevel)
         end
         add(model, origin, "UpperStructuralCollar", CFrame.new(0, 6.3, 0),
             Vector3.new(6.8, 0.72, 5.4), hardware,
-            palette.metal, nil, false)
+            palette.metal, nil, false, bevel)
         add(model, origin, "CantileverPlatformUnderside",
             CFrame.new(0, 7.4, 0.1),
             Vector3.new(5.9, 0.55, 7.5), inset,
-            palette.secondary, "WedgePart", false)
+            palette.secondary, "WedgePart", false, cast, slope, swapXZ)
         add(model, origin, "WeatherGuardTop", CFrame.new(0, 8.2, 0),
             Vector3.new(4.8, 0.70, 4.6), body,
-            palette.metal, nil, true)
+            palette.metal, nil, true, bevel)
         add(model, origin, "BeaconTensionMast", CFrame.new(0, 10.8, 0),
             Vector3.new(0.50, 4.8, 0.50), hardware,
-            palette.secondary, nil, false)
+            palette.secondary, nil, false, shaft)
         if variant == "Crossroads" then
             -- Crossroads' original gantries are 28-stud horizontal beams,
             -- NOT 12-stud towers. The generic upright casing did not
@@ -148,15 +177,20 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
             -- physical beam's true axis without replacing its signals.
             local source = decor:FindFirstChild("CrossroadGantry" .. i)
             if source and source:IsA("BasePart") then
-                local alongX = source.Size.X > source.Size.Z
+                local longSide = if source.Size.X > source.Size.Z
+                    then source.CFrame.RightVector else source.CFrame.LookVector
+                local alongX = math.abs(longSide.X) > math.abs(longSide.Z)
                 local span = math.max(source.Size.X, source.Size.Z)
                 -- Keep the original gantry and its danger/signal cues.
                 -- This decorative frame uses WORLD axes from the source:
                 -- the outer beams remain beyond the shrinking arena.
                 local beamFrame = CFrame.new(source.Position)
                 local function girder(name, offset, dimensions, material, color, shape)
+                    local wedge = shape == "WedgePart"
                     add(model, beamFrame, name, CFrame.new(offset),
-                        dimensions, color, material, shape, false)
+                        dimensions, color, material, shape, false,
+                        if wedge then cast else beam, if wedge then slope else nil,
+                        wedge and swapXZ, not wedge)
                 end
                 local beamSize = alongX
                     and Vector3.new(span + 1.6, 0.62, 0.90)

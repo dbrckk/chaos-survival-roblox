@@ -38,6 +38,8 @@ La revue de la branche à partir de `df33653` a retrouvé huit stations de trans
 
 Le recensement client inclut désormais le transit quand le serveur le crée. Les attributs `LocalP4VisibleNativeDistrictTransitStructure` et `LocalP4VisibleNativeDistrictTransitSignal` donnent ses deux sous-totaux. `LocalP4VisibleNativeUnclassifiedLarge` relève les primitives de 12 studs ou plus sans famille identifiée pour orienter la prochaine inspection. `AllDecor` conserve son périmètre historique Décor + Helix. `AllScanned` couvre aussi le transit. Ces mesures dépendent du streaming et des masques client.
 
+Les 20 installations extérieures qui bordent les arènes peuvent utiliser des maillages approuvés dans **276 emplacements**. Classic, Tower Run, Orbital et Storm Harbor ont chacun 52 pièces. Crossroads en a 68, dont les 16 renforts et profilés des quatre portiques. Ces profilés suivent l’axe réel du portique, même si l’import permute les axes horizontaux. Les habillages complets de proximité reconnaissent les formes sculptées et leurs secours avec les mêmes budgets. Les inventaires de sol distinguent toujours les dalles PBR, les alertes et les habillages géométriques.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

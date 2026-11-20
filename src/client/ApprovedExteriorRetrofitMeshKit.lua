@@ -4,6 +4,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SceneryLodRules = if script then require(ReplicatedStorage.Shared.SceneryLodRules)
     else require("../shared/SceneryLodRules")
 
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+
 local Kit = {}
 local TOWER = {folder="ApprovedExteriorTowerTemplates",name="Tower21",
     id=137744886537150,tag="OriginalExteriorTower3D",size=Vector3.new(11.84,22.2,9.84)}
@@ -15,25 +20,25 @@ local RANGE = {Low=146,Medium=238,High=335}
 local ACTIVE_RANGE = 14
 
 local PARTS = {
-    {"OuterFrontArmor","Part",5,11.8,.68},
-    {"RearMaintenanceShell","Part",4.6,10.8,.78},
-    {"RecessedEquipmentBox","Part",2.3,5.2,.43},
-    {"FacetedSideWing-1","WedgePart",1.6,10.8,3.1},
-    {"FacetedSideWing1","WedgePart",1.6,10.8,3.1},
-    {"DiagonalExteriorStiffener-1","Part",.46,.46,math.sqrt(148.01)},
-    {"DiagonalExteriorStiffener1","Part",.46,.46,math.sqrt(148.01)},
-    {"CrownButtress-1","Part",.95,2.2,3.8},
-    {"CrownButtress1","Part",.95,2.2,3.8},
-    {"UpperStructuralCollar","Part",6.8,.72,5.4},
-    {"CantileverPlatformUnderside","WedgePart",5.9,.55,7.5},
-    {"WeatherGuardTop","Part",4.8,.70,4.6},
-    {"BeaconTensionMast","Part",.5,4.8,.5},
+    {"OuterFrontArmor","Part",5,11.8,.68,"bevel"},
+    {"RearMaintenanceShell","Part",4.6,10.8,.78,"bevel"},
+    {"RecessedEquipmentBox","Part",2.3,5.2,.43,"bevel"},
+    {"FacetedSideWing-1","WedgePart",1.6,10.8,3.1,"cast"},
+    {"FacetedSideWing1","WedgePart",1.6,10.8,3.1,"cast"},
+    {"DiagonalExteriorStiffener-1","Part",.46,.46,math.sqrt(148.01),"beam"},
+    {"DiagonalExteriorStiffener1","Part",.46,.46,math.sqrt(148.01),"beam"},
+    {"CrownButtress-1","Part",.95,2.2,3.8,"bevel"},
+    {"CrownButtress1","Part",.95,2.2,3.8,"bevel"},
+    {"UpperStructuralCollar","Part",6.8,.72,5.4,"bevel"},
+    {"CantileverPlatformUnderside","WedgePart",5.9,.55,7.5,"cast"},
+    {"WeatherGuardTop","Part",4.8,.70,4.6,"bevel"},
+    {"BeaconTensionMast","Part",.5,4.8,.5,"shaft"},
 }
 local OUTER = {
-    {"LongSpanUpperStructuralFlange","Part",29.6,.62,.90},
-    {"LongSpanLowerStructuralFlange","Part",29.6,.48,.64},
-    {"LongSpanDiagonalReinforcement-1","WedgePart",2.4,2.6,.74},
-    {"LongSpanDiagonalReinforcement1","WedgePart",2.4,2.6,.74},
+    {"LongSpanUpperStructuralFlange","Part",29.6,.62,.90,"beam"},
+    {"LongSpanLowerStructuralFlange","Part",29.6,.48,.64,"beam"},
+    {"LongSpanDiagonalReinforcement-1","WedgePart",2.4,2.6,.74,"cast"},
+    {"LongSpanDiagonalReinforcement1","WedgePart",2.4,2.6,.74,"cast"},
 }
 local VARIANTS = {Classic=true,Towers=true,Crossroads=true,Orbital=true,Harbor=true}
 local root = Instance.new("Folder")
@@ -165,13 +170,25 @@ local function nativeParts(owner,fleet,variant,index,origin)
             local part = owner:FindFirstChild(row[1])
             local x,y,z = row[3],row[4],row[5]
             if span and index > 2 then x,z = z,x end
-            if not part or not part:IsA(row[2]) or not part.Anchored
+            if not part or not part:IsA("BasePart") or not part.Anchored
                 or part.CanCollide or part.CanTouch or part.CanQuery
-                or (part.Size-Vector3.new(x,y,z)).Magnitude > .11
                 or (part.Position-origin.Position).Magnitude > (span and 11 or 13.4)
                 or (part.Transparency ~= 1 and math.abs(part.Transparency-.045) > .025)
                 or part:GetAttribute("SceneryLodHidden") == true
                 or part.LocalTransparencyModifier >= .95 then return false end
+            local size = part.Size
+            if part:IsA("MeshPart") then
+                local assetId = HorizonMonumentGeometry.assetId(row[6], variant)
+                if not assetId or part.MeshId == "" or part:GetAttribute("Original3DAssetId") ~= assetId then
+                    return false
+                end
+                -- Cast and forged sources can use either horizontal import axis.
+                size = Vector3.new(math.max(size.X, size.Z), size.Y, math.min(size.X, size.Z))
+                x, z = math.max(x, z), math.min(x, z)
+            elseif not part:IsA(row[2]) then
+                return false
+            end
+            if (size - Vector3.new(x, y, z)).Magnitude > .11 then return false end
             parts[#parts+1] = part
         end
         return true
@@ -279,6 +296,10 @@ local function mount(item,tower,gantry)
     for _,part in ipairs(item.parts) do
         entry.originals[part] = part.Transparency
         watch(part:GetAttributeChangedSignal("SceneryLodHidden"))
+        if part:IsA("MeshPart") then
+            watch(part:GetPropertyChangedSignal("MeshId"))
+            watch(part:GetAttributeChangedSignal("Original3DAssetId"))
+        end
         for _,property in ipairs({"Name","CFrame","Size","Anchored","CanCollide","CanTouch",
             "CanQuery","LocalTransparencyModifier"}) do watch(part:GetPropertyChangedSignal(property)) end
         part.Transparency = 1

@@ -3222,7 +3222,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     addVariantLandmarks(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
-    StructureRetrofit.buildArena(decor, base, variant.Id, theme)
+    StructureRetrofit.buildArena(decor, base, variant.Id, theme, detailProfiles)
     local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
     local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
     -- The Harbor floor relief has a closed twelve-facet cast roller.
