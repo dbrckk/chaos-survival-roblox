@@ -1,6 +1,6 @@
 local PerimeterCapGeometry = {}
 
-function PerimeterCapGeometry.slope(casting)
+local function slope(casting, signalWidth, signalHeight, signalDepth, signalOffset)
     if not casting or not casting.Parent or casting.CFrame.UpVector.Y < .999 then return nil end
     local model = casting.Parent
     -- The single SIGNAL region sits toward the high end of the casting.
@@ -9,9 +9,9 @@ function PerimeterCapGeometry.slope(casting)
     for _, part in ipairs(model:GetChildren()) do
         if not part:IsA("MeshPart") then continue end
         local size = part.Size
-        if math.abs(size.Y - .04066) < .025
-            and math.abs(math.max(size.X, size.Z) - .9372) < .055
-            and math.abs(math.min(size.X, size.Z) - .1638) < .055 then
+        if math.abs(size.Y - signalHeight) < .025
+            and math.abs(math.max(size.X, size.Z) - signalWidth) < .055
+            and math.abs(math.min(size.X, size.Z) - signalDepth) < .055 then
             if highEnd then return nil end
             highEnd = casting.CFrame:PointToObjectSpace(part.Position)
         end
@@ -20,12 +20,20 @@ function PerimeterCapGeometry.slope(casting)
     local sideways = math.abs(highEnd.X) > math.abs(highEnd.Z)
     local forward = if sideways then highEnd.X else highEnd.Z
     local lateral = if sideways then highEnd.Z else highEnd.X
-    if math.abs(math.abs(forward) - .4212) > .10 or math.abs(lateral) > .08 then
+    if math.abs(math.abs(forward) - signalOffset) > .10 or math.abs(lateral) > .08 then
         return nil
     end
     local yaw = if sideways then -math.sign(forward) * math.pi / 2
         elseif forward < 0 then math.pi else 0
     return CFrame.Angles(0, yaw, 0), sideways
+end
+
+function PerimeterCapGeometry.slope(casting)
+    return slope(casting, .9372, .04066, .1638, .4212)
+end
+
+function PerimeterCapGeometry.wingSlope(casting)
+    return slope(casting, 1.1088, .03116, .3934, 1.0116)
 end
 
 return PerimeterCapGeometry

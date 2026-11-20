@@ -13,6 +13,7 @@ local PerimeterCapGeometry = if capModule then require(capModule)
 type Profile = {part: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
 type Profiles = {
     bevel: Profile?, beam: Profile?, shaft: Profile?, cast: Profile?, ring: Profile?, lens: Profile?,
+    wing: Profile?,
 }
 
 local HarborScenery = {}
@@ -125,18 +126,22 @@ local function buildCargoVessel(fleet, base, theme, profiles: Profiles?, slope: 
         CFrame.new(0, -4.4, 0), lower, Enum.Material.CorrodedMetal, nil, truss, true)
     segment("MainHull", Vector3.new(88, 8.2, 20),
         CFrame.new(0, -0.4, 0), hull, Enum.Material.CorrodedMetal)
-    segment("BowTaperPort", Vector3.new(14, 7.0, 10),
-        CFrame.new(49.5, -1.0, -5) * CFrame.Angles(0, math.pi / 2, 0),
-        hull, Enum.Material.CorrodedMetal, "WedgePart")
-    segment("BowTaperStarboard", Vector3.new(14, 7.0, 10),
-        CFrame.new(49.5, -1.0, 5) * CFrame.Angles(0, -math.pi / 2, 0),
-        hull, Enum.Material.CorrodedMetal, "WedgePart")
-    segment("SternTaperPort", Vector3.new(9, 6.5, 10),
-        CFrame.new(-47, -1.0, -4.8) * CFrame.Angles(0, -math.pi / 2, 0),
-        hull, Enum.Material.CorrodedMetal, "WedgePart")
-    segment("SternTaperStarboard", Vector3.new(9, 6.5, 10),
-        CFrame.new(-47, -1.0, 4.8) * CFrame.Angles(0, math.pi / 2, 0),
-        hull, Enum.Material.CorrodedMetal, "WedgePart")
+    -- The high faces meet the central hull on BOTH sides. Extend the
+    -- bow slightly inboard to close the gap while retaining the same tip.
+    -- A small overlap accommodates the rounded sides of the castings.
+    local taperWidth = if slope then 10.6 else 10
+    local bowSize = Vector3.new(taperWidth, 7.0, 10.8)
+    local sternSize = Vector3.new(taperWidth, 6.5, 10)
+    local bowYaw = CFrame.Angles(0, -math.pi / 2, 0)
+    local sternYaw = CFrame.Angles(0, math.pi / 2, 0)
+    segment("BowTaperPort", bowSize,
+        CFrame.new(49.1, -1.0, -5) * bowYaw, hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("BowTaperStarboard", bowSize,
+        CFrame.new(49.1, -1.0, 5) * bowYaw, hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("SternTaperPort", sternSize,
+        CFrame.new(-47, -1.0, -5) * sternYaw, hull, Enum.Material.CorrodedMetal, "WedgePart")
+    segment("SternTaperStarboard", sternSize,
+        CFrame.new(-47, -1.0, 5) * sternYaw, hull, Enum.Material.CorrodedMetal, "WedgePart")
     segment("MainCargoDeck", Vector3.new(88, 0.7, 19),
         CFrame.new(0, 4.1, 0), roof)
     for _, side in ipairs({-1, 1}) do
@@ -230,9 +235,14 @@ function HarborScenery.build(decor, base, theme, profiles: Profiles?)
     local column = available(profiles and profiles.shaft)
     local lens = available(profiles and profiles.lens)
     local ring = available(profiles and profiles.ring)
+    local hullCasting = cast
     local rotation, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
-    local slope = if rotation and cast then {
-        part = cast.part, assetId = cast.assetId, rotation = rotation, swapXZ = swapXZ,
+    if not rotation then
+        hullCasting = available(profiles and profiles.wing)
+        rotation, swapXZ = PerimeterCapGeometry.wingSlope(hullCasting and hullCasting.part)
+    end
+    local slope = if rotation and hullCasting then {
+        part = hullCasting.part, assetId = hullCasting.assetId, rotation = rotation, swapXZ = swapXZ,
     } else nil
 
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5

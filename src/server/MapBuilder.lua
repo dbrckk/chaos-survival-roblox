@@ -3398,6 +3398,11 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     HeroArchitecture.build(decor, base, variant.Id, theme, heroProfiles)
     ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase, sweptProfile)
     if variant.Id == "Harbor" then
+        exteriorProfiles.wing = {
+            part = approvedHorizonRegion("ApprovedPerimeterArmorTemplates", "Wing",
+                "OriginalPerimeterArmor3D", 138096293972093, Vector3.new(5.62, 1.64, 3.27701)),
+            assetId = 138096293972093,
+        }
         HarborScenery.build(decor, base, theme, exteriorProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
