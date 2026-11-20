@@ -83,4 +83,6 @@ Les danseurs holographiques peuvent utiliser des profils approuvés sur leurs hu
 
 Les trois façades imprimées, les deux lampes du portique et ses cinq accents réservés au High complètent le lot. Le même `SurfaceGui` suit la façade sur sa face orientée vers le public, y compris avec un maillage importé sur l’autre axe. Les 55, 89 et 140 emplacements visuels recensés de Showtime disposent ainsi d’un profil de remplacement, avec les mêmes formes de secours.
 
+Les halos de victoire, les socles des survivants et l’impulsion de retour peuvent utiliser un anneau creux approuvé d’Orbital. Le centre de la constellation utilise la région facettée du même modèle. Les dimensions, durées et options de réduction des animations suivent le code existant. Un effet qui démarre avant le chargement garde son disque de secours jusqu’à sa fin.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.

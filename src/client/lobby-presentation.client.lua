@@ -12,6 +12,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local LobbyGateCueKit = require(script.Parent.LobbyGateCueKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -889,12 +890,9 @@ local function lobbyReturnPulse()
     local q = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
 
-    local ring = Instance.new("Part")
+    local source = CelebrationMeshes.readyProfile("ring", player:GetAttribute("OptionalVfxPressure"))
+    local ring = CelebrationMeshes.disc(source, root.Position - Vector3.new(0, 2.6, 0), 2.6, 0.04)
     ring.Name = "LobbyReturnPulse"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.04, 2.6, 2.6)
-    ring.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.6, 0))
-        * CFrame.Angles(0, 0, math.rad(90))
     ring.Anchored = true
     ring.CanCollide = false
     ring.CanTouch = false
@@ -914,7 +912,7 @@ local function lobbyReturnPulse()
             Enum.EasingDirection.Out
         ),
         {
-            Size = Vector3.new(0.04, target, target),
+            Size = CelebrationMeshes.size(ring, target, 0.04),
             Transparency = 1,
         }
     ):Play()
@@ -932,6 +930,11 @@ stateEvent.OnClientEvent:Connect(function(state)
     local nextState = state
     local nextPhase = tostring(nextState.phase or "waiting")
 
+    if nextPhase ~= previousPhase and (nextPhase == "ready" or nextPhase == "result") then
+        local pressure = player:GetAttribute("OptionalVfxPressure")
+        CelebrationMeshes.readyProfile("ring", pressure)
+        CelebrationMeshes.readyProfile("core", pressure)
+    end
     if previousPhase == "result"
         and (nextPhase == "intermission" or nextPhase == "waiting")
     then
