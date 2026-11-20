@@ -18,6 +18,7 @@ local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local BroadcastFin = require(script.Parent.ApprovedClassicBroadcastFinMeshKit)
+local DistrictFoundation = require(script.Parent.ApprovedDistrictFoundationMeshKit)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
@@ -42,6 +43,8 @@ local opticalCores = {}
 local signalPanels = {}
 local containmentCollars = {}
 local collarSegments = {}
+local foundations = {}
+local identityPlates = {}
 local INWARD_WINDING = {
     [roofs] = true,
     [castStructures] = true,
@@ -51,6 +54,8 @@ local INWARD_WINDING = {
     [signalPanels] = true,
     [containmentCollars] = true,
     [collarSegments] = true,
+    [foundations] = true,
+    [identityPlates] = true,
 }
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
@@ -118,6 +123,16 @@ local function syncDetailGroup(group, changedModels, source, assetId, rotation, 
             replacement:SetAttribute("DistrictPanBasis", if source then rotation else nil)
         end
         replacement.Parent = parent
+        if group == identityPlates then
+            -- The replacement keeps the original coordinate axes and size.
+            -- Move the real GUI instances so layout and LOD state survive.
+            for _, sign in ipairs(previous:GetChildren()) do
+                if sign:IsA("SurfaceGui") or sign:IsA("BillboardGui") then
+                    if sign.Adornee == previous then sign.Adornee = replacement end
+                    sign.Parent = replacement
+                end
+            end
+        end
         detail.part = replacement
         previous:Destroy()
         if changedModels then changedModels[parent] = true end
@@ -139,6 +154,8 @@ local function syncDetails(changedModels)
         syncDetailGroup(gantryBeams)
         syncDetailGroup(anchorBolts)
         syncDetailGroup(opticalCores)
+        syncDetailGroup(foundations)
+        syncDetailGroup(identityPlates)
         syncDetailGroup(radarRings, changedModels)
         syncDetailGroup(signalPanels, changedModels)
         syncDetailGroup(containmentCollars, changedModels)
@@ -154,6 +171,8 @@ local function syncDetails(changedModels)
     end
     local casting = PylonShell.bodyProfile()
     syncDetailGroup(castStructures, nil, casting, PylonShell.AssetId)
+    syncDetailGroup(identityPlates, nil, casting, PylonShell.AssetId)
+    syncDetailGroup(foundations, nil, DistrictFoundation.plinthProfile(), DistrictFoundation.AssetId)
     syncDetailGroup(containmentCollars, changedModels, casting, PylonShell.AssetId)
     if #gantryBeams > 0 then
         syncLongDetail(gantryBeams, ForgedBridge.sweptProfile(), ForgedBridge.AssetId)
@@ -180,6 +199,8 @@ local function clearDetails()
     table.clear(signalPanels)
     table.clear(containmentCollars)
     table.clear(collarSegments)
+    table.clear(foundations)
+    table.clear(identityPlates)
     folder:ClearAllChildren()
 end
 
@@ -310,7 +331,7 @@ local function beam(parent, name, root, a, b, thick, color, alpha)
         color, Enum.Material.Metal, alpha)
 end
 
-local function sectorSign(model, anchor, copy, color)
+local function sectorSign(anchor, copy, color)
     -- On real Android landscape screenshots the central survival HUD,
     -- signal navigation and objective progress already consume the upper
     -- view. Four more world-floating sector names obscure traversal and
@@ -380,12 +401,13 @@ local function makeSector(base, theme, index, tier, variant)
             color or alloy, material, alpha, shape)
     end
 
-    local foundation = make("GroundFoundation",
+    trackDetail(foundations, make("GroundFoundation",
         Vector3.new(14, 0.55, 13),
-        CFrame.new(0, 0.27, 0), dark, Enum.Material.Slate, 0.07)
+        CFrame.new(0, 0.27, 0), dark, Enum.Material.Slate, 0.07))
     local face = make("SectorIdentityPlate", Vector3.new(9, 1.6, 0.55),
         CFrame.new(0, 5.4, -5.8), alloy, Enum.Material.Metal, 0.03)
-    sectorSign(model, face, CoreLocalization.text(localeId,
+    trackDetail(identityPlates, face)
+    sectorSign(face, CoreLocalization.text(localeId,
         "DISTRICT_SECTOR_SIGN", number,
         CoreLocalization.text(localeId, "DISTRICT_SECTOR_" .. index)),
         accent)
@@ -873,6 +895,7 @@ local DETAIL_SOURCES = {
     ApprovedLobbyPylonShellTemplates = "LobbyPylonShell",
     ApprovedTowersSignatureBridgeTemplates = "ForgedBridge",
     ApprovedClassicBroadcastFinTemplates = "BroadcastFin",
+    ApprovedHarborDockCaissonTemplates = "DockCaisson",
     ApprovedFloorReliefTemplates = "AnchorBolt",
     ApprovedOrbitalReactorLandmarkTemplates = "Node",
 }

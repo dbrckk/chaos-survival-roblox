@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Kit = {}
 local ASSET_ID = 101457508594609
+Kit.AssetId = ASSET_ID
 local SOURCE_FOLDER = "ApprovedHarborDockCaissonTemplates"
 local SOURCE_TAG = "OriginalHarborDockCaisson3D"
 local FACADE = "LocalApprovedDistrictFacadeMounted"
@@ -85,6 +86,22 @@ local function approved()
     local _, bounds = source:GetBoundingBox()
     if (bounds - Vector3.new(14.07, 3.30755, 14.07)).Magnitude > .47 then return nil end
     return source
+end
+
+function Kit.plinthProfile()
+    local source = approved()
+    if not source then return nil end
+    -- The ARMOR region contains the sealed upper cassette and its inset
+    -- lower bulkhead. Its square footprint survives horizontal axis swaps.
+    local expected = Vector3.new(12.82, 2.69, 12.82)
+    local plinth
+    for _, part in ipairs(source:GetChildren()) do
+        if (part.Size - expected).Magnitude < .12 then
+            if plinth or not part.Archivable or part.MeshId == "" then return nil end
+            plinth = part
+        end
+    end
+    return plinth
 end
 
 local function bindSource(source)
