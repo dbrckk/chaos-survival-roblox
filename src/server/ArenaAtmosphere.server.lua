@@ -4,6 +4,7 @@ local ArenaAtmosphereStyle = require("./ArenaAtmosphereStyle")
 local ReactorAssets = require("./PremiumOrbitalReactorLandmarkAssets")
 local ForgedBridgeAssets = require("./PremiumTowersSignatureBridgeAssets")
 local LargeStructureAssets = require("./PremiumLargeStructureAssets")
+local PerimeterArmorAssets = require("./PremiumPerimeterArmorAssets")
 local RouteSignalGeometry = require("./RouteSignalGeometry")
 
 local function makePart(parent, name, size, cframe, color, material, profile, assetId)
@@ -181,6 +182,12 @@ local function addDistantSilhouette(folder, center, theme, variantId, base)
         Vector3.new(extentX, 0, extentZ),
     }
     local harbor = variantId == "Harbor"
+    local shaft, shaftId, collar, beacon
+    if variantId == "Orbital" then
+        shaft, shaftId = LargeStructureAssets.shaftProfile(variantId)
+        collar = PerimeterArmorAssets.wayfinderProfile()
+        beacon = ReactorAssets.nodeProfile(Vector3.new(2.96, 2.9503, 2.96))
+    end
     local verticalCylinder = CFrame.Angles(0, 0, math.pi * 0.5)
     for index, offset in ipairs(locations) do
         local height = (variantId == "Towers" and 23)
@@ -196,7 +203,8 @@ local function addDistantSilhouette(folder, center, theme, variantId, base)
                 or Vector3.new(2.4, height, 2.4),
             CFrame.new(origin) * (harbor and verticalCylinder or CFrame.identity),
             harbor and theme.structure or Color3.fromRGB(29, 37, 53),
-            harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal
+            harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal,
+            shaft, shaftId
         )
         if harbor then spine.Shape = Enum.PartType.Cylinder end
         spine.Transparency = 0.04
@@ -213,7 +221,8 @@ local function addDistantSilhouette(folder, center, theme, variantId, base)
                     or Vector3.new(3.1, 0.32, 3.1),
                 harbor and bandOrigin * verticalCylinder or bandOrigin,
                 theme.secondary,
-                harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal
+                harbor and Enum.Material.CorrodedMetal or Enum.Material.Metal,
+                collar, 88962643359267
             )
             if harbor then band.Shape = Enum.PartType.Cylinder end
             band.Transparency = 0.14
@@ -228,7 +237,7 @@ local function addDistantSilhouette(folder, center, theme, variantId, base)
                 or Vector3.new(3.7, 0.5, 3.7),
             harbor and capOrigin * verticalCylinder or capOrigin,
             index % 2 == 0 and theme.accent or theme.secondary,
-            Enum.Material.Neon
+            Enum.Material.Neon, beacon, 104654294187035
         )
         if harbor then cap.Shape = Enum.PartType.Cylinder end
         cap.Transparency = 0.25
