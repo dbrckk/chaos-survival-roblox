@@ -408,7 +408,7 @@ function ArenaMechanics.start(ctx, variantId)
 
     local hint = ArenaMechanics.effectiveHint(variantId, dynamicStarted)
     if shuttersStarted then
-        hint = "Timed bridge shutters rise: JUMP the low bar or WAIT for an open crossing"
+        hint = "Wait on your side while the shutter rises, then jump the low bar or wait for it to reopen"
     end
     local mode = ArenaMechanics.mode(
         variantId, dynamicStarted, shuttersStarted

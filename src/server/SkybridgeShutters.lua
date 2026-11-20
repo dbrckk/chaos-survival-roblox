@@ -85,6 +85,7 @@ function SkybridgeShutters.gateFor(bridge, folder, profile)
     gate.BottomSurface = Enum.SurfaceType.Smooth
     gate:SetAttribute("BridgeShutter", true)
     gate:SetAttribute("BridgeName", bridge.Name)
+    gate:SetAttribute("ShutterDeckTopY", bridge.Position.Y + bridge.Size.Y * .5)
     gate:SetAttribute("ShutterPhase", "Idle")
     gate.Parent = folder
     -- Client-only locale/accessibility notice follows this real object.
@@ -137,38 +138,38 @@ function SkybridgeShutters.gateFor(bridge, folder, profile)
 end
 
 function SkybridgeShutters.setPhase(state, phase, timestamp)
-    if not state or not state.gate or not state.gate.Parent then
-        return false
-    end
+    if not state or not state.gate then return false end
     local gate = state.gate
-    local reopened = phase == "Idle" and type(timestamp) == "number"
+    if not gate.Parent and phase ~= "Idle" then return false end
+    local reopened = gate.Parent ~= nil and phase == "Idle" and type(timestamp) == "number"
         and gate.CanCollide and gate:GetAttribute("ShutterPhase") == "Raised"
-    -- Put collision behind the visible status transition so observers
-    -- never get struck by a gate which still appears to be inactive.
-    gate.CanCollide = false
-    gate.CanQuery = false
-    if phase == "Warning" then
-        gate:SetAttribute("ShutterReopenedAt", nil)
-        gate.CFrame = state.lowered
-        gate.Color = Color3.fromRGB(233, 180, 72)
-        gate.Transparency = 0.28
-        gate:SetAttribute("ShutterWarningAt", timestamp)
-    elseif phase == "Raising" then
-        gate.Color = Color3.fromRGB(225, 159, 71)
-        gate.Transparency = 0.16
-    elseif phase == "Raised" then
-        gate.CFrame = state.raised
-        gate.Color = Color3.fromRGB(190, 117, 67)
-        gate.Transparency = 0.08
-        gate.CanQuery = true
-        gate.CanCollide = true
-    else
-        phase = "Idle"
-        gate.CFrame = state.lowered
-        gate.Transparency = 1
-        gate:SetAttribute("ShutterWarningAt", nil)
+    if gate.Parent then
+        -- The obstruction exists only in the Raised phase.
+        gate.CanCollide = false
+        gate.CanQuery = false
+        if phase == "Warning" then
+            gate:SetAttribute("ShutterReopenedAt", nil)
+            gate.CFrame = state.lowered
+            gate.Color = Color3.fromRGB(233, 180, 72)
+            gate.Transparency = 0.28
+            gate:SetAttribute("ShutterWarningAt", timestamp)
+        elseif phase == "Raising" then
+            gate.Color = Color3.fromRGB(225, 159, 71)
+            gate.Transparency = 0.16
+        elseif phase == "Raised" then
+            gate.CFrame = state.raised
+            gate.Color = Color3.fromRGB(190, 117, 67)
+            gate.Transparency = 0.08
+            gate.CanQuery = true
+            gate.CanCollide = true
+        else
+            phase = "Idle"
+            gate.CFrame = state.lowered
+            gate.Transparency = 1
+            gate:SetAttribute("ShutterWarningAt", nil)
+        end
+        gate:SetAttribute("ShutterPhase", phase)
     end
-    gate:SetAttribute("ShutterPhase", phase)
     if state.stripe and state.stripe.Parent then
         local warningAlpha = phase == "Warning" and 0.20
             or (phase == "Raising" and 0.12
@@ -276,8 +277,19 @@ function SkybridgeShutters.start(ctx, arena)
             current = nil
         end
     end
+    local connections = {}
+    for _, state in ipairs(states) do
+        local function revoke()
+            if current == state and (state.gate.Parent ~= folder or state.bridge.Parent ~= platforms
+                or not state.bridge.CanCollide) then restore() end
+        end
+        connections[#connections + 1] = state.gate.AncestryChanged:Connect(revoke)
+        connections[#connections + 1] = state.bridge.AncestryChanged:Connect(revoke)
+        connections[#connections + 1] = state.bridge:GetPropertyChangedSignal("CanCollide"):Connect(revoke)
+    end
     ctx.OnCleanup[#ctx.OnCleanup + 1] = function()
         active = false
+        for _, connection in ipairs(connections) do connection:Disconnect() end
         restore()
         folder:Destroy()
     end
@@ -289,24 +301,29 @@ function SkybridgeShutters.start(ctx, arena)
         while active and ctx.Active()
             and arena.Parent and platforms.Parent and folder.Parent do
             if not SkybridgeShutters.canComplete(ctx, os.clock()) then break end
-            cycle += 1
-            local selected = states[((round + cycle - 2) % #states) + 1]
-            if not selected.bridge.Parent
-                or not selected.bridge.CanCollide then break end
+            local selected
+            for _ = 1, #states do
+                cycle += 1
+                local entry = states[((round + cycle - 2) % #states) + 1]
+                if entry.bridge.Parent == platforms and entry.bridge.CanCollide and entry.gate.Parent == folder then
+                    selected = entry
+                    break
+                end
+            end
+            if not selected then break end
             current = selected
-            SkybridgeShutters.setPhase(
-                current, "Warning", workspace:GetServerTimeNow()
-            )
+            SkybridgeShutters.setPhase(current, "Warning", workspace:GetServerTimeNow())
             task.wait(SkybridgeShutters.WarningSeconds)
-            if not active or not ctx.Active()
-                or not selected.bridge.Parent or not selected.bridge.CanCollide then
+            if not active or not ctx.Active() or not folder.Parent then break end
+            if not selected.bridge.Parent or not selected.bridge.CanCollide
+                or not SkybridgeShutters.setPhase(current, "Raising") then
                 restore()
-                break
+                task.wait(SkybridgeShutters.BetweenSeconds)
+                continue
             end
 
-            -- The visible warning becomes an actual rising metal hurdle,
-            -- rather than a blinking prompt or a scripted character push.
-            SkybridgeShutters.setPhase(current, "Raising")
+            -- Tween the visual obstacle before testing whether its
+            -- authoritative collision can safely be enabled.
             local tween = TweenService:Create(
                 current.gate,
                 TweenInfo.new(
@@ -318,11 +335,17 @@ function SkybridgeShutters.start(ctx, arena)
             )
             tween:Play()
             task.wait(SkybridgeShutters.RiseSeconds)
-            if not active or not ctx.Active() or not current
-                or not selected.bridge.Parent or not selected.bridge.CanCollide then
+            if not active or not ctx.Active() or not folder.Parent then
                 tween:Cancel()
-                restore()
                 break
+            end
+            if not current or selected.bridge.Parent ~= platforms or not selected.bridge.CanCollide
+                or selected.gate.Parent ~= folder then
+                tween:Cancel()
+                SkybridgeShutters.setPhase(selected, "Idle")
+                restore()
+                task.wait(SkybridgeShutters.BetweenSeconds)
+                continue
             end
             -- A late arrival in the exact shutter volume cancels closure.
             -- Waiting is always safe; no unavoidable forced collision.
@@ -333,7 +356,8 @@ function SkybridgeShutters.start(ctx, arena)
             ) then
                 SkybridgeShutters.setPhase(current, "Raised")
                 task.wait(SkybridgeShutters.RaisedSeconds)
-                if active and ctx.Active() and selected.bridge.Parent and selected.bridge.CanCollide then
+                if active and ctx.Active() and selected.bridge.Parent
+                    and selected.bridge.CanCollide and selected.gate.Parent then
                     reopenedAt = workspace:GetServerTimeNow()
                 end
             end

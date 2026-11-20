@@ -13,8 +13,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local phase = "waiting"
 local tracked = {}
-local requestedMeshes = {}
-local readyMeshes = {}
+local requestedMeshes, loadingMeshes, readyMeshes = {}, {}, {}
 local REOPEN_SECONDS = 1.6
 
 local function participantCanSee()
@@ -25,7 +24,8 @@ end
 
 local function update(gate, bundle)
     if not bundle or not bundle.sign.Parent then return end
-    if not gate.Parent or not participantCanSee() then
+    if not gate.Parent or gate:GetAttribute("BridgeShutter") ~= true
+        or not participantCanSee() then
         bundle.sign.Enabled = false
         return
     end
@@ -78,23 +78,32 @@ local function refreshSkins()
     local meshId = source.MeshId
     if not readyMeshes[meshId]
         and ContentProvider:GetAssetFetchStatus(meshId) ~= Enum.AssetFetchStatus.Success then
-        if requestedMeshes[meshId] then return end
-        requestedMeshes[meshId] = true
+        local attempts = requestedMeshes[meshId] or 0
+        if loadingMeshes[meshId] or attempts >= 2 then return end
+        loadingMeshes[meshId] = true
+        requestedMeshes[meshId] = attempts + 1
         task.spawn(function()
             local loaded = false
             local ok = pcall(ContentProvider.PreloadAsync, ContentProvider, {meshId}, function(_, status)
                 loaded = status == Enum.AssetFetchStatus.Success
             end)
             if ok and loaded then
+                loadingMeshes[meshId] = nil
                 readyMeshes[meshId] = true
                 refreshSkins()
+            else
+                task.delay(3, function()
+                    loadingMeshes[meshId] = nil
+                    refreshSkins()
+                end)
             end
         end)
         return
     end
 
     for gate, bundle in pairs(tracked) do
-        if bundle.skin and bundle.skin.Parent == gate then continue end
+        if gate:GetAttribute("BridgeShutter") ~= true
+            or (bundle.skin and bundle.skin.Parent == gate) then continue end
         bundle.skin, bundle.releaseSkin = ForgedBridge.bindShutterSkin(gate, source)
     end
 end
@@ -109,8 +118,7 @@ local function remove(gate)
 end
 
 local function attach(gate)
-    if not gate:IsA("BasePart") or tracked[gate]
-        or gate:GetAttribute("BridgeShutter") ~= true then return end
+    if not gate:IsA("BasePart") or tracked[gate] then return end
     local sign = Instance.new("BillboardGui")
     sign.Name = "TowerTimedGateGuide"
     sign.Adornee = gate
@@ -149,6 +157,10 @@ local function attach(gate)
     tracked[gate] = bundle
     local function changed() update(gate, bundle) end
     bundle.connections = {
+        gate:GetAttributeChangedSignal("BridgeShutter"):Connect(function()
+            changed()
+            refreshSkins()
+        end),
         gate:GetAttributeChangedSignal("ShutterPhase"):Connect(changed),
         gate:GetAttributeChangedSignal("ShutterReopenedAt"):Connect(changed),
         gate:GetPropertyChangedSignal("CanCollide"):Connect(changed),

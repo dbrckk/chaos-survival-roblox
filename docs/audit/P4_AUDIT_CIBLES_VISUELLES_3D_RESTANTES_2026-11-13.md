@@ -135,6 +135,10 @@ Les quatre parcours de chaque arène affichent les deux directions aux paliers 5
 
 Sur les deux Promenades, chaque flèche longitudinale suit le véritable palier voisin ou le belvédère terminal. Aux jonctions de l’Épine céleste, les flèches et le guide exigent un recouvrement praticable. Si la direction suivie et la jonction sont bloquées, le guide vérifie le palier arrière avant de proposer un repli.
 
+### Volets de Tower Run et replis sous alerte
+
+Le guide écarte les chemins qui traversent un volet en fermeture ou levé, à la hauteur du pont. Les trajets sous les passerelles et les replis du même côté restent disponibles. Un bot proche du volet peut dégager le centre puis attendre du côté accessible, en tenant compte des alertes d’impact. Pendant une coupure de pont, il vérifie le palier qui reçoit son repli avant de quitter le tablier. Si le volet ou son support disparaît pendant une fermeture, le cycle libère ce pont et continue avec les volets encore utilisables. La réouverture après une fermeture réelle conserve son signal dédié.
+
 ### Retour au sol et replis des bots
 
 Le guide peut accompagner la descente depuis les sommets des terrasses et les belvédères. Il utilise les sauts existants en sens inverse et, si une branche est bloquée, vérifie la traversée de secours. Le dernier repère indique un point sur le vrai sol. Le volume du personnage doit pouvoir y passer et le trajet doit rester hors des zones de danger. Le repère de descente s'efface pendant la montée de lave.

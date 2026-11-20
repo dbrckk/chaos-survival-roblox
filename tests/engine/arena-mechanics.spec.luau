@@ -523,6 +523,13 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(state.stripe.Transparency < 0.4).toBe(true)
             expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Warning")
+            local RouteRules = require("../../src/shared/JumpRouteCueRules")
+            local rootPoint = bridge.Position + Vector3.yAxis * 2.9
+            local approach, exit = rootPoint - direction * 6, rootPoint + direction * 6
+            expect(RouteRules.safeGuidedPath(approach, exit, {gate})).toBe(false)
+            expect(RouteRules.safeGuidedPath(approach, approach - direction * 3, {gate})).toBe(true)
+            expect(RouteRules.safeGuidedPath(approach - Vector3.yAxis * 8,
+                exit - Vector3.yAxis * 8, {gate})).toBe(true)
             for _, arm in ipairs(state.chevrons) do
                 expect(arm.Transparency).toBe(state.stripe.Transparency)
             end
@@ -559,6 +566,7 @@ describe("Arena mechanics", function()
             expect(bridge.CanCollide).toBe(true)
             expect(SkybridgeShutters.setPhase(state, "Idle", 115)).toBe(true)
             expect(gate:GetAttribute("ShutterReopenedAt")).toBe(115)
+            expect(RouteRules.safeGuidedPath(approach, exit, {gate})).toBe(true)
             expect(gate.CanCollide).toBe(false)
             expect(gate.CanQuery).toBe(false)
             expect(gate.Transparency).toBe(1)
@@ -578,6 +586,14 @@ describe("Arena mechanics", function()
             expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
             expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
             expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Warning", 130)).toBe(true)
+            gate:Destroy()
+            expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(false)
+            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Idle")
+            for _, entry in ipairs(state.rails) do
+                expect(entry.part.Transparency).toBe(entry.transparency)
+            end
             states[#states + 1] = state
         end
         expect(#states).toBe(4)

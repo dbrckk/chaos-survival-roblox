@@ -1438,40 +1438,39 @@ describe("AI survivor rules", function()
         ) == nil).toBe(true)
     end)
 
-    it("responds to actual timed skybridge shutters with physically supported retreat or waiting", function()
-        local rule = AISurvivorRules.skybridgeShutterEscapeTarget
-        local north = CFrame.new(0, 12.5, -28)
-        local length = Vector3.new(49, 1, 4.5)
-        local warning = "Warning"
-        local right = rule(Vector3.new(15, 15.4, -28), north, length, warning)
-        expect(right ~= nil and right.X > 26).toBe(true)
-        local left = rule(Vector3.new(-15, 15.4, -28), north, length, "Raised")
-        expect(left ~= nil and left.X < -26).toBe(true)
-
-        -- A bot standing at the gate must not be sent THROUGH the
-        -- collision or sideways into open air. It holds until clear;
-        -- the gate's real server occupancy check cancels unsafe closure.
-        local center = Vector3.new(0.5, 15.4, -28)
-        expect((rule(center, north, length, "Raising") - center).Magnitude
-            < 0.001).toBe(true)
-        expect(rule(center, north, length, "Idle") == nil).toBe(true)
-        expect(rule(center, north, length, nil) == nil).toBe(true)
-        expect(rule(center, north, length, "Gone") == nil).toBe(true)
-
-        local west = CFrame.new(-28, 12.5, 0)
-        local westSize = Vector3.new(4.5, 1, 49)
-        local farEnd = rule(
-            Vector3.new(-28, 15.4, -12), west, westSize, "Warning"
-        )
-        expect(farEnd ~= nil and farEnd.Z < -26).toBe(true)
-        expect(math.abs(farEnd.X + 28) < 0.1).toBe(true)
-        expect(rule(Vector3.new(0, 3, -28), north, length, warning)
-            == nil).toBe(true)
-        expect(rule(Vector3.new(0, 15.4, -38), north, length, warning)
-            == nil).toBe(true)
-        expect(rule(Vector3.new(0, 15.4, -28), north,
-            Vector3.new(49, 1, 2), warning) == nil).toBe(true)
-        expect(rule(nil, north, length, warning) == nil).toBe(true)
+    it("responds to timed shutters on the live bridge footprint", function()
+        local Rules = require("../../src/shared/SkybridgeShutterRules")
+        for _, alongX in ipairs({true, false}) do
+            local bridge, gate = Instance.new("Part"), Instance.new("Part")
+            bridge.Size = alongX and Vector3.new(49, 1, 4.5) or Vector3.new(4.5, 1, 49)
+            bridge.CFrame = CFrame.new(-5, 12, 6) * CFrame.Angles(0, math.pi * .25, 0)
+            gate.Size = alongX and Vector3.new(.85, 2.05, 4.38) or Vector3.new(4.38, 2.05, .85)
+            gate.CFrame = bridge.CFrame * CFrame.new(0, -.525, 0)
+            gate:SetAttribute("ShutterDeckTopY", 12.5)
+            gate:SetAttribute("ShutterPhase", "Warning")
+            gate.CanCollide = false
+            local axis = alongX and bridge.CFrame.RightVector or -bridge.CFrame.LookVector
+            local center = bridge.Position + Vector3.yAxis * 2.9
+            expect(Rules.onBridge(bridge, center)).toBe(true)
+            expect(Rules.onBridge(bridge, center - Vector3.yAxis * 9)).toBe(false)
+            expect(Rules.blocksPath(gate, center - axis * 6, center + axis * 6)).toBe(true)
+            expect(Rules.blocksPath(gate, center + axis * 2, center + axis * 6)).toBe(false)
+            expect(Rules.blocksPath(gate, center, center)).toBe(true)
+            local near, far, opposite = Rules.refugeOptions(bridge, gate, center, -axis * 10)
+            expect((near - center):Dot(axis) < -4).toBe(true)
+            expect((far - center):Dot(axis) < (near - center):Dot(axis)).toBe(true)
+            expect((opposite - center):Dot(axis) > 4).toBe(true)
+            expect(Rules.blocksPath(gate, center, near)).toBe(false)
+            expect(Rules.onBridge(bridge, far)).toBe(true)
+            gate:SetAttribute("ShutterPhase", "Raised")
+            gate.CanCollide = true
+            local _, _, blockedSide = Rules.refugeOptions(bridge, gate, center, -axis * 10)
+            expect(blockedSide).toBe(nil)
+            gate:SetAttribute("ShutterPhase", "Idle")
+            expect(Rules.blocksPath(gate, center - axis * 6, center + axis * 6)).toBe(false)
+            gate:Destroy()
+            bridge:Destroy()
+        end
     end)
 
     it("allows one pre-jump per Shock warning and ignores unrelated markers", function()

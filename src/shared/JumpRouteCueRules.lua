@@ -4,6 +4,9 @@
 local SkyRouteConnectionRules = if script
     then require(script.Parent.SkyRouteConnectionRules)
     else require("./SkyRouteConnectionRules")
+local SkybridgeShutterRules = if script
+    then require(script.Parent.SkybridgeShutterRules)
+    else require("./SkybridgeShutterRules")
 local JumpRouteCueRules = {}
 
 JumpRouteCueRules.MaxGap = 3.85
@@ -500,6 +503,9 @@ function JumpRouteCueRules.safeGuidedPath(fromPosition, toPosition, warnings)
                     return false
                 end
             end
+        elseif typeof(warning) == "Instance" and warning:IsA("BasePart")
+            and warning.Parent ~= nil and warning:GetAttribute("BridgeShutter") == true then
+            if SkybridgeShutterRules.blocksPath(warning, fromPosition, toPosition) then return false end
         elseif typeof(warning) == "Instance"
             and warning:IsA("BasePart")
             and warning.Parent ~= nil
