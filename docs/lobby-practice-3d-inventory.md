@@ -95,4 +95,6 @@ Les anneaux personnels de victoire, de défaite et de médaille peuvent utiliser
 
 Les traces circulaires de catastrophe utilisent en qualité moyenne et haute un profil approuvé d’Orbital. Les cratères de météores et les ondes de saut adoptent un anneau creux. Le givre et les brûlures de bombes reprennent le noyau facetté aplati. Chaque trace garde une pièce alignée sur la surface et sa durée d’origine. Le disque simple prend le relais en qualité basse, sous pression graphique ou si le maillage est indisponible.
 
+Les fissures d’impact, les lignes résiduelles et les éclats peuvent reprendre deux maillages approuvés. Le profil octogonal du lobby suit l’axe des fissures. La tête forgée à douze facettes fournit le relief des éclats. Chaque élément garde une pièce, son emprise au sol et son fondu. Les formes simples servent de secours au chargement et sous pression graphique.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.

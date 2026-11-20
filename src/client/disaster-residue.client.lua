@@ -184,6 +184,14 @@ local function makeDisc(name, position, diameter, profile, transparency, lifetim
     fadeLater(disc, lifetime)
 end
 
+local function fitCrack(source, size, frame)
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    if not mesh then return nil, size, frame end
+    -- Lay the vertical chamfered shaft along the crack's local Z axis.
+    return mesh, Vector3.new(size.X, size.Z, size.Y),
+        frame * CFrame.Angles(math.pi * 0.5, 0, 0)
+end
+
 local function makeCracks(name, position, radius, profile, count, lifetime)
     local surface, normal = surfaceAt(position)
     if not surface then
@@ -191,18 +199,20 @@ local function makeCracks(name, position, radius, profile, count, lifetime)
     end
 
     local base = flatCFrame(surface, normal, 0)
+    local source = CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
     for i = 1, count do
         local angle = ((i - 1) / count) * 360 + ((i * 31) % 17)
         local length = radius * (0.50 + ((i * 13) % 30) / 100)
+        local mesh, size, frame = fitCrack(source, Vector3.new(0.10, 0.028, length),
+            base * CFrame.Angles(0, math.rad(angle), 0) * CFrame.new(0, 0.01, -length * 0.42))
         local line = makePart(
             name .. i,
-            Vector3.new(0.10, 0.028, length),
-            base
-                * CFrame.Angles(0, math.rad(angle), 0)
-                * CFrame.new(0, 0.01, -length * 0.42),
+            size,
+            frame,
             profile.Color:Lerp(Color3.new(0, 0, 0), 0.22),
             profile.Material,
-            0.38
+            0.38,
+            mesh
         )
         fadeLater(line, lifetime)
     end
@@ -238,6 +248,7 @@ local function makeFragments(position, radius, profile, count, lifetime)
     end
 
     local base = flatCFrame(surface, normal, 0)
+    local source = CelebrationMeshes.readyProfile("fragment", player:GetAttribute("OptionalVfxPressure"))
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2 + ((i * 17) % 13) * 0.04
         local distance = radius * (0.24 + ((i * 19) % 36) / 100)
@@ -262,7 +273,8 @@ local function makeFragments(position, radius, profile, count, lifetime)
                 ),
             profile.Color:Lerp(Color3.fromRGB(28, 30, 36), 0.52),
             profile.Material,
-            0.20
+            0.20,
+            CelebrationMeshes.cloneProfile(source)
         )
         fadeLater(shard, lifetime)
     end
@@ -305,10 +317,16 @@ local function impactResidue(payload)
     local frame = flatCFrame(surface, normal, 0)
     local radius = math.max(2, ImpactSetpieceRules.safeRadius(payload.radius))
     local reduced = player:GetAttribute("ReduceMotion") == true
-    trimBudget(ImpactSurfaceScarKit.partCount(quality.Name, reduced))
+    local pieceCount = ImpactSurfaceScarKit.partCount(quality.Name, reduced)
+    local source = pieceCount > 1
+        and CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
+    local fitImpactCrack = if source then function(size, crackFrame)
+        return fitCrack(source, size, crackFrame)
+    end else nil
+    trimBudget(pieceCount)
     local pieces = ImpactSurfaceScarKit.build(
         folder, frame, kind, quality.Name,
-        groundMaterial, groundColor, profile.Color, radius, reduced
+        groundMaterial, groundColor, profile.Color, radius, reduced, fitImpactCrack
     )
     local lifetime = DisasterResidue.impactLifetime(quality.Name)
     for _, piece in ipairs(pieces) do
@@ -433,13 +451,18 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
             local surface, normal = surfaceAt(position)
             if surface then
                 local length = profile.Kind == "edge" and 7.5 or 5.5
+                local traceSource = quality.Name ~= "Low"
+                    and CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
+                local mesh, size, frame = fitCrack(traceSource, Vector3.new(0.12, 0.025, length),
+                    flatCFrame(surface, normal, yaw))
                 local trace = makePart(
                     id .. "ResultTrace" .. i,
-                    Vector3.new(0.12, 0.025, length),
-                    flatCFrame(surface, normal, yaw),
+                    size,
+                    frame,
                     profile.Color,
                     profile.Material,
-                    quality.Name == "Low" and 0.76 or 0.62
+                    quality.Name == "Low" and 0.76 or 0.62,
+                    mesh
                 )
                 fadeLater(trace, lifetime)
             end
