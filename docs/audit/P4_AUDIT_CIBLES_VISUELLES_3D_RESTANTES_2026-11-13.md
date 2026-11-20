@@ -40,6 +40,10 @@ Le recensement client inclut désormais le transit quand le serveur le crée. Le
 
 Les 20 installations extérieures qui bordent les arènes peuvent utiliser des maillages approuvés dans **276 emplacements**. Classic, Tower Run, Orbital et Storm Harbor ont chacun 52 pièces. Crossroads en a 68, dont les 16 renforts et profilés des quatre portiques. Ces profilés suivent l’axe réel du portique, même si l’import permute les axes horizontaux. Les habillages complets de proximité reconnaissent les formes sculptées et leurs secours avec les mêmes budgets. Les inventaires de sol distinguent toujours les dalles PBR, les alertes et les habillages géométriques.
 
+### Grandes dalles des parcours
+
+Les **36 dalles par arène**, soit 180 emplacements sur les cinq variantes, peuvent reprendre le biseau continu du caisson de service approuvé. Leur empreinte et leur épaisseur de 0,035 stud restent les mêmes. Leur sommet reste à 0,1705 stud au-dessus du sol physique, sous les marquages de danger. Les dalles gardent leurs teintes, leur finition PBR, leurs ancrages pour les modèles complets de proximité et leur suivi du rétrécissement. Leur forme plate sert de secours si le profil manque à la construction. Les dalles et le fond de sol reçus après un rétrécissement continuent à prendre la teinte de contraste pendant la montée de lave.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

@@ -18,7 +18,20 @@ end
 
 -- Accept only server-authored, nonphysical floor FINISH parts, not
 -- Base, PlatformN, lava, collapse indicators, mesh proxies or ornaments.
-function Rules.nativeRole(part, decor)
+local function floorScale(decor, base)
+    if typeof(base) ~= "Instance" or not base:IsA("BasePart") or base.Name ~= "Base"
+        or base.Parent ~= decor.Parent or not base.Anchored or not base.CanCollide then
+        return 1
+    end
+    local x, z = base:GetAttribute("OriginalSizeX"), base:GetAttribute("OriginalSizeZ")
+    if type(x) ~= "number" or x < 318 or type(z) ~= "number" or z < 318 then return 1 end
+    local ratioX, ratioZ = base.Size.X / x, base.Size.Z / z
+    if not (ratioX >= .445 and ratioX <= 1.005 and ratioZ >= .445 and ratioZ <= 1.005
+        and math.abs(ratioX - ratioZ) < .012) then return 1 end
+    return math.min(1, ratioX, ratioZ)
+end
+
+function Rules.nativeRole(part, decor, base)
     if typeof(part) ~= "Instance" or typeof(decor) ~= "Instance"
         or not decor:IsA("Folder") or part.Parent ~= decor
         or not part:IsA("BasePart") or not part.Anchored
@@ -26,13 +39,15 @@ function Rules.nativeRole(part, decor)
         or part.Transparency >= 0.5
         or part:GetAttribute("PremiumArchitecturalSurface") ~= true
     then return nil end
-    if part.Name == "ArenaDeckInset"
-        and part.Size.X > 200 and part.Size.Z > 200
-        and part.Size.Y <= 0.2 then return "deck" end
-    if part.Name:match("^PremiumGroundModule%d+$")
-        and part:GetAttribute("OriginalGroundFinish") == true
-        and part.Size.X >= 35 and part.Size.Z >= 35
-        and part.Size.Y <= 0.12 then return "module" end
+    if part.Name == "ArenaDeckInset" and part.Size.Y <= .2 then
+        local minimum = 200 * floorScale(decor, base)
+        if part.Size.X > minimum and part.Size.Z > minimum then return "deck" end
+    elseif part.Name:match("^PremiumGroundModule%d+$")
+        and part:GetAttribute("OriginalGroundFinish") == true and part.Size.Y <= .12 then
+        -- Bays streamed after the floor contracts still need the lava tint.
+        local minimum = 35 * floorScale(decor, base)
+        if part.Size.X >= minimum and part.Size.Z >= minimum then return "module" end
+    end
     return nil
 end
 

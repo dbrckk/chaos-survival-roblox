@@ -3146,18 +3146,19 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local wayfinderBase = wayfinderBaseSource()
     local beaconShaft = PremiumLargeStructureAssets.shaftProfile(variant.Id)
     local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
+    local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
-    ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile, wayfinderBase)
+    ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile,
+        wayfinderBase, bevelCasting)
     local orbitalLens = orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96))
     local rotorAssetId = HorizonMonumentGeometry.assetId("rotor")
     local perimeterRotor = approvedHorizonRegion(
         "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
         rotorAssetId, Vector3.new(2.56, .72, 2.56))
     local shaftAssetId = HorizonMonumentGeometry.assetId("shaft", variant.Id)
-    local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
     local detailProfiles = {
         bevel = {part = bevelCasting, assetId = HorizonMonumentGeometry.assetId("bevel")},
         beam = {part = sweptProfile, assetId = 126298311664881},

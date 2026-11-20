@@ -1,6 +1,8 @@
 --!strict
 -- PBR decoration policy for the four playable sectors AND the original
 -- out-of-bounds architecture. Pure decisions; no graphics or event loops.
+local ArenaPresentation = if script then require(script.Parent.ArenaPresentation)
+    else require("./ArenaPresentation")
 local PbrDistrictRules = {}
 
 -- Exact creator-owned original-model asset packages shipped by this game.
@@ -383,7 +385,7 @@ function PbrDistrictRules.eligiblePart(part, ownedVariant)
         -- Exception is restricted to the real authored 20+ stud panels,
         -- with an additional builder-set provenance marker.
         and (part.Name:match("^PremiumGroundModule%d+$") == nil
-            or (part:IsA("Part")
+            or (ArenaPresentation.isGroundBayGeometry(part)
                 and part:GetAttribute("OriginalGroundFinish") == true
                 and part.Size.X >= 20 and part.Size.Z >= 20))
         and part.Size.Y >=
