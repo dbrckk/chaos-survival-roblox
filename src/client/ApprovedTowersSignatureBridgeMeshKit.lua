@@ -23,6 +23,7 @@ local function originalFootprint(base, arena)
 end
 
 local MODEL_ID=126298311664881
+Kit.AssetId = MODEL_ID
 -- Android Low: one authenticated seven-MeshPart landmark instead of
 -- 2 distant primitive silhouette Parts, only at VFX pressure zero.
 -- These three variants are mutually exclusive on the same active arena.

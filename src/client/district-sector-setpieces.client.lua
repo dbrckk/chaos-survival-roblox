@@ -16,6 +16,7 @@ local DistrictMaterialFinishKit = require(script.Parent.DistrictMaterialFinishKi
 local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
 local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
@@ -33,13 +34,22 @@ local rebuildQueued = false
 local liveTracks = {}
 local radarTracks = {}
 local roofs = {}
-local baseArmour = {}
+local castStructures = {}
+local gantryBeams = {}
 local anchorBolts = {}
 local radarRings = {}
 local opticalCores = {}
+local INWARD_WINDING = {
+    [roofs] = true,
+    [castStructures] = true,
+    [gantryBeams] = true,
+    [radarRings] = true,
+    [opticalCores] = true,
+}
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
 local RADAR_ROTATION = CFrame.Angles(0, 0, -math.pi / 2)
+local GANTRY_SWAP_ROTATION = CFrame.Angles(0, math.pi / 2, 0)
 
 local function trackDetail(group, part, meshSize)
     group[#group + 1] = {
@@ -93,9 +103,9 @@ local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
             replacement:SetAttribute(name, value)
         end
         replacement:SetAttribute("Original3DAssetId", if source then assetId else nil)
-        if source and (group == radarRings or group == opticalCores) then
-            -- These two source regions wind inward. Render their near faces
-            -- as well so the standalone optics keep a complete silhouette.
+        if source and INWARD_WINDING[group] then
+            -- These approved source regions need their near faces when
+            -- the cosmetic piece is used on its own.
             replacement.DoubleSided = true
         end
         if group == radarRings then
@@ -113,7 +123,8 @@ local function syncDetails()
     if #radarRings == 0 then return false end
     if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1 then
         syncDetailGroup(roofs)
-        syncDetailGroup(baseArmour)
+        syncDetailGroup(castStructures)
+        syncDetailGroup(gantryBeams)
         syncDetailGroup(anchorBolts)
         syncDetailGroup(opticalCores)
         return syncDetailGroup(radarRings)
@@ -122,8 +133,15 @@ local function syncDetails()
         local roof, orientation, swapped, roofId = PerimeterArmor.slopedCapProfile()
         syncDetailGroup(roofs, roof, roofId, orientation, swapped)
     end
-    if #baseArmour > 0 then
-        syncDetailGroup(baseArmour, PylonShell.bodyProfile(), PylonShell.AssetId)
+    if #castStructures > 0 then
+        syncDetailGroup(castStructures, PylonShell.bodyProfile(), PylonShell.AssetId)
+    end
+    if #gantryBeams > 0 then
+        local beamProfile = ForgedBridge.sweptProfile()
+        -- The gantries span local X, while the import may put its span on Z.
+        local swapped = beamProfile and beamProfile.Size.Z > beamProfile.Size.X
+        syncDetailGroup(gantryBeams, beamProfile, ForgedBridge.AssetId,
+            if swapped then GANTRY_SWAP_ROTATION else nil, swapped)
     end
     if #anchorBolts > 0 then
         local bolt = FloorHardware.platformCornerProfile()
@@ -138,7 +156,8 @@ end
 
 local function clearDetails()
     table.clear(roofs)
-    table.clear(baseArmour)
+    table.clear(castStructures)
+    table.clear(gantryBeams)
     table.clear(anchorBolts)
     table.clear(radarRings)
     table.clear(opticalCores)
@@ -358,13 +377,12 @@ local function makeSector(base, theme, index, tier, variant)
         accent)
 
     -- Android Low previously lost all four important in-arena landmarks.
-    -- Keep four sharply differentiated five-part silhouettes using real
-    -- native Roblox textured materials, but reserve fine PBR-like finish
-    -- and extra decorative geometry for Medium/High.
+    -- Keep four five-piece silhouettes with the same textured finishes.
+    -- Approved meshes replace the main volumes one for one as they load.
     if tier == "Low" then
         if index == 1 then
-            make("LowObservatoryMast", Vector3.new(2.5, 16, 2.5),
-                CFrame.new(0, 8.3, 0), dark, Enum.Material.CorrodedMetal)
+            trackDetail(castStructures, make("LowObservatoryMast", Vector3.new(2.5, 16, 2.5),
+                CFrame.new(0, 8.3, 0), dark, Enum.Material.CorrodedMetal))
             trackRadar(make("LowRadarDish", Vector3.new(0.85, 8.4, 8.4),
                 CFrame.new(0, 18.2, 0)
                     * CFrame.Angles(0, math.rad(21), math.rad(15)),
@@ -373,23 +391,23 @@ local function makeSector(base, theme, index, tier, variant)
                 CFrame.new(0, 18.2, -0.45), accent,
                 Enum.Material.Glass, 0.23, Enum.PartType.Ball))
         elseif index == 2 then
-            make("LowCargoStack", Vector3.new(9.4, 7.0, 6.0),
-                CFrame.new(0, 4.0, 0), dark, Enum.Material.CorrodedMetal)
-            make("LowOverheadGantry", Vector3.new(15.8, 1.8, 3.4),
-                CFrame.new(0, 13.2, 0), alloy, Enum.Material.DiamondPlate)
-            make("LowCargoHoist", Vector3.new(0.9, 8, 0.9),
-                CFrame.new(0, 9, -0.1), accent, Enum.Material.Metal)
+            trackDetail(castStructures, make("LowCargoStack", Vector3.new(9.4, 7.0, 6.0),
+                CFrame.new(0, 4.0, 0), dark, Enum.Material.CorrodedMetal))
+            trackDetail(gantryBeams, make("LowOverheadGantry", Vector3.new(15.8, 1.8, 3.4),
+                CFrame.new(0, 13.2, 0), alloy, Enum.Material.DiamondPlate))
+            trackDetail(castStructures, make("LowCargoHoist", Vector3.new(0.9, 8, 0.9),
+                CFrame.new(0, 9, -0.1), accent, Enum.Material.Metal))
         elseif index == 3 then
-            make("LowReactorTower", Vector3.new(8.6, 16.0, 8.6),
-                CFrame.new(0, 8.4, 0), dark, Enum.Material.Metal)
+            trackDetail(castStructures, make("LowReactorTower", Vector3.new(8.6, 16.0, 8.6),
+                CFrame.new(0, 8.4, 0), dark, Enum.Material.Metal))
             make("LowEnergyCollar", Vector3.new(10.0, 2.2, 10.0),
                 CFrame.new(0, 11.5, 0), accent, Enum.Material.Glass, 0.40)
             trackDetail(opticalCores, make("LowCoreSignal", Vector3.new(3.3, 3.3, 3.3),
                 CFrame.new(0, 18, 0), accent,
                 Enum.Material.Glass, 0.22, Enum.PartType.Ball))
         else
-            make("LowCommunicationsMast", Vector3.new(3.2, 25, 3.2),
-                CFrame.new(0, 13.0, 0), dark, Enum.Material.Metal)
+            trackDetail(castStructures, make("LowCommunicationsMast", Vector3.new(3.2, 25, 3.2),
+                CFrame.new(0, 13.0, 0), dark, Enum.Material.Metal))
             make("LowSignalArray", Vector3.new(10, 7.2, 1.1),
                 CFrame.new(0, 20.2, 0) * CFrame.Angles(0, math.rad(22), 0),
                 alloy, Enum.Material.DiamondPlate)
@@ -404,8 +422,8 @@ local function makeSector(base, theme, index, tier, variant)
 
     if index == 1 then
         -- Observatory: tall angled receiver with a distinct disk antenna.
-        make("ReceiverMast", Vector3.new(2.1, 17.0, 2.1),
-            CFrame.new(0, 9.0, 0), dark)
+        trackDetail(castStructures, make("ReceiverMast", Vector3.new(2.1, 17.0, 2.1),
+            CFrame.new(0, 9.0, 0), dark))
         trackRadar(make("RadarDish", Vector3.new(0.62, 8.6, 8.6),
             CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(22), math.rad(20)),
             alloy, Enum.Material.Metal, 0.02, Enum.PartType.Cylinder))
@@ -442,15 +460,15 @@ local function makeSector(base, theme, index, tier, variant)
                 CFrame.new(side * 3.1, 5.65, 0), paintedAlloy,
                 Enum.Material.Metal, 0.08)
         end
-        make("GantryBridge", Vector3.new(16.5, 1.6, 4),
-            CFrame.new(0, 15, 0), alloy)
+        trackDetail(gantryBeams, make("GantryBridge", Vector3.new(16.5, 1.6, 4),
+            CFrame.new(0, 15, 0), alloy))
         if high then
             for side = -1, 1, 2 do
-                make("GantryPylon" .. side, Vector3.new(1.35, 16, 1.45),
-                    CFrame.new(side * 7.0, 8.5, 0), dark)
+                trackDetail(castStructures, make("GantryPylon" .. side, Vector3.new(1.35, 16, 1.45),
+                    CFrame.new(side * 7.0, 8.5, 0), dark))
             end
-            make("CargoHanger", Vector3.new(0.55, 6.4, 0.55),
-                CFrame.new(0, 11.1, 0), alloy)
+            trackDetail(castStructures, make("CargoHanger", Vector3.new(0.55, 6.4, 0.55),
+                CFrame.new(0, 11.1, 0), alloy))
             make("RaisedSupplyPod", Vector3.new(4.8, 3.0, 3.4),
                 CFrame.new(0, 7.4, 0), theme.Detail)
             make("CraneCap", Vector3.new(4.5, 0.6, 5),
@@ -486,8 +504,8 @@ local function makeSector(base, theme, index, tier, variant)
         end
     else
         -- Comms relay: tall scanner fin, side receivers and glass collar.
-        make("CommsMast", Vector3.new(2.3, 21, 2.3),
-            CFrame.new(0, 11.2, 0), dark)
+        trackDetail(castStructures, make("CommsMast", Vector3.new(2.3, 21, 2.3),
+            CFrame.new(0, 11.2, 0), dark))
         make("CommsSignalFin", Vector3.new(9.3, 7.4, 1.4),
             CFrame.new(0, 17.4, 0) * CFrame.Angles(0, math.rad(17), 0),
             alloy)
@@ -657,7 +675,7 @@ local function makeSector(base, theme, index, tier, variant)
             CFrame.new(side * 5.6, 2.2, -2.1)
                 * CFrame.Angles(0, side * math.rad(16), 0),
             weathered, Enum.Material.CorrodedMetal, 0.05)
-        trackDetail(baseArmour, armour)
+        trackDetail(castStructures, armour)
         local boss = make("StampedAnchorBolt" .. side,
             Vector3.new(0.65, 0.65, 0.65),
             CFrame.new(side * 3.1, 5.55, -6.27),
@@ -839,6 +857,7 @@ player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleDetailSy
 local DETAIL_SOURCES = {
     ApprovedPerimeterArmorTemplates = "Cap",
     ApprovedLobbyPylonShellTemplates = "LobbyPylonShell",
+    ApprovedTowersSignatureBridgeTemplates = "ForgedBridge",
     ApprovedFloorReliefTemplates = "AnchorBolt",
     ApprovedOrbitalReactorLandmarkTemplates = "Node",
 }
