@@ -1,7 +1,7 @@
 -- Authored native 3D silhouettes at the FOUR playable districts.
 -- Unlike off-map skyline art these sit inside the 320-stud floor, close
 -- enough to orient real players along the outer stair and branch routes.
--- Client-only, noncolliding, using approved sculpted roof profiles.
+-- Client-only, noncolliding, using approved sculpted detail profiles.
 -- No runtime physics, lights or high-frequency update tasks.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,6 +15,8 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local DistrictMaterialFinishKit = require(script.Parent.DistrictMaterialFinishKit)
 local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
 local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
+local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
+local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
@@ -29,18 +31,23 @@ local disconnectReady = nil
 local rebuildQueued = false
 local liveTracks = {}
 local roofs = {}
-local roofGeometryReady
+local baseArmour = {}
+local anchorBolts = {}
+local detailGeometryReady
+local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
 
-local function syncRoofs()
-    if #roofs == 0 then return end
-    local source, orientation, swapped, assetId
-    if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) < 1 then
-        source, orientation, swapped, assetId = PerimeterArmor.slopedCapProfile()
-        if source and not roofGeometryReady(source) then source = nil end
-    end
+local function trackDetail(group, part)
+    group[#group + 1] = {
+        part = part, frame = part.CFrame, size = part.Size,
+        material = part.Material, class = part.ClassName,
+        shape = if part:IsA("Part") then part.Shape else nil,
+    }
+end
 
-    for _, roof in ipairs(roofs) do
-        local previous = roof.part
+local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
+    if source and not detailGeometryReady(source) then source = nil end
+    for _, detail in ipairs(group) do
+        local previous = detail.part
         local parent = previous.Parent
         if not parent then continue end
         local wasMesh = previous:IsA("MeshPart")
@@ -48,19 +55,22 @@ local function syncRoofs()
             or (not source and not wasMesh) then continue end
         local replacement = CelebrationMeshes.cloneProfile(source)
         if source and not replacement then continue end
-        replacement = replacement or Instance.new("WedgePart")
+        replacement = replacement or Instance.new(detail.class)
         replacement.Name = previous.Name
-        replacement.CFrame = roof.frame
-        replacement.Size = roof.size
+        replacement.CFrame = detail.frame
+        replacement.Size = detail.size
         if source then
-            replacement.CFrame *= orientation
-            if swapped then
-                replacement.Size = Vector3.new(roof.size.Z, roof.size.Y, roof.size.X)
+            if rotation then replacement.CFrame *= rotation end
+            if swapXZ then
+                replacement.Size = Vector3.new(detail.size.Z, detail.size.Y, detail.size.X)
             end
+        elseif detail.shape then
+            replacement.Shape = detail.shape
         end
         replacement.Color = previous.Color
-        replacement.Material = roof.material
+        replacement.Material = detail.material
         replacement.Transparency = previous.Transparency
+        replacement.Reflectance = previous.Reflectance
         replacement.LocalTransparencyModifier = previous.LocalTransparencyModifier
         replacement.Anchored = true
         replacement.CanCollide = false
@@ -72,23 +82,48 @@ local function syncRoofs()
         end
         replacement:SetAttribute("Original3DAssetId", if source then assetId else nil)
         replacement.Parent = parent
-        roof.part = replacement
+        detail.part = replacement
         previous:Destroy()
     end
 end
 
-local roofSyncQueued = false
+local function syncDetails()
+    if #roofs + #baseArmour + #anchorBolts == 0 then return end
+    if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1 then
+        syncDetailGroup(roofs)
+        syncDetailGroup(baseArmour)
+        syncDetailGroup(anchorBolts)
+        return
+    end
+    local roof, orientation, swapped, roofId = PerimeterArmor.slopedCapProfile()
+    local armour = PylonShell.bodyProfile()
+    local bolt = FloorHardware.platformCornerProfile()
+    syncDetailGroup(roofs, roof, roofId, orientation, swapped)
+    syncDetailGroup(baseArmour, armour, PylonShell.AssetId)
+    -- The bolt source is authored upright. Point the head toward the
+    -- sector's front (-Z) while keeping the original cubic envelope.
+    syncDetailGroup(anchorBolts, bolt and bolt.part, bolt and bolt.assetId, ANCHOR_BOLT_ROTATION)
+end
 
-local function scheduleRoofSync()
-    if roofSyncQueued then return end
-    roofSyncQueued = true
+local detailSyncQueued = false
+
+local function scheduleDetailSync()
+    if detailSyncQueued then return end
+    detailSyncQueued = true
     task.defer(function()
-        roofSyncQueued = false
-        syncRoofs()
+        detailSyncQueued = false
+        syncDetails()
     end)
 end
 
-roofGeometryReady = LobbyMeshPreload.new(scheduleRoofSync)
+detailGeometryReady = LobbyMeshPreload.new(scheduleDetailSync)
+
+local function clearDetails()
+    table.clear(roofs)
+    table.clear(baseArmour)
+    table.clear(anchorBolts)
+    folder:ClearAllChildren()
+end
 
 local function currentTier()
     local requested = player:GetAttribute("VfxQualityTier")
@@ -557,10 +592,7 @@ local function makeSector(base, theme, index, tier, variant)
                 wedge:SetAttribute("PreserveNativeMaterial", true)
             end
             wedge.Parent = model
-            roofs[#roofs + 1] = {
-                part = wedge, frame = wedge.CFrame, size = wedge.Size,
-                material = profile.material,
-            }
+            trackDetail(roofs, wedge)
             infrastructure += 1
         end
     end
@@ -574,15 +606,17 @@ local function makeSector(base, theme, index, tier, variant)
     -- markings provide depth/texture from multiple camera angles. These
     -- additions are purely client decoration: no collision or replication.
     for side = -1, 1, 2 do
-        make("ChamferedBaseArmour" .. side, Vector3.new(1.8, 3.6, 3.5),
+        local armour = make("ChamferedBaseArmour" .. side, Vector3.new(1.8, 3.6, 3.5),
             CFrame.new(side * 5.6, 2.2, -2.1)
                 * CFrame.Angles(0, side * math.rad(16), 0),
             weathered, Enum.Material.CorrodedMetal, 0.05)
+        trackDetail(baseArmour, armour)
         local boss = make("StampedAnchorBolt" .. side,
             Vector3.new(0.65, 0.65, 0.65),
             CFrame.new(side * 3.1, 5.55, -6.27),
             brushed, Enum.Material.Metal, 0.02, Enum.PartType.Ball)
         boss.Reflectance = 0.07
+        trackDetail(anchorBolts, boss)
     end
     DistrictMaterialFinishKit.stencil(
         face, "CS-" .. number .. "  /  " .. variant,
@@ -696,8 +730,7 @@ end
 
 local function rebuild()
     stopKinetics()
-    table.clear(roofs)
-    folder:ClearAllChildren()
+    clearDetails()
     local tier = currentTier()
     -- Low-end phones now receive a recognizable five-Part variant instead
     -- of an empty district; it stays subject to the existing scenery LOD.
@@ -712,7 +745,7 @@ local function rebuild()
     for index = 1, 4 do
         makeSector(base, theme, index, tier, variant)
     end
-    syncRoofs()
+    syncDetails()
     syncKinetics()
 end
 
@@ -737,8 +770,7 @@ local function bindMap(generated)
         )
     else
         stopKinetics()
-        table.clear(roofs)
-        folder:ClearAllChildren()
+        clearDetails()
     end
 end
 
@@ -755,19 +787,25 @@ workspace.ChildRemoved:Connect(function(child)
 end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(syncKinetics)
-player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleRoofSync)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleDetailSync)
 
-local function capSourceChanged(item)
+local DETAIL_SOURCES = {
+    ApprovedPerimeterArmorTemplates = "Cap",
+    ApprovedLobbyPylonShellTemplates = "LobbyPylonShell",
+    ApprovedFloorReliefTemplates = "AnchorBolt",
+}
+
+local function detailSourceChanged(item)
     local parent = item.Parent
-    if item.Name == "ApprovedPerimeterArmorTemplates"
-        or (item.Name == "Cap" and parent and parent.Name == "ApprovedPerimeterArmorTemplates")
-        or (item:IsA("MeshPart") and parent and parent.Name == "Cap"
-            and parent.Parent and parent.Parent.Name == "ApprovedPerimeterArmorTemplates") then
-        scheduleRoofSync()
+    if item:IsA("MeshPart") and parent then
+        item, parent = parent, parent.Parent
+    end
+    if DETAIL_SOURCES[item.Name] or (parent and DETAIL_SOURCES[parent.Name] == item.Name) then
+        scheduleDetailSync()
     end
 end
 
-ReplicatedStorage.DescendantAdded:Connect(capSourceChanged)
-ReplicatedStorage.DescendantRemoving:Connect(capSourceChanged)
+ReplicatedStorage.DescendantAdded:Connect(detailSourceChanged)
+ReplicatedStorage.DescendantRemoving:Connect(detailSourceChanged)
 bindMap(workspace:FindFirstChild("GeneratedMap"))
 scheduleRebuild()

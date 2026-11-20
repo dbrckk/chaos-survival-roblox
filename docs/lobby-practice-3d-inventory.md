@@ -150,3 +150,5 @@ Les stations de signal serveur peuvent aussi reprendre le noyau facetté d’Orb
 ## P4 — Toitures des monuments de secteur
 
 Les coiffes météo de Classic, les capots de levage de Tower Run, les auvents de Crossroads, les ailettes d’Orbital et les capots portuaires de Storm Harbor peuvent reprendre le moulage incliné approuvé du périmètre. Chaque paire conserve ses deux pentes opposées, son gabarit et son matériau. La mise à jour remplace uniquement les huit pièces de toiture de l’arène, en qualité moyenne ou haute. Les formes simples reprennent leur place au chargement ou sous pression graphique.
+
+Les quatre monuments peuvent aussi afficher deux blindages octogonaux par socle et deux têtes de fixation à douze facettes tournées vers l’avant. Ces seize pièces réutilisent la coque approuvée du pylône du lobby et la fixation approuvée du sol de l’arène. Elles occupent leurs volumes existants en qualité moyenne ou haute, avec une forme de secours indépendante pour chaque source.
