@@ -453,13 +453,13 @@ end)
 
 workspace.ChildRemoved:Connect(function(child)
     if child == watchedMap then
-        HarborCoastalGeometry.watch(function()
-    local arena = watchedMap and watchedMap:FindFirstChild("Arena")
-    if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRebuild() end
+        bindMap(workspace:FindFirstChild("GeneratedMap"))
+    end
 end)
 
-bindMap(workspace:FindFirstChild("GeneratedMap"))
-    end
+HarborCoastalGeometry.watch(function()
+    local arena = watchedMap and watchedMap:FindFirstChild("Arena")
+    if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRebuild() end
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)

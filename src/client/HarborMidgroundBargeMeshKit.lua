@@ -14,6 +14,11 @@ local SpatialMidgroundSelectionRules = if script and script.Parent
     then require(ReplicatedStorage.Shared.SpatialMidgroundSelectionRules)
     else require("../shared/SpatialMidgroundSelectionRules")
 
+local horizonModule = script and ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+
 local Kit={}
 -- EXACT Model ID returned by Roblox import with Approved moderation.
 -- Verify against the server template holder and the Model itself.
@@ -87,7 +92,9 @@ local function authentic(hull,arena,midground,base)
     if not index or hull:GetAttribute("OriginalHarborMidgroundBargeIndex")
         ~=index then return false end
     if hull:IsA("MeshPart") then
-        if hull.MeshId == "" or hull:GetAttribute("Original3DAssetId") ~= HULL_FALLBACK_ID then
+        local assetId = hull:GetAttribute("Original3DAssetId")
+        if hull.MeshId == "" or (assetId ~= HULL_FALLBACK_ID
+            and not HorizonMonumentGeometry.isFloorCasting(assetId, "Harbor")) then
             return false
         end
     elseif not hull:IsA("Part") then

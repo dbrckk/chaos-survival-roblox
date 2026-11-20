@@ -264,14 +264,17 @@ local function rebuild()
             Vector3.new(-halfX - 0.55, topY - 0.45, halfZ + 0.55),
             Vector3.new(halfX + 0.55, topY - 0.45, halfZ + 0.55),
         }
+        local cornerSize = Vector3.new(1.7, 2.4, 1.7)
         for i, pos in ipairs(cornerOffsets) do
+            local pose = base.CFrame * CFrame.new(pos)
             makePart(
                 "ArenaEdgeCorner" .. i,
-                Vector3.new(1.7, 2.4, 1.7),
-                base.CFrame * CFrame.new(pos),
+                cornerSize,
+                pose,
                 theme.Detail,
                 Enum.Material.Metal,
-                0.16
+                0.16,
+                harbor and HarborCoastalGeometry.fit(harbor.plate, cornerSize, pose)
             )
         end
     end
