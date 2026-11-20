@@ -101,4 +101,6 @@ Les neuf motifs au sol de fin de manche peuvent utiliser des maillages approuvé
 
 Pendant la manche, les impacts de météores peuvent laisser un cratère ouvert issu de l’anneau d’Orbital. Les bombes utilisent une plaque pleine issue du moulage du périmètre. Les deux marques reprennent la teinte du sol et s’alignent sur sa normale. Le centre occupe une seule pièce dans le budget de l’impact. Les formes simples servent de secours en qualité basse, au chargement et sous pression graphique.
 
+Pour les impacts proches en qualité moyenne et haute, la tête forgée à douze facettes habille les éclats et le rebord temporaire du cratère. Les arcs de pression des bombes reprennent le moulage du périmètre et les volumes lumineux adoptent le noyau facetté d’Orbital. Le nombre de pièces, les trajectoires et les durées restent les mêmes. Les formes simples s’affichent en qualité basse, à distance, sous pression graphique ou pendant le chargement.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
