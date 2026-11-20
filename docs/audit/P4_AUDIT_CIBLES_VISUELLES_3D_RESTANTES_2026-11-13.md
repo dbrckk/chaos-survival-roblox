@@ -89,6 +89,10 @@ Les **36 dalles par arène**, soit 180 emplacements sur les cinq variantes, peuv
 
 Les cinq monuments à l’est de l’arène peuvent utiliser des maillages approuvés dans **124 emplacements**. Le lot couvre 25 pièces sur l’observatoire de Classic, 28 sur le portique de Tower Run, 21 sur l’échangeur de Crossroads, 31 sur le réacteur d’Orbital et 19 sur le chantier naval de Storm Harbor. Les dimensions et les budgets de silhouette Low restent les mêmes, soit 10, 8, 6, 10 et 8 pièces. Les corps, socles et équipements complets de proximité gardent leurs ancrages. Chaque forme simple reste disponible si son profil manque à la construction. `LocalP4VisibleNativeHeroMonuments` compte les primitives de ces monuments quand elles sont chargées et visibles côté client.
 
+### Crêtes et silhouettes industrielles de Storm Harbor
+
+Les **12 crêtes** orientent désormais leur moulage d’après le repère qui marque le haut de la pente. Les quatre orientations d’import occupent la même empreinte et la crête garde son relief simple quand ce repère manque. Les quatre silhouettes industrielles peuvent aussi conserver **24 pièces sculptées** grâce au moulage fermé de Harbor ou de Classic. Le fût approuvé d’une autre arène peut habiller les renforts et les antennes. Les modèles complets continuent à utiliser les ancrages d’origine pendant le rétrécissement.
+
 ### Horizons et stations de Storm Harbor
 
 Un seul moulage fermé approuvé de Harbor ou de Classic peut couvrir **52 emplacements sur les horizons** et **56 sur les quatre stations** quand leurs profils spécialisés manquent. Les silhouettes sont réparties entre les deux grands monuments, les quatre tours de premier plan et les huit arrière-plans. Les formes inclinées gardent leur propre profil de secours. Les habillages de proximité reconnaissent les moulages sur les pièces qu’ils couvrent. Aux stations, le repère lumineux reste en place et les emplacements réservés aux mécanismes complets gardent leur géométrie d’origine.

@@ -157,6 +157,14 @@ local function realRidges(arena,owner,corner)
             (index-2)*spec.sz*6))
             *CFrame.Angles(0,yaw+(index-2)*.32,0)
         local size, pose = ExteriorDetailGeometry.footprint(ridge, owner, 88962643359267, "WedgePart")
+        local turns = size and ridge:GetAttribute("ExteriorRidgeCapTurns")
+        if turns ~= nil then
+            if arena:GetAttribute("VariantId") ~= "Harbor" or not ridge:IsA("MeshPart")
+                or type(turns) ~= "number" or turns % 1 ~= 0 or math.abs(turns) > 2
+                or ridge:GetAttribute("ExteriorDetailAxisSwap") == true then return nil end
+            if turns % 2 ~= 0 then size = Vector3.new(size.Z, size.Y, size.X) end
+            pose *= CFrame.Angles(0, -turns * math.pi * .5, 0)
+        end
         if not size or (size-Vector3.new(11+index*3,
                 height,13+index*2)).Magnitude>.12
             or (pose.Position-expected.Position).Magnitude>.16

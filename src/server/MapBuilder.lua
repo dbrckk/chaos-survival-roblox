@@ -13,6 +13,9 @@ local ArenaPresentation = if arenaPresentationModule
 local horizonGeometryModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
 local HorizonMonumentGeometry = if horizonGeometryModule then require(horizonGeometryModule)
     else require("../shared/HorizonMonumentGeometry")
+local capGeometryModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capGeometryModule then require(capGeometryModule)
+    else require("../shared/PerimeterCapGeometry")
 local platformIdentityModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
 local PlatformIdentityLodRules = if platformIdentityModule then require(platformIdentityModule)
     else require("../shared/PlatformIdentityLodRules")
@@ -321,14 +324,21 @@ local function addPerimeterStations(decor, config, variant, theme, profiles)
     end
 end
 
-local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass)
-    local mesh = source and RouteSignalGeometry.fit(source.part, frame, size, nil, alongX)
+local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass, ridgeTurns)
+    local meshFrame, meshSize = frame, size
+    if ridgeTurns then
+        meshFrame *= CFrame.Angles(0, ridgeTurns * math.pi * .5, 0)
+        if ridgeTurns % 2 ~= 0 then meshSize = Vector3.new(size.Z, size.Y, size.X) end
+        alongX = source.part.Size.X > source.part.Size.Z
+    end
+    local mesh = source and RouteSignalGeometry.fit(source.part, meshFrame, meshSize, nil, alongX)
     local item = mesh or Instance.new(fallbackClass or "Part")
     if mesh then
         mesh:SetAttribute("OriginalExteriorDetail3D", true)
         mesh:SetAttribute("Original3DAssetId", source.assetId)
-        local turned = math.abs(mesh.CFrame.RightVector:Dot(frame.RightVector)) < .5
+        local turned = not ridgeTurns and math.abs(mesh.CFrame.RightVector:Dot(frame.RightVector)) < .5
         mesh:SetAttribute("ExteriorDetailAxisSwap", if turned then true else nil)
+        if ridgeTurns then mesh:SetAttribute("ExteriorRidgeCapTurns", ridgeTurns) end
     else
         item.Size = size
         item.CFrame = frame
@@ -873,6 +883,17 @@ local function addExteriorCornerRidges(decor, config, variant, theme, casting)
     local z = variant.BaseSize.Z * 0.5 + 28
     local stone = theme.Structure:Lerp(Color3.fromRGB(25, 31, 39), 0.45)
     local metal = theme.Detail:Lerp(stone, 0.72)
+    local ridgeTurns
+    if variant.Id == "Harbor" then
+        -- The signal region marks the high edge even when an import yaw
+        -- flips or swaps axes. Keep the native wedge until it is readable.
+        local rotation = PerimeterCapGeometry.slope(casting and casting.part)
+        if rotation then
+            ridgeTurns = math.round(math.atan2(-rotation.RightVector.Z, rotation.RightVector.X) / (math.pi * .5))
+        else
+            casting = nil
+        end
+    end
     for _, corner in ipairs({
         {id = "NW", sx = -1, sz = -1},
         {id = "NE", sx = 1, sz = -1},
@@ -898,7 +919,7 @@ local function addExteriorCornerRidges(decor, config, variant, theme, casting)
             )) * CFrame.Angles(0, yaw + (index - 2) * 0.32, 0)
             local ridge = exteriorPart("Ridge" .. index, frame, size,
                 index == 2 and Enum.Material.Concrete or Enum.Material.Metal,
-                index == 2 and stone or metal, casting, true, "WedgePart")
+                index == 2 and stone or metal, casting, true, "WedgePart", ridgeTurns)
             ridge.Transparency = 0.07 + index * 0.04
             ridge.Parent = model
         end
@@ -3346,11 +3367,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local exteriorCasting = {part = wayfinderBase, assetId = 88962643359267}
     addExteriorCornerRidges(decor, config, variant, theme, exteriorCasting)
     addExteriorSilhouettes(decor, config, variant, theme, {
-        shell = {part = bevelCasting,
-            assetId = PremiumFloorReliefAssets.approvedId("Classic")},
-        roof = exteriorCasting,
-        shaft = {part = beaconShaft, assetId = PremiumLargeStructureAssets.approvedId(variant.Id)},
-        signal = {part = sweptProfile, assetId = 126298311664881},
+        shell = harborCasting or detailProfiles.bevel,
+        roof = if wayfinderBase then exteriorCasting else harborCasting,
+        shaft = if harborCasting then (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft,
+        signal = if sweptProfile then detailProfiles.beam else harborCasting,
     })
     addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     addVariantLandmarks(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)

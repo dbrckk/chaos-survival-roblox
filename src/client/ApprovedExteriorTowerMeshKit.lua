@@ -8,6 +8,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SceneryLodRules = require(ReplicatedStorage.Shared.SceneryLodRules)
 local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
+local horizonModule = ReplicatedStorage.Shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+
 local Kit = {}
 local STATIONS = {"North","East","South","West"}
 local HEIGHTS = {21,24,27,30}
@@ -137,12 +141,22 @@ local function realTower(arena,owner,index)
         Vector3.new(1.2,height*.75,1.4),
         Vector3.new(1.2,height*.75,1.4),
     }
-    local shaftAsset = SHAFT_ASSETS[arena:GetAttribute("VariantId")]
+    local variant = arena:GetAttribute("VariantId")
+    local shaftAsset = SHAFT_ASSETS[variant]
     local assets = {102746904688141, 88962643359267, shaftAsset, shaftAsset}
+    local function footprint(part, assetId, profile)
+        if part and variant == "Harbor" then
+            local nativeId = part:GetAttribute("Original3DAssetId")
+            if HorizonMonumentGeometry.matchesHarborStructuralFallback(nativeId, profile) then
+                assetId = nativeId
+            end
+        end
+        return ExteriorDetailGeometry.footprint(part, owner, assetId, "Part")
+    end
     local natives, poses = {}, {}
     for i,name in ipairs(NAMES) do
         local part=owner:FindFirstChild(name)
-        local size, pose = ExteriorDetailGeometry.footprint(part, owner, assets[i], "Part")
+        local size, pose = footprint(part, assets[i], i <= 2 and "bevel" or "shaft")
         if not size or (size-expected[i]).Magnitude>.10 then
             return nil
         end
@@ -153,8 +167,8 @@ local function realTower(arena,owner,index)
     -- their real authored presence so a partially streamed model is refused.
     local signal=owner:FindFirstChild("SignalBand")
     local antenna=owner:FindFirstChild("Antenna")
-    local signalSize = ExteriorDetailGeometry.footprint(signal, owner, 126298311664881, "Part")
-    local antennaSize = ExteriorDetailGeometry.footprint(antenna, owner, shaftAsset, "Part")
+    local signalSize = footprint(signal, 126298311664881, "beam")
+    local antennaSize = footprint(antenna, shaftAsset, "shaft")
     if not signalSize or (signalSize-Vector3.new(6,.35,.18)).Magnitude>.1
         or signal.Material ~= Enum.Material.Neon
         or not antennaSize or (antennaSize-Vector3.new(.55,6,.55)).Magnitude>.1 then
