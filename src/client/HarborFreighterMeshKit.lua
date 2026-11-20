@@ -1,6 +1,5 @@
--- Original approved 3D container freighter replaces the 70+ native
--- Part/WedgePart cargo ship, with a seven-MeshPart near-camera Low
--- replacement when healthy. All native pieces remain reversible fallback.
+-- Seven approved MeshParts can take over the server cargo silhouette
+-- within the camera budget. Its fitted or simple pieces remain reversible fallback.
 -- The existing scenery-lod sampler is the ONLY scheduling owner.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

@@ -3203,7 +3203,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     if variant.Id == "Harbor" then
         -- Exterior harbor cranes distinguish the new cargo port without
         -- extra colliders, sound loops or cameras tracking scenic models.
-        HarborScenery.build(decor, base, theme)
+        HarborScenery.build(decor, base, theme, detailProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.

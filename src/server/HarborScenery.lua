@@ -2,15 +2,60 @@
 -- STORM HARBOR skyline: four creator-authored, collision-free gantry
 -- cranes and one full original static cargo vessel, outside the actual
 -- 320x320 survival map.
--- Zero moving parts, sound emitters, scripts, lights or runtime loops.
+-- Client-side motion uses the same named anchors for either geometry.
 -- Atomic streaming and distant-scene tags allow Android LOD culling.
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local capModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capModule then require(capModule)
+    else require("../shared/PerimeterCapGeometry")
+
+type Profile = {part: MeshPart?, assetId: number?, rotation: CFrame?, swapXZ: boolean?}
+type Profiles = {bevel: Profile?, beam: Profile?, shaft: Profile?, cast: Profile?, ring: Profile?}
+
 local HarborScenery = {}
 
+local function geometry(model, name, size, frame, tone, material, profile: Profile?,
+        kind: string?, alongX: boolean?, cylinder: boolean?)
+    local source = profile and profile.part
+    local mesh
+    if source and profile and source.MeshId ~= "" then
+        local meshSize, meshFrame = size, frame
+        if cylinder then
+            meshSize = Vector3.new(size.Y, size.X, size.Z)
+            meshFrame *= CFrame.Angles(0, 0, -math.pi / 2)
+        end
+        if profile.rotation then meshFrame *= profile.rotation end
+        if profile.swapXZ then meshSize = Vector3.new(meshSize.Z, meshSize.Y, meshSize.X) end
+        -- Motion and full-model mounts depend on the original frame of
+        -- the crane crossgirder and cargo deck. Only free spans may yaw.
+        local spanX = if alongX == nil then source.Size.X > source.Size.Z else alongX
+        mesh = RouteSignalGeometry.fit(source, meshFrame, meshSize, nil, spanX)
+    end
+    local piece = mesh or Instance.new(kind or "Part")
+    if mesh then
+        mesh.Transparency = 0
+        mesh:SetAttribute("Original3DAssetId", profile and profile.assetId)
+    else
+        piece.Size = size
+        piece.CFrame = frame
+        if cylinder and piece:IsA("Part") then piece.Shape = Enum.PartType.Cylinder end
+    end
+    piece.Name = name
+    piece.Color = tone
+    piece.Material = material or Enum.Material.Metal
+    piece.Anchored = true
+    piece.CanCollide = false
+    piece.CanTouch = false
+    piece.CanQuery = false
+    piece.CastShadow = false
+    piece.Parent = model
+    return piece
+end
+
 -- One recognizable full cargo-freighter silhouette behind the northern
--- yard. This is an original Roblox-native 3D assembly, not a decal, mesh
--- asset dependency or a gameplay platform. The ship belongs to the same
--- protected distant-scenery LOD fleet as the existing four cranes.
-local function buildCargoVessel(fleet, base, theme)
+-- yard, with the same distant-scenery LOD as the four cranes.
+local function buildCargoVessel(fleet, base, theme, profiles: Profiles?, slope: Profile?)
     local vessel = Instance.new("Model")
     vessel.Name = "HarborCargoVessel"
     vessel:SetAttribute("ChaosDistantScenery", true)
@@ -39,43 +84,38 @@ local function buildCargoVessel(fleet, base, theme)
     -- The full freighter has many decorative ribs, railings and details.
     -- On low-end Android an entirely invisible cargo landmark leaves the
     -- north skyline empty. Retain exactly fourteen LARGE structural pieces
-    -- of this already-replicated 3D ship, never a new low-cost fake mesh.
-    -- The existing scenery LOD exclusively owns the visibility; it
-    -- still hides all four separate gantry cranes on Low.
+    -- of this already-replicated 3D ship. Scenery LOD hides the four
+    -- fallback gantries on Low.
     local lowSilhouette = {
         MainHull = true, LowerKeel = true, MainCargoDeck = true,
         BowTaperPort = true, BowTaperStarboard = true,
         SternDeckhouse = true, Wheelhouse = true, ExhaustStack = true,
     }
 
-    local function segment(name, size, offset, color, material, kind)
-        local piece = Instance.new(kind or "Part")
-        piece.Name = name
-        piece.Size = size
-        piece.CFrame = origin * offset
-        piece.Color = color or hull
-        piece.Material = material or Enum.Material.Metal
-        piece.Anchored = true
-        piece.CanCollide = false
-        piece.CanTouch = false
-        piece.CanQuery = false
-        piece.CastShadow = false
+    local bevel = profiles and profiles.bevel
+    local truss = profiles and profiles.beam
+    local column = profiles and profiles.shaft
+    local function segment(name, size, offset, color, material, kind, artwork: Profile?,
+            alongX: boolean?)
+        local profile = if kind == "WedgePart" then slope else artwork or bevel
+        local piece = geometry(vessel, name, size, origin * offset, color or hull,
+            material, profile, kind, alongX)
         if lowSilhouette[name] == true then
             piece:SetAttribute("HeroSilhouetteEssential", true)
         end
-        piece.Parent = vessel
         return piece
     end
     local function brace(name, a, b, thickness, color)
         local delta = b - a
         return segment(name, Vector3.new(thickness, thickness, delta.Magnitude),
-            CFrame.lookAt((a + b) * 0.5, b), color or alloy)
+            CFrame.lookAt((a + b) * 0.5, b), color or alloy,
+            nil, nil, truss, false)
     end
 
     -- Ship axis is X, starboard/port Z. Layered hull bands and tapered
     -- bow/stern read as a genuine vessel even with particles disabled.
     segment("LowerKeel", Vector3.new(83, 4.2, 14),
-        CFrame.new(0, -4.4, 0), lower, Enum.Material.CorrodedMetal)
+        CFrame.new(0, -4.4, 0), lower, Enum.Material.CorrodedMetal, nil, truss, true)
     segment("MainHull", Vector3.new(88, 8.2, 20),
         CFrame.new(0, -0.4, 0), hull, Enum.Material.CorrodedMetal)
     segment("BowTaperPort", Vector3.new(14, 7.0, 10),
@@ -96,12 +136,12 @@ local function buildCargoVessel(fleet, base, theme)
         segment("HullWaterline" .. side, Vector3.new(78, 0.45, 0.18),
             CFrame.new(0, -2.9, side * 10.08), stripe)
         segment("DeckGunwale" .. side, Vector3.new(85, 0.76, 0.65),
-            CFrame.new(0, 4.7, side * 9.5), alloy)
+            CFrame.new(0, 4.7, side * 9.5), alloy, nil, nil, truss, true)
         for index = 1, 5 do
             local x = -35 + (index - 1) * 17
             segment("GuardrailPost" .. side .. "_" .. index,
                 Vector3.new(0.24, 2.2, 0.24),
-                CFrame.new(x, 6.0, side * 9.55), alloy)
+                CFrame.new(x, 6.0, side * 9.55), alloy, nil, nil, column)
         end
         segment("GuardrailTop" .. side, Vector3.new(75, 0.18, 0.18),
             CFrame.new(0, 7.15, side * 9.55), alloy)
@@ -130,7 +170,7 @@ local function buildCargoVessel(fleet, base, theme)
                 for rib = -1, 1, 2 do
                     segment(prefix .. "Rib" .. rib, Vector3.new(0.22, 3.5, 0.24),
                         CFrame.new(x + rib * 5.5, y, z + side * 3.89),
-                        alloy:Lerp(tone, 0.65))
+                        alloy:Lerp(tone, 0.65), nil, nil, column)
                 end
                 segment(prefix .. "DoorLine", Vector3.new(0.20, 3.7, 6.5),
                     CFrame.new(x + 7.55, y, z), lower)
@@ -155,11 +195,11 @@ local function buildCargoVessel(fleet, base, theme)
             glass, Enum.Material.Glass)
     end
     segment("ExhaustStack", Vector3.new(4.5, 8.8, 4.5),
-        CFrame.new(-43, 18.7, -2.6), lower)
+        CFrame.new(-43, 18.7, -2.6), lower, nil, nil, column)
     segment("ExhaustLip", Vector3.new(5, 0.6, 5),
         CFrame.new(-43, 23.2, -2.6), alloy)
     segment("RadarMast", Vector3.new(0.55, 12.0, 0.55),
-        CFrame.new(-31, 29.3, 1.7), alloy)
+        CFrame.new(-31, 29.3, 1.7), alloy, nil, nil, column)
     segment("RadarBoom", Vector3.new(8.2, 0.36, 0.50),
         CFrame.new(-31, 34.6, 1.7), stripe)
     brace("MastBackstay",
@@ -172,10 +212,20 @@ local function buildCargoVessel(fleet, base, theme)
     return vessel
 end
 
-function HarborScenery.build(decor, base, theme)
+function HarborScenery.build(decor, base, theme, profiles: Profiles?)
     if not decor or not base or not base:IsA("BasePart") then
         return nil
     end
+
+    local bevel = profiles and profiles.bevel
+    local truss = profiles and profiles.beam
+    local column = profiles and profiles.shaft
+    local ring = profiles and profiles.ring
+    local cast = profiles and profiles.cast
+    local rotation, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
+    local slope = if rotation and cast then {
+        part = cast.part, assetId = cast.assetId, rotation = rotation, swapXZ = swapXZ,
+    } else nil
 
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5
     local floorY = base.Position.Y + base.Size.Y * 0.5
@@ -208,30 +258,20 @@ function HarborScenery.build(decor, base, theme)
             base.Position.Z + slot.z
         ) * CFrame.Angles(0, slot.yaw, 0)
 
-        local function beam(name, size, offset, color, material)
-            local p = Instance.new("Part")
-            p.Name = name
-            p.Size = size
-            p.CFrame = origin * offset
-            p.Color = color or metal
-            p.Material = material or Enum.Material.Metal
-            p.Anchored = true
-            p.CanCollide = false
-            p.CanTouch = false
-            p.CanQuery = false
-            p.CastShadow = false
-            p.Parent = crane
-            return p
+        local function beam(name, size, offset, color, material, profile: Profile?,
+                alongX: boolean?, cylinder: boolean?)
+            return geometry(crane, name, size, origin * offset, color or metal, material,
+                (if cylinder then profile else profile or bevel), nil, alongX, cylinder)
         end
 
         beam("PortLeg", Vector3.new(1.7, 30, 1.7),
-            CFrame.new(-8, 15, 0))
+            CFrame.new(-8, 15, 0), nil, nil, column)
         beam("StarboardLeg", Vector3.new(1.7, 30, 1.7),
-            CFrame.new(8, 15, 0))
+            CFrame.new(8, 15, 0), nil, nil, column)
         beam("MainCrossgirder", Vector3.new(20, 1.8, 2.2),
-            CFrame.new(0, 30, 0))
+            CFrame.new(0, 30, 0), nil, nil, truss)
         beam("TrolleyTrack", Vector3.new(1.8, 1.4, 34),
-            CFrame.new(0, 32, -3))
+            CFrame.new(0, 32, -3), nil, nil, truss, false)
         beam("Counterweight", Vector3.new(5.8, 3.5, 4),
             CFrame.new(0, 31.7, 15), shadow)
         beam("TrolleyCabin", Vector3.new(4.1, 3.4, 3.6),
@@ -239,14 +279,14 @@ function HarborScenery.build(decor, base, theme)
         beam("CabinWindow", Vector3.new(3.0, 1.6, 0.12),
             CFrame.new(0, 29.7, -12.88), trim, Enum.Material.Glass)
         beam("HoistCable", Vector3.new(0.25, 13, 0.25),
-            CFrame.new(0, 22, -15), shadow)
+            CFrame.new(0, 22, -15), shadow, nil, column)
         beam("CargoSpreader", Vector3.new(9, 0.8, 1.2),
-            CFrame.new(0, 15.5, -15), theme.Detail)
+            CFrame.new(0, 15.5, -15), theme.Detail, nil, truss)
         for _, sign in ipairs({-1, 1}) do
             beam(sign < 0 and "PortKnee" or "StarboardKnee",
                 Vector3.new(1.15, 12, 1.15),
                 CFrame.new(sign * 5, 23.8, 0)
-                    * CFrame.Angles(0, 0, math.rad(sign * 31)), metal)
+                    * CFrame.Angles(0, 0, math.rad(sign * 31)), metal, nil, column)
         end
 
         -- Authored gantry: real triangular bracing, paired trolley rails,
@@ -257,11 +297,11 @@ function HarborScenery.build(decor, base, theme)
             if delta.Magnitude < 0.2 then return end
             return beam(name, Vector3.new(width, width, delta.Magnitude),
                 CFrame.lookAt((from + to) * 0.5, to),
-                color or metal, Enum.Material.Metal)
+                color or metal, Enum.Material.Metal, truss, false)
         end
         for side = -1, 1, 2 do
             beam("TrackRail" .. side, Vector3.new(0.38, 0.34, 31),
-                CFrame.new(side * 1.15, 33.0, -3), trim)
+                CFrame.new(side * 1.15, 33.0, -3), trim, nil, truss, false)
             brace("GantryKneeBrace" .. side,
                 Vector3.new(side * 8, 4.5, -4.2),
                 Vector3.new(side * 8, 27.0, 3.4), 0.48, metal)
@@ -297,19 +337,15 @@ function HarborScenery.build(decor, base, theme)
             for side = -1, 1, 2 do
                 beam("ContainerRib" .. side,
                     Vector3.new(0.27, 4.4, 0.27),
-                    CFrame.new(side * 3.25, 10.1, -17.72), trim)
+                    CFrame.new(side * 3.25, 10.1, -17.72), trim, nil, column)
             end
         else
-            local drum = beam("CableDrum",
-                Vector3.new(7.5, 4.3, 4.3),
-                CFrame.new(0, 10.3, -15),
-                loadTone, Enum.Material.CorrodedMetal)
-            drum.Shape = Enum.PartType.Cylinder
+            beam("CableDrum", Vector3.new(7.5, 4.3, 4.3),
+                CFrame.new(0, 10.3, -15), loadTone, Enum.Material.CorrodedMetal,
+                column, nil, true)
             for side = -1, 1, 2 do
-                local cap = beam("DrumArmorPlate" .. side,
-                    Vector3.new(0.46, 5.1, 5.1),
-                    CFrame.new(side * 3.9, 10.3, -15), metal)
-                cap.Shape = Enum.PartType.Cylinder
+                beam("DrumArmorPlate" .. side, Vector3.new(0.46, 5.1, 5.1),
+                    CFrame.new(side * 3.9, 10.3, -15), metal, nil, ring, nil, true)
             end
         end
 
@@ -324,7 +360,7 @@ function HarborScenery.build(decor, base, theme)
         crane.Parent = folder
     end
 
-    buildCargoVessel(folder, base, theme)
+    buildCargoVessel(folder, base, theme, profiles, slope)
 
     return folder
 end
