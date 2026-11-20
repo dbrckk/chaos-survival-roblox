@@ -1,5 +1,5 @@
 -- Authored vector-chevron contact motifs for the four lobby boost pads.
--- Three tier-aware silhouettes: 2/4/6 static Parts per pad, no animation,
+-- Three tier-aware silhouettes: 2/4/6 static pieces per pad, no animation,
 -- lights, particles, physics or server authority.
 local Kit = {}
 
@@ -37,7 +37,7 @@ function Kit.direction(pad, center)
     return planar.Unit
 end
 
-function Kit.build(parent, pad, tier, center)
+function Kit.build(parent, pad, tier, center, source)
     local arrowCount = Kit.count(tier)
     if arrowCount == 0
         or typeof(parent) ~= "Instance"
@@ -50,6 +50,9 @@ function Kit.build(parent, pad, tier, center)
     if not forward or not finiteVector(pad.Size)
         or pad.Size.X < 3 or pad.Size.Z < 3 or pad.Size.Y <= 0 then
         return nil
+    end
+    if source and (not source:IsA("MeshPart") or not source.Archivable) then
+        source = nil
     end
 
     local up = pad.CFrame.UpVector
@@ -68,12 +71,19 @@ function Kit.build(parent, pad, tier, center)
             local shoulder = tip - forward * reach + right * (spread * side)
             local midpoint = (tip + shoulder) * 0.5
             local length = (tip - shoulder).Magnitude
-            local stroke = Instance.new("Part")
+            local mesh = source and source:Clone()
+            local stroke = mesh or Instance.new("Part")
+            if mesh then
+                mesh:ClearAllChildren()
+                mesh.TextureID = ""
+            end
             stroke.Name = side < 0 and "VectorChevronLeft" or "VectorChevronRight"
-            stroke.Size = Vector3.new(
-                tier == "Low" and 0.15 or 0.19, 0.065, length
-            )
-            stroke.CFrame = CFrame.lookAt(midpoint, tip, up)
+            local width = tier == "Low" and 0.15 or 0.19
+            local frame = CFrame.lookAt(midpoint, tip, up)
+            local rotate = mesh and source.Size.X > source.Size.Z
+            stroke.Size = rotate and Vector3.new(length, 0.065, width)
+                or Vector3.new(width, 0.065, length)
+            stroke.CFrame = rotate and frame * CFrame.Angles(0, math.pi * 0.5, 0) or frame
             stroke.Anchored = true
             stroke.CanCollide = false
             stroke.CanTouch = false

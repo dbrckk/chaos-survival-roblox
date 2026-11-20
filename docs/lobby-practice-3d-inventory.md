@@ -61,7 +61,7 @@ Relevé du 20 novembre 2026. Le tableau compte les pièces produites par chaque 
 | Tablier, dalles, bordures et pylônes de Showtime | 18 | 25 | 34 | Autour de la piste de 13,8 × 13,8 studs. |
 | Danseurs holographiques de Showtime | 0 | 8 | 20 | Un danseur à huit pièces en Medium, deux à dix pièces en High. |
 | **Total visuel potentiel de Showtime** | **55** | **89** | **140** | Hors ancrages transparents, interfaces et effets. |
-| Bras des chevrons des stations d’entraînement | 8 | 16 | 24 | Quatre stations présentes, à raison de deux bras par chevron. |
+| Bras des chevrons des stations d’entraînement | 8 | 16 | 24 | Emplacements éligibles au profil forgé approuvé. Deux bras par chevron, avec secours natif pendant le chargement et sous pression graphique. |
 | Orbites et noyau avec tous les maillages prêts | 16 | 0 | 0 | En Low, douze segments, une sphère et trois fragments utilisent les primitives par choix de qualité. |
 | Joints, trappes et inserts de secours du vestibule | 8 | 12 | 24 | Nombre maximal lorsqu’aucune dalle 3D ne couvre le vestibule. |
 
@@ -70,3 +70,5 @@ Le plateau principal et l’estrade, les quatre pylônes et les trois pièces ph
 Le secteur Showtime concentre le plus de formes simples dans les constructeurs examinés. Les premiers remplacements à forte visibilité sont le tablier, les deux enceintes, la console, les trois éléments du portique et le cristal suspendu. Les chevrons d’entraînement constituent le suivant : chaque bras peut garder son empreinte et utiliser le profil forgé existant, sans ajouter de pièce visible.
 
 Le lot Showtime rend ces huit emplacements éligibles aux profils approuvés. Le tablier, les enceintes et la console reprennent le moulage du périmètre, le portique le profil forgé de Tower Run et le cristal le cœur facetté d’Orbital. Chaque emplacement garde une seule pièce. Le tablier conserve ses ancrages audio et ses effets. Les formes de secours restent visibles jusqu’au chargement et reviennent sous pression graphique.
+
+Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
