@@ -26,6 +26,7 @@ local chargeSlots = {}
 local chargeRefreshAt = 0
 local chargeViewerLast = nil
 local chargeTierLast = nil
+local bombMeshRoles = {"core", "casting", "casting", "pylon", "fragment"}
 local warningNames = {
     BombWarning = true,
     MeteorWarning = true,
@@ -60,11 +61,18 @@ local function bombViewerPosition()
     return root and root.Position or nil
 end
 
+local function cloneBombPiece(index)
+    local source = CelebrationMeshes.readyProfile(bombMeshRoles[index], meshPressure)
+    return CelebrationMeshes.cloneProfile(source)
+end
+
 local function syncBombCharge(part, state, progress, reduced, slot, viewerPosition)
     if state.kind ~= "Bomb" or not state.bombCharge then return end
+    local clonePiece = not reduced and currentTier.Name ~= "Low" and meshPressure < 1
+        and cloneBombPiece or nil
     BombChargeKit.sync(
         state.bombCharge, part, localDecor, currentTier.Name,
-        reduced, progress, viewerPosition, slot, BombChargeRules
+        reduced, progress, viewerPosition, slot, BombChargeRules, clonePiece
     )
 end
 

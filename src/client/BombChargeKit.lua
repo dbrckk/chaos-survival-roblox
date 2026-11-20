@@ -8,6 +8,7 @@ local function clearPieces(state)
     end
     state.parts = {}
     state.source = nil
+    state.clonePiece = nil
     state.staticPosition = nil
     state.staticTier = nil
     state.staticCount = nil
@@ -19,7 +20,7 @@ function BombChargeKit.clear(state)
 end
 
 function BombChargeKit.sync(state, warning, parent, tier, reduced,
-        progress, viewerPosition, slot, rules)
+        progress, viewerPosition, slot, rules, clonePiece)
     if type(state) ~= "table" or type(rules) ~= "table" then return end
     local valid = typeof(warning) == "Instance"
         and warning:IsA("BasePart") and warning.Parent == workspace
@@ -38,9 +39,10 @@ function BombChargeKit.sync(state, warning, parent, tier, reduced,
     end
 
     local count = rules.profile(tier, reduced).Count
-    if state.source ~= warning then
+    if state.source ~= warning or state.clonePiece ~= clonePiece then
         clearPieces(state)
         state.source = warning
+        state.clonePiece = clonePiece
     end
     local parts = state.parts or {}
     state.parts = parts
@@ -80,20 +82,20 @@ function BombChargeKit.sync(state, warning, parent, tier, reduced,
                 piece = nil
                 parts[index] = nil
             end
-            if not piece then
-                piece = recipe.Shape == "Wedge" and Instance.new("WedgePart")
-                    or Instance.new("Part")
+            local created = not piece
+            if created then
+                piece = clonePiece and clonePiece(index)
+                if not piece then
+                    piece = Instance.new(recipe.Shape == "Wedge" and "WedgePart" or "Part")
+                    if recipe.Shape == "Ball" then piece.Shape = Enum.PartType.Ball end
+                end
                 piece.Name = "LocalBombCharge" .. index
                 piece.Anchored = true
                 piece.CanCollide = false
                 piece.CanTouch = false
                 piece.CanQuery = false
                 piece.CastShadow = false
-                piece.Parent = parent
                 parts[index] = piece
-            end
-            if recipe.Shape == "Ball" and piece.Shape ~= Enum.PartType.Ball then
-                piece.Shape = Enum.PartType.Ball
             end
             if piece.Size ~= recipe.Size then piece.Size = recipe.Size end
             local frame = CFrame.new(position) * recipe.Transform
@@ -105,6 +107,7 @@ function BombChargeKit.sync(state, warning, parent, tier, reduced,
             if piece.Transparency ~= recipe.Transparency then
                 piece.Transparency = recipe.Transparency
             end
+            if created then piece.Parent = parent end
         end
     end
 
