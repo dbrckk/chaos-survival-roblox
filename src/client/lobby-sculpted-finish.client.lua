@@ -152,6 +152,7 @@ local function refresh()
     local activities = lobby and lobby:FindFirstChild("Activities")
     local presentation = workspace:FindFirstChild("LobbyPresentationLocal")
     local surfaceDetail = workspace:FindFirstChild("LobbySurfaceDetailLocal")
+    local wayfinding = workspace:FindFirstChild("LobbyWayfindingLocal")
     local mountedPylons = tonumber(player:GetAttribute("LocalOriginalLobbyPylon3DCount")) or 0
     local candidates = {}
     if decor
@@ -177,12 +178,14 @@ local function refresh()
                         and tag == "LobbySculptedCasting" and part:GetAttribute("LobbySocialMarker") == true
                     local sculptedSurfaceDetail = surfaceDetail and part.Parent == surfaceDetail
                         and tag == "LobbySculptedSwept"
+                    local wayfindingBeam = wayfinding and part.Parent == wayfinding
+                        and tag == "LobbySculptedShaft" and part.Name == "WayfindingBeam"
                     if not part:IsA("Part")
                         and not ((gatePiece or gateCue or pylonPiece) and part:IsA("WedgePart")) then
                         continue
                     end
-                    local cosmeticCladding = (gatePiece or gateCue or pylonPiece or socialMarker or sculptedSurfaceDetail
-                            or (stage and part.Parent == stage))
+                    local cosmeticCladding = (gatePiece or gateCue or pylonPiece or socialMarker
+                            or sculptedSurfaceDetail or wayfindingBeam or (stage and part.Parent == stage))
                         and not part.CanCollide and not part.CanTouch and not part.CanQuery
                     if part.Anchored
                         and not part:FindFirstChildWhichIsA("SurfaceGui")

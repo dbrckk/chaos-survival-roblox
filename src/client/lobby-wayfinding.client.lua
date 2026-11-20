@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalizationService = game:GetService("LocalizationService")
@@ -64,6 +65,7 @@ local function makeMarker(definition)
     gui.LightInfluence = 0
     gui.Size = UDim2.fromOffset(190, 54)
     gui.MaxDistance = 105
+    gui.Enabled = false
     gui.Parent = anchor
 
     local panel = Instance.new("Frame")
@@ -106,7 +108,7 @@ local function makeMarker(definition)
     beam.CastShadow = false
     beam.Material = Enum.Material.Neon
     beam.Color = definition.color
-    beam.Transparency = 0.48
+    beam.Transparency = 1
     beam.Parent = folder
 
     table.insert(markers, {gui = gui, beam = beam})
@@ -127,17 +129,17 @@ local function refresh()
     local visible = mode == "social" and not FirstTimeExperience.isRookie(games)
     local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
     local reduced = player:GetAttribute("ReduceMotion") == true
+    local showBeams = visible and tier.Name ~= "Low"
 
     for _, marker in ipairs(markers) do
         marker.gui.Enabled = visible
-        if not visible then
-            marker.beam.Transparency = 1
-        elseif tier.Name == "Low" then
-            marker.beam.Transparency = 1
-        elseif reduced then
-            marker.beam.Transparency = 0.72
+        if showBeams then
+            marker.beam.Transparency = if reduced then 0.72
+                elseif tier.Name == "High" then 0.42 else 0.56
+            CollectionService:AddTag(marker.beam, "LobbySculptedShaft")
         else
-            marker.beam.Transparency = tier.Name == "High" and 0.42 or 0.56
+            marker.beam.Transparency = 1
+            CollectionService:RemoveTag(marker.beam, "LobbySculptedShaft")
         end
     end
 end

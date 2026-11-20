@@ -89,4 +89,6 @@ Les pylônes de victoire en qualité moyenne et haute reprennent le profil octog
 
 Le balayage doré au départ reprend la traverse forgée de Tower Run, ajustée à 80 % de la largeur de la piste. Il suit la même trajectoire au-dessus du revêtement, y compris si le maillage importé présente son axe long sur Z. La barre plate sert de secours au démarrage et sous pression graphique. Chaque balayage garde sa géométrie jusqu’à la fin du fondu.
 
+Les trois balises d’orientation du lobby peuvent afficher le mât polygonal approuvé de Tower Run. La tige de secours reste visible tant que le maillage charge ou sous pression graphique. Les mâts disparaissent avec les balises pendant la manche et restent masqués en qualité basse. Les panneaux conservent leurs ancrages.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
