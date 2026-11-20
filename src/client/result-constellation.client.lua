@@ -298,13 +298,16 @@ local function addResultArchitecture(
     secondaryColor,
     tier,
     reducedMotion,
-    survivorCount
+    survivorCount,
+    pressure,
+    capSource
 )
     local profile = ResultPresentation.architectureProfile(tier.Name, survivorCount)
     if profile.Pylons <= 0 then
         return
     end
 
+    local bodySource = CelebrationMeshes.readyProfile("pylon", pressure)
     local structureRadius = radius * profile.RadiusScale
     for index = 1, profile.Pylons do
         local angle = ((index - 1) / profile.Pylons) * math.pi * 2
@@ -321,7 +324,8 @@ local function addResultArchitecture(
             bodyCFrame,
             VisualTheme.World.Metal,
             Enum.Material.Metal,
-            reducedMotion and 0.16 or 1
+            reducedMotion and 0.16 or 1,
+            CelebrationMeshes.cloneProfile(bodySource)
         )
 
         local glass = makePart(
@@ -330,7 +334,8 @@ local function addResultArchitecture(
             bodyCFrame * CFrame.new(0, 0.02, -0.64),
             VisualTheme.World.MetalLight:Lerp(pylonAccent, 0.18),
             Enum.Material.Glass,
-            reducedMotion and 0.48 or 1
+            reducedMotion and 0.48 or 1,
+            CelebrationMeshes.cloneProfile(bodySource)
         )
 
         local blade = makePart(
@@ -339,7 +344,8 @@ local function addResultArchitecture(
             bodyCFrame * CFrame.new(0, 0.02, -0.75),
             pylonAccent,
             Enum.Material.Neon,
-            reducedMotion and 0.42 or 1
+            reducedMotion and 0.42 or 1,
+            CelebrationMeshes.cloneProfile(bodySource)
         )
 
         local cap = makePart(
@@ -348,7 +354,8 @@ local function addResultArchitecture(
             bodyCFrame * CFrame.new(0, profile.Height * 0.5 + 0.18, 0),
             pylonAccent:Lerp(Color3.new(1, 1, 1), 0.10),
             Enum.Material.Glass,
-            reducedMotion and 0.46 or 1
+            reducedMotion and 0.46 or 1,
+            CelebrationMeshes.cloneProfile(capSource)
         )
 
         if not reducedMotion then
@@ -484,7 +491,9 @@ local function rebuild(state)
         secondaryColor,
         tier,
         reducedMotion,
-        #survivors
+        #survivors,
+        pressure,
+        coreSource
     )
 
     local centerAnchor = Instance.new("Part")
@@ -553,6 +562,11 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
     lastState = state
+
+    if phase ~= previousPhase and (phase == "ready" or phase == "round")
+        and VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name ~= "Low" then
+        CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
+    end
 
     if phase == "result" and previousPhase ~= "result" then
         task.delay(0.10, function()

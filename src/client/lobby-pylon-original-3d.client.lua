@@ -8,10 +8,11 @@ local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
+local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 
 local player = Players.LocalPlayer
 local SOURCE_ID = 91626128452597 -- older genuine open-detail fallback
-local ENCLOSED_ID = 75945454705246 -- Approved source #41825253849
+local ENCLOSED_ID = PylonShell.AssetId
 
 local PYLON_OFFSETS = {
     Vector3.new(-31, 5, -31),
@@ -42,40 +43,6 @@ local function budget()
         return p == 0 and 4 or (p == 1 and 2 or 0)
     end
     return p < 2 and 4 or 2
-end
-
--- The new original source has a fully CLOSED 2.84 x 10.36 x 2.84
--- chamfered octagonal body, with a .16 bevel. Its smallest inner square
--- still encloses the ENTIRE 2.2x10x2.2 native rectangular collision box.
--- Exact creator-approved Model ID, safe server-sanitized template, bounding
--- and MeshPart checks are all REQUIRED before hiding native collision art.
-local function approvedShell()
-    local holder = ReplicatedStorage:FindFirstChild(
-        "ApprovedLobbyPylonShellTemplates")
-    if not holder or not holder:IsA("Folder")
-        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
-    local model = holder:FindFirstChild("LobbyPylonShell")
-    if not model or not model:IsA("Model") or model.Parent ~= holder
-        or model:GetAttribute("OwnerVerified") ~= true
-        or model:GetAttribute("CosmeticOnly") ~= true
-        or model:GetAttribute("OriginalLobbyPylonShell3D") ~= true
-        or model:GetAttribute("EnclosesCollider") ~= true
-        or model:GetAttribute("Original3DAssetId") ~= ENCLOSED_ID then
-        return nil
-    end
-    local count = 0
-    for _, item in ipairs(model:GetDescendants()) do
-        if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") or item.MeshId == "" then return nil end
-            count += 1
-        elseif item:IsA("LuaSourceContainer") then return nil end
-    end
-    if count < 1 or count > 12 then return nil end
-    local _, size = model:GetBoundingBox()
-    if size.Y < 10.25 or size.Y > 10.75
-        or math.min(size.X, size.Z) < 3.40
-        or math.max(size.X, size.Z) > 4.05 then return nil end
-    return model, count, size
 end
 
 local function approved()
@@ -308,7 +275,7 @@ reconcile = function()
         restore()
         return
     end
-    local template, partCount, sourceSize = approvedShell()
+    local template, partCount, sourceSize = PylonShell.approved()
     local enclosed = template ~= nil and geometryReady(template)
     if not enclosed then
         template, partCount, sourceSize = approved()

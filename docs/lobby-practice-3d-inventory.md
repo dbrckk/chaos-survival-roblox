@@ -85,4 +85,6 @@ Les trois façades imprimées, les deux lampes du portique et ses cinq accents r
 
 Les halos de victoire, les socles des survivants et l’impulsion de retour peuvent utiliser un anneau creux approuvé d’Orbital. Le centre de la constellation utilise la région facettée du même modèle. Les dimensions, durées et options de réduction des animations suivent le code existant. Un effet qui démarre avant le chargement garde son disque de secours jusqu’à sa fin.
 
+Les pylônes de victoire en qualité moyenne et haute reprennent le profil octogonal de la colonne du lobby pour le corps, la vitre et l’insert lumineux. Leur coiffe reprend le profil facetté d’Orbital. Chaque pylône conserve quatre pièces et sa montée en cascade. Les formes simples servent de secours si les maillages sont indisponibles ou si la pression graphique augmente avant l’apparition des pylônes.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.

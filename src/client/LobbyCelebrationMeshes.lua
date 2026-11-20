@@ -1,4 +1,5 @@
 local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local Kit = {}
@@ -8,7 +9,9 @@ local geometryReady = LobbyMeshPreload.new(function() end)
 
 function Kit.readyProfile(role, pressure)
     if (tonumber(pressure) or 0) >= 1 then return nil end
-    local profile = if role == "ring" then OrbitalReactor.ringProfile() else OrbitalReactor.coreProfile()
+    local profile = if role == "ring" then OrbitalReactor.ringProfile()
+        elseif role == "pylon" then PylonShell.bodyProfile()
+        else OrbitalReactor.coreProfile()
     if profile and geometryReady(profile) then return profile end
     return nil
 end
@@ -18,11 +21,18 @@ function Kit.size(part, diameter, thickness)
     return Vector3.new(thickness, diameter, diameter)
 end
 
-function Kit.disc(profile, position, diameter, thickness)
+function Kit.cloneProfile(profile)
     local part = profile and profile:Clone()
     if part then
         part:ClearAllChildren()
         part.TextureID = ""
+    end
+    return part
+end
+
+function Kit.disc(profile, position, diameter, thickness)
+    local part = Kit.cloneProfile(profile)
+    if part then
         part.CFrame = CFrame.new(position)
     else
         part = Instance.new("Part")
