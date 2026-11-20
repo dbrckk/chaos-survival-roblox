@@ -202,6 +202,7 @@ ArenaVariants.Definitions = {
                 offset = Vector3.new(0, 4, 0),
                 size = Vector3.new(18, 2, 18),
                 RouteTier = 1,
+                OrbitalRescueHub = true,
             })
             table.insert(result, {
                 offset = Vector3.new(0, 18, 0),

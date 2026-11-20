@@ -1941,7 +1941,8 @@ local function harborLandingAlongX(definition)
     return nil
 end
 
-local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand, edgeOverhang, routeAlongX)
+local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand, edgeOverhang, routeAlongX,
+    hubRing)
     local name = "PlatformGlow" .. index
     local color = (index % 2 == 0) and theme.Secondary or theme.Accent
     local transparency = 0.64
@@ -1954,6 +1955,23 @@ local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBan
     end
 
     local size = platform.Size
+    if hubRing then
+        -- The torus emerges above the panel at .105 studs while staying
+        -- below the local surface markings that start at .117 studs.
+        local diameter = math.min(size.X, size.Z) * 0.72
+        local inlayPose = platform.CFrame * CFrame.new(0, size.Y * 0.5 + 0.091, 0)
+        local inlay = RouteSignalGeometry.fit(hubRing.part, inlayPose, Vector3.new(diameter, 0.05, diameter))
+        if inlay then
+            inlay.Name = name
+            inlay.Color = theme.Detail:Lerp(theme.Secondary, 0.20)
+            inlay.Material = Enum.Material.Metal
+            inlay.Transparency = 0.28
+            inlay:SetAttribute("Original3DAssetId", hubRing.assetId)
+            inlay.Parent = decor
+            return
+        end
+    end
+
     local alongX = if routeAlongX ~= nil then routeAlongX else size.X > size.Z
     local atRim = platform:GetAttribute("PerimeterStep") ~= nil
         or platform:GetAttribute("BranchStep") ~= nil
@@ -3594,17 +3612,18 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- While common trim loads, keep the existing deck silhouettes
         -- with the arena's own closed casting or Harbor's load roller.
         local reactorLanding = definition.OrbitalReactorLanding == true
-        local trimCasting = if reactorLanding or orbitalEntry then closedDeckCasting else routeCasting
+        local orbitalHub = definition.OrbitalRescueHub == true
+        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
-            edgeOverhang, glowAlongX)
+            edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
         local harborSkywayBeam = definition.HarborSkywayLane and sweptProfile or nil
         local bevelSource = (skybridge and sweptProfile)
             or (harborLanding and rimBevel) or canonicalRim
         -- Use the open lattice in the existing shallow frame envelope
         -- so the landed platform still matches the native trim owners.
-        local frameProfile = (reactorLanding and underdeckLattice)
+        local frameProfile = ((reactorLanding or orbitalHub) and underdeckLattice)
             or underdeckSpars or (orbitalEntry and underdeckLattice)
             or (not elevatedRoute and trimCasting) or nil
         local coreProfile = (orbitalEntry and detailProfiles.ring.part) or underdeckSignal or signalFallback
