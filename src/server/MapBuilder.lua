@@ -3702,6 +3702,9 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local harborTurn = PlatformIdentityLodRules.isHarborCargoTurn(platform)
         local harborFreightTrim = harborApproach or harborTurn
             or definition.HarborStep == 7 or definition.HarborSkywayLane ~= nil
+            -- Upper cardinal piers also need the closed Harbor casting:
+            -- keep the existing rim bevel and route-axis glow on their decks.
+            or (definition.HarborSpokeStep ~= nil and definition.HarborSpokeStep >= 3)
         local trimCasting = if reactorLanding or orbitalEntry or orbitalHub
             or harborFreightTrim then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
