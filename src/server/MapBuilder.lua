@@ -1993,10 +1993,11 @@ local function addSpineExitChevrons(decor, spine, promenade, color, profile)
 
     local index = tonumber(spine.Name:match("^Platform(%d+)$"))
     local prefix = "SkySpine" .. index .. "_PromenadeChevron"
+    local targetIndex = tonumber(promenade.Name:match("^Platform(%d+)$"))
     for direction = -1, 1, 2 do
         local forward = across * direction
         local offset = center + forward * spacing
-        addRouteChevron(decor, prefix .. direction, spine, index, forward, color, style, profile, offset)
+        addRouteChevron(decor, prefix .. direction, spine, index, forward, color, style, profile, offset, targetIndex)
     end
 end
 
@@ -3882,8 +3883,14 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local inset = math.min(5.0, platform.Size.X * 0.24)
             for direction = -1, 1, 2 do
                 local forward = platform.CFrame.RightVector * direction
+                local nextStep = step + direction
+                local targetIndex = i + direction
+                if nextStep < 1 or nextStep > 8 then
+                    local route = (lane - 1) * 2 + (direction < 0 and 1 or 2)
+                    targetIndex = #variant.Platforms + #variant.PerimeterPlatforms + route * 4
+                end
                 addRouteChevron(decor, arrowName .. direction, platform, i,
-                    forward, promenadeTone, PROMENADE_CHEVRON, routeChevronProfile, forward * inset)
+                    forward, promenadeTone, PROMENADE_CHEVRON, routeChevronProfile, forward * inset, targetIndex)
             end
         end
 
@@ -4041,8 +4048,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local along = deck.CFrame.LookVector
             local side = (spine.Position - deck.Position):Dot(along) >= 0 and 1 or -1
             local forward = along * side
+            local targetIndex = tonumber(spine.Name:match("^Platform(%d+)$"))
             addRouteChevron(decor, "PromenadeJumpChevron" .. index .. "_Spine", deck, index,
-                forward, theme.Secondary, SPINE_TURN_CHEVRON, routeChevronProfile, forward * (deck.Size.Z * 0.25))
+                forward, theme.Secondary, SPINE_TURN_CHEVRON, routeChevronProfile,
+                forward * (deck.Size.Z * 0.25), targetIndex)
             addSpineExitChevrons(decor, spine, deck, theme.Secondary, routeChevronProfile)
         end
     end

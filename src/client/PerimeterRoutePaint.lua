@@ -109,6 +109,8 @@ function Paint.sync(arena, cameraPoint)
                 if target and target:IsA("BasePart") then nearby[target] = true end
                 visible = JumpRouteCueRules.safeLandingTarget(source)
                     and (if source:GetAttribute("BranchStep") == 4
+                        or source:GetAttribute("PromenadeLane") ~= nil
+                        or source:GetAttribute("SkySpineStep") ~= nil
                         then JumpRouteCueRules.skyNetworkLink(source, target)
                         else JumpRouteCueRules.jumpable(source, target))
                     and JumpRouteHazards.deckPathIsSafe(source, target, warnings, lava)

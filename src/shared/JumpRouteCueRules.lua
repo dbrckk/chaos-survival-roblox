@@ -1,6 +1,9 @@
 -- Deterministic, conservative parkour wayfinding from physical decks.
 -- Never turns an unverified island into a suggested jump. These rules
 -- create no forces, collision, network traffic or reward advantage.
+local SkyRouteConnectionRules = if script
+    then require(script.Parent.SkyRouteConnectionRules)
+    else require("./SkyRouteConnectionRules")
 local JumpRouteCueRules = {}
 
 JumpRouteCueRules.MaxGap = 3.85
@@ -597,6 +600,13 @@ function JumpRouteCueRules.skyNetworkLink(from, target)
         or target:GetAttribute("ChaosPermanentRoute") ~= true then
         return false
     end
+    local fromSpine = from:GetAttribute("SkySpineStep") ~= nil
+    local targetSpine = target:GetAttribute("SkySpineStep") ~= nil
+    if fromSpine and target:GetAttribute("PromenadeLane") ~= nil then
+        return SkyRouteConnectionRules.spineJunction(from, target, from)
+    elseif targetSpine and from:GetAttribute("PromenadeLane") ~= nil then
+        return SkyRouteConnectionRules.spineJunction(target, from, from)
+    end
     local firstTop = from.Position.Y + from.Size.Y * 0.5
     local secondTop = target.Position.Y + target.Size.Y * 0.5
     if math.abs(secondTop - firstTop) > 0.25 then return false end
@@ -721,7 +731,17 @@ function JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, var
         local forward, junction = JumpRouteCueRules.skyNetworkOptions(
             from, orderedPlatforms, skywayDirection)
         if forward and (not isClear or isClear(from,forward)) then return forward end
-        return junction and (not isClear or isClear(from,junction)) and junction or nil
+        if junction and (not isClear or isClear(from,junction)) then return junction end
+
+        -- If the intended direction and junction are both blocked, the
+        -- previous span can still be a valid way out of the hazard.
+        local step = from:GetAttribute("PromenadeStep") or from:GetAttribute("SkySpineStep")
+        if type(step) ~= "number" then return nil end
+        local midpoint = from:GetAttribute("PromenadeLane") ~= nil and 4 or 5
+        local direction = if skywayDirection == -1 or skywayDirection == 1
+            then skywayDirection else (step <= midpoint and 1 or -1)
+        local retreat = JumpRouteCueRules.skyNetworkOptions(from, orderedPlatforms, -direction)
+        return retreat and (not isClear or isClear(from,retreat)) and retreat or nil
     end
 
     -- Storm Harbor's newer cardinal dry-dock routes are also authored

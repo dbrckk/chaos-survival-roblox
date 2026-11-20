@@ -75,7 +75,11 @@ describe("H-shaped five-world physical sky route wayfinding", function()
                 other:SetAttribute("CollapsePhase", "Warning")
                 expect(nextFrom(center, 1)).toBe(spine)
                 spine:SetAttribute("CollapsePhase", "Warning")
+                local retreat = find("PromenadeLane", lane, "PromenadeStep", 3)
+                expect(nextFrom(center, 1)).toBe(retreat)
+                retreat:SetAttribute("CollapsePhase", "Warning")
                 expect(nextFrom(center, 1)).toBe(nil)
+                retreat:SetAttribute("CollapsePhase", nil)
                 other:SetAttribute("CollapsePhase", nil)
                 spine:SetAttribute("CollapsePhase", nil)
                 expect(nextFrom(center, 1)).toBe(other)
@@ -83,6 +87,20 @@ describe("H-shaped five-world physical sky route wayfinding", function()
                 -- server collision exists; only dangerous LANDINGS fail.
                 center:SetAttribute("CollapsePhase", "Warning")
                 expect(nextFrom(center, 1)).toBe(other)
+                center:SetAttribute("CollapsePhase", nil)
+
+                -- Positive overlap is mandatory at the painted turn.
+                -- A small gap still fits an ordinary level jump, but
+                -- cannot replace the authored walkable junction.
+                local spineFrame = spine.CFrame
+                local away = lane == 1 and 1 or -1
+                spine.CFrame = spineFrame + Vector3.new(0, 0, away * 5.2)
+                expect(JumpRouteCueRules.gap(center, spine) < JumpRouteCueRules.MaxGap).toBe(true)
+                expect(JumpRouteCueRules.skyNetworkLink(center, spine)).toBe(false)
+                spine.CFrame = spineFrame
+                center:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.skyNetworkLink(center, spine)).toBe(true)
+                expect(JumpRouteCueRules.skyNetworkLink(spine, center)).toBe(false)
                 center:SetAttribute("CollapsePhase", nil)
 
                 -- A streamed-out link is NOT replaced by an invented
