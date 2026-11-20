@@ -17,6 +17,7 @@ local DistrictKineticKit = require(script.Parent.DistrictKineticKit)
 local PerimeterArmor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
 local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 local FloorHardware = require(script.Parent.PremiumFloorHardwareMeshKit)
+local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
@@ -30,22 +31,33 @@ local watchedMap = nil
 local disconnectReady = nil
 local rebuildQueued = false
 local liveTracks = {}
+local radarTracks = {}
 local roofs = {}
 local baseArmour = {}
 local anchorBolts = {}
+local radarRings = {}
+local opticalCores = {}
 local detailGeometryReady
 local ANCHOR_BOLT_ROTATION = CFrame.Angles(-math.pi / 2, 0, 0)
+local RADAR_ROTATION = CFrame.Angles(0, 0, -math.pi / 2)
 
-local function trackDetail(group, part)
+local function trackDetail(group, part, meshSize)
     group[#group + 1] = {
-        part = part, frame = part.CFrame, size = part.Size,
+        part = part, frame = part.CFrame, size = part.Size, meshSize = meshSize,
         material = part.Material, class = part.ClassName,
         shape = if part:IsA("Part") then part.Shape else nil,
     }
 end
 
+local function trackRadar(part)
+    -- A Part cylinder faces along X. The approved ring's hole faces along Y.
+    local size = part.Size
+    trackDetail(radarRings, part, Vector3.new(size.Y, size.X, size.Z))
+end
+
 local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
     if source and not detailGeometryReady(source) then source = nil end
+    local replaced = false
     for _, detail in ipairs(group) do
         local previous = detail.part
         local parent = previous.Parent
@@ -58,7 +70,7 @@ local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
         replacement = replacement or Instance.new(detail.class)
         replacement.Name = previous.Name
         replacement.CFrame = detail.frame
-        replacement.Size = detail.size
+        replacement.Size = if source and detail.meshSize then detail.meshSize else detail.size
         if source then
             if rotation then replacement.CFrame *= rotation end
             if swapXZ then
@@ -81,47 +93,55 @@ local function syncDetailGroup(group, source, assetId, rotation, swapXZ)
             replacement:SetAttribute(name, value)
         end
         replacement:SetAttribute("Original3DAssetId", if source then assetId else nil)
+        if source and (group == radarRings or group == opticalCores) then
+            -- These two source regions wind inward. Render their near faces
+            -- as well so the standalone optics keep a complete silhouette.
+            replacement.DoubleSided = true
+        end
+        if group == radarRings then
+            replacement:SetAttribute("DistrictPanBasis", if source then rotation else nil)
+        end
         replacement.Parent = parent
         detail.part = replacement
         previous:Destroy()
+        replaced = true
     end
+    return replaced
 end
 
 local function syncDetails()
-    if #roofs + #baseArmour + #anchorBolts == 0 then return end
+    if #radarRings == 0 then return false end
     if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1 then
         syncDetailGroup(roofs)
         syncDetailGroup(baseArmour)
         syncDetailGroup(anchorBolts)
-        return
+        syncDetailGroup(opticalCores)
+        return syncDetailGroup(radarRings)
     end
-    local roof, orientation, swapped, roofId = PerimeterArmor.slopedCapProfile()
-    local armour = PylonShell.bodyProfile()
-    local bolt = FloorHardware.platformCornerProfile()
-    syncDetailGroup(roofs, roof, roofId, orientation, swapped)
-    syncDetailGroup(baseArmour, armour, PylonShell.AssetId)
-    -- The bolt source is authored upright. Point the head toward the
-    -- sector's front (-Z) while keeping the original cubic envelope.
-    syncDetailGroup(anchorBolts, bolt and bolt.part, bolt and bolt.assetId, ANCHOR_BOLT_ROTATION)
+    if #roofs > 0 then
+        local roof, orientation, swapped, roofId = PerimeterArmor.slopedCapProfile()
+        syncDetailGroup(roofs, roof, roofId, orientation, swapped)
+    end
+    if #baseArmour > 0 then
+        syncDetailGroup(baseArmour, PylonShell.bodyProfile(), PylonShell.AssetId)
+    end
+    if #anchorBolts > 0 then
+        local bolt = FloorHardware.platformCornerProfile()
+        -- The bolt source is authored upright. Point the head toward the
+        -- sector's front (-Z) while keeping the original cubic envelope.
+        syncDetailGroup(anchorBolts, bolt and bolt.part, bolt and bolt.assetId, ANCHOR_BOLT_ROTATION)
+    end
+    local core, ring = OrbitalReactor.coreProfile(), OrbitalReactor.ringProfile()
+    syncDetailGroup(opticalCores, core, OrbitalReactor.NodeAssetId)
+    return syncDetailGroup(radarRings, ring, OrbitalReactor.NodeAssetId, RADAR_ROTATION)
 end
-
-local detailSyncQueued = false
-
-local function scheduleDetailSync()
-    if detailSyncQueued then return end
-    detailSyncQueued = true
-    task.defer(function()
-        detailSyncQueued = false
-        syncDetails()
-    end)
-end
-
-detailGeometryReady = LobbyMeshPreload.new(scheduleDetailSync)
 
 local function clearDetails()
     table.clear(roofs)
     table.clear(baseArmour)
     table.clear(anchorBolts)
+    table.clear(radarRings)
+    table.clear(opticalCores)
     folder:ClearAllChildren()
 end
 
@@ -131,8 +151,32 @@ local function currentTier()
         and requested or VfxQuality.initialTier(UserInputService.TouchEnabled)
 end
 
+local function syncRadarKinetics()
+    DistrictKineticKit.stop(radarTracks)
+    local first = radarRings[1]
+    local model = first and first.part.Parent
+    if model then
+        radarTracks = DistrictKineticKit.start(model, 1, currentTier(),
+            player:GetAttribute("ReduceMotion") == true)
+    end
+end
+
+local detailSyncQueued = false
+
+local function scheduleDetailSync()
+    if detailSyncQueued then return end
+    detailSyncQueued = true
+    task.defer(function()
+        detailSyncQueued = false
+        if syncDetails() then syncRadarKinetics() end
+    end)
+end
+
+detailGeometryReady = LobbyMeshPreload.new(scheduleDetailSync)
+
 local function stopKinetics()
     DistrictKineticKit.stop(liveTracks)
+    DistrictKineticKit.stop(radarTracks)
 end
 
 -- Reconfigure only existing cosmetic tweens when reduced motion changes.
@@ -143,9 +187,11 @@ local function syncKinetics()
     if tier == "Low" or player:GetAttribute("ReduceMotion") == true then
         return
     end
+    syncRadarKinetics()
     for _, model in ipairs(folder:GetChildren()) do
         if model:IsA("Model") then
             local sector = model:GetAttribute("DistrictSector")
+            if sector == 1 then continue end
             for _, entry in ipairs(DistrictKineticKit.start(model, sector, tier, false)) do
                 liveTracks[#liveTracks + 1] = entry
             end
@@ -319,13 +365,13 @@ local function makeSector(base, theme, index, tier, variant)
         if index == 1 then
             make("LowObservatoryMast", Vector3.new(2.5, 16, 2.5),
                 CFrame.new(0, 8.3, 0), dark, Enum.Material.CorrodedMetal)
-            make("LowRadarDish", Vector3.new(0.85, 8.4, 8.4),
+            trackRadar(make("LowRadarDish", Vector3.new(0.85, 8.4, 8.4),
                 CFrame.new(0, 18.2, 0)
                     * CFrame.Angles(0, math.rad(21), math.rad(15)),
-                alloy, Enum.Material.Metal, 0.04, Enum.PartType.Cylinder)
-            make("LowRadarEye", Vector3.new(2.5, 2.5, 2.5),
+                alloy, Enum.Material.Metal, 0.04, Enum.PartType.Cylinder))
+            trackDetail(opticalCores, make("LowRadarEye", Vector3.new(2.5, 2.5, 2.5),
                 CFrame.new(0, 18.2, -0.45), accent,
-                Enum.Material.Glass, 0.23, Enum.PartType.Ball)
+                Enum.Material.Glass, 0.23, Enum.PartType.Ball))
         elseif index == 2 then
             make("LowCargoStack", Vector3.new(9.4, 7.0, 6.0),
                 CFrame.new(0, 4.0, 0), dark, Enum.Material.CorrodedMetal)
@@ -338,18 +384,18 @@ local function makeSector(base, theme, index, tier, variant)
                 CFrame.new(0, 8.4, 0), dark, Enum.Material.Metal)
             make("LowEnergyCollar", Vector3.new(10.0, 2.2, 10.0),
                 CFrame.new(0, 11.5, 0), accent, Enum.Material.Glass, 0.40)
-            make("LowCoreSignal", Vector3.new(3.3, 3.3, 3.3),
+            trackDetail(opticalCores, make("LowCoreSignal", Vector3.new(3.3, 3.3, 3.3),
                 CFrame.new(0, 18, 0), accent,
-                Enum.Material.Glass, 0.22, Enum.PartType.Ball)
+                Enum.Material.Glass, 0.22, Enum.PartType.Ball))
         else
             make("LowCommunicationsMast", Vector3.new(3.2, 25, 3.2),
                 CFrame.new(0, 13.0, 0), dark, Enum.Material.Metal)
             make("LowSignalArray", Vector3.new(10, 7.2, 1.1),
                 CFrame.new(0, 20.2, 0) * CFrame.Angles(0, math.rad(22), 0),
                 alloy, Enum.Material.DiamondPlate)
-            make("LowBeacon", Vector3.new(2.6, 2.6, 2.6),
+            trackDetail(opticalCores, make("LowBeacon", Vector3.new(2.6, 2.6, 2.6),
                 CFrame.new(0, 28.1, 0), accent,
-                Enum.Material.Glass, 0.2, Enum.PartType.Ball)
+                Enum.Material.Glass, 0.2, Enum.PartType.Ball))
         end
         model:SetAttribute("Decorative3DParts", 5)
         model:SetAttribute("VariantArchitectureParts", 0)
@@ -360,9 +406,9 @@ local function makeSector(base, theme, index, tier, variant)
         -- Observatory: tall angled receiver with a distinct disk antenna.
         make("ReceiverMast", Vector3.new(2.1, 17.0, 2.1),
             CFrame.new(0, 9.0, 0), dark)
-        make("RadarDish", Vector3.new(0.62, 8.6, 8.6),
+        trackRadar(make("RadarDish", Vector3.new(0.62, 8.6, 8.6),
             CFrame.new(0, 18, 0) * CFrame.Angles(0, math.rad(22), math.rad(20)),
-            alloy, Enum.Material.Metal, 0.02, Enum.PartType.Cylinder)
+            alloy, Enum.Material.Metal, 0.02, Enum.PartType.Cylinder))
         local eye = make("RadarEye", Vector3.new(2.5, 2.5, 2.5),
             CFrame.new(-0.65, 18, -0.3), accent, Enum.Material.Glass, 0.24,
             Enum.PartType.Ball)
@@ -382,6 +428,7 @@ local function makeSector(base, theme, index, tier, variant)
                 Enum.Material.Glass, 0.38)
         end
         eye:SetAttribute("OriginalLens", true)
+        trackDetail(opticalCores, eye)
     elseif index == 2 then
         -- Cargo depot: stacked freight pods, crane frame and suspended load.
         for side = -1, 1, 2 do
@@ -629,10 +676,10 @@ local function makeSector(base, theme, index, tier, variant)
     -- instrument pieces/cables/sheathed pipes rather than extra neon sheets.
     if high then
         if index == 1 then
-            make("RadarDishInnerLip", Vector3.new(0.24, 7.35, 7.35),
+            trackRadar(make("RadarDishInnerLip", Vector3.new(0.24, 7.35, 7.35),
                 CFrame.new(-0.47, 18, 0)
                     * CFrame.Angles(0, math.rad(22), math.rad(20)),
-                brushed, Enum.Material.Metal, 0.06, Enum.PartType.Cylinder)
+                brushed, Enum.Material.Metal, 0.06, Enum.PartType.Cylinder))
             make("SurveyApertureCollar", Vector3.new(1.8, 3.1, 3.1),
                 CFrame.new(-1.1, 18, -0.3)
                     * CFrame.Angles(0, 0, math.pi / 2),
@@ -689,11 +736,11 @@ local function makeSector(base, theme, index, tier, variant)
                     Vector3.new(side * 4.7, 8, 1.4),
                     Vector3.new(side * 4.0, 19, 0.0),
                     0.51, brushed, 0.05)
-                make("DirectionalReceiver" .. side,
+                trackDetail(opticalCores, make("DirectionalReceiver" .. side,
                     Vector3.new(2.3, 2.3, 2.3),
                     CFrame.new(side * 4.0, 19, -0.45),
                     accent, Enum.Material.Glass, 0.34,
-                    Enum.PartType.Ball)
+                    Enum.PartType.Ball))
             end
             make("SignalWaveguideRib", Vector3.new(7.6, 0.6, 1.5),
                 CFrame.new(0, 14.8, -1.7),
@@ -793,6 +840,7 @@ local DETAIL_SOURCES = {
     ApprovedPerimeterArmorTemplates = "Cap",
     ApprovedLobbyPylonShellTemplates = "LobbyPylonShell",
     ApprovedFloorReliefTemplates = "AnchorBolt",
+    ApprovedOrbitalReactorLandmarkTemplates = "Node",
 }
 
 local function detailSourceChanged(item)

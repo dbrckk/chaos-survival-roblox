@@ -6,6 +6,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local NODE_ID=104654294187035
+Kit.NodeAssetId = NODE_ID
 local STRUT_ID=138666009076890
 local NODE_BOUNDS=Vector3.new(4.36,4.36,4.36)
 local STRUT_BOUNDS=Vector3.new(8.46,1.24,1.10)
