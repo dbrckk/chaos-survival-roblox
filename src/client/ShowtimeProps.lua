@@ -5,6 +5,7 @@
 local UITheme = nil
 
 local ShowtimeProps = {}
+local CYLINDER_OFFSET = CFrame.Angles(0, 0, -math.pi * 0.5)
 
 local PROFILE_BY_NAME = {
     ShowtimeSpeakerHousing1 = "casting",
@@ -28,17 +29,25 @@ function ShowtimeProps.fit(part, source)
     if meshId == (source and source.MeshId) then return part end
     local replacement = if source then source:Clone() else Instance.new("Part")
     if not replacement then return part end
+    local cylinderFallback = not source and part:GetAttribute("ShowtimeCylinder") == true
     if source then
         replacement:ClearAllChildren()
         replacement.TextureID = ""
     elseif part.Name == "ShowtimeCrownCrystal" or part.Name == "ShowtimeCrownHeart" then
         replacement.Shape = Enum.PartType.Ball
+    elseif cylinderFallback then
+        replacement.Shape = Enum.PartType.Cylinder
     end
 
     local size = part:GetAttribute("ShowtimeProfileSize") or part.Size
     local rotate = source and size.X ~= size.Z and (source.Size.X > source.Size.Z) ~= (size.X > size.Z)
-    replacement.PivotOffset = rotate and CFrame.Angles(0, -math.pi * 0.5, 0) or CFrame.new()
-    replacement.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
+    if cylinderFallback then
+        replacement.PivotOffset = CYLINDER_OFFSET
+        replacement.Size = Vector3.new(size.Y, size.X, size.Z)
+    else
+        replacement.PivotOffset = rotate and CFrame.Angles(0, -math.pi * 0.5, 0) or CFrame.new()
+        replacement.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
+    end
     replacement:PivotTo(part:GetPivot())
     replacement.Name = part.Name
     replacement.Color = part.Color
@@ -69,7 +78,7 @@ function ShowtimeProps.applyProfiles(asset, profiles)
     for i, part in ipairs(asset.props) do
         if part.Parent ~= asset.folder or not part:IsA("BasePart") then continue end
         local ring = ringByPart[part]
-        local role = PROFILE_BY_NAME[part.Name]
+        local role = PROFILE_BY_NAME[part.Name] or part:GetAttribute("ShowtimeMeshProfile")
         if ring or part.Name:match("^ShowtimeWaveguideRib%d+$") then role = "forged" end
         if role then
             local replacement = ShowtimeProps.fit(part, profiles[role])
@@ -81,7 +90,7 @@ function ShowtimeProps.applyProfiles(asset, profiles)
     end
 end
 
-local function primitive(parent, name, cf, size, color, material, transparency, shape)
+local function primitive(parent, name, cf, size, color, material, transparency, shape, profile)
     local p = Instance.new("Part")
     p.Name = name
     p.CFrame = cf
@@ -97,6 +106,15 @@ local function primitive(parent, name, cf, size, color, material, transparency, 
     if shape then
         p.Shape = shape
     end
+    if shape == Enum.PartType.Cylinder then
+        -- Authored disk frames use Y as the normal. Native cylinders use X.
+        p:SetAttribute("ShowtimeCylinder", true)
+        p:SetAttribute("ShowtimeProfileSize", size)
+        p.PivotOffset = CYLINDER_OFFSET
+        p.Size = Vector3.new(size.Y, size.X, size.Z)
+        p:PivotTo(cf)
+    end
+    if profile then p:SetAttribute("ShowtimeMeshProfile", profile) end
     p:SetAttribute("ShowtimeDefaultTransparency", p.Transparency)
     p.Parent = parent
     return p
@@ -144,19 +162,19 @@ local function buildSpeaker(folder, baseCF, index, options)
         stackCF * CFrame.new(0, -0.91, 0.94)
             * CFrame.Angles(math.rad(90), 0, 0),
         Vector3.new(1.33, 0.13, 1.33),
-        Color3.fromRGB(42, 57, 78), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder)
+        Color3.fromRGB(42, 57, 78), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder, "crystal")
     lowCone:SetAttribute("ShowtimeCone", true)
     primitive(folder, "ShowtimeBassCore" .. index,
         stackCF * CFrame.new(0, -0.91, 1.05) * CFrame.Angles(math.rad(90), 0, 0),
-        Vector3.new(0.48, 0.15, 0.48), accent, Enum.Material.Neon, 0.13, Enum.PartType.Cylinder)
+        Vector3.new(0.48, 0.15, 0.48), accent, Enum.Material.Neon, 0.13, Enum.PartType.Cylinder, "crystal")
     if options.Detail then
         primitive(folder, "ShowtimeTrebleCone" .. index,
             stackCF * CFrame.new(0, 0.94, 0.94) * CFrame.Angles(math.rad(90), 0, 0),
             Vector3.new(0.84, 0.13, 0.84),
-            Color3.fromRGB(54, 75, 100), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder)
+            Color3.fromRGB(54, 75, 100), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder, "crystal")
         primitive(folder, "ShowtimeSpeakerTrim" .. index,
             stackCF * CFrame.new(0, 2.05, 0.87),
-            Vector3.new(1.70, 0.12, 0.15), accent, Enum.Material.Neon, 0.09)
+            Vector3.new(1.70, 0.12, 0.15), accent, Enum.Material.Neon, 0.09, nil, "forged")
     end
 end
 
@@ -171,17 +189,17 @@ local function buildConsole(folder, baseCF, tier)
     faceLabel(front, "C  H  A  O  S", Enum.NormalId.Back, UITheme.Colors.Cyan)
 
     primitive(folder, "ShowtimeMixDeck", bodyCF * CFrame.new(0, 1.00, 0),
-        Vector3.new(4.8, 0.13, 1.67), dark, Enum.Material.SmoothPlastic)
+        Vector3.new(4.8, 0.13, 1.67), dark, Enum.Material.SmoothPlastic, nil, nil, "casting")
     for i = 1, 2 do
         local side = i == 1 and -1 or 1
         primitive(folder, "ShowtimeTurntable" .. i,
             bodyCF * CFrame.new(side * 1.27, 1.085, 0.03),
             Vector3.new(1.20, 0.10, 1.20), Color3.fromRGB(60, 73, 101),
-            Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder)
+            Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder, "crystal")
         primitive(folder, "ShowtimeRecord" .. i,
             bodyCF * CFrame.new(side * 1.27, 1.15, 0.03),
             Vector3.new(0.75, 0.07, 0.75), UITheme.Colors.Violet,
-            Enum.Material.Neon, 0.18, Enum.PartType.Cylinder)
+            Enum.Material.Neon, 0.18, Enum.PartType.Cylinder, "crystal")
     end
     if tier ~= "Low" then
         for i = 1, 5 do
@@ -189,7 +207,7 @@ local function buildConsole(folder, baseCF, tier)
                 bodyCF * CFrame.new((i - 3) * 0.18, 1.13, -0.12),
                 Vector3.new(0.075, 0.09, 0.50),
                 i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
-                Enum.Material.Neon, 0.16)
+                Enum.Material.Neon, 0.16, nil, "forged")
         end
     end
 end

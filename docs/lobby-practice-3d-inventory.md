@@ -75,4 +75,6 @@ Les arcs acoustiques et la couronne de Showtime ajoutent 13, 21 ou 43 emplacemen
 
 La piste peut afficher des profils approuvés sur ses 9, 16 ou 25 dalles, ses quatre bordures et ses quatre pylônes. Les dalles reprennent le profil moulé sans modifier les joints du quadrillage ni les décalages de pulsation. Les bordures utilisent le profil forgé dans les deux axes. Les pylônes reprennent les facettes d’Orbital et conservent les lumières existantes. Chaque emplacement garde une pièce de secours aux mêmes dimensions.
 
+Les enceintes et le pupitre ajoutent neuf emplacements sculptés en Low et dix-huit en Medium et High. Les cônes, caches et disques utilisent les facettes d’Orbital, le plateau utilise le moulage du périmètre et les garnitures et curseurs le profil forgé. Le secours cylindrique suit le même plan que le maillage, face au public pour les enceintes et à plat sur le pupitre.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
