@@ -7,6 +7,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local feedbackEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundFeedback")
@@ -47,16 +48,17 @@ local function rootPart()
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
--- Share the same translucent, hollow outline language as the round-start
--- pulse; unlike the old solid cylinder, it never covers the full floor.
 local function makeRing(root, color, diameter, duration, height)
     local quality = profile()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local center = CFrame.new(root.Position + Vector3.new(0, height or -2.35, 0))
+    local source = quality.Name ~= "Low"
+        and CelebrationMeshes.readyProfile("ring", player:GetAttribute("OptionalVfxPressure"))
     return CinematicPulseRingKit.emit(
         folder, "LocalRoundCelebrationRing", center, color,
         reduced and diameter or 1, diameter, duration,
-        quality.Name, reduced, reduced and 0.70 or 0.42
+        quality.Name, reduced, reduced and 0.70 or 0.42,
+        CelebrationMeshes.cloneProfile(source)
     )
 end
 

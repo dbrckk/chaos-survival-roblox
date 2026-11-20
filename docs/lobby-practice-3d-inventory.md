@@ -91,4 +91,6 @@ Le balayage doré au départ reprend la traverse forgée de Tower Run, ajustée 
 
 Les trois balises d’orientation du lobby peuvent afficher le mât polygonal approuvé de Tower Run. La tige de secours reste visible tant que le maillage charge ou sous pression graphique. Les mâts disparaissent avec les balises pendant la manche et restent masqués en qualité basse. Les panneaux conservent leurs ancrages.
 
+Les anneaux personnels de victoire, de défaite et de médaille peuvent utiliser un seul maillage creux d’Orbital à la place de six ou huit segments. Les couleurs, la durée et les options de réduction des animations suivent le résultat reçu. Les segments existants servent de secours en qualité basse, au chargement et sous pression graphique. Les impulsions de départ et d’impact continuent d’utiliser les segments.
+
 Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.

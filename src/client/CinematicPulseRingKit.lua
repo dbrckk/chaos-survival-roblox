@@ -17,7 +17,7 @@ function CinematicPulseRingKit.segmentFrame(centerCF, radius, index, count)
 end
 
 function CinematicPulseRingKit.emit(parent, name, centerCF, color, startDiameter,
-        endDiameter, duration, tier, reduceMotion, alpha)
+        endDiameter, duration, tier, reduceMotion, alpha, ringMesh)
     local count = CinematicPulseRingKit.segmentCount(tier)
     local result = {}
     if not parent or typeof(centerCF) ~= "CFrame" or typeof(color) ~= "Color3"
@@ -32,16 +32,9 @@ function CinematicPulseRingKit.emit(parent, name, centerCF, color, startDiameter
         or math.clamp(startDiameter * 0.5, 0.30, targetRadius)
     local durationSeconds = reduceMotion and math.min(duration, 0.24) or duration
     local initialAlpha = math.clamp(alpha or 0.40, 0.25, 0.78)
-    local function segmentSize(radius)
-        return Vector3.new(math.max(0.65, 2 * radius * math.sin(math.pi / count) * 0.74),
-            0.055, 0.18)
-    end
-
-    for i = 1, count do
-        local piece = Instance.new("Part")
-        piece.Name = name .. "_Arc" .. i
-        piece.Size = segmentSize(initialRadius)
-        piece.CFrame = CinematicPulseRingKit.segmentFrame(centerCF, initialRadius, i, count)
+    local function animate(piece, initialFrame, initialSize, targetFrame, targetSize)
+        piece.Size = initialSize
+        piece.CFrame = initialFrame
         piece.Anchored = true
         piece.CanCollide = false
         piece.CanTouch = false
@@ -56,13 +49,33 @@ function CinematicPulseRingKit.emit(parent, name, centerCF, color, startDiameter
             piece,
             TweenInfo.new(durationSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
-                CFrame = CinematicPulseRingKit.segmentFrame(centerCF, targetRadius, i, count),
-                Size = segmentSize(targetRadius),
+                CFrame = targetFrame,
+                Size = targetSize,
                 Transparency = 1,
             }
         ):Play()
         Debris:AddItem(piece, durationSeconds + 0.12)
         table.insert(result, piece)
+    end
+
+    if ringMesh then
+        ringMesh.Name = name
+        animate(ringMesh, centerCF, Vector3.new(initialRadius * 2, 0.055, initialRadius * 2),
+            centerCF, Vector3.new(endDiameter, 0.055, endDiameter))
+        return result
+    end
+
+    local function segmentSize(radius)
+        return Vector3.new(math.max(0.65, 2 * radius * math.sin(math.pi / count) * 0.74),
+            0.055, 0.18)
+    end
+
+    for i = 1, count do
+        local piece = Instance.new("Part")
+        piece.Name = name .. "_Arc" .. i
+        animate(piece,
+            CinematicPulseRingKit.segmentFrame(centerCF, initialRadius, i, count), segmentSize(initialRadius),
+            CinematicPulseRingKit.segmentFrame(centerCF, targetRadius, i, count), segmentSize(targetRadius))
     end
     return result
 end
