@@ -331,11 +331,11 @@ function JumpRouteCueRules.crosslinkOptions(from, orderedPlatforms, isClear)
 end
 
 function JumpRouteCueRules.isOuterRoute(part)
-    return part:GetAttribute("PerimeterRoute") ~= nil
+    return part ~= nil and (part:GetAttribute("PerimeterRoute") ~= nil
         or part:GetAttribute("BranchRoute") ~= nil
         or part:GetAttribute("CrosslinkRoute") ~= nil
         or part:GetAttribute("PromenadeLane") ~= nil
-        or part:GetAttribute("SkySpineStep") ~= nil
+        or part:GetAttribute("SkySpineStep") ~= nil)
 end
 
 -- Skill-aware parkour hint: after a veteran stays on the SAME physical
@@ -704,6 +704,105 @@ function JumpRouteCueRules.skyNetworkOptions(from, orderedPlatforms,
         end
     end
     return forward, interchange
+end
+
+-- Reverse only an authored ascent. Validate the lower landing rather than
+-- treating the higher departure as a safe destination during a warning.
+local function outerAscent(from, target)
+    local ridge = from:GetAttribute("PerimeterRoute")
+    local ridgeStep = from:GetAttribute("PerimeterStep")
+    local branch = from:GetAttribute("BranchRoute")
+    local branchStep = from:GetAttribute("BranchStep")
+    local crossing = from:GetAttribute("CrosslinkRoute")
+    if ridge and type(ridgeStep) == "number" then
+        return (target:GetAttribute("PerimeterRoute") == ridge
+                and target:GetAttribute("PerimeterStep") == ridgeStep + 1)
+            or (ridgeStep == 5 and target:GetAttribute("BranchRoute") == ridge
+                and target:GetAttribute("BranchStep") == 1 and target:GetAttribute("BranchParentStep") == 5)
+            or (ridgeStep == 6 and target:GetAttribute("CrosslinkRoute") == ridge
+                and target:GetAttribute("CrosslinkFromPerimeterStep") == 6
+                and target:GetAttribute("CrosslinkToBranchStep") == 2)
+    elseif branch and type(branchStep) == "number" then
+        return target:GetAttribute("BranchRoute") == branch
+            and target:GetAttribute("BranchStep") == branchStep + 1
+    elseif crossing and from:GetAttribute("CrosslinkFromPerimeterStep") == 6
+        and from:GetAttribute("CrosslinkToBranchStep") == 2 then
+        return target:GetAttribute("BranchRoute") == crossing and target:GetAttribute("BranchStep") == 2
+    end
+    return false
+end
+
+function JumpRouteCueRules.canDescend(from, target)
+    if not walkable(from) or not JumpRouteCueRules.safeLandingTarget(target)
+        or from.Parent ~= target.Parent or not outerAscent(target, from) then return false end
+    local gap = JumpRouteCueRules.gap(from, target)
+    local drop = from.Position.Y + from.Size.Y * 0.5 - target.Position.Y - target.Size.Y * 0.5
+    return gap > 0.15 and gap <= JumpRouteCueRules.MaxGap
+        and drop >= 0.4 and drop <= JumpRouteCueRules.MaxRise
+end
+
+function JumpRouteCueRules.outerDescent(from, platforms, isClear)
+    if not walkable(from) or type(platforms) ~= "table" then return nil end
+    local connector
+    for _, target in ipairs(platforms) do
+        if JumpRouteCueRules.canDescend(from, target) and (not isClear or isClear(from, target)) then
+            if target:GetAttribute("CrosslinkRoute") == nil then return target end
+            connector = target
+        end
+    end
+    return connector
+end
+
+function JumpRouteCueRules.outerRouteLink(from, target)
+    if not walkable(from) or not JumpRouteCueRules.safeLandingTarget(target)
+        or from == target or from.Parent ~= target.Parent then return false end
+    if outerAscent(from, target) then return JumpRouteCueRules.jumpable(from, target) end
+    if JumpRouteCueRules.canDescend(from, target) then return true end
+    if not JumpRouteCueRules.skyNetworkLink(from, target) then return false end
+
+    local lane, nextLane = from:GetAttribute("PromenadeLane"), target:GetAttribute("PromenadeLane")
+    local span, nextSpan = from:GetAttribute("PromenadeStep"), target:GetAttribute("PromenadeStep")
+    if lane and nextLane then
+        return lane == nextLane and type(span) == "number" and type(nextSpan) == "number"
+            and math.abs(span - nextSpan) == 1
+    end
+    local spine, nextSpine = from:GetAttribute("SkySpineStep"), target:GetAttribute("SkySpineStep")
+    if spine and nextSpine then
+        return type(spine) == "number" and type(nextSpine) == "number" and math.abs(spine - nextSpine) == 1
+    elseif (spine and nextLane) or (nextSpine and lane) then
+        return true -- skyNetworkLink already requires the real intersection.
+    end
+    local lookout, promenade = if lane then target else from, if lane then from else target
+    local route = lookout:GetAttribute("BranchRoute")
+    if type(route) ~= "number" or route < 1 or route > 4
+        or lookout:GetAttribute("BranchStep") ~= 4 then return false end
+    return promenade:GetAttribute("PromenadeLane") == (route <= 2 and 1 or 2)
+        and promenade:GetAttribute("PromenadeStep") == (route % 2 == 1 and 1 or 8)
+end
+
+function JumpRouteCueRules.groundExit(from, base)
+    if not walkable(from) or not JumpRouteCueRules.safeLandingSurface(base)
+        or from:GetAttribute("PerimeterStep") ~= 1 or not from.Parent
+        or from.Parent.Name ~= "Platforms" or base.Name ~= "Base"
+        or from.Parent.Parent ~= base.Parent then return nil end
+    local top = base.Position.Y + base.Size.Y * 0.5
+    local drop = from.Position.Y + from.Size.Y * 0.5 - top
+    if drop < 0.4 or drop > JumpRouteCueRules.MaxRise then return nil end
+
+    local inward = base.Position - from.Position
+    local flat = Vector3.new(inward.X, 0, inward.Z)
+    if flat.Magnitude < 0.01 then return nil end
+    local direction = flat.Unit
+    local localDirection = from.CFrame:VectorToObjectSpace(direction)
+    local edgeDistance = math.min(
+        from.Size.X * 0.5 / math.max(.0001, math.abs(localDirection.X)),
+        from.Size.Z * 0.5 / math.max(.0001, math.abs(localDirection.Z))
+    )
+    local point = from.Position + direction * (edgeDistance + 3)
+    point = Vector3.new(point.X, top, point.Z)
+    local spot = base.CFrame:PointToObjectSpace(point)
+    if math.abs(spot.X) > base.Size.X * .5 - 2 or math.abs(spot.Z) > base.Size.Z * .5 - 2 then return nil end
+    return point
 end
 
 -- Original central routes use conservative spatial selection. Perimeter

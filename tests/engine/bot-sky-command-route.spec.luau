@@ -82,6 +82,18 @@ describe("Bot cooperative route: climb, real sky jumps, hold", function()
                 expect((core.Position.Z - stand.Z)).toBe(0)
                 expect(SkySpineSwitchyard.sameDeckApproach(
                     stand, previous)).toBe(stand)
+
+                local lower = find("BranchRoute", route, "BranchStep", 3)
+                local originTop = origin.Position.Y + origin.Size.Y * .5
+                local lowerTop = lower.Position.Y + lower.Size.Y * .5
+                expect(JumpRouteCueRules.canDescend(origin, lower)).toBe(true)
+                expect(AISurvivorRules.skyGapJumpReady(
+                    true, 30, 9, originTop, false, lowerTop)).toBe(false)
+                expect(AISurvivorRules.skyGapJumpReady(
+                    true, 30, 9, originTop, false, lowerTop, JumpRouteCueRules.MaxRise)).toBe(true)
+                lower:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.outerRouteLink(origin, lower)).toBe(false)
+                lower:SetAttribute("CollapsePhase", nil)
             end
             for _, cleanup in ipairs(ctx.OnCleanup) do cleanup() end
             for _, item in ipairs(ctx.Cleanup) do

@@ -37,9 +37,12 @@ local skywayArrival = nil
 -- the direction the player's camera happens to face.
 local lastSkyNetworkDeck = nil
 local skyNetworkDirection = nil
+local returningToGround = false
+local groundReturnUntil = 0
 local function resetSkyway()
     lastSkywayDeck, skywayDirection, skywayArrival = nil, nil, nil
     lastSkyNetworkDeck, skyNetworkDirection = nil, nil
+    returningToGround, groundReturnUntil = false, 0
 end
 local function skyRouteDirection(from)
     if from:GetAttribute("PromenadeLane") ~= nil
@@ -57,7 +60,10 @@ end
 -- This optional sign must not recommend a deck already submerged by
 -- the live server-owned lava. Use the same hazard geometry for every
 -- candidate checked during this update.
-local function safeGuidedTargetPath(fromPosition, target, warnings, lava)
+local function safeGuidedTargetPath(fromPosition, target, warnings, lava, groundPoint)
+    if groundPoint then
+        return JumpRouteHazards.landingPathIsSafe(fromPosition, target, warnings, lava, groundPoint)
+    end
     if not target or not target:IsA("BasePart") then return false end
     if target.Parent and target.Parent.Name == "Platforms" then
         return JumpRouteHazards.landingPathIsSafe(fromPosition, target, warnings, lava)
@@ -80,11 +86,11 @@ end
 
 local marker
 local caption
-local currentTarget, currentAlternate, currentAnchor
+local currentTarget, currentAlternate, currentAnchor, currentGroundPoint
 local targetConnections = {}
 local currentMap
 local mapPlatforms
-local routeClearance
+local jumpClear, routeClearance, groundExitClear
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -100,7 +106,7 @@ local function hide()
         marker.Enabled = false
         marker.Adornee = nil
     end
-    currentTarget, currentAlternate, currentAnchor = nil, nil, nil
+    currentTarget, currentAlternate, currentAnchor, currentGroundPoint = nil, nil, nil, nil
 end
 
 JumpRouteHazards.WarningsChanged:Connect(function()
@@ -109,7 +115,7 @@ JumpRouteHazards.WarningsChanged:Connect(function()
     local root = target and character and character:FindFirstChild("HumanoidRootPart")
     if not root or not root:IsA("BasePart") then return end
     local warnings, lava = JumpRouteHazards.read(mapPlatforms and mapPlatforms.Parent)
-    if not safeGuidedTargetPath(root.Position, target, warnings, lava)
+    if not safeGuidedTargetPath(root.Position, target, warnings, lava, currentGroundPoint)
         or (currentAlternate and not safeGuidedTargetPath(root.Position, currentAlternate, warnings, lava)) then
         hide()
     end
@@ -417,7 +423,8 @@ local function update()
     end
     if generated ~= currentMap or platforms ~= mapPlatforms then
         currentMap, mapPlatforms = generated, platforms
-        routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
+        jumpClear, groundExitClear = JumpRouteClearance.forArena(arena)
+        routeClearance = variant == "Harbor" and jumpClear or nil
         hide()
         resetRecovery()
         resetSkyway()
@@ -476,6 +483,14 @@ local function update()
     -- ends similarly preserve the player's actual sequence of landings.
     if from ~= lastSkyNetworkDeck then
         local previous = lastSkyNetworkDeck
+        if returningToGround and from == base and previous and previous:GetAttribute("PerimeterStep") == 1 then
+            groundReturnUntil = os.clock() + 3
+        end
+        returningToGround = from:GetAttribute("PerimeterStep") == 8
+            or (previous ~= nil and (JumpRouteCueRules.canDescend(previous, from)
+                or (previous:GetAttribute("PromenadeLane") ~= nil
+                    and from:GetAttribute("BranchStep") == 4
+                    and JumpRouteCueRules.outerRouteLink(previous, from))))
         local lane = from:GetAttribute("PromenadeLane")
         local promenadeStep = from:GetAttribute("PromenadeStep")
         local spineStep = from:GetAttribute("SkySpineStep")
@@ -558,12 +573,29 @@ local function update()
         end
         return clear
     end
-    local target, alternate
+    local target, alternate, groundPoint
     local outerRoute = JumpRouteCueRules.isOuterRoute(from)
     local french = player.LocaleId:sub(1, 2) == "fr"
     local hint = french and "SAUT SUIVANT  ↑" or "NEXT JUMP  ↑"
     local collapseEscape = from.Parent == platforms
         and from:GetAttribute("CollapsePhase") == "Warning"
+    local attemptedReturn
+    local function returnTarget()
+        attemptedReturn = true
+        if lavaClimbActive or not outerRoute or from.Parent ~= platforms then return nil end
+        local lower = JumpRouteCueRules.outerDescent(from, pieces, function(source, destination)
+            return isClear(source, destination)
+                and (routeClearance ~= nil or jumpClear(source, destination, nil, hit.Position))
+        end)
+        if lower then return lower end
+        local point = JumpRouteCueRules.groundExit(from, base)
+        if point and safeGuidedTargetPath(root.Position, base, dangerWarnings, lava, point)
+            and groundExitClear(from, base, point, hit.Position) then
+            groundPoint = point
+            return base
+        end
+        return nil
+    end
     if collapseEscape then
         -- A server-warning deck will lose collision in 1.35 seconds.
         -- Prioritize an actual reachable, still-collidable successor
@@ -572,6 +604,7 @@ local function update()
         target = JumpRouteCueRules.nextPhysical(
             from, pieces, base.Position, variant, skyRouteDirection(from), isClear
         )
+        target = target or returnTarget()
         if target then
             hint = french and "QUITTE LA PLATEFORME  ↑"
                 or "LEAVE THE PLATFORM  ↑"
@@ -628,6 +661,9 @@ local function update()
                     or "RESUME THE ROUTE  ↑"
             end
         end
+    elseif from == base and now < groundReturnUntil then
+        hide()
+        return true
     elseif variant == "Orbital" and not outerRoute then
         -- This world uses physical ramps instead of tiered jump gaps.
         -- Preserve the SAME one-sign Android guide, not a second HUD.
@@ -638,12 +674,13 @@ local function update()
     elseif from == base then
         -- The largest missing first-session cue was *before* the first
         -- jump. Guide from the actual floor to a short, grounded entry.
-        target = JumpRouteCueRules.nearestEntry(
-            pieces, hit.Position, 42, canApproach
-        )
+        target = JumpRouteCueRules.nearestEntry(pieces, hit.Position, 42, canApproach)
     elseif from.Parent == platforms then
         local perimeterStep = from:GetAttribute("PerimeterStep")
-        if perimeterStep == 5 or perimeterStep == 6 then
+        if returningToGround then target = returnTarget() end
+        if target then
+            hint = french and "RETOUR AU SOL  ↓" or "BACK TO GROUND  ↓"
+        elseif perimeterStep == 5 or perimeterStep == 6 then
             local options = perimeterStep == 5 and JumpRouteCueRules.forkOptions
                 or JumpRouteCueRules.crosslinkOptions
             local forward, detour = options(from, pieces, isClear)
@@ -683,15 +720,22 @@ local function update()
             end
         end
     end
-    if target and not isSafe(target) then target = nil end
+    if not target and not attemptedReturn and not lavaClimbActive
+        and (rookie or (outerRoute and currentChallenge ~= "highGround" and not finalRush
+            and JumpRouteCueRules.recoveryHintReady(now - recoverySince, traveled, true))) then
+        target = returnTarget()
+        if target then hint = french and "RETOUR AU SOL  ↓" or "BACK TO GROUND  ↓" end
+    end
+    if target and not groundPoint and not isSafe(target) then target = nil end
     -- A long orbital ramp's CENTER can be far from its actionable entry.
     -- Only for server-authored ramps, use the real HelixStart takeoff
     -- coordinate rather than suppressing the guide or marking midair.
     local rampStart = target and target.Parent
         and target.Parent.Name == "HelixCircuit"
         and target:GetAttribute("HelixStart") or nil
-    local guideDistance = typeof(rampStart) == "Vector3"
-        and (root.Position - rampStart).Magnitude
+    local guidePoint = groundPoint or rampStart
+    local guideDistance = typeof(guidePoint) == "Vector3"
+        and (root.Position - guidePoint).Magnitude
         or (target and (root.Position - target.Position).Magnitude
             or math.huge)
     local maxGuideDistance = lavaClimbActive
@@ -738,7 +782,8 @@ local function update()
     end
     if caption.Text ~= hint then caption.Text = hint end
     local anchor = alternate and from or target
-    if currentTarget ~= target or currentAlternate ~= alternate or currentAnchor ~= anchor then
+    if currentTarget ~= target or currentAlternate ~= alternate or currentAnchor ~= anchor
+        or (currentGroundPoint == nil) ~= (groundPoint == nil) then
         hide()
         currentTarget, currentAlternate, currentAnchor = target, alternate, anchor
         sign.Adornee = anchor
@@ -746,12 +791,16 @@ local function update()
             and (rampStart + Vector3.new(0, 3.1, 0) - anchor.Position)
             or Vector3.new(0, anchor.Size.Y * 0.5 + 3.1, 0)
         local targetParent = target.Parent
-        watchTarget(target, targetParent == platforms
+        watchTarget(target, groundPoint ~= nil or targetParent == platforms
             or (targetParent ~= nil and targetParent == arena:FindFirstChild("HelixCircuit")))
         if alternate then
             watchTarget(alternate, true)
             watchTarget(anchor, true)
         end
+    end
+    currentGroundPoint = groundPoint
+    if groundPoint then
+        sign.StudsOffsetWorldSpace = groundPoint + Vector3.yAxis * 2.7 - base.Position
     end
     sign.Enabled = true
     return true, collapseEscape

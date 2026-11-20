@@ -1605,13 +1605,40 @@ describe("Chaos Survival engine", function()
                 )).toBe(nil)
                 forward.CanCollide = true
                 side.CanCollide = true
-                -- The final outer lookout is still a terminal platform,
-                -- not a route back to the beginning.
+                -- Forward progression still ends at the summit. The
+                -- dedicated return guide follows the same authored ridge in reverse.
                 local last = platforms:FindFirstChild("Platform" .. (
                     originals + route * ArenaVariants.PerimeterSteps))
                 expect(JumpRouteCueRules.nextPhysical(
                     last, pieces, Config.ArenaCenter, variantId
                 )).toBe(nil)
+
+                local lower = last
+                for step = ArenaVariants.PerimeterSteps - 1, 1, -1 do
+                    local previous = platforms:FindFirstChild("Platform" .. (
+                        originals + (route - 1) * ArenaVariants.PerimeterSteps + step))
+                    expect(JumpRouteCueRules.outerDescent(lower, pieces)).toBe(previous)
+                    expect(JumpRouteCueRules.outerRouteLink(lower, previous)).toBe(true)
+                    lower = previous
+                end
+                local base = arena:FindFirstChild("Base")
+                local exit = JumpRouteCueRules.groundExit(lower, base)
+                expect(typeof(exit)).toBe("Vector3")
+                expect(math.abs(exit.Y - base.Position.Y - base.Size.Y * .5) < .01).toBe(true)
+                local foot = lower.CFrame:PointToObjectSpace(exit)
+                expect(math.abs(foot.X) > lower.Size.X * .5
+                    or math.abs(foot.Z) > lower.Size.Z * .5).toBe(true)
+                expect(JumpRouteCueRules.groundExit(last, base)).toBe(nil)
+
+                local branch2 = platforms:FindFirstChild("Platform" .. (
+                    perimeterEnd + (route - 1) * 4 + 2))
+                local link = platforms:FindFirstChild("Platform" .. (perimeterEnd + 16 + route))
+                expect(JumpRouteCueRules.outerDescent(branch2, pieces)).toBe(side)
+                side:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.outerDescent(branch2, pieces)).toBe(link)
+                expect(JumpRouteCueRules.outerDescent(link, pieces)).toBe(forward)
+                side:SetAttribute("CollapsePhase", nil)
+                expect(JumpRouteCueRules.outerRouteLink(last, fork)).toBe(false)
 
                 for step = 1, 3 do
                     local number = perimeterEnd + (route - 1) * 4 + step
@@ -1638,6 +1665,9 @@ describe("Chaos Survival engine", function()
                     end
                 end
                 expect(continuation ~= nil).toBe(true)
+                expect(JumpRouteCueRules.outerRouteLink(continuation, lookout)).toBe(true)
+                local nextLower = platforms:FindFirstChild("Platform" .. (perimeterEnd + route * 4 - 1))
+                expect(JumpRouteCueRules.outerDescent(lookout, pieces)).toBe(nextLower)
                 expect(JumpRouteCueRules.skyNetworkLink(lookout, continuation))
                     .toBe(true)
                 expect(JumpRouteCueRules.nextPhysical(

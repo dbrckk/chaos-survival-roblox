@@ -135,6 +135,12 @@ Les quatre parcours de chaque arène affichent les deux directions aux paliers 5
 
 Sur les deux Promenades, chaque flèche longitudinale suit le véritable palier voisin ou le belvédère terminal. Aux jonctions de l’Épine céleste, les flèches et le guide exigent un recouvrement praticable. Si la direction suivie et la jonction sont bloquées, le guide vérifie le palier arrière avant de proposer un repli.
 
+### Retour au sol et replis des bots
+
+Le guide peut accompagner la descente depuis les sommets des terrasses et les belvédères. Il utilise les sauts existants en sens inverse et, si une branche est bloquée, vérifie la traversée de secours. Le dernier repère indique un point sur le vrai sol. Le volume du personnage doit pouvoir y passer et le trajet doit rester hors des zones de danger. Le repère de descente s'efface pendant la montée de lave.
+
+Sur les hauteurs, les bots suivent les connexions de parcours réelles pour leurs déplacements et leurs replis. Ils revérifient l'empreinte du palier quand l'arène se contracte, écartent les arrivées noyées et peuvent rejoindre un palier voisin si leur tablier n'offre aucun abri contre un impact. Les sauts restent soumis au contrôleur Humanoid existant.
+
 ### Sorties des terrasses périphériques de Storm Harbor
 
 Les quatre sorties peuvent conserver **16 pièces sculptées** avec le moulage fermé de Harbor ou de Classic. Les huit renforts privilégient un fût polygonal approuvé. Les couronnes et les lentilles gardent leur profil forgé s’il est chargé. Les quatre couronnes peuvent aussi reprendre la pente du capuchon ou de l’aile périphérique, avec la face haute tournée vers l’extérieur sur les deux côtés de l’arène. Le moulage fermé ou le caisson d’amarrage servent de secours avant le coin simple. Les couronnes restent hors de la surface jouable et suivent le rétrécissement et l’effondrement de leur palier.

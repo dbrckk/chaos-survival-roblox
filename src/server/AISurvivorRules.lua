@@ -960,7 +960,7 @@ end
 
 function AISurvivorRules.skyGapJumpReady(
     grounded, heightAboveBase, horizontalDistance,
-    originFloorY, gapIsSupported, landingFloorY)
+    originFloorY, gapIsSupported, landingFloorY, confirmedDrop)
     if grounded ~= true or gapIsSupported ~= false then return false end
     if type(heightAboveBase) ~= "number"
         or type(horizontalDistance) ~= "number"
@@ -971,10 +971,12 @@ function AISurvivorRules.skyGapJumpReady(
     }) do
         if value ~= value or math.abs(value) == math.huge then return false end
     end
+    local rise = landingFloorY - originFloorY
+    local maxDrop = if type(confirmedDrop) == "number" and confirmedDrop > 2 then math.min(confirmedDrop, 4.05) else 2
     return heightAboveBase >= 7
         and horizontalDistance >= 4.2
         and horizontalDistance <= 34
-        and math.abs(landingFloorY - originFloorY) <= 2.0
+        and rise <= 2 and rise >= -maxDrop
 end
 
 -- Bot-to-bot separation can displace a center waypoint by several
