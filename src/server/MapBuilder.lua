@@ -3394,6 +3394,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local routeChevronProfile = sweptProfile or routeCasting or harborReserve
     local markerShaft = if harborCasting then routeShaft or harborReserve else beaconShaft
     local markerCap = wayfinderBase or harborReserve
+    local exitBeam = if harborCasting then
+        (sweptProfile and detailProfiles.beam or harborCasting) else detailProfiles.beam
+    local exitRib = if harborCasting then
+        (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft
+    local exitLens = if harborCasting and not sweptProfile and orbitalLens
+        then detailProfiles.lens else exitBeam
     -- Only callers that fit the local span explicitly can accept a
     -- roller imported along either horizontal axis.
     local canonicalRim = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil
@@ -3905,7 +3911,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 + frontSign * (platform.Size.Z * 0.5 + 0.18)
             for side = -1, 1, 2 do
                 local rib = fitDecorMesh(
-                    beaconShaft,
+                    exitRib.part,
                     "PerimeterExitRib" .. definition.PerimeterRoute
                         .. "_" .. tostring(side),
                     CFrame.new(platformPosition.X + side * 3.35,
@@ -3915,6 +3921,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                     Enum.Material.Metal
                 )
                 rib.Transparency = 0.06
+                if rib:IsA("MeshPart") then rib:SetAttribute("Original3DAssetId", exitRib.assetId) end
                 rib:SetAttribute("PerimeterPlatformIndex", i)
                 rib.Parent = decor
             end
@@ -3924,7 +3931,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 platformPosition.Y + platform.Size.Y * 0.5 - 0.45,
                 outerZ + frontSign * 0.34
             ) * CFrame.Angles(0, frontSign < 0 and math.pi or 0, 0)
-            local cap = RouteSignalGeometry.fit(sweptProfile, crownFrame, crownSize)
+            local cap = RouteSignalGeometry.fit(exitBeam.part, crownFrame, crownSize)
             if not cap then
                 cap = Instance.new("WedgePart")
                 cap.Size = crownSize
@@ -3934,6 +3941,8 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 cap.CanTouch = false
                 cap.CanQuery = false
                 cap.CastShadow = false
+            else
+                cap:SetAttribute("Original3DAssetId", exitBeam.assetId)
             end
             cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
             cap.Color = theme.Detail:Lerp(theme.Structure, 0.30)
@@ -3942,7 +3951,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             cap:SetAttribute("PerimeterPlatformIndex", i)
             cap.Parent = decor
             local lens = fitDecorMesh(
-                sweptProfile, "PerimeterExitLens" .. definition.PerimeterRoute,
+                exitLens.part, "PerimeterExitLens" .. definition.PerimeterRoute,
                 CFrame.new(platformPosition.X, platformPosition.Y,
                     outerZ + frontSign * 0.22),
                 Vector3.new(2.1, 2.1, 0.35),
@@ -3951,6 +3960,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             )
             lens.Parent = decor
             lens.Transparency = 0.34
+            if lens:IsA("MeshPart") then lens:SetAttribute("Original3DAssetId", exitLens.assetId) end
             lens:SetAttribute("PerimeterPlatformIndex", i)
         end
     end

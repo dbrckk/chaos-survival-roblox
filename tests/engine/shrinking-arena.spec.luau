@@ -1567,7 +1567,15 @@ describe("Shrinking Arena mobility integration", function()
             assert(owner:GetAttribute("PerimeterStep") == ArenaVariants.PerimeterSteps)
             assert(owner:GetAttribute("PerimeterRoute") == route)
             local exitLens = arena.Decor["PerimeterExitLens" .. route]
-            assert(exitLens:IsA("Part") and exitLens.Material == Enum.Material.Glass)
+            assert(exitLens.Material == Enum.Material.Glass)
+            if exitLens:IsA("MeshPart") then
+                local assetId = exitLens:GetAttribute("Original3DAssetId")
+                assert(assetId == 126298311664881
+                    or (arena:GetAttribute("VariantId") == "Harbor"
+                        and (assetId == 94830155055482 or assetId == 102746904688141 or assetId == 104654294187035)))
+            else
+                assert(exitLens:IsA("Part"))
+            end
             assert(exitLens:GetAttribute("PerimeterPlatformIndex") == mast:GetAttribute("PerimeterPlatformIndex"))
             for _, fit in ipairs({
                 {"PerimeterExitRib" .. route .. "_-1", .88, .34},

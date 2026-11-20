@@ -129,6 +129,10 @@ Les huit paliers supérieurs peuvent recevoir **16 biseaux forgés** sur les fac
 
 En qualité basse, les incrustations de bois et les chevrons déjà affichés peuvent utiliser la collerette de Harbor ou le moulage fermé de Classic quand le profil principal manque. Le même secours couvre les pièces des avant-postes en qualité moyenne et haute. Les pièces reprennent le profil de Harbor dès son arrivée et gardent leur emplacement, leur nombre et leur suivi du tablier.
 
+### Sorties des terrasses périphériques de Storm Harbor
+
+Les quatre sorties peuvent conserver **16 pièces sculptées** avec le moulage fermé de Harbor ou de Classic. Les huit renforts privilégient un fût polygonal approuvé. Les couronnes et les lentilles gardent leur profil forgé s’il est chargé. Chaque ensemble reste sur la face extérieure du dernier palier et suit son rétrécissement et sa disparition.
+
 ### Virages des parcours de fret de Storm Harbor
 
 Aux vingt virages, les bandes latérales suivent la sortie du palier et les inserts sculptés sous le tablier reprennent l’axe du saut d’arrivée. Les poteaux s’engagent de 0,08 stud dans la dalle et leurs têtes restent sous le tablier. Le moulage et le fût polygonal déjà chargés peuvent prendre le relais si les sources dédiées manquent. Les instruments de guidage, la détection des alertes et le montage des caissons gardent leurs repères physiques. Le scénario de rétrécissement couvre les deux axes sur les 58 paliers des trois familles.
