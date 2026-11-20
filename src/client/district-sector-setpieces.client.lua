@@ -146,7 +146,17 @@ local function syncDetailGroup(group, changedModels, source, assetId, rotation, 
         end
         detail.part = replacement
         previous:Destroy()
-        if changedModels then changedModels[parent] = true end
+        if changedModels and not changedModels[parent] then
+            local tracks = liveTracks[parent]
+            if tracks then
+                for _, track in ipairs(tracks) do
+                    if track.part == previous then
+                        changedModels[parent] = true
+                        break
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -161,10 +171,10 @@ local function syncDetails(changedModels)
     if #radarRings == 0 then return end
     if (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1 then
         syncDetailGroup(roofs)
-        syncDetailGroup(castStructures)
+        syncDetailGroup(castStructures, changedModels)
         syncDetailGroup(gantryBeams)
         syncDetailGroup(anchorBolts)
-        syncDetailGroup(opticalCores)
+        syncDetailGroup(opticalCores, changedModels)
         syncDetailGroup(foundations)
         syncDetailGroup(identityPlates)
         syncDetailGroup(cargoModules)
@@ -185,7 +195,7 @@ local function syncDetails(changedModels)
         end
     end
     local casting = PylonShell.bodyProfile()
-    syncDetailGroup(castStructures, nil, casting, PylonShell.AssetId)
+    syncDetailGroup(castStructures, changedModels, casting, PylonShell.AssetId)
     syncDetailGroup(identityPlates, nil, casting, PylonShell.AssetId)
     -- The closed cargo shell has chamfered corners on both horizontal
     -- axes. Keep the destination axes so its existing front stencil fits.
@@ -213,7 +223,7 @@ local function syncDetails(changedModels)
         syncDetailGroup(latches, nil, bolt and bolt.part, bolt and bolt.assetId)
     end
     local core, ring = OrbitalReactor.coreProfile(), OrbitalReactor.ringProfile()
-    syncDetailGroup(opticalCores, nil, core, OrbitalReactor.NodeAssetId)
+    syncDetailGroup(opticalCores, changedModels, core, OrbitalReactor.NodeAssetId)
     syncDetailGroup(radarRings, changedModels, ring, OrbitalReactor.NodeAssetId)
 end
 
@@ -509,9 +519,9 @@ local function makeSector(base, theme, index, tier, variant)
                 alloy))
             -- Etched glass instrument face instead of a full-bright
             -- decorative neon plate above the player's route.
-            make("DishBacklight", Vector3.new(3.2, 0.2, 1.1),
+            trackDetail(castStructures, make("DishBacklight", Vector3.new(3.2, 0.2, 1.1),
                 CFrame.new(0.3, 14.0, -1), paintedAlloy,
-                Enum.Material.Glass, 0.38)
+                Enum.Material.Glass, 0.38))
         end
         eye:SetAttribute("OriginalLens", true)
         trackDetail(opticalCores, eye)
@@ -524,9 +534,9 @@ local function makeSector(base, theme, index, tier, variant)
             -- Cargo identification is painted steel, never a huge
             -- glowing route surface. Keep its existing subtle flicker
             -- tween and unique four-sector wayfinding hue.
-            make("CargoStripe" .. side, Vector3.new(5.7, 0.46, 4.6),
+            trackDetail(castStructures, make("CargoStripe" .. side, Vector3.new(5.7, 0.46, 4.6),
                 CFrame.new(side * 3.1, 5.65, 0), paintedAlloy,
-                Enum.Material.Metal, 0.08)
+                Enum.Material.Metal, 0.08))
         end
         trackDetail(gantryBeams, make("GantryBridge", Vector3.new(16.5, 1.6, 4),
             CFrame.new(0, 15, 0), alloy))
@@ -539,9 +549,9 @@ local function makeSector(base, theme, index, tier, variant)
                 CFrame.new(0, 11.1, 0), alloy))
             trackDetail(cargoModules, make("RaisedSupplyPod", Vector3.new(4.8, 3.0, 3.4),
                 CFrame.new(0, 7.4, 0), theme.Detail))
-            make("CraneCap", Vector3.new(4.5, 0.6, 5),
+            trackDetail(castStructures, make("CraneCap", Vector3.new(4.5, 0.6, 5),
                 CFrame.new(0, 16, 0), paintedAlloy,
-                Enum.Material.DiamondPlate, 0.12)
+                Enum.Material.DiamondPlate, 0.12))
         end
     elseif index == 3 then
         -- Power station: visual containment volume with axial fins.
@@ -551,9 +561,9 @@ local function makeSector(base, theme, index, tier, variant)
             CFrame.new(0, 8.6, 0), accent,
             Enum.Material.Glass, 0.26))
         for side = -1, 1, 2 do
-            make("ReactorFin" .. side, Vector3.new(2.3, 10, 4.5),
+            trackDetail(shafts, make("ReactorFin" .. side, Vector3.new(2.3, 10, 4.5),
                 CFrame.new(side * 5.4, 5.8, 0),
-                alloy, Enum.Material.Metal, 0.07)
+                alloy, Enum.Material.Metal, 0.07))
         end
         if high then
             for segment = 1, 8 do
@@ -587,9 +597,9 @@ local function makeSector(base, theme, index, tier, variant)
                     Vector3.new(side * 5, 0.6, 3),
                     Vector3.new(0, 17, 0), 0.67, alloy, 0.06)
             end
-            make("CommsTopBeacon", Vector3.new(1.5, 1.5, 1.5),
+            trackDetail(opticalCores, make("CommsTopBeacon", Vector3.new(1.5, 1.5, 1.5),
                 CFrame.new(0, 22.1, 0), accent, Enum.Material.Glass, 0.18,
-                Enum.PartType.Ball)
+                Enum.PartType.Ball))
             trackDetail(shafts, make("AntennaNeedle", Vector3.new(0.38, 5, 0.38),
                 CFrame.new(0, 25.1, 0), alloy))
         end
@@ -768,11 +778,11 @@ local function makeSector(base, theme, index, tier, variant)
                 CFrame.new(-0.47, 18, 0)
                     * CFrame.Angles(0, math.rad(22), math.rad(20)),
                 brushed, Enum.Material.Metal, 0.06, Enum.PartType.Cylinder))
-            make("SurveyApertureCollar", Vector3.new(1.8, 3.1, 3.1),
+            trackCylinder(radarRings, make("SurveyApertureCollar", Vector3.new(1.8, 3.1, 3.1),
                 CFrame.new(-1.1, 18, -0.3)
                     * CFrame.Angles(0, 0, math.pi / 2),
                 dark, Enum.Material.CorrodedMetal, 0,
-                Enum.PartType.Cylinder)
+                Enum.PartType.Cylinder))
             for side = -1, 1, 2 do
                 beam(model, "AntennaCounterbalance" .. side, root,
                     Vector3.new(side * 3.0, 12.0, 1.8),
@@ -814,9 +824,9 @@ local function makeSector(base, theme, index, tier, variant)
                     CFrame.new(side * 2.2, 5.9, -3.67),
                     accent, Enum.Material.Glass, 0.42))
             end
-            make("CorePressureCap", Vector3.new(6.2, 1.0, 6.2),
+            trackDetail(castStructures, make("CorePressureCap", Vector3.new(6.2, 1.0, 6.2),
                 CFrame.new(0, 13.8, 0),
-                brushed, Enum.Material.DiamondPlate, 0.04)
+                brushed, Enum.Material.DiamondPlate, 0.04))
         else
             for side = -1, 1, 2 do
                 beam(model, "MicrowaveGuide" .. side, root,
