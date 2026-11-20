@@ -956,7 +956,8 @@ local function orbitalStructureFootprint(native)
     if native:IsA("MeshPart") then
         local swapped=native:GetAttribute("OrbitalStructureAxisSwap")
         if swapped==nil then swapped=native:GetAttribute("OrbitalAccessChassisAxisSwap") end
-        if native.MeshId=="" or native:GetAttribute("Original3DAssetId")~=SOURCE.AccessChassis.id
+        local assetId=native:GetAttribute("Original3DAssetId")
+        if native.MeshId=="" or (assetId~=SOURCE.AccessChassis.id and assetId~=126298311664881)
             or type(swapped)~="boolean" then return nil end
         if swapped then
             nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
