@@ -18,6 +18,9 @@ local RouteSignalGeometry = require("./RouteSignalGeometry")
 local ArenaDistrictArchitecture = {}
 local GLAZING_PROFILE_ID = 88962643359267
 
+type MeshProfile = {part: MeshPart?, assetId: number?}
+type StructureProfiles = {shaft: MeshProfile?, underframe: MeshProfile?}
+
 -- Four navigable sectors need distinct silhouettes AND distinct color IDs.
 -- Tint existing architecture only: zero added Parts, lights, particle emitters
 -- or texture lookups, preserving Android LOD and author-owned PBR budgets.
@@ -49,7 +52,7 @@ local function element(model, origin, name, kind, size, localFrame, color, mater
     return piece
 end
 
-local function fixture(folder, base, variantId, theme, side, slot, number, glazingProfile)
+local function fixture(folder, base, variantId, theme, side, slot, number, glazingProfile, structureProfiles: StructureProfiles?)
     -- Four skyline profiles per side, alternating silhouettes.
     -- Keep the entire structure inside the 320-stud playable floor.
     local tangent = (slot - 2.5) * 72
@@ -95,28 +98,33 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
             color or steel, material)
     end
 
+    local function fitted(name, size, localFrame, color, material, profile: MeshPart?, assetId: number?, alongX: boolean?)
+        if not profile or not profile:IsA("MeshPart") or profile.MeshId == "" then
+            return make(name, "Part", size, localFrame, color, material)
+        end
+        -- Glass and vertical supports retain their authored local axes.
+        -- The roof rails instead put the longest source axis along local Z.
+        local spanX = if alongX == nil then profile.Size.X > profile.Size.Z else alongX
+        local mesh = RouteSignalGeometry.fit(profile, origin * localFrame, size, nil, spanX)
+        if not mesh then return make(name, "Part", size, localFrame, color, material) end
+        mesh.Name = name
+        mesh.Material = material
+        mesh.Color = color
+        mesh.DoubleSided = true
+        mesh:SetAttribute("Original3DAssetId", assetId)
+        mesh.Parent = model
+        return mesh
+    end
+
     local function glazing(name, size, localFrame, color, alpha)
-        local pane
-        if glazingProfile and glazingProfile:IsA("MeshPart") and glazingProfile.MeshId ~= "" then
-            -- Retain the pane's local axes. The front signage is drawn on
-            -- its original rectangular plane and the glass gaps are shallow.
-            local alongX = glazingProfile.Size.X > glazingProfile.Size.Z
-            pane = RouteSignalGeometry.fit(glazingProfile, origin * localFrame, size, nil, alongX)
-        end
-        if pane then
-            pane.Name = name
-            pane.Material = Enum.Material.Glass
-            pane.Color = color
-            pane.DoubleSided = true
-            pane:SetAttribute("Original3DAssetId", GLAZING_PROFILE_ID)
-        else
-            pane = make(name, "Part", size, localFrame, color, Enum.Material.Glass)
-        end
+        local pane = fitted(name, size, localFrame, color, Enum.Material.Glass,
+            glazingProfile, GLAZING_PROFILE_ID)
         pane.Transparency = alpha
-        pane.Parent = model
         return pane
     end
 
+    local shaft = structureProfiles and structureProfiles.shaft
+    local rail = structureProfiles and structureProfiles.underframe
     -- Full 3D massing: recessed disc, four sculpted supports and an elevated
     -- roof. Narrow x/z footprint leaves generous escape and hazard lanes.
     local plinth = make("BasaltFoundation", "Part",
@@ -131,9 +139,9 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
     rim.Shape = Enum.PartType.Cylinder
     for _, direction in ipairs({-1, 1}) do
         local suffix = direction < 0 and "L" or "R"
-        make("ArmoredSupport" .. suffix, "Part",
-            Vector3.new(1.4, 12.6, 2.3),
-            CFrame.new(direction * 4.4, 7.1, 1.8), steel)
+        fitted("ArmoredSupport" .. suffix, Vector3.new(1.4, 12.6, 2.3),
+            CFrame.new(direction * 4.4, 7.1, 1.8), steel, Enum.Material.Metal,
+            shaft and shaft.part, shaft and shaft.assetId)
         make("AngledRoof" .. suffix, "WedgePart",
             Vector3.new(4.3, 2.1, 6.0),
             CFrame.new(direction * 3.0, 13.3, -0.8)
@@ -234,10 +242,9 @@ local function fixture(folder, base, variantId, theme, side, slot, number, glazi
         glazing("SideGlass" .. tostring(direction), Vector3.new(0.18, 2.2, 3.6),
             CFrame.new(direction * 4.13, 8.3, 0.48),
             accent:Lerp(Color3.fromRGB(170, 220, 235), 0.15), 0.36)
-        make("TopRail" .. tostring(direction), "Part",
-            Vector3.new(0.34, 0.38, 8),
-            CFrame.new(direction * 5.4, 14.3, 0.2),
-            alloy, Enum.Material.Metal)
+        fitted("TopRail" .. tostring(direction), Vector3.new(0.34, 0.38, 8),
+            CFrame.new(direction * 5.4, 14.3, 0.2), alloy, Enum.Material.Metal,
+            rail and rail.part, rail and rail.assetId, false)
     end
 
     -- Four recognizable macro profiles: taller radar fins, wider freight
@@ -542,7 +549,8 @@ local function cornerFixture(folder, base, variantId, theme, index)
     model.Parent = folder
 end
 
-function ArenaDistrictArchitecture.build(decor, base, variantId, theme, glazingProfile: MeshPart?)
+function ArenaDistrictArchitecture.build(decor, base, variantId, theme, glazingProfile: MeshPart?,
+        structureProfiles: StructureProfiles?)
     if not decor or not base or not base:IsA("BasePart")
         or type(variantId) ~= "string" or type(theme) ~= "table" then
         return nil
@@ -556,7 +564,7 @@ function ArenaDistrictArchitecture.build(decor, base, variantId, theme, glazingP
     for _, side in ipairs({"North", "East", "South", "West"}) do
         for slot = 1, 4 do
             count += 1
-            fixture(folder, base, variantId, theme, side, slot, count, glazingProfile)
+            fixture(folder, base, variantId, theme, side, slot, count, glazingProfile, structureProfiles)
         end
     end
     folder:SetAttribute("District3DCount", count)

@@ -22,6 +22,8 @@ Les 72 bandes de guidage des 24 rampes d’Orbital peuvent reprendre le moulage 
 
 Les 16 façades par arène peuvent reprendre le moulage du périmètre pour les vitrages et les ailettes de signal, soit 84 pièces sur Classic, Crossroads, Orbital et Storm Harbor, et 100 sur Tower Run. Les quatre enseignes conservent leur fenêtre, leur face et leur orientation. Le vitrage de la cabine reste compatible avec le masque de façade à proximité, comme celui du transfert sur Tower Run l’est avec le masque des équipements de toit.
 
+Chaque arène peut afficher 32 supports blindés façonnés avec le profil polygonal de sa variante et 32 rails de toiture avec les longerons approuvés. Le kit de parois latérales vérifie l’asset et le gabarit des supports avant de prendre le relais. Chaque famille possède son propre secours à la construction.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).

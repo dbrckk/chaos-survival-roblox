@@ -4,6 +4,10 @@
 -- One existing scenery LOD camera pass owns all residency and GPU backoff.
 -- Original Roblox Model 77387019170428 Approved by run #43302925840.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 
 local Kit = {}
 local ID = 77387019170428
@@ -30,9 +34,9 @@ local REQUIRED = {
     {name = "ServiceCore", size = Vector3.new(6.8, 7.3, 6.8),
         offset = CFrame.new(0, 8.4, 0)},
     {name = "ArmoredSupportL", size = Vector3.new(1.4, 12.6, 2.3),
-        offset = CFrame.new(-4.4, 7.1, 1.8)},
+        offset = CFrame.new(-4.4, 7.1, 1.8), shaft = true},
     {name = "ArmoredSupportR", size = Vector3.new(1.4, 12.6, 2.3),
-        offset = CFrame.new(4.4, 7.1, 1.8)},
+        offset = CFrame.new(4.4, 7.1, 1.8), shaft = true},
     {name = "SideCassette-1", size = Vector3.new(.85, 4.8, 4.6),
         offset = CFrame.new(-3.68, 7.6, .48)},
     {name = "SideCassette1", size = Vector3.new(.85, 4.8, 4.6),
@@ -122,11 +126,14 @@ local function eligible(building, district, requiresFacade)
     -- All FIVE server-authored native massing pieces must be available
     -- before mounting; otherwise leave a complete original fallback.
     local resident = mounted[building]
+    local shaftId = HorizonMonumentGeometry.assetId("shaft", building:GetAttribute("FacadeVariantId"))
     local natives = {}
     for _, spec in ipairs(REQUIRED) do
         local part = building:FindFirstChild(spec.name)
         local target = origin * spec.offset
-        if not part or not part:IsA("Part") or part.Parent ~= building
+        local validMesh = part and spec.shaft and shaftId ~= nil and part:IsA("MeshPart")
+            and part.MeshId ~= "" and part:GetAttribute("Original3DAssetId") == shaftId
+        if not part or (not part:IsA("Part") and not validMesh) or part.Parent ~= building
             or not part.Anchored or part.CanCollide or part.CanTouch
             or part.CanQuery or (part.Size - spec.size).Magnitude > .08
             or (part.Position - target.Position).Magnitude > .12
@@ -368,6 +375,8 @@ local function mount(arena, district, base, building, door,
                 release(building)
             end
         end)
+    entry.connections[#entry.connections + 1] =
+        building:GetAttributeChangedSignal("FacadeVariantId"):Connect(reconcile)
     -- Five native server volumes own the fallback's exact footprint.
     -- No Heartbeat or per-frame checks: only property-change signals.
     for _, native in ipairs(natives) do
@@ -377,6 +386,12 @@ local function mount(arena, district, base, building, door,
         }) do
             entry.connections[#entry.connections + 1] =
                 native:GetPropertyChangedSignal(property):Connect(reconcile)
+        end
+        if native:IsA("MeshPart") then
+            entry.connections[#entry.connections + 1] =
+                native:GetPropertyChangedSignal("MeshId"):Connect(reconcile)
+            entry.connections[#entry.connections + 1] =
+                native:GetAttributeChangedSignal("Original3DAssetId"):Connect(reconcile)
         end
     end
     entry.connections[#entry.connections + 1] =
