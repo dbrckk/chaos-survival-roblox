@@ -20,6 +20,9 @@ local currentPlatforms = nil
 local currentTier = nil
 local currentReduced = nil
 local currentMeshEligible = nil
+local currentProfiles = {}
+local nextProfileCheck = 0
+local profileKeys = {"casting", "shaft", "swept", "fragment"}
 local bridges = {}
 local canopy = {}
 local signalConnections = {}
@@ -99,7 +102,7 @@ local function routeTransform(alongX, longitudinal, up, lateral)
     )
 end
 
-local function buildCanopy(bridge, tier, reduced, shaft, casting, fragment)
+local function buildCanopy(bridge, tier, reduced, profiles)
     local alongX = bridge.Size.X > bridge.Size.Z
     local parts = {}
     local animate = {}
@@ -108,35 +111,37 @@ local function buildCanopy(bridge, tier, reduced, shaft, casting, fragment)
     if tier == "Low" then
         for side = -1, 1, 2 do
             createPart(parts, "SkyrailGroundMarker" .. n,
-                Vector3.new(0.62, 0.10, 0.40),
+                alongX and Vector3.new(0.74, 0.10, 0.40) or Vector3.new(0.40, 0.10, 0.74),
                 bridge, routeTransform(alongX, 0, bridge.Size.Y * 0.5 + 0.09,
                     side * (math.min(bridge.Size.X, bridge.Size.Z) * 0.5 - 0.3)),
-                colors.Cyan, Enum.Material.Metal, 0.47)
+                colors.Cyan, Enum.Material.Metal, 0.32, profiles.casting)
         end
     else
         -- Two cantilever supports never project into the 4.5-stud central
         -- walkway. Crossbeam hangs high above the avatars' jump envelope.
         local deck = bridge.Size.Y * 0.5
         local sideways = math.min(bridge.Size.X, bridge.Size.Z) * 0.5 + 0.35
+        local pillarSize = alongX and Vector3.new(0.58, 4.65, 0.72) or Vector3.new(0.72, 4.65, 0.58)
+        local fiberSize = alongX and Vector3.new(0.14, 3.65, 0.13) or Vector3.new(0.13, 3.65, 0.14)
         for side = -1, 1, 2 do
             createPart(parts, "SkyrailPillar" .. n,
-                Vector3.new(0.58, 4.5, 0.72),
+                pillarSize,
                 bridge, routeTransform(alongX, 0, deck + 2.45, side * sideways),
-                colors.Armor, Enum.Material.DiamondPlate, 0.04, shaft)
+                colors.Armor, Enum.Material.DiamondPlate, 0.04, profiles.shaft)
 
             createPart(parts, "SkyrailInsetFiber" .. n,
-                Vector3.new(0.14, 3.65, 0.13),
+                fiberSize,
                 bridge, routeTransform(alongX, 0, deck + 2.52,
-                    side * (sideways - 0.22)),
+                    side * (sideways - 0.38)),
                 side < 0 and colors.Cyan or colors.Gold,
-                Enum.Material.Neon, 0.20, shaft)
+                Enum.Material.Neon, 0.20, profiles.shaft)
 
             if tier == "High" then
                 createPart(parts, "SkyrailCounterweight" .. n,
                     Vector3.new(1.10, 0.28, 1.03),
                     bridge, routeTransform(alongX, 0, deck + 4.45,
                         side * sideways),
-                    colors.Spine, Enum.Material.Metal, 0.12, casting)
+                    colors.Spine, Enum.Material.Metal, 0.12, profiles.casting)
             end
         end
 
@@ -144,12 +149,12 @@ local function buildCanopy(bridge, tier, reduced, shaft, casting, fragment)
             alongX and Vector3.new(0.88, 0.62, sideways * 2 + 0.6)
                 or Vector3.new(sideways * 2 + 0.6, 0.62, 0.88),
             bridge, routeTransform(alongX, 0, deck + 4.89, 0),
-            colors.Armor, Enum.Material.Metal, 0.04, casting)
+            colors.Armor, Enum.Material.Metal, 0.04, profiles.swept or profiles.casting)
         createPart(parts, "SkyrailCrownBeam" .. n,
             alongX and Vector3.new(0.28, 0.15, sideways * 1.5)
                 or Vector3.new(sideways * 1.5, 0.15, 0.28),
             bridge, routeTransform(alongX, 0, deck + 5.26, 0),
-            colors.Cyan, Enum.Material.Neon, 0.23, casting)
+            colors.Cyan, Enum.Material.Neon, 0.23, profiles.swept or profiles.casting)
 
         if tier == "High" then
             -- Two asymmetric upper wing fins echo an aerospace rail signal.
@@ -160,33 +165,37 @@ local function buildCanopy(bridge, tier, reduced, shaft, casting, fragment)
                     bridge, routeTransform(alongX, side * 0.45,
                         deck + 5.18, side * 1.2),
                     side < 0 and colors.Cyan or colors.Gold,
-                    Enum.Material.Neon, 0.24, casting)
+                    Enum.Material.Neon, 0.24, profiles.casting)
             end
         end
 
         if not reduced then
             for index = 1, tier == "High" and 2 or 1 do
                 local runner = createPart(parts, "SkyrailPulseCourier" .. n,
-                    Vector3.new(0.65, 0.10, 0.35),
+                    alongX and Vector3.new(0.65, 0.10, 0.35) or Vector3.new(0.35, 0.10, 0.65),
                     bridge, routeTransform(alongX, 0, deck + 5.50, 0),
                     index == 1 and colors.Cyan or colors.Gold,
-                    Enum.Material.Neon, 0.25, fragment)
+                    Enum.Material.Neon, 0.25, profiles.fragment)
+                parts[#parts].Runner = true
                 table.insert(animate, {
                     Part = runner,
                     Offset = (index - 1) * 0.5,
+                    Rotation = parts[#parts].LocalCf.Rotation,
                 })
             end
         end
     end
 
-    return {Bridge = bridge, Parts = parts, Runners = animate, AlongX = alongX}
+    return {Bridge = bridge, Parts = parts, Runners = animate, AlongX = alongX,
+        Width = math.min(bridge.Size.X, bridge.Size.Z), Height = bridge.Size.Y}
 end
 
 -- One-shot courier flare. It uses existing bridge transforms, with
 -- a bounded local part count and no per-frame server replication.
 local function surgeBurst(bridge, tier, reduced)
-    if reduced or tier == "Low" or not bridge or not bridge.Parent
-        or not bridge.CanCollide
+    if reduced or tier == "Low" or not bridge or not bridge.Parent then return end
+    local shutter = bridge:GetAttribute("BridgeShutterPhase")
+    if not bridge.CanCollide or (shutter ~= nil and shutter ~= "Idle")
         or bridge:GetAttribute("CollapsePhase") ~= nil then
         return
     end
@@ -263,23 +272,34 @@ local function surgeBurst(bridge, tier, reduced)
     end
 end
 
-local function rebuildCanopies(tier, reduced, pressure)
+local function readProfiles(tier, reduced, pressure, hasBridges)
+    if not hasBridges or pressure >= 1 then return {} end
+    local profiles = {casting = CelebrationMeshes.readyProfile("casting", pressure)}
+    if tier ~= "Low" then
+        profiles.shaft = CelebrationMeshes.readyProfile("pylon", pressure)
+        profiles.swept = CelebrationMeshes.readyProfile("runway", pressure)
+        if not reduced then profiles.fragment = CelebrationMeshes.readyProfile("fragment", pressure) end
+    end
+    -- A same-name replacement or a newly preloaded file can become ready
+    -- midway through a round. Only rebuild when the selected geometry changes.
+    for _, key in ipairs(profileKeys) do
+        local part = profiles[key]
+        profiles[key .. "Id"] = part and part.MeshId
+    end
+    return profiles
+end
+
+local function rebuildCanopies(tier, reduced, profiles)
     for _, structure in ipairs(canopy) do
         for _, item in ipairs(structure.Parts) do item.Part:Destroy() end
     end
     table.clear(canopy)
-    local shaft, casting, fragment
-    if tier ~= "Low" and #bridges > 0 then
-        shaft = CelebrationMeshes.readyProfile("pylon", pressure)
-        casting = CelebrationMeshes.readyProfile("casting", pressure)
-        if not reduced then fragment = CelebrationMeshes.readyProfile("fragment", pressure) end
-    end
     for _, bridge in ipairs(bridges) do
-        table.insert(canopy, buildCanopy(bridge, tier, reduced, shaft, casting, fragment))
+        table.insert(canopy, buildCanopy(bridge, tier, reduced, profiles))
     end
 end
 
-local function rebuild(platforms, tier, reduced, ordered, pressure)
+local function rebuild(platforms, tier, reduced, ordered, profiles)
     for _, connection in ipairs(signalConnections) do
         connection:Disconnect()
     end
@@ -291,25 +311,21 @@ local function rebuild(platforms, tier, reduced, ordered, pressure)
     currentTier = tier
     currentReduced = reduced
     bridges = ordered
-    rebuildCanopies(tier, reduced, pressure)
+    rebuildCanopies(tier, reduced, profiles)
     for _, bridge in ipairs(bridges) do
-        -- Sync disappearance immediately, even at Low (0.65s draw cadence).
-        -- Reuse the existing draw path, with no extra render loop.
-        table.insert(signalConnections, bridge:GetAttributeChangedSignal(
-            "CollapsePhase"
-        ):Connect(function()
+        -- Hazard changes use the same draw path immediately, even on Low.
+        local function syncHazard()
             if draw then draw(os.clock()) end
-        end))
-        table.insert(signalConnections, bridge:GetPropertyChangedSignal(
-            "CanCollide"
-        ):Connect(function()
-            if draw then draw(os.clock()) end
-        end))
+        end
+        table.insert(signalConnections, bridge:GetAttributeChangedSignal("CollapsePhase"):Connect(syncHazard))
+        table.insert(signalConnections, bridge:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(syncHazard))
+        table.insert(signalConnections, bridge:GetPropertyChangedSignal("CanCollide"):Connect(syncHazard))
         table.insert(signalConnections, bridge:GetAttributeChangedSignal(
             "SkyrailUsedAt"
         ):Connect(function()
             if bridge.Parent == currentPlatforms and bridge.CanCollide
-                and bridge:GetAttribute("CollapsePhase") == nil then
+                and bridge:GetAttribute("CollapsePhase") == nil
+                and (bridge:GetAttribute("BridgeShutterPhase") or "Idle") == "Idle" then
                 activeSurges[bridge] = os.clock() + 0.8
                 surgeBurst(bridge, tier, reduced)
             end
@@ -340,7 +356,7 @@ draw = function(timestamp)
             local surging = not warning and not gone
                 and (activeSurges[bridge] or 0) > timestamp
             for _, item in ipairs(structure.Parts) do
-                if item.Part.Parent then
+                if item.Part.Parent and not item.Runner then
                     item.Part.CFrame = bridge.CFrame * item.LocalCf
                     local alpha = item.BaseTransparency
                     if gone then
@@ -381,12 +397,13 @@ draw = function(timestamp)
             local travelSign = bridge:GetAttribute("SkyrailRunDirection") == -1 and -1 or 1
             local localDirection = structure.AlongX and travelSign or -travelSign
             for _, runner in ipairs(structure.Runners) do
+                if not runner.Part.Parent then continue end
                 local progress = (timestamp * 0.27 + runner.Offset) % 1
                 local span = math.max(2, math.max(bridge.Size.X, bridge.Size.Z) - 5)
                 local distance = (progress - 0.5) * span * 0.77 * localDirection
                 local cf = routeTransform(structure.AlongX, distance,
                     bridge.Size.Y * 0.5 + 5.50, 0)
-                runner.Part.CFrame = bridge.CFrame * cf
+                runner.Part.CFrame = bridge.CFrame * cf * runner.Rotation
                 runner.Part.Transparency = (gone or warning) and 1
                     or (safeAce and 0.13
                         or (0.34 + 0.28 * math.abs(2 * progress - 1)))
@@ -408,7 +425,7 @@ task.spawn(function()
         ).Name
         local reduced = player:GetAttribute("ReduceMotion") == true
         local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
-        local meshEligible = tier ~= "Low" and pressure < 1
+        local meshEligible = pressure < 1
         local ordered = readBridges(platforms)
         local changed = platforms ~= currentPlatforms or tier ~= currentTier
             or reduced ~= currentReduced or #ordered ~= #bridges
@@ -420,10 +437,35 @@ task.spawn(function()
                 end
             end
         end
+        local now = os.clock()
+        local profilesChanged = false
+        if changed or currentMeshEligible ~= meshEligible or now >= nextProfileCheck then
+            local profiles = readProfiles(tier, reduced, pressure, #ordered > 0)
+            for _, key in ipairs(profileKeys) do
+                if currentProfiles[key] ~= profiles[key]
+                    or currentProfiles[key .. "Id"] ~= profiles[key .. "Id"] then
+                    profilesChanged = true
+                    break
+                end
+            end
+            currentProfiles = profiles
+            nextProfileCheck = now + 1
+        end
+        local refit = false
+        if not changed then
+            for _, structure in ipairs(canopy) do
+                local size = structure.Bridge.Size
+                if structure.AlongX ~= (size.X > size.Z)
+                    or structure.Width ~= math.min(size.X, size.Z) or structure.Height ~= size.Y then
+                    refit = true
+                    break
+                end
+            end
+        end
         if changed then
-            rebuild(platforms, tier, reduced, ordered, pressure)
-        elseif meshEligible ~= currentMeshEligible then
-            rebuildCanopies(tier, reduced, pressure)
+            rebuild(platforms, tier, reduced, ordered, currentProfiles)
+        elseif profilesChanged or refit then
+            rebuildCanopies(tier, reduced, currentProfiles)
         end
         currentMeshEligible = meshEligible
         if #canopy > 0 then
