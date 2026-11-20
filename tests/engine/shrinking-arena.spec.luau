@@ -1212,11 +1212,20 @@ describe("Shrinking Arena mobility integration", function()
                 assert(math.abs(alongX and bandDirection.X or bandDirection.Z)>.999)
                 assert(math.abs(lensAlongX and lensDirection.X or lensDirection.Z)>.999)
                 local skywayStep=deck:GetAttribute("HarborSkywayStep")
-                if data.turn or (skywayStep and skywayStep>=2 and skywayStep<=6) then
-                    local post=assert(arena.Decor["PlatformSupport"..id.."_1"])
-                    local foot=arena.Base.Position.Y + arena.Base.Size.Y*.5 - .08
-                    assert(math.abs(post.Position.Y-post.Size.Y*.5-foot)<.02)
-                    assert(math.abs(post.Position.Y+post.Size.Y*.5-(deck.Position.Y-halfY))<.02)
+                local spokeStep=deck:GetAttribute("HarborSpokeStep")
+                local upperPier=spokeStep and spokeStep>=3
+                if data.turn or upperPier or (skywayStep and skywayStep>=2 and skywayStep<=6) then
+                    local count=if upperPier then (spokeStep==3 and 4 or 2) else 1
+                    local foot=arena.Base.Position.Y+arena.Base.Size.Y*.5-.08
+                    for corner=1,count do
+                        local post=assert(arena.Decor["PlatformSupport"..id.."_"..corner])
+                        assert(math.abs(post.Position.Y-post.Size.Y*.5-foot)<.02)
+                        assert(math.abs(post.Position.Y+post.Size.Y*.5-(deck.Position.Y-halfY))<.02)
+                        if upperPier then assert(math.abs(post.Size.X-data.size.X*.10*scale)<.02) end
+                    end
+                    if upperPier then
+                        assert(not arena.Decor:FindFirstChild("PlatformSupport"..id.."_"..(count+1)))
+                    end
                 end
                 local _,acceptedFrame=Rim.nativeParts(arena.Decor,deck,data.size,scale)
                 assert(acceptedFrame==frame and frame:IsA("MeshPart") and deck.CanCollide)

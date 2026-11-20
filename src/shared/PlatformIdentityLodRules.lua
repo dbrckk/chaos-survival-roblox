@@ -33,12 +33,19 @@ function Rules.isHarborSkywayInterior(deck)
     return routeIndex(lane, 2) and routeIndex(step, 6) and step >= 2
 end
 
+function Rules.isHarborUpperPier(deck)
+    local route = deck:GetAttribute("HarborSpokeRoute")
+    local step = deck:GetAttribute("HarborSpokeStep")
+    return routeIndex(route, 4) and routeIndex(step, 4) and step >= 3
+end
+
 function Rules.platformSupportFootY(base, deck)
     local ground = base.Position.Y + base.Size.Y * 0.5
     if deck:GetAttribute("PromenadeStep") ~= nil
         or deck:GetAttribute("SkySpineInterchange") == true
         or Rules.isHarborCargoTurn(deck)
-        or Rules.isHarborSkywayInterior(deck) then
+        or Rules.isHarborSkywayInterior(deck)
+        or Rules.isHarborUpperPier(deck) then
         -- Seat the forged shaft in the arena slab so it meets the floor.
         return ground - 0.08
     end

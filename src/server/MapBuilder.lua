@@ -2086,7 +2086,7 @@ local function fitHarborJunctions(decor, platforms, profile)
 end
 
 local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
-    frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborSkywayBeam, bevelFallback)
+    frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborRouteBeam, bevelFallback)
     -- Keep the panel's authored size and axes for route-mask and shrink checks.
     local panelAlongX = panelProfile and panelProfile.Size.X > panelProfile.Size.Z
     local topPanel = fitDecorMesh(
@@ -2180,8 +2180,10 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
     }
     local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
     local useBridgeBevel = bevelProfile and bevelProfile.Name == "SweptCrossbeam"
-    local skywayBeam = harborSkywayBeam and harborSkywayBeam.MeshId ~= "" and harborSkywayBeam
+    local routeBeam = harborRouteBeam and harborRouteBeam.MeshId ~= "" and harborRouteBeam
+    local skyway = platform:GetAttribute("HarborSkywayLane") ~= nil
     local skywayInterior = PlatformIdentityLodRules.isHarborSkywayInterior(platform)
+    local upperPier = PlatformIdentityLodRules.isHarborUpperPier(platform)
     local bevelAlongX = bevelProfile and bevelProfile.Size.X > bevelProfile.Size.Z
     for edgeIndex, spec in ipairs(edgeSpecs) do
         local size = spec[1]
@@ -2193,10 +2195,12 @@ local function addPlatformFinish(decor, platform, index, theme, panelProfile, un
         local bevel
         -- Long edges are X-aligned on a Promenade and Z-aligned on the Spine.
         local longEdge = if skySpineStep then edgeIndex > 2 else edgeIndex <= 2
-        local longProfile = (elevatedTrim and longEdge and elevatedTrim.beam)
-            or ((edgeIndex <= 2 or skywayInterior) and skywayBeam)
-        if longProfile then
-            bevel = fitForgedPlatformBevel(longProfile, pose, size)
+        -- The upper pier's transverse faces frame the approach on either axis.
+        local pierFace = upperPier and (harborAlongX == (edgeIndex > 2))
+        local forgedProfile = (elevatedTrim and longEdge and elevatedTrim.beam)
+            or (((skyway and edgeIndex <= 2) or skywayInterior or pierFace) and routeBeam)
+        if forgedProfile then
+            bevel = fitForgedPlatformBevel(forgedProfile, pose, size)
         end
         local bridgeBevel = not bevel and useBridgeBevel and bevelProfile:Clone()
         if bridgeBevel then
@@ -3700,18 +3704,16 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local harborStep = definition.HarborStep or definition.HarborSpokeStep
         local harborApproach = harborStep ~= nil and harborStep <= 2
         local harborTurn = PlatformIdentityLodRules.isHarborCargoTurn(platform)
-        local harborFreightTrim = harborApproach or harborTurn
+        local harborUpperPier = PlatformIdentityLodRules.isHarborUpperPier(platform)
+        local harborFreightTrim = harborApproach or harborTurn or harborUpperPier
             or definition.HarborStep == 7 or definition.HarborSkywayLane ~= nil
-            -- Upper cardinal piers also need the closed Harbor casting:
-            -- keep the existing rim bevel and route-axis glow on their decks.
-            or (definition.HarborSpokeStep ~= nil and definition.HarborSpokeStep >= 3)
         local trimCasting = if reactorLanding or orbitalEntry or orbitalHub
             or harborFreightTrim then closedDeckCasting else routeCasting
         local signalFallback = if harborLanding then rimBevel or trimCasting else trimCasting
         addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
             edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
         local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
-        local harborSkywayBeam = definition.HarborSkywayLane and sweptProfile or nil
+        local harborRouteBeam = (definition.HarborSkywayLane or harborUpperPier) and sweptProfile or nil
         local bevelSource = (skybridge and sweptProfile)
             or (harborLanding and rimBevel) or canonicalRim
         -- Use the open lattice in the existing shallow frame envelope
@@ -3724,7 +3726,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             coreProfile,
             (skybridge or harborLanding) and underdeckLattice or nil,
             frameProfile, bevelSource, harborAlongX, elevatedTrim,
-            harborSkywayBeam, trimCasting)
+            harborRouteBeam, trimCasting)
         if elevatedRoute or reactorLanding or harborFreightTrim then
             addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId)
         else
