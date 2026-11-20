@@ -32,8 +32,20 @@ function PerimeterCapGeometry.slope(casting)
     return slope(casting, .9372, .04066, .1638, .4212)
 end
 
-function PerimeterCapGeometry.wingSlope(casting)
+local function wingSlope(casting)
     return slope(casting, 1.1088, .03116, .3934, 1.0116)
+end
+
+local function slopedProfile(profile, orientation)
+    local part = profile and profile.part
+    if not part or not part.Archivable or part.MeshId == "" then return nil end
+    local rotation, swapXZ = orientation(part)
+    if not rotation then return nil end
+    return {part = part, assetId = profile.assetId, rotation = rotation, swapXZ = swapXZ}
+end
+
+function PerimeterCapGeometry.preferredSlope(cap, wing)
+    return slopedProfile(cap, PerimeterCapGeometry.slope) or slopedProfile(wing, wingSlope)
 end
 
 return PerimeterCapGeometry

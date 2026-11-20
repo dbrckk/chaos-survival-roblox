@@ -3434,6 +3434,10 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     local markerCap = wayfinderBase or harborReserve
     local exitBeam = if harborCasting then
         (sweptProfile and detailProfiles.beam or harborCasting) else detailProfiles.beam
+    local exitCrownSlope = if variant.Id == "Harbor" and not sweptProfile
+        then PerimeterCapGeometry.preferredSlope(detailProfiles.cast, exteriorProfiles.wing)
+        else nil
+    local exitCrown = if exitBeam.part then exitBeam else heroProfiles.caisson or exitBeam
     local exitRib = if harborCasting then
         (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft
     local exitLens = if harborCasting and not sweptProfile and orbitalLens
@@ -3973,7 +3977,19 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 platformPosition.Y + platform.Size.Y * 0.5 - 0.45,
                 outerZ + frontSign * 0.34
             ) * CFrame.Angles(0, frontSign < 0 and math.pi or 0, 0)
-            local cap = RouteSignalGeometry.fit(exitBeam.part, crownFrame, crownSize)
+            local profile = exitCrownSlope or exitCrown
+            local source = profile.part
+            local cap
+            if exitCrownSlope then
+                -- The high edge faces out like the wedge. Preserve the
+                -- marked import orientation instead of aligning its long axis.
+                local size = if exitCrownSlope.swapXZ
+                    then Vector3.new(crownSize.Z, crownSize.Y, crownSize.X) else crownSize
+                cap = RouteSignalGeometry.fit(source, crownFrame * exitCrownSlope.rotation,
+                    size, nil, source.Size.X > source.Size.Z)
+            else
+                cap = RouteSignalGeometry.fit(source, crownFrame, crownSize, nil, true)
+            end
             if not cap then
                 cap = Instance.new("WedgePart")
                 cap.Size = crownSize
@@ -3984,7 +4000,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 cap.CanQuery = false
                 cap.CastShadow = false
             else
-                cap:SetAttribute("Original3DAssetId", exitBeam.assetId)
+                cap:SetAttribute("Original3DAssetId", profile.assetId)
             end
             cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
             cap.Color = theme.Detail:Lerp(theme.Structure, 0.30)

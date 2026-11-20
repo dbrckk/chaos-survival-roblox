@@ -131,7 +131,7 @@ En qualité basse, les incrustations de bois et les chevrons déjà affichés pe
 
 ### Sorties des terrasses périphériques de Storm Harbor
 
-Les quatre sorties peuvent conserver **16 pièces sculptées** avec le moulage fermé de Harbor ou de Classic. Les huit renforts privilégient un fût polygonal approuvé. Les couronnes et les lentilles gardent leur profil forgé s’il est chargé. Chaque ensemble reste sur la face extérieure du dernier palier et suit son rétrécissement et sa disparition.
+Les quatre sorties peuvent conserver **16 pièces sculptées** avec le moulage fermé de Harbor ou de Classic. Les huit renforts privilégient un fût polygonal approuvé. Les couronnes et les lentilles gardent leur profil forgé s’il est chargé. Les quatre couronnes peuvent aussi reprendre la pente du capuchon ou de l’aile périphérique, avec la face haute tournée vers l’extérieur sur les deux côtés de l’arène. Le moulage fermé ou le caisson d’amarrage servent de secours avant le coin simple. Les couronnes restent hors de la surface jouable et suivent le rétrécissement et l’effondrement de leur palier.
 
 ### Virages des parcours de fret de Storm Harbor
 

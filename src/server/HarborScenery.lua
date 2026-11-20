@@ -235,15 +235,7 @@ function HarborScenery.build(decor, base, theme, profiles: Profiles?)
     local column = available(profiles and profiles.shaft)
     local lens = available(profiles and profiles.lens)
     local ring = available(profiles and profiles.ring)
-    local hullCasting = cast
-    local rotation, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
-    if not rotation then
-        hullCasting = available(profiles and profiles.wing)
-        rotation, swapXZ = PerimeterCapGeometry.wingSlope(hullCasting and hullCasting.part)
-    end
-    local slope = if rotation and hullCasting then {
-        part = hullCasting.part, assetId = hullCasting.assetId, rotation = rotation, swapXZ = swapXZ,
-    } else nil
+    local slope = PerimeterCapGeometry.preferredSlope(cast, profiles and profiles.wing)
 
     local halfX, halfZ = base.Size.X * 0.5, base.Size.Z * 0.5
     local floorY = base.Position.Y + base.Size.Y * 0.5
