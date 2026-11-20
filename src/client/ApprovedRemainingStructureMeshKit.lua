@@ -992,13 +992,24 @@ local function collectAccessChassis(arena,ramp,circuit)
     if size.X<2.38 or size.X>fullWidth+.025 or math.abs(size.Y-.92)>.04
         or size.Z<2.6 or size.Z>55 then return nil end
     local native=circuit:FindFirstChild(kind.."Chassis"..number)
-    if not visualNative(native,circuit) or not native:IsA("Part")
-        or native.Shape~=Enum.PartType.Block or native:GetAttribute("OrbitRouteGroup")~=group then
+    if not visualNative(native,circuit) or native:GetAttribute("OrbitRouteGroup")~=group then
+        return nil
+    end
+    local nativeSize,nativeFrame=native.Size,native.CFrame
+    if native:IsA("MeshPart") then
+        local swapped=native:GetAttribute("OrbitalAccessChassisAxisSwap")
+        if native.MeshId=="" or native:GetAttribute("Original3DAssetId")~=SOURCE.AccessChassis.id
+            or type(swapped)~="boolean" then return nil end
+        if swapped then
+            nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
+            nativeFrame*=CFrame.Angles(0,-math.pi*.5,0)
+        end
+    elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
         return nil
     end
     local expected=Vector3.new(size.X*(1-.38/fullWidth),.22,size.Z-.45)
-    local relative=ramp.CFrame:ToObjectSpace(native.CFrame)
-    if (native.Size-expected).Magnitude>.08
+    local relative=ramp.CFrame:ToObjectSpace(nativeFrame)
+    if (nativeSize-expected).Magnitude>.08
         or (relative.Position-Vector3.new(0,-.58,0)).Magnitude>.07
         or relative.LookVector:Dot(-Vector3.zAxis)<.998
         or relative.UpVector:Dot(Vector3.yAxis)<.998 then
@@ -1008,7 +1019,7 @@ local function collectAccessChassis(arena,ramp,circuit)
     return {category="helix",name="AccessChassis",owner=ramp,arena=arena,
         originals={native},center=ramp.Position,expectedParent=circuit,
         orientation=ramp.CFrame*CFrame.new(0,-size.Y*.5-.012-depth*.5,0),
-        fitSize=Vector3.new(native.Size.X*.985,depth,native.Size.Z*.985)}
+        fitSize=Vector3.new(nativeSize.X*.985,depth,nativeSize.Z*.985)}
 end
 
 local function isPortico(category)
@@ -1467,8 +1478,13 @@ local function mount(data,source)
             end
         elseif data.category=="helix" then
             watch(native,{"CFrame","Size","Transparency","Anchored","CanCollide",
-                "CanTouch","CanQuery","Name","Shape"})
-            for _,tag in ipairs({"OrbitRouteGroup","HelixLane"}) do
+                "CanTouch","CanQuery","Name"})
+            if native:IsA("MeshPart") then
+                watch(native,{"MeshId"})
+            else
+                watch(native,{"Shape"})
+            end
+            for _,tag in ipairs({"OrbitRouteGroup","HelixLane","Original3DAssetId","OrbitalAccessChassisAxisSwap"}) do
                 entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
             end
         elseif isPortico(data.category) then
