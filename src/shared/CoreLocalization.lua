@@ -740,7 +740,7 @@ local ARENA_ACTIONS = {
             OrbitalActive = "HELIX: TRANSFER",
         },
         Harbor = {
-            HarborSafe = "BLUE: CROSS DOCKS",
+            HarborSafe = "USE BLUE PAD",
             HarborActive = "SWEEP: JUMP / MOVE",
         },
     },
@@ -763,7 +763,7 @@ local ARENA_ACTIONS = {
             OrbitalActive = "HÉLICE : TRANSFERT",
         },
         Harbor = {
-            HarborSafe = "BLEU : CHANGE DE QUAI",
+            HarborSafe = "AU PAD BLEU",
             HarborActive = "BALAYAGE : ÉVITE",
         },
     },

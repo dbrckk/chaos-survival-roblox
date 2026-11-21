@@ -1,8 +1,10 @@
-## Lisibilité mobile après la manche
+## Lisibilité mobile pendant et après la manche
 
 Sur le Port des tempêtes, le grand tablier et les 36 dalles décoratives utilisent une finition acier gris-bleu. Les tuiles sculptées reprennent le relief PBR brossé dans le budget existant. Le contraste de la lave et les marquages de danger gardent leur traitement dédié.
 
 La carte de résultat masque la notification d’entraînement jusqu’à la fin de son fondu. Un boost déclenché pendant ce délai conserve son effet dans le monde.
+
+Sur mobile, la consigne de début de manche et le défi occupent la barre basse pendant l’introduction du mécanisme. Le compteur d’éclats revient ensuite. La disposition suit la rotation de l’écran et le Port des tempêtes affiche « AU PAD BLEU » lorsque les pads de transfert sont actifs.
 
 ## P4 — Finitions 3D du lobby
 

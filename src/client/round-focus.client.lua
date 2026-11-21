@@ -166,51 +166,52 @@ gradient.Color = ColorSequence.new({
 gradient.Parent = fill
 
 
+local compactFocus = false
+
 local function applyResponsiveLayout()
+    local tinyHeight = false
     if not touchDevice then
         root.AnchorPoint = Vector2.new(0.5, 1)
         root.Position = UDim2.new(0.5, 0, 1, -18)
         root.Size = UDim2.new(0.82, 0, 0, 54)
         sizeConstraint.MinSize = Vector2.new(250, 48)
-        return
+    else
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+        local profile = UIResponsive.mobileProfile(viewport)
+        local criticalMin = UIResponsive.criticalTextMin(viewport)
+        shardTextConstraint.MinTextSize = math.max(12, criticalMin - 1)
+        challengeTextConstraint.MinTextSize = criticalMin
+        statusTextConstraint.MinTextSize = criticalMin
+
+        root.AnchorPoint = Vector2.new(0.5, 1)
+        root.Position = UDim2.new(0.5, 0, 1, -profile.roundFocusBottomOffset)
+        root.Size = UDim2.new(profile.roundFocusWidthScale, 0, 0, profile.roundFocusHeight)
+        sizeConstraint.MinSize = Vector2.new(
+            profile.veryNarrow and 220 or 250,
+            profile.roundFocusHeight
+        )
+        tinyHeight = profile.tinyHeight
     end
 
-    local camera = workspace.CurrentCamera
-    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
-    local profile = UIResponsive.mobileProfile(viewport)
-    local criticalMin = UIResponsive.criticalTextMin(viewport)
-    shardTextConstraint.MinTextSize = math.max(12, criticalMin - 1)
-    challengeTextConstraint.MinTextSize = criticalMin
-    statusTextConstraint.MinTextSize = criticalMin
-
-    root.AnchorPoint = Vector2.new(0.5, 1)
-    root.Position = UDim2.new(0.5, 0, 1, -profile.roundFocusBottomOffset)
-    root.Size = UDim2.new(
-        profile.roundFocusWidthScale,
-        0,
-        0,
-        profile.roundFocusHeight
-    )
-    sizeConstraint.MinSize = Vector2.new(
-        profile.veryNarrow and 220 or 250,
-        profile.roundFocusHeight
-    )
-
-    if profile.tinyHeight then
+    shard.Visible = not compactFocus
+    if compactFocus then
+        challenge.Position = UDim2.fromScale(0.025, 0.12)
+        challenge.Size = UDim2.fromScale(0.46, 0.43)
+        status.Size = UDim2.fromScale(0.46, 0.43)
+    elseif tinyHeight then
         shard.Size = UDim2.fromScale(0.24, 0.43)
         challenge.Position = UDim2.fromScale(0.275, 0.12)
         challenge.Size = UDim2.fromScale(0.35, 0.43)
         status.Size = UDim2.fromScale(0.32, 0.43)
-        barBg.Position = UDim2.fromScale(0.025, 0.70)
-        barBg.Size = UDim2.fromScale(0.95, 0.12)
     else
         shard.Size = UDim2.fromScale(0.27, 0.43)
         challenge.Position = UDim2.fromScale(0.31, 0.12)
         challenge.Size = UDim2.fromScale(0.32, 0.43)
         status.Size = UDim2.fromScale(0.36, 0.43)
-        barBg.Position = UDim2.fromScale(0.025, 0.68)
-        barBg.Size = UDim2.fromScale(0.95, 0.14)
     end
+    barBg.Position = UDim2.fromScale(0.025, tinyHeight and 0.70 or 0.68)
+    barBg.Size = UDim2.fromScale(0.95, tinyHeight and 0.12 or 0.14)
 end
 applyResponsiveLayout()
 
@@ -240,8 +241,6 @@ local currentState = nil
 local visibleToken = 0
 local completedChallengeId = nil
 local lastNotifiedPeakTier = 0
-local rookieCompactMode = false
-local mobileStatusCollapsed = false
 local isHiding = false
 local lastIntensityScale = nil
 -- One cancellable Tween per visual target. Prevents fade/re-entry races and
@@ -278,21 +277,10 @@ local function shardCount()
     return math.max(0, math.floor(tonumber(player:GetAttribute("RoundChaosShards")) or 0))
 end
 
-local function setRookieCompactMode(enabled)
-    if rookieCompactMode == enabled then
-        return
-    end
-    rookieCompactMode = enabled
-
-    if enabled then
-        shard.Visible = false
-        challenge.Position = UDim2.fromScale(0.025, 0.12)
-        challenge.Size = UDim2.fromScale(0.46, 0.43)
-        status.Size = UDim2.fromScale(0.46, 0.43)
-    else
-        shard.Visible = true
-        applyResponsiveLayout()
-    end
+local function setCompactFocus(enabled)
+    if compactFocus == enabled then return end
+    compactFocus = enabled
+    applyResponsiveLayout()
 end
 
 local function challengeProgress(state)
@@ -352,7 +340,7 @@ local function refresh()
 
     if not state or state.phase ~= "round" or not isParticipant or isEliminated then
         parkourChip.Visible = false
-        setRookieCompactMode(false)
+        setCompactFocus(false)
         if root.Visible and not isHiding then
             visibleToken += 1
             local token = visibleToken
@@ -419,10 +407,6 @@ local function refresh()
         player:GetAttribute("Games"), player:GetAttribute("SessionRoundsPlayed")
     )
     local rookieRound = FirstTimeExperience.isGuidedPhase(played, state.phase)
-    -- On Android a shards challenge already includes the shard count
-    -- (e.g. "ÉCLATS 0/2"). Avoid displaying the same value twice.
-    setRookieCompactMode((rookieRound and count <= 0)
-        or (touchDevice and state.challengeMetric == "shards"))
     local challengeId = state.challengeId
     local challengeTarget = math.max(1, math.floor(tonumber(state.challengeTarget) or 1))
     local progress = math.min(challengeTarget, challengeProgress(state))
@@ -486,8 +470,9 @@ local function refresh()
     -- at round entry; don't teach a player a disabled arena mechanic.
     local introAction = state.arenaMechanicIntro == true
         and CoreLocalization.arenaMechanicAction(
-            localeId, state.arenaName, state.arenaMechanicMode
+            localeId, state.arenaId or state.arenaName, state.arenaMechanicMode
         ) or nil
+    local showingArenaAction = false
     if state.finalRush then
         text = CoreLocalization.text(
             localeId,
@@ -523,6 +508,7 @@ local function refresh()
         -- higher priority. Reuse the existing pill, never add an overlay.
         text = introAction
         color = UITheme.Colors.Cyan
+        showingArenaAction = true
     elseif state.doubleChaos then
         text = tostring(state.fusionName or CoreLocalization.text(localeId, "CHAOS_FUSION"))
         color = UITheme.Colors.Violet
@@ -537,12 +523,10 @@ local function refresh()
     status.Text = text
     status.TextColor3 = color
 
-    -- Android screenshots show the exact same hazard name in the top
-    -- warning banner AND the third pill of the lower focus meter.
-    -- Preserve exceptional tactical cues (FLANKS, SWEEP, OVERDRIVE,
-    -- FINAL RUSH, fusions), but remove only the identical stable name.
-    -- Widen the actual objective instead of leaving a blank pill;
-    -- no additional screen surface or changes to survival information.
+    -- Keep the objective and contextual instruction readable on narrow
+    -- phones. A shards challenge already includes the optional counter.
+    setCompactFocus((rookieRound and count <= 0)
+        or (touchDevice and (showingArenaAction or state.challengeMetric == "shards")))
     if touchDevice then
         local name = primaryId
             and CoreLocalization.hazardName(localeId, primaryId)
@@ -557,16 +541,6 @@ local function refresh()
                 localeId, "SURVIVE_SECONDS",
                 math.max(0, math.floor(tonumber(state.seconds) or 0)))
             status.TextColor3 = UITheme.Colors.Text
-        end
-        if redundant ~= mobileStatusCollapsed then
-            mobileStatusCollapsed = redundant
-            status.Visible = true
-            applyResponsiveLayout()
-            if rookieCompactMode then
-                challenge.Position = UDim2.fromScale(0.025, 0.12)
-                challenge.Size = UDim2.fromScale(0.46, 0.43)
-                status.Size = UDim2.fromScale(0.46, 0.43)
-            end
         end
     end
 
