@@ -99,6 +99,10 @@ describe("Core localization", function()
             "ÉQUIPE • 3 MANCHES ENSEMBLE"
         )
         expect(CoreLocalization.text("fr-fr", "CHAOS_FUSION_SUB")).toBe("SURVIS AUX DEUX DANGERS")
+        expect(CoreLocalization.text("fr-fr", "RESULT_FUSION_SURVIVED", 5))
+            .toBe("FUSION RÉUSSIE • BONUS +5")
+        expect(CoreLocalization.text("en-us", "RESULT_FUSION_SURVIVED", 5))
+            .toBe("FUSION SURVIVED • BONUS +5")
         expect(CoreLocalization.text("fr-fr", "SHARE_MOMENT")).toBe("PARTAGER CE MOMENT")
         expect(CoreLocalization.text("fr-fr", "SHARE_REASON_LAST_SURVIVOR")).toBe(
             "DERNIER SURVIVANT"

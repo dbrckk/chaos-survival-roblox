@@ -127,7 +127,6 @@ local lastSpeedTempoPhase = nil
 local lastGravityTideStage = nil
 local lastLavaStage = nil
 local lastBlackoutStage = nil
-local lastFusionKey = nil
 local previousPhase = "waiting"
 local touchDevice = UserInputService.TouchEnabled
 local pendingEvent = nil
@@ -159,6 +158,11 @@ local function quality()
 end
 
 local function show(kind, mainText, subText, color, duration)
+    if player:GetAttribute("RoundParticipant") ~= true
+        or player:GetAttribute("RoundEliminated") == true
+        or player:GetAttribute("RoundResultCardVisible") == true then
+        return false
+    end
     local priority = RoundEventPresentation.priority(kind)
     local now = os.clock()
     if now < activeUntil and priority < activePriority then
@@ -334,6 +338,12 @@ player:GetAttributeChangedSignal("RoundEliminated"):Connect(function()
     end
 end)
 
+player:GetAttributeChangedSignal("RoundResultCardVisible"):Connect(function()
+    if player:GetAttribute("RoundResultCardVisible") == true then
+        clearRoundToast()
+    end
+end)
+
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end
     local phase = tostring(state.phase or "waiting")
@@ -363,8 +373,6 @@ stateEvent.OnClientEvent:Connect(function(state)
         and (state.blackoutStage == "Dark"
             or state.blackoutStage == "PowerReturn")
         and state.blackoutStage or nil
-    local fusionName = type(state.fusionName) == "string" and state.fusionName or nil
-    local fusionKey = state.doubleChaos and fusionName or nil
     local eventColor = RoundEventPresentation.accent(
         state.disasterIds,
         function(id)
@@ -513,7 +521,6 @@ stateEvent.OnClientEvent:Connect(function(state)
         and state.doubleCollapseUnlocked == true
     lastOverdrive = overdrive
     lastFinalRush = finalRush
-    lastFusionKey = fusionKey
     previousPhase = phase
 end)
 

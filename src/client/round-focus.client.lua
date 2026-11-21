@@ -510,7 +510,12 @@ local function refresh()
         color = UITheme.Colors.Cyan
         showingArenaAction = true
     elseif state.doubleChaos then
-        text = tostring(state.fusionName or CoreLocalization.text(localeId, "CHAOS_FUSION"))
+        -- The two localized hazard names already appear in the top HUD.
+        text = CoreLocalization.text(
+            localeId,
+            "SURVIVE_SECONDS",
+            math.max(0, math.floor(tonumber(state.seconds) or 0))
+        )
         color = UITheme.Colors.Violet
     elseif rookieRound then
         text = CoreLocalization.text(

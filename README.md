@@ -6,6 +6,8 @@ La carte de résultat masque la notification d’entraînement jusqu’à la fin
 
 Sur mobile, la consigne de début de manche et le défi occupent la barre basse pendant l’introduction du mécanisme. Le compteur d’éclats revient ensuite. La disposition suit la rotation de l’écran et le Port des tempêtes affiche « AU PAD BLEU » lorsque les pads de transfert sont actifs.
 
+En Double Chaos, l’en-tête affiche les deux dangers et la barre basse rappelle le temps à tenir. Le résultat reprend leurs noms et le bonus dans la langue du joueur. Les annonces de phase sont réservées aux participants encore en vie tant que la carte de résultat est fermée.
+
 ## P4 — Finitions 3D du lobby
 
 Le lobby applique jusqu’à 74 finitions sculptées après le chargement des maillages approuvés. L’allée, les huit panneaux d’accueil, les repères lumineux et le portail gardent leurs dimensions et leurs ancrages. La traverse reprend la couleur et le fondu du départ de manche. Les formes de secours restent visibles au démarrage et reprennent leur place pendant la manche, sous pression graphique ou si le maillage est indisponible.
